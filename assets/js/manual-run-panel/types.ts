@@ -2,7 +2,6 @@ export enum SeletableOptions {
   EXISTING,
   EMPTY,
   CUSTOM,
-  IMPORT,
 }
 
 export interface Dataclip {

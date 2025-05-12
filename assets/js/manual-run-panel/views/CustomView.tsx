@@ -1,6 +1,7 @@
 import { MonacoEditor } from "../../monaco";
 import { CheckCircleIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
+import FileUploader from "../FileUploader";
 
 const iconStyle = 'h-4 w-4 text-grey-400';
 
@@ -8,6 +9,16 @@ const CustomView: React.FC<{
   pushEvent: (event: string, data: any) => void;
 }> = ({ pushEvent }) => {
   const [editorValue, setEditorValue] = React.useState('');
+
+  async function uploadFiles(f: File[]) {
+    if (f.length) {
+      const file = f[0];
+      if (file) {
+        const content = await readFileContent(file);
+        handleEditorChange(content);
+      }
+    }
+  }
 
   const isEmpty = React.useMemo(() => !editorValue.trim(), [editorValue]);
   const jsonParseResult = React.useMemo(() => {
@@ -33,9 +44,17 @@ const CustomView: React.FC<{
     [pushEvent]
   );
 
-  return (
+  return <>
+    <FileUploader count={1} formats={["json"]} onUpload={uploadFiles} />
+    <div className="relative">
+      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+        <div className="w-full border-t border-gray-300"></div>
+      </div>
+      <div className="relative flex justify-center">
+        <span className="bg-white px-2 text-sm text-gray-500">OR</span>
+      </div>
+    </div>
     <div className="relative h-full flex flex-col">
-      <div className="font-semibold mb-3 text-gray-600">Create a new input</div>
       {isEmpty || !jsonParseResult.success ? (
         <div className="text-red-700 text-sm flex gap-1 mb-1 items-center">
           <InformationCircleIcon className={iconStyle} />{' '}
@@ -72,7 +91,22 @@ const CustomView: React.FC<{
         />
       </div>
     </div>
-  );
+  </>
 };
 
 export default CustomView;
+
+export async function readFileContent(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = () => {
+      reject(reader.error);
+    };
+
+    reader.readAsText(file);
+  });
+}

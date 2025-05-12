@@ -2,17 +2,13 @@ import { CloudArrowUpIcon, InformationCircleIcon, XMarkIcon } from "@heroicons/r
 import React, { type ChangeEvent } from "react";
 
 interface FileUploader {
-  currFiles: File[];
   onUpload: (files: File[]) => void;
-  onDelete: (index: number) => void;
   count: number;
   formats: string[];
 }
 
 const FileUploader: React.FC<FileUploader> = ({
-  currFiles,
   onUpload,
-  onDelete,
   count,
   formats
 }) => {
@@ -21,21 +17,6 @@ const FileUploader: React.FC<FileUploader> = ({
   const fileRef = React.useRef<HTMLInputElement | null>(null);
   const [issue, setIssue] = React.useState("");
   const timeout = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-
-
-  const deleteHandler = React.useCallback((index: number) => {
-    const dt = new DataTransfer();
-    const files = fileRef.current?.files || [];
-
-    Array.from(files).forEach((file, i) => {
-      if (i !== index) dt.items.add(file);
-    });
-
-    if (fileRef.current) {
-      fileRef.current.files = dt.files;
-      onDelete(index);
-    }
-  }, [onDelete]);
 
   const setVanishingIssue = (issue: string) => {
     setIssue(issue);
@@ -67,14 +48,14 @@ const FileUploader: React.FC<FileUploader> = ({
       return;
     }
 
-    if (currFiles.length + files.length > count) {
+    if (files.length > count) {
       setVanishingIssue(`Only ${count} files can be uploaded`)
       return;
     } else {
       onUpload(files);
     }
 
-  }, [count, currFiles.length, formats, onUpload])
+  }, [count, formats, onUpload])
 
   React.useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
@@ -140,30 +121,6 @@ const FileUploader: React.FC<FileUploader> = ({
         <div className="flex gap-1 items-center"><InformationCircleIcon className="size-4" />{issue}</div>
         <XMarkIcon onClick={() => { setIssue("") }} className="size-4 hover:bg-red-700 hover:text-red-50 rounded cursor-pointer" />
       </div> : null}
-
-      {currFiles.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          {currFiles.map((file, index) => (
-            <div
-              key={index}
-              className="w-full p-4 rounded-md bg-gray-100 space-y-3"
-            >
-              <div className="flex justify-between items-center">
-                <div className="w-[70%] cursor-pointer">
-                  <div className="text-sm font-medium text-gray-700 truncate">{file.name}</div>
-                  <div className="text-xs text-gray-500">{Math.floor(file.size / 1024)} KB</div>
-                </div>
-                <button
-                  className="text-sm text-red-500"
-                  onClick={() => { deleteHandler(index) }}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 }

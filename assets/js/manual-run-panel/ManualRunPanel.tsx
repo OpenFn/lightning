@@ -1,18 +1,16 @@
 import type { WithActionProps } from '#/react/lib/with-props';
 import {
-  DocumentArrowUpIcon,
   DocumentIcon,
   PencilSquareIcon,
   QueueListIcon
 } from '@heroicons/react/24/outline';
 import React from 'react';
+import constructQuery from '../utils/constructQuery';
 import { type Dataclip, FilterTypes, SeletableOptions } from './types';
 import CustomView from './views/CustomView';
 import EmptyView from './views/EmptyView';
 import ExistingView from './views/ExistingView';
-import ImportView from './views/ImportView';
 import SelectedClipView from './views/SelectedClipView';
-import constructQuery from '../utils/constructQuery';
 interface ManualRunPanelProps {
   job_id: string;
 }
@@ -20,7 +18,7 @@ interface ManualRunPanelProps {
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   const { pushEvent, job_id } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
-    SeletableOptions.EXISTING
+    SeletableOptions.EMPTY
   );
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
   const [query, setQuery] = React.useState('');
@@ -134,7 +132,6 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         break;
       case SeletableOptions.CUSTOM:
       case SeletableOptions.EXISTING:
-      case SeletableOptions.IMPORT:
         pushEvent('manual_run_change', {
           manual: {
             body: null,
@@ -162,8 +159,6 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             setSelectedDates={setSelectedDates}
           />
         );
-      case SeletableOptions.IMPORT:
-        return <ImportView pushEvent={pushEvent} />;
       case SeletableOptions.CUSTOM:
         return <CustomView pushEvent={pushEvent} />;
       case SeletableOptions.EMPTY:
@@ -205,19 +200,6 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             <div className="flex md:gap-2 sm:gap-1 gap-4 justify-center flex-wrap">
               <button
                 type="button"
-                onClick={selectOptionHandler(SeletableOptions.EXISTING)}
-                className={
-                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
-                  getActive(SeletableOptions.EXISTING)
-                }
-              >
-                <QueueListIcon
-                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                />
-                Existing
-              </button>
-              <button
-                type="button"
                 onClick={selectOptionHandler(SeletableOptions.EMPTY)}
                 className={
                   'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
@@ -244,16 +226,16 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
               </button>
               <button
                 type="button"
-                onClick={selectOptionHandler(SeletableOptions.IMPORT)}
+                onClick={selectOptionHandler(SeletableOptions.EXISTING)}
                 className={
                   'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
-                  getActive(SeletableOptions.IMPORT)
+                  getActive(SeletableOptions.EXISTING)
                 }
               >
-                <DocumentArrowUpIcon
+                <QueueListIcon
                   className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
                 />
-                Import
+                Existing
               </button>
             </div>
             <hr className="my-2" />
