@@ -17,7 +17,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselec
   return <>
     <div className="flex flex-col flex-0 gap-2">
       <Pill onClose={onUnselect}>
-        <div className='flex px-2 py-1 grow items-center justify-between'>
+        <div className='flex py-1 grow items-center justify-between'>
           <div className="flex gap-1 items-center text-sm">
             {' '}
             <DocumentTextIcon
