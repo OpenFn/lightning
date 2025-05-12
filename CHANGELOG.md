@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Delay purge user having project file(s)
+  [#2919](https://github.com/OpenFn/lightning/issues/2919)
+
 ## [v2.12.2] - 2025-05-01
 
 ### Changed

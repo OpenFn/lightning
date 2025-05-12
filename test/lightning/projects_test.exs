@@ -1470,6 +1470,34 @@ defmodule Lightning.ProjectsTest do
       assert dataclip.body === %{"team" => "senegal"}
       assert is_nil(dataclip.wiped_at)
     end
+
+    test "deletes project files past the retention period" do
+      project =
+        insert(:project, history_retention_period: 7)
+
+      more_days_ago = Date.utc_today() |> Date.add(-8)
+
+      File.write!("ficheiro", "some-content")
+      on_exit(fn -> File.rm!("ficheiro") end)
+
+      {:ok, path} =
+        Lightning.Storage.store("ficheiro", "/bucket_subdir/ficheiro")
+
+      project_file1 =
+        insert(:project_file,
+          project: project,
+          path: path,
+          inserted_at: DateTime.new!(more_days_ago, ~T[00:00:00])
+        )
+
+      project_file2 =
+        insert(:project_file, project: project)
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      refute Repo.get(Projects.File, project_file1.id)
+      assert Repo.get(Projects.File, project_file2.id)
+    end
   end
 
   describe "invite_collaborators/3" do
