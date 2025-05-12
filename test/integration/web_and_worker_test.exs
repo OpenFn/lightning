@@ -255,8 +255,8 @@ defmodule Lightning.WebAndWorkerTest do
           |> Map.get(:message)
         end)
 
-      assert version_logs =~ "▸ node.js                  23.5.0"
-      assert version_logs =~ "▸ worker                   1.13.2"
+      assert version_logs =~ "▸ node.js                  22.12"
+      assert version_logs =~ "▸ worker                   1.13"
       assert version_logs =~ "▸ @openfn/language-http    3.1.12"
 
       expected_lines =
