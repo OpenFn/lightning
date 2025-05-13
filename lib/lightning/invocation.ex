@@ -67,10 +67,16 @@ defmodule Lightning.Invocation do
     filters =
       Enum.reduce(filters, dynamic(true), fn
         {:id, uuid}, dynamic ->
-          dynamic([d], ^dynamic and like(type(d.id, :string), ^"%#{uuid}%"))
+          dynamic([d], ^dynamic and d.id == ^uuid)
 
         {:id_prefix, id_prefix}, dynamic ->
-          dynamic([d], ^dynamic and like(type(d.id, :string), ^"%#{id_prefix}%"))
+          {id_prefix_start, id_prefix_end} =
+            id_prefix_interval(id_prefix)
+
+          dynamic(
+            [d],
+            ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
+          )
 
         {:type, type}, dynamic ->
           dynamic([d], ^dynamic and d.type == ^type)
@@ -91,6 +97,7 @@ defmodule Lightning.Invocation do
     |> where([d], ^filters)
     |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
     |> Repo.all()
+    |> maybe_filter_uuid_prefix(filters)
   end
 
   @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
@@ -744,5 +751,44 @@ defmodule Lightning.Invocation do
       )
     end)
     |> Repo.transaction()
+  end
+
+  @uuid_binary_size 16
+
+  defp id_prefix_interval(id_prefix) do
+    prefix_bin =
+      id_prefix
+      |> String.to_charlist()
+      |> Enum.chunk_every(2)
+      |> Enum.reduce(<<>>, fn
+        [_single_char], prefix_bin ->
+          prefix_bin
+
+        byte_list, prefix_bin ->
+          byte_int = byte_list |> :binary.list_to_bin() |> String.to_integer(16)
+          prefix_bin <> <<byte_int>>
+      end)
+
+    prefix_size = byte_size(prefix_bin)
+    missing_byte_size = @uuid_binary_size - prefix_size
+
+    {
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<0>>, missing_byte_size)),
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<255>>, missing_byte_size))
+    }
+  end
+
+  # A pair of hex chars on UUID strings comprise a byte on UUID binary
+  # Searching by prefix with an odd number of chars (not in pairs) requires
+  # additional filtering once you can't filter half of a byte on the database
+  # using > or < operators
+  defp maybe_filter_uuid_prefix(dataclips, filters) do
+    case Map.get(filters, :id_prefix, "") do
+      id_prefix when rem(byte_size(id_prefix), 2) == 1 ->
+        Enum.filter(dataclips, &String.starts_with?(&1.id, id_prefix))
+
+      _ ->
+        dataclips
+    end
   end
 end
