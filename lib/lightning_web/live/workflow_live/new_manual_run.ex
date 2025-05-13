@@ -66,13 +66,12 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   defp parse_param("after:" <> param) do
-    IO.inspect(param, label: "who?")
-    case NaiveDateTime.from_iso8601(param) do
+    # TODO - Why doesn't the native datetime picker (datetime-local) send seconds?
+    case NaiveDateTime.from_iso8601(param <> ":00") do
       {:ok, datetime} ->
-        IO.inspect("valid?")
         {:ok, {:after, datetime}}
+
       {:error, _reason} ->
-        IO.inspect("invalid?")
         {:error, :invalid_datetime}
     end
   end
