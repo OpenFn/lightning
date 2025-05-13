@@ -13,7 +13,7 @@ import ExistingView from './views/ExistingView';
 import SelectedClipView from './views/SelectedClipView';
 interface ManualRunPanelProps {
   job_id: string;
-  selected_dataclip_id: string;
+  selected_dataclip_id: string | null;
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
@@ -95,7 +95,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         }
       }
     );
-  }, [pushEvent, job_id, selected_dataclip_id]);
+  }, [pushEvent, job_id]);
 
   const handleSearchSumbit = React.useCallback(() => {
     const q = constructQuery(parsedQuery);

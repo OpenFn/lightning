@@ -243,7 +243,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         <.ManualRunPanel
                           :if={@selection_mode === "expand"}
                           job_id={@selected_job.id}
-                          selected_dataclip_id={@manual_run_form.params["dataclip_id"]}
+                          selected_dataclip_id={@step && @step.input_dataclip_id}
                         />
                         <%!-- <LightningWeb.WorkflowLive.ManualWorkorder.component
                           id={"manual-job-#{@selected_job.id}"}
