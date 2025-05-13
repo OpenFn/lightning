@@ -58,7 +58,7 @@ const CustomView: React.FC<{
         <span className="bg-white px-2 text-sm text-gray-500">OR</span>
       </div>
     </div>
-    <div className="relative h-full flex flex-col">
+    <div className="relative h-full flex flex-col overflow-hidden">
       {
         !isEmpty && !jsonParseResult.success ?
           (
@@ -68,7 +68,7 @@ const CustomView: React.FC<{
             </div>
           ) : null
       }
-      <div className="grow">
+      <div className="overflow-hidden flex-1">
         <MonacoEditor
           defaultLanguage="json"
           theme="default"
