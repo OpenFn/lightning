@@ -46,6 +46,9 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
         {:ok, %NaiveDateTime{} = datetime} ->
           {:cont, Map.put(filters, :datetime, datetime)}
 
+        {:ok, {:before, datetime}} ->
+          {:cont, Map.put(filters, :before, datetime)}
+
         {:ok, {:after, datetime}} ->
           {:cont, Map.put(filters, :after, datetime)}
 
@@ -72,6 +75,17 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     case NaiveDateTime.from_iso8601(param <> ":00") do
       {:ok, datetime} ->
         {:ok, {:after, datetime}}
+
+      {:error, _reason} ->
+        {:error, :invalid_datetime}
+    end
+  end
+
+  defp parse_param("before:" <> param) do
+    # TODO - Why doesn't the native datetime picker (datetime-local) send seconds?
+    case NaiveDateTime.from_iso8601(param <> ":00") do
+      {:ok, datetime} ->
+        {:ok, {:before, datetime}}
 
       {:error, _reason} ->
         {:error, :invalid_datetime}

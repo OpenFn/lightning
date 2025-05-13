@@ -86,6 +86,9 @@ defmodule Lightning.Invocation do
 
         {:after, ts}, dynamic ->
           dynamic([d], ^dynamic and d.inserted_at > ^ts)
+
+        {:before, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at < ^ts)
       end)
 
     Query.last_n_for_job(job_id, limit)
