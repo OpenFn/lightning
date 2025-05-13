@@ -336,6 +336,29 @@ defmodule Lightning.InvocationTest do
       end)
     end
 
+    test "doesn't return a dataclip if the wrong text is entered" do
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow)
+
+      [%{id: dataclip_id} | _ignored] =
+        Enum.map(1..10, fn _i ->
+          insert(:dataclip) |> tap(&insert(:step, input_dataclip: &1, job: job1))
+        end)
+
+      # replace the actual 3rd character with some random number
+      prefix = String.slice(dataclip_id, 0, 2) <> "4"
+
+      dataclips =
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{id_prefix: prefix},
+          10
+        )
+
+      # ensure that the dataclip isn't found:
+      # i.e., refute that writing "ab4" matches a dataclip with UUID prefix "ab7"
+      refute Enum.any?(dataclips, &(&1.id == dataclip_id))
+    end
+
     test "filters out wiped dataclips" do
       %{jobs: [job1 | _rest]} = insert(:simple_workflow)
 
