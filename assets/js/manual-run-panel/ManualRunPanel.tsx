@@ -13,16 +13,18 @@ import ExistingView from './views/ExistingView';
 import SelectedClipView from './views/SelectedClipView';
 interface ManualRunPanelProps {
   job_id: string;
+  selected_dataclip_id: string;
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
-  const { pushEvent, job_id } = props;
+  const { pushEvent, job_id, selected_dataclip_id } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
-    SeletableOptions.EMPTY
+    selected_dataclip_id ? SeletableOptions.EXISTING :
+      SeletableOptions.EMPTY
   );
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
   const [query, setQuery] = React.useState('');
-  const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>(null);
+  const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>();
   const [selectedcliptype, setSelectedClipType] = React.useState<string>('');
   const [selectedDates, setSelectedDates] = React.useState({
     before: '',
@@ -87,9 +89,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       response => {
         const dataclips = response.dataclips as Dataclip[];
         setRecentClips(dataclips);
+        if (selected_dataclip_id) {
+          const activeClip = dataclips.find(d => d.id === selected_dataclip_id);
+          if (activeClip) setSelectedclip(activeClip);
+        }
       }
     );
-  }, [pushEvent, job_id]);
+  }, [pushEvent, job_id, selected_dataclip_id]);
 
   const handleSearchSumbit = React.useCallback(() => {
     const q = constructQuery(parsedQuery);
