@@ -68,28 +68,30 @@ const CustomView: React.FC<{
             </div>
           ) : null
       }
-      <MonacoEditor
-        defaultLanguage="json"
-        theme="default"
-        value={editorValue}
-        onChange={handleEditorChange}
-        loading={<div>Loading...</div>}
-        options={{
-          readOnly: false,
-          lineNumbersMinChars: 3,
-          tabSize: 2,
-          scrollBeyondLastLine: false,
-          overviewRulerLanes: 0,
-          overviewRulerBorder: false,
-          fontFamily: 'Fira Code VF',
-          fontSize: 14,
-          fontLigatures: true,
-          minimap: {
-            enabled: false,
-          },
-          wordWrap: 'on',
-        }}
-      />
+      <div className="overflow-hidden flex-1">
+        <MonacoEditor
+          defaultLanguage="json"
+          theme="default"
+          value={editorValue}
+          onChange={handleEditorChange}
+          loading={<div>Loading...</div>}
+          options={{
+            readOnly: false,
+            lineNumbersMinChars: 3,
+            tabSize: 2,
+            scrollBeyondLastLine: false,
+            overviewRulerLanes: 0,
+            overviewRulerBorder: false,
+            fontFamily: 'Fira Code VF',
+            fontSize: 14,
+            fontLigatures: true,
+            minimap: {
+              enabled: false,
+            },
+            wordWrap: 'on',
+          }}
+        />
+      </div>
     </div>
   </>
 };
