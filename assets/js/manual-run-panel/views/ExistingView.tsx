@@ -240,6 +240,9 @@ const ExistingView: React.FC<ExistingViewProps> = ({
             No dataclips match the filter.
           </div>
         )}
+        <div className="text-center text-xs">
+          (Search results are limited to the 10 most recent matches for this step.)
+        </div>
       </div>
     </>
   );

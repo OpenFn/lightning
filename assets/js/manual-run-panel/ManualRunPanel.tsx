@@ -85,7 +85,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   React.useEffect(() => {
     pushEvent(
       'get-selectable-dataclips',
-      { job_id: job_id, limit: 5 },
+      { job_id: job_id, limit: 10 },
       response => {
         const dataclips = response.dataclips as Dataclip[];
         setRecentClips(dataclips);
@@ -101,7 +101,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     const q = constructQuery(parsedQuery);
     pushEvent(
       'search-selectable-dataclips',
-      { job_id: job_id, search_text: q, limit: 5 },
+      { job_id: job_id, search_text: q, limit: 10 },
       response => {
         const dataclips = (response.dataclips || []) as Dataclip[];
         setRecentClips(dataclips);
