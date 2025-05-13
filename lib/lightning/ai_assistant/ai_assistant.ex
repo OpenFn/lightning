@@ -130,6 +130,8 @@ defmodule Lightning.AiAssistant do
           {:ok, ChatSession.t()}
           | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content) do
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
+
     ApolloClient.query(
       content,
       %{expression: session.expression, adaptor: session.adaptor},
@@ -150,28 +152,28 @@ defmodule Lightning.AiAssistant do
 
   defp handle_apollo_resp(
          {:ok, %Tesla.Env{status: status, body: body}},
-         session
+         _session
        )
        when status not in 200..299 do
     error_message = body["message"]
-    Logger.error("AI query failed for session #{session.id}: #{error_message}")
+
+    Logger.error("AI query failed with status #{status}: #{error_message}")
+
     {:error, error_message}
   end
 
-  defp handle_apollo_resp({:error, :timeout}, session) do
-    Logger.error("AI query timed out for session #{session.id}")
+  defp handle_apollo_resp({:error, :timeout}, _session) do
+    Logger.error("AI query timed out")
     {:error, "Request timed out. Please try again."}
   end
 
-  defp handle_apollo_resp({:error, :econnrefused}, session) do
-    Logger.error("Connection to AI server refused for session #{session.id}")
+  defp handle_apollo_resp({:error, :econnrefused}, _session) do
+    Logger.error("Connection to AI server refused")
     {:error, "Unable to reach the AI server. Please try again later."}
   end
 
-  defp handle_apollo_resp(unexpected_error, session) do
-    Logger.error(
-      "Received an unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
-    )
+  defp handle_apollo_resp(unexpected_error, _session) do
+    Logger.error("Received an unexpected error: #{inspect(unexpected_error)}")
 
     {:error, "Oops! Something went wrong. Please try again."}
   end

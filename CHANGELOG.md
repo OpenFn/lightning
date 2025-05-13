@@ -24,6 +24,8 @@ and this project adheres to
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
 - Make the chunk size for deleting expired activty configurable via ENV
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
+- Report AI Assistant errors to Sentry
+  [#3010](https://github.com/OpenFn/lightning/issues/3010)
 
 ### Fixed
 
