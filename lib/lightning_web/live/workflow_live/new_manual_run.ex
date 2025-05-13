@@ -110,10 +110,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   defp parse_id_prefix(text) do
-    with {_num, ""} <- Integer.parse(text, 16),
-         0 <- rem(String.length(text), 2) do
-      {:ok, {:id_prefix, text}}
-    else
+    case Integer.parse(text, 16) do
+      {_num, ""} -> {:ok, {:id_prefix, text}}
       _invalid -> {:error, :invalid_uuid}
     end
   end

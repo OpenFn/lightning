@@ -59,13 +59,18 @@ defmodule Lightning.Invocation do
 
   @spec list_dataclips_for_job(
           Job.t(),
-          filters :: map(),
+          user_filters :: map(),
           limit :: pos_integer(),
           offset :: pos_integer() | nil
         ) :: [Dataclip.t()]
-  def list_dataclips_for_job(%Job{id: job_id}, filters, limit, offset \\ nil) do
-    filters =
-      Enum.reduce(filters, dynamic(true), fn
+  def list_dataclips_for_job(
+        %Job{id: job_id},
+        user_filters,
+        limit,
+        offset \\ nil
+      ) do
+    db_filters =
+      Enum.reduce(user_filters, dynamic(true), fn
         {:id, uuid}, dynamic ->
           dynamic([d], ^dynamic and d.id == ^uuid)
 
@@ -94,10 +99,10 @@ defmodule Lightning.Invocation do
     Query.last_n_for_job(job_id, limit)
     |> Query.select_as_input()
     |> where([d], is_nil(d.wiped_at))
-    |> where([d], ^filters)
+    |> where([d], ^db_filters)
     |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
     |> Repo.all()
-    |> maybe_filter_uuid_prefix(filters)
+    |> maybe_filter_uuid_prefix(user_filters)
   end
 
   @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
