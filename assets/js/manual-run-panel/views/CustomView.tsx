@@ -58,7 +58,7 @@ const CustomView: React.FC<{
         <span className="bg-white px-2 text-sm text-gray-500">OR</span>
       </div>
     </div>
-    <div className="relative h-full flex flex-col">
+    <div className="relative h-full flex flex-col overflow-hidden">
       {
         !isEmpty && !jsonParseResult.success ?
           (
@@ -68,30 +68,28 @@ const CustomView: React.FC<{
             </div>
           ) : null
       }
-      <div className="grow">
-        <MonacoEditor
-          defaultLanguage="json"
-          theme="default"
-          value={editorValue}
-          onChange={handleEditorChange}
-          loading={<div>Loading...</div>}
-          options={{
-            readOnly: false,
-            lineNumbersMinChars: 3,
-            tabSize: 2,
-            scrollBeyondLastLine: false,
-            overviewRulerLanes: 0,
-            overviewRulerBorder: false,
-            fontFamily: 'Fira Code VF',
-            fontSize: 14,
-            fontLigatures: true,
-            minimap: {
-              enabled: false,
-            },
-            wordWrap: 'on',
-          }}
-        />
-      </div>
+      <MonacoEditor
+        defaultLanguage="json"
+        theme="default"
+        value={editorValue}
+        onChange={handleEditorChange}
+        loading={<div>Loading...</div>}
+        options={{
+          readOnly: false,
+          lineNumbersMinChars: 3,
+          tabSize: 2,
+          scrollBeyondLastLine: false,
+          overviewRulerLanes: 0,
+          overviewRulerBorder: false,
+          fontFamily: 'Fira Code VF',
+          fontSize: 14,
+          fontLigatures: true,
+          minimap: {
+            enabled: false,
+          },
+          wordWrap: 'on',
+        }}
+      />
     </div>
   </>
 };
