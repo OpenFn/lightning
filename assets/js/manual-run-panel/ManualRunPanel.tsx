@@ -91,7 +91,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     );
   }, [pushEvent, job_id]);
 
-  React.useEffect(() => {
+  const handleSearchSumbit = React.useCallback(() => {
     const q = constructQuery(parsedQuery);
     pushEvent(
       'search-selectable-dataclips',
@@ -101,7 +101,15 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         setRecentClips(dataclips);
       }
     );
-  }, [pushEvent, job_id, parsedQuery]);
+  }, [job_id, parsedQuery, pushEvent])
+
+  React.useEffect(() => {
+    if (!query.trim()) handleSearchSumbit();
+  }, [query, handleSearchSumbit])
+
+  React.useEffect(() => {
+    handleSearchSumbit();
+  }, [selectedcliptype, selectedDates]);
 
   React.useEffect(() => {
     if (selectedclip) {
@@ -147,6 +155,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       case SeletableOptions.EXISTING:
         return (
           <ExistingView
+            onSubmit={handleSearchSumbit}
             query={query}
             filters={parsedQuery.filters}
             dataclips={recentclips}

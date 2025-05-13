@@ -1,4 +1,4 @@
-import React from "react";
+import React, { type KeyboardEvent } from "react";
 import { DataclipTypeNames, DataclipTypes, FilterTypes, type Dataclip, type SetDates } from "../types";
 import useOutsideClick from "#/hooks/useOutsideClick";
 import Pill from "../Pill";
@@ -19,6 +19,7 @@ interface ExistingViewProps {
   clearFilter: (v: FilterTypes) => void;
   selectedDates: { before: string; after: string };
   setSelectedDates: SetDates;
+  onSubmit: () => void;
 }
 
 const ExistingView: React.FC<ExistingViewProps> = ({
@@ -32,6 +33,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   clearFilter,
   selectedDates,
   setSelectedDates,
+  onSubmit
 }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
@@ -49,6 +51,10 @@ const ExistingView: React.FC<ExistingViewProps> = ({
       </Pill>
     ));
 
+  const keyDownHandler = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') onSubmit();
+  }
+
   return (
     <>
       <div className="flex flex-col gap-3">
@@ -56,6 +62,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
           <div className="flex gap-2">
             <div className="relative rounded-md shadow-xs flex grow">
               <input
+                onKeyDown={keyDownHandler}
                 value={query}
                 onChange={e => {
                   setQuery(e.target.value);
