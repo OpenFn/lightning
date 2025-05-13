@@ -81,9 +81,6 @@ defmodule Lightning.Invocation do
         {:type, type}, dynamic ->
           dynamic([d], ^dynamic and d.type == ^type)
 
-        {:date, date}, dynamic ->
-          dynamic([d], ^dynamic and fragment("date(?)", d.inserted_at) == ^date)
-
         {:datetime, ts}, dynamic ->
           dynamic([d], ^dynamic and d.inserted_at == ^ts)
 
