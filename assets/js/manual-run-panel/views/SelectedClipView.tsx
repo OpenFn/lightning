@@ -30,7 +30,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselec
           </div>
         </div>
       </Pill>
-      <div className="flex flex-row min-h-[28px] items-center">
+      <div className="flex flex-row min-h-[28px] items-center mx-1">
         <div className="basis-1/2 font-medium text-secondary-700 text-sm">
           Type
         </div>
@@ -38,7 +38,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselec
           <DataclipTypePill type={dataclip.type} />
         </div>
       </div>
-      <div className="flex flex-row min-h-[28px] items-center">
+      <div className="flex flex-row min-h-[28px] items-center mx-1">
         <div className="basis-1/2 font-medium text-secondary-700 text-sm">
           Created at
         </div>
@@ -46,7 +46,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselec
           {formatDate(new Date(dataclip.inserted_at))}
         </div>
       </div>
-      <div className="flex flex-row min-h-[28px] items-center">
+      <div className="flex flex-row min-h-[28px] items-center mx-1">
         <div className="basis-1/2 font-medium text-secondary-700 text-sm">
           UUID
         </div>

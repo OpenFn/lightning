@@ -1,10 +1,23 @@
-import React, { type KeyboardEvent } from "react";
-import { DataclipTypeNames, DataclipTypes, FilterTypes, type Dataclip, type SetDates } from "../types";
-import useOutsideClick from "#/hooks/useOutsideClick";
-import Pill from "../Pill";
-import { CalendarDaysIcon, CheckIcon, DocumentTextIcon, MagnifyingGlassIcon, RectangleGroupIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import formatDate from "#/utils/formatDate";
-import truncateUid from "#/utils/truncateUID";
+import React, { type KeyboardEvent } from 'react';
+import {
+  DataclipTypeNames,
+  DataclipTypes,
+  FilterTypes,
+  type Dataclip,
+  type SetDates,
+} from '../types';
+import useOutsideClick from '#/hooks/useOutsideClick';
+import Pill from '../Pill';
+import {
+  CalendarDaysIcon,
+  CheckIcon,
+  DocumentTextIcon,
+  MagnifyingGlassIcon,
+  RectangleGroupIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
+import formatDate from '#/utils/formatDate';
+import truncateUid from '#/utils/truncateUID';
 
 const iconStyle = 'h-4 w-4 text-grey-400';
 
@@ -33,7 +46,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   clearFilter,
   selectedDates,
   setSelectedDates,
-  onSubmit
+  onSubmit,
 }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
@@ -44,22 +57,28 @@ const ExistingView: React.FC<ExistingViewProps> = ({
     setTypesOpen(false);
   });
 
-  const pills = Object.entries(filters)
-    .map(([key, value]) => (
-      <Pill onClose={() => { clearFilter(key as FilterTypes) }}>
-        {key}: {(key as FilterTypes) === FilterTypes.DATACLIP_TYPE ? DataclipTypeNames[value] : value}{' '}
-      </Pill>
-    ));
+  const pills = Object.entries(filters).map(([key, value]) => (
+    <Pill
+      onClose={() => {
+        clearFilter(key as FilterTypes);
+      }}
+    >
+      {key}:{' '}
+      {(key as FilterTypes) === FilterTypes.DATACLIP_TYPE
+        ? DataclipTypeNames[value]
+        : value}{' '}
+    </Pill>
+  ));
 
   const keyDownHandler = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') onSubmit();
-  }
+  };
 
   return (
     <>
       <div className="flex flex-col gap-3">
         <div>
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <div className="relative rounded-md shadow-xs flex grow">
               <input
                 onKeyDown={keyDownHandler}
@@ -69,20 +88,21 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 }}
                 type="text"
                 className="focus:outline focus:outline-2 focus:-outline-offset-2 focus:ring-0  disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 border-slate-300 focus:border-slate-400 focus:outline-indigo-600 block w-full rounded-md border-0 py-1.5 pl-10 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                placeholder="Filter inputs"
+                placeholder="Search for inputs by UUID"
               />
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
               </div>
-              {
-                query.trim() ?
-                  <div
-                    onClick={() => { setQuery("") }}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer">
-                    <XMarkIcon className="h-5 w-5 text-gray-400" />
-                  </div>
-                  : null
-              }
+              {query.trim() ? (
+                <div
+                  onClick={() => {
+                    setQuery('');
+                  }}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
+                >
+                  <XMarkIcon className="h-5 w-5 text-gray-400" />
+                </div>
+              ) : null}
             </div>
             <div className="relative inline-block">
               <button
@@ -95,8 +115,9 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <div
                 ref={calendarRef}
-                className={`absolute right-0 ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none min-w-[260px] ${dateOpen ? '' : 'hidden'
-                  } `}
+                className={`absolute right-0 ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none min-w-[260px] ${
+                  dateOpen ? '' : 'hidden'
+                } `}
               >
                 <div className="py-3" role="none">
                   <div className="px-4 py-1 text-gray-500 text-sm">
@@ -146,8 +167,9 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <ul
                 ref={typesRef}
-                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto overflow-hidden ${typesOpen ? '' : 'hidden'
-                  } `}
+                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto overflow-hidden ${
+                  typesOpen ? '' : 'hidden'
+                } `}
               >
                 {DataclipTypes.map(type => {
                   return (
@@ -158,26 +180,38 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                           type === selectedcliptype ? '' : type
                         );
                       }}
-                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype
-                        ? 'bg-blue-200 text-blue-700'
-                        : ''
-                        }`}
+                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${
+                        type === selectedcliptype
+                          ? 'bg-blue-200 text-blue-700'
+                          : ''
+                      }`}
                     >
                       {' '}
                       {DataclipTypeNames[type]}{' '}
                       <CheckIcon
                         strokeWidth={3}
-                        className={`${iconStyle} ${type !== selectedcliptype ? 'invisible' : ''
-                          }`}
+                        className={`${iconStyle} ${
+                          type !== selectedcliptype ? 'invisible' : ''
+                        }`}
                       />{' '}
                     </li>
                   );
                 })}
               </ul>
             </div>
+            <div className="relative inline-block">
+              <button
+                onClick={() => {
+                  onSubmit();
+                }}
+                // TODO: This should come from app.css (lib/lightning_web/components/new_inputs.ex button_base_classes)
+                className="rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 px-3 py-2"
+              >
+                Search
+              </button>
+            </div>
           </div>
           <div className="flex gap-1 mt-2">{pills}</div>
-
         </div>
         {dataclips.length ? (
           dataclips.map(clip => {
