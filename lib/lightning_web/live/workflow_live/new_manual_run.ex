@@ -35,6 +35,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   def get_dataclips_filters(search_text) do
+    IO.inspect(search_text, label: "text")
+
     search_text = String.replace(search_text, ": ", ":")
 
     search_text
