@@ -41,11 +41,11 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     |> String.split()
     |> Enum.reduce_while(Map.new(), fn text, filters ->
       case parse_param(text) do
-        {:ok, %Date{} = date} ->
-          {:cont, Map.put(filters, :date, date)}
-
         {:ok, %NaiveDateTime{} = datetime} ->
           {:cont, Map.put(filters, :datetime, datetime)}
+
+        {:ok, {:before, datetime}} ->
+          {:cont, Map.put(filters, :before, datetime)}
 
         {:ok, {:after, datetime}} ->
           {:cont, Map.put(filters, :after, datetime)}
@@ -69,21 +69,27 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   defp parse_param("after:" <> param) do
-    case Date.from_iso8601(param) do
-      {:ok, date} ->
-        datetime =
-          date |> Date.add(-1) |> NaiveDateTime.new!(~T[23:59:59.999999])
-
+    # TODO - Why doesn't the native datetime picker (datetime-local) send seconds?
+    case NaiveDateTime.from_iso8601(param <> ":00") do
+      {:ok, datetime} ->
         {:ok, {:after, datetime}}
 
       {:error, _reason} ->
-        with {:ok, datetime} <- NaiveDateTime.from_iso8601(param) do
-          {:ok, {:after, datetime}}
-        end
+        {:error, :invalid_datetime}
     end
   end
 
-  defp parse_param("date:" <> param), do: Date.from_iso8601(param)
+  defp parse_param("before:" <> param) do
+    # TODO - Why doesn't the native datetime picker (datetime-local) send seconds?
+    case NaiveDateTime.from_iso8601(param <> ":00") do
+      {:ok, datetime} ->
+        {:ok, {:before, datetime}}
+
+      {:error, _reason} ->
+        {:error, :invalid_datetime}
+    end
+  end
+
   defp parse_param("datetime:" <> param), do: NaiveDateTime.from_iso8601(param)
 
   defp parse_param("id:" <> param) do
@@ -99,8 +105,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   defp parse_param(text) do
-    with {:error, _reason} <- Date.from_iso8601(text),
-         {:error, _reason} <- NaiveDateTime.from_iso8601(text),
+    with {:error, _reason} <- NaiveDateTime.from_iso8601(text),
          :error <- Ecto.UUID.cast(text),
          {:error, _reason} <- parse_id_prefix(text),
          true <-
