@@ -339,9 +339,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp fetch_repos(installation_id) do
     case VersionControl.fetch_installation_repos(installation_id) do
       {:ok, body} ->
-        Enum.map(body["repositories"], fn g_repo ->
+        body["repositories"]
+        |> Enum.map(fn g_repo ->
           Map.take(g_repo, ["full_name", "default_branch"])
         end)
+        |> Enum.sort_by(fn g_repo -> g_repo["full_name"] end)
 
       _other ->
         []
@@ -351,7 +353,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp fetch_branches(installation_id, repo_name) do
     case VersionControl.fetch_repo_branches(installation_id, repo_name) do
       {:ok, body} ->
-        Enum.map(body, fn branch -> Map.take(branch, ["name"]) end)
+        body
+        |> Enum.map(fn branch -> Map.take(branch, ["name"]) end)
+        |> Enum.sort_by(fn branch -> branch["name"] end)
 
       _other ->
         []

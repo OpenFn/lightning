@@ -208,15 +208,43 @@ defmodule Lightning.VersionControl do
 
   def fetch_installation_repos(installation_id) do
     with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
-      case GithubClient.get_installation_repos(client) do
+      case GithubClient.get_installation_repos(client, page: 1, per_page: 100) do
         {:ok, %{body: body}} ->
-          {:ok, body}
+          {:ok, maybe_fetch_remaining_repos(client, body)}
 
         {:error, %{body: body}} ->
           {:error, body}
       end
     end
   end
+
+  defp maybe_fetch_remaining_repos(
+         client,
+         %{"total_count" => total_count} = initial_result
+       )
+       when total_count > 100 do
+    2..ceil(total_count / 100)
+    |> Task.async_stream(
+      fn page ->
+        GithubClient.get_installation_repos(client, page: page, per_page: 100)
+      end,
+      timeout: :infinity,
+      max_concurrency: 5
+    )
+    |> Enum.reduce(initial_result, fn
+      {:ok, %{body: body}}, acc ->
+        %{acc | "repositories" => body["repositories"] ++ acc["repositories"]}
+
+      {:error, %{body: body}}, acc ->
+        Logger.error(
+          "Failed to fetch a subsequent github repositories page: #{inspect(body)}"
+        )
+
+        acc
+    end)
+  end
+
+  defp maybe_fetch_remaining_repos(_client, initial_result), do: initial_result
 
   def fetch_repo_branches(installation_id, repo_name) do
     with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
