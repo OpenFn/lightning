@@ -110,10 +110,9 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   defp parse_id_prefix(text) do
-    if String.match?(text, ~r/^[0-9a-fA-F]+$/) do
-      {:ok, {:id_prefix, text}}
-    else
-      {:error, :invalid_uuid}
+    case Integer.parse(text, 16) do
+      {_num, ""} -> {:ok, {:id_prefix, text}}
+      _invalid -> {:error, :invalid_uuid}
     end
   end
 end
