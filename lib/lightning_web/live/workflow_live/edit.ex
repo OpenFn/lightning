@@ -2343,7 +2343,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             project: socket.assigns.project,
             workflow: socket.assigns.workflow,
             job: socket.assigns.selected_job,
-            user: socket.assigns.current_user
+            created_by: socket.assigns.current_user
           )
 
         selectable_dataclips =
@@ -2439,14 +2439,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         can_edit_workflow: can_edit_workflow,
         can_run_workflow: can_run_workflow
       } ->
-        form_valid =
-          if manual_run_form.source.errors == [
-               created_by: {"can't be blank", [validation: :required]}
-             ] and Map.get(manual_run_form.params, "dataclip_id") do
-            true
-          else
-            !Enum.any?(manual_run_form.source.errors)
-          end
+        form_valid = manual_run_form.source.valid?
 
         !form_valid or
           !changeset.valid? or
