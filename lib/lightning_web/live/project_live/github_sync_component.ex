@@ -343,7 +343,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         |> Enum.map(fn g_repo ->
           Map.take(g_repo, ["full_name", "default_branch"])
         end)
-        |> Enum.sort_by(fn g_repo -> g_repo["full_name"] end)
+        |> Enum.sort_by(fn g_repo -> String.downcase(g_repo["full_name"]) end)
 
       _other ->
         []
@@ -355,7 +355,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       {:ok, body} ->
         body
         |> Enum.map(fn branch -> Map.take(branch, ["name"]) end)
-        |> Enum.sort_by(fn branch -> branch["name"] end)
+        |> Enum.sort_by(fn branch -> String.downcase(branch["name"]) end)
 
       _other ->
         []
