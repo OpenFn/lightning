@@ -3268,7 +3268,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # we only have one option listed
       floki_fragment = Floki.parse_fragment!(html)
-      options = Floki.find(floki_fragment, "#select-installations-input option")
+      options = Floki.find(floki_fragment, "#select-installations-input li")
       assert Enum.count(options) == 1
       options |> hd() |> Floki.raw_html() =~ "Select an installation"
 
@@ -3347,16 +3347,16 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # lets select the installation
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{github_installation_id: expected_installation["id"]}
       )
-      |> render_change()
 
       selected_installation =
         view
         |> element("#select-installations-input")
         |> render_async()
-        |> find_selected_option("#select-installations-input option")
+        |> find_selected_option("#select-installations-input li")
 
       assert selected_installation =~ expected_installation["id"]
 
@@ -3366,73 +3366,71 @@ defmodule LightningWeb.ProjectLiveTest do
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{
           github_installation_id: expected_installation["id"],
           repo: expected_repo["full_name"]
         }
       )
-      |> render_change()
 
       selected_repo =
         view
         |> element("#select-repos-input")
         |> render_async()
-        |> find_selected_option("#select-repos-input option")
+        |> find_selected_option("#select-repos-input li")
 
       assert selected_repo =~ expected_repo["full_name"]
 
       # lets select the branch
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{
           github_installation_id: expected_installation["id"],
           repo: expected_repo["full_name"],
           branch: expected_branch["name"]
         }
       )
-      |> render_change()
 
       selected_branch =
         view
         |> element("#select-branches-input")
         |> render_async()
-        |> find_selected_option("#select-branches-input option")
+        |> find_selected_option("#select-branches-input li")
 
       assert selected_branch =~ expected_branch["name"]
 
       # deselecting the installation deselects the repo and branch
       view
-      |> form("#project-repo-connection-form",
-        connection: %{github_installation_id: ""}
-      )
-      |> render_change()
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{github_installation_id: ""})
 
       html = render_async(view)
 
-      refute find_selected_option(html, "#select-repos-input option")
+      refute find_selected_option(html, "#select-repos-input li")
 
-      refute find_selected_option(html, "#select-branches-input option")
+      refute find_selected_option(html, "#select-branches-input li")
 
       # let us list the branches again by following the ritual again
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{github_installation_id: expected_installation["id"]}
       )
-      |> render_change()
 
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{
           github_installation_id: expected_installation["id"],
           repo: expected_repo["full_name"]
         }
       )
-      |> render_change()
 
       # we should now have 2 options listed for the branches
       # The default and the expected
@@ -3441,7 +3439,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input option")
+        |> Floki.find("#select-branches-input li")
 
       assert Enum.count(options) == 2
 
@@ -3464,7 +3462,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input option")
+        |> Floki.find("#select-branches-input li")
 
       assert Enum.count(options) == 3
     end
@@ -3530,10 +3528,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # lets select the installation
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{github_installation_id: expected_installation["id"]}
       )
-      |> render_change()
 
       # we should now have the repos listed
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
@@ -3559,13 +3557,13 @@ defmodule LightningWeb.ProjectLiveTest do
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{
           github_installation_id: expected_installation["id"],
           repo: expected_repo["full_name"]
         }
       )
-      |> render_change()
 
       # we should now have the branches listed
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
@@ -3685,10 +3683,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # lets select the installation
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{github_installation_id: expected_installation["id"]}
       )
-      |> render_change()
 
       # we should now have the repos listed
       render_async(view)
@@ -3699,13 +3697,13 @@ defmodule LightningWeb.ProjectLiveTest do
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{
           github_installation_id: expected_installation["id"],
           repo: expected_repo["full_name"]
         }
       )
-      |> render_change()
 
       # we should now have the branches listed
       render_async(view)
@@ -3805,10 +3803,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # lets select the installation
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{github_installation_id: expected_installation["id"]}
       )
-      |> render_change()
 
       # we should now have the repos listed
       render_async(view)
@@ -3819,13 +3817,13 @@ defmodule LightningWeb.ProjectLiveTest do
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{
           github_installation_id: expected_installation["id"],
           repo: expected_repo["full_name"]
         }
       )
-      |> render_change()
 
       # we should now have the branches listed
       render_async(view)
@@ -3895,10 +3893,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # lets select the installation
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{github_installation_id: expected_installation["id"]}
       )
-      |> render_change()
 
       # we should now have the repos listed
       render_async(view)
@@ -3909,13 +3907,13 @@ defmodule LightningWeb.ProjectLiveTest do
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{
           github_installation_id: expected_installation["id"],
           repo: expected_repo["full_name"]
         }
       )
-      |> render_change()
 
       # we should now have the branches listed
       render_async(view)
@@ -3987,10 +3985,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # lets select the installation
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{github_installation_id: expected_installation["id"]}
       )
-      |> render_change()
 
       # we should now have the repos listed
       render_async(view)
@@ -4001,13 +3999,13 @@ defmodule LightningWeb.ProjectLiveTest do
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
 
       view
-      |> form("#project-repo-connection-form",
+      |> form("#project-repo-connection-form")
+      |> render_change(
         connection: %{
           github_installation_id: expected_installation["id"],
           repo: expected_repo["full_name"]
         }
       )
-      |> render_change()
 
       # we should now have the branches listed
       render_async(view)
@@ -5559,7 +5557,7 @@ defmodule LightningWeb.ProjectLiveTest do
     |> Floki.parse_fragment!()
     |> Floki.find(selector)
     |> Enum.map(&Floki.raw_html/1)
-    |> Enum.find(fn el -> el =~ "selected=\"selected\"" end)
+    |> Enum.find(fn el -> el =~ "selected=\"true\"" end)
   end
 
   defp find_user_index_in_list(view, user) do

@@ -9,10 +9,10 @@
       phx-submit="save"
       phx-target={@myself}
     >
-      <div class="flex">
+      <div class="">
         <.input
           id="select-installations-input"
-          type="select"
+          type="custom-select"
           field={f[:github_installation_id]}
           label="Github Installation"
           prompt="Select an installation"
@@ -56,7 +56,7 @@
       <div class="mt-4">
         <.input
           id="select-repos-input"
-          type="select"
+          type="custom-select"
           field={f[:repo]}
           label="Repository"
           prompt="Select a repository"
@@ -72,7 +72,7 @@
       <div class="mt-4">
         <.input
           id="select-branches-input"
-          type="select"
+          type="custom-select"
           field={f[:branch]}
           label="Branch"
           prompt="Select a branch"
