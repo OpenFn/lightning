@@ -2040,6 +2040,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              )
     end
 
+    @tag skip: "component moved to react"
     test "manual run form body remains unchanged even after save workflow form is submitted",
          %{conn: conn, project: project, test: test} do
       %{jobs: [job_1, job_2 | _rest]} =
@@ -4218,7 +4219,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "id: #{String.slice(dataclip.id, 0..1)} type: step_result",
+          "search_text" =>
+            "id: #{String.slice(dataclip.id, 0..1)} type: step_result",
           "limit" => 5
         }
       )
