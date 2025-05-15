@@ -1068,9 +1068,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       #          "[id='job-editor-#{job_1.id}'][data-disabled='true'][data-source='#{job_1.body}'][data-disabled-message=\"You can't edit while viewing a snapshot, switch to the latest version.\"]"
       #        )
 
-      assert view
-             |> has_element?("select[name='manual[dataclip_id]'][disabled]")
-
       assert view |> has_element?("div", job_1.name)
 
       view |> element("#version-switcher-toggle-#{job_1.id}") |> render_click()
@@ -2306,6 +2303,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              )
     end
 
+    @tag skip: "component moved to react"
     test "manual run form body remains unchanged even after save workflow form is submitted",
          %{conn: conn, project: project, test: test} do
       %{jobs: [job_1, job_2 | _rest]} =
