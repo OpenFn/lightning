@@ -232,10 +232,10 @@ defmodule Lightning.VersionControl do
       max_concurrency: 5
     )
     |> Enum.reduce(initial_result, fn
-      {:ok, %{body: body}}, acc ->
+      {:ok, {:ok, %{body: body}}}, acc ->
         %{acc | "repositories" => body["repositories"] ++ acc["repositories"]}
 
-      {:error, %{body: body}}, acc ->
+      {:ok, {:error, %{body: body}}}, acc ->
         Logger.error(
           "Failed to fetch a subsequent github repositories page: #{inspect(body)}"
         )
