@@ -364,12 +364,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     <div
       id="create-workflow-from-template"
       phx-hook="TemplateToWorkflow"
-      class="flex flex-col p-1 gap-4 h-full overflow-hidden"
+      class="flex flex-col p-1 gap-3 h-full overflow-hidden"
     >
-      <div>
-        <h3 class="text-base font-medium text-gray-700 mb-4">
-          Build your workflow from templates
-        </h3>
+      <div class="mt-3 mb-2">
         <.form
           id="search-templates-form"
           phx-change="search-templates"
@@ -406,7 +403,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         phx-change="select-template"
         phx-target={@myself}
         for={to_form(%{})}
-        class="flex-grow mt-2 overflow-hidden flex flex-col"
+        class="flex-grow overflow-hidden flex flex-col"
       >
         <fieldset class="overflow-auto flex-grow">
           <div class="grid lg:grid-cols-1 xl:grid-cols-2 gap-2">
