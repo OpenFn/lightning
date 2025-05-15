@@ -409,7 +409,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         class="flex-grow mt-2 overflow-hidden flex flex-col"
       >
         <fieldset class="overflow-auto flex-grow">
-          <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-2">
+          <div class="grid lg:grid-cols-1 xl:grid-cols-2 gap-2">
             <label
               :for={template <- @base_templates}
               id={"template-label-#{template.id}"}

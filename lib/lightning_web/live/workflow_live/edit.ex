@@ -3058,12 +3058,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div
       phx-mounted={fade_in()}
       phx-remove={fade_out()}
-      class="m-2 absolute rounded-md p-4 z-[9999] text-xs text-left text-primary-50 bg-primary-950 hidden opacity-0 max-w-lg"
+      class="m-4 absolute rounded-md p-4 z-[9999] text-xs text-left text-primary-50 bg-primary-950 hidden opacity-0 max-w-lg"
     >
-      <div class="font-semibold text-sm mb-1">
+      <div class="font-semibold text-xl mb-1">
         {@template["title"]}
       </div>
-      <div class="text-primary-200">
+      <div class="text-primary-200 text-lg">
         {@template["description"]}
       </div>
     </div>
@@ -3072,8 +3072,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp canvas_placeholder_card(assigns) do
     ~H"""
-    <div class="flex items-center justify-center w-full h-full">
-      Select a template, open a chat session, or create a new one to render your workflow diagram
+    <div class="flex items-center justify-center w-full h-full p-8 text-center">
+      Select a template or open a chat with the AI assistant to start building a workflow.
     </div>
     """
   end
