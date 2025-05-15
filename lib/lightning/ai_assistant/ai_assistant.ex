@@ -376,14 +376,14 @@ defmodule Lightning.AiAssistant do
          session
        )
        when status in 200..299 do
-    response_text = body["response"]
-    response_yaml = body["response_yaml"]
-    usage = body["usage"] || %{}
-
     save_message(
       session,
-      %{role: :assistant, content: response_text, yaml: response_yaml},
-      usage
+      %{
+        role: :assistant,
+        content: body["response"],
+        workflow_code: body["response_yaml"]
+      },
+      body["usage"] || %{}
     )
   end
 
