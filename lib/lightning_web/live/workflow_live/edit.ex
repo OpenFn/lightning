@@ -195,6 +195,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :if={@hovered_template && @live_action != :ai}
             template={@hovered_template}
           />
+          <.canvas_placeholder_card :if={@show_canvas_placeholder} />
           <div class="flex-none" id="job-editor-pane">
             <div
               :if={@selected_job && @selection_mode == "expand"}
@@ -368,7 +369,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </div>
           </div>
 
-          <.WorkflowEditor react-portal-target="workflow-mount" />
+          <.WorkflowEditor
+            :if={!@show_canvas_placeholder}
+            react-portal-target="workflow-mount"
+          />
           <.live_component
             :if={@selected_job}
             id="new-credential-modal"
@@ -1232,6 +1236,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     view_only_users_ids =
       assigns.project |> view_only_users() |> Enum.map(fn pu -> pu.user.id end)
 
+    show_canvas_placeholder =
+      if assigns.live_action in [:new, :ai], do: true, else: false
+
     {:ok,
      socket
      |> authorize()
@@ -1268,6 +1275,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        oauth_clients: OauthClients.list_clients(assigns.project),
        show_missing_dataclip_selector: false,
        show_new_workflow_panel: assigns.live_action in [:new, :ai],
+       show_canvas_placeholder: show_canvas_placeholder,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        publish_template: false,
@@ -2049,6 +2057,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:redirect, :navigate, to}, socket) do
     {:noreply, push_navigate(socket, to: to)}
+  end
+
+  def handle_info({:show_canvas_placeholder, value}, socket) do
+    {:noreply, assign(socket, show_canvas_placeholder: value)}
   end
 
   def handle_info(%{}, socket) do
@@ -3054,6 +3066,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <div class="text-primary-200">
         {@template["description"]}
       </div>
+    </div>
+    """
+  end
+
+  defp canvas_placeholder_card(assigns) do
+    ~H"""
+    <div class="flex items-center justify-center w-full h-full">
+      Select a template, open a chat session, or create a new one to render your workflow diagram
     </div>
     """
   end

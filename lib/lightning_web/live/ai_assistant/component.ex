@@ -91,6 +91,8 @@ defmodule LightningWeb.AiAssistant.Component do
     sort_direction = socket.assigns.sort_direction
     project = socket.assigns.project
 
+    show_canvas_placeholder(true)
+
     socket
     |> assign_async(:all_sessions, fn ->
       {:ok,
@@ -1059,6 +1061,8 @@ defmodule LightningWeb.AiAssistant.Component do
         socket
 
       last_message ->
+        show_canvas_placeholder(false)
+
         push_event(socket, "template_selected", %{
           template: last_message.workflow_code
         })
@@ -1078,4 +1082,8 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp maybe_push_workflow_code(socket, _message, _mode), do: socket
+
+  def show_canvas_placeholder(should_show? \\ true) do
+    send(self(), {:show_canvas_placeholder, should_show?})
+  end
 end

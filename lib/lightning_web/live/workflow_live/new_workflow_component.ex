@@ -31,6 +31,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   @impl true
   def handle_event("choose-another-method", %{"method" => method}, socket) do
+    show_canvas_placeholder()
+
     if socket.assigns.selected_method == "ai" do
       {:noreply,
        push_patch(socket, to: "/projects/#{socket.assigns.project.id}/w/new")}
@@ -58,6 +60,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         template.id == template_id
       end)
 
+    show_canvas_placeholder(false)
+
     {:noreply,
      socket
      |> assign(selected_template: template)
@@ -69,7 +73,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     %{project: project, selected_template: template} = socket.assigns
 
     workflow_name = default_if_empty(params["name"], "Untitled Workflow")
-    template_name = default_if_empty(template.name, "Untitled Template")
+
+    template_name =
+      if template,
+        do: default_if_empty(template.name, "Untitled Template"),
+        else: "Untitled Template"
 
     params =
       project
@@ -181,11 +189,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         base_templates = base_templates()
         users_templates = WorkflowTemplates.list_templates()
         all_templates = base_templates ++ users_templates
-        default_template = hd(base_templates)
 
         socket
         |> assign(
-          selected_template: default_template,
+          selected_template: nil,
           base_templates: base_templates,
           users_templates: users_templates,
           filtered_templates: users_templates,
@@ -208,10 +215,18 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     :ok
   end
 
+  def show_canvas_placeholder(should_show? \\ true) do
+    send(self(), {:show_canvas_placeholder, should_show?})
+  end
+
   defp push_selected_template_code(socket) do
-    push_event(socket, "template_selected", %{
-      template: socket.assigns.selected_template.code
-    })
+    if socket.assigns.selected_template do
+      push_event(socket, "template_selected", %{
+        template: socket.assigns.selected_template.code
+      })
+    else
+      socket
+    end
   end
 
   defp update_workflow_canvas(socket, params) do
@@ -383,7 +398,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         phx-mounted={fade_in()}
         phx-remove={fade_out()}
       >
-        We don’t have any templates matching this description. Want to try a base template or drafting this workflow with AI?
+        We don't have any templates matching this description. Want to try a base template or drafting this workflow with AI?
       </div>
 
       <.form
@@ -394,7 +409,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         class="flex-grow mt-2 overflow-hidden flex flex-col"
       >
         <fieldset class="overflow-auto flex-grow">
-          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-2">
             <label
               :for={template <- @base_templates}
               id={"template-label-#{template.id}"}
@@ -405,11 +420,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
                   description: template.description
                 })
               }
-              data-selected={"#{template.id == @selected_template.id}"}
+              data-selected={"#{@selected_template && template.id == @selected_template.id}"}
               for={"template-input-#{template.id}"}
               class={[
                 "relative flex flex-col cursor-pointer rounded-md border bg-white p-4 hover:bg-gray-50 transition-all h-24",
-                if(template.id == @selected_template.id,
+                if(@selected_template && template.id == @selected_template.id,
                   do: "border-indigo-600 border-1",
                   else: "border-gray-300"
                 )
@@ -451,11 +466,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
                   description: template.description
                 })
               }
-              data-selected={"#{template.id == @selected_template.id}"}
+              data-selected={"#{@selected_template && template.id == @selected_template.id}"}
               for={"template-input-#{template.id}"}
               class={[
                 "relative flex flex-col cursor-pointer rounded-md border bg-white p-4 hover:bg-gray-50 transition-all h-24",
-                if(template.id == @selected_template.id,
+                if(@selected_template && template.id == @selected_template.id,
                   do: "border-indigo-600 border-1",
                   else: "border-gray-300"
                 )
