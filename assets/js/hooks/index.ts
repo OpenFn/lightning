@@ -52,18 +52,11 @@ export { ReactComponent } from '#/react/hooks';
 
 export const TemplateTooltip = {
   mounted() {
-    this.el.addEventListener("mouseenter", () => {
-      console.log("mouseenter", this.el.dataset.template);
+    this.el.addEventListener("click", () => {
+      console.log("click", this.el.dataset.template);
       this.pushEvent("show_tooltip", this.el.dataset.template);
     });
-    this.el.addEventListener("mouseleave", () => {
-      this.pushEvent("hide_tooltip", {});
-    });
-  },
-  // destroyed() {
-  //   this.el.removeEventListener("mouseenter");
-  //   this.el.removeEventListener("mouseleave");
-  // }
+  }
 } as PhoenixHook;
 
 export const TabIndent = {
