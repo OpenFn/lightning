@@ -378,7 +378,7 @@ follows:
 
 ### Problems with Postgres
 
-If you're having connecting issues with Postgres, check the database section of
+If you're having connection issues with Postgres, check the database section of
 your `.env` to ensure the DB url is correctly set for your environment — note
 that composing a DB url out of other, earlier declared variables, does not work
 while using `xargs`.
@@ -416,7 +416,7 @@ would like to start from scratch you can clean up everything and start over like
 this:
 
 ```sh
-# To remove any ignored files and reset your .env to it's example
+# To remove any ignored files and reset your .env to its example
 git clean -fdx && cp .env.example .env
 # You can skip the line below if you want to keep your database
 docker compose down --rmi all --volumes
