@@ -35,7 +35,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
     if socket.assigns.selected_method == "ai" do
       {:noreply,
-       push_patch(socket, to: "/projects/#{socket.assigns.project.id}/w/new")}
+       push_navigate(socket, to: "/projects/#{socket.assigns.project.id}/w/new")}
     else
       {:noreply,
        socket
@@ -99,7 +99,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   def handle_event("open-workflow-chat", _params, socket) do
     {:noreply,
-     push_patch(socket, to: "/projects/#{socket.assigns.project.id}/w/new/ai")}
+     push_navigate(socket, to: "/projects/#{socket.assigns.project.id}/w/new/ai")}
   end
 
   defp default_if_empty(name, default) do
@@ -340,10 +340,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       id="template-label-ai-dynamic-template"
       phx-click="open-workflow-chat"
       phx-target={@myself}
-      phx-hook="TemplateTooltip"
-      data-template={
-        Jason.encode!(%{title: "Build with AI ✨", description: @search_term})
-      }
       class="relative flex flex-col cursor-pointer rounded-md border border-indigo-300/40 p-4 transition-all duration-300 no-underline w-full text-left bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 hover:border-indigo-300/80 group h-24"
       style="appearance: none;"
     >
