@@ -291,9 +291,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert %{id: workflow_id} =
                Lightning.Repo.one(
-                 from w in Workflow,
+                 from(w in Workflow,
                    where:
                      w.project_id == ^project.id and w.name == ^workflow_name
+                 )
                )
 
       assert_patched(
@@ -378,10 +379,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       expected_workflow_name = "Copy of #{cron_template_name}"
 
       assert Lightning.Repo.exists?(
-               from w in Workflow,
+               from(w in Workflow,
                  where:
                    w.project_id == ^project.id and
                      w.name == ^expected_workflow_name
+               )
              )
     end
 
@@ -433,10 +435,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       expected_workflow_name = "Copy of Untitled Workflow"
 
       assert Lightning.Repo.exists?(
-               from w in Workflow,
+               from(w in Workflow,
                  where:
                    w.project_id == ^project.id and
                      w.name == ^expected_workflow_name
+               )
              )
     end
 
@@ -556,12 +559,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert %{id: workflow_id} =
                Lightning.Repo.one(
-                 from w in Workflow,
+                 from(w in Workflow,
                    where:
                      w.project_id == ^project.id and w.name == ^workflow_name
+                 )
                )
 
-      audit_query = from a in Audit, where: a.event == "snapshot_created"
+      audit_query = from(a in Audit, where: a.event == "snapshot_created")
 
       audit_event = Lightning.Repo.one(audit_query)
 
@@ -973,12 +977,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       force_event(view, :rerun, nil, nil)
 
       snapshots_query =
-        from s in Snapshot, where: s.id not in ^existing_snapshot_ids
+        from(s in Snapshot, where: s.id not in ^existing_snapshot_ids)
 
       [%{id: latest_snapshot_id}] = Lightning.Repo.all(snapshots_query)
 
       audit_query =
-        from a in Audit, where: a.id not in ^existing_audit_ids
+        from(a in Audit, where: a.id not in ^existing_audit_ids)
 
       [audit] = Lightning.Repo.all(audit_query)
 
@@ -2584,9 +2588,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert workflow =
                Lightning.Repo.one(
-                 from w in Workflow,
+                 from(w in Workflow,
                    where:
                      w.project_id == ^project.id and w.name == ^workflow_name
+                 )
                )
 
       assert_patched(
@@ -4368,7 +4373,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "limit" => limit
       })
 
-      assert_reply view, %{dataclips: ^dataclips}
+      assert_reply(view, %{dataclips: ^dataclips})
     end
 
     test "searches for dataclips by uuid",
@@ -4401,24 +4406,24 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => Ecto.UUID.generate(),
+          "search_text" => "query=#{Ecto.UUID.generate()}",
           "limit" => 5
         }
       )
 
-      assert_reply view, %{dataclips: []}
+      assert_reply(view, %{dataclips: []})
 
       render_hook(
         view,
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => dataclip.id,
+          "search_text" => "query=#{dataclip.id}",
           "limit" => 5
         }
       )
 
-      assert_reply view, %{dataclips: [^dataclip]}
+      assert_reply(view, %{dataclips: [^dataclip]})
     end
 
     test "searches for dataclips by uuid prefix",
@@ -4451,36 +4456,36 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => Ecto.UUID.generate(),
+          "search_text" => "query=#{Ecto.UUID.generate()}",
           "limit" => 5
         }
       )
 
-      assert_reply view, %{dataclips: []}
+      assert_reply(view, %{dataclips: []})
 
       render_hook(
         view,
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => String.slice(dataclip.id, 0..3),
+          "search_text" => "query=#{String.slice(dataclip.id, 0..3)}",
           "limit" => 5
         }
       )
 
-      assert_reply view, %{dataclips: [^dataclip]}
+      assert_reply(view, %{dataclips: [^dataclip]})
 
       render_hook(
         view,
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "id: #{String.slice(dataclip.id, 0..3)}",
+          "search_text" => "query=#{String.slice(dataclip.id, 0..3)}",
           "limit" => 5
         }
       )
 
-      assert_reply view, %{dataclips: [^dataclip]}
+      assert_reply(view, %{dataclips: [^dataclip]})
 
       render_hook(
         view,
@@ -4488,12 +4493,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         %{
           "job_id" => job.id,
           "search_text" =>
-            "id: #{String.slice(dataclip.id, 0..1)} type: step_result",
+            "query=#{String.slice(dataclip.id, 0..1)}&type=step_result",
           "limit" => 5
         }
       )
 
-      assert_reply view, %{dataclips: [^dataclip]}
+      assert_reply(view, %{dataclips: [^dataclip]})
     end
 
     test "searches for dataclips by type",
@@ -4539,12 +4544,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "http_request",
+          "search_text" => "type=http_request",
           "limit" => limit
         }
       )
 
-      assert_reply view, %{dataclips: ^dataclips}
+      assert_reply(view, %{dataclips: ^dataclips})
     end
 
     test "searches for dataclips results empty on unknown type",
@@ -4578,117 +4583,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         }
       )
 
-      assert_reply view, %{error: :invalid_search}
-    end
-
-    test "searches for dataclips by date",
-         %{conn: conn, project: project} do
-      %{jobs: [job | _rest]} =
-        workflow = insert(:complex_workflow, project: project)
-
-      Lightning.Workflows.Snapshot.create(workflow)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
-          on_error: :raise
-        )
-
-      insert(:dataclip,
-        body: %{"body-field" => "body-value"},
-        request: %{"headers" => "list"},
-        type: :http_request,
-        inserted_at: DateTime.add(DateTime.utc_now(), -1, :day)
-      )
-      |> tap(&insert(:step, input_dataclip: &1, job: job))
-
-      limit = 3
-
-      dataclips =
-        Enum.map(1..5, fn i ->
-          type = if rem(i, 2) == 0, do: :http_request, else: :step_result
-          request = if type == :http_request, do: %{"headers" => "list"}
-
-          insert(:dataclip,
-            body: %{"body-field" => "body-value#{i}"},
-            request: request,
-            type: type
-          )
-          |> tap(&insert(:step, input_dataclip: &1, job: job))
-          |> then(fn %{body: body, request: request} = dataclip ->
-            Repo.reload!(dataclip) |> restore_listed(body, request)
-          end)
-        end)
-        |> Enum.sort_by(& &1.inserted_at, :desc)
-        |> Enum.take(limit)
-
-      render_hook(
-        view,
-        "search-selectable-dataclips",
-        %{
-          "job_id" => job.id,
-          "search_text" => Date.to_iso8601(Date.utc_today()),
-          "limit" => limit
-        }
-      )
-
-      assert_reply view, %{dataclips: ^dataclips}
-    end
-
-    test "searches for dataclips by datetime",
-         %{conn: conn, project: project} do
-      %{jobs: [job | _rest]} =
-        workflow = insert(:complex_workflow, project: project)
-
-      Lightning.Workflows.Snapshot.create(workflow)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
-          on_error: :raise
-        )
-
-      insert(:dataclip,
-        body: %{"body-field" => "body-value"},
-        request: %{"headers" => "list"},
-        type: :http_request,
-        inserted_at: DateTime.add(DateTime.utc_now(), -1, :day)
-      )
-      |> tap(&insert(:step, input_dataclip: &1, job: job))
-
-      limit = 3
-
-      dataclip =
-        Enum.map(1..5, fn i ->
-          type = if rem(i, 2) == 0, do: :http_request, else: :step_result
-          request = if type == :http_request, do: %{"headers" => "list"}
-
-          insert(:dataclip,
-            body: %{"body-field" => "body-value#{i}"},
-            request: request,
-            type: type
-          )
-          |> tap(&insert(:step, input_dataclip: &1, job: job))
-          |> then(fn %{body: body, request: request} = dataclip ->
-            Repo.reload!(dataclip) |> restore_listed(body, request)
-          end)
-        end)
-        |> Enum.sort_by(& &1.inserted_at, :desc)
-        |> Enum.at(2)
-
-      render_hook(
-        view,
-        "search-selectable-dataclips",
-        %{
-          "job_id" => job.id,
-          "search_text" => DateTime.to_iso8601(dataclip.inserted_at),
-          "limit" => limit
-        }
-      )
-
-      assert_reply view, %{dataclips: [^dataclip]}
+      assert_reply(view, %{errors: %{query: ["at least one filter is required"]}})
     end
 
     test "searches for dataclips created after a datetime",
@@ -4716,7 +4611,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
             body: %{"body-field" => "body-value#{i}"},
             request: request,
             type: type,
-            inserted_at: DateTime.add(datetime_param, i, :millisecond)
+            inserted_at: DateTime.add(datetime_param, i, :minute)
           )
           |> tap(&insert(:step, input_dataclip: &1, job: job))
           |> then(fn %{body: body, request: request} = dataclip ->
@@ -4726,17 +4621,25 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> Enum.sort_by(& &1.inserted_at, :desc)
         |> Enum.take(5)
 
+      search_text =
+        %{
+          "after" =>
+            DateTime.to_iso8601(datetime_param |> DateTime.add(1, :minute))
+            |> String.slice(0..15)
+        }
+        |> URI.encode_query()
+
       render_hook(
         view,
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "after: #{DateTime.to_iso8601(datetime_param)}",
+          "search_text" => search_text,
           "limit" => 10
         }
       )
 
-      assert_reply view, %{dataclips: ^dataclips}
+      assert_reply(view, %{dataclips: ^dataclips})
     end
 
     test "searches for dataclips created after a date",
@@ -4753,7 +4656,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           on_error: :raise
         )
 
-      date_param = Date.utc_today()
+      starting_datetime = ~N[2025-05-15 00:00:00]
 
       dataclips =
         Enum.map(-1..5, fn i ->
@@ -4764,12 +4667,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
             body: %{"body-field" => "body-value#{i}"},
             request: request,
             type: type,
-            inserted_at:
-              DateTime.add(
-                DateTime.new!(date_param, ~T[00:00:00]),
-                i,
-                :millisecond
-              )
+            inserted_at: NaiveDateTime.add(starting_datetime, i * 5, :minute)
           )
           |> tap(&insert(:step, input_dataclip: &1, job: job))
           |> then(fn %{body: body, request: request} = dataclip ->
@@ -4779,17 +4677,26 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> Enum.drop(1)
         |> Enum.sort_by(& &1.inserted_at, :desc)
 
+      search_text =
+        %{
+          "after" =>
+            starting_datetime
+            |> NaiveDateTime.to_iso8601()
+            |> String.slice(0..15)
+        }
+        |> URI.encode_query()
+
       render_hook(
         view,
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "after: #{Date.to_iso8601(date_param)}",
+          "search_text" => search_text,
           "limit" => 10
         }
       )
 
-      assert_reply view, %{dataclips: ^dataclips}
+      assert_reply(view, %{dataclips: ^dataclips})
     end
 
     test "searches for dataclips from one type created after a date",
@@ -4806,7 +4713,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           on_error: :raise
         )
 
-      date_param = Date.utc_today()
+      starting_datetime = ~N[2025-05-15 00:00:00]
 
       dataclips =
         Enum.map(-1..5, fn i ->
@@ -4817,12 +4724,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
             body: %{"body-field" => "body-value#{i}"},
             request: request,
             type: type,
-            inserted_at:
-              DateTime.add(
-                DateTime.new!(date_param, ~T[00:00:00]),
-                i,
-                :millisecond
-              )
+            inserted_at: NaiveDateTime.add(starting_datetime, i * 5, :minute)
           )
           |> tap(&insert(:step, input_dataclip: &1, job: job))
           |> then(fn %{body: body, request: request} = dataclip ->
@@ -4833,18 +4735,26 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> Enum.sort_by(& &1.inserted_at, :desc)
         |> Enum.filter(&(&1.type == :step_result))
 
+      search_text =
+        %{
+          "after" =>
+            NaiveDateTime.to_iso8601(starting_datetime)
+            |> String.slice(0..15),
+          "type" => "step_result"
+        }
+        |> URI.encode_query()
+
       render_hook(
         view,
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" =>
-            "after: #{Date.to_iso8601(date_param)} type: step_result",
+          "search_text" => search_text,
           "limit" => 10
         }
       )
 
-      assert_reply view, %{dataclips: ^dataclips}
+      assert_reply(view, %{dataclips: ^dataclips})
     end
 
     test "returns an error on unknown search tagged params",
@@ -4872,12 +4782,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "afterrr: #{Date.to_iso8601(date_param)}",
+          "search_text" => "afterrr=#{Date.to_iso8601(date_param)}",
           "limit" => 10
         }
       )
 
-      assert_reply view, %{error: :invalid_search}
+      assert_reply(view, %{errors: %{query: ["at least one filter is required"]}})
     end
   end
 

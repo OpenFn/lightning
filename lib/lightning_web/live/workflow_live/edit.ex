@@ -1517,15 +1517,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
       ) do
     offset = Map.get(params, "offset")
 
-    payload =
-      NewManualRun.search_selectable_dataclips(
-        job_id,
-        search_text,
-        limit,
-        offset
-      )
+    case NewManualRun.search_selectable_dataclips(
+           job_id,
+           search_text,
+           limit,
+           offset
+         ) do
+      {:ok, dataclips} ->
+        {:reply, %{dataclips: dataclips}, socket}
 
-    {:reply, payload, socket}
+      {:error, changeset} ->
+        {:reply, %{errors: LightningWeb.ChangesetJSON.errors(changeset)}, socket}
+    end
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do

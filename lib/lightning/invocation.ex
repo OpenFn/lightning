@@ -86,14 +86,11 @@ defmodule Lightning.Invocation do
         {:type, type}, dynamic ->
           dynamic([d], ^dynamic and d.type == ^type)
 
-        {:datetime, ts}, dynamic ->
-          dynamic([d], ^dynamic and d.inserted_at == ^ts)
-
         {:after, ts}, dynamic ->
-          dynamic([d], ^dynamic and d.inserted_at > ^ts)
+          dynamic([d], ^dynamic and d.inserted_at >= ^ts)
 
         {:before, ts}, dynamic ->
-          dynamic([d], ^dynamic and d.inserted_at < ^ts)
+          dynamic([d], ^dynamic and d.inserted_at <= ^ts)
       end)
 
     Query.last_n_for_job(job_id, limit)
@@ -758,8 +755,6 @@ defmodule Lightning.Invocation do
     |> Repo.transaction()
   end
 
-  @uuid_binary_size 16
-
   defp id_prefix_interval(id_prefix) do
     prefix_bin =
       id_prefix
@@ -775,7 +770,12 @@ defmodule Lightning.Invocation do
       end)
 
     prefix_size = byte_size(prefix_bin)
-    missing_byte_size = @uuid_binary_size - prefix_size
+
+    # UUIDs are 128 bits (16 bytes) in binary form.
+    # We calculate how many bytes are missing from the prefix.
+    # missing_byte_size is the number of bytes to pad to reach a full UUID binary.
+    # We pad with 0s for the lower bound and 255s for the upper bound.
+    missing_byte_size = 16 - prefix_size
 
     {
       Ecto.UUID.load!(prefix_bin <> :binary.copy(<<0>>, missing_byte_size)),

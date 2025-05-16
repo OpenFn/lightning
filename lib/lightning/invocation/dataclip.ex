@@ -48,6 +48,7 @@ defmodule Lightning.Invocation.Dataclip do
              :inserted_at,
              :updated_at
            ]}
+
   schema "dataclips" do
     field :body, :map, load_in_query: false
     field :request, :map, load_in_query: false
