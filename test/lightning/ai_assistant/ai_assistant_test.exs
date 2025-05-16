@@ -2,6 +2,7 @@ defmodule Lightning.AiAssistantTest do
   use Lightning.DataCase, async: true
   import Mox
 
+  alias Lightning.Accounts
   alias Lightning.AiAssistant
 
   setup :verify_on_exit!
@@ -377,6 +378,264 @@ defmodule Lightning.AiAssistantTest do
       [updated_message2, updated_message1] = updated_session.messages
       assert updated_message1.status == :success
       assert updated_message2.status == :error
+    end
+  end
+
+  describe "put_expression_and_adaptor/3" do
+    test "puts expression and adaptor in session", %{user: user} do
+      session = insert(:chat_session, user: user)
+      expression = "fn() => { return true; }"
+      adaptor = "@openfn/language-common"
+
+      updated_session =
+        AiAssistant.put_expression_and_adaptor(session, expression, adaptor)
+
+      assert updated_session.expression == expression
+
+      assert updated_session.adaptor ==
+               Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
+    end
+  end
+
+  describe "get_session!/1" do
+    test "returns session with messages", %{
+      user: user,
+      workflow: %{jobs: [job | _]}
+    } do
+      session = insert(:chat_session, user: user, job: job)
+      message = insert(:chat_message, chat_session: session, user: user)
+
+      retrieved_session = AiAssistant.get_session!(session.id)
+
+      assert retrieved_session.id == session.id
+      assert length(retrieved_session.messages) == 1
+      assert hd(retrieved_session.messages).id == message.id
+    end
+
+    test "raises when session not found" do
+      assert_raise Ecto.NoResultsError, fn ->
+        AiAssistant.get_session!(Ecto.UUID.generate())
+      end
+    end
+  end
+
+  describe "enabled?/0" do
+    test "returns true when endpoint and api_key are configured" do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+        end
+      end)
+
+      assert AiAssistant.enabled?() == true
+    end
+
+    test "returns false when endpoint is missing" do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> nil
+          :ai_assistant_api_key -> "api_key"
+        end
+      end)
+
+      assert AiAssistant.enabled?() == false
+    end
+
+    test "returns false when api_key is missing" do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> nil
+        end
+      end)
+
+      assert AiAssistant.enabled?() == false
+    end
+  end
+
+  describe "user_has_read_disclaimer?/1" do
+    test "returns true when user has read disclaimer within 24 hours", %{
+      user: user
+    } do
+      timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
+      {:ok, user} =
+        Accounts.update_user_preference(
+          user,
+          "ai_assistant.disclaimer_read_at",
+          to_string(timestamp)
+        )
+
+      assert AiAssistant.user_has_read_disclaimer?(user) == true
+    end
+
+    test "returns false when user has not read disclaimer", %{user: user} do
+      assert AiAssistant.user_has_read_disclaimer?(user) == false
+    end
+
+    test "returns false when disclaimer was read more than 24 hours ago", %{
+      user: user
+    } do
+      old_timestamp =
+        DateTime.utc_now() |> DateTime.add(-25, :hour) |> DateTime.to_unix()
+
+      {:ok, user} =
+        Accounts.update_user_preference(
+          user,
+          "ai_assistant.disclaimer_read_at",
+          to_string(old_timestamp)
+        )
+
+      assert AiAssistant.user_has_read_disclaimer?(user) == false
+    end
+  end
+
+  describe "mark_disclaimer_read/1" do
+    test "updates user preference with current timestamp", %{user: user} do
+      assert {:ok, updated_user} = AiAssistant.mark_disclaimer_read(user)
+
+      preference =
+        Accounts.get_preference(updated_user, "ai_assistant.disclaimer_read_at")
+
+      timestamp = String.to_integer(preference)
+      now = DateTime.utc_now() |> DateTime.to_unix()
+
+      # Allow for a small time difference
+      assert abs(timestamp - now) < 2
+    end
+  end
+
+  describe "list_workflow_sessions_for_project/2" do
+    test "lists sessions for project in descending order", %{
+      user: user,
+      project: project
+    } do
+      session1 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          updated_at: DateTime.utc_now() |> DateTime.add(-5)
+        )
+
+      session2 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      sessions = AiAssistant.list_workflow_sessions_for_project(project)
+      assert length(sessions) == 2
+      assert hd(sessions).id == session2.id
+      assert List.last(sessions).id == session1.id
+    end
+
+    test "returns empty list when no sessions exist", %{project: project} do
+      assert AiAssistant.list_workflow_sessions_for_project(project) == []
+    end
+  end
+
+  describe "create_workflow_session/3" do
+    test "creates a new workflow session", %{user: user, project: project} do
+      content = "Create a workflow for data sync"
+
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(project, user, content)
+
+      assert session.project_id == project.id
+      assert session.user_id == user.id
+      assert session.session_type == "workflow_template"
+      assert length(session.messages) == 1
+      assert hd(session.messages).content == content
+    end
+  end
+
+  describe "associate_workflow/2" do
+    test "associates workflow with session", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      assert {:ok, updated_session} =
+               AiAssistant.associate_workflow(session, workflow)
+
+      assert updated_session.workflow_id == workflow.id
+    end
+  end
+
+  describe "query_workflow/3" do
+    test "queries workflow chat service", %{user: user, project: project} do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+        end
+      end)
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+        assert url =~ "/services/workflow_chat"
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "response" => "Workflow created",
+             "response_yaml" => "workflow: example",
+             "usage" => %{}
+           }
+         }}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_workflow(session, "Create workflow", nil)
+
+      assert length(updated_session.messages) == 1
+    end
+
+    test "handles errors from workflow chat service", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+        end
+      end)
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 400,
+           body: %{"message" => "Invalid request"}
+         }}
+      end)
+
+      assert {:error, "Invalid request"} =
+               AiAssistant.query_workflow(session, "Create workflow", nil)
     end
   end
 end
