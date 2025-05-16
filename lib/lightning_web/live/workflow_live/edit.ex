@@ -191,7 +191,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           current_user={@current_user}
         />
         <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
-          <.template_tooltip_card
+          <.template_label
             :if={@hovered_template && @live_action != :ai}
             template={@hovered_template}
           />
@@ -3053,27 +3053,27 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp template_tooltip_card(assigns) do
+  defp template_label(assigns) do
     ~H"""
     <div
       phx-mounted={fade_in()}
       phx-remove={fade_out()}
-      class="m-4 absolute rounded-md p-4 z-[9999] text-xs text-left text-primary-50 bg-primary-950 hidden opacity-0 max-w-lg"
+      class="m-4 absolute p-4 z-[9999] hidden opacity-0"
     >
-      <div class="font-semibold text-xl mb-1">
+      <p class="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
         {@template["title"]}
-      </div>
-      <div class="text-primary-200 text-lg">
+      </p>
+      <p class="mt-6 text-lg/8 text-gray-500">
         {@template["description"]}
-      </div>
+      </p>
     </div>
     """
   end
 
   defp canvas_placeholder_card(assigns) do
     ~H"""
-    <div class="flex items-center justify-center w-full h-full p-8 text-center">
-      Select a template or open a chat with the AI assistant to start building a workflow.
+    <div class="flex items-center justify-center w-full h-full p-8 text-center text-gray-500">
+      Select a template, import a workflow, or open a chat with the AI assistant to start building a workflow.
     </div>
     """
   end
