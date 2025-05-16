@@ -54,7 +54,7 @@ export const TemplateTooltip = {
   mounted() {
     this.el.addEventListener("click", () => {
       console.log("click", this.el.dataset.template);
-      this.pushEvent("show_tooltip", this.el.dataset.template);
+      this.pushEvent("show_label", this.el.dataset.template);
     });
   }
 } as PhoenixHook;

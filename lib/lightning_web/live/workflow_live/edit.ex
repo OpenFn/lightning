@@ -192,8 +192,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         />
         <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
           <.template_label
-            :if={@hovered_template && @live_action != :ai}
-            template={@hovered_template}
+            :if={@selected_template && @live_action != :ai}
+            template={@selected_template}
           />
           <.canvas_placeholder_card :if={@show_canvas_placeholder} />
           <div class="flex-none" id="job-editor-pane">
@@ -1248,7 +1248,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        expanded_job: nil,
        ai_assistant_enabled: AiAssistant.enabled?(),
        chat_session_id: nil,
-       hovered_template: nil,
+       selected_template: nil,
        follow_run: nil,
        step: nil,
        manual_run_form: nil,
@@ -1951,12 +1951,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, assign(socket, publish_template: false)}
   end
 
-  def handle_event("show_tooltip", template, socket) do
-    {:noreply, assign(socket, hovered_template: Jason.decode!(template))}
+  def handle_event("show_label", template, socket) do
+    {:noreply, assign(socket, selected_template: Jason.decode!(template))}
   end
 
-  def handle_event("hide_tooltip", _params, socket) do
-    {:noreply, assign(socket, hovered_template: nil)}
+  def handle_event("hide_label", _params, socket) do
+    {:noreply, assign(socket, selected_template: nil)}
   end
 
   def handle_event(_unhandled_event, _params, socket) do
@@ -3058,12 +3058,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div
       phx-mounted={fade_in()}
       phx-remove={fade_out()}
-      class="m-4 absolute p-4 z-[9999] hidden opacity-0"
+      class="my-2 mx-4 absolute p-4 hidden opacity-0 z-[9999]"
     >
-      <p class="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
+      <p class="text-1xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
         {@template["title"]}
       </p>
-      <p class="mt-6 text-lg/8 text-gray-500">
+      <p class="mt-4 text-lg/8 text-gray-500">
         {@template["description"]}
       </p>
     </div>
