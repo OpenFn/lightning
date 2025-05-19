@@ -44,6 +44,17 @@ export default {
     },
   },
   plugins: [
+    plugin(({ addUtilities }) => {
+      addUtilities({
+        '.no-scrollbar': {
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+        },
+      });
+    }),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:
     //
@@ -116,6 +127,6 @@ export default {
         },
         { values }
       );
-    })
+    }),
   ],
 } satisfies Config;

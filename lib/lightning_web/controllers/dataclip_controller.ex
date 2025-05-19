@@ -43,10 +43,9 @@ defmodule LightningWeb.DataclipController do
     dataclip = Invocation.get_dataclip_details!(dataclip_id)
 
     body =
-      DataclipScrubber.scrub_dataclip_body!(%{
-        dataclip
-        | body: Jason.encode!(dataclip.body, pretty: true)
-      })
+      dataclip
+      |> Map.put(:body, Jason.encode!(dataclip.body, pretty: true))
+      |> DataclipScrubber.scrub_dataclip_body!()
 
     conn
     |> put_resp_content_type("application/json")

@@ -25,7 +25,7 @@ export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
   }, [dataclipId]);
 
   return (
-    <div className='h-full relative'>
+    <div className='h-full relative overflow-hidden'>
       <MonacoEditor
         defaultLanguage="json"
         theme="default"
