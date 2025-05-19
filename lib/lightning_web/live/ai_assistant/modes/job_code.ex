@@ -113,4 +113,64 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   def query(session, content) do
     AiAssistant.query(session, content)
   end
+
+  @impl true
+  def chat_input_disabled?(%{
+        selected_job: selected_job,
+        can_edit_workflow: can_edit_workflow,
+        ai_limit_result: ai_limit_result,
+        endpoint_available?: endpoint_available?,
+        pending_message: pending_message
+      }) do
+    !can_edit_workflow or
+      has_reached_limit?(ai_limit_result) or
+      !endpoint_available? or
+      !is_nil(pending_message.loading) or job_is_unsaved?(selected_job)
+  end
+
+  def disabled_tooltip_message(%{
+        can_edit_workflow: can_edit_workflow,
+        ai_limit_result: ai_limit_result,
+        selected_job: selected_job
+      }) do
+    case {can_edit_workflow, ai_limit_result, selected_job} do
+      {false, _, _} ->
+        "You are not authorized to use the Ai Assistant"
+
+      {_, {:error, _reason, _msg} = error, _} ->
+        error_message(error)
+
+      {_, _, %{__meta__: %{state: :built}}} ->
+        "Save the job first in order to use the AI Assistant"
+
+      _ ->
+        nil
+    end
+  end
+
+  def error_message({:error, message}) when is_binary(message) do
+    message
+  end
+
+  def error_message({:error, %Ecto.Changeset{}}) do
+    "Could not save message. Please try again."
+  end
+
+  def error_message({:error, _reason, %{text: text_message}}) do
+    text_message
+  end
+
+  def error_message(_error) do
+    "Oops! Something went wrong. Please try again."
+  end
+
+  defp has_reached_limit?(ai_limit_result) do
+    ai_limit_result != :ok
+  end
+
+  defp job_is_unsaved?(%{__meta__: %{state: :built}} = _job) do
+    true
+  end
+
+  defp job_is_unsaved?(_job), do: false
 end

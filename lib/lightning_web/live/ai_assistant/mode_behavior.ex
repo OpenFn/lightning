@@ -66,4 +66,15 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
               session :: map(),
               content :: String.t()
             ) :: {:ok, map()} | {:error, any()}
+
+  @doc """
+  Determines if the chat input should be disabled based on mode-specific conditions.
+
+  ## Parameters
+    * assigns - A map containing the necessary context for determining disabled state
+
+  ## Returns
+    * `boolean()` - Whether the chat input should be disabled
+  """
+  @callback chat_input_disabled?(assigns :: map()) :: boolean()
 end

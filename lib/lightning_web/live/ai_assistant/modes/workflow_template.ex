@@ -108,4 +108,53 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   def query(session, content) do
     AiAssistant.query_workflow(session, content)
   end
+
+  @impl true
+  def chat_input_disabled?(%{
+        can_edit_workflow: can_edit_workflow,
+        ai_limit_result: ai_limit_result,
+        endpoint_available?: endpoint_available?,
+        pending_message: pending_message
+      }) do
+    !can_edit_workflow or
+      has_reached_limit?(ai_limit_result) or
+      !endpoint_available? or
+      !is_nil(pending_message.loading)
+  end
+
+  defp has_reached_limit?(ai_limit_result) do
+    ai_limit_result != :ok
+  end
+
+  def disabled_tooltip_message(%{
+        can_edit_workflow: can_edit_workflow,
+        ai_limit_result: ai_limit_result
+      }) do
+    case {can_edit_workflow, ai_limit_result} do
+      {false, _} ->
+        "You are not authorized to use the Ai Assistant"
+
+      {_, {:error, _reason, _msg} = error} ->
+        error_message(error)
+
+      _ ->
+        nil
+    end
+  end
+
+  def error_message({:error, message}) when is_binary(message) do
+    message
+  end
+
+  def error_message({:error, %Ecto.Changeset{}}) do
+    "Could not save message. Please try again."
+  end
+
+  def error_message({:error, _reason, %{text: text_message}}) do
+    text_message
+  end
+
+  def error_message(_error) do
+    "Oops! Something went wrong. Please try again."
+  end
 end

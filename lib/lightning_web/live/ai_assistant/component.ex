@@ -42,9 +42,9 @@ defmodule LightningWeb.AiAssistant.Component do
      |> assign(
        has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
      )
-     |> maybe_check_limit()
      |> assign(:mode, mode)
      |> assign(:handler, ModeRegistry.get_handler(mode))
+     |> maybe_check_limit()
      |> maybe_create_session_and_send_message()
      |> apply_action(action, mode)}
   end
@@ -66,7 +66,9 @@ defmodule LightningWeb.AiAssistant.Component do
           |> assign(:process_message_on_show, true)
 
         error ->
-          assign(socket, error_message: error_message(error))
+          assign(socket,
+            error_message: socket.assigns.handler.error_message(error)
+          )
       end
     else
       socket
@@ -242,7 +244,9 @@ defmodule LightningWeb.AiAssistant.Component do
         |> push_patch(to: redirect_url(socket.assigns.base_url, query_params))
 
       error ->
-        assign(socket, error_message: error_message(error))
+        assign(socket,
+          error_message: socket.assigns.handler.error_message(error)
+        )
     end
   end
 
@@ -254,24 +258,10 @@ defmodule LightningWeb.AiAssistant.Component do
         |> process_message(content)
 
       error ->
-        assign(socket, error_message: error_message(error))
+        assign(socket,
+          error_message: socket.assigns.handler.error_message(error)
+        )
     end
-  end
-
-  def error_message({:error, message}) when is_binary(message) do
-    message
-  end
-
-  def error_message({:error, %Ecto.Changeset{}}) do
-    "Could not save message. Please try again."
-  end
-
-  def error_message({:error, _reason, %{text: text_message}}) do
-    text_message
-  end
-
-  def error_message(_error) do
-    "Oops! Something went wrong. Please try again."
   end
 
   defp redirect_url(base_url, query_params) do
@@ -619,6 +609,7 @@ defmodule LightningWeb.AiAssistant.Component do
             query_params={@query_params}
             base_url={@base_url}
             target={@myself}
+            handler={@handler}
           />
       <% end %>
 
@@ -653,40 +644,18 @@ defmodule LightningWeb.AiAssistant.Component do
           <.chat_input
             form={@form}
             disabled={
-              !@can_edit_workflow or
-                has_reached_limit?(@ai_limit_result) or
-                !endpoint_available? or
-                !is_nil(@pending_message.loading)
+              @handler.chat_input_disabled?(%{
+                assigns
+                | endpoint_available?: endpoint_available?
+              })
             }
-            tooltip={
-              disabled_tooltip_message(
-                @can_edit_workflow,
-                @ai_limit_result
-              )
-            }
+            tooltip={@handler.disabled_tooltip_message(assigns)}
           />
         </.form>
       </.async_result>
     </div>
     <.disclaimer />
     """
-  end
-
-  defp has_reached_limit?(ai_limit_result) do
-    ai_limit_result != :ok
-  end
-
-  defp disabled_tooltip_message(can_edit_workflow, ai_limit_result) do
-    case {can_edit_workflow, ai_limit_result} do
-      {false, _} ->
-        "You are not authorized to use the Ai Assistant"
-
-      {_, {:error, _reason, _msg} = error} ->
-        error_message(error)
-
-      _ ->
-        nil
-    end
   end
 
   attr :disabled, :boolean
@@ -799,6 +768,7 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :query_params, :map, required: true
   attr :base_url, :string, required: true
   attr :target, :any, required: true
+  attr :handler, :any, required: true
 
   defp render_individual_session(assigns) do
     assigns = assign(assigns, ai_feedback: ai_feedback())
@@ -921,7 +891,7 @@ defmodule LightningWeb.AiAssistant.Component do
                   name="hero-exclamation-triangle"
                   class="h-5 w-5 flex-shrink-0 text-red-400"
                 />
-                <span class="text-red-700">{error_message(failure)}</span>
+                <span class="text-red-700">{@handler.error_message(failure)}</span>
               </div>
             </div>
           </:failed>
@@ -1016,7 +986,10 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp check_limit(socket) do
     limit = Limiter.validate_quota(socket.assigns.project.id)
-    error_message = if limit != :ok, do: error_message(limit)
+
+    error_message =
+      if limit != :ok, do: socket.assigns.handler.error_message(limit)
+
     assign(socket, ai_limit_result: limit, error_message: error_message)
   end
 
