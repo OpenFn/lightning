@@ -98,6 +98,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       # Naively add a job via the editor (calling the push-change event)
       assert view
              |> push_patches_to_view([add_job_patch()])
@@ -144,6 +146,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
       workflow_name = view |> get_workflow_params() |> Map.get("name")
@@ -174,8 +178,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # the panel for creating workflow appears
       html = render(view)
-      assert html =~ "Build your workflow from templates"
-      assert html =~ "Browse templates"
+      assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
 
@@ -198,8 +201,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # the panel disappears
       html = render(view)
-      refute html =~ "Build your workflow from templates"
-      refute html =~ "Browse templates"
+      refute html =~ "Describe your workflow"
       refute has_element?(view, "form#search-templates-form")
       refute has_element?(view, "form#choose-workflow-template-form")
 
@@ -315,10 +317,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       # the panel for creating workflow is visible
       html = render(view)
-      assert html =~ "Build your workflow from templates"
-      assert html =~ "Browse templates"
+      assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
 
@@ -517,7 +520,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       user: %{id: user_id}
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
+        live(conn, ~p"/projects/#{project.id}/w/new")
+
+      select_template(view, "base-cron-template")
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
@@ -2112,6 +2117,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       push_patches_to_view(view, initial_workflow_patchset(project))
 
       # click continue
@@ -2151,6 +2158,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/new", on_error: :raise)
+
+      select_template(view, "base-webhook-template")
 
       push_patches_to_view(view, initial_workflow_patchset(project))
 
@@ -2446,6 +2455,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
+
+      select_template(view, "base-webhook-template")
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
