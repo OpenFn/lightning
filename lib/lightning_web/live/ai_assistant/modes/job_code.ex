@@ -15,9 +15,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   @behaviour LightningWeb.Live.AiAssistant.ModeBehavior
 
-  require Phoenix.LiveView
   alias Lightning.AiAssistant
-  require Logger
+
+  # require Logger
+  # require Phoenix.LiveView
 
   @doc """
   Creates a new chat session for job code assistance.

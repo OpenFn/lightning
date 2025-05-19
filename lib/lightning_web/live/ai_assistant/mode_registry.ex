@@ -11,7 +11,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
   * `:workflow` - Handles workflow template generation through the `WorkflowTemplate` module
   """
 
-  alias LightningWeb.Live.AiAssistant.Modes.{JobCode, WorkflowTemplate}
+  alias LightningWeb.Live.AiAssistant.Modes.JobCode
+  alias LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
 
   @doc """
   Returns a map of all registered modes.

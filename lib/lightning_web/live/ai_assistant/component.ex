@@ -1,4 +1,8 @@
 defmodule LightningWeb.AiAssistant.Component do
+  @moduledoc """
+  The AI Assistant component is a live component that allows users to interact with the AI Assistant.
+  """
+
   use LightningWeb, :live_component
 
   alias Lightning.AiAssistant

@@ -16,8 +16,9 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   @behaviour LightningWeb.Live.AiAssistant.ModeBehavior
 
-  require Phoenix.LiveView
   alias Lightning.AiAssistant
+
+  # require Phoenix.LiveView
 
   @doc """
   Creates a new chat session for workflow template generation.
