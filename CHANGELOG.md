@@ -28,6 +28,8 @@ and this project adheres to
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
 - Make the chunk size for deleting expired activty configurable via ENV
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
+- Reduce the cardinality of `lightning_run_lost_count`.
+  [#3226](https://github.com/OpenFn/lightning/issues/3226)
 
 ### Fixed
 

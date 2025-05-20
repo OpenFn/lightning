@@ -98,7 +98,7 @@ defmodule Lightning.PromExTest do
       ^lost_runs_count_event,
       ^ref,
       %{count: 1},
-      %{seed_event: true}
+      %{}
     }
   end
 

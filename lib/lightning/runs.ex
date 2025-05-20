@@ -294,7 +294,7 @@ defmodule Lightning.Runs do
 
   @spec mark_run_lost(Lightning.Run.t()) ::
           {:ok, any()} | {:error, any()}
-  def mark_run_lost(%Run{worker_name: worker_name} = run) do
+  def mark_run_lost(%Run{} = run) do
     error_type =
       case run.state do
         :claimed -> "LostAfterClaim"
@@ -302,7 +302,7 @@ defmodule Lightning.Runs do
         _other -> "UnknownReason"
       end
 
-    PromExPlugin.fire_lost_run_event(worker_name, run.state)
+    PromExPlugin.fire_lost_run_event()
 
     Logger.warning(fn ->
       "Detected lost run with reason #{error_type}: #{inspect(run)}"
