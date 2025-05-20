@@ -53,29 +53,22 @@ defmodule Lightning.Runs.PromExPlugin do
           Metrics.counter(
             @lost_run_event ++ [:count],
             description: "A counter of lost runs.",
-            tags: [:seed_event, :state, :worker_name]
+            tags: []
           )
         ]
       )
     ]
   end
 
-  def seed_event_metrics, do: fire_lost_run_event(nil, nil, true)
+  def seed_event_metrics, do: fire_lost_run_event()
 
-  def fire_lost_run_event(worker_name, state, seed_event \\ false) do
+  def fire_lost_run_event do
     :telemetry.execute(
       @lost_run_event,
       %{count: 1},
-      %{
-        seed_event: seed_event,
-        state: state |> nil_to_na() |> to_string(),
-        worker_name: worker_name |> nil_to_na()
-      }
+      %{}
     )
   end
-
-  defp nil_to_na(nil), do: "n/a"
-  defp nil_to_na(value), do: value
 
   @impl true
   def polling_metrics(opts) do
