@@ -12,6 +12,10 @@ defmodule Lightning.RunsTest do
   alias Lightning.WorkOrders
   alias Lightning.Workflows
 
+  test "CI barium" do
+    assert false
+  end
+
   describe "enqueue/1" do
     test "enqueues a run" do
       dataclip = insert(:dataclip)
