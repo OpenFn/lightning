@@ -25,6 +25,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
+  setup do
+    Mox.stub(Lightning.MockConfig, :apollo, fn
+      :endpoint -> "http://localhost:4001"
+      :ai_assistant_api_key -> "ai_assistant_api_key"
+      :timeout -> 5_000
+    end)
+
+    :ok
+  end
+
   describe "New credential from project context " do
     setup %{project: project} do
       %{job: job} = workflow_job_fixture(project_id: project.id)
@@ -2750,11 +2760,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       # user's email is not from @openfn.org
       refute String.match?(user.email, ~r/@openfn\.org/i)
 
@@ -2801,6 +2806,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       {:ok, view, _html} =
@@ -2824,11 +2830,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       # when disclaimer hasn't been read and no session exists
       refute user.preferences["ai_assistant.disclaimer_read_at"]
 
@@ -2864,11 +2865,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
            user: user,
            workflow: %{jobs: [job_1 | _]} = workflow
          } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
 
       skip_disclaimer(user, date)
@@ -2895,11 +2891,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
            user: user,
            workflow: %{jobs: [job_1 | _]} = workflow
          } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       skip_disclaimer(user)
 
       {:ok, view, _html} =
@@ -2922,11 +2913,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
 
       Mox.stub(
         Lightning.Tesla.Mock,
@@ -3050,11 +3036,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       apollo_endpoint = "http://localhost:4001"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       Mox.stub(
         Lightning.Tesla.Mock,
         :call,
@@ -3105,11 +3086,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       apollo_endpoint = "http://localhost:4001"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       Mox.stub(
         Lightning.Tesla.Mock,
         :call,
@@ -3149,11 +3125,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       test: test
     } do
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
 
       Mox.stub(
         Lightning.Tesla.Mock,
@@ -3222,12 +3193,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       expected_question = "Can you help me with this?"
       expected_answer = "No, I am a robot"
 
@@ -3304,11 +3269,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       apollo_endpoint = "http://localhost:4001"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       Mox.stub(
         Lightning.Tesla.Mock,
         :call,
@@ -3356,11 +3316,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       apollo_endpoint = "http://localhost:4001"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       Mox.stub(
         Lightning.Tesla.Mock,
         :call,
@@ -3406,11 +3361,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project: %{id: project_id} = project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001/health_check"
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       error_message = "You have reached your quota of AI queries"
 
       Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
@@ -3454,12 +3404,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       error_message = "Server is temporarily unavailable"
 
       Mox.stub(
@@ -3509,11 +3453,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       apollo_endpoint = "http://localhost:4001"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       Mox.stub(
         Lightning.Tesla.Mock,
         :call,
@@ -3555,11 +3494,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       apollo_endpoint = "http://localhost:4001"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       Mox.stub(
         Lightning.Tesla.Mock,
         :call,
@@ -3599,11 +3533,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
 
       Mox.stub(
         Lightning.Tesla.Mock,
@@ -3645,11 +3574,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
 
       Mox.stub(
         Lightning.Tesla.Mock,
@@ -3765,11 +3689,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       apollo_endpoint = "http://localhost:4001"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
-
       Mox.stub(
         Lightning.Tesla.Mock,
         :call,
@@ -3828,11 +3747,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
         %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
@@ -3914,11 +3828,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
         %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
@@ -4049,11 +3958,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       })
 
       apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-      end)
 
       Mox.stub(
         Lightning.Tesla.Mock,
