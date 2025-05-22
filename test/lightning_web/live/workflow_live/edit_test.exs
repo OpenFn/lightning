@@ -2684,7 +2684,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[method: "template", s: job_2.id]}"
       )
 
       assert render(view) =~

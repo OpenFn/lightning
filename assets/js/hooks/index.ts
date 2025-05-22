@@ -56,6 +56,10 @@ export const TemplateTooltip = {
       console.log("click", this.el.dataset.template);
       this.pushEvent("show_label", this.el.dataset.template);
     });
+
+    this.handleEvent("hide_label", () => {
+      this.pushEvent("hide_label", {});
+    });
   }
 } as PhoenixHook;
 

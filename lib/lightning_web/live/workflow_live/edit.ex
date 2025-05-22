@@ -58,9 +58,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
             :edit ->
               ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
-
-            :ai ->
-              ~p"/projects/#{assigns.project}/w/new/ai"
           end,
         workflow_form: to_form(assigns.changeset),
         save_and_run_disabled: save_and_run_disabled?(assigns),
@@ -185,16 +182,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
           module={LightningWeb.WorkflowLive.NewWorkflowComponent}
           workflow={@workflow}
           project={@project}
-          action={@live_action}
+          selected_method={@method || "template"}
           base_url={@base_url}
           chat_session_id={@chat_session_id}
           current_user={@current_user}
         />
         <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
-          <.template_label
-            :if={@selected_template && @live_action != :ai}
-            template={@selected_template}
-          />
+          <.template_label :if={@selected_template} template={@selected_template} />
           <.canvas_placeholder_card :if={@show_canvas_placeholder} />
           <div class="flex-none" id="job-editor-pane">
             <div
@@ -1173,8 +1167,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  def authorize(%{assigns: %{live_action: action}} = socket)
-      when action in [:new, :ai] do
+  def authorize(%{assigns: %{live_action: :new}} = socket) do
     %{project_user: project_user, current_user: current_user, project: project} =
       socket.assigns
 
@@ -1234,10 +1227,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @impl true
   def mount(_params, _session, %{assigns: assigns} = socket) do
     view_only_users_ids =
-      assigns.project |> view_only_users() |> Enum.map(fn pu -> pu.user.id end)
-
-    show_canvas_placeholder =
-      if assigns.live_action in [:new, :ai], do: true, else: false
+      assigns.project
+      |> view_only_users()
+      |> Enum.map(fn pu -> pu.user.id end)
 
     {:ok,
      socket
@@ -1263,7 +1255,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
          "m" => nil,
          "a" => nil,
          "v" => nil,
-         "chat" => nil
+         "chat" => nil,
+         "method" => nil
        },
        workflow: nil,
        snapshot: nil,
@@ -1274,11 +1267,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_credential_type: nil,
        oauth_clients: OauthClients.list_clients(assigns.project),
        show_missing_dataclip_selector: false,
-       show_new_workflow_panel: assigns.live_action in [:new, :ai],
-       show_canvas_placeholder: show_canvas_placeholder,
+       show_new_workflow_panel: assigns.live_action == :new,
+       show_canvas_placeholder: assigns.live_action == :new,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        publish_template: false,
+       method: nil,
        workflow_code: nil,
        project_repo_connection:
          VersionControl.get_repo_connection_for_project(assigns.project.id),
@@ -1312,7 +1306,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      end)}
   end
 
-  def apply_action(socket, action, _params) when action in [:new, :ai] do
+  def apply_action(socket, :new, _params) do
     if socket.assigns.workflow do
       socket
     else
@@ -2551,14 +2545,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a", "v", "chat", "code"])
+        |> Map.take(["s", "m", "a", "v", "chat", "code", "method"])
         |> Enum.into(%{
           "s" => nil,
           "m" => nil,
           "a" => nil,
           "v" => nil,
           "chat" => nil,
-          "code" => nil
+          "code" => nil,
+          "method" => nil
         })
     )
     |> apply_query_params()
@@ -2575,6 +2570,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> unselect_all()
         |> set_mode("code")
         |> assign(publish_template: false)
+
+      %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
+        socket |> unselect_all() |> assign(method: method)
 
       # Nothing is selected
       %{"s" => nil} ->
@@ -3058,12 +3056,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div
       phx-mounted={fade_in()}
       phx-remove={fade_out()}
-      class="my-2 mx-4 absolute p-4 hidden opacity-0 z-[9999]"
+      class="border border-gray-200 rounded-md my-2 mx-2 bg-gray-900 absolute p-4 hidden opacity-0 z-[9999]"
     >
-      <p class="text-1xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
+      <p class="text-sm font-semibold tracking-tight text-gray-100">
         {@template["title"]}
       </p>
-      <p class="mt-4 text-lg/8 text-gray-500">
+      <p class="text-sm mt-2 text-lg/8 text-gray-300">
         {@template["description"]}
       </p>
     </div>

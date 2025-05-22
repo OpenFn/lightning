@@ -23,7 +23,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     {:ok,
      socket
      |> assign(assigns)
-     |> maybe_apply_ai_method(assigns)
      |> assign_new(:changeset, fn %{workflow: workflow} ->
        Workflow.changeset(workflow, %{})
      end)}
@@ -99,7 +98,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   def handle_event("open-workflow-chat", _params, socket) do
     {:noreply,
-     push_navigate(socket, to: "/projects/#{socket.assigns.project.id}/w/new/ai")}
+     socket
+     |> push_event("hide_label", %{})
+     |> push_patch(to: "/projects/#{socket.assigns.project.id}/w/new?method=ai")}
   end
 
   defp default_if_empty(name, default) do
@@ -233,14 +234,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     socket
     |> push_event("state-applied", %{"state" => params})
     |> push_event("force-fit", %{})
-  end
-
-  defp maybe_apply_ai_method(socket, %{action: :ai}) do
-    assign(socket, selected_method: "ai")
-  end
-
-  defp maybe_apply_ai_method(socket, _assigns) do
-    socket
   end
 
   @impl true
@@ -386,7 +379,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       </div>
 
       <div
-        :if={length(@filtered_templates) == 0}
+        :if={length(@filtered_templates) == 0 && @search_term != ""}
         class="text-center italic text-gray-400 text-sm hidden opacity-0"
         phx-mounted={fade_in()}
         phx-remove={fade_out()}
@@ -574,7 +567,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         project={@project}
         current_user={@current_user}
         chat_session_id={@chat_session_id}
-        query_params={%{}}
+        query_params={%{"method" => "ai"}}
         base_url={@base_url}
         input_value={@search_term}
         action={if(@chat_session_id, do: :show, else: :new)}
