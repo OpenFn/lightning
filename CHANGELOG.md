@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Set timeout for Apollo client requests.
+  [#3009](https://github.com/OpenFn/lightning/issues/3009)
 - Added a custom metric to track projects that could benefit from additional
   worker pods.
   [#3189](https://github.com/OpenFn/lightning/issues/3189)
