@@ -242,6 +242,12 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_hook("push-change", %{patches: patches})
   end
 
+  def select_template(view, template_id) do
+    view
+    |> form("#choose-workflow-template-form", %{template_id: template_id})
+    |> render_change()
+  end
+
   def add_job_patch(name \\ "", id \\ Ecto.UUID.generate()) do
     Jsonpatch.diff(
       %{jobs: []},

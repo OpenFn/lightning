@@ -350,8 +350,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # go directly
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      assert html =~ "Build your workflow from templates"
-      assert html =~ "Browse templates"
+      assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")
 
       view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
@@ -359,8 +358,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # the panel disappears
       html = render(view)
 
-      refute html =~ "Build your workflow from templates"
-      refute html =~ "Browse templates"
+      refute html =~ "Describe your workflow"
       refute has_element?(view, "form#search-templates-form")
     end
 
