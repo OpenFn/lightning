@@ -255,7 +255,8 @@ defmodule Lightning.ApolloClient do
     Tesla.client([
       {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
       Tesla.Middleware.JSON,
-      Tesla.Middleware.KeepRequest
+      Tesla.Middleware.KeepRequest,
+      {Tesla.Middleware.Timeout, timeout: Lightning.Config.apollo(:timeout)}
     ])
   end
 end

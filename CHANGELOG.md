@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Set timeout for Apollo client requests.
+  [#3009](https://github.com/OpenFn/lightning/issues/3009)
 - Generate workflows using AI 
   [#3174](https://github.com/OpenFn/lightning/issues/3174)
 - Enhance workflows templates UI
