@@ -12,6 +12,7 @@ defmodule Lightning.ApolloClientTest do
       case key do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "api_key"
+        :timeout -> 1_000
       end
     end)
 
@@ -48,5 +49,21 @@ defmodule Lightning.ApolloClientTest do
     {:ok, response} = ApolloClient.query("foo")
 
     assert response.body
+  end
+
+  test "send a query and get a timeout acording to apollo config" do
+    Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+      case key do
+        :endpoint -> "http://localhost:3000"
+        :ai_assistant_api_key -> "api_key"
+        :timeout -> 100
+      end
+    end)
+
+    stub(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+      Process.sleep(200)
+    end)
+
+    assert {:error, :timeout} = ApolloClient.query("foo")
   end
 end
