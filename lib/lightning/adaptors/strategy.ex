@@ -3,7 +3,7 @@ defmodule Lightning.Adaptors.Strategy do
   Behaviour for adaptor registry strategies (NPM, local, etc).
   """
 
-  @callback fetch_adaptors(config :: map()) :: {:ok, [map()]} | {:error, term()}
+  @callback fetch_adaptors(config :: term()) :: {:ok, [map()]} | {:error, term()}
   @callback fetch_credential_schema(
               adaptor_name :: String.t(),
               version :: String.t()

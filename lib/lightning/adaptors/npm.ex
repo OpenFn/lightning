@@ -5,17 +5,17 @@ defmodule Lightning.Adaptors.NPM do
   @behaviour Lightning.Adaptors.Strategy
   require Logger
 
-  @type config :: %{
+  @type config :: [
           user: String.t(),
           max_concurrency: pos_integer(),
           timeout: pos_integer(),
           filter: (String.t() -> boolean())
-        }
+        ]
 
   @impl true
   @spec fetch_adaptors(config :: config()) :: {:ok, [map()]} | {:error, term()}
   def fetch_adaptors(config) do
-    user_packages(config.user)
+    user_packages(config[:user])
     |> case do
       {:ok, response} ->
         response
@@ -25,8 +25,8 @@ defmodule Lightning.Adaptors.NPM do
         |> Task.async_stream(
           &fetch_package_details/1,
           ordered: false,
-          max_concurrency: config.max_concurrency,
-          timeout: config.timeout
+          max_concurrency: config[:max_concurrency],
+          timeout: config[:timeout]
         )
         |> Stream.map(fn result ->
           case result do
@@ -64,7 +64,7 @@ defmodule Lightning.Adaptors.NPM do
     package_detail(package_name)
     |> case do
       {:ok, %Tesla.Env{status: 200, body: details}} ->
-        %{
+        %Lightning.Adaptors.Package{
           name: details["name"],
           repo: details["repository"]["url"],
           latest: details["dist-tags"]["latest"],
