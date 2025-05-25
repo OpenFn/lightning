@@ -188,13 +188,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
           current_user={@current_user}
         />
         <div
-          class="relative h-full flex grow flex-col w-2/3"
+          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "flex-col w-2/3", else: ""}"}
           id={"workflow-edit-#{@workflow.id}"}
         >
           <.selected_template_tooltip
-            :if={@selected_template}
+            :if={@selected_template && @show_new_workflow_panel}
             template={@selected_template}
           />
+          <%!-- class="transition-all duration-300 ease-in-out" --%>
           <.canvas_placeholder_card :if={@show_canvas_placeholder} />
           <div class="flex-none" id="job-editor-pane">
             <div
