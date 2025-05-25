@@ -186,6 +186,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           base_url={@base_url}
           chat_session_id={@chat_session_id}
           current_user={@current_user}
+          class="transition-all duration-300 ease-in-out"
         />
         <div
           class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "flex-col w-2/3", else: ""}"}
@@ -194,6 +195,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.selected_template_tooltip
             :if={@selected_template && @show_new_workflow_panel}
             template={@selected_template}
+            class="transition-all duration-300 ease-in-out"
           />
           <%!-- class="transition-all duration-300 ease-in-out" --%>
           <.canvas_placeholder_card :if={@show_canvas_placeholder} />
