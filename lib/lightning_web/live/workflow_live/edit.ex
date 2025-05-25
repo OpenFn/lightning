@@ -187,7 +187,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           chat_session_id={@chat_session_id}
           current_user={@current_user}
         />
-        <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
+        <div
+          class="relative h-full flex grow flex-col w-2/3"
+          id={"workflow-edit-#{@workflow.id}"}
+        >
           <.selected_template_tooltip
             :if={@selected_template}
             template={@selected_template}
@@ -3081,17 +3084,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp selected_template_tooltip(assigns) do
     ~H"""
-    <div
-      phx-mounted={fade_in()}
-      phx-remove={fade_out()}
-      class="my-2 mx-4 absolute p-4 hidden opacity-0 z-[9999]"
-    >
-      <p class="text-1xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
-        {@template.name}
-      </p>
-      <p class="mt-4 text-lg/8 text-gray-500">
-        {@template.description}
-      </p>
+    <div phx-mounted={fade_in()} phx-remove={fade_out()} class="w-full flex grow p-2">
+      <div class="px-4 py-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">
+              {@template.name}
+            </p>
+            <p class="mt-1 text-sm text-gray-700">
+              {@template.description}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
     """
   end
