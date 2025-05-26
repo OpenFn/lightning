@@ -18,8 +18,9 @@ and this project adheres to
 ### Added
 
 - Added a custom metric to track projects that could benefit from additional
-  worker pods.
-  [#3189](https://github.com/OpenFn/lightning/issues/3189)
+  worker pods. [#3189](https://github.com/OpenFn/lightning/issues/3189)
+- Minimap for easier workflow navigation
+  [#3125](https://github.com/OpenFn/lightning/issues/3125)
 
 ### Changed
 
