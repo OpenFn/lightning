@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Position, type NodeProps } from 'reactflow';
+import { Position, type NodeProps } from '@xyflow/react';
 import Node from './Node';
 import PlusButton from '../components/PlusButton';
 import PathButton from '../components/PathButton';
