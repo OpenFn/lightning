@@ -1501,15 +1501,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event(
-        "get-selectable-dataclips",
-        %{"job_id" => job_id, "limit" => limit},
-        socket
-      ) do
-    payload = NewManualRun.get_selectable_dataclips(job_id, limit)
-    {:reply, payload, socket}
-  end
-
-  def handle_event(
         "search-selectable-dataclips",
         %{"job_id" => job_id, "search_text" => search_text, "limit" => limit} =
           params,

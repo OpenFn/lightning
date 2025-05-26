@@ -4351,6 +4351,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       limit = 4
+      search_text = ""
 
       dataclips =
         Enum.map(1..5, fn i ->
@@ -4368,8 +4369,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> Enum.sort_by(& &1.inserted_at, :desc)
         |> Enum.take(limit)
 
-      render_hook(view, "get-selectable-dataclips", %{
+      render_hook(view, "search-selectable-dataclips", %{
         "job_id" => job.id,
+        "search_text" => search_text,
         "limit" => limit
       })
 

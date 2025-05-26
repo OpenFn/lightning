@@ -7,13 +7,6 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Workflows.Job
 
-  def get_selectable_dataclips(job_id, limit) do
-    dataclips =
-      Invocation.list_dataclips_for_job(%Job{id: job_id}, limit)
-
-    %{dataclips: dataclips}
-  end
-
   @spec search_selectable_dataclips(
           job_id :: Ecto.UUID.t(),
           search_text :: String.t(),
