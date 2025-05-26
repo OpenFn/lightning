@@ -56,11 +56,10 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
       params,
       [:before, :after, :type, :query]
     )
-    # TODO - figure out why this was added.
-    # |> Lightning.Validators.validate_one_required(
-    #   [:query, :before, :after, :type],
-    #   "at least one filter is required"
-    # )
+    |> Lightning.Validators.validate_one_required(
+      [:query, :before, :after, :type],
+      "at least one filter is required"
+    )
     |> then(fn changeset ->
       query = Ecto.Changeset.get_field(changeset, :query)
 
