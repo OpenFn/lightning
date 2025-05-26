@@ -11,24 +11,24 @@ import CustomView from './views/CustomView';
 import EmptyView from './views/EmptyView';
 import ExistingView from './views/ExistingView';
 import SelectedClipView from './views/SelectedClipView';
+import updateURLParams from '../utils/updateURLParams';
+import useQuery from '../hooks/useQuery';
 interface ManualRunPanelProps {
   job_id: string;
   selected_dataclip_id: string | null;
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
+  const { active_panel, type, before, after, query: urlQuery } = useQuery(["active_panel", "type", "before", "after", "query"])
   const { pushEvent, job_id, selected_dataclip_id } = props;
-  const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
-    selected_dataclip_id ? SeletableOptions.EXISTING :
-      SeletableOptions.EMPTY
-  );
+  const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(active_panel ? Number(active_panel) as unknown as SeletableOptions : SeletableOptions.EMPTY);
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = React.useState(urlQuery ? urlQuery : '');
   const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>();
-  const [selectedcliptype, setSelectedClipType] = React.useState<string>('');
+  const [selectedcliptype, setSelectedClipType] = React.useState<string>(type ? type : '');
   const [selectedDates, setSelectedDates] = React.useState({
-    before: '',
-    after: '',
+    before: before ? before : '',
+    after: after ? after : '',
   });
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -58,10 +58,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   }, [pushEvent]);
 
   const parsedQuery = React.useMemo(() => {
-    const a = { query, filters: {} as Record<string, string> };
-    if (selectedcliptype) a.filters['type'] = selectedcliptype;
-    if (selectedDates.before) a.filters['before'] = selectedDates.before;
-    if (selectedDates.after) a.filters['after'] = selectedDates.after;
+    const a = { query, filters: {} as Record<string, string | undefined> };
+    if (typeof selectedcliptype === "string" && selectedcliptype) a.filters['type'] = selectedcliptype;
+    else a.filters['type'] = undefined;
+    if (typeof selectedDates.before === "string" && selectedDates.before) a.filters['before'] = selectedDates.before;
+    else a.filters['before'] = undefined;
+    if (typeof selectedDates.after === "string" && selectedDates.after) a.filters['after'] = selectedDates.after;
+    else a.filters["after"] = undefined;
     return a;
   }, [query, selectedcliptype, selectedDates.before, selectedDates.after]);
 
@@ -85,20 +88,29 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   React.useEffect(() => {
     pushEvent(
       'search-selectable-dataclips',
-      { job_id: job_id, limit: 10 },
+      { job_id: job_id, search_text: "", limit: 10 },
       response => {
         const dataclips = response.dataclips as Dataclip[];
         setRecentClips(dataclips);
         if (selected_dataclip_id) {
           const activeClip = dataclips.find(d => d.id === selected_dataclip_id);
-          if (activeClip) setSelectedclip(activeClip);
+          if (activeClip) {
+            setSelectedOption(SeletableOptions.EXISTING);
+            setSelectedclip(activeClip);
+          }
         }
       }
     );
   }, [pushEvent, job_id, selected_dataclip_id]);
 
   const handleSearchSumbit = React.useCallback(() => {
-    const q = constructQuery(parsedQuery);
+    const queryData = {
+      ...(parsedQuery.query ? { query: parsedQuery.query } : { query: undefined }),
+      ...parsedQuery.filters
+    };
+    const q = constructQuery(queryData);
+    updateURLParams(queryData);
+
     pushEvent(
       'search-selectable-dataclips',
       { job_id: job_id, search_text: q, limit: 10 },
@@ -154,6 +166,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         });
         break;
     }
+    updateURLParams({ active_panel: selectedOption.toString() });
   }, [selectedOption, pushEvent]);
 
   const innerView = React.useMemo(() => {
