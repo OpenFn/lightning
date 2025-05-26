@@ -4,6 +4,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
   alias LightningWeb.WorkflowLive.NewManualRun
 
   test "get_dataclips_filters/1" do
+    assert {:ok, %{}} = NewManualRun.get_dataclips_filters("query=+")
+
     assert {:error, %{errors: [query: {"at least one filter is required", []}]}} =
              NewManualRun.get_dataclips_filters("test")
 
