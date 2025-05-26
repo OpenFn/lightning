@@ -26,7 +26,7 @@
 set -euo pipefail
 
 set +e
-mix coveralls.json --export-coverage coverage -o test/reports
+mix coveralls.json --exclude dist_integration --export-coverage coverage -o test/reports
 EXIT_CODE=$?
 set -e
 
@@ -39,7 +39,7 @@ fi
 # Only retry if exit code is exactly 2
 if [ $EXIT_CODE -eq 2 ]; then
   set +e
-  mix coveralls.json --import-cover coverage --failed -o test/reports
+  mix coveralls.json --exclude dist_integration --import-cover coverage --failed -o test/reports
   EXIT_CODE=$? # Overwrite with the second run's exit code
   set -e
   # Rename the failed test report if it exists

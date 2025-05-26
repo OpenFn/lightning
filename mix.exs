@@ -56,7 +56,7 @@ defmodule Lightning.MixProject do
     [
       mod: {Lightning.Application, [:timex]},
       extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener],
-      start_phases: [seed_prom_ex_telemetry: []]
+      start_phases: [seed_prom_ex_telemetry: [], init_rate_limiter: []]
     ]
   end
 
@@ -70,6 +70,7 @@ defmodule Lightning.MixProject do
   defp deps do
     [
       # {:rexbug, ">= 1.0.0", only: :test},
+      {:horde, "~> 0.9.0"},
       {:bcrypt_elixir, "~> 3.2"},
       {:bodyguard, "~> 2.2"},
       {:broadway_kafka, "~> 0.4.2"},
@@ -133,7 +134,7 @@ defmodule Lightning.MixProject do
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
-      {:hammer_backend_mnesia, "~> 0.6"},
+      {:hammer_backend_mnesia, "~> 0.6.0"},
       {:hammer, "~> 6.0"},
       {:dotenvy, "~> 0.8.0"},
       {:goth, "~> 1.3"},

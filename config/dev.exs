@@ -48,6 +48,8 @@ config :lightning, Lightning.Vault,
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: true
 
+config :lightning, Lightning.DistributedRateLimiter, start: true
+
 config :lightning, :workers,
   private_key: """
   -----BEGIN PRIVATE KEY-----

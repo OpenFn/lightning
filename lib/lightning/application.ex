@@ -7,6 +7,11 @@ defmodule Lightning.Application do
 
   require Logger
 
+  @rate_limiter_opts Application.compile_env!(
+                       :lightning,
+                       Lightning.DistributedRateLimiter
+                     )
+
   @impl true
   def start(_type, _args) do
     # Initialize ETS table for adapter lookup
@@ -107,6 +112,12 @@ defmodule Lightning.Application do
       [
         Lightning.PromEx,
         {Cluster.Supervisor, [topologies, [name: Lightning.ClusterSupervisor]]},
+        {Horde.Registry,
+         name: Lightning.HordeRegistry, keys: :unique, members: :auto},
+        {Horde.DynamicSupervisor,
+         name: Lightning.DistributedSupervisor,
+         strategy: :one_for_one,
+         members: :auto},
         {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])},
         # Start the Ecto repository
         Lightning.Repo,
@@ -171,6 +182,17 @@ defmodule Lightning.Application do
   @impl true
   def start_phase(:seed_prom_ex_telemetry, :normal, _) do
     Lightning.PromEx.seed_event_metrics()
+    :ok
+  end
+
+  def start_phase(:init_rate_limiter, :normal, _args) do
+    if @rate_limiter_opts[:start] do
+      Horde.DynamicSupervisor.start_child(
+        Lightning.DistributedSupervisor,
+        {Lightning.DistributedRateLimiter, @rate_limiter_opts}
+      )
+    end
+
     :ok
   end
 
