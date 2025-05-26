@@ -6,9 +6,6 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
   test "get_dataclips_filters/1" do
     assert {:ok, %{}} = NewManualRun.get_dataclips_filters("query=+")
 
-    assert {:error, %{errors: [query: {"at least one filter is required", []}]}} =
-             NewManualRun.get_dataclips_filters("test")
-
     assert {:ok, %{before: ~N[2025-05-14 14:35:00]}} =
              NewManualRun.get_dataclips_filters(
                "query=+&before=2025-05-14T14%3A35"

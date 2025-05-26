@@ -84,7 +84,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
 
   React.useEffect(() => {
     pushEvent(
-      'get-selectable-dataclips',
+      'search-selectable-dataclips',
       { job_id: job_id, limit: 10 },
       response => {
         const dataclips = response.dataclips as Dataclip[];
@@ -95,7 +95,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         }
       }
     );
-  }, [pushEvent, job_id]);
+  }, [pushEvent, job_id, selected_dataclip_id]);
 
   const handleSearchSumbit = React.useCallback(() => {
     const q = constructQuery(parsedQuery);
@@ -192,6 +192,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     setSelectedClipType,
     clearFilter,
     pushEvent,
+    handleSearchSumbit,
   ]);
 
   const getActive = (v: SeletableOptions) => {
