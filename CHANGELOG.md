@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Minimap for easier workflow navigation
+  [#3125](https://github.com/OpenFn/lightning/issues/3125)
+
 ### Changed
 
 - Report AI Assistant errors to Sentry
