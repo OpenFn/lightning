@@ -4,9 +4,11 @@ import ReactFlow, {
   ReactFlowProvider,
   applyNodeChanges,
   getRectOfNodes,
+  MiniMap,
+  Background,
   type NodeChange,
   type ReactFlowInstance,
-  type Rect
+  type Rect,
 } from 'reactflow';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
@@ -46,7 +48,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
-  const workflowDiagramRef = useRef<HTMLDivElement>(null)
+  const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -64,13 +66,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     cancel: cancelPlaceholder,
   } = usePlaceholders(el, updateSelection);
 
-
-  const workflow = React.useMemo(() => ({
-    jobs,
-    triggers,
-    edges,
-    disabled,
-  }), [jobs, triggers, edges, disabled])
+  const workflow = React.useMemo(
+    () => ({
+      jobs,
+      triggers,
+      edges,
+      disabled,
+    }),
+    [jobs, triggers, edges, disabled]
+  );
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
@@ -254,7 +258,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         {...connectHandlers}
       >
         <Controls showInteractive={false} position="bottom-left" />
+        <Background />
+        <MiniMap zoomable pannable className="border border-2 border-gray-200" />
       </ReactFlow>
     </ReactFlowProvider>
   );
-};
+}
