@@ -66,6 +66,7 @@ defmodule Lightning.PromExTest do
         stalled_run_threshold_seconds: 30,
         unclaimed_run_threshold_seconds: 40
       },
+      Lightning.PromExTestPlugin,
       FooPlugin,
       BarPlugin
     ]
@@ -73,18 +74,20 @@ defmodule Lightning.PromExTest do
     assert Lightning.PromEx.plugins() == expected
   end
 
-  test "seeds any external event metrics to ensure presence of the metrics" do
+  test "seeds event metrics, including external metrics" do
     Mox.stub(Lightning.MockConfig, :external_metrics_module, fn ->
       Lightning.PromExTest.ExternalMetrics
     end)
 
+    lightning_prom_ex_test_event = [:lightning, :prom_ex_test]
     lost_runs_count_event = [:lightning, :run, :lost]
-    test_event = [:promex, :test, :event]
+    test_event = [:promex, :external, :test, :event]
 
     ref =
       :telemetry_test.attach_event_handlers(
         self(),
         [
+          lightning_prom_ex_test_event,
           lost_runs_count_event,
           test_event
         ]
@@ -96,6 +99,13 @@ defmodule Lightning.PromExTest do
 
     assert_received {
       ^lost_runs_count_event,
+      ^ref,
+      %{count: 1},
+      %{}
+    }
+
+    assert_received {
+      ^lightning_prom_ex_test_event,
       ^ref,
       %{count: 1},
       %{}
@@ -116,7 +126,7 @@ defmodule Lightning.PromExTest do
     end
 
     def seed_event_metrics do
-      :telemetry.execute([:promex, :test, :event], %{count: 42}, %{})
+      :telemetry.execute([:promex, :external, :test, :event], %{count: 42}, %{})
     end
   end
 end
