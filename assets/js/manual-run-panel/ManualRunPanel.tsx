@@ -35,10 +35,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   React.useEffect(() => {
     props.handleEvent('manual_run_created', payload => {
       if (payload.dataclip) {
-        setSelectedOption(SeletableOptions.EXISTING);
-        setTimeout(() => {
-          setSelectedclip(payload.dataclip);
-        }, 0);
+        setSelectedclip(payload.dataclip);
       }
     });
   }, [props, pushEvent]);
