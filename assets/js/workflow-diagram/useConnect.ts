@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type * as F from 'reactflow';
+import type * as F from '@xyflow/react';
 import { randomUUID } from '../common';
 import { useWorkflowStore } from '../workflow-store/store';
 import Connection from './edges/Connection';
