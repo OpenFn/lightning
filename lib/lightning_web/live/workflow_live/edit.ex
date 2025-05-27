@@ -186,11 +186,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
           base_url={@base_url}
           chat_session_id={@chat_session_id}
           current_user={@current_user}
+          class="transition-all duration-300 ease-in-out"
         />
-        <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
+        <div
+          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "flex-col w-2/3", else: ""}"}
+          id={"workflow-edit-#{@workflow.id}"}
+        >
           <.selected_template_tooltip
-            :if={@selected_template}
+            :if={@selected_template && @show_new_workflow_panel}
             template={@selected_template}
+            class="transition-all duration-300 ease-in-out"
           />
           <.canvas_placeholder_card :if={@show_canvas_placeholder} />
           <div class="flex-none" id="job-editor-pane">
@@ -741,8 +746,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 >
                   Copy Code
                 </.button>
+                <%!-- :if={@current_user.support_user} --%>
                 <.button
-                  :if={@current_user.support_user}
                   theme="primary"
                   id="publish-template-btn"
                   phx-click="publish_template"
@@ -3079,27 +3084,94 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
+  # TODO: Hey @taylordowns2000 here are the template tooltips and the empty canvas placeholders options.
+  #       Play with them and pick the best one.
+
+  # defp selected_template_tooltip(assigns) do
+  #   ~H"""
+  #   <div
+  #     phx-mounted={fade_in()}
+  #     phx-remove={fade_out()}
+  #     class="w-full hidden opacity-[100] flex grow p-2 transition-all duration-300 ease-out"
+  #   >
+  #     <div class="px-4 py-3">
+  #       <div class="flex items-center justify-between flex-wrap gap-2">
+  #         <div class="flex-1 min-w-0">
+  #           <p class="text-sm font-medium text-gray-800">
+  #             {@template.name}
+  #           </p>
+  #           <p class="mt-1 text-sm text-gray-700">
+  #             {@template.description}
+  #           </p>
+  #         </div>
+  #       </div>
+  #     </div>
+  #   </div>
+  #   """
+  # end
+
   defp selected_template_tooltip(assigns) do
     ~H"""
     <div
       phx-mounted={fade_in()}
       phx-remove={fade_out()}
-      class="my-2 mx-4 absolute p-4 hidden opacity-0 z-[9999]"
+      class="w-full flex grow hidden opacity-[0.90] bg-white backdrop-blur-md border-b border-gray-200 p-6
+             transition-all duration-300 ease-out"
     >
-      <p class="text-1xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
-        {@template.name}
-      </p>
-      <p class="mt-4 text-lg/8 text-gray-500">
-        {@template.description}
-      </p>
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600
+                      flex items-center justify-center">
+            <.icon name="hero-document-text" class="w-5 h-5 text-white" />
+          </div>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <h3 class="text-sm font-medium text-gray-800 tracking-tight leading-tight mb-2
+                     bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            {@template.name}
+          </h3>
+          <p class="text-sm text-gray-600 leading-relaxed line-clamp-3">
+            {@template.description}
+          </p>
+        </div>
+      </div>
     </div>
     """
   end
 
+  # defp canvas_placeholder_card(assigns) do
+  #   ~H"""
+  #   <div class="flex items-center justify-center w-full h-full p-8 text-center text-gray-500">
+  #     Select a template, import a workflow, or open a chat with the AI assistant to start building a workflow.
+  #   </div>
+  #   """
+  # end
+
   defp canvas_placeholder_card(assigns) do
     ~H"""
-    <div class="flex items-center justify-center w-full h-full p-8 text-center text-gray-500">
-      Select a template, import a workflow, or open a chat with the AI assistant to start building a workflow.
+    <div class="flex items-center justify-center w-full h-full p-8">
+      <div class="max-w-md text-center space-y-6">
+        <div class="relative mx-auto w-24 h-24 mb-8">
+          <div class="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20
+                      rounded-2xl animate-pulse">
+          </div>
+          <div class="relative bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6">
+            <.icon name="hero-bolt" class="w-12 h-12 text-white" />
+          </div>
+        </div>
+        <div class="space-y-3">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            Ready for a new workflow?
+          </h3>
+          <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
+            Get started by selecting a template, importing a workflow, or opening a chat with the AI assistant.
+          </p>
+        </div>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-6">
+          Not sure where to start? Try browsing our template library first.
+        </p>
+      </div>
     </div>
     """
   end
