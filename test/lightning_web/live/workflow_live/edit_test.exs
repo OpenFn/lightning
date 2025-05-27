@@ -4363,7 +4363,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           )
           |> tap(&insert(:step, input_dataclip: &1, job: job))
           |> then(fn %{body: body, request: request} = dataclip ->
-            Repo.reload!(dataclip) |> restore_listed(body, request)
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
           end)
         end)
         |> Enum.sort_by(& &1.inserted_at, :desc)
@@ -4400,7 +4403,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
         |> tap(&insert(:step, input_dataclip: &1, job: job))
         |> then(fn %{body: body, request: request} = dataclip ->
-          Repo.reload!(dataclip) |> restore_listed(body, request)
+          dataclip
+          |> Repo.reload!()
+          |> restore_listed(body, request)
+          |> then(&%{&1 | body: nil})
         end)
 
       render_hook(
@@ -4450,7 +4456,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
         |> tap(&insert(:step, input_dataclip: &1, job: job))
         |> then(fn %{body: body, request: request} = dataclip ->
-          Repo.reload!(dataclip) |> restore_listed(body, request)
+          dataclip
+          |> Repo.reload!()
+          |> restore_listed(body, request)
+          |> then(&%{&1 | body: nil})
         end)
 
       render_hook(
@@ -4535,7 +4544,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           )
           |> tap(&insert(:step, input_dataclip: &1, job: job))
           |> then(fn %{body: body, request: request} = dataclip ->
-            Repo.reload!(dataclip) |> restore_listed(body, request)
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
           end)
         end)
         |> Enum.sort_by(& &1.inserted_at, :desc)
@@ -4583,7 +4595,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           )
           |> tap(&insert(:step, input_dataclip: &1, job: job))
           |> then(fn %{body: body, request: request} = dataclip ->
-            Repo.reload!(dataclip) |> restore_listed(body, request)
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
           end)
         end)
         |> Enum.sort_by(& &1.inserted_at, :desc)
@@ -4639,7 +4654,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           )
           |> tap(&insert(:step, input_dataclip: &1, job: job))
           |> then(fn %{body: body, request: request} = dataclip ->
-            Repo.reload!(dataclip) |> restore_listed(body, request)
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
           end)
         end)
         |> Enum.drop(1)
@@ -4696,7 +4714,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           )
           |> tap(&insert(:step, input_dataclip: &1, job: job))
           |> then(fn %{body: body, request: request} = dataclip ->
-            Repo.reload!(dataclip) |> restore_listed(body, request)
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
           end)
         end)
         |> Enum.drop(1)
