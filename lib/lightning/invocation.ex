@@ -60,15 +60,13 @@ defmodule Lightning.Invocation do
   @spec list_dataclips_for_job(
           Job.t(),
           user_filters :: map(),
-          limit :: pos_integer(),
-          offset :: pos_integer() | nil
+          opts :: Keyword.t()
         ) :: [Dataclip.t()]
-  def list_dataclips_for_job(
-        %Job{id: job_id},
-        user_filters,
-        limit,
-        offset \\ nil
-      ) do
+  def list_dataclips_for_job(%Job{id: job_id}, user_filters, opts) do
+    load_body = Keyword.get(opts, :load_body, false)
+    limit = Keyword.fetch!(opts, :limit)
+    offset = Keyword.get(opts, :offset)
+
     db_filters =
       Enum.reduce(user_filters, dynamic(true), fn
         {:id, uuid}, dynamic ->
@@ -94,7 +92,9 @@ defmodule Lightning.Invocation do
       end)
 
     Query.last_n_for_job(job_id, limit)
-    |> Query.select_as_input()
+    |> then(fn query ->
+      if load_body, do: Query.select_as_input(query), else: query
+    end)
     |> where([d], is_nil(d.wiped_at))
     |> where([d], ^db_filters)
     |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)

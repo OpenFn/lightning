@@ -252,8 +252,63 @@ defmodule Lightning.InvocationTest do
                Invocation.list_dataclips_for_job(
                  %Job{id: Ecto.UUID.generate()},
                  %{},
-                 5
+                 [limit: 5]
                )
+    end
+
+    test "returns dataclips without the body" do
+      %{jobs: [job1, job2 | _rest]} = insert(:complex_workflow)
+
+      insert(:step,
+        input_dataclip:
+          build(:dataclip,
+            body: %{"field" => "value"},
+            request: %{"headers" => "list"},
+            type: :http_request
+          ),
+        job: job2
+      )
+
+      insert(:step,
+        input_dataclip:
+          build(:dataclip,
+            body: %{"field" => "value"},
+            request: %{"headers" => "list"},
+            type: :saved_input
+          ),
+        job: job1
+      )
+
+      inserted_at = DateTime.utc_now()
+
+      dataclips =
+        Enum.map(1..6, fn i ->
+          dataclip =
+            insert(:dataclip,
+              body: %{"foo#{i}" => "bar#{i}"},
+              request: %{"headers" => "list#{i}"},
+              type: :http_request,
+              inserted_at: DateTime.add(inserted_at, i, :millisecond)
+            )
+            |> Map.delete(:project)
+
+          insert(:step, input_dataclip: dataclip, job: job1)
+
+          assert dataclip.body == %{"foo#{i}" => "bar#{i}"}
+
+          dataclip
+          |> Map.put(:request, nil)
+        end)
+        |> Enum.drop(1)
+        |> Enum.sort_by(& &1.inserted_at, :desc)
+
+      assert Enum.map(dataclips, &Map.merge(&1, %{body: nil, project: nil})) ==
+               Invocation.list_dataclips_for_job(
+                 job1,
+                 %{type: "http_request"},
+                 [limit: 5, load_body: false]
+               )
+               |> Enum.map(&Map.merge(&1, %{project: nil}))
     end
 
     test "returns latest dataclips for a job filtering by type" do
@@ -309,9 +364,17 @@ defmodule Lightning.InvocationTest do
                Invocation.list_dataclips_for_job(
                  job1,
                  %{type: "http_request"},
-                 5
+                 [limit: 5, load_body: true]
                )
                |> Enum.map(&Map.delete(&1, :project))
+
+      assert ^dataclips =
+          Invocation.list_dataclips_for_job(
+            job1,
+            %{type: "http_request"},
+            [limit: 5, load_body: true]
+          )
+          |> Enum.map(&Map.delete(&1, :project))
     end
 
     test "returns latest dataclips for a job filtering by id" do
@@ -329,7 +392,7 @@ defmodule Lightning.InvocationTest do
           Invocation.list_dataclips_for_job(
             job1,
             %{id_prefix: prefix},
-            10
+            [limit: 10, load_body: true]
           )
 
         assert Enum.any?(dataclips, &(&1.id == dataclip_id))
@@ -351,7 +414,7 @@ defmodule Lightning.InvocationTest do
         Invocation.list_dataclips_for_job(
           job1,
           %{id_prefix: prefix},
-          10
+          [limit: 10]
         )
 
       # ensure that the dataclip isn't found:
@@ -387,7 +450,7 @@ defmodule Lightning.InvocationTest do
                Invocation.list_dataclips_for_job(
                  job1,
                  %{type: "http_request"},
-                 5
+                 [limit: 5, load_body: true]
                )
                |> Enum.map(&Map.drop(&1, [:project, :request]))
     end

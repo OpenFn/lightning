@@ -1500,6 +1500,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
   end
 
+  def handle_event("get-dataclip-with-body", %{"id" => dataclip_id}, socket) do
+    {:reply, %{dataclip: Invocation.get_dataclip_details!(dataclip_id)}, socket}
+  end
+
   def handle_event(
         "search-selectable-dataclips",
         %{"job_id" => job_id, "search_text" => search_text, "limit" => limit} =
