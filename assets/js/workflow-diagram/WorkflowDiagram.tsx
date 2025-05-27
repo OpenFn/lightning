@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   Controls,
   ReactFlowProvider,
   applyNodeChanges,
-  getRectOfNodes,
+  getNodesBounds,
   MiniMap,
   Background,
   type NodeChange,
   type ReactFlowInstance,
   type Rect,
-} from 'reactflow';
+} from '@xyflow/react';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import edgeTypes from './edges';
@@ -209,7 +210,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           const visible = model.nodes.filter(n =>
             isPointInRect(n.position, rect)
           );
-          cachedTargetBounds = getRectOfNodes(visible);
+          cachedTargetBounds = getNodesBounds(visible);
         }
 
         // Run an animated fit

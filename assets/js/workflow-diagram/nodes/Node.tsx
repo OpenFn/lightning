@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Handle, type NodeProps } from 'reactflow';
+import { Handle, type NodeProps } from '@xyflow/react';
 
 import Shape from '../components/Shape';
 import ErrorMessage from '../components/ErrorMessage';
@@ -124,7 +124,7 @@ const Node = ({
 
                   // abuse the handle style to make the whole node the drop target
                   left: '52px',
-                  top: '-12px',
+                  top: '52px',
                   width: '128px',
                   height: '128px',
                   backgroundColor: data.isActiveDropTarget

@@ -1053,8 +1053,8 @@ function undo(g) {
       if (node.dummy === "edge-label") {
         origLabel.x = node.x;
         origLabel.y = node.y;
-        origLabel.width = node.width;
-        origLabel.height = node.height;
+        origLabel.width = node.measured.width;
+        origLabel.height = node.measured.height;
       }
       v = w;
       node = g.node(v);
