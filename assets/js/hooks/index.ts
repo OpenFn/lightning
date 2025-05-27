@@ -50,19 +50,6 @@ export {
 
 export { ReactComponent } from '#/react/hooks';
 
-export const TemplateTooltip = {
-  mounted() {
-    this.el.addEventListener("click", () => {
-      console.log("click", this.el.dataset.template);
-      this.pushEvent("show_label", this.el.dataset.template);
-    });
-
-    this.handleEvent("hide_label", () => {
-      this.pushEvent("hide_label", {});
-    });
-  }
-} as PhoenixHook;
-
 export const TabIndent = {
   mounted() {
     this.el.addEventListener('keydown', e => {

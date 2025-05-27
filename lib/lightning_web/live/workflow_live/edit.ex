@@ -188,7 +188,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           current_user={@current_user}
         />
         <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
-          <.template_label :if={@selected_template} template={@selected_template} />
+          <.selected_template_tooltip
+            :if={@selected_template}
+            template={@selected_template}
+          />
           <.canvas_placeholder_card :if={@show_canvas_placeholder} />
           <div class="flex-none" id="job-editor-pane">
             <div
@@ -1763,6 +1766,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("toggle_new_workflow_panel", _, socket) do
     {:noreply,
      socket
+     |> assign(selected_template: nil)
      |> update(:show_new_workflow_panel, fn val -> !val end)
      |> maybe_disable_canvas()}
   end
@@ -1945,11 +1949,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, assign(socket, publish_template: false)}
   end
 
-  def handle_event("show_label", template, socket) do
-    {:noreply, assign(socket, selected_template: Jason.decode!(template))}
-  end
-
-  def handle_event("hide_label", _params, socket) do
+  def handle_event("close_template_tooltip", _params, socket) do
     {:noreply, assign(socket, selected_template: nil)}
   end
 
@@ -2055,6 +2055,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:show_canvas_placeholder, value}, socket) do
     {:noreply, assign(socket, show_canvas_placeholder: value)}
+  end
+
+  def handle_info({:show_template_tooltip, template}, socket) do
+    {:noreply, assign(socket, selected_template: template)}
   end
 
   def handle_info(%{}, socket) do
@@ -2560,45 +2564,69 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp apply_query_params(socket) do
-    socket.assigns.query_params
-    |> case do
-      %{"m" => "settings", "s" => nil, "a" => nil} ->
-        socket |> unselect_all() |> set_mode("settings")
-
-      %{"m" => "code", "s" => nil, "a" => nil} ->
-        socket
-        |> unselect_all()
-        |> set_mode("code")
-        |> assign(publish_template: false)
-
-      %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
-        socket |> unselect_all() |> assign(method: method)
-
-      # Nothing is selected
-      %{"s" => nil} ->
-        socket |> unselect_all() |> set_mode(nil)
-
-      # Try to select the given item, possibly with a mode (such as `expand`)
-      %{"s" => selected_id, "m" => mode} ->
-        case find_item(socket.assigns.changeset, selected_id) do
-          [type, selected] ->
-            socket
-            |> set_selected_node(type, selected)
-            |> set_mode(if mode in ["expand"], do: mode, else: nil)
-
-          nil ->
-            socket |> unselect_all()
-        end
-    end
-    |> then(fn socket ->
-      if socket.assigns.show_new_workflow_panel do
-        socket |> unselect_all() |> set_mode(nil)
-      else
-        socket
-      end
-    end)
+    socket
+    |> apply_mode_and_selection()
+    |> handle_new_workflow_panel()
     |> assign_follow_run(socket.assigns.query_params)
     |> assign_chat_session_id(socket.assigns.query_params)
+  end
+
+  defp apply_mode_and_selection(socket) do
+    case socket.assigns.query_params do
+      %{"m" => "settings", "s" => nil, "a" => nil} ->
+        handle_settings_mode(socket)
+
+      %{"m" => "code", "s" => nil, "a" => nil} ->
+        handle_code_mode(socket)
+
+      %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
+        handle_method_assignment(socket, method)
+
+      %{"s" => nil} ->
+        handle_no_selection(socket)
+
+      %{"s" => selected_id, "m" => mode} ->
+        handle_selection_with_mode(socket, selected_id, mode)
+    end
+  end
+
+  defp handle_settings_mode(socket) do
+    socket |> unselect_all() |> set_mode("settings")
+  end
+
+  defp handle_code_mode(socket) do
+    socket
+    |> unselect_all()
+    |> set_mode("code")
+    |> assign(publish_template: false)
+  end
+
+  defp handle_method_assignment(socket, method) do
+    socket |> unselect_all() |> assign(method: method)
+  end
+
+  defp handle_no_selection(socket) do
+    socket |> unselect_all() |> set_mode(nil)
+  end
+
+  defp handle_selection_with_mode(socket, selected_id, mode) do
+    case find_item(socket.assigns.changeset, selected_id) do
+      [type, selected] ->
+        socket
+        |> set_selected_node(type, selected)
+        |> set_mode(if mode in ["expand"], do: mode, else: nil)
+
+      nil ->
+        socket |> unselect_all()
+    end
+  end
+
+  defp handle_new_workflow_panel(socket) do
+    if socket.assigns.show_new_workflow_panel do
+      socket |> unselect_all() |> set_mode(nil)
+    else
+      socket
+    end
   end
 
   defp assign_chat_session_id(socket, %{"chat" => session_id})
@@ -3051,18 +3079,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp template_label(assigns) do
+  defp selected_template_tooltip(assigns) do
     ~H"""
     <div
       phx-mounted={fade_in()}
       phx-remove={fade_out()}
-      class="border border-gray-200 rounded-md my-2 mx-2 bg-gray-900 absolute p-4 hidden opacity-0 z-[9999]"
+      class="my-2 mx-4 absolute p-4 hidden opacity-0 z-[9999]"
     >
-      <p class="text-sm font-semibold tracking-tight text-gray-100">
-        {@template["title"]}
+      <p class="text-1xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
+        {@template.name}
       </p>
-      <p class="text-sm mt-2 text-lg/8 text-gray-300">
-        {@template["description"]}
+      <p class="mt-4 text-lg/8 text-gray-500">
+        {@template.description}
       </p>
     </div>
     """

@@ -94,12 +94,10 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp apply_action(socket, :new, :workflow) do
-    sort_direction = socket.assigns.sort_direction
-    project = socket.assigns.project
-
-    show_canvas_placeholder(true)
+    %{sort_direction: sort_direction, project: project} = socket.assigns
 
     socket
+    |> update_workflow_template(nil)
     |> assign_async(:all_sessions, fn ->
       {:ok,
        %{
@@ -1028,22 +1026,10 @@ defmodule LightningWeb.AiAssistant.Component do
          %ChatSession{messages: messages},
          :workflow
        ) do
-    messages
-    |> Enum.reverse()
-    |> Enum.find(fn message ->
-      is_binary(message.workflow_code) and message.workflow_code != ""
-    end)
-    |> then(fn
-      nil ->
-        socket
-
-      last_message ->
-        show_canvas_placeholder(false)
-
-        push_event(socket, "template_selected", %{
-          template: last_message.workflow_code
-        })
-    end)
+    case find_last_message_with_workflow_code(messages) do
+      nil -> socket
+      message -> update_workflow_template(socket, %{code: message.workflow_code})
+    end
   end
 
   defp maybe_push_workflow_code(
@@ -1051,8 +1037,8 @@ defmodule LightningWeb.AiAssistant.Component do
          %ChatMessage{workflow_code: code},
          :workflow
        ) do
-    if is_binary(code) and code != "" do
-      push_event(socket, "template_selected", %{template: code})
+    if has_workflow_code?(code) do
+      update_workflow_template(socket, %{code: code})
     else
       socket
     end
@@ -1060,7 +1046,25 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp maybe_push_workflow_code(socket, _message, _mode), do: socket
 
-  def show_canvas_placeholder(should_show? \\ true) do
-    send(self(), {:show_canvas_placeholder, should_show?})
+  defp update_workflow_template(socket, template) do
+    if socket.assigns.mode == :workflow do
+      send_update(
+        LightningWeb.WorkflowLive.NewWorkflowComponent,
+        id: socket.assigns.parent_component_id,
+        action: :template_selected,
+        template: template
+      )
+    end
+
+    socket
   end
+
+  defp find_last_message_with_workflow_code(messages) do
+    messages
+    |> Enum.reverse()
+    |> Enum.find(&has_workflow_code?(&1.workflow_code))
+  end
+
+  defp has_workflow_code?(code) when is_binary(code), do: code != ""
+  defp has_workflow_code?(_), do: false
 end

@@ -182,13 +182,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
 
-      # the base webhook template is selected by default
-      assert view
-             |> element(
-               "form#choose-workflow-template-form label[data-selected='true']"
-             )
-             |> render() =~ "base-webhook"
-
       # click continue
       view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
 
@@ -324,13 +317,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
-
-      # the base webhook template is selected by default
-      assert view
-             |> element(
-               "form#choose-workflow-template-form label[data-selected='true']"
-             )
-             |> render() =~ "base-webhook"
 
       # lets select the cron one
       template_id = "base-cron-template"
@@ -503,6 +489,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           }
         ]
       }
+
+      view |> render_click("choose-another-method", %{"method" => "import"})
 
       view
       |> with_target("#new-workflow-panel")
@@ -2684,7 +2672,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[method: "template", s: job_2.id]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id]}"
       )
 
       assert render(view) =~

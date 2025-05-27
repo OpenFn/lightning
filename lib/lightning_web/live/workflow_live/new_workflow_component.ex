@@ -9,16 +9,38 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   @impl true
   def mount(socket) do
+    base_templates = base_templates()
+    users_templates = WorkflowTemplates.list_templates()
+
     {:ok,
      socket
-     |> assign(selected_method: "template")
+     |> assign(base_url: nil)
      |> assign(search_term: "")
      |> assign(chat_session_id: nil)
-     |> assign(base_url: nil)
-     |> apply_selected_method()}
+     |> assign(selected_template: nil)
+     |> assign(selected_method: "template")
+     |> assign(base_templates: base_templates)
+     |> assign(users_templates: users_templates)
+     |> assign(filtered_templates: users_templates)
+     |> assign(all_templates: base_templates ++ users_templates)}
   end
 
   @impl true
+  def update(%{action: :template_selected, template: nil}, socket) do
+    update_ui_state(show_canvas_placeholder: true, show_template_tooltip: nil)
+
+    {:ok, socket}
+  end
+
+  def update(%{action: :template_selected, template: template}, socket) do
+    update_ui_state(show_canvas_placeholder: false, show_template_tooltip: nil)
+
+    {:ok,
+     socket
+     |> assign(selected_template: nil)
+     |> push_event("template_selected", %{template: template.code})}
+  end
+
   def update(assigns, socket) do
     {:ok,
      socket
@@ -30,17 +52,14 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   @impl true
   def handle_event("choose-another-method", %{"method" => method}, socket) do
-    show_canvas_placeholder()
+    update_ui_state(show_canvas_placeholder: true, show_template_tooltip: nil)
 
-    if socket.assigns.selected_method == "ai" do
-      {:noreply,
-       push_navigate(socket, to: "/projects/#{socket.assigns.project.id}/w/new")}
-    else
-      {:noreply,
-       socket
-       |> assign(selected_method: method)
-       |> apply_selected_method()}
-    end
+    {:noreply,
+     socket
+     |> assign(selected_method: method)
+     |> push_patch(
+       to: "/projects/#{socket.assigns.project.id}/w/new?method=#{method}"
+     )}
   end
 
   def handle_event("search-templates", %{"search" => search_term}, socket) do
@@ -59,48 +78,77 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         template.id == template_id
       end)
 
-    show_canvas_placeholder(false)
+    update_ui_state(
+      show_canvas_placeholder: false,
+      show_template_tooltip: template
+    )
 
     {:noreply,
      socket
      |> assign(selected_template: template)
-     |> push_selected_template_code()}
+     |> push_event("template_selected", %{template: template.code})}
   end
 
   def handle_event(event_name, %{"workflow" => params}, socket)
       when event_name in ["workflow-parsed", "template-parsed"] do
     %{project: project, selected_template: template} = socket.assigns
+    params_with_name = params_with_name(params, project, template, event_name)
 
-    workflow_name = default_if_empty(params["name"], "Untitled Workflow")
+    changeset =
+      Workflow.changeset(socket.assigns.workflow, params_with_name)
 
-    template_name =
-      if template,
-        do: default_if_empty(template.name, "Untitled Template"),
-        else: "Untitled Template"
+    if changeset.valid? do
+      template_for_tooltip = get_template_for_tooltip(event_name, template)
 
-    params =
-      project
-      |> Projects.list_workflows()
-      |> generate_workflow_name(
-        workflow_name,
-        template_name,
-        event_name
+      update_ui_state(
+        show_canvas_placeholder: false,
+        show_template_tooltip: template_for_tooltip
       )
-      |> then(fn name -> Map.put(params, "name", name) end)
 
-    update_parent_form(params)
+      notify_form_change(params_with_name)
 
-    case event_name do
-      "workflow-parsed" -> handle_workflow_parsed(socket, params)
-      "template-parsed" -> handle_template_parsed(socket, params)
+      socket =
+        socket
+        |> update_canvas_state(params_with_name)
+        |> assign(changeset: changeset)
+
+      {:reply, %{}, socket}
+    else
+      update_ui_state(show_canvas_placeholder: true, show_template_tooltip: nil)
+
+      {:reply, ProvisioningJSON.error(%{changeset: changeset}),
+       assign_error_changeset(socket, changeset, event_name)}
     end
   end
 
-  def handle_event("open-workflow-chat", _params, socket) do
-    {:noreply,
-     socket
-     |> push_event("hide_label", %{})
-     |> push_patch(to: "/projects/#{socket.assigns.project.id}/w/new?method=ai")}
+  def handle_event(_event, _params, socket) do
+    {:noreply, socket}
+  end
+
+  defp params_with_name(params, project, template, event_name) do
+    workflow_name = default_if_empty(params["name"], "Untitled Workflow")
+    template_name = get_template_name(template)
+
+    unique_name =
+      project
+      |> Projects.list_workflows()
+      |> generate_workflow_name(workflow_name, template_name, event_name)
+
+    Map.put(params, "name", unique_name)
+  end
+
+  defp get_template_for_tooltip("template-parsed", template), do: template
+  defp get_template_for_tooltip("workflow-parsed", _template), do: nil
+
+  defp assign_error_changeset(socket, changeset, "workflow-parsed"),
+    do: assign(socket, changeset: changeset)
+
+  defp assign_error_changeset(socket, _changeset, "template-parsed"), do: socket
+
+  defp get_template_name(nil), do: "Untitled Template"
+
+  defp get_template_name(template) do
+    default_if_empty(template.name, "Untitled Template")
   end
 
   defp default_if_empty(name, default) do
@@ -123,37 +171,25 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     generate_unique_name(base_name, existing_workflows)
   end
 
-  defp handle_workflow_parsed(socket, params) do
-    changeset = Workflow.changeset(socket.assigns.workflow, params)
-
-    if changeset.valid? do
-      {:reply, %{},
-       socket
-       |> update_workflow_canvas(params)
-       |> assign(changeset: changeset)}
-    else
-      {:reply, ProvisioningJSON.error(%{changeset: changeset}),
-       assign(socket, changeset: changeset)}
-    end
-  end
-
-  defp handle_template_parsed(socket, params) do
-    {:noreply, update_workflow_canvas(socket, params)}
-  end
-
   defp generate_unique_name(base_name, existing_workflows) do
     existing_names = MapSet.new(existing_workflows, & &1.name)
 
-    Stream.iterate(0, &(&1 + 1))
-    |> Enum.reduce_while(base_name, fn i, name ->
-      candidate = if i == 0, do: name, else: "#{name} #{i}"
+    if MapSet.member?(existing_names, base_name) do
+      find_available_name(base_name, existing_names)
+    else
+      base_name
+    end
+  end
 
-      if MapSet.member?(existing_names, candidate) do
-        {:cont, name}
-      else
-        {:halt, candidate}
-      end
-    end)
+  defp find_available_name(base_name, existing_names) do
+    1
+    |> Stream.iterate(&(&1 + 1))
+    |> Stream.map(&"#{base_name} #{&1}")
+    |> Enum.find(&name_available?(&1, existing_names))
+  end
+
+  defp name_available?(name, existing_names) do
+    not MapSet.member?(existing_names, name)
   end
 
   defp filter_templates(templates, search_term)
@@ -184,58 +220,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   defp filter_templates(templates, _), do: templates
 
-  defp apply_selected_method(socket) do
-    case socket.assigns.selected_method do
-      "template" ->
-        base_templates = base_templates()
-        users_templates = WorkflowTemplates.list_templates()
-        all_templates = base_templates ++ users_templates
-
-        socket
-        |> assign(
-          selected_template: nil,
-          base_templates: base_templates,
-          users_templates: users_templates,
-          filtered_templates: users_templates,
-          all_templates: all_templates
-        )
-        |> push_selected_template_code()
-
-      "import" ->
-        changeset = Workflow.changeset(socket.assigns.workflow, %{})
-        assign(socket, changeset: changeset)
-    end
-  end
-
-  def update_parent_form(params) do
-    send(
-      self(),
-      {"form_changed", %{"workflow" => params, "opts" => [push_patches: false]}}
-    )
-
-    :ok
-  end
-
-  def show_canvas_placeholder(should_show? \\ true) do
-    send(self(), {:show_canvas_placeholder, should_show?})
-  end
-
-  defp push_selected_template_code(socket) do
-    if socket.assigns.selected_template do
-      push_event(socket, "template_selected", %{
-        template: socket.assigns.selected_template.code
-      })
-    else
-      socket
-    end
-  end
-
-  defp update_workflow_canvas(socket, params) do
-    socket
-    |> push_event("state-applied", %{"state" => params})
-    |> push_event("force-fit", %{})
-  end
-
   @impl true
   def render(assigns) do
     assigns =
@@ -251,7 +235,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     <div id={@id} class="w-1/3">
       <div class="divide-y divide-gray-200 bg-white h-full flex flex-col">
         <div class="flex-grow overflow-hidden flex flex-col">
-          <div :if={@selected_method != "ai"} class="px-2 py-2 sm:px-4 sm:py-2">
+          <div
+            :if={@selected_method != "ai"}
+            class="px-2 py-2 sm:px-4 sm:py-2 flex-grow"
+          >
             <.create_workflow_from_template
               :if={@selected_method == "template"}
               myself={@myself}
@@ -277,6 +264,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             chat_session_id={@chat_session_id}
             search_term={@search_term}
             base_url={@base_url}
+            parent_component_id={@id}
           />
         </div>
         <div class="px-4 py-4 sm:p-3 flex flex-row justify-end gap-2 h-max border-t">
@@ -331,7 +319,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     <button
       type="button"
       id="template-label-ai-dynamic-template"
-      phx-click="open-workflow-chat"
+      phx-click="choose-another-method"
+      phx-value-method="ai"
       phx-target={@myself}
       class="relative flex flex-col cursor-pointer rounded-md border border-indigo-300/40 p-4 transition-all duration-300 no-underline w-full text-left bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 hover:border-indigo-300/80 group h-24"
       style="appearance: none;"
@@ -399,13 +388,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             <label
               :for={template <- @base_templates}
               id={"template-label-#{template.id}"}
-              phx-hook="TemplateTooltip"
-              data-template={
-                Jason.encode!(%{
-                  title: template.name,
-                  description: template.description
-                })
-              }
               data-selected={"#{@selected_template && template.id == @selected_template.id}"}
               for={"template-input-#{template.id}"}
               class={[
@@ -445,13 +427,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             <label
               :for={template <- @filtered_templates}
               id={"template-label-#{template.id}"}
-              phx-hook="TemplateTooltip"
-              data-template={
-                Jason.encode!(%{
-                  title: template.name,
-                  description: template.description
-                })
-              }
               data-selected={"#{@selected_template && template.id == @selected_template.id}"}
               for={"template-input-#{template.id}"}
               class={[
@@ -571,6 +546,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         base_url={@base_url}
         input_value={@search_term}
         action={if(@chat_session_id, do: :show, else: :new)}
+        parent_component_id={@parent_component_id}
         id="workflow-ai-assistant"
       />
     </div>
@@ -585,6 +561,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         description: "The basic structure for a webhook-triggered workflow",
         tags: ["webhook", "event", "workflow"],
         code: """
+        name: "Event-based Workflow"
         jobs:
           Step-1:
             name: Transform data
@@ -610,6 +587,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         description: "The basic structure for a cron-triggered workflow",
         tags: ["cron", "scheduled", "workflow"],
         code: """
+        name: "Scheduled Workflow"
         jobs:
           Get-data:
             name: Get data
@@ -632,5 +610,31 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         """
       }
     ]
+  end
+
+  defp update_ui_state(opts) do
+    send(
+      self(),
+      {:show_canvas_placeholder,
+       Keyword.get(opts, :show_canvas_placeholder, true)}
+    )
+
+    send(
+      self(),
+      {:show_template_tooltip, Keyword.get(opts, :show_template_tooltip, nil)}
+    )
+  end
+
+  defp notify_form_change(params) do
+    send(
+      self(),
+      {"form_changed", %{"workflow" => params, "opts" => [push_patches: false]}}
+    )
+  end
+
+  defp update_canvas_state(socket, params) do
+    socket
+    |> push_event("state-applied", %{"state" => params})
+    |> push_event("force-fit", %{})
   end
 end
