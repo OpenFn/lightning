@@ -52,8 +52,7 @@ defmodule Lightning.Runs.PromExPlugin do
           ),
           Metrics.counter(
             @lost_run_event ++ [:count],
-            description: "A counter of lost runs.",
-            tags: []
+            description: "A counter of lost runs."
           )
         ]
       )
