@@ -3084,11 +3084,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  # TODO: Hey @taylordowns2000 here are the template tooltips and the empty canvas placeholders options. Play with them and pick the best one.
+  # TODO: Hey @taylordowns2000 here are the template tooltips and the empty canvas placeholders options.
+  #       Play with them and pick the best one.
 
   # defp selected_template_tooltip(assigns) do
   #   ~H"""
-  #   <div phx-mounted={fade_in()} phx-remove={fade_out()} class="w-full hidden opacity-[100] flex grow p-2 transition-all duration-300 ease-out">
+  #   <div
+  #     phx-mounted={fade_in()}
+  #     phx-remove={fade_out()}
+  #     class="w-full hidden opacity-[100] flex grow p-2 transition-all duration-300 ease-out"
+  #   >
   #     <div class="px-4 py-3">
   #       <div class="flex items-center justify-between flex-wrap gap-2">
   #         <div class="flex-1 min-w-0">
