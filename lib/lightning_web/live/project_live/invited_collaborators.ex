@@ -7,8 +7,7 @@ defmodule LightningWeb.ProjectLive.InvitedCollaborators do
   use Lightning.Schema
 
   embedded_schema do
-    embeds_many :invited_collaborators, InvitedCollaborator,
-      on_replace: :delete do
+    embeds_many :invited_collaborators, InvitedCollaborator, on_replace: :delete do
       field :first_name, :string
       field :last_name, :string
       field :email, :string
