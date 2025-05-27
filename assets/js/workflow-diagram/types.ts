@@ -1,4 +1,4 @@
-import type * as ReactFlow from 'reactflow';
+import type * as ReactFlow from '@xyflow/react';
 
 // This all describes the lightning view of a workflow
 export namespace Lightning {

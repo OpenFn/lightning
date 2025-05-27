@@ -1,4 +1,4 @@
-import { BezierEdge, type EdgeProps, EdgeLabelRenderer } from 'reactflow';
+import { BezierEdge, type EdgeProps, EdgeLabelRenderer } from '@xyflow/react';
 import { edgeLabelStyles } from '../styles';
 
 const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
