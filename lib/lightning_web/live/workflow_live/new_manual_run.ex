@@ -21,9 +21,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
            Invocation.list_dataclips_for_job(
              %Job{id: job_id},
              filters,
-             limit: limit,
-             offset: offset,
-             load_body: false
+             [limit: limit, offset: offset, load_body: false]
            ) do
       {:ok, dataclips}
     end

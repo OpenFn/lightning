@@ -252,7 +252,7 @@ defmodule Lightning.InvocationTest do
                Invocation.list_dataclips_for_job(
                  %Job{id: Ecto.UUID.generate()},
                  %{},
-                 limit: 5
+                 [limit: 5]
                )
     end
 
@@ -306,8 +306,7 @@ defmodule Lightning.InvocationTest do
                Invocation.list_dataclips_for_job(
                  job1,
                  %{type: "http_request"},
-                 limit: 5,
-                 load_body: false
+                 [limit: 5, load_body: false]
                )
                |> Enum.map(&Map.merge(&1, %{project: nil}))
     end
@@ -365,19 +364,17 @@ defmodule Lightning.InvocationTest do
                Invocation.list_dataclips_for_job(
                  job1,
                  %{type: "http_request"},
-                 limit: 5,
-                 load_body: true
+                 [limit: 5, load_body: true]
                )
                |> Enum.map(&Map.delete(&1, :project))
 
       assert ^dataclips =
-               Invocation.list_dataclips_for_job(
-                 job1,
-                 %{type: "http_request"},
-                 limit: 5,
-                 load_body: true
-               )
-               |> Enum.map(&Map.delete(&1, :project))
+          Invocation.list_dataclips_for_job(
+            job1,
+            %{type: "http_request"},
+            [limit: 5, load_body: true]
+          )
+          |> Enum.map(&Map.delete(&1, :project))
     end
 
     test "returns latest dataclips for a job filtering by id" do
@@ -395,8 +392,7 @@ defmodule Lightning.InvocationTest do
           Invocation.list_dataclips_for_job(
             job1,
             %{id_prefix: prefix},
-            limit: 10,
-            load_body: true
+            [limit: 10, load_body: true]
           )
 
         assert Enum.any?(dataclips, &(&1.id == dataclip_id))
@@ -418,7 +414,7 @@ defmodule Lightning.InvocationTest do
         Invocation.list_dataclips_for_job(
           job1,
           %{id_prefix: prefix},
-          limit: 10
+          [limit: 10]
         )
 
       # ensure that the dataclip isn't found:
@@ -454,8 +450,7 @@ defmodule Lightning.InvocationTest do
                Invocation.list_dataclips_for_job(
                  job1,
                  %{type: "http_request"},
-                 limit: 5,
-                 load_body: true
+                 [limit: 5, load_body: true]
                )
                |> Enum.map(&Map.drop(&1, [:project, :request]))
     end
