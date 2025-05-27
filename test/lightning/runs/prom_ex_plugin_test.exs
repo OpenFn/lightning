@@ -62,7 +62,7 @@ defmodule Lightning.Runs.PromExPluginText do
 
       assert metric.description == "A counter of lost runs."
       assert metric.event_name == [:lightning, :run, :lost]
-      assert metric.tags == [:seed_event, :state, :worker_name]
+      assert metric.tags == []
     end
 
     def find_event_metric(metrics, metric_name) do
@@ -602,7 +602,7 @@ defmodule Lightning.Runs.PromExPluginText do
         ^event,
         ^ref,
         %{count: 1},
-        %{seed_event: true, state: "n/a", worker_name: "n/a"}
+        %{}
       }
     end
   end
@@ -615,111 +615,21 @@ defmodule Lightning.Runs.PromExPluginText do
 
       %{
         event: event,
-        ref: ref,
-        state: :claimed,
-        state_as_string: "claimed",
-        worker_name: "worker_1"
+        ref: ref
       }
     end
 
-    test "defaults to a non-seed event", %{
+    test "fires a lost run event", %{
       event: event,
-      ref: ref,
-      state: state,
-      state_as_string: state_as_string,
-      worker_name: worker_name
+      ref: ref
     } do
-      Lightning.Runs.PromExPlugin.fire_lost_run_event(worker_name, state)
+      Lightning.Runs.PromExPlugin.fire_lost_run_event()
 
       assert_received {
         ^event,
         ^ref,
         %{count: 1},
-        %{seed_event: false, state: ^state_as_string, worker_name: ^worker_name}
-      }
-    end
-
-    test "can set a seed event", %{
-      event: event,
-      ref: ref,
-      state: state,
-      state_as_string: state_as_string,
-      worker_name: worker_name
-    } do
-      Lightning.Runs.PromExPlugin.fire_lost_run_event(worker_name, state, true)
-
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{seed_event: true, state: ^state_as_string, worker_name: ^worker_name}
-      }
-    end
-
-    test "can set a non-seed event", %{
-      event: event,
-      ref: ref,
-      state: state,
-      state_as_string: state_as_string,
-      worker_name: worker_name
-    } do
-      Lightning.Runs.PromExPlugin.fire_lost_run_event(worker_name, state, false)
-
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{seed_event: false, state: ^state_as_string, worker_name: ^worker_name}
-      }
-    end
-
-    test "converts a nil worker name", %{
-      event: event,
-      ref: ref,
-      state: state,
-      state_as_string: state_as_string
-    } do
-      Lightning.Runs.PromExPlugin.fire_lost_run_event(nil, state)
-
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{seed_event: false, state: ^state_as_string, worker_name: "n/a"}
-      }
-    end
-
-    test "converts a nil state", %{
-      event: event,
-      ref: ref,
-      worker_name: worker_name
-    } do
-      Lightning.Runs.PromExPlugin.fire_lost_run_event(worker_name, nil)
-
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{seed_event: false, state: "n/a", worker_name: ^worker_name}
-      }
-    end
-
-    test "accepts a state that is a string", %{
-      event: event,
-      ref: ref,
-      state_as_string: state_as_string,
-      worker_name: worker_name
-    } do
-      Lightning.Runs.PromExPlugin.fire_lost_run_event(
-        worker_name,
-        state_as_string
-      )
-
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{seed_event: false, state: ^state_as_string, worker_name: ^worker_name}
+        %{}
       }
     end
   end
