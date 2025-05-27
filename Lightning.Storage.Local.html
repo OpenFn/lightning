@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.Storage.Local — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,44 +77,34 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Storage.Local</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/storage/local.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.Storage.Local</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
 <p>A storage backend module for handling local file storage.</p><p>It implements the <a href="Lightning.Storage.Backend.html"><code class="inline">Lightning.Storage.Backend</code></a> behaviour to manage file storage
 operations on the local file system. This includes storing files from a source
-path to a destination path and generating URLs for accessing stored files.</p><h2 id="module-responsibilities" class="section-heading">
-  <a href="#module-responsibilities" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Responsibilities</span>
-</h2>
-<ul><li><strong>Storing Files</strong>: The <code class="inline">store/2</code> function is responsible for copying files
+path to a destination path and generating URLs for accessing stored files.</p><h2 id="module-responsibilities" class="section-heading"><a href="#module-responsibilities" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Responsibilities</span></h2><ul><li><strong>Storing Files</strong>: The <code class="inline">store/2</code> function is responsible for copying files
 from a given source path to a specified destination path on the local file
 system.</li><li><strong>Generating URLs</strong>: The <code class="inline">get_url/1</code> function generates a <code class="inline">file://</code> URL for
 accessing a stored file locally.</li><li><strong>Configuration</strong>: The module relies on application configuration to
-determine the root directory for storage operations.</li></ul><h2 id="module-example-usage" class="section-heading">
-  <a href="#module-example-usage" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example Usage</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="c1"># Store a file</span><span class="w">
-</span><span class="p" data-group-id="1534088881-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">filename</span><span class="p" data-group-id="1534088881-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="1534088881-2">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="1534088881-2">)</span><span class="w">
+determine the root directory for storage operations.</li></ul><h2 id="module-example-usage" class="section-heading"><a href="#module-example-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example Usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Store a file</span><span class="w">
+</span><span class="p" data-group-id="1054664252-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">filename</span><span class="p" data-group-id="1054664252-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="1054664252-2">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="1054664252-2">)</span><span class="w">
 
 </span><span class="c1"># Get the URL for the stored file</span><span class="w">
-</span><span class="p" data-group-id="1534088881-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p" data-group-id="1534088881-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="1534088881-4">(</span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="1534088881-4">)</span></code></pre>
+</span><span class="p" data-group-id="1054664252-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p" data-group-id="1054664252-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="1054664252-4">(</span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="1054664252-4">)</span></code></pre>
     </section>
 
 </div>
@@ -184,7 +127,7 @@ determine the root directory for storage operations.</li></ul><h2 id="module-exa
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

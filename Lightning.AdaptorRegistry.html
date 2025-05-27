@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.AdaptorRegistry — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,26 +77,28 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.AdaptorRegistry</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.AdaptorRegistry</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
 <p>Registry process to query and maintain a list of adaptors available for
 writing jobs.</p><p>Currently it queries NPM for all modules in the <code class="inline">@openfn</code> organization and
 filters out modules that are known not to be adaptors.</p><p><strong>Usage</strong></p><pre><code class="makeup elixir" translate="no"><span class="c1"># Starting the process</span><span class="w">
-</span><span class="nc">AdaptorRegistry</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="3327862825-1">(</span><span class="p" data-group-id="3327862825-1">)</span><span class="w">
+</span><span class="nc">AdaptorRegistry</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="3142581861-1">(</span><span class="p" data-group-id="3142581861-1">)</span><span class="w">
 </span><span class="c1"># Getting a list of all adaptors</span><span class="w">
-</span><span class="nc">Lightning.AdaptorRegistry.AdaptorRegistry</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="3327862825-2">(</span><span class="p" data-group-id="3327862825-2">)</span></code></pre><p><strong>Caching</strong></p><p>By default the results are cached to disk, and will be reused every start.</p><p>In order to disable or configure caching pass see: <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><p>The process uses <code class="inline">:continue</code> to return before the adaptors have been queried.
+</span><span class="nc">Lightning.AdaptorRegistry.AdaptorRegistry</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="3142581861-2">(</span><span class="p" data-group-id="3142581861-2">)</span></code></pre><p><strong>Caching</strong></p><p>By default the results are cached to disk, and will be reused every start.</p><p>In order to disable or configure caching pass see: <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><p>The process uses <code class="inline">:continue</code> to return before the adaptors have been queried.
 This does mean that the first call to the process will be delayed until
 the <code class="inline">handle_continue/2</code> has finished.</p><p><strong>Timeouts</strong></p><p>There is a 'general' timeout of 30s, this is used for GenServer calls like
 <a href="#all/1"><code class="inline">all/1</code></a> and also internally when the modules are being queried. NPM can
@@ -167,7 +122,7 @@ can take a couple of seconds if not cached.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#all/1" data-no-tooltip translate="no">all(server \\ __MODULE__)</a>
+        <a href="#all/1" data-no-tooltip="" translate="no">all(server \\ __MODULE__)</a>
 
       </div>
 
@@ -180,7 +135,7 @@ been fetched yet).</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#child_spec/1" data-no-tooltip translate="no">child_spec(init_arg)</a>
+        <a href="#child_spec/1" data-no-tooltip="" translate="no">child_spec(init_arg)</a>
 
       </div>
 
@@ -190,7 +145,7 @@ been fetched yet).</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch/0" data-no-tooltip translate="no">fetch()</a>
+        <a href="#fetch/0" data-no-tooltip="" translate="no">fetch()</a>
 
       </div>
 
@@ -200,7 +155,7 @@ been fetched yet).</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#latest_for/2" data-no-tooltip translate="no">latest_for(server \\ __MODULE__, module_name)</a>
+        <a href="#latest_for/2" data-no-tooltip="" translate="no">latest_for(server \\ __MODULE__, module_name)</a>
 
       </div>
 
@@ -210,7 +165,7 @@ been fetched yet).</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#local_adaptors_enabled?/0" data-no-tooltip translate="no">local_adaptors_enabled?()</a>
+        <a href="#local_adaptors_enabled?/0" data-no-tooltip="" translate="no">local_adaptors_enabled?()</a>
 
       </div>
 
@@ -218,7 +173,7 @@ been fetched yet).</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#resolve_adaptor/1" data-no-tooltip translate="no">resolve_adaptor(adaptor)</a>
+        <a href="#resolve_adaptor/1" data-no-tooltip="" translate="no">resolve_adaptor(adaptor)</a>
 
       </div>
 
@@ -226,7 +181,7 @@ been fetched yet).</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#resolve_package_name/1" data-no-tooltip translate="no">resolve_package_name(package_name)</a>
+        <a href="#resolve_package_name/1" data-no-tooltip="" translate="no">resolve_package_name(package_name)</a>
 
       </div>
 
@@ -236,18 +191,18 @@ been fetched yet).</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#resolve_package_name!/1" data-no-tooltip translate="no">resolve_package_name!(package_name)</a>
+        <a href="#resolve_package_name!/1" data-no-tooltip="" translate="no">resolve_package_name!(package_name)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Same as <a href="#resolve_package_name/1"><code class="inline">resolve_package_name/1</code></a> except will throw an exception if a package
+        <div class="summary-synopsis"><p>Same as <a><code class="inline">resolve_package_name/1</code></a> except will throw an exception if a package
 name cannot be matched.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_link/1" data-no-tooltip translate="no">start_link(opts \\ [use_cache: true])</a>
+        <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(opts \\ [use_cache: true])</a>
 
       </div>
 
@@ -257,7 +212,7 @@ name cannot be matched.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#versions_for/2" data-no-tooltip translate="no">versions_for(server \\ __MODULE__, module_name)</a>
+        <a href="#versions_for/2" data-no-tooltip="" translate="no">versions_for(server \\ __MODULE__, module_name)</a>
 
       </div>
 
@@ -283,18 +238,18 @@ name cannot be matched.</p></div>
     <span id="all/0"></span>
 
   <div class="detail-header">
-    <a href="#all/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#all/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">all(server \\ __MODULE__)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L202" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">all(server \\ __MODULE__)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L202" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -314,18 +269,18 @@ been fetched yet).</p>
 <section class="detail" id="child_spec/1">
 
   <div class="detail-header">
-    <a href="#child_spec/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#child_spec/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">child_spec(init_arg)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L36" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">child_spec(init_arg)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L36" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -336,18 +291,18 @@ been fetched yet).</p>
 <section class="detail" id="fetch/0">
 
   <div class="detail-header">
-    <a href="#fetch/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#fetch/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fetch()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L228" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L228" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -366,18 +321,18 @@ been fetched yet).</p>
     <span id="latest_for/1"></span>
 
   <div class="detail-header">
-    <a href="#latest_for/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#latest_for/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">latest_for(server \\ __MODULE__, module_name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L220" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">latest_for(server \\ __MODULE__, module_name)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L220" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -395,18 +350,18 @@ been fetched yet).</p>
 <section class="detail" id="local_adaptors_enabled?/0">
 
   <div class="detail-header">
-    <a href="#local_adaptors_enabled?/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#local_adaptors_enabled?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">local_adaptors_enabled?()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L364" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">local_adaptors_enabled?()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L364" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -417,18 +372,18 @@ been fetched yet).</p>
 <section class="detail" id="resolve_adaptor/1">
 
   <div class="detail-header">
-    <a href="#resolve_adaptor/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#resolve_adaptor/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">resolve_adaptor(adaptor)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L348" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">resolve_adaptor(adaptor)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L348" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -439,18 +394,18 @@ been fetched yet).</p>
 <section class="detail" id="resolve_package_name/1">
 
   <div class="detail-header">
-    <a href="#resolve_package_name/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#resolve_package_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">resolve_package_name(package_name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L301" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">resolve_package_name(package_name)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L301" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -464,27 +419,27 @@ been fetched yet).</p>
 
       </div>
 
-<p>Destructures an NPM style package name into module name and version.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="3945590755-1">(</span><span class="s">&quot;@openfn/language-salesforce@1.2.3&quot;</span><span class="p" data-group-id="3945590755-1">)</span><span class="w">
-</span><span class="p" data-group-id="3945590755-2">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span><span class="w"> </span><span class="p" data-group-id="3945590755-2">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="3945590755-3">(</span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p" data-group-id="3945590755-3">)</span><span class="w">
-</span><span class="p" data-group-id="3945590755-4">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="w"> </span><span class="p" data-group-id="3945590755-4">}</span></code></pre>
+<p>Destructures an NPM style package name into module name and version.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="7230754585-1">(</span><span class="s">&quot;@openfn/language-salesforce@1.2.3&quot;</span><span class="p" data-group-id="7230754585-1">)</span><span class="w">
+</span><span class="p" data-group-id="7230754585-2">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span><span class="w"> </span><span class="p" data-group-id="7230754585-2">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="7230754585-3">(</span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p" data-group-id="7230754585-3">)</span><span class="w">
+</span><span class="p" data-group-id="7230754585-4">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="w"> </span><span class="p" data-group-id="7230754585-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="resolve_package_name!/1">
 
   <div class="detail-header">
-    <a href="#resolve_package_name!/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#resolve_package_name!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">resolve_package_name!(package_name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L338" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">resolve_package_name!(package_name)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L338" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -504,18 +459,18 @@ name cannot be matched.</p>
     <span id="start_link/0"></span>
 
   <div class="detail-header">
-    <a href="#start_link/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#start_link/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start_link(opts \\ [use_cache: true])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L158" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start_link(opts \\ [use_cache: true])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L158" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -539,18 +494,18 @@ for testing and/or running multiple versions of the registry</li></ul>
     <span id="versions_for/1"></span>
 
   <div class="detail-header">
-    <a href="#versions_for/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#versions_for/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">versions_for(server \\ __MODULE__, module_name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L211" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">versions_for(server \\ __MODULE__, module_name)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L211" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -586,7 +541,7 @@ for testing and/or running multiple versions of the registry</li></ul>
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>API Reference — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="extras" class="page-extra">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-extra" id="main" data-type="extras">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,27 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>API Reference <small class="app-vsn">Lightning v#2.12.2</small></h1>
 
       <a href="https://github.com/OpenFn/lightning" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
+  </div>
 
-    <span>API Reference <small class="app-vsn">Lightning v2.12.2</small></span>
-  </h1>
-
-
-  <section class="details-list">
-    <h2 id="modules" class="section-heading">
-  <a href="#modules" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Modules</span>
-</h2>
-
-    <div class="summary">
+    <section class="details-list">
+      <h2 id="modules" class="section-heading">Modules</h2>
+      <div class="summary">
 <div class="summary-row">
   <div class="summary-signature">
     <a href="Lightning.html" translate="no">Lightning</a>
@@ -587,7 +532,7 @@ when they have identical scope sets.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Structure that can parse JsonSchemas (using <a href="https://hexdocs.pm/ex_json_schema/0.9.3/ExJsonSchema.html"><code class="inline">ExJsonSchema</code></a>) and validate
+    <div class="summary-synopsis"><p>Structure that can parse JsonSchemas (using <a><code class="inline">ExJsonSchema</code></a>) and validate
 changesets for a given schema.</p></div>
 
 </div>
@@ -598,7 +543,7 @@ changesets for a given schema.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Provides facilities to dynamically create and validate a changeset for a given
-<a href="Lightning.Credentials.Schema.html">Schema</a></p></div>
+<a>Schema</a></p></div>
 
 </div>
 <div class="summary-row">
@@ -2064,7 +2009,7 @@ their cron schedule, and then running them.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>The <a href="Lightning.Workflows.WebhookAuthMethod.html"><code class="inline">Lightning.Workflows.WebhookAuthMethod</code></a> module defines the schema for webhook authentication methods and provides functionalities to handle them.</p></div>
+    <div class="summary-synopsis"><p>The <a><code class="inline">Lightning.Workflows.WebhookAuthMethod</code></a> module defines the schema for webhook authentication methods and provides functionalities to handle them.</p></div>
 
 </div>
 <div class="summary-row">
@@ -2497,7 +2442,7 @@ of projects associations to credentials and / or oauth clients.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Translates controller action results into valid <a href="https://hexdocs.pm/plug/1.17.0/Plug.Conn.html"><code class="inline">Plug.Conn</code></a> responses.</p></div>
+    <div class="summary-synopsis"><p>Translates controller action results into valid <a><code class="inline">Plug.Conn</code></a> responses.</p></div>
 
 </div>
 <div class="summary-row">
@@ -3158,19 +3103,13 @@ for common functionality.</p></div>
 
 </div>
 
-    </div>
-  </section>
+      </div>
+    </section>
 
 
-  <section class="details-list">
-    <h2 id="mix-tasks" class="section-heading">
-  <a href="#mix-tasks" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Mix Tasks</span>
-</h2>
-
-    <div class="summary">
+    <section class="details-list">
+      <h2 id="tasks" class="section-heading">Mix Tasks</h2>
+      <div class="summary">
 <div class="summary-row">
   <div class="summary-signature">
     <a href="Mix.Tasks.Lightning.DownloadAdaptorRegistryCache.html" translate="no">mix lightning.download_adaptor_registry_cache</a>
@@ -3228,27 +3167,9 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
 </div>
 
-    </div>
-  </section>
+      </div>
+    </section>
 
-</div>
-
-<div class="bottom-actions" id="bottom-actions">
-  <div class="bottom-actions-item">
-
-  </div>
-  <div class="bottom-actions-item">
-
-      <a href="readme.html" class="bottom-actions-button" rel="next">
-        <span class="subheader">
-          Next Page →
-        </span>
-        <span class="title">
-Lightning
-        </span>
-      </a>
-
-  </div>
 </div>
     <footer class="footer">
       <p>
@@ -3267,7 +3188,7 @@ Lightning
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

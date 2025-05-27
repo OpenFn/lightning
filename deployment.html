@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Deployment — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="extras" class="page-extra">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-extra" id="main" data-type="extras">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,66 +77,37 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>Deployment</h1>
+
 
       <a href="https://github.com/OpenFn/lightning/blob/main/DEPLOYMENT.md#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
+  </div>
 
-    <span>Deployment</span>
-  </h1>
 
 <p>Head to the <a href="https://docs.openfn.org/documentation/deploy/options">Deploy</a>
-section of our docs site to get started.</p><p>See below for technical considerations and instructions.</p><h2 id="encryption" class="section-heading">
-  <a href="#encryption" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Encryption</span>
-</h2>
-<p>Lightning enforces encryption at rest for credentials, TOTP backup codes, and
+section of our docs site to get started.</p><p>See below for technical considerations and instructions.</p><h2 id="encryption" class="section-heading"><a href="#encryption" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Encryption</span></h2><p>Lightning enforces encryption at rest for credentials, TOTP backup codes, and
 webhook trigger authentication methods, for which an encryption key must be
 provided when running in production.</p><p>The key is expected to be a randomized set of bytes, 32 long; and Base64 encoded
 when setting the environment variable.</p><p>There is a mix task that can generate keys in the correct shape for use as an
 environment variable:</p><pre><code class="makeup sh" translate="no"><span class="">mix lightning.gen_encryption_key
 </span><span class="">0bJ9w+hn4ebQrsCaWXuA9JY49fP9kbHmywGd5K7k+/s=
 </span></code></pre><p>Copy your key <em>(NOT THIS ONE)</em> and set it as <code class="inline">PRIMARY_ENCRYPTION_KEY</code> in your
-environment.</p><h2 id="workers" class="section-heading">
-  <a href="#workers" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Workers</span>
-</h2>
-<p>Lightning uses external worker processes for executing Runs. There are three
+environment.</p><h2 id="workers" class="section-heading"><a href="#workers" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Workers</span></h2><p>Lightning uses external worker processes for executing Runs. There are three
 settings required to configure worker authentication.</p><ul><li><code class="inline">WORKER_RUNS_PRIVATE_KEY</code></li><li><code class="inline">WORKER_LIGHTNING_PUBLIC_KEY</code></li><li><code class="inline">WORKER_SECRET</code></li></ul><p>You can use the <a href="Mix.Tasks.Lightning.GenWorkerKeys.html"><code class="inline">mix lightning.gen_worker_keys</code></a> task to generate these for
-convenience.</p><p>For more information see the <a href="workers.html">Workers</a> documentation.</p><h2 id="environment-variables" class="section-heading">
-  <a href="#environment-variables" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Environment Variables</span>
-</h2>
-<p>Note that for secure deployments, it's recommended to use a combination of
-<code class="inline">secrets</code> and <code class="inline">configMaps</code> to generate secure environment variables.</p><h3 id="limits" class="section-heading">
-  <a href="#limits" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Limits</span>
-</h3>
-<ul><li><code class="inline">WORKER_MAX_RUN_MEMORY_MB</code> - how much memory (in MB) can a single run use?</li><li><code class="inline">RUN_GRACE_PERIOD_SECONDS</code> - how long <em>after</em> the <code class="inline">MAX_RUN_DURATION_SECONDS</code>
+convenience.</p><p>For more information see the <a href="workers.html">Workers</a> documentation.</p><h2 id="environment-variables" class="section-heading"><a href="#environment-variables" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Environment Variables</span></h2><p>Note that for secure deployments, it's recommended to use a combination of
+<code class="inline">secrets</code> and <code class="inline">configMaps</code> to generate secure environment variables.</p><h3 id="limits" class="section-heading"><a href="#limits" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Limits</span></h3><ul><li><code class="inline">WORKER_MAX_RUN_MEMORY_MB</code> - how much memory (in MB) can a single run use?</li><li><code class="inline">RUN_GRACE_PERIOD_SECONDS</code> - how long <em>after</em> the <code class="inline">MAX_RUN_DURATION_SECONDS</code>
 should the server wait for the worker to send back data on a run.</li><li><code class="inline">WORKER_MAX_RUN_DURATION_SECONDS</code> - the maximum duration (in seconds) that
 workflows are allowed to run (keep this plus <code class="inline">RUN_GRACE_PERIOD_SECONDS</code> below
 your termination_grace_period if using kubernetes)</li><li><code class="inline">WORKER_CAPACITY</code> - the number of runs a ws-worker instance will take on
 concurrently.</li><li><code class="inline">MAX_DATACLIP_SIZE_MB</code> - the maximum size (in MB) of a dataclip created via
 the webhook trigger URL for a job. This limits the max request size via the
 JSON plug and may (in future) limit the size of dataclips that can be stored
-as run_results via the websocket connection from a worker.</li></ul><h3 id="github" class="section-heading">
-  <a href="#github" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">GitHub</span>
-</h3>
-<p>Lightning enables connection to GitHub via GitHub Apps. The following GitHub
+as run_results via the websocket connection from a worker.</li></ul><h3 id="github" class="section-heading"><a href="#github" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">GitHub</span></h3><p>Lightning enables connection to GitHub via GitHub Apps. The following GitHub
 repository permissions are needed for the GitHub app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>Ensure you set the following URLs:</p><ul><li><strong>Homepage URL:</strong> <code class="inline">&lt;app_url_here&gt;</code></li><li><strong>Callback URL for authorizing users:</strong> <code class="inline">&lt;app_url_here&gt;/oauth/github/callback</code>
 (Do NOT check the two checkboxes in this section requesting Device Flow and
 OAuth.)</li><li><strong>Setup URL for Post installation:</strong> <code class="inline">&lt;app_url_here&gt;/setup_vcs</code> (Check the box
@@ -191,43 +115,13 @@ for <strong>Redirect on update</strong>)</li></ul><p>These envrionment variables
 app:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;"><strong>Description</strong></th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_ID</code></td><td style="text-align: left;">the github app ID.</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_NAME</code></td><td style="text-align: left;">the github app name. This is the name used in the public link. It is the downcased name with spaces replaced with hyphens</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_ID</code></td><td style="text-align: left;">the github app Client ID</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_SECRET</code></td><td style="text-align: left;">the github app Client Secret</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_CERT</code></td><td style="text-align: left;">the github app private key (Base 64 encoded)</td></tr></tbody></table><p>You can access these from your github app settings menu. Also needed for the
 configuration is:</p><ul><li><code class="inline">REPO_CONNECTION_SIGNING_SECRET</code> - secret used to sign access tokens. This
 access token is used to authenticate requests made from the github actions.
-You can generate this using <a href="Mix.Tasks.Lightning.GenEncryptionKey.html"><code class="inline">mix lightning.gen_encryption_key</code></a></li></ul><h3 id="storage" class="section-heading">
-  <a href="#storage" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Storage</span>
-</h3>
-<p>Lightning can use a storage backend to store exports.</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">STORAGE_BACKEND</code></td><td style="text-align: left;">the storage backend to use. (default is <code class="inline">local</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">STORAGE_PATH</code></td><td style="text-align: left;">the path to store files in. (default is <code class="inline">.</code>)</td></tr></tbody></table><h4>Supported backends:</h4><ul><li><code class="inline">local</code> - local file storage</li><li><code class="inline">gcs</code> - Google Cloud Storage</li></ul><h4>Google Cloud Storage</h4><p>For Google Cloud Storage, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GCS_BUCKET</code></td><td style="text-align: left;">the name of the bucket to store files in</td></tr><tr><td style="text-align: left;"><code class="inline">GOOGLE_APPLICATION_CREDENTIALS_JSON</code></td><td style="text-align: left;">A base64 encoded JSON keyfile for the service account with access to the bucket.</td></tr></tbody></table><blockquote><p>ℹ️ Note: The <code class="inline">GOOGLE_APPLICATION_CREDENTIALS_JSON</code> should be base64 encoded,
-currently Workload Identity is not supported.</p></blockquote><h3 id="mail" class="section-heading">
-  <a href="#mail" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Mail</span>
-</h3>
-<p>Lightning can send emails for various reasons, such as password resets and
+You can generate this using <a href="Mix.Tasks.Lightning.GenEncryptionKey.html"><code class="inline">mix lightning.gen_encryption_key</code></a></li></ul><h3 id="storage" class="section-heading"><a href="#storage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Storage</span></h3><p>Lightning can use a storage backend to store exports.</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">STORAGE_BACKEND</code></td><td style="text-align: left;">the storage backend to use. (default is <code class="inline">local</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">STORAGE_PATH</code></td><td style="text-align: left;">the path to store files in. (default is <code class="inline">.</code>)</td></tr></tbody></table><h4>Supported backends:</h4><ul><li><code class="inline">local</code> - local file storage</li><li><code class="inline">gcs</code> - Google Cloud Storage</li></ul><h4>Google Cloud Storage</h4><p>For Google Cloud Storage, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GCS_BUCKET</code></td><td style="text-align: left;">the name of the bucket to store files in</td></tr><tr><td style="text-align: left;"><code class="inline">GOOGLE_APPLICATION_CREDENTIALS_JSON</code></td><td style="text-align: left;">A base64 encoded JSON keyfile for the service account with access to the bucket.</td></tr></tbody></table><blockquote><p>ℹ️ Note: The <code class="inline">GOOGLE_APPLICATION_CREDENTIALS_JSON</code> should be base64 encoded,
+currently Workload Identity is not supported.</p></blockquote><h3 id="mail" class="section-heading"><a href="#mail" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Mail</span></h3><p>Lightning can send emails for various reasons, such as password resets and
 alerts for failed runs.</p><p>In order to send emails, you need to set the <code class="inline">MAIL_PROVIDER</code> environment
 variable to one of the following:</p><ul><li><code class="inline">local</code> (the default)</li><li><code class="inline">mailgun</code></li><li><code class="inline">smtp</code></li></ul><p>You will also want to set the <code class="inline">EMAIL_ADMIN</code> environment variable to the email
-address that will be used as the sender for system emails.</p><h4>Mailgun</h4><p>For mailgun, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">MAIL_PROVIDER</code></td><td style="text-align: left;">Must be set to <code class="inline">mailgun</code></td></tr><tr><td style="text-align: left;"><code class="inline">MAILGUN_API_KEY</code></td><td style="text-align: left;">the mail gun api key</td></tr><tr><td style="text-align: left;"><code class="inline">MAILGUN_DOMAIN</code></td><td style="text-align: left;">the mail gun domain</td></tr></tbody></table><h4>SMTP</h4><p>For SMTP, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">MAIL_PROVIDER</code></td><td style="text-align: left;">Must be set to <code class="inline">smtp</code></td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_USERNAME</code></td><td style="text-align: left;">Username for your server</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_PASSWORD</code></td><td style="text-align: left;">Password for the user</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_RELAY</code></td><td style="text-align: left;">IP address or hostname</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_TLS</code></td><td style="text-align: left;">Use TLS, defaults to <code class="inline">true</code>, options are <code class="inline">true</code>, <code class="inline">false</code>, <code class="inline">if_available</code></td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_PORT</code></td><td style="text-align: left;">Which port to use, defaults to <code class="inline">587</code></td></tr></tbody></table><h3 id="other-config" class="section-heading">
-  <a href="#other-config" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Other config</span>
-</h3>
-<table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">ADAPTORS_PATH</code></td><td style="text-align: left;">Where you store your locally installed adaptors</td></tr><tr><td style="text-align: left;"><code class="inline">ALLOW_SIGNUP</code></td><td style="text-align: left;">Set to <code class="inline">true</code> to enable user access to the registration page. Set to <code class="inline">false</code> to disable new user registrations and block access to the registration page.&lt;br&gt;Default is <code class="inline">true</code>.</td></tr><tr><td style="text-align: left;"><code class="inline">CORS_ORIGIN</code></td><td style="text-align: left;">A list of acceptable hosts for browser/cors requests (',' separated)</td></tr><tr><td style="text-align: left;"><code class="inline">DISABLE_DB_SSL</code></td><td style="text-align: left;">In production, the use of an SSL connection to Postgres is required by default.&lt;br&gt;Setting this to <code class="inline">&quot;true&quot;</code> allows unencrypted connections to the database. This is strongly discouraged in a real production environment.</td></tr><tr><td style="text-align: left;"><code class="inline">EMAIL_ADMIN</code></td><td style="text-align: left;">This is used as the sender email address for system emails. It is also displayed in the menu as the support email.</td></tr><tr><td style="text-align: left;"><code class="inline">EMAIL_SENDER_NAME</code></td><td style="text-align: left;">This is displayed in the email client as the sender name for emails sent by the application.</td></tr><tr><td style="text-align: left;"><code class="inline">IDLE_TIMEOUT</code></td><td style="text-align: left;">The number of seconds that must pass without data being received before the Lightning web server kills the connection.</td></tr><tr><td style="text-align: left;"><code class="inline">IS_RESETTABLE_DEMO</code></td><td style="text-align: left;">If set to <code class="inline">yes</code>, it allows this instance to be reset to the initial &quot;Lightning Demo&quot; state. Note that this will destroy <em>most</em> of what you have in your database!</td></tr><tr><td style="text-align: left;"><code class="inline">K8S_HEADLESS_SERVICE</code></td><td style="text-align: left;">This environment variable is automatically set if you're running on GKE and it is used to establish an Erlang node cluster. Note that if you're <em>not</em> using Kubernetes, the &quot;gossip&quot; strategy is used to establish clusters.</td></tr><tr><td style="text-align: left;"><code class="inline">LISTEN_ADDRESS</code></td><td style="text-align: left;">The address the web server should bind to. Defaults to <code class="inline">127.0.0.1</code> to block access from other machines.</td></tr><tr><td style="text-align: left;"><code class="inline">LOG_LEVEL</code></td><td style="text-align: left;">How noisy you want the logs to be (e.g., <code class="inline">debug</code>, <code class="inline">info</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">METRICS_RUN_PERFORMANCE_AGE_SECONDS</code></td><td style="text-align: left;">The oldest a run can be to be included in Run performance metrics.</td></tr><tr><td style="text-align: left;"><code class="inline">METRICS_RUN_QUEUE_AGE_SECONDS</code></td><td style="text-align: left;">The polling period for run queue metrics.</td></tr><tr><td style="text-align: left;"><code class="inline">METRICS_STALLED_RUN_THRESHOLD_SECONDS</code></td><td style="text-align: left;">The length of time a Run must be in the <code class="inline">available</code> state before it is considered stalled.</td></tr><tr><td style="text-align: left;"><code class="inline">METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS</code></td><td style="text-align: left;">The length of time a Run must be in the <code class="inline">available</code> state before it counts towards an impeded project.</td></tr><tr><td style="text-align: left;"><code class="inline">MIX_ENV</code></td><td style="text-align: left;">Your mix env, likely <code class="inline">prod</code> for deployment</td></tr><tr><td style="text-align: left;"><code class="inline">NODE_ENV</code></td><td style="text-align: left;">Node env, likely <code class="inline">production</code> for deployment</td></tr><tr><td style="text-align: left;"><code class="inline">ORIGINS</code></td><td style="text-align: left;">The allowed origins for web traffic to the backend</td></tr><tr><td style="text-align: left;"><code class="inline">PORT</code></td><td style="text-align: left;">The port your Phoenix app runs on</td></tr><tr><td style="text-align: left;"><code class="inline">PRIMARY_ENCRYPTION_KEY</code></td><td style="text-align: left;">A base64 encoded 32 character long string.&lt;br&gt;See <a href="#encryption">Encryption</a>.</td></tr><tr><td style="text-align: left;"><code class="inline">QUEUE_RESULT_RETENTION_PERIOD_SECONDS</code></td><td style="text-align: left;">The number of seconds to keep completed (successful) <code class="inline">ObanJobs</code> in the queue (not to be confused with runs and/or history)</td></tr><tr><td style="text-align: left;"><code class="inline">SCHEMAS_PATH</code></td><td style="text-align: left;">Path to the credential schemas that provide forms for different adaptors</td></tr><tr><td style="text-align: left;"><code class="inline">ADAPTORS_REGISTRY_JSON_PATH</code></td><td style="text-align: left;">Path to adaptor registry file. When provided, the app will attempt to read from it then later fallback to the internet</td></tr><tr><td style="text-align: left;"><code class="inline">SECRET_KEY_BASE</code></td><td style="text-align: left;">A secret key used as a base to generate secrets for encrypting and signing data.</td></tr><tr><td style="text-align: left;"><code class="inline">SENTRY_DSN</code></td><td style="text-align: left;">If using Sentry for error monitoring, your DSN</td></tr><tr><td style="text-align: left;"><code class="inline">UI_METRICS_ENABLED</code></td><td style="text-align: left;">Enable serverside tracking of certain metrics related to the UI. This s temporary functionality. Defaults to <code class="inline">false</code>.</td></tr><tr><td style="text-align: left;"><code class="inline">URL_HOST</code></td><td style="text-align: left;">The host used for writing URLs (e.g., <code class="inline">demo.openfn.org</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">URL_PORT</code></td><td style="text-align: left;">The port, usually <code class="inline">443</code> for production</td></tr><tr><td style="text-align: left;"><code class="inline">URL_SCHEME</code></td><td style="text-align: left;">The scheme for writing URLs (e.g., <code class="inline">https</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKER_HOST</code></td><td style="text-align: left;">The host that receives usage tracking submissions&lt;br&gt;(defaults to <a href="https://impact.openfn.org">https://impact.openfn.org</a>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_DAILY_BATCH_SIZE</code></td><td style="text-align: left;">The number of days that will be reported on with each run of <code class="inline">UsageTracking.DayWorker</code>. This will only have a noticeable effect in cases where there is a backlog or where reports are being generated retroactively (defaults to 10).</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_ENABLED</code></td><td style="text-align: left;">Enables the submission of anonymized usage data to OpenFn (defaults to <code class="inline">true</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_RESUBMISSION_BATCH_SIZE</code></td><td style="text-align: left;">The number of failed reports that will be submitted on each resubmission run (defaults to 10)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_RUN_CHUNK_SIZE</code></td><td style="text-align: left;">The size of each batch of runs that is streamed from the database when generating UsageTracking reports (default 100). Decreasing this may decrease memory consumption when generating reports.</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_UUIDS</code></td><td style="text-align: left;">Indicates whether submissions should include cleartext UUIDs or not. Options are <code class="inline">cleartext</code> or <code class="inline">hashed_only</code>, with the default being <code class="inline">hashed_only</code>.</td></tr><tr><td style="text-align: left;"><code class="inline">REQUIRE_EMAIL_VERIFICATION</code></td><td style="text-align: left;">Indicates whether user email addresses should be verified. Defaults to <code class="inline">false</code>.</td></tr></tbody></table><h3 id="ai-chat" class="section-heading">
-  <a href="#ai-chat" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">AI Chat</span>
-</h3>
-<p>🧪 <strong>Experimental</strong></p><p>Lightning can be configured to use an AI chatbot for user interactions.</p><p>See <a href="https://github.com/OpenFn/apollo">openfn/apollo</a> for more information on
+address that will be used as the sender for system emails.</p><h4>Mailgun</h4><p>For mailgun, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">MAIL_PROVIDER</code></td><td style="text-align: left;">Must be set to <code class="inline">mailgun</code></td></tr><tr><td style="text-align: left;"><code class="inline">MAILGUN_API_KEY</code></td><td style="text-align: left;">the mail gun api key</td></tr><tr><td style="text-align: left;"><code class="inline">MAILGUN_DOMAIN</code></td><td style="text-align: left;">the mail gun domain</td></tr></tbody></table><h4>SMTP</h4><p>For SMTP, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">MAIL_PROVIDER</code></td><td style="text-align: left;">Must be set to <code class="inline">smtp</code></td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_USERNAME</code></td><td style="text-align: left;">Username for your server</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_PASSWORD</code></td><td style="text-align: left;">Password for the user</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_RELAY</code></td><td style="text-align: left;">IP address or hostname</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_TLS</code></td><td style="text-align: left;">Use TLS, defaults to <code class="inline">true</code>, options are <code class="inline">true</code>, <code class="inline">false</code>, <code class="inline">if_available</code></td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_PORT</code></td><td style="text-align: left;">Which port to use, defaults to <code class="inline">587</code></td></tr></tbody></table><h3 id="other-config" class="section-heading"><a href="#other-config" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Other config</span></h3><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">ADAPTORS_PATH</code></td><td style="text-align: left;">Where you store your locally installed adaptors</td></tr><tr><td style="text-align: left;"><code class="inline">ALLOW_SIGNUP</code></td><td style="text-align: left;">Set to <code class="inline">true</code> to enable user access to the registration page. Set to <code class="inline">false</code> to disable new user registrations and block access to the registration page.&lt;br&gt;Default is <code class="inline">true</code>.</td></tr><tr><td style="text-align: left;"><code class="inline">CORS_ORIGIN</code></td><td style="text-align: left;">A list of acceptable hosts for browser/cors requests (',' separated)</td></tr><tr><td style="text-align: left;"><code class="inline">DISABLE_DB_SSL</code></td><td style="text-align: left;">In production, the use of an SSL connection to Postgres is required by default.&lt;br&gt;Setting this to <code class="inline">&quot;true&quot;</code> allows unencrypted connections to the database. This is strongly discouraged in a real production environment.</td></tr><tr><td style="text-align: left;"><code class="inline">EMAIL_ADMIN</code></td><td style="text-align: left;">This is used as the sender email address for system emails. It is also displayed in the menu as the support email.</td></tr><tr><td style="text-align: left;"><code class="inline">EMAIL_SENDER_NAME</code></td><td style="text-align: left;">This is displayed in the email client as the sender name for emails sent by the application.</td></tr><tr><td style="text-align: left;"><code class="inline">IDLE_TIMEOUT</code></td><td style="text-align: left;">The number of seconds that must pass without data being received before the Lightning web server kills the connection.</td></tr><tr><td style="text-align: left;"><code class="inline">IS_RESETTABLE_DEMO</code></td><td style="text-align: left;">If set to <code class="inline">yes</code>, it allows this instance to be reset to the initial &quot;Lightning Demo&quot; state. Note that this will destroy <em>most</em> of what you have in your database!</td></tr><tr><td style="text-align: left;"><code class="inline">K8S_HEADLESS_SERVICE</code></td><td style="text-align: left;">This environment variable is automatically set if you're running on GKE and it is used to establish an Erlang node cluster. Note that if you're <em>not</em> using Kubernetes, the &quot;gossip&quot; strategy is used to establish clusters.</td></tr><tr><td style="text-align: left;"><code class="inline">LISTEN_ADDRESS</code></td><td style="text-align: left;">The address the web server should bind to. Defaults to <code class="inline">127.0.0.1</code> to block access from other machines.</td></tr><tr><td style="text-align: left;"><code class="inline">LOG_LEVEL</code></td><td style="text-align: left;">How noisy you want the logs to be (e.g., <code class="inline">debug</code>, <code class="inline">info</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">METRICS_RUN_PERFORMANCE_AGE_SECONDS</code></td><td style="text-align: left;">The oldest a run can be to be included in Run performance metrics.</td></tr><tr><td style="text-align: left;"><code class="inline">METRICS_RUN_QUEUE_AGE_SECONDS</code></td><td style="text-align: left;">The polling period for run queue metrics.</td></tr><tr><td style="text-align: left;"><code class="inline">METRICS_STALLED_RUN_THRESHOLD_SECONDS</code></td><td style="text-align: left;">The length of time a Run must be in the <code class="inline">available</code> state before it is considered stalled.</td></tr><tr><td style="text-align: left;"><code class="inline">METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS</code></td><td style="text-align: left;">The length of time a Run must be in the <code class="inline">available</code> state before it counts towards an impeded project.</td></tr><tr><td style="text-align: left;"><code class="inline">MIX_ENV</code></td><td style="text-align: left;">Your mix env, likely <code class="inline">prod</code> for deployment</td></tr><tr><td style="text-align: left;"><code class="inline">NODE_ENV</code></td><td style="text-align: left;">Node env, likely <code class="inline">production</code> for deployment</td></tr><tr><td style="text-align: left;"><code class="inline">ORIGINS</code></td><td style="text-align: left;">The allowed origins for web traffic to the backend</td></tr><tr><td style="text-align: left;"><code class="inline">PORT</code></td><td style="text-align: left;">The port your Phoenix app runs on</td></tr><tr><td style="text-align: left;"><code class="inline">PRIMARY_ENCRYPTION_KEY</code></td><td style="text-align: left;">A base64 encoded 32 character long string.&lt;br&gt;See <a href="#encryption">Encryption</a>.</td></tr><tr><td style="text-align: left;"><code class="inline">QUEUE_RESULT_RETENTION_PERIOD_SECONDS</code></td><td style="text-align: left;">The number of seconds to keep completed (successful) <code class="inline">ObanJobs</code> in the queue (not to be confused with runs and/or history)</td></tr><tr><td style="text-align: left;"><code class="inline">SCHEMAS_PATH</code></td><td style="text-align: left;">Path to the credential schemas that provide forms for different adaptors</td></tr><tr><td style="text-align: left;"><code class="inline">ADAPTORS_REGISTRY_JSON_PATH</code></td><td style="text-align: left;">Path to adaptor registry file. When provided, the app will attempt to read from it then later fallback to the internet</td></tr><tr><td style="text-align: left;"><code class="inline">SECRET_KEY_BASE</code></td><td style="text-align: left;">A secret key used as a base to generate secrets for encrypting and signing data.</td></tr><tr><td style="text-align: left;"><code class="inline">SENTRY_DSN</code></td><td style="text-align: left;">If using Sentry for error monitoring, your DSN</td></tr><tr><td style="text-align: left;"><code class="inline">UI_METRICS_ENABLED</code></td><td style="text-align: left;">Enable serverside tracking of certain metrics related to the UI. This s temporary functionality. Defaults to <code class="inline">false</code>.</td></tr><tr><td style="text-align: left;"><code class="inline">URL_HOST</code></td><td style="text-align: left;">The host used for writing URLs (e.g., <code class="inline">demo.openfn.org</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">URL_PORT</code></td><td style="text-align: left;">The port, usually <code class="inline">443</code> for production</td></tr><tr><td style="text-align: left;"><code class="inline">URL_SCHEME</code></td><td style="text-align: left;">The scheme for writing URLs (e.g., <code class="inline">https</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKER_HOST</code></td><td style="text-align: left;">The host that receives usage tracking submissions&lt;br&gt;(defaults to <a href="https://impact.openfn.org">https://impact.openfn.org</a>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_DAILY_BATCH_SIZE</code></td><td style="text-align: left;">The number of days that will be reported on with each run of <code class="inline">UsageTracking.DayWorker</code>. This will only have a noticeable effect in cases where there is a backlog or where reports are being generated retroactively (defaults to 10).</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_ENABLED</code></td><td style="text-align: left;">Enables the submission of anonymized usage data to OpenFn (defaults to <code class="inline">true</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_RESUBMISSION_BATCH_SIZE</code></td><td style="text-align: left;">The number of failed reports that will be submitted on each resubmission run (defaults to 10)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_RUN_CHUNK_SIZE</code></td><td style="text-align: left;">The size of each batch of runs that is streamed from the database when generating UsageTracking reports (default 100). Decreasing this may decrease memory consumption when generating reports.</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_UUIDS</code></td><td style="text-align: left;">Indicates whether submissions should include cleartext UUIDs or not. Options are <code class="inline">cleartext</code> or <code class="inline">hashed_only</code>, with the default being <code class="inline">hashed_only</code>.</td></tr><tr><td style="text-align: left;"><code class="inline">REQUIRE_EMAIL_VERIFICATION</code></td><td style="text-align: left;">Indicates whether user email addresses should be verified. Defaults to <code class="inline">false</code>.</td></tr></tbody></table><h3 id="ai-chat" class="section-heading"><a href="#ai-chat" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">AI Chat</span></h3><p>🧪 <strong>Experimental</strong></p><p>Lightning can be configured to use an AI chatbot for user interactions.</p><p>See <a href="https://github.com/OpenFn/apollo">openfn/apollo</a> for more information on
 the Apollo AI service.</p><p>The following environment variables are required:</p><ul><li><code class="inline">AI_ASSISTANT_API_KEY</code> - API key to use the assistant. This currently requires
-an Anthropic key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><h3 id="kafka-triggers" class="section-heading">
-  <a href="#kafka-triggers" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Kafka Triggers</span>
-</h3>
-<p>🧪 <strong>Experimental</strong></p><p>Lightning workflows can be configured with a trigger that will consume messages
+an Anthropic key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><h3 id="kafka-triggers" class="section-heading"><a href="#kafka-triggers" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Kafka Triggers</span></h3><p>🧪 <strong>Experimental</strong></p><p>Lightning workflows can be configured with a trigger that will consume messages
 from a Kafka Cluster. By default this is disabled and you will not see the
 option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
 be running.</p><p>To enable this feature set the <code class="inline">KAFKA_TRIGGERS_ENABLED</code> environment variable to
@@ -277,31 +171,20 @@ headers and data as received by the Kafka pipeline and write this to a file
 within the subdirectory. The file will be named based on the pattern
 <code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers be
 disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="3826291487-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="3826291487-2">(</span><span class="p" data-group-id="3826291487-2">)</span><span class="w">
-</span><span class="p" data-group-id="3826291487-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
+run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="4613268686-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="4613268686-2">(</span><span class="p" data-group-id="4613268686-2">)</span><span class="w">
+</span><span class="p" data-group-id="4613268686-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
 been marked as recovered.</p><p>Once all files have either been recovered or discarded, the triggers can be
-enabled once more.</p><h3 id="google-oauth2" class="section-heading">
-  <a href="#google-oauth2" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Google Oauth2</span>
-</h3>
-<p>Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
+enabled once more.</p><h3 id="google-oauth2" class="section-heading"><a href="#google-oauth2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Google Oauth2</span></h3><p>Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
 application' type.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
 Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Once the client has been created, get/download the OAuth client JSON and set the
-following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GOOGLE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">client_id</code> from the client details.</td></tr><tr><td style="text-align: left;"><code class="inline">GOOGLE_CLIENT_SECRET</code></td><td style="text-align: left;"><code class="inline">client_secret</code> from the client details.</td></tr></tbody></table><h3 id="salesforce-oauth2" class="section-heading">
-  <a href="#salesforce-oauth2" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Salesforce Oauth2</span>
-</h3>
-<p>Using your Salesforce developer account, create a new Oauth 2.0 connected
+following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GOOGLE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">client_id</code> from the client details.</td></tr><tr><td style="text-align: left;"><code class="inline">GOOGLE_CLIENT_SECRET</code></td><td style="text-align: left;"><code class="inline">client_secret</code> from the client details.</td></tr></tbody></table><h3 id="salesforce-oauth2" class="section-heading"><a href="#salesforce-oauth2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Salesforce Oauth2</span></h3><p>Using your Salesforce developer account, create a new Oauth 2.0 connected
 application.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
 Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Grant permissions as desired.</p><p>Once the client has been created set the following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Key</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_SECRET</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Secret</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr></tbody></table>
+
 </div>
 
 <div class="bottom-actions" id="bottom-actions">
@@ -347,7 +230,7 @@ Benchmarking
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

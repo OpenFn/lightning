@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Workers — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="extras" class="page-extra">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-extra" id="main" data-type="extras">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,86 +77,39 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>Workers</h1>
+
 
       <a href="https://github.com/OpenFn/lightning/blob/main/WORKERS.md#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
+  </div>
 
-    <span>Workers</span>
-  </h1>
 
 <p>The OpenFn Runtime used by Lightning is a <a href="https://nodejs.org/en/">Node.js</a>
 application that runs on a server. It is responsible for executing the code that
 you write in your OpenFn jobs.</p><p>A Runtime Manager is a module or application that processes Runs, which
 contains reference to the Workflow, the starting point and the initial data.</p><p>Runs are enqueued, and Runtime Managers request work to be performed when
-they are ready.</p><h2 id="history" class="section-heading">
-  <a href="#history" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">History</span>
-</h2>
-<p>In previous versions of OpenFn products, the server would invoke a NodeJS child
+they are ready.</p><h2 id="history" class="section-heading"><a href="#history" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">History</span></h2><p>In previous versions of OpenFn products, the server would invoke a NodeJS child
 process for each Run that needs to be executed. Deciding which Job to run in a
 workflow is decided after each run is completed.</p><p>The current approach to executing Runs, is that a worker checks out the
 entire run and executes it and all the jobs required.</p><p>The advantage of this approach is a significant reduction in latency of
-launching new workers for every Run to be processed.</p><h2 id="connecting-workers-to-lightning" class="section-heading">
-  <a href="#connecting-workers-to-lightning" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Connecting Workers to Lightning</span>
-</h2>
-<p>Our standard Runtime Manager uses WebSockets to communicate with Lightning.</p><p>However, since the workers are treated no differently from any other incoming
+launching new workers for every Run to be processed.</p><h2 id="connecting-workers-to-lightning" class="section-heading"><a href="#connecting-workers-to-lightning" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Connecting Workers to Lightning</span></h2><p>Our standard Runtime Manager uses WebSockets to communicate with Lightning.</p><p>However, since the workers are treated no differently from any other incoming
 traffic; there are two layers of security applied to anything that can access
-your data or process work.</p><p>We use two different JWTs to facilitate the follow:</p><h3 id="worker-token" class="section-heading">
-  <a href="#worker-token" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Worker Token</span>
-</h3>
-<p>This token is created by the worker and signed with a shared HS256 secret that
-Lightning uses to verify.</p><h3 id="run-token" class="section-heading">
-  <a href="#run-token" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Run Token</span>
-</h3>
-<p>This token is created by Lightning for every Run that a worker receives. The
+your data or process work.</p><p>We use two different JWTs to facilitate the follow:</p><h3 id="worker-token" class="section-heading"><a href="#worker-token" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Worker Token</span></h3><p>This token is created by the worker and signed with a shared HS256 secret that
+Lightning uses to verify.</p><h3 id="run-token" class="section-heading"><a href="#run-token" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Run Token</span></h3><p>This token is created by Lightning for every Run that a worker receives. The
 token is signed with a private key, and therefore cannot be generated by 3rd
 parties.</p><p>The token is scoped for a single Run and cannot be used to access anything
-outside of the scope of that Run.</p><h2 id="generating-keys" class="section-heading">
-  <a href="#generating-keys" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Generating Keys</span>
-</h2>
-<p>Lightning comes with a mix task to help generate keys:</p><pre><code class="makeup elixir" translate="no"><span class="n">mix</span><span class="w"> </span><span class="n">lightning</span><span class="o">.</span><span class="n">gen_worker_keys</span></code></pre><h2 id="configuring-lightning-and-workers" class="section-heading">
-  <a href="#configuring-lightning-and-workers" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Configuring Lightning and Workers</span>
-</h2>
-<p>There are three environment variables required to make everything work.</p><p><strong><code class="inline">WORKER_RUNS_PRIVATE_KEY</code></strong></p><p><em>Lightning only</em></p><p>A Base64 encoded private key in PEM format, used to generate JWTs granting
+outside of the scope of that Run.</p><h2 id="generating-keys" class="section-heading"><a href="#generating-keys" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Generating Keys</span></h2><p>Lightning comes with a mix task to help generate keys:</p><pre><code class="makeup elixir" translate="no"><span class="n">mix</span><span class="w"> </span><span class="n">lightning</span><span class="o">.</span><span class="n">gen_worker_keys</span></code></pre><h2 id="configuring-lightning-and-workers" class="section-heading"><a href="#configuring-lightning-and-workers" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Configuring Lightning and Workers</span></h2><p>There are three environment variables required to make everything work.</p><p><strong><code class="inline">WORKER_RUNS_PRIVATE_KEY</code></strong></p><p><em>Lightning only</em></p><p>A Base64 encoded private key in PEM format, used to generate JWTs granting
 workers permission to access a specific Run, the related Workflow and
 credentials.</p><blockquote><p>[!IMPORTANT] This key should never be shared. If you suspect it has been
 compromised, generate a new one and reconfigure both Lightning and your
 workers.</p></blockquote><p><strong><code class="inline">WORKER_SECRET</code></strong></p><p><em>Lightning and Workers</em></p><p>A 256bit long shared secret used by the worker to sign JWTs for authentication
 with the Lightning API.</p><p><strong><code class="inline">WORKER_LIGHTNING_PUBLIC_KEY</code></strong></p><p><em>Workers only</em></p><p>A Base64 encoded public key in PEM format derived from the private key. This is
-used by workers to verify Run Tokens coming from Lightning.</p><h2 id="troubleshooting" class="section-heading">
-  <a href="#troubleshooting" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Troubleshooting</span>
-</h2>
-<h3 id="problems-with-nodejs-dns-name-resolution" class="section-heading">
-  <a href="#problems-with-nodejs-dns-name-resolution" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Problems with NodeJS DNS name resolution</span>
-</h3>
-<p>NodeJS v17 <a href="https://github.com/nodejs/node/pull/39987">changed</a> how DNS name
+used by workers to verify Run Tokens coming from Lightning.</p><h2 id="troubleshooting" class="section-heading"><a href="#troubleshooting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Troubleshooting</span></h2><h3 id="problems-with-nodejs-dns-name-resolution" class="section-heading"><a href="#problems-with-nodejs-dns-name-resolution" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Problems with NodeJS DNS name resolution</span></h3><p>NodeJS v17 <a href="https://github.com/nodejs/node/pull/39987">changed</a> how DNS name
 resolution is handled. In earlier versions, Node would reorder DNS lookup
 results so IPv4 addresses came before IPv6 addresses. In v17, Node started
 returning addresses in the same order provided by the resolver. The net effect
@@ -214,6 +120,7 @@ error similar to the following:</p><pre><code class="makeup elixir" translate="n
 variable as shown below. This will force pre-v17 behavior of returning IPv4
 addresses first.</p><pre><code class="makeup elixir" translate="no"><span class="nc">NODE_OPTIONS</span><span class="o">=</span><span class="o">--</span><span class="n">dns</span><span class="o">-</span><span class="n">result</span><span class="o">-</span><span class="n">order</span><span class="o">=</span><span class="n">ipv4first</span></code></pre><p>You can directly inspect what IP address Node returns for <code class="inline">localhost</code> by running
 the following command:</p><pre><code class="makeup elixir" translate="no"><span class="n">node</span><span class="w"> </span><span class="o">-</span><span class="n">e</span><span class="w"> </span><span class="sc">&#39;dns.lookup(&quot;localhost&quot;, console.log)&#39;</span></code></pre>
+
 </div>
 
 <div class="bottom-actions" id="bottom-actions">
@@ -259,7 +166,7 @@ Provisioning
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

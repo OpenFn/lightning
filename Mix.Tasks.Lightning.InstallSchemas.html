@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>mix lightning.install_schemas — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="tasks" class="page-task">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-task" id="main" data-type="tasks">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">mix lightning.install_schemas</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">mix lightning.install_schemas</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -158,7 +113,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:body/0" data-no-tooltip translate="no">body()</a>
+        <a href="#t:body/0" data-no-tooltip="" translate="no">body()</a>
 
       </div>
 
@@ -166,7 +121,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:headers/0" data-no-tooltip translate="no">headers()</a>
+        <a href="#t:headers/0" data-no-tooltip="" translate="no">headers()</a>
 
       </div>
 
@@ -174,7 +129,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:method/0" data-no-tooltip translate="no">method()</a>
+        <a href="#t:method/0" data-no-tooltip="" translate="no">method()</a>
 
       </div>
 
@@ -182,7 +137,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:options/0" data-no-tooltip translate="no">options()</a>
+        <a href="#t:options/0" data-no-tooltip="" translate="no">options()</a>
 
       </div>
 
@@ -190,7 +145,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:params/0" data-no-tooltip translate="no">params()</a>
+        <a href="#t:params/0" data-no-tooltip="" translate="no">params()</a>
 
       </div>
 
@@ -198,7 +153,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:request/0" data-no-tooltip translate="no">request()</a>
+        <a href="#t:request/0" data-no-tooltip="" translate="no">request()</a>
 
       </div>
 
@@ -206,7 +161,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:url/0" data-no-tooltip translate="no">url()</a>
+        <a href="#t:url/0" data-no-tooltip="" translate="no">url()</a>
 
       </div>
 
@@ -220,7 +175,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete/3" data-no-tooltip translate="no">delete(url, headers \\ [], options \\ [])</a>
+        <a href="#delete/3" data-no-tooltip="" translate="no">delete(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -230,7 +185,7 @@ Use --exclude language-package1, language-package2 to exclude specific packages<
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete!/3" data-no-tooltip translate="no">delete!(url, headers \\ [], options \\ [])</a>
+        <a href="#delete!/3" data-no-tooltip="" translate="no">delete!(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -241,7 +196,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_schemas/2" data-no-tooltip translate="no">fetch_schemas(excluded \\ [], fun)</a>
+        <a href="#fetch_schemas/2" data-no-tooltip="" translate="no">fetch_schemas(excluded \\ [], fun)</a>
 
       </div>
 
@@ -249,7 +204,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get/3" data-no-tooltip translate="no">get(url, headers \\ [], options \\ [])</a>
+        <a href="#get/3" data-no-tooltip="" translate="no">get(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -259,7 +214,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get!/3" data-no-tooltip translate="no">get!(url, headers \\ [], options \\ [])</a>
+        <a href="#get!/3" data-no-tooltip="" translate="no">get!(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -270,7 +225,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#head/3" data-no-tooltip translate="no">head(url, headers \\ [], options \\ [])</a>
+        <a href="#head/3" data-no-tooltip="" translate="no">head(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -280,7 +235,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#head!/3" data-no-tooltip translate="no">head!(url, headers \\ [], options \\ [])</a>
+        <a href="#head!/3" data-no-tooltip="" translate="no">head!(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -291,7 +246,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#options/3" data-no-tooltip translate="no">options(url, headers \\ [], options \\ [])</a>
+        <a href="#options/3" data-no-tooltip="" translate="no">options(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -301,7 +256,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#options!/3" data-no-tooltip translate="no">options!(url, headers \\ [], options \\ [])</a>
+        <a href="#options!/3" data-no-tooltip="" translate="no">options!(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -312,7 +267,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#parse_excluded/1" data-no-tooltip translate="no">parse_excluded(args)</a>
+        <a href="#parse_excluded/1" data-no-tooltip="" translate="no">parse_excluded(args)</a>
 
       </div>
 
@@ -320,7 +275,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#patch/4" data-no-tooltip translate="no">patch(url, body, headers \\ [], options \\ [])</a>
+        <a href="#patch/4" data-no-tooltip="" translate="no">patch(url, body, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -330,7 +285,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#patch!/4" data-no-tooltip translate="no">patch!(url, body, headers \\ [], options \\ [])</a>
+        <a href="#patch!/4" data-no-tooltip="" translate="no">patch!(url, body, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -341,7 +296,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#persist_schema/2" data-no-tooltip translate="no">persist_schema(dir, package_name)</a>
+        <a href="#persist_schema/2" data-no-tooltip="" translate="no">persist_schema(dir, package_name)</a>
 
       </div>
 
@@ -349,7 +304,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#post/4" data-no-tooltip translate="no">post(url, body, headers \\ [], options \\ [])</a>
+        <a href="#post/4" data-no-tooltip="" translate="no">post(url, body, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -359,7 +314,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#post!/4" data-no-tooltip translate="no">post!(url, body, headers \\ [], options \\ [])</a>
+        <a href="#post!/4" data-no-tooltip="" translate="no">post!(url, body, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -370,143 +325,143 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_headers/1" data-no-tooltip translate="no">process_headers(headers)</a>
+        <a href="#process_headers/1" data-no-tooltip="" translate="no">process_headers(headers)</a>
 
           <span class="deprecated" title="Use process_response_headers/1 instead">deprecated</span>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_headers/1"><code class="inline">HTTPoison.Base.process_headers/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_headers/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_body/1" data-no-tooltip translate="no">process_request_body(body)</a>
+        <a href="#process_request_body/1" data-no-tooltip="" translate="no">process_request_body(body)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_request_body/1"><code class="inline">HTTPoison.Base.process_request_body/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_body/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_headers/1" data-no-tooltip translate="no">process_request_headers(headers)</a>
+        <a href="#process_request_headers/1" data-no-tooltip="" translate="no">process_request_headers(headers)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_request_headers/1"><code class="inline">HTTPoison.Base.process_request_headers/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_headers/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_options/1" data-no-tooltip translate="no">process_request_options(options)</a>
+        <a href="#process_request_options/1" data-no-tooltip="" translate="no">process_request_options(options)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_request_options/1"><code class="inline">HTTPoison.Base.process_request_options/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_options/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_params/1" data-no-tooltip translate="no">process_request_params(params)</a>
+        <a href="#process_request_params/1" data-no-tooltip="" translate="no">process_request_params(params)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_request_params/1"><code class="inline">HTTPoison.Base.process_request_params/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_params/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_url/1" data-no-tooltip translate="no">process_request_url(url)</a>
+        <a href="#process_request_url/1" data-no-tooltip="" translate="no">process_request_url(url)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_request_url/1"><code class="inline">HTTPoison.Base.process_request_url/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_url/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response/1" data-no-tooltip translate="no">process_response(response)</a>
+        <a href="#process_response/1" data-no-tooltip="" translate="no">process_response(response)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_response/1"><code class="inline">HTTPoison.Base.process_response/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response_body/1" data-no-tooltip translate="no">process_response_body(body)</a>
+        <a href="#process_response_body/1" data-no-tooltip="" translate="no">process_response_body(body)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_response_body/1"><code class="inline">HTTPoison.Base.process_response_body/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response_body/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response_chunk/1" data-no-tooltip translate="no">process_response_chunk(chunk)</a>
+        <a href="#process_response_chunk/1" data-no-tooltip="" translate="no">process_response_chunk(chunk)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_response_chunk/1"><code class="inline">HTTPoison.Base.process_response_chunk/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response_chunk/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response_headers/1" data-no-tooltip translate="no">process_response_headers(headers)</a>
+        <a href="#process_response_headers/1" data-no-tooltip="" translate="no">process_response_headers(headers)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_response_headers/1"><code class="inline">HTTPoison.Base.process_response_headers/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response_headers/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response_status_code/1" data-no-tooltip translate="no">process_response_status_code(status_code)</a>
+        <a href="#process_response_status_code/1" data-no-tooltip="" translate="no">process_response_status_code(status_code)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_response_status_code/1"><code class="inline">HTTPoison.Base.process_response_status_code/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response_status_code/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_status_code/1" data-no-tooltip translate="no">process_status_code(status_code)</a>
+        <a href="#process_status_code/1" data-no-tooltip="" translate="no">process_status_code(status_code)</a>
 
           <span class="deprecated" title="Use process_response_status_code/1 instead">deprecated</span>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_status_code/1"><code class="inline">HTTPoison.Base.process_status_code/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_status_code/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_url/1" data-no-tooltip translate="no">process_url(url)</a>
+        <a href="#process_url/1" data-no-tooltip="" translate="no">process_url(url)</a>
 
           <span class="deprecated" title="Use process_request_url/1 instead">deprecated</span>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Base.html#c:process_url/1"><code class="inline">HTTPoison.Base.process_url/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_url/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put/4" data-no-tooltip translate="no">put(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+        <a href="#put/4" data-no-tooltip="" translate="no">put(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -516,7 +471,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put!/4" data-no-tooltip translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+        <a href="#put!/4" data-no-tooltip="" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -527,17 +482,17 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request/1" data-no-tooltip translate="no">request(request)</a>
+        <a href="#request/1" data-no-tooltip="" translate="no">request(request)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Issues an HTTP request using an <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a> struct.</p></div>
+        <div class="summary-synopsis"><p>Issues an HTTP request using an <a><code class="inline">HTTPoison.Request</code></a> struct.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request/5" data-no-tooltip translate="no">request(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+        <a href="#request/5" data-no-tooltip="" translate="no">request(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -547,18 +502,18 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request!/1" data-no-tooltip translate="no">request!(request)</a>
+        <a href="#request!/1" data-no-tooltip="" translate="no">request!(request)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Issues an HTTP request an <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a> struct.
+        <div class="summary-synopsis"><p>Issues an HTTP request an <a><code class="inline">HTTPoison.Request</code></a> struct.
 exception in case of failure.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request!/5" data-no-tooltip translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+        <a href="#request!/5" data-no-tooltip="" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -569,17 +524,17 @@ exception in case of failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#run/1" data-no-tooltip translate="no">run(args)</a>
+        <a href="#run/1" data-no-tooltip="" translate="no">run(args)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/mix/Mix.Task.html#c:run/1"><code class="inline">Mix.Task.run/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Mix.Task.run/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start/0" data-no-tooltip translate="no">start()</a>
+        <a href="#start/0" data-no-tooltip="" translate="no">start()</a>
 
       </div>
 
@@ -589,17 +544,17 @@ exception in case of failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#stream_next/1" data-no-tooltip translate="no">stream_next(resp)</a>
+        <a href="#stream_next/1" data-no-tooltip="" translate="no">stream_next(resp)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Requests the next message to be streamed for a given <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.AsyncResponse.html"><code class="inline">HTTPoison.AsyncResponse</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Requests the next message to be streamed for a given <a><code class="inline">HTTPoison.AsyncResponse</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#write_schema/3" data-no-tooltip translate="no">write_schema(dir, package_name, data)</a>
+        <a href="#write_schema/3" data-no-tooltip="" translate="no">write_schema(dir, package_name, data)</a>
 
       </div>
 
@@ -621,18 +576,18 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:body/0">
 
   <div class="detail-header">
-    <a href="#t:body/0" class="detail-link" data-no-tooltip title="Link to this type">
+    <a href="#t:body/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">body()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">body()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -649,18 +604,18 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:headers/0">
 
   <div class="detail-header">
-    <a href="#t:headers/0" class="detail-link" data-no-tooltip title="Link to this type">
+    <a href="#t:headers/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">headers()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">headers()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -677,18 +632,18 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:method/0">
 
   <div class="detail-header">
-    <a href="#t:method/0" class="detail-link" data-no-tooltip title="Link to this type">
+    <a href="#t:method/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">method()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">method()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -705,18 +660,18 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:options/0">
 
   <div class="detail-header">
-    <a href="#t:options/0" class="detail-link" data-no-tooltip title="Link to this type">
+    <a href="#t:options/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">options()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">options()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -733,18 +688,18 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:params/0">
 
   <div class="detail-header">
-    <a href="#t:params/0" class="detail-link" data-no-tooltip title="Link to this type">
+    <a href="#t:params/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">params()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">params()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -761,18 +716,18 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:request/0">
 
   <div class="detail-header">
-    <a href="#t:request/0" class="detail-link" data-no-tooltip title="Link to this type">
+    <a href="#t:request/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">request()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">request()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -789,18 +744,18 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:url/0">
 
   <div class="detail-header">
-    <a href="#t:url/0" class="detail-link" data-no-tooltip title="Link to this type">
+    <a href="#t:url/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">url()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">url()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -833,18 +788,18 @@ exception in case of failure.</p></div>
     <span id="delete/2"></span>
 
   <div class="detail-header">
-    <a href="#delete/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete(url, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -871,18 +826,18 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="delete!/2"></span>
 
   <div class="detail-header">
-    <a href="#delete!/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete!(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete!(url, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -905,18 +860,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="fetch_schemas/1"></span>
 
   <div class="detail-header">
-    <a href="#fetch_schemas/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#fetch_schemas/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fetch_schemas(excluded \\ [], fun)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L101" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_schemas(excluded \\ [], fun)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L101" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -931,18 +886,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="get/2"></span>
 
   <div class="detail-header">
-    <a href="#get/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get(url, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -966,18 +921,18 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="get!/2"></span>
 
   <div class="detail-header">
-    <a href="#get!/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get!(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get!(url, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1000,18 +955,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="head/2"></span>
 
   <div class="detail-header">
-    <a href="#head/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#head/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">head(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">head(url, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1035,18 +990,18 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="head!/2"></span>
 
   <div class="detail-header">
-    <a href="#head!/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#head!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">head!(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">head!(url, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1069,18 +1024,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="options/2"></span>
 
   <div class="detail-header">
-    <a href="#options/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#options/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">options(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">options(url, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1107,18 +1062,18 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="options!/2"></span>
 
   <div class="detail-header">
-    <a href="#options!/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#options!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">options!(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">options!(url, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1139,18 +1094,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="parse_excluded/1">
 
   <div class="detail-header">
-    <a href="#parse_excluded/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#parse_excluded/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">parse_excluded(args)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L38" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">parse_excluded(args)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L38" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1165,18 +1120,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="patch/3"></span>
 
   <div class="detail-header">
-    <a href="#patch/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#patch/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">patch(url, body, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">patch(url, body, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1203,18 +1158,18 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="patch!/3"></span>
 
   <div class="detail-header">
-    <a href="#patch!/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#patch!/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">patch!(url, body, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">patch!(url, body, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1235,18 +1190,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="persist_schema/2">
 
   <div class="detail-header">
-    <a href="#persist_schema/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#persist_schema/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">persist_schema(dir, package_name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L80" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">persist_schema(dir, package_name)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L80" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1261,18 +1216,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="post/3"></span>
 
   <div class="detail-header">
-    <a href="#post/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#post/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">post(url, body, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">post(url, body, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1299,18 +1254,18 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="post!/3"></span>
 
   <div class="detail-header">
-    <a href="#post!/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#post!/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">post!(url, body, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">post!(url, body, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1331,18 +1286,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_headers/1">
 
   <div class="detail-header">
-    <a href="#process_headers/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_headers/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_headers(headers)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_headers(headers)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
     <div class="deprecated">
@@ -1363,18 +1318,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_body/1">
 
   <div class="detail-header">
-    <a href="#process_request_body/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_request_body/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_request_body(body)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_request_body(body)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1391,18 +1346,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_headers/1">
 
   <div class="detail-header">
-    <a href="#process_request_headers/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_request_headers/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_request_headers(headers)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_request_headers(headers)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1419,18 +1374,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_options/1">
 
   <div class="detail-header">
-    <a href="#process_request_options/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_request_options/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_request_options(options)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_request_options(options)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1447,18 +1402,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_params/1">
 
   <div class="detail-header">
-    <a href="#process_request_params/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_request_params/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_request_params(params)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_request_params(params)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1475,18 +1430,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_url/1">
 
   <div class="detail-header">
-    <a href="#process_request_url/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_request_url/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_request_url(url)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_request_url(url)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1503,18 +1458,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response/1">
 
   <div class="detail-header">
-    <a href="#process_response/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_response/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_response(response)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_response(response)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1531,18 +1486,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response_body/1">
 
   <div class="detail-header">
-    <a href="#process_response_body/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_response_body/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_response_body(body)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_response_body(body)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1559,18 +1514,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response_chunk/1">
 
   <div class="detail-header">
-    <a href="#process_response_chunk/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_response_chunk/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_response_chunk(chunk)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_response_chunk(chunk)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1587,18 +1542,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response_headers/1">
 
   <div class="detail-header">
-    <a href="#process_response_headers/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_response_headers/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_response_headers(headers)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_response_headers(headers)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1615,18 +1570,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response_status_code/1">
 
   <div class="detail-header">
-    <a href="#process_response_status_code/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_response_status_code/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_response_status_code(status_code)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_response_status_code(status_code)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1643,18 +1598,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_status_code/1">
 
   <div class="detail-header">
-    <a href="#process_status_code/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_status_code/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_status_code(status_code)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_status_code(status_code)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
     <div class="deprecated">
@@ -1675,18 +1630,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_url/1">
 
   <div class="detail-header">
-    <a href="#process_url/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#process_url/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">process_url(url)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">process_url(url)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
     <div class="deprecated">
@@ -1713,18 +1668,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="put/3"></span>
 
   <div class="detail-header">
-    <a href="#put/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#put/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">put(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">put(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1753,18 +1708,18 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="put!/3"></span>
 
   <div class="detail-header">
-    <a href="#put!/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#put!/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1785,18 +1740,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="request/1">
 
   <div class="detail-header">
-    <a href="#request/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#request/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">request(request)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">request(request)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1813,31 +1768,19 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
       </div>
 
 <p>Issues an HTTP request using an <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a> struct.</p><p>This function returns <code class="inline">{:ok, response}</code>, <code class="inline">{:ok, async_response}</code>, or <code class="inline">{:ok, maybe_redirect}</code>
-if the request is successful, <code class="inline">{:error, reason}</code> otherwise.</p><h2 id="request/1-redirect-handling" class="section-heading">
-  <a href="#request/1-redirect-handling" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Redirect handling</span>
-</h2>
-<p>If the option <code class="inline">:follow_redirect</code> is given, HTTP redirects are automatically follow if
+if the request is successful, <code class="inline">{:error, reason}</code> otherwise.</p><h2 id="request/1-redirect-handling" class="section-heading"><a href="#request/1-redirect-handling" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Redirect handling</span></h2><p>If the option <code class="inline">:follow_redirect</code> is given, HTTP redirects are automatically follow if
 the method is set to <code class="inline">:get</code> or <code class="inline">:head</code> and the response's <code class="inline">status_code</code> is <code class="inline">301</code>, <code class="inline">302</code> or
 <code class="inline">307</code>.</p><p>If the method is set to <code class="inline">:post</code>, then the only <code class="inline">status_code</code> that get's automatically
 followed is <code class="inline">303</code>.</p><p>If any other method or <code class="inline">status_code</code> is returned, then this function returns a
 returns a <code class="inline">{:ok, %HTTPoison.MaybeRedirect{}}</code> containing the <code class="inline">redirect_url</code> for you to
-re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/1-examples" class="section-heading">
-  <a href="#request/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3846293695-1">%</span><span class="nc" data-group-id="3846293695-1">HTTPoison.Request</span><span class="p" data-group-id="3846293695-1">{</span><span class="w">
+re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/1-examples" class="section-heading"><a href="#request/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7640106403-1">%</span><span class="nc" data-group-id="7640106403-1">HTTPoison.Request</span><span class="p" data-group-id="7640106403-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3846293695-2">[</span><span class="p" data-group-id="3846293695-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="3846293695-3">}</span><span class="p" data-group-id="3846293695-2">]</span><span class="w">
-</span><span class="p" data-group-id="3846293695-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7640106403-2">[</span><span class="p" data-group-id="7640106403-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="7640106403-3">}</span><span class="p" data-group-id="7640106403-2">]</span><span class="w">
+</span><span class="p" data-group-id="7640106403-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="3846293695-4">(</span><span class="n">request</span><span class="p" data-group-id="3846293695-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="7640106403-4">(</span><span class="n">request</span><span class="p" data-group-id="7640106403-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1849,18 +1792,18 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
     <span id="request/4"></span>
 
   <div class="detail-header">
-    <a href="#request/5" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#request/5" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">request(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">request(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1878,41 +1821,29 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
 
 <p>Issues an HTTP request with the given method to the given url.</p><p>This function is usually used indirectly by <a href="#get/3"><code class="inline">get/3</code></a>, <a href="#post/4"><code class="inline">post/4</code></a>, <a href="#put/4"><code class="inline">put/4</code></a>, etc</p><p>Args:</p><ul><li><code class="inline">method</code> - HTTP method as an atom (<code class="inline">:get</code>, <code class="inline">:head</code>, <code class="inline">:post</code>, <code class="inline">:put</code>,
 <code class="inline">:delete</code>, etc.)</li><li><code class="inline">url</code> - target url as a binary string or char list</li><li><code class="inline">body</code> - request body. See more below</li><li><code class="inline">headers</code> - HTTP headers as an orddict (e.g., <code class="inline">[{&quot;Accept&quot;, &quot;application/json&quot;}]</code>)</li><li><code class="inline">options</code> - Keyword list of options</li></ul><p>Body: see type <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a></p><p>Options: see type <a href="https://hexdocs.pm/httpoison/2.2.1/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a></p><p>This function returns <code class="inline">{:ok, response}</code>, <code class="inline">{:ok, async_response}</code>, or <code class="inline">{:ok, maybe_redirect}</code>
-if the request is successful, <code class="inline">{:error, reason}</code> otherwise.</p><h2 id="request/5-redirect-handling" class="section-heading">
-  <a href="#request/5-redirect-handling" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Redirect handling</span>
-</h2>
-<p>If the option <code class="inline">:follow_redirect</code> is given, HTTP redirects are automatically follow if
+if the request is successful, <code class="inline">{:error, reason}</code> otherwise.</p><h2 id="request/5-redirect-handling" class="section-heading"><a href="#request/5-redirect-handling" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Redirect handling</span></h2><p>If the option <code class="inline">:follow_redirect</code> is given, HTTP redirects are automatically follow if
 the method is set to <code class="inline">:get</code> or <code class="inline">:head</code> and the response's <code class="inline">status_code</code> is <code class="inline">301</code>, <code class="inline">302</code> or
 <code class="inline">307</code>.</p><p>If the method is set to <code class="inline">:post</code>, then the only <code class="inline">status_code</code> that get's automatically
 followed is <code class="inline">303</code>.</p><p>If any other method or <code class="inline">status_code</code> is returned, then this function returns a
 returns a <code class="inline">{:ok, %HTTPoison.MaybeRedirect{}}</code> containing the <code class="inline">redirect_url</code> for you to
-re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/5-examples" class="section-heading">
-  <a href="#request/5-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="3439016442-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3439016442-2">[</span><span class="p" data-group-id="3439016442-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="3439016442-3">}</span><span class="p" data-group-id="3439016442-2">]</span><span class="p" data-group-id="3439016442-1">)</span></code></pre>
+re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/5-examples" class="section-heading"><a href="#request/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="2044277622-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2044277622-2">[</span><span class="p" data-group-id="2044277622-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2044277622-3">}</span><span class="p" data-group-id="2044277622-2">]</span><span class="p" data-group-id="2044277622-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/1">
 
   <div class="detail-header">
-    <a href="#request!/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#request!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">request!(request)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">request!(request)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1941,18 +1872,18 @@ request fails.</p>
     <span id="request!/4"></span>
 
   <div class="detail-header">
-    <a href="#request!/5" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#request!/5" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1975,18 +1906,18 @@ request fails.</p>
 <section class="detail" id="run/1">
 
   <div class="detail-header">
-    <a href="#run/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#run/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">run(args)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L20" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run(args)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L20" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2003,18 +1934,18 @@ request fails.</p>
 <section class="detail" id="start/0">
 
   <div class="detail-header">
-    <a href="#start/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#start/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2025,18 +1956,18 @@ request fails.</p>
 <section class="detail" id="stream_next/1">
 
   <div class="detail-header">
-    <a href="#stream_next/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#stream_next/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">stream_next(resp)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">stream_next(resp)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2054,18 +1985,18 @@ request fails.</p>
 <section class="detail" id="write_schema/3">
 
   <div class="detail-header">
-    <a href="#write_schema/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#write_schema/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">write_schema(dir, package_name, data)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L67" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">write_schema(dir, package_name, data)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2094,7 +2025,7 @@ request fails.</p>
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

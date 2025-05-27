@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.Accounts — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Accounts</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.Accounts</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,7 +112,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#apply_user_email/3" data-no-tooltip translate="no">apply_user_email(user, password, attrs)</a>
+        <a href="#apply_user_email/3" data-no-tooltip="" translate="no">apply_user_email(user, password, attrs)</a>
 
       </div>
 
@@ -168,7 +123,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#cancel_scheduled_deletion/1" data-no-tooltip translate="no">cancel_scheduled_deletion(user_id)</a>
+        <a href="#cancel_scheduled_deletion/1" data-no-tooltip="" translate="no">cancel_scheduled_deletion(user_id)</a>
 
       </div>
 
@@ -176,7 +131,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_scheduled_deletion/2" data-no-tooltip translate="no">change_scheduled_deletion(user, attrs \\ %{})</a>
+        <a href="#change_scheduled_deletion/2" data-no-tooltip="" translate="no">change_scheduled_deletion(user, attrs \\ %{})</a>
 
       </div>
 
@@ -186,7 +141,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_superuser_registration/1" data-no-tooltip translate="no">change_superuser_registration(attrs \\ %{})</a>
+        <a href="#change_superuser_registration/1" data-no-tooltip="" translate="no">change_superuser_registration(attrs \\ %{})</a>
 
       </div>
 
@@ -196,7 +151,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_user/2" data-no-tooltip translate="no">change_user(user, attrs)</a>
+        <a href="#change_user/2" data-no-tooltip="" translate="no">change_user(user, attrs)</a>
 
       </div>
 
@@ -204,7 +159,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_user_email/2" data-no-tooltip translate="no">change_user_email(user, attrs \\ %{})</a>
+        <a href="#change_user_email/2" data-no-tooltip="" translate="no">change_user_email(user, attrs \\ %{})</a>
 
       </div>
 
@@ -214,7 +169,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_user_info/2" data-no-tooltip translate="no">change_user_info(user, attrs \\ %{})</a>
+        <a href="#change_user_info/2" data-no-tooltip="" translate="no">change_user_info(user, attrs \\ %{})</a>
 
       </div>
 
@@ -222,7 +177,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_user_password/2" data-no-tooltip translate="no">change_user_password(user, attrs \\ %{})</a>
+        <a href="#change_user_password/2" data-no-tooltip="" translate="no">change_user_password(user, attrs \\ %{})</a>
 
       </div>
 
@@ -232,7 +187,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_user_registration/1" data-no-tooltip translate="no">change_user_registration(attrs \\ %{})</a>
+        <a href="#change_user_registration/1" data-no-tooltip="" translate="no">change_user_registration(attrs \\ %{})</a>
 
       </div>
 
@@ -242,7 +197,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#confirm_user/1" data-no-tooltip translate="no">confirm_user(token)</a>
+        <a href="#confirm_user/1" data-no-tooltip="" translate="no">confirm_user(token)</a>
 
       </div>
 
@@ -252,7 +207,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#confirmation_required?/1" data-no-tooltip translate="no">confirmation_required?(user)</a>
+        <a href="#confirmation_required?/1" data-no-tooltip="" translate="no">confirmation_required?(user)</a>
 
       </div>
 
@@ -260,7 +215,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_user/1" data-no-tooltip translate="no">create_user(attrs)</a>
+        <a href="#create_user/1" data-no-tooltip="" translate="no">create_user(attrs)</a>
 
       </div>
 
@@ -268,17 +223,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_auth_token/1" data-no-tooltip translate="no">delete_auth_token(token)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Deletes the signed token with the given context.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#delete_session_token/1" data-no-tooltip translate="no">delete_session_token(token)</a>
+        <a href="#delete_auth_token/1" data-no-tooltip="" translate="no">delete_auth_token(token)</a>
 
       </div>
 
@@ -288,7 +233,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_sudo_session_token/1" data-no-tooltip translate="no">delete_sudo_session_token(token)</a>
+        <a href="#delete_session_token/1" data-no-tooltip="" translate="no">delete_session_token(token)</a>
 
       </div>
 
@@ -298,7 +243,17 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_token/1" data-no-tooltip translate="no">delete_token(token)</a>
+        <a href="#delete_sudo_session_token/1" data-no-tooltip="" translate="no">delete_sudo_session_token(token)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Deletes the signed token with the given context.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_token/1" data-no-tooltip="" translate="no">delete_token(token)</a>
 
       </div>
 
@@ -308,7 +263,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_user/1" data-no-tooltip translate="no">delete_user(user)</a>
+        <a href="#delete_user/1" data-no-tooltip="" translate="no">delete_user(user)</a>
 
       </div>
 
@@ -318,7 +273,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_user_totp/1" data-no-tooltip translate="no">delete_user_totp(totp)</a>
+        <a href="#delete_user_totp/1" data-no-tooltip="" translate="no">delete_user_totp(totp)</a>
 
       </div>
 
@@ -328,7 +283,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#deliver_user_confirmation_instructions/1" data-no-tooltip translate="no">deliver_user_confirmation_instructions(user)</a>
+        <a href="#deliver_user_confirmation_instructions/1" data-no-tooltip="" translate="no">deliver_user_confirmation_instructions(user)</a>
 
       </div>
 
@@ -338,7 +293,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#deliver_user_confirmation_instructions/2" data-no-tooltip translate="no">deliver_user_confirmation_instructions(registerer, user)</a>
+        <a href="#deliver_user_confirmation_instructions/2" data-no-tooltip="" translate="no">deliver_user_confirmation_instructions(registerer, user)</a>
 
       </div>
 
@@ -346,7 +301,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#deliver_user_reset_password_instructions/2" data-no-tooltip translate="no">deliver_user_reset_password_instructions(user, reset_password_url_fun)</a>
+        <a href="#deliver_user_reset_password_instructions/2" data-no-tooltip="" translate="no">deliver_user_reset_password_instructions(user, reset_password_url_fun)</a>
 
       </div>
 
@@ -356,7 +311,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#exchange_auth_token/1" data-no-tooltip translate="no">exchange_auth_token(auth_token)</a>
+        <a href="#exchange_auth_token/1" data-no-tooltip="" translate="no">exchange_auth_token(auth_token)</a>
 
       </div>
 
@@ -366,7 +321,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_api_token/1" data-no-tooltip translate="no">generate_api_token(user)</a>
+        <a href="#generate_api_token/1" data-no-tooltip="" translate="no">generate_api_token(user)</a>
 
       </div>
 
@@ -376,7 +331,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_auth_token/1" data-no-tooltip translate="no">generate_auth_token(user)</a>
+        <a href="#generate_auth_token/1" data-no-tooltip="" translate="no">generate_auth_token(user)</a>
 
       </div>
 
@@ -386,7 +341,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_sudo_session_token/1" data-no-tooltip translate="no">generate_sudo_session_token(user)</a>
+        <a href="#generate_sudo_session_token/1" data-no-tooltip="" translate="no">generate_sudo_session_token(user)</a>
 
       </div>
 
@@ -396,7 +351,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_user_session_token/1" data-no-tooltip translate="no">generate_user_session_token(user)</a>
+        <a href="#generate_user_session_token/1" data-no-tooltip="" translate="no">generate_user_session_token(user)</a>
 
       </div>
 
@@ -406,7 +361,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_preference/2" data-no-tooltip translate="no">get_preference(user, key)</a>
+        <a href="#get_preference/2" data-no-tooltip="" translate="no">get_preference(user, key)</a>
 
       </div>
 
@@ -416,7 +371,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_token!/1" data-no-tooltip translate="no">get_token!(id)</a>
+        <a href="#get_token!/1" data-no-tooltip="" translate="no">get_token!(id)</a>
 
       </div>
 
@@ -426,7 +381,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user/1" data-no-tooltip translate="no">get_user(id)</a>
+        <a href="#get_user/1" data-no-tooltip="" translate="no">get_user(id)</a>
 
       </div>
 
@@ -436,7 +391,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user!/1" data-no-tooltip translate="no">get_user!(id)</a>
+        <a href="#get_user!/1" data-no-tooltip="" translate="no">get_user!(id)</a>
 
       </div>
 
@@ -446,7 +401,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user_by_api_token/1" data-no-tooltip translate="no">get_user_by_api_token(claims)</a>
+        <a href="#get_user_by_api_token/1" data-no-tooltip="" translate="no">get_user_by_api_token(claims)</a>
 
       </div>
 
@@ -456,7 +411,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user_by_auth_token/1" data-no-tooltip translate="no">get_user_by_auth_token(token)</a>
+        <a href="#get_user_by_auth_token/1" data-no-tooltip="" translate="no">get_user_by_auth_token(token)</a>
 
       </div>
 
@@ -466,7 +421,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user_by_email/1" data-no-tooltip translate="no">get_user_by_email(email)</a>
+        <a href="#get_user_by_email/1" data-no-tooltip="" translate="no">get_user_by_email(email)</a>
 
       </div>
 
@@ -476,7 +431,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user_by_email_and_password/2" data-no-tooltip translate="no">get_user_by_email_and_password(email, password)</a>
+        <a href="#get_user_by_email_and_password/2" data-no-tooltip="" translate="no">get_user_by_email_and_password(email, password)</a>
 
       </div>
 
@@ -486,7 +441,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user_by_reset_password_token/1" data-no-tooltip translate="no">get_user_by_reset_password_token(token)</a>
+        <a href="#get_user_by_reset_password_token/1" data-no-tooltip="" translate="no">get_user_by_reset_password_token(token)</a>
 
       </div>
 
@@ -496,7 +451,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user_by_session_token/1" data-no-tooltip translate="no">get_user_by_session_token(token)</a>
+        <a href="#get_user_by_session_token/1" data-no-tooltip="" translate="no">get_user_by_session_token(token)</a>
 
       </div>
 
@@ -506,7 +461,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_user_totp/1" data-no-tooltip translate="no">get_user_totp(user)</a>
+        <a href="#get_user_totp/1" data-no-tooltip="" translate="no">get_user_totp(user)</a>
 
       </div>
 
@@ -516,7 +471,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_users_to_alert_for_project/1" data-no-tooltip translate="no">get_users_to_alert_for_project(map)</a>
+        <a href="#get_users_to_alert_for_project/1" data-no-tooltip="" translate="no">get_users_to_alert_for_project(map)</a>
 
       </div>
 
@@ -526,7 +481,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#has_activity_in_projects?/1" data-no-tooltip translate="no">has_activity_in_projects?(user)</a>
+        <a href="#has_activity_in_projects?/1" data-no-tooltip="" translate="no">has_activity_in_projects?(user)</a>
 
       </div>
 
@@ -534,7 +489,7 @@ it in the database.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#has_one_superuser?/0" data-no-tooltip translate="no">has_one_superuser?()</a>
+        <a href="#has_one_superuser?/0" data-no-tooltip="" translate="no">has_one_superuser?()</a>
 
       </div>
 
@@ -545,7 +500,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_api_tokens/1" data-no-tooltip translate="no">list_api_tokens(user)</a>
+        <a href="#list_api_tokens/1" data-no-tooltip="" translate="no">list_api_tokens(user)</a>
 
       </div>
 
@@ -555,7 +510,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_user_backup_codes/1" data-no-tooltip translate="no">list_user_backup_codes(user)</a>
+        <a href="#list_user_backup_codes/1" data-no-tooltip="" translate="no">list_user_backup_codes(user)</a>
 
       </div>
 
@@ -565,7 +520,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_users/0" data-no-tooltip translate="no">list_users()</a>
+        <a href="#list_users/0" data-no-tooltip="" translate="no">list_users()</a>
 
       </div>
 
@@ -575,7 +530,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_users_by_emails/1" data-no-tooltip translate="no">list_users_by_emails(emails)</a>
+        <a href="#list_users_by_emails/1" data-no-tooltip="" translate="no">list_users_by_emails(emails)</a>
 
       </div>
 
@@ -585,7 +540,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#perform/1" data-no-tooltip translate="no">perform(job)</a>
+        <a href="#perform/1" data-no-tooltip="" translate="no">perform(job)</a>
 
       </div>
 
@@ -595,7 +550,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#purge_user/1" data-no-tooltip translate="no">purge_user(id)</a>
+        <a href="#purge_user/1" data-no-tooltip="" translate="no">purge_user(id)</a>
 
       </div>
 
@@ -603,7 +558,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#regenerate_user_backup_codes/1" data-no-tooltip translate="no">regenerate_user_backup_codes(user)</a>
+        <a href="#regenerate_user_backup_codes/1" data-no-tooltip="" translate="no">regenerate_user_backup_codes(user)</a>
 
       </div>
 
@@ -613,7 +568,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#register_superuser/1" data-no-tooltip translate="no">register_superuser(attrs)</a>
+        <a href="#register_superuser/1" data-no-tooltip="" translate="no">register_superuser(attrs)</a>
 
       </div>
 
@@ -623,7 +578,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#register_user/1" data-no-tooltip translate="no">register_user(attrs)</a>
+        <a href="#register_user/1" data-no-tooltip="" translate="no">register_user(attrs)</a>
 
       </div>
 
@@ -633,7 +588,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#remind_account_confirmation/1" data-no-tooltip translate="no">remind_account_confirmation(user)</a>
+        <a href="#remind_account_confirmation/1" data-no-tooltip="" translate="no">remind_account_confirmation(user)</a>
 
       </div>
 
@@ -641,7 +596,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request_email_update/2" data-no-tooltip translate="no">request_email_update(user, new_email)</a>
+        <a href="#request_email_update/2" data-no-tooltip="" translate="no">request_email_update(user, new_email)</a>
 
       </div>
 
@@ -651,7 +606,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#reset_user_password/2" data-no-tooltip translate="no">reset_user_password(user, attrs)</a>
+        <a href="#reset_user_password/2" data-no-tooltip="" translate="no">reset_user_password(user, attrs)</a>
 
       </div>
 
@@ -661,7 +616,7 @@ This triggers the setup page on fresh installs.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#schedule_user_deletion/2" data-no-tooltip translate="no">schedule_user_deletion(user, email)</a>
+        <a href="#schedule_user_deletion/2" data-no-tooltip="" translate="no">schedule_user_deletion(user, email)</a>
 
       </div>
 
@@ -674,17 +629,17 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#subscribe/0" data-no-tooltip translate="no">subscribe()</a>
+        <a href="#subscribe/0" data-no-tooltip="" translate="no">subscribe()</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>See <a href="Lightning.Accounts.Events.html#subscribe/0"><code class="inline">Lightning.Accounts.Events.subscribe/0</code></a>.</p></div>
+        <div class="summary-synopsis"><p>See <a><code class="inline">Lightning.Accounts.Events.subscribe/0</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#sudo_session_token_valid?/2" data-no-tooltip translate="no">sudo_session_token_valid?(user, token)</a>
+        <a href="#sudo_session_token_valid?/2" data-no-tooltip="" translate="no">sudo_session_token_valid?(user, token)</a>
 
       </div>
 
@@ -694,7 +649,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_user_details/2" data-no-tooltip translate="no">update_user_details(user, attrs \\ %{})</a>
+        <a href="#update_user_details/2" data-no-tooltip="" translate="no">update_user_details(user, attrs \\ %{})</a>
 
       </div>
 
@@ -702,7 +657,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_user_email/2" data-no-tooltip translate="no">update_user_email(user, token)</a>
+        <a href="#update_user_email/2" data-no-tooltip="" translate="no">update_user_email(user, token)</a>
 
       </div>
 
@@ -712,7 +667,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_user_info/2" data-no-tooltip translate="no">update_user_info(user, attrs)</a>
+        <a href="#update_user_info/2" data-no-tooltip="" translate="no">update_user_info(user, attrs)</a>
 
       </div>
 
@@ -720,7 +675,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_user_password/3" data-no-tooltip translate="no">update_user_password(user, password, attrs)</a>
+        <a href="#update_user_password/3" data-no-tooltip="" translate="no">update_user_password(user, password, attrs)</a>
 
       </div>
 
@@ -730,7 +685,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_user_preference/3" data-no-tooltip translate="no">update_user_preference(user, key, value)</a>
+        <a href="#update_user_preference/3" data-no-tooltip="" translate="no">update_user_preference(user, key, value)</a>
 
       </div>
 
@@ -740,7 +695,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_user_preferences/2" data-no-tooltip translate="no">update_user_preferences(user, preferences)</a>
+        <a href="#update_user_preferences/2" data-no-tooltip="" translate="no">update_user_preferences(user, preferences)</a>
 
       </div>
 
@@ -750,7 +705,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#upsert_user_totp/2" data-no-tooltip translate="no">upsert_user_totp(totp, attrs)</a>
+        <a href="#upsert_user_totp/2" data-no-tooltip="" translate="no">upsert_user_totp(totp, attrs)</a>
 
       </div>
 
@@ -760,7 +715,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#valid_user_backup_code?/2" data-no-tooltip translate="no">valid_user_backup_code?(user, code)</a>
+        <a href="#valid_user_backup_code?/2" data-no-tooltip="" translate="no">valid_user_backup_code?(user, code)</a>
 
       </div>
 
@@ -770,7 +725,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#valid_user_totp?/2" data-no-tooltip translate="no">valid_user_totp?(user, code)</a>
+        <a href="#valid_user_totp?/2" data-no-tooltip="" translate="no">valid_user_totp?(user, code)</a>
 
       </div>
 
@@ -780,7 +735,7 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#validate_change_user_email/2" data-no-tooltip translate="no">validate_change_user_email(user, params \\ %{})</a>
+        <a href="#validate_change_user_email/2" data-no-tooltip="" translate="no">validate_change_user_email(user, params \\ %{})</a>
 
       </div>
 
@@ -804,50 +759,44 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 <section class="detail" id="apply_user_email/3">
 
   <div class="detail-header">
-    <a href="#apply_user_email/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#apply_user_email/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">apply_user_email(user, password, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L479" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">apply_user_email(user, password, attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L479" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
 <p>Emulates that the email will change without actually changing
-it in the database.</p><h2 id="apply_user_email/3-examples" class="section-heading">
-  <a href="#apply_user_email/3-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="5466990961-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5466990961-2">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5466990961-2">}</span><span class="p" data-group-id="5466990961-1">)</span><span class="w">
-</span><span class="p" data-group-id="5466990961-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5466990961-4">%</span><span class="nc" data-group-id="5466990961-4">User</span><span class="p" data-group-id="5466990961-4">{</span><span class="p" data-group-id="5466990961-4">}</span><span class="p" data-group-id="5466990961-3">}</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:superuser</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="5466990961-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5466990961-6">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5466990961-6">}</span><span class="p" data-group-id="5466990961-5">)</span><span class="w">
-</span><span class="p" data-group-id="5466990961-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5466990961-8">%</span><span class="nc" data-group-id="5466990961-8">Ecto.Changeset</span><span class="p" data-group-id="5466990961-8">{</span><span class="p" data-group-id="5466990961-8">}</span><span class="p" data-group-id="5466990961-7">}</span></code></pre>
+it in the database.</p><h2 id="apply_user_email/3-examples" class="section-heading"><a href="#apply_user_email/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="6150260320-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6150260320-2">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6150260320-2">}</span><span class="p" data-group-id="6150260320-1">)</span><span class="w">
+</span><span class="p" data-group-id="6150260320-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6150260320-4">%</span><span class="nc" data-group-id="6150260320-4">User</span><span class="p" data-group-id="6150260320-4">{</span><span class="p" data-group-id="6150260320-4">}</span><span class="p" data-group-id="6150260320-3">}</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:superuser</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="6150260320-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6150260320-6">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6150260320-6">}</span><span class="p" data-group-id="6150260320-5">)</span><span class="w">
+</span><span class="p" data-group-id="6150260320-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6150260320-8">%</span><span class="nc" data-group-id="6150260320-8">Ecto.Changeset</span><span class="p" data-group-id="6150260320-8">{</span><span class="p" data-group-id="6150260320-8">}</span><span class="p" data-group-id="6150260320-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="cancel_scheduled_deletion/1">
 
   <div class="detail-header">
-    <a href="#cancel_scheduled_deletion/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#cancel_scheduled_deletion/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">cancel_scheduled_deletion(user_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L457" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">cancel_scheduled_deletion(user_id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L457" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -860,30 +809,24 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     <span id="change_scheduled_deletion/1"></span>
 
   <div class="detail-header">
-    <a href="#change_scheduled_deletion/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#change_scheduled_deletion/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">change_scheduled_deletion(user, attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L453" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">change_scheduled_deletion(user, attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L453" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for changing the user scheduled_deletion.</p><h2 id="change_scheduled_deletion/2-examples" class="section-heading">
-  <a href="#change_scheduled_deletion/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_scheduled_deletion</span><span class="p" data-group-id="1230027433-1">(</span><span class="n">user</span><span class="p" data-group-id="1230027433-1">)</span><span class="w">
-</span><span class="p" data-group-id="1230027433-2">%</span><span class="nc" data-group-id="1230027433-2">Ecto.Changeset</span><span class="p" data-group-id="1230027433-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1230027433-3">%</span><span class="nc" data-group-id="1230027433-3">User</span><span class="p" data-group-id="1230027433-3">{</span><span class="p" data-group-id="1230027433-3">}</span><span class="p" data-group-id="1230027433-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for changing the user scheduled_deletion.</p><h2 id="change_scheduled_deletion/2-examples" class="section-heading"><a href="#change_scheduled_deletion/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_scheduled_deletion</span><span class="p" data-group-id="1692720515-1">(</span><span class="n">user</span><span class="p" data-group-id="1692720515-1">)</span><span class="w">
+</span><span class="p" data-group-id="1692720515-2">%</span><span class="nc" data-group-id="1692720515-2">Ecto.Changeset</span><span class="p" data-group-id="1692720515-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1692720515-3">%</span><span class="nc" data-group-id="1692720515-3">User</span><span class="p" data-group-id="1692720515-3">{</span><span class="p" data-group-id="1692720515-3">}</span><span class="p" data-group-id="1692720515-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_superuser_registration/1">
@@ -891,18 +834,18 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     <span id="change_superuser_registration/0"></span>
 
   <div class="detail-header">
-    <a href="#change_superuser_registration/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#change_superuser_registration/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">change_superuser_registration(attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L356" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">change_superuser_registration(attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L356" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -913,31 +856,25 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
 
       </div>
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking superuser changes.</p><h2 id="change_superuser_registration/1-examples" class="section-heading">
-  <a href="#change_superuser_registration/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_superuser_registration</span><span class="p" data-group-id="1704800853-1">(</span><span class="n">user</span><span class="p" data-group-id="1704800853-1">)</span><span class="w">
-</span><span class="p" data-group-id="1704800853-2">%</span><span class="nc" data-group-id="1704800853-2">Ecto.Changeset</span><span class="p" data-group-id="1704800853-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1704800853-3">%</span><span class="nc" data-group-id="1704800853-3">User</span><span class="p" data-group-id="1704800853-3">{</span><span class="p" data-group-id="1704800853-3">}</span><span class="p" data-group-id="1704800853-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking superuser changes.</p><h2 id="change_superuser_registration/1-examples" class="section-heading"><a href="#change_superuser_registration/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_superuser_registration</span><span class="p" data-group-id="7784833278-1">(</span><span class="n">user</span><span class="p" data-group-id="7784833278-1">)</span><span class="w">
+</span><span class="p" data-group-id="7784833278-2">%</span><span class="nc" data-group-id="7784833278-2">Ecto.Changeset</span><span class="p" data-group-id="7784833278-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7784833278-3">%</span><span class="nc" data-group-id="7784833278-3">User</span><span class="p" data-group-id="7784833278-3">{</span><span class="p" data-group-id="7784833278-3">}</span><span class="p" data-group-id="7784833278-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_user/2">
 
   <div class="detail-header">
-    <a href="#change_user/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#change_user/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">change_user(user, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L634" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">change_user(user, attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L634" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -950,30 +887,24 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     <span id="change_user_email/1"></span>
 
   <div class="detail-header">
-    <a href="#change_user_email/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#change_user_email/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">change_user_email(user, attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L440" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">change_user_email(user, attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L440" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for changing the user email.</p><h2 id="change_user_email/2-examples" class="section-heading">
-  <a href="#change_user_email/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_email</span><span class="p" data-group-id="7367034671-1">(</span><span class="n">user</span><span class="p" data-group-id="7367034671-1">)</span><span class="w">
-</span><span class="p" data-group-id="7367034671-2">%</span><span class="nc" data-group-id="7367034671-2">Ecto.Changeset</span><span class="p" data-group-id="7367034671-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7367034671-3">%</span><span class="nc" data-group-id="7367034671-3">User</span><span class="p" data-group-id="7367034671-3">{</span><span class="p" data-group-id="7367034671-3">}</span><span class="p" data-group-id="7367034671-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for changing the user email.</p><h2 id="change_user_email/2-examples" class="section-heading"><a href="#change_user_email/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_email</span><span class="p" data-group-id="1081994423-1">(</span><span class="n">user</span><span class="p" data-group-id="1081994423-1">)</span><span class="w">
+</span><span class="p" data-group-id="1081994423-2">%</span><span class="nc" data-group-id="1081994423-2">Ecto.Changeset</span><span class="p" data-group-id="1081994423-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1081994423-3">%</span><span class="nc" data-group-id="1081994423-3">User</span><span class="p" data-group-id="1081994423-3">{</span><span class="p" data-group-id="1081994423-3">}</span><span class="p" data-group-id="1081994423-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_user_info/2">
@@ -981,18 +912,18 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     <span id="change_user_info/1"></span>
 
   <div class="detail-header">
-    <a href="#change_user_info/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#change_user_info/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">change_user_info(user, attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L406" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">change_user_info(user, attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L406" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1005,30 +936,24 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     <span id="change_user_password/1"></span>
 
   <div class="detail-header">
-    <a href="#change_user_password/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#change_user_password/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">change_user_password(user, attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L630" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">change_user_password(user, attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L630" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for changing the user password.</p><h2 id="change_user_password/2-examples" class="section-heading">
-  <a href="#change_user_password/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_password</span><span class="p" data-group-id="5227075332-1">(</span><span class="n">user</span><span class="p" data-group-id="5227075332-1">)</span><span class="w">
-</span><span class="p" data-group-id="5227075332-2">%</span><span class="nc" data-group-id="5227075332-2">Ecto.Changeset</span><span class="p" data-group-id="5227075332-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5227075332-3">%</span><span class="nc" data-group-id="5227075332-3">User</span><span class="p" data-group-id="5227075332-3">{</span><span class="p" data-group-id="5227075332-3">}</span><span class="p" data-group-id="5227075332-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for changing the user password.</p><h2 id="change_user_password/2-examples" class="section-heading"><a href="#change_user_password/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_password</span><span class="p" data-group-id="4505927129-1">(</span><span class="n">user</span><span class="p" data-group-id="4505927129-1">)</span><span class="w">
+</span><span class="p" data-group-id="4505927129-2">%</span><span class="nc" data-group-id="4505927129-2">Ecto.Changeset</span><span class="p" data-group-id="4505927129-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4505927129-3">%</span><span class="nc" data-group-id="4505927129-3">User</span><span class="p" data-group-id="4505927129-3">{</span><span class="p" data-group-id="4505927129-3">}</span><span class="p" data-group-id="4505927129-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_user_registration/1">
@@ -1036,47 +961,41 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     <span id="change_user_registration/0"></span>
 
   <div class="detail-header">
-    <a href="#change_user_registration/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#change_user_registration/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">change_user_registration(attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L397" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">change_user_registration(attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L397" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking user changes.</p><h2 id="change_user_registration/1-examples" class="section-heading">
-  <a href="#change_user_registration/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_registration</span><span class="p" data-group-id="8146653856-1">(</span><span class="n">user</span><span class="p" data-group-id="8146653856-1">)</span><span class="w">
-</span><span class="p" data-group-id="8146653856-2">%</span><span class="nc" data-group-id="8146653856-2">Ecto.Changeset</span><span class="p" data-group-id="8146653856-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8146653856-3">%</span><span class="nc" data-group-id="8146653856-3">User</span><span class="p" data-group-id="8146653856-3">{</span><span class="p" data-group-id="8146653856-3">}</span><span class="p" data-group-id="8146653856-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking user changes.</p><h2 id="change_user_registration/1-examples" class="section-heading"><a href="#change_user_registration/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_registration</span><span class="p" data-group-id="6720505973-1">(</span><span class="n">user</span><span class="p" data-group-id="6720505973-1">)</span><span class="w">
+</span><span class="p" data-group-id="6720505973-2">%</span><span class="nc" data-group-id="6720505973-2">Ecto.Changeset</span><span class="p" data-group-id="6720505973-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6720505973-3">%</span><span class="nc" data-group-id="6720505973-3">User</span><span class="p" data-group-id="6720505973-3">{</span><span class="p" data-group-id="6720505973-3">}</span><span class="p" data-group-id="6720505973-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="confirm_user/1">
 
   <div class="detail-header">
-    <a href="#confirm_user/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#confirm_user/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">confirm_user(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L914" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">confirm_user(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L914" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1088,18 +1007,18 @@ and the token is deleted.</p>
 <section class="detail" id="confirmation_required?/1">
 
   <div class="detail-header">
-    <a href="#confirmation_required?/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#confirmation_required?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">confirmation_required?(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1032" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">confirmation_required?(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1032" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1110,18 +1029,18 @@ and the token is deleted.</p>
 <section class="detail" id="create_user/1">
 
   <div class="detail-header">
-    <a href="#create_user/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#create_user/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_user(attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L98" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_user(attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L98" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1132,18 +1051,18 @@ and the token is deleted.</p>
 <section class="detail" id="delete_auth_token/1">
 
   <div class="detail-header">
-    <a href="#delete_auth_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete_auth_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete_auth_token(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L794" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_auth_token(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L794" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1154,18 +1073,18 @@ and the token is deleted.</p>
 <section class="detail" id="delete_session_token/1">
 
   <div class="detail-header">
-    <a href="#delete_session_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete_session_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete_session_token(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L721" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_session_token(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L721" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1176,18 +1095,18 @@ and the token is deleted.</p>
 <section class="detail" id="delete_sudo_session_token/1">
 
   <div class="detail-header">
-    <a href="#delete_sudo_session_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete_sudo_session_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete_sudo_session_token(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L750" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_sudo_session_token(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L750" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1198,82 +1117,70 @@ and the token is deleted.</p>
 <section class="detail" id="delete_token/1">
 
   <div class="detail-header">
-    <a href="#delete_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete_token(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L840" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_token(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L840" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Deletes a token.</p><h2 id="delete_token/1-examples" class="section-heading">
-  <a href="#delete_token/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_token</span><span class="p" data-group-id="7601992057-1">(</span><span class="n">token</span><span class="p" data-group-id="7601992057-1">)</span><span class="w">
-</span><span class="p" data-group-id="7601992057-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7601992057-3">%</span><span class="nc" data-group-id="7601992057-3">UserToken</span><span class="p" data-group-id="7601992057-3">{</span><span class="p" data-group-id="7601992057-3">}</span><span class="p" data-group-id="7601992057-2">}</span><span class="w">
+<p>Deletes a token.</p><h2 id="delete_token/1-examples" class="section-heading"><a href="#delete_token/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_token</span><span class="p" data-group-id="6401276327-1">(</span><span class="n">token</span><span class="p" data-group-id="6401276327-1">)</span><span class="w">
+</span><span class="p" data-group-id="6401276327-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6401276327-3">%</span><span class="nc" data-group-id="6401276327-3">UserToken</span><span class="p" data-group-id="6401276327-3">{</span><span class="p" data-group-id="6401276327-3">}</span><span class="p" data-group-id="6401276327-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_token</span><span class="p" data-group-id="7601992057-4">(</span><span class="n">token</span><span class="p" data-group-id="7601992057-4">)</span><span class="w">
-</span><span class="p" data-group-id="7601992057-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7601992057-6">%</span><span class="nc" data-group-id="7601992057-6">Ecto.Changeset</span><span class="p" data-group-id="7601992057-6">{</span><span class="p" data-group-id="7601992057-6">}</span><span class="p" data-group-id="7601992057-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_token</span><span class="p" data-group-id="6401276327-4">(</span><span class="n">token</span><span class="p" data-group-id="6401276327-4">)</span><span class="w">
+</span><span class="p" data-group-id="6401276327-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6401276327-6">%</span><span class="nc" data-group-id="6401276327-6">Ecto.Changeset</span><span class="p" data-group-id="6401276327-6">{</span><span class="p" data-group-id="6401276327-6">}</span><span class="p" data-group-id="6401276327-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_user/1">
 
   <div class="detail-header">
-    <a href="#delete_user/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete_user/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete_user(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L617" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_user(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L617" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Deletes a user.</p><h2 id="delete_user/1-examples" class="section-heading">
-  <a href="#delete_user/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="5381393540-1">(</span><span class="n">user</span><span class="p" data-group-id="5381393540-1">)</span><span class="w">
-</span><span class="p" data-group-id="5381393540-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5381393540-3">%</span><span class="nc" data-group-id="5381393540-3">User</span><span class="p" data-group-id="5381393540-3">{</span><span class="p" data-group-id="5381393540-3">}</span><span class="p" data-group-id="5381393540-2">}</span><span class="w">
+<p>Deletes a user.</p><h2 id="delete_user/1-examples" class="section-heading"><a href="#delete_user/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="2028179989-1">(</span><span class="n">user</span><span class="p" data-group-id="2028179989-1">)</span><span class="w">
+</span><span class="p" data-group-id="2028179989-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2028179989-3">%</span><span class="nc" data-group-id="2028179989-3">User</span><span class="p" data-group-id="2028179989-3">{</span><span class="p" data-group-id="2028179989-3">}</span><span class="p" data-group-id="2028179989-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="5381393540-4">(</span><span class="n">user</span><span class="p" data-group-id="5381393540-4">)</span><span class="w">
-</span><span class="p" data-group-id="5381393540-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5381393540-6">%</span><span class="nc" data-group-id="5381393540-6">Ecto.Changeset</span><span class="p" data-group-id="5381393540-6">{</span><span class="p" data-group-id="5381393540-6">}</span><span class="p" data-group-id="5381393540-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="2028179989-4">(</span><span class="n">user</span><span class="p" data-group-id="2028179989-4">)</span><span class="w">
+</span><span class="p" data-group-id="2028179989-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2028179989-6">%</span><span class="nc" data-group-id="2028179989-6">Ecto.Changeset</span><span class="p" data-group-id="2028179989-6">{</span><span class="p" data-group-id="2028179989-6">}</span><span class="p" data-group-id="2028179989-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_user_totp/1">
 
   <div class="detail-header">
-    <a href="#delete_user_totp/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete_user_totp/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete_user_totp(totp)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L242" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_user_totp(totp)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L242" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1291,50 +1198,44 @@ and the token is deleted.</p>
 <section class="detail" id="deliver_user_confirmation_instructions/1">
 
   <div class="detail-header">
-    <a href="#deliver_user_confirmation_instructions/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#deliver_user_confirmation_instructions/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">deliver_user_confirmation_instructions(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L875" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">deliver_user_confirmation_instructions(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L875" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Delivers the confirmation email instructions to the given user.</p><h2 id="deliver_user_confirmation_instructions/1-examples" class="section-heading">
-  <a href="#deliver_user_confirmation_instructions/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="2167153911-1">(</span><span class="n">user</span><span class="p" data-group-id="2167153911-1">)</span><span class="w">
-</span><span class="p" data-group-id="2167153911-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2167153911-3">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2167153911-3">}</span><span class="p" data-group-id="2167153911-2">}</span><span class="w">
+<p>Delivers the confirmation email instructions to the given user.</p><h2 id="deliver_user_confirmation_instructions/1-examples" class="section-heading"><a href="#deliver_user_confirmation_instructions/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="2205745658-1">(</span><span class="n">user</span><span class="p" data-group-id="2205745658-1">)</span><span class="w">
+</span><span class="p" data-group-id="2205745658-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2205745658-3">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2205745658-3">}</span><span class="p" data-group-id="2205745658-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="2167153911-4">(</span><span class="n">confirmed_user</span><span class="p" data-group-id="2167153911-4">)</span><span class="w">
-</span><span class="p" data-group-id="2167153911-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:already_confirmed</span><span class="p" data-group-id="2167153911-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="2205745658-4">(</span><span class="n">confirmed_user</span><span class="p" data-group-id="2205745658-4">)</span><span class="w">
+</span><span class="p" data-group-id="2205745658-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:already_confirmed</span><span class="p" data-group-id="2205745658-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="deliver_user_confirmation_instructions/2">
 
   <div class="detail-header">
-    <a href="#deliver_user_confirmation_instructions/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#deliver_user_confirmation_instructions/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">deliver_user_confirmation_instructions(registerer, user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L886" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">deliver_user_confirmation_instructions(registerer, user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L886" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1345,47 +1246,41 @@ and the token is deleted.</p>
 <section class="detail" id="deliver_user_reset_password_instructions/2">
 
   <div class="detail-header">
-    <a href="#deliver_user_reset_password_instructions/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#deliver_user_reset_password_instructions/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">deliver_user_reset_password_instructions(user, reset_password_url_fun)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L946" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">deliver_user_reset_password_instructions(user, reset_password_url_fun)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L946" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Delivers the reset password email to the given user.</p><h2 id="deliver_user_reset_password_instructions/2-examples" class="section-heading">
-  <a href="#deliver_user_reset_password_instructions/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_reset_password_instructions</span><span class="p" data-group-id="4436336295-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_reset_password_url</span><span class="p" data-group-id="4436336295-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="4436336295-2">)</span><span class="p" data-group-id="4436336295-1">)</span><span class="w">
-</span><span class="p" data-group-id="4436336295-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4436336295-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4436336295-4">}</span><span class="p" data-group-id="4436336295-3">}</span></code></pre>
+<p>Delivers the reset password email to the given user.</p><h2 id="deliver_user_reset_password_instructions/2-examples" class="section-heading"><a href="#deliver_user_reset_password_instructions/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_reset_password_instructions</span><span class="p" data-group-id="9305369222-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_reset_password_url</span><span class="p" data-group-id="9305369222-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="9305369222-2">)</span><span class="p" data-group-id="9305369222-1">)</span><span class="w">
+</span><span class="p" data-group-id="9305369222-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9305369222-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9305369222-4">}</span><span class="p" data-group-id="9305369222-3">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="exchange_auth_token/1">
 
   <div class="detail-header">
-    <a href="#exchange_auth_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#exchange_auth_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">exchange_auth_token(auth_token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L772" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">exchange_auth_token(auth_token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L772" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1396,18 +1291,18 @@ and the token is deleted.</p>
 <section class="detail" id="generate_api_token/1">
 
   <div class="detail-header">
-    <a href="#generate_api_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#generate_api_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">generate_api_token(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L804" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">generate_api_token(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L804" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1418,18 +1313,18 @@ and the token is deleted.</p>
 <section class="detail" id="generate_auth_token/1">
 
   <div class="detail-header">
-    <a href="#generate_auth_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#generate_auth_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">generate_auth_token(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L761" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">generate_auth_token(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L761" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1440,18 +1335,18 @@ and the token is deleted.</p>
 <section class="detail" id="generate_sudo_session_token/1">
 
   <div class="detail-header">
-    <a href="#generate_sudo_session_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#generate_sudo_session_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">generate_sudo_session_token(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L731" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">generate_sudo_session_token(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L731" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1462,18 +1357,18 @@ and the token is deleted.</p>
 <section class="detail" id="generate_user_session_token/1">
 
   <div class="detail-header">
-    <a href="#generate_user_session_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#generate_user_session_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">generate_user_session_token(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L704" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">generate_user_session_token(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L704" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1484,18 +1379,18 @@ and the token is deleted.</p>
 <section class="detail" id="get_preference/2">
 
   <div class="detail-header">
-    <a href="#get_preference/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_preference/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_preference(user, key)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1055" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_preference(user, key)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1055" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1507,98 +1402,80 @@ and the token is deleted.</p>
       </div>
 
 <p>Retrieves a specific preference value for a given user.</p><p>Returns the value of the specified key from the user's preferences.
-If the value is the string <code class="inline">&quot;true&quot;</code> or <code class="inline">&quot;false&quot;</code>, it is converted to a boolean.</p><h2 id="get_preference/2-examples" class="section-heading">
-  <a href="#get_preference/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_preference</span><span class="p" data-group-id="0094553886-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;editor.orientation&quot;</span><span class="p" data-group-id="0094553886-1">)</span><span class="w">
+If the value is the string <code class="inline">&quot;true&quot;</code> or <code class="inline">&quot;false&quot;</code>, it is converted to a boolean.</p><h2 id="get_preference/2-examples" class="section-heading"><a href="#get_preference/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_preference</span><span class="p" data-group-id="7678849022-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;editor.orientation&quot;</span><span class="p" data-group-id="7678849022-1">)</span><span class="w">
 </span><span class="s">&quot;vertical&quot;</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_preference</span><span class="p" data-group-id="0094553886-2">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;notifications.enabled&quot;</span><span class="p" data-group-id="0094553886-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_preference</span><span class="p" data-group-id="7678849022-2">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;notifications.enabled&quot;</span><span class="p" data-group-id="7678849022-2">)</span><span class="w">
 </span><span class="no">true</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_token!/1">
 
   <div class="detail-header">
-    <a href="#get_token!/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_token!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_token!(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L199" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_token!(id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L199" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets a single token.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the UserToken does not exist.</p><h2 id="get_token!/1-examples" class="section-heading">
-  <a href="#get_token!/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_token!</span><span class="p" data-group-id="9592760733-1">(</span><span class="mi">123</span><span class="p" data-group-id="9592760733-1">)</span><span class="w">
-</span><span class="p" data-group-id="9592760733-2">%</span><span class="nc" data-group-id="9592760733-2">UserToken</span><span class="p" data-group-id="9592760733-2">{</span><span class="p" data-group-id="9592760733-2">}</span><span class="w">
+<p>Gets a single token.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the UserToken does not exist.</p><h2 id="get_token!/1-examples" class="section-heading"><a href="#get_token!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_token!</span><span class="p" data-group-id="9326278153-1">(</span><span class="mi">123</span><span class="p" data-group-id="9326278153-1">)</span><span class="w">
+</span><span class="p" data-group-id="9326278153-2">%</span><span class="nc" data-group-id="9326278153-2">UserToken</span><span class="p" data-group-id="9326278153-2">{</span><span class="p" data-group-id="9326278153-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_token!</span><span class="p" data-group-id="9592760733-3">(</span><span class="mi">456</span><span class="p" data-group-id="9592760733-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_token!</span><span class="p" data-group-id="9326278153-3">(</span><span class="mi">456</span><span class="p" data-group-id="9326278153-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_user/1">
 
   <div class="detail-header">
-    <a href="#get_user/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L183" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user(id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L183" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets a single user.</p><h2 id="get_user/1-examples" class="section-heading">
-  <a href="#get_user/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user</span><span class="p" data-group-id="6850011777-1">(</span><span class="mi">123</span><span class="p" data-group-id="6850011777-1">)</span><span class="w">
-</span><span class="p" data-group-id="6850011777-2">%</span><span class="nc" data-group-id="6850011777-2">User</span><span class="p" data-group-id="6850011777-2">{</span><span class="p" data-group-id="6850011777-2">}</span><span class="w">
+<p>Gets a single user.</p><h2 id="get_user/1-examples" class="section-heading"><a href="#get_user/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user</span><span class="p" data-group-id="8820431389-1">(</span><span class="mi">123</span><span class="p" data-group-id="8820431389-1">)</span><span class="w">
+</span><span class="p" data-group-id="8820431389-2">%</span><span class="nc" data-group-id="8820431389-2">User</span><span class="p" data-group-id="8820431389-2">{</span><span class="p" data-group-id="8820431389-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="6850011777-3">(</span><span class="mi">456</span><span class="p" data-group-id="6850011777-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="8820431389-3">(</span><span class="mi">456</span><span class="p" data-group-id="8820431389-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_user!/1">
 
   <div class="detail-header">
-    <a href="#get_user!/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user!(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L170" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user!(id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L170" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1609,18 +1486,18 @@ If the value is the string <code class="inline">&quot;true&quot;</code> or <code
 <section class="detail" id="get_user_by_api_token/1">
 
   <div class="detail-header">
-    <a href="#get_user_by_api_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user_by_api_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user_by_api_token(claims)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L813" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user_by_api_token(claims)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L813" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1631,18 +1508,18 @@ If the value is the string <code class="inline">&quot;true&quot;</code> or <code
 <section class="detail" id="get_user_by_auth_token/1">
 
   <div class="detail-header">
-    <a href="#get_user_by_auth_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user_by_auth_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user_by_auth_token(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L786" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user_by_auth_token(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L786" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1653,114 +1530,96 @@ If the value is the string <code class="inline">&quot;true&quot;</code> or <code
 <section class="detail" id="get_user_by_email/1">
 
   <div class="detail-header">
-    <a href="#get_user_by_email/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user_by_email/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user_by_email(email)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L141" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user_by_email(email)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L141" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets a user by email.</p><h2 id="get_user_by_email/1-examples" class="section-heading">
-  <a href="#get_user_by_email/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="6422269265-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p" data-group-id="6422269265-1">)</span><span class="w">
-</span><span class="p" data-group-id="6422269265-2">%</span><span class="nc" data-group-id="6422269265-2">User</span><span class="p" data-group-id="6422269265-2">{</span><span class="p" data-group-id="6422269265-2">}</span><span class="w">
+<p>Gets a user by email.</p><h2 id="get_user_by_email/1-examples" class="section-heading"><a href="#get_user_by_email/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="9644094744-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p" data-group-id="9644094744-1">)</span><span class="w">
+</span><span class="p" data-group-id="9644094744-2">%</span><span class="nc" data-group-id="9644094744-2">User</span><span class="p" data-group-id="9644094744-2">{</span><span class="p" data-group-id="9644094744-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="6422269265-3">(</span><span class="s">&quot;unknown@example.com&quot;</span><span class="p" data-group-id="6422269265-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="9644094744-3">(</span><span class="s">&quot;unknown@example.com&quot;</span><span class="p" data-group-id="9644094744-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_user_by_email_and_password/2">
 
   <div class="detail-header">
-    <a href="#get_user_by_email_and_password/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user_by_email_and_password/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user_by_email_and_password(email, password)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L157" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user_by_email_and_password(email, password)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L157" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets a user by email and password.</p><h2 id="get_user_by_email_and_password/2-examples" class="section-heading">
-  <a href="#get_user_by_email_and_password/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="1445598143-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;correct_password&quot;</span><span class="p" data-group-id="1445598143-1">)</span><span class="w">
-</span><span class="p" data-group-id="1445598143-2">%</span><span class="nc" data-group-id="1445598143-2">User</span><span class="p" data-group-id="1445598143-2">{</span><span class="p" data-group-id="1445598143-2">}</span><span class="w">
+<p>Gets a user by email and password.</p><h2 id="get_user_by_email_and_password/2-examples" class="section-heading"><a href="#get_user_by_email_and_password/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="0601687377-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;correct_password&quot;</span><span class="p" data-group-id="0601687377-1">)</span><span class="w">
+</span><span class="p" data-group-id="0601687377-2">%</span><span class="nc" data-group-id="0601687377-2">User</span><span class="p" data-group-id="0601687377-2">{</span><span class="p" data-group-id="0601687377-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="1445598143-3">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid_password&quot;</span><span class="p" data-group-id="1445598143-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="0601687377-3">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid_password&quot;</span><span class="p" data-group-id="0601687377-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_user_by_reset_password_token/1">
 
   <div class="detail-header">
-    <a href="#get_user_by_reset_password_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user_by_reset_password_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user_by_reset_password_token(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L974" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user_by_reset_password_token(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L974" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets the user by reset password token.</p><h2 id="get_user_by_reset_password_token/1-examples" class="section-heading">
-  <a href="#get_user_by_reset_password_token/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="6839107098-1">(</span><span class="s">&quot;validtoken&quot;</span><span class="p" data-group-id="6839107098-1">)</span><span class="w">
-</span><span class="p" data-group-id="6839107098-2">%</span><span class="nc" data-group-id="6839107098-2">User</span><span class="p" data-group-id="6839107098-2">{</span><span class="p" data-group-id="6839107098-2">}</span><span class="w">
+<p>Gets the user by reset password token.</p><h2 id="get_user_by_reset_password_token/1-examples" class="section-heading"><a href="#get_user_by_reset_password_token/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="2220273068-1">(</span><span class="s">&quot;validtoken&quot;</span><span class="p" data-group-id="2220273068-1">)</span><span class="w">
+</span><span class="p" data-group-id="2220273068-2">%</span><span class="nc" data-group-id="2220273068-2">User</span><span class="p" data-group-id="2220273068-2">{</span><span class="p" data-group-id="2220273068-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="6839107098-3">(</span><span class="s">&quot;invalidtoken&quot;</span><span class="p" data-group-id="6839107098-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="2220273068-3">(</span><span class="s">&quot;invalidtoken&quot;</span><span class="p" data-group-id="2220273068-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_user_by_session_token/1">
 
   <div class="detail-header">
-    <a href="#get_user_by_session_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user_by_session_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user_by_session_token(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L713" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user_by_session_token(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L713" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1771,18 +1630,18 @@ If the value is the string <code class="inline">&quot;true&quot;</code> or <code
 <section class="detail" id="get_user_totp/1">
 
   <div class="detail-header">
-    <a href="#get_user_totp/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_user_totp/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_user_totp(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L204" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_user_totp(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L204" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1793,18 +1652,18 @@ If the value is the string <code class="inline">&quot;true&quot;</code> or <code
 <section class="detail" id="get_users_to_alert_for_project/1">
 
   <div class="detail-header">
-    <a href="#get_users_to_alert_for_project/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_users_to_alert_for_project/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_users_to_alert_for_project(map)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1023" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_users_to_alert_for_project(map)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1023" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1815,18 +1674,18 @@ If the value is the string <code class="inline">&quot;true&quot;</code> or <code
 <section class="detail" id="has_activity_in_projects?/1">
 
   <div class="detail-header">
-    <a href="#has_activity_in_projects?/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#has_activity_in_projects?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">has_activity_in_projects?(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L29" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">has_activity_in_projects?(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1837,18 +1696,18 @@ If the value is the string <code class="inline">&quot;true&quot;</code> or <code
 <section class="detail" id="has_one_superuser?/0">
 
   <div class="detail-header">
-    <a href="#has_one_superuser?/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#has_one_superuser?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">has_one_superuser?()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1015" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">has_one_superuser?()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1015" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1866,18 +1725,18 @@ This triggers the setup page on fresh installs.</p>
 <section class="detail" id="list_api_tokens/1">
 
   <div class="detail-header">
-    <a href="#list_api_tokens/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#list_api_tokens/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">list_api_tokens(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L847" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_api_tokens(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L847" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1888,18 +1747,18 @@ This triggers the setup page on fresh installs.</p>
 <section class="detail" id="list_user_backup_codes/1">
 
   <div class="detail-header">
-    <a href="#list_user_backup_codes/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#list_user_backup_codes/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">list_user_backup_codes(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L323" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_user_backup_codes(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L323" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1917,47 +1776,41 @@ This triggers the setup page on fresh installs.</p>
 <section class="detail" id="list_users/0">
 
   <div class="detail-header">
-    <a href="#list_users/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#list_users/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">list_users()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L113" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_users()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L113" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns the list of users.</p><h2 id="list_users/0-examples" class="section-heading">
-  <a href="#list_users/0-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_users</span><span class="p" data-group-id="2549501378-1">(</span><span class="p" data-group-id="2549501378-1">)</span><span class="w">
-</span><span class="p" data-group-id="2549501378-2">[</span><span class="p" data-group-id="2549501378-3">%</span><span class="nc" data-group-id="2549501378-3">User</span><span class="p" data-group-id="2549501378-3">{</span><span class="p" data-group-id="2549501378-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2549501378-2">]</span></code></pre>
+<p>Returns the list of users.</p><h2 id="list_users/0-examples" class="section-heading"><a href="#list_users/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_users</span><span class="p" data-group-id="3296908090-1">(</span><span class="p" data-group-id="3296908090-1">)</span><span class="w">
+</span><span class="p" data-group-id="3296908090-2">[</span><span class="p" data-group-id="3296908090-3">%</span><span class="nc" data-group-id="3296908090-3">User</span><span class="p" data-group-id="3296908090-3">{</span><span class="p" data-group-id="3296908090-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3296908090-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_users_by_emails/1">
 
   <div class="detail-header">
-    <a href="#list_users_by_emails/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#list_users_by_emails/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">list_users_by_emails(emails)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L120" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_users_by_emails(emails)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L120" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1968,18 +1821,18 @@ This triggers the setup page on fresh installs.</p>
 <section class="detail" id="perform/1">
 
   <div class="detail-header">
-    <a href="#perform/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#perform/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">perform(job)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L71" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">perform(job)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L71" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1990,18 +1843,18 @@ This triggers the setup page on fresh installs.</p>
 <section class="detail" id="purge_user/1">
 
   <div class="detail-header">
-    <a href="#purge_user/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#purge_user/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">purge_user(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L41" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">purge_user(id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L41" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2018,18 +1871,18 @@ This triggers the setup page on fresh installs.</p>
 <section class="detail" id="regenerate_user_backup_codes/1">
 
   <div class="detail-header">
-    <a href="#regenerate_user_backup_codes/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#regenerate_user_backup_codes/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">regenerate_user_backup_codes(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L306" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">regenerate_user_backup_codes(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L306" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2047,50 +1900,44 @@ This triggers the setup page on fresh installs.</p>
 <section class="detail" id="register_superuser/1">
 
   <div class="detail-header">
-    <a href="#register_superuser/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#register_superuser/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">register_superuser(attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L340" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">register_superuser(attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L340" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Registers a superuser.</p><h2 id="register_superuser/1-examples" class="section-heading">
-  <a href="#register_superuser/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="8021726515-1">(</span><span class="p" data-group-id="8021726515-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="8021726515-2">}</span><span class="p" data-group-id="8021726515-1">)</span><span class="w">
-</span><span class="p" data-group-id="8021726515-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8021726515-4">%</span><span class="nc" data-group-id="8021726515-4">User</span><span class="p" data-group-id="8021726515-4">{</span><span class="p" data-group-id="8021726515-4">}</span><span class="p" data-group-id="8021726515-3">}</span><span class="w">
+<p>Registers a superuser.</p><h2 id="register_superuser/1-examples" class="section-heading"><a href="#register_superuser/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="1815949989-1">(</span><span class="p" data-group-id="1815949989-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1815949989-2">}</span><span class="p" data-group-id="1815949989-1">)</span><span class="w">
+</span><span class="p" data-group-id="1815949989-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1815949989-4">%</span><span class="nc" data-group-id="1815949989-4">User</span><span class="p" data-group-id="1815949989-4">{</span><span class="p" data-group-id="1815949989-4">}</span><span class="p" data-group-id="1815949989-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="8021726515-5">(</span><span class="p" data-group-id="8021726515-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8021726515-6">}</span><span class="p" data-group-id="8021726515-5">)</span><span class="w">
-</span><span class="p" data-group-id="8021726515-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8021726515-8">%</span><span class="nc" data-group-id="8021726515-8">Ecto.Changeset</span><span class="p" data-group-id="8021726515-8">{</span><span class="p" data-group-id="8021726515-8">}</span><span class="p" data-group-id="8021726515-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="1815949989-5">(</span><span class="p" data-group-id="1815949989-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1815949989-6">}</span><span class="p" data-group-id="1815949989-5">)</span><span class="w">
+</span><span class="p" data-group-id="1815949989-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1815949989-8">%</span><span class="nc" data-group-id="1815949989-8">Ecto.Changeset</span><span class="p" data-group-id="1815949989-8">{</span><span class="p" data-group-id="1815949989-8">}</span><span class="p" data-group-id="1815949989-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="register_user/1">
 
   <div class="detail-header">
-    <a href="#register_user/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#register_user/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">register_user(attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L376" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">register_user(attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L376" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2105,34 +1952,28 @@ This triggers the setup page on fresh installs.</p>
 
       </div>
 
-<p>Registers a user.</p><h2 id="register_user/1-examples" class="section-heading">
-  <a href="#register_user/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="3533836762-1">(</span><span class="p" data-group-id="3533836762-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3533836762-2">}</span><span class="p" data-group-id="3533836762-1">)</span><span class="w">
-</span><span class="p" data-group-id="3533836762-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3533836762-4">%</span><span class="nc" data-group-id="3533836762-4">User</span><span class="p" data-group-id="3533836762-4">{</span><span class="p" data-group-id="3533836762-4">}</span><span class="p" data-group-id="3533836762-3">}</span><span class="w">
+<p>Registers a user.</p><h2 id="register_user/1-examples" class="section-heading"><a href="#register_user/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="0184815944-1">(</span><span class="p" data-group-id="0184815944-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="0184815944-2">}</span><span class="p" data-group-id="0184815944-1">)</span><span class="w">
+</span><span class="p" data-group-id="0184815944-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0184815944-4">%</span><span class="nc" data-group-id="0184815944-4">User</span><span class="p" data-group-id="0184815944-4">{</span><span class="p" data-group-id="0184815944-4">}</span><span class="p" data-group-id="0184815944-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="3533836762-5">(</span><span class="p" data-group-id="3533836762-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3533836762-6">}</span><span class="p" data-group-id="3533836762-5">)</span><span class="w">
-</span><span class="p" data-group-id="3533836762-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3533836762-8">%</span><span class="nc" data-group-id="3533836762-8">Ecto.Changeset</span><span class="p" data-group-id="3533836762-8">{</span><span class="p" data-group-id="3533836762-8">}</span><span class="p" data-group-id="3533836762-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="0184815944-5">(</span><span class="p" data-group-id="0184815944-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0184815944-6">}</span><span class="p" data-group-id="0184815944-5">)</span><span class="w">
+</span><span class="p" data-group-id="0184815944-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0184815944-8">%</span><span class="nc" data-group-id="0184815944-8">Ecto.Changeset</span><span class="p" data-group-id="0184815944-8">{</span><span class="p" data-group-id="0184815944-8">}</span><span class="p" data-group-id="0184815944-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="remind_account_confirmation/1">
 
   <div class="detail-header">
-    <a href="#remind_account_confirmation/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#remind_account_confirmation/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">remind_account_confirmation(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L901" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">remind_account_confirmation(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L901" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2143,79 +1984,67 @@ This triggers the setup page on fresh installs.</p>
 <section class="detail" id="request_email_update/2">
 
   <div class="detail-header">
-    <a href="#request_email_update/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#request_email_update/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">request_email_update(user, new_email)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L530" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">request_email_update(user, new_email)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L530" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Delivers the update email instructions to the given user.</p><h2 id="request_email_update/2-examples" class="section-heading">
-  <a href="#request_email_update/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">request_email_update</span><span class="p" data-group-id="8345179365-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">new_email</span><span class="p" data-group-id="8345179365-1">)</span><span class="w">
+<p>Delivers the update email instructions to the given user.</p><h2 id="request_email_update/2-examples" class="section-heading"><a href="#request_email_update/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">request_email_update</span><span class="p" data-group-id="9903821718-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">new_email</span><span class="p" data-group-id="9903821718-1">)</span><span class="w">
 </span><span class="ss">:ok</span></code></pre>
   </section>
 </section>
 <section class="detail" id="reset_user_password/2">
 
   <div class="detail-header">
-    <a href="#reset_user_password/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#reset_user_password/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">reset_user_password(user, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L996" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reset_user_password(user, attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L996" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Resets the user password.</p><h2 id="reset_user_password/2-examples" class="section-heading">
-  <a href="#reset_user_password/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="0666389970-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0666389970-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p" data-group-id="0666389970-2">}</span><span class="p" data-group-id="0666389970-1">)</span><span class="w">
-</span><span class="p" data-group-id="0666389970-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0666389970-4">%</span><span class="nc" data-group-id="0666389970-4">User</span><span class="p" data-group-id="0666389970-4">{</span><span class="p" data-group-id="0666389970-4">}</span><span class="p" data-group-id="0666389970-3">}</span><span class="w">
+<p>Resets the user password.</p><h2 id="reset_user_password/2-examples" class="section-heading"><a href="#reset_user_password/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="4997590672-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4997590672-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p" data-group-id="4997590672-2">}</span><span class="p" data-group-id="4997590672-1">)</span><span class="w">
+</span><span class="p" data-group-id="4997590672-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4997590672-4">%</span><span class="nc" data-group-id="4997590672-4">User</span><span class="p" data-group-id="4997590672-4">{</span><span class="p" data-group-id="4997590672-4">}</span><span class="p" data-group-id="4997590672-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="0666389970-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0666389970-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;valid&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;not the same&quot;</span><span class="p" data-group-id="0666389970-6">}</span><span class="p" data-group-id="0666389970-5">)</span><span class="w">
-</span><span class="p" data-group-id="0666389970-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0666389970-8">%</span><span class="nc" data-group-id="0666389970-8">Ecto.Changeset</span><span class="p" data-group-id="0666389970-8">{</span><span class="p" data-group-id="0666389970-8">}</span><span class="p" data-group-id="0666389970-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="4997590672-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4997590672-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;valid&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;not the same&quot;</span><span class="p" data-group-id="4997590672-6">}</span><span class="p" data-group-id="4997590672-5">)</span><span class="w">
+</span><span class="p" data-group-id="4997590672-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4997590672-8">%</span><span class="nc" data-group-id="4997590672-8">Ecto.Changeset</span><span class="p" data-group-id="4997590672-8">{</span><span class="p" data-group-id="4997590672-8">}</span><span class="p" data-group-id="4997590672-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="schedule_user_deletion/2">
 
   <div class="detail-header">
-    <a href="#schedule_user_deletion/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#schedule_user_deletion/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">schedule_user_deletion(user, email)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L675" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">schedule_user_deletion(user, email)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L675" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2229,18 +2058,18 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 <section class="detail" id="subscribe/0">
 
   <div class="detail-header">
-    <a href="#subscribe/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#subscribe/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">subscribe()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L27" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">subscribe()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2251,18 +2080,18 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 <section class="detail" id="sudo_session_token_valid?/2">
 
   <div class="detail-header">
-    <a href="#sudo_session_token_valid?/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#sudo_session_token_valid?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">sudo_session_token_valid?(user, token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L740" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">sudo_session_token_valid?(user, token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L740" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2275,18 +2104,18 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
     <span id="update_user_details/1"></span>
 
   <div class="detail-header">
-    <a href="#update_user_details/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_user_details/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_user_details(user, attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L401" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_user_details(user, attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L401" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2297,18 +2126,18 @@ run. (Note that subsequent logins will be blocked for users pending deletion.)</
 <section class="detail" id="update_user_email/2">
 
   <div class="detail-header">
-    <a href="#update_user_email/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_user_email/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_user_email(user, token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L492" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_user_email(user, token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L492" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2320,18 +2149,18 @@ The confirmed_at date is also updated to the current time.</p>
 <section class="detail" id="update_user_info/2">
 
   <div class="detail-header">
-    <a href="#update_user_info/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_user_info/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_user_info(user, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L410" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_user_info(user, attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L410" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2342,50 +2171,44 @@ The confirmed_at date is also updated to the current time.</p>
 <section class="detail" id="update_user_password/3">
 
   <div class="detail-header">
-    <a href="#update_user_password/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_user_password/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_user_password(user, password, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L650" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_user_password(user, password, attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L650" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Updates the user password.</p><h2 id="update_user_password/3-examples" class="section-heading">
-  <a href="#update_user_password/3-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="7693028535-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7693028535-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7693028535-2">}</span><span class="p" data-group-id="7693028535-1">)</span><span class="w">
-</span><span class="p" data-group-id="7693028535-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7693028535-4">%</span><span class="nc" data-group-id="7693028535-4">User</span><span class="p" data-group-id="7693028535-4">{</span><span class="p" data-group-id="7693028535-4">}</span><span class="p" data-group-id="7693028535-3">}</span><span class="w">
+<p>Updates the user password.</p><h2 id="update_user_password/3-examples" class="section-heading"><a href="#update_user_password/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="0446937638-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0446937638-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0446937638-2">}</span><span class="p" data-group-id="0446937638-1">)</span><span class="w">
+</span><span class="p" data-group-id="0446937638-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0446937638-4">%</span><span class="nc" data-group-id="0446937638-4">User</span><span class="p" data-group-id="0446937638-4">{</span><span class="p" data-group-id="0446937638-4">}</span><span class="p" data-group-id="0446937638-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="7693028535-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7693028535-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7693028535-6">}</span><span class="p" data-group-id="7693028535-5">)</span><span class="w">
-</span><span class="p" data-group-id="7693028535-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7693028535-8">%</span><span class="nc" data-group-id="7693028535-8">Ecto.Changeset</span><span class="p" data-group-id="7693028535-8">{</span><span class="p" data-group-id="7693028535-8">}</span><span class="p" data-group-id="7693028535-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="0446937638-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0446937638-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0446937638-6">}</span><span class="p" data-group-id="0446937638-5">)</span><span class="w">
+</span><span class="p" data-group-id="0446937638-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0446937638-8">%</span><span class="nc" data-group-id="0446937638-8">Ecto.Changeset</span><span class="p" data-group-id="0446937638-8">{</span><span class="p" data-group-id="0446937638-8">}</span><span class="p" data-group-id="0446937638-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_user_preference/3">
 
   <div class="detail-header">
-    <a href="#update_user_preference/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_user_preference/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_user_preference(user, key, value)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1084" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_user_preference(user, key, value)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L1084" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2397,34 +2220,28 @@ The confirmed_at date is also updated to the current time.</p>
 
       </div>
 
-<p>Updates a specific key in the user's preferences.</p><p>Merges the new key-value pair into the user's existing preferences and updates the database.</p><h2 id="update_user_preference/3-examples" class="section-heading">
-  <a href="#update_user_preference/3-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_preference</span><span class="p" data-group-id="3469478835-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;editor.orientation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;vertical&quot;</span><span class="p" data-group-id="3469478835-1">)</span><span class="w">
-</span><span class="p" data-group-id="3469478835-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3469478835-3">%</span><span class="nc" data-group-id="3469478835-3">User</span><span class="p" data-group-id="3469478835-3">{</span><span class="p" data-group-id="3469478835-3">}</span><span class="p" data-group-id="3469478835-2">}</span><span class="w">
+<p>Updates a specific key in the user's preferences.</p><p>Merges the new key-value pair into the user's existing preferences and updates the database.</p><h2 id="update_user_preference/3-examples" class="section-heading"><a href="#update_user_preference/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_preference</span><span class="p" data-group-id="1874571961-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;editor.orientation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;vertical&quot;</span><span class="p" data-group-id="1874571961-1">)</span><span class="w">
+</span><span class="p" data-group-id="1874571961-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1874571961-3">%</span><span class="nc" data-group-id="1874571961-3">User</span><span class="p" data-group-id="1874571961-3">{</span><span class="p" data-group-id="1874571961-3">}</span><span class="p" data-group-id="1874571961-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_user_preference</span><span class="p" data-group-id="3469478835-4">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;notifications.enabled&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="3469478835-4">)</span><span class="w">
-</span><span class="p" data-group-id="3469478835-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3469478835-6">%</span><span class="nc" data-group-id="3469478835-6">User</span><span class="p" data-group-id="3469478835-6">{</span><span class="p" data-group-id="3469478835-6">}</span><span class="p" data-group-id="3469478835-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_user_preference</span><span class="p" data-group-id="1874571961-4">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;notifications.enabled&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="1874571961-4">)</span><span class="w">
+</span><span class="p" data-group-id="1874571961-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1874571961-6">%</span><span class="nc" data-group-id="1874571961-6">User</span><span class="p" data-group-id="1874571961-6">{</span><span class="p" data-group-id="1874571961-6">}</span><span class="p" data-group-id="1874571961-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_user_preferences/2">
 
   <div class="detail-header">
-    <a href="#update_user_preferences/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_user_preferences/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_user_preferences(user, preferences)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L423" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_user_preferences(user, preferences)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L423" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2436,30 +2253,24 @@ The confirmed_at date is also updated to the current time.</p>
 
       </div>
 
-<p>Updates the user preferences.</p><h2 id="update_user_preferences/2-examples" class="section-heading">
-  <a href="#update_user_preferences/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_preferences</span><span class="p" data-group-id="8024322357-1">(</span><span class="p" data-group-id="8024322357-2">%</span><span class="nc" data-group-id="8024322357-2">User</span><span class="p" data-group-id="8024322357-2">{</span><span class="p" data-group-id="8024322357-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8024322357-3">%{</span><span class="s">&quot;editor.orientaion&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;vertical&quot;</span><span class="p" data-group-id="8024322357-3">}</span><span class="p" data-group-id="8024322357-1">)</span></code></pre>
+<p>Updates the user preferences.</p><h2 id="update_user_preferences/2-examples" class="section-heading"><a href="#update_user_preferences/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_preferences</span><span class="p" data-group-id="6990707600-1">(</span><span class="p" data-group-id="6990707600-2">%</span><span class="nc" data-group-id="6990707600-2">User</span><span class="p" data-group-id="6990707600-2">{</span><span class="p" data-group-id="6990707600-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6990707600-3">%{</span><span class="s">&quot;editor.orientaion&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;vertical&quot;</span><span class="p" data-group-id="6990707600-3">}</span><span class="p" data-group-id="6990707600-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="upsert_user_totp/2">
 
   <div class="detail-header">
-    <a href="#upsert_user_totp/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#upsert_user_totp/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">upsert_user_totp(totp, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L213" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">upsert_user_totp(totp, attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L213" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2477,18 +2288,18 @@ The confirmed_at date is also updated to the current time.</p>
 <section class="detail" id="valid_user_backup_code?/2">
 
   <div class="detail-header">
-    <a href="#valid_user_backup_code?/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#valid_user_backup_code?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">valid_user_backup_code?(user, code)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L270" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">valid_user_backup_code?(user, code)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L270" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2505,18 +2316,18 @@ The confirmed_at date is also updated to the current time.</p>
 <section class="detail" id="valid_user_totp?/2">
 
   <div class="detail-header">
-    <a href="#valid_user_totp?/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#valid_user_totp?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">valid_user_totp?(user, code)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L260" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">valid_user_totp?(user, code)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L260" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -2535,42 +2346,24 @@ The confirmed_at date is also updated to the current time.</p>
     <span id="validate_change_user_email/1"></span>
 
   <div class="detail-header">
-    <a href="#validate_change_user_email/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#validate_change_user_email/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">validate_change_user_email(user, params \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L572" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">validate_change_user_email(user, params \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L572" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Validates the changes for updating a user's email address.</p><p>This function ensures that:</p><ul><li>The <code class="inline">email</code> and <code class="inline">current_password</code> fields are present.</li><li>The new email is in a valid format.</li><li>The new email is different from the current one.</li><li>The provided <code class="inline">current_password</code> matches the user's password.</li></ul><h2 id="validate_change_user_email/2-parameters" class="section-heading">
-  <a href="#validate_change_user_email/2-parameters" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Parameters</span>
-</h2>
-<ul><li><code class="inline">user</code>: The <code class="inline">%User{}</code> struct representing the current user.</li><li><code class="inline">params</code>: A map of parameters containing the new email and current password.</li></ul><h2 id="validate_change_user_email/2-returns" class="section-heading">
-  <a href="#validate_change_user_email/2-returns" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Returns</span>
-</h2>
-<p>An <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> containing any validation errors.</p><h2 id="validate_change_user_email/2-examples" class="section-heading">
-  <a href="#validate_change_user_email/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">validate_change_user_email</span><span class="p" data-group-id="2783359486-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2783359486-2">%{</span><span class="s">&quot;email&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;new@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;current_password&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;secret&quot;</span><span class="p" data-group-id="2783359486-2">}</span><span class="p" data-group-id="2783359486-1">)</span><span class="w">
-</span><span class="p" data-group-id="2783359486-3">%</span><span class="nc" data-group-id="2783359486-3">Ecto.Changeset</span><span class="p" data-group-id="2783359486-3">{</span><span class="n">...</span><span class="p" data-group-id="2783359486-3">}</span></code></pre>
+<p>Validates the changes for updating a user's email address.</p><p>This function ensures that:</p><ul><li>The <code class="inline">email</code> and <code class="inline">current_password</code> fields are present.</li><li>The new email is in a valid format.</li><li>The new email is different from the current one.</li><li>The provided <code class="inline">current_password</code> matches the user's password.</li></ul><h2 id="validate_change_user_email/2-parameters" class="section-heading"><a href="#validate_change_user_email/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">user</code>: The <code class="inline">%User{}</code> struct representing the current user.</li><li><code class="inline">params</code>: A map of parameters containing the new email and current password.</li></ul><h2 id="validate_change_user_email/2-returns" class="section-heading"><a href="#validate_change_user_email/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>An <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> containing any validation errors.</p><h2 id="validate_change_user_email/2-examples" class="section-heading"><a href="#validate_change_user_email/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">validate_change_user_email</span><span class="p" data-group-id="5404459841-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5404459841-2">%{</span><span class="s">&quot;email&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;new@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;current_password&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;secret&quot;</span><span class="p" data-group-id="5404459841-2">}</span><span class="p" data-group-id="5404459841-1">)</span><span class="w">
+</span><span class="p" data-group-id="5404459841-3">%</span><span class="nc" data-group-id="5404459841-3">Ecto.Changeset</span><span class="p" data-group-id="5404459841-3">{</span><span class="n">...</span><span class="p" data-group-id="5404459841-3">}</span></code></pre>
   </section>
 </section>
 
@@ -2594,7 +2387,7 @@ The confirmed_at date is also updated to the current time.</p>
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

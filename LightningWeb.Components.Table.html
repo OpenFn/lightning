@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>LightningWeb.Components.Table — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,50 +77,40 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Components.Table</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">LightningWeb.Components.Table</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
 <p>A collection of composable table components for building consistent, flexible tables across the Lightning application.</p><p>This module provides a set of table primitives that can be composed together to create tables
 with consistent styling, sorting capabilities, and pagination support. The components are designed
-to be flexible while maintaining a unified look and feel.</p><h2 id="module-features" class="section-heading">
-  <a href="#module-features" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Features</span>
-</h2>
-<ul><li>Consistent styling with proper spacing, borders, and hover states</li><li>Built-in support for pagination</li><li>Sortable columns with visual indicators</li><li>Flexible cell content handling</li><li>Support for header, body, and footer sections</li><li>Responsive design with proper overflow handling</li></ul><h2 id="module-example" class="section-heading">
-  <a href="#module-example" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">table</span><span class="w"> </span><span class="n">page</span><span class="o">=</span><span class="p" data-group-id="5215287558-1">{</span><span class="na">@page</span><span class="p" data-group-id="5215287558-1">}</span><span class="w"> </span><span class="n">url</span><span class="o">=</span><span class="p" data-group-id="5215287558-2">{</span><span class="na">@pagination_path</span><span class="p" data-group-id="5215287558-2">}</span><span class="o">&gt;</span><span class="w">
+to be flexible while maintaining a unified look and feel.</p><h2 id="module-features" class="section-heading"><a href="#module-features" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Features</span></h2><ul><li>Consistent styling with proper spacing, borders, and hover states</li><li>Built-in support for pagination</li><li>Sortable columns with visual indicators</li><li>Flexible cell content handling</li><li>Support for header, body, and footer sections</li><li>Responsive design with proper overflow handling</li></ul><h2 id="module-example" class="section-heading"><a href="#module-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">table</span><span class="w"> </span><span class="n">page</span><span class="o">=</span><span class="p" data-group-id="4463370375-1">{</span><span class="na">@page</span><span class="p" data-group-id="4463370375-1">}</span><span class="w"> </span><span class="n">url</span><span class="o">=</span><span class="p" data-group-id="4463370375-2">{</span><span class="na">@pagination_path</span><span class="p" data-group-id="4463370375-2">}</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="ss">:header</span><span class="o">&gt;</span><span class="w">
     </span><span class="o">&lt;</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span><span class="w">
-      </span><span class="o">&lt;</span><span class="o">.</span><span class="n">th</span><span class="w"> </span><span class="n">sortable</span><span class="o">=</span><span class="p" data-group-id="5215287558-3">{</span><span class="no">true</span><span class="p" data-group-id="5215287558-3">}</span><span class="w"> </span><span class="n">sort_by</span><span class="o">=</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="n">active</span><span class="o">=</span><span class="p" data-group-id="5215287558-4">{</span><span class="na">@sort_key</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p" data-group-id="5215287558-4">}</span><span class="o">&gt;</span><span class="w">
+      </span><span class="o">&lt;</span><span class="o">.</span><span class="n">th</span><span class="w"> </span><span class="n">sortable</span><span class="o">=</span><span class="p" data-group-id="4463370375-3">{</span><span class="no">true</span><span class="p" data-group-id="4463370375-3">}</span><span class="w"> </span><span class="n">sort_by</span><span class="o">=</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="n">active</span><span class="o">=</span><span class="p" data-group-id="4463370375-4">{</span><span class="na">@sort_key</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p" data-group-id="4463370375-4">}</span><span class="o">&gt;</span><span class="w">
         </span><span class="nc">Name</span><span class="w">
       </span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">th</span><span class="o">&gt;</span><span class="w">
       </span><span class="o">&lt;</span><span class="o">.</span><span class="n">th</span><span class="o">&gt;</span><span class="nc">Email</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">th</span><span class="o">&gt;</span><span class="w">
     </span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="o">/</span><span class="ss">:header</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="ss">:body</span><span class="o">&gt;</span><span class="w">
-    </span><span class="o">&lt;</span><span class="p">%</span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">user</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="na">@users</span><span class="w"> </span><span class="k" data-group-id="5215287558-5">do</span><span class="w"> </span><span class="p">%</span><span class="o">&gt;</span><span class="w">
+    </span><span class="o">&lt;</span><span class="p">%</span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">user</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="na">@users</span><span class="w"> </span><span class="k" data-group-id="4463370375-5">do</span><span class="w"> </span><span class="p">%</span><span class="o">&gt;</span><span class="w">
       </span><span class="o">&lt;</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span><span class="w">
-        </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="5215287558-6">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p" data-group-id="5215287558-6">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
-        </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="5215287558-7">{</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p" data-group-id="5215287558-7">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
+        </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="4463370375-6">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p" data-group-id="4463370375-6">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
+        </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="4463370375-7">{</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p" data-group-id="4463370375-7">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
       </span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span><span class="w">
-    </span><span class="o">&lt;</span><span class="p">%</span><span class="w"> </span><span class="k" data-group-id="5215287558-5">end</span><span class="w"> </span><span class="p">%</span><span class="o">&gt;</span><span class="w">
+    </span><span class="o">&lt;</span><span class="p">%</span><span class="w"> </span><span class="k" data-group-id="4463370375-5">end</span><span class="w"> </span><span class="p">%</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="o">/</span><span class="ss">:body</span><span class="o">&gt;</span><span class="w">
 </span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">table</span><span class="o">&gt;</span></code></pre>
     </section>
@@ -188,17 +131,17 @@ to be flexible while maintaining a unified look and feel.</p><h2 id="module-feat
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#empty_state/1" data-no-tooltip translate="no">empty_state(assigns)</a>
+        <a href="#empty_state/1" data-no-tooltip="" translate="no">empty_state(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">icon</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;hero-plus-circle&quot;</code>.</li><li><code class="inline">message</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">button_text</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_click</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">button_target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_action_value</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">interactive</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li></ul></div>
+        <div class="summary-synopsis"></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#table/1" data-no-tooltip translate="no">table(assigns)</a>
+        <a href="#table/1" data-no-tooltip="" translate="no">table(assigns)</a>
 
       </div>
 
@@ -208,7 +151,7 @@ to be flexible while maintaining a unified look and feel.</p><h2 id="module-feat
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#td/1" data-no-tooltip translate="no">td(assigns)</a>
+        <a href="#td/1" data-no-tooltip="" translate="no">td(assigns)</a>
 
       </div>
 
@@ -218,7 +161,7 @@ to be flexible while maintaining a unified look and feel.</p><h2 id="module-feat
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#th/1" data-no-tooltip translate="no">th(assigns)</a>
+        <a href="#th/1" data-no-tooltip="" translate="no">th(assigns)</a>
 
       </div>
 
@@ -228,7 +171,7 @@ to be flexible while maintaining a unified look and feel.</p><h2 id="module-feat
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#tr/1" data-no-tooltip translate="no">tr(assigns)</a>
+        <a href="#tr/1" data-no-tooltip="" translate="no">tr(assigns)</a>
 
       </div>
 
@@ -252,69 +195,45 @@ to be flexible while maintaining a unified look and feel.</p><h2 id="module-feat
 <section class="detail" id="empty_state/1">
 
   <div class="detail-header">
-    <a href="#empty_state/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#empty_state/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">empty_state(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L290" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">empty_state(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L290" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<h2 id="empty_state/1-attributes" class="section-heading">
-  <a href="#empty_state/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">icon</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;hero-plus-circle&quot;</code>.</li><li><code class="inline">message</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">button_text</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_click</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">button_target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_action_value</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">interactive</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li></ul>
+<h2 id="empty_state/1-attributes" class="section-heading"><a href="#empty_state/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">icon</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;hero-plus-circle&quot;</code>.</li><li><code class="inline">message</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">button_text</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_click</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">button_target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">button_action_value</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">interactive</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="table/1">
 
   <div class="detail-header">
-    <a href="#table/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#table/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">table(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L93" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">table(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L93" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Renders a table container with optional pagination.</p><h2 id="table/1-attributes" class="section-heading">
-  <a href="#table/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">:page</code> - Optional map containing pagination information</li><li><code class="inline">:url</code> - Optional URL or function for pagination links</li><li><code class="inline">:id</code> - Optional HTML id attribute</li><li><code class="inline">:class</code> - Optional additional CSS classes</li></ul><h2 id="table/1-slots" class="section-heading">
-  <a href="#table/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">:header</code> - Content for the table header (thead)</li><li><code class="inline">:body</code> - Content for the table body (tbody)</li><li><code class="inline">:footer</code> - Optional content for the table footer (tfoot)</li></ul><h2 id="table/1-example" class="section-heading">
-  <a href="#table/1-example" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">table</span><span class="w"> </span><span class="n">page</span><span class="o">=</span><span class="p" data-group-id="4833814438-1">{</span><span class="na">@page</span><span class="p" data-group-id="4833814438-1">}</span><span class="w"> </span><span class="n">url</span><span class="o">=</span><span class="p" data-group-id="4833814438-2">{</span><span class="na">@pagination_path</span><span class="p" data-group-id="4833814438-2">}</span><span class="o">&gt;</span><span class="w">
+<p>Renders a table container with optional pagination.</p><h2 id="table/1-attributes" class="section-heading"><a href="#table/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">:page</code> - Optional map containing pagination information</li><li><code class="inline">:url</code> - Optional URL or function for pagination links</li><li><code class="inline">:id</code> - Optional HTML id attribute</li><li><code class="inline">:class</code> - Optional additional CSS classes</li></ul><h2 id="table/1-slots" class="section-heading"><a href="#table/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">:header</code> - Content for the table header (thead)</li><li><code class="inline">:body</code> - Content for the table body (tbody)</li><li><code class="inline">:footer</code> - Optional content for the table footer (tfoot)</li></ul><h2 id="table/1-example" class="section-heading"><a href="#table/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">table</span><span class="w"> </span><span class="n">page</span><span class="o">=</span><span class="p" data-group-id="0402886804-1">{</span><span class="na">@page</span><span class="p" data-group-id="0402886804-1">}</span><span class="w"> </span><span class="n">url</span><span class="o">=</span><span class="p" data-group-id="0402886804-2">{</span><span class="na">@pagination_path</span><span class="p" data-group-id="0402886804-2">}</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="ss">:header</span><span class="o">&gt;</span><span class="w">
     </span><span class="o">&lt;</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span><span class="w">
       </span><span class="o">&lt;</span><span class="o">.</span><span class="n">th</span><span class="o">&gt;</span><span class="nc">Name</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">th</span><span class="o">&gt;</span><span class="w">
@@ -322,195 +241,93 @@ to be flexible while maintaining a unified look and feel.</p><h2 id="module-feat
     </span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="o">/</span><span class="ss">:header</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="ss">:body</span><span class="o">&gt;</span><span class="w">
-    </span><span class="o">&lt;</span><span class="p">%</span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">user</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="na">@users</span><span class="w"> </span><span class="k" data-group-id="4833814438-3">do</span><span class="w"> </span><span class="p">%</span><span class="o">&gt;</span><span class="w">
+    </span><span class="o">&lt;</span><span class="p">%</span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">user</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="na">@users</span><span class="w"> </span><span class="k" data-group-id="0402886804-3">do</span><span class="w"> </span><span class="p">%</span><span class="o">&gt;</span><span class="w">
       </span><span class="o">&lt;</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span><span class="w">
-        </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="4833814438-4">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p" data-group-id="4833814438-4">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
-        </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="4833814438-5">{</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p" data-group-id="4833814438-5">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
+        </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="0402886804-4">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p" data-group-id="0402886804-4">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
+        </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="0402886804-5">{</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p" data-group-id="0402886804-5">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
       </span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span><span class="w">
-    </span><span class="o">&lt;</span><span class="p">%</span><span class="w"> </span><span class="k" data-group-id="4833814438-3">end</span><span class="w"> </span><span class="p">%</span><span class="o">&gt;</span><span class="w">
+    </span><span class="o">&lt;</span><span class="p">%</span><span class="w"> </span><span class="k" data-group-id="0402886804-3">end</span><span class="w"> </span><span class="p">%</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="o">/</span><span class="ss">:body</span><span class="o">&gt;</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">table</span><span class="o">&gt;</span></code></pre><h2 id="table/1-attributes-1" class="section-heading">
-  <a href="#table/1-attributes-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">page</code> (<code class="inline">:map</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">url</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">divide</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li></ul><h2 id="table/1-slots-1" class="section-heading">
-  <a href="#table/1-slots-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">header</code></li><li><code class="inline">body</code></li><li><code class="inline">footer</code></li></ul>
+</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">table</span><span class="o">&gt;</span></code></pre><h2 id="table/1-attributes-1" class="section-heading"><a href="#table/1-attributes-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">page</code> (<code class="inline">:map</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">url</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">divide</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li></ul><h2 id="table/1-slots-1" class="section-heading"><a href="#table/1-slots-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">header</code></li><li><code class="inline">body</code></li><li><code class="inline">footer</code></li></ul>
   </section>
 </section>
 <section class="detail" id="td/1">
 
   <div class="detail-header">
-    <a href="#td/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#td/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">td(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L267" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">td(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L267" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Renders a table data cell with consistent styling and spacing.</p><h2 id="td/1-attributes" class="section-heading">
-  <a href="#td/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">:class</code> - Optional additional CSS classes</li><li><code class="inline">:id</code> - Optional HTML id attribute</li><li><code class="inline">:colspan</code> - Optional number of columns to span</li><li><code class="inline">:rowspan</code> - Optional number of rows to span</li></ul><h2 id="td/1-slots" class="section-heading">
-  <a href="#td/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">:inner_block</code> - Required content for the data cell</li></ul><h2 id="td/1-example" class="section-heading">
-  <a href="#td/1-example" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="w"> </span><span class="n">class</span><span class="o">=</span><span class="s">&quot;break-words max-w-[25rem]&quot;</span><span class="o">&gt;</span><span class="w">
-  </span><span class="p" data-group-id="1548249897-1">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p" data-group-id="1548249897-1">}</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span></code></pre><h2 id="td/1-attributes-1" class="section-heading">
-  <a href="#td/1-attributes-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">colspan</code> (<code class="inline">:integer</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">rowspan</code> (<code class="inline">:integer</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="td/1-slots-1" class="section-heading">
-  <a href="#td/1-slots-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code> (required)</li></ul>
+<p>Renders a table data cell with consistent styling and spacing.</p><h2 id="td/1-attributes" class="section-heading"><a href="#td/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">:class</code> - Optional additional CSS classes</li><li><code class="inline">:id</code> - Optional HTML id attribute</li><li><code class="inline">:colspan</code> - Optional number of columns to span</li><li><code class="inline">:rowspan</code> - Optional number of rows to span</li></ul><h2 id="td/1-slots" class="section-heading"><a href="#td/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">:inner_block</code> - Required content for the data cell</li></ul><h2 id="td/1-example" class="section-heading"><a href="#td/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="w"> </span><span class="n">class</span><span class="o">=</span><span class="s">&quot;break-words max-w-[25rem]&quot;</span><span class="o">&gt;</span><span class="w">
+  </span><span class="p" data-group-id="9113933114-1">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p" data-group-id="9113933114-1">}</span><span class="w">
+</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span></code></pre><h2 id="td/1-attributes-1" class="section-heading"><a href="#td/1-attributes-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">colspan</code> (<code class="inline">:integer</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">rowspan</code> (<code class="inline">:integer</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="td/1-slots-1" class="section-heading"><a href="#td/1-slots-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="th/1">
 
   <div class="detail-header">
-    <a href="#th/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#th/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">th(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L212" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">th(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L212" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Renders a table header cell with optional sorting capabilities.</p><h2 id="th/1-attributes" class="section-heading">
-  <a href="#th/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">:class</code> - Optional additional CSS classes</li><li><code class="inline">:id</code> - Optional HTML id attribute</li><li><code class="inline">:scope</code> - HTML scope attribute (default: &quot;col&quot;)</li><li><code class="inline">:sortable</code> - Whether the column is sortable (default: false)</li><li><code class="inline">:sort_by</code> - The field to sort by when clicked</li><li><code class="inline">:active</code> - Whether this column is currently being sorted</li><li><code class="inline">:sort_direction</code> - Current sort direction (&quot;asc&quot; or &quot;desc&quot;)</li><li><code class="inline">:phx_click</code> - Phoenix LiveView click event (default: &quot;sort&quot;)</li><li><code class="inline">:phx_target</code> - Target for the click event</li></ul><h2 id="th/1-slots" class="section-heading">
-  <a href="#th/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">:inner_block</code> - Required content for the header cell</li></ul><h2 id="th/1-example" class="section-heading">
-  <a href="#th/1-example" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">th</span><span class="w">
-  </span><span class="n">sortable</span><span class="o">=</span><span class="p" data-group-id="7821351009-1">{</span><span class="no">true</span><span class="p" data-group-id="7821351009-1">}</span><span class="w">
+<p>Renders a table header cell with optional sorting capabilities.</p><h2 id="th/1-attributes" class="section-heading"><a href="#th/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">:class</code> - Optional additional CSS classes</li><li><code class="inline">:id</code> - Optional HTML id attribute</li><li><code class="inline">:scope</code> - HTML scope attribute (default: &quot;col&quot;)</li><li><code class="inline">:sortable</code> - Whether the column is sortable (default: false)</li><li><code class="inline">:sort_by</code> - The field to sort by when clicked</li><li><code class="inline">:active</code> - Whether this column is currently being sorted</li><li><code class="inline">:sort_direction</code> - Current sort direction (&quot;asc&quot; or &quot;desc&quot;)</li><li><code class="inline">:phx_click</code> - Phoenix LiveView click event (default: &quot;sort&quot;)</li><li><code class="inline">:phx_target</code> - Target for the click event</li></ul><h2 id="th/1-slots" class="section-heading"><a href="#th/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">:inner_block</code> - Required content for the header cell</li></ul><h2 id="th/1-example" class="section-heading"><a href="#th/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">th</span><span class="w">
+  </span><span class="n">sortable</span><span class="o">=</span><span class="p" data-group-id="4304663595-1">{</span><span class="no">true</span><span class="p" data-group-id="4304663595-1">}</span><span class="w">
   </span><span class="n">sort_by</span><span class="o">=</span><span class="s">&quot;name&quot;</span><span class="w">
-  </span><span class="n">active</span><span class="o">=</span><span class="p" data-group-id="7821351009-2">{</span><span class="na">@sort_key</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p" data-group-id="7821351009-2">}</span><span class="w">
-  </span><span class="n">sort_direction</span><span class="o">=</span><span class="p" data-group-id="7821351009-3">{</span><span class="na">@sort_direction</span><span class="p" data-group-id="7821351009-3">}</span><span class="w">
-  </span><span class="n">phx</span><span class="o">-</span><span class="n">target</span><span class="o">=</span><span class="p" data-group-id="7821351009-4">{</span><span class="na">@myself</span><span class="p" data-group-id="7821351009-4">}</span><span class="w">
+  </span><span class="n">active</span><span class="o">=</span><span class="p" data-group-id="4304663595-2">{</span><span class="na">@sort_key</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p" data-group-id="4304663595-2">}</span><span class="w">
+  </span><span class="n">sort_direction</span><span class="o">=</span><span class="p" data-group-id="4304663595-3">{</span><span class="na">@sort_direction</span><span class="p" data-group-id="4304663595-3">}</span><span class="w">
+  </span><span class="n">phx</span><span class="o">-</span><span class="n">target</span><span class="o">=</span><span class="p" data-group-id="4304663595-4">{</span><span class="na">@myself</span><span class="p" data-group-id="4304663595-4">}</span><span class="w">
 </span><span class="o">&gt;</span><span class="w">
   </span><span class="nc">Name</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">th</span><span class="o">&gt;</span></code></pre><h2 id="th/1-attributes-1" class="section-heading">
-  <a href="#th/1-attributes-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">scope</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;col&quot;</code>.</li><li><code class="inline">sortable</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">sort_by</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">active</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">sort_direction</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">phx_click</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;sort&quot;</code>.</li><li><code class="inline">phx_target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="th/1-slots-1" class="section-heading">
-  <a href="#th/1-slots-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code> (required)</li></ul>
+</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">th</span><span class="o">&gt;</span></code></pre><h2 id="th/1-attributes-1" class="section-heading"><a href="#th/1-attributes-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">scope</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;col&quot;</code>.</li><li><code class="inline">sortable</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">sort_by</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">active</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">sort_direction</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">phx_click</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;sort&quot;</code>.</li><li><code class="inline">phx_target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="th/1-slots-1" class="section-heading"><a href="#th/1-slots-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="tr/1">
 
   <div class="detail-header">
-    <a href="#tr/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#tr/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">tr(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L145" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">tr(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/table.ex#L145" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Renders a table row with hover effects and optional click handling.</p><h2 id="tr/1-attributes" class="section-heading">
-  <a href="#tr/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">:class</code> - Optional additional CSS classes</li><li><code class="inline">:id</code> - Optional HTML id attribute</li><li><code class="inline">:onclick</code> - Optional Phoenix LiveView click event handler</li></ul><h2 id="tr/1-slots" class="section-heading">
-  <a href="#tr/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">:inner_block</code> - Required content for the table row</li></ul><h2 id="tr/1-example" class="section-heading">
-  <a href="#tr/1-example" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">tr</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="p" data-group-id="7003199580-1">{</span><span class="s">&quot;user-123&quot;</span><span class="p" data-group-id="7003199580-1">}</span><span class="w"> </span><span class="n">onclick</span><span class="o">=</span><span class="p" data-group-id="7003199580-2">{</span><span class="nc">JS</span><span class="o">.</span><span class="n">navigate</span><span class="p" data-group-id="7003199580-3">(</span><span class="sx">~p&quot;/users/123&quot;</span><span class="p" data-group-id="7003199580-3">)</span><span class="p" data-group-id="7003199580-2">}</span><span class="o">&gt;</span><span class="w">
-  </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="7003199580-4">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p" data-group-id="7003199580-4">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
-  </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="7003199580-5">{</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p" data-group-id="7003199580-5">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span></code></pre><h2 id="tr/1-attributes-1" class="section-heading">
-  <a href="#tr/1-attributes-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">onclick</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="tr/1-slots-1" class="section-heading">
-  <a href="#tr/1-slots-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code> (required)</li></ul>
+<p>Renders a table row with hover effects and optional click handling.</p><h2 id="tr/1-attributes" class="section-heading"><a href="#tr/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">:class</code> - Optional additional CSS classes</li><li><code class="inline">:id</code> - Optional HTML id attribute</li><li><code class="inline">:onclick</code> - Optional Phoenix LiveView click event handler</li></ul><h2 id="tr/1-slots" class="section-heading"><a href="#tr/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">:inner_block</code> - Required content for the table row</li></ul><h2 id="tr/1-example" class="section-heading"><a href="#tr/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">tr</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="p" data-group-id="0705614750-1">{</span><span class="s">&quot;user-123&quot;</span><span class="p" data-group-id="0705614750-1">}</span><span class="w"> </span><span class="n">onclick</span><span class="o">=</span><span class="p" data-group-id="0705614750-2">{</span><span class="nc">JS</span><span class="o">.</span><span class="n">navigate</span><span class="p" data-group-id="0705614750-3">(</span><span class="sx">~p&quot;/users/123&quot;</span><span class="p" data-group-id="0705614750-3">)</span><span class="p" data-group-id="0705614750-2">}</span><span class="o">&gt;</span><span class="w">
+  </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="0705614750-4">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p" data-group-id="0705614750-4">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
+  </span><span class="o">&lt;</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="p" data-group-id="0705614750-5">{</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p" data-group-id="0705614750-5">}</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">td</span><span class="o">&gt;</span><span class="w">
+</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">tr</span><span class="o">&gt;</span></code></pre><h2 id="tr/1-attributes-1" class="section-heading"><a href="#tr/1-attributes-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">onclick</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="tr/1-slots-1" class="section-heading"><a href="#tr/1-slots-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 
@@ -534,7 +351,7 @@ to be flexible while maintaining a unified look and feel.</p><h2 id="module-feat
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

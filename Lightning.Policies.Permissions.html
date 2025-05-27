@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.Policies.Permissions — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,28 +77,30 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Policies.Permissions</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/permissions.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.Policies.Permissions</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
 <p>This module defines a unique interface managing authorizations in Lightning.</p><p>Users in Lightning have instance-wide and project-wide roles which determine their level of access to resources in the application. Fo rmore details see the <a href="https://docs.openfn.org/documentation/about-lightning#roles-and-permissions">documentation</a>.</p><p>These authorizations policies are all implemented under the <code class="inline">lib/lightning/policies</code> folder. In that folder you can find 3 files:</p><ul><li>The <code class="inline">users.ex</code> file has all the policies for the instances wide access levels</li><li>The <code class="inline">project_users.ex</code> file has all the policies for the project wide access levels</li><li>The <code class="inline">permissions.ex</code> file defines the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface. Which is a wrapper around the <a href="https://hexdocs.pm/bodyguard/2.4.3/Bodyguard.html#permit/4"><code class="inline">Bodyguard.permit/4</code></a> function.
-We use that interface to be able to harmonize the use of policies across the entire app.</li></ul><p>All the policies are tested in the <code class="inline">test/lightning/policies</code> folder. And the test are written in a way that allows the reader to quickly who can do what in the app.</p><p>We have two variants of the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface:</p><ul><li><code class="inline">Lightning.Policies.Permissions.can(policy, action, actor, resource)</code> returns <code class="inline">:ok</code> if the actor can perform the action on the resource and <code class="inline">{:error, :unauthorized}</code> otherwise.</li><li><code class="inline">Lightning.Policies.Permissions.can?(policy, action, actor, resource)</code> returns <code class="inline">true</code> if the actor can perform the action on the resource and <code class="inline">false</code> otherwise.</li></ul><p>Here is an example of how we the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface to check if the a user can edit a job or not</p><pre><code class="makeup elixir" translate="no"><span class="n">can_edit_workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Policies.ProjectUsers</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Lightning.Policies.Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="9829508154-1">(</span><span class="ss">:edit_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">current_user</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">project</span><span class="p" data-group-id="9829508154-1">)</span><span class="w">
+We use that interface to be able to harmonize the use of policies across the entire app.</li></ul><p>All the policies are tested in the <code class="inline">test/lightning/policies</code> folder. And the test are written in a way that allows the reader to quickly who can do what in the app.</p><p>We have two variants of the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface:</p><ul><li><code class="inline">Lightning.Policies.Permissions.can(policy, action, actor, resource)</code> returns <code class="inline">:ok</code> if the actor can perform the action on the resource and <code class="inline">{:error, :unauthorized}</code> otherwise.</li><li><code class="inline">Lightning.Policies.Permissions.can?(policy, action, actor, resource)</code> returns <code class="inline">true</code> if the actor can perform the action on the resource and <code class="inline">false</code> otherwise.</li></ul><p>Here is an example of how we the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface to check if the a user can edit a job or not</p><pre><code class="makeup elixir" translate="no"><span class="n">can_edit_workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Policies.ProjectUsers</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Lightning.Policies.Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="6025217594-1">(</span><span class="ss">:edit_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">current_user</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">project</span><span class="p" data-group-id="6025217594-1">)</span><span class="w">
 
-</span><span class="k">if</span><span class="w"> </span><span class="n">can_edit_workflow</span><span class="w"> </span><span class="k" data-group-id="9829508154-2">do</span><span class="w">
+</span><span class="k">if</span><span class="w"> </span><span class="n">can_edit_workflow</span><span class="w"> </span><span class="k" data-group-id="6025217594-2">do</span><span class="w">
   </span><span class="c1"># allow user to edit the workflow</span><span class="w">
-</span><span class="k" data-group-id="9829508154-2">else</span><span class="w">
+</span><span class="k" data-group-id="6025217594-2">else</span><span class="w">
   </span><span class="c1"># quick user out</span><span class="w">
-</span><span class="k" data-group-id="9829508154-2">end</span></code></pre>
+</span><span class="k" data-group-id="6025217594-2">end</span></code></pre>
     </section>
 
 </div>
@@ -164,7 +119,7 @@ We use that interface to be able to harmonize the use of policies across the ent
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#can/4" data-no-tooltip translate="no">can(policy, action, user, params \\ [])</a>
+        <a href="#can/4" data-no-tooltip="" translate="no">can(policy, action, user, params \\ [])</a>
 
       </div>
 
@@ -174,7 +129,7 @@ We use that interface to be able to harmonize the use of policies across the ent
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#can?/4" data-no-tooltip translate="no">can?(policy, action, user, params \\ [])</a>
+        <a href="#can?/4" data-no-tooltip="" translate="no">can?(policy, action, user, params \\ [])</a>
 
       </div>
 
@@ -200,33 +155,27 @@ We use that interface to be able to harmonize the use of policies across the ent
     <span id="can/3"></span>
 
   <div class="detail-header">
-    <a href="#can/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#can/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">can(policy, action, user, params \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/permissions.ex#L45" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">can(policy, action, user, params \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/permissions.ex#L45" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>checks if user has the permissions to apply action using some policy module</p><p>Returns <code class="inline">:ok</code> if user can apply action and <code class="inline">{:error, :unauthorized}</code> otherwise</p><h2 id="can/4-examples" class="section-heading">
-  <a href="#can/4-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="5194656631-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="5194656631-1">)</span><span class="w">
+<p>checks if user has the permissions to apply action using some policy module</p><p>Returns <code class="inline">:ok</code> if user can apply action and <code class="inline">{:error, :unauthorized}</code> otherwise</p><h2 id="can/4-examples" class="section-heading"><a href="#can/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="4417581048-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4417581048-1">)</span><span class="w">
 </span><span class="ss">:ok</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="5194656631-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5194656631-3">%{</span><span class="p" data-group-id="5194656631-3">}</span><span class="p" data-group-id="5194656631-2">)</span><span class="w">
-</span><span class="p" data-group-id="5194656631-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:unauthorized</span><span class="p" data-group-id="5194656631-4">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="4417581048-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4417581048-3">%{</span><span class="p" data-group-id="4417581048-3">}</span><span class="p" data-group-id="4417581048-2">)</span><span class="w">
+</span><span class="p" data-group-id="4417581048-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:unauthorized</span><span class="p" data-group-id="4417581048-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="can?/4">
@@ -234,32 +183,26 @@ We use that interface to be able to harmonize the use of policies across the ent
     <span id="can?/3"></span>
 
   <div class="detail-header">
-    <a href="#can?/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#can?/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">can?(policy, action, user, params \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/permissions.ex#L61" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">can?(policy, action, user, params \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/permissions.ex#L61" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>same as can/4 but returns <code class="inline">true</code> if user can apply action and <code class="inline">false</code> otherwise</p><h2 id="can?/4-examples" class="section-heading">
-  <a href="#can?/4-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="9580379293-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="9580379293-1">)</span><span class="w">
+<p>same as can/4 but returns <code class="inline">true</code> if user can apply action and <code class="inline">false</code> otherwise</p><h2 id="can?/4-examples" class="section-heading"><a href="#can?/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="7854753496-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="7854753496-1">)</span><span class="w">
 </span><span class="no">true</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="9580379293-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9580379293-3">%{</span><span class="p" data-group-id="9580379293-3">}</span><span class="p" data-group-id="9580379293-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="7854753496-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7854753496-3">%{</span><span class="p" data-group-id="7854753496-3">}</span><span class="p" data-group-id="7854753496-2">)</span><span class="w">
 </span><span class="no">false</span></code></pre>
   </section>
 </section>
@@ -284,7 +227,7 @@ We use that interface to be able to harmonize the use of policies across the ent
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

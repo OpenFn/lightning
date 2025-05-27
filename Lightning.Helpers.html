@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.Helpers — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Helpers</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.Helpers</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,7 +112,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#actual_deletion_date/3" data-no-tooltip translate="no">actual_deletion_date(grace_period, cron_expression \\ &quot;4 2 * * *&quot;, unit \\ :days)</a>
+        <a href="#actual_deletion_date/3" data-no-tooltip="" translate="no">actual_deletion_date(grace_period, cron_expression \\ &quot;4 2 * * *&quot;, unit \\ :days)</a>
 
       </div>
 
@@ -165,7 +120,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#coerce_json_field/2" data-no-tooltip translate="no">coerce_json_field(attrs, field)</a>
+        <a href="#coerce_json_field/2" data-no-tooltip="" translate="no">coerce_json_field(attrs, field)</a>
 
       </div>
 
@@ -176,7 +131,7 @@ If it cannot be converted, it leaves the original value</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#copy_error/4" data-no-tooltip translate="no">copy_error(changeset, original_key, new_key, opts \\ [overwrite: true])</a>
+        <a href="#copy_error/4" data-no-tooltip="" translate="no">copy_error(changeset, original_key, new_key, opts \\ [overwrite: true])</a>
 
       </div>
 
@@ -186,7 +141,7 @@ If it cannot be converted, it leaves the original value</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#format_date/2" data-no-tooltip translate="no">format_date(date, formatter \\ &quot;%F %T&quot;)</a>
+        <a href="#format_date/2" data-no-tooltip="" translate="no">format_date(date, formatter \\ &quot;%F %T&quot;)</a>
 
       </div>
 
@@ -194,7 +149,7 @@ If it cannot be converted, it leaves the original value</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#format_date_long/1" data-no-tooltip translate="no">format_date_long(date)</a>
+        <a href="#format_date_long/1" data-no-tooltip="" translate="no">format_date_long(date)</a>
 
       </div>
 
@@ -202,7 +157,7 @@ If it cannot be converted, it leaves the original value</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#json_safe/1" data-no-tooltip translate="no">json_safe(data)</a>
+        <a href="#json_safe/1" data-no-tooltip="" translate="no">json_safe(data)</a>
 
       </div>
 
@@ -213,7 +168,7 @@ where all keys are strings and all values are json safe (primitive values).</p><
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#ms_to_human/1" data-no-tooltip translate="no">ms_to_human(milliseconds)</a>
+        <a href="#ms_to_human/1" data-no-tooltip="" translate="no">ms_to_human(milliseconds)</a>
 
       </div>
 
@@ -225,7 +180,7 @@ where all keys are strings and all values are json safe (primitive values).</p><
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#url_safe_name/1" data-no-tooltip translate="no">url_safe_name(name)</a>
+        <a href="#url_safe_name/1" data-no-tooltip="" translate="no">url_safe_name(name)</a>
 
       </div>
 
@@ -254,18 +209,18 @@ replacing unwanted characters with hyphens, and trimming leading/trailing hyphen
     <span id="actual_deletion_date/2"></span>
 
   <div class="detail-header">
-    <a href="#actual_deletion_date/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#actual_deletion_date/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">actual_deletion_date(grace_period, cron_expression \\ &quot;4 2 * * *&quot;, unit \\ :days)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L50" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">actual_deletion_date(grace_period, cron_expression \\ &quot;4 2 * * *&quot;, unit \\ :days)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L50" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -276,18 +231,18 @@ replacing unwanted characters with hyphens, and trimming leading/trailing hyphen
 <section class="detail" id="coerce_json_field/2">
 
   <div class="detail-header">
-    <a href="#coerce_json_field/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#coerce_json_field/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">coerce_json_field(attrs, field)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L13" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">coerce_json_field(attrs, field)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L13" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -307,38 +262,26 @@ If it cannot be converted, it leaves the original value</p>
     <span id="copy_error/3"></span>
 
   <div class="detail-header">
-    <a href="#copy_error/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#copy_error/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">copy_error(changeset, original_key, new_key, opts \\ [overwrite: true])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L121" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">copy_error(changeset, original_key, new_key, opts \\ [overwrite: true])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L121" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Copies an error from one key to another in the given changeset.</p><h2 id="copy_error/4-parameters" class="section-heading">
-  <a href="#copy_error/4-parameters" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Parameters</span>
-</h2>
-<ul><li><code class="inline">changeset</code>: The changeset to modify.</li><li><code class="inline">original_key</code>: The key where the error currently exists.</li><li><code class="inline">new_key</code>: The key where the error should be duplicated.</li><li><code class="inline">opts</code>: A keyword list of options. Supports <code class="inline">overwrite</code>, which is a boolean indicating whether to overwrite the <code class="inline">new_key</code> error if it already exists. Defaults to <code class="inline">true</code>.</li></ul><h2 id="copy_error/4-example" class="section-heading">
-  <a href="#copy_error/4-example" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3107770948-1">%</span><span class="nc" data-group-id="3107770948-1">Ecto.Changeset</span><span class="p" data-group-id="3107770948-1">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3107770948-2">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3107770948-3">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3107770948-4">[</span><span class="p" data-group-id="3107770948-4">]</span><span class="p" data-group-id="3107770948-3">}</span><span class="p" data-group-id="3107770948-2">]</span><span class="p" data-group-id="3107770948-1">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Helpers</span><span class="o">.</span><span class="n">copy_error</span><span class="p" data-group-id="3107770948-5">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:raw_name</span><span class="p" data-group-id="3107770948-5">)</span><span class="w">
+<p>Copies an error from one key to another in the given changeset.</p><h2 id="copy_error/4-parameters" class="section-heading"><a href="#copy_error/4-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">changeset</code>: The changeset to modify.</li><li><code class="inline">original_key</code>: The key where the error currently exists.</li><li><code class="inline">new_key</code>: The key where the error should be duplicated.</li><li><code class="inline">opts</code>: A keyword list of options. Supports <code class="inline">overwrite</code>, which is a boolean indicating whether to overwrite the <code class="inline">new_key</code> error if it already exists. Defaults to <code class="inline">true</code>.</li></ul><h2 id="copy_error/4-example" class="section-heading"><a href="#copy_error/4-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2428361723-1">%</span><span class="nc" data-group-id="2428361723-1">Ecto.Changeset</span><span class="p" data-group-id="2428361723-1">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2428361723-2">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2428361723-3">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2428361723-4">[</span><span class="p" data-group-id="2428361723-4">]</span><span class="p" data-group-id="2428361723-3">}</span><span class="p" data-group-id="2428361723-2">]</span><span class="p" data-group-id="2428361723-1">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Helpers</span><span class="o">.</span><span class="n">copy_error</span><span class="p" data-group-id="2428361723-5">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:raw_name</span><span class="p" data-group-id="2428361723-5">)</span><span class="w">
 </span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="o">.</span><span class="n">errors</span><span class="w">
-</span><span class="p" data-group-id="3107770948-6">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3107770948-7">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3107770948-8">[</span><span class="p" data-group-id="3107770948-8">]</span><span class="p" data-group-id="3107770948-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">raw_name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3107770948-9">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3107770948-10">[</span><span class="p" data-group-id="3107770948-10">]</span><span class="p" data-group-id="3107770948-9">}</span><span class="p" data-group-id="3107770948-6">]</span></code></pre><p>If the <code class="inline">original_key</code> doesn't exist in the errors, or if the <code class="inline">new_key</code> already exists and <code class="inline">overwrite</code> is set to <code class="inline">false</code>, the changeset is returned unchanged.</p>
+</span><span class="p" data-group-id="2428361723-6">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2428361723-7">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2428361723-8">[</span><span class="p" data-group-id="2428361723-8">]</span><span class="p" data-group-id="2428361723-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">raw_name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2428361723-9">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2428361723-10">[</span><span class="p" data-group-id="2428361723-10">]</span><span class="p" data-group-id="2428361723-9">}</span><span class="p" data-group-id="2428361723-6">]</span></code></pre><p>If the <code class="inline">original_key</code> doesn't exist in the errors, or if the <code class="inline">new_key</code> already exists and <code class="inline">overwrite</code> is set to <code class="inline">false</code>, the changeset is returned unchanged.</p>
   </section>
 </section>
 <section class="detail" id="format_date/2">
@@ -346,18 +289,18 @@ If it cannot be converted, it leaves the original value</p>
     <span id="format_date/1"></span>
 
   <div class="detail-header">
-    <a href="#format_date/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#format_date/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">format_date(date, formatter \\ &quot;%F %T&quot;)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L67" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">format_date(date, formatter \\ &quot;%F %T&quot;)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -368,18 +311,18 @@ If it cannot be converted, it leaves the original value</p>
 <section class="detail" id="format_date_long/1">
 
   <div class="detail-header">
-    <a href="#format_date_long/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#format_date_long/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">format_date_long(date)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L71" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">format_date_long(date)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L71" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -390,18 +333,18 @@ If it cannot be converted, it leaves the original value</p>
 <section class="detail" id="json_safe/1">
 
   <div class="detail-header">
-    <a href="#json_safe/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#json_safe/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">json_safe(data)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L82" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">json_safe(data)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L82" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -413,18 +356,18 @@ where all keys are strings and all values are json safe (primitive values).</p>
 <section class="detail" id="ms_to_human/1">
 
   <div class="detail-header">
-    <a href="#ms_to_human/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#ms_to_human/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">ms_to_human(milliseconds)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L44" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">ms_to_human(milliseconds)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L44" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -443,18 +386,18 @@ where all keys are strings and all values are json safe (primitive values).</p>
 <section class="detail" id="url_safe_name/1">
 
   <div class="detail-header">
-    <a href="#url_safe_name/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#url_safe_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">url_safe_name(name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L157" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">url_safe_name(name)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L157" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -467,22 +410,10 @@ where all keys are strings and all values are json safe (primitive values).</p>
 
 <p>Converts a string into a URL-safe format by converting it to lowercase,
 replacing unwanted characters with hyphens, and trimming leading/trailing hyphens.</p><p>This function allows international characters, which will be automatically
-percent-encoded in URLs by browsers.</p><h2 id="url_safe_name/1-parameters" class="section-heading">
-  <a href="#url_safe_name/1-parameters" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Parameters</span>
-</h2>
-<ul><li><code class="inline">name</code>: The string to convert. If <code class="inline">nil</code> is passed, it returns an empty string.</li></ul><h2 id="url_safe_name/1-examples" class="section-heading">
-  <a href="#url_safe_name/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="1924668108-1">(</span><span class="s">&quot;My Project!!&quot;</span><span class="p" data-group-id="1924668108-1">)</span><span class="w">
+percent-encoded in URLs by browsers.</p><h2 id="url_safe_name/1-parameters" class="section-heading"><a href="#url_safe_name/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">name</code>: The string to convert. If <code class="inline">nil</code> is passed, it returns an empty string.</li></ul><h2 id="url_safe_name/1-examples" class="section-heading"><a href="#url_safe_name/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="1499301568-1">(</span><span class="s">&quot;My Project!!&quot;</span><span class="p" data-group-id="1499301568-1">)</span><span class="w">
 </span><span class="s">&quot;my-project&quot;</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="1924668108-2">(</span><span class="no">nil</span><span class="p" data-group-id="1924668108-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="1499301568-2">(</span><span class="no">nil</span><span class="p" data-group-id="1499301568-2">)</span><span class="w">
 </span><span class="s">&quot;&quot;</span></code></pre>
   </section>
 </section>
@@ -507,7 +438,7 @@ percent-encoded in URLs by browsers.</p><h2 id="url_safe_name/1-parameters" clas
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

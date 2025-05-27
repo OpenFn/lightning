@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.SetupUtils — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.SetupUtils</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.SetupUtils</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,7 +112,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#confirm_users/1" data-no-tooltip translate="no">confirm_users(users)</a>
+        <a href="#confirm_users/1" data-no-tooltip="" translate="no">confirm_users(users)</a>
 
       </div>
 
@@ -165,7 +120,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_dhis2_project/1" data-no-tooltip translate="no">create_dhis2_project(project_users)</a>
+        <a href="#create_dhis2_project/1" data-no-tooltip="" translate="no">create_dhis2_project(project_users)</a>
 
       </div>
 
@@ -173,7 +128,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_openhie_project/1" data-no-tooltip translate="no">create_openhie_project(project_users)</a>
+        <a href="#create_openhie_project/1" data-no-tooltip="" translate="no">create_openhie_project(project_users)</a>
 
       </div>
 
@@ -181,7 +136,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_starter_project/3" data-no-tooltip translate="no">create_starter_project(name, project_users, with_workflow \\ false)</a>
+        <a href="#create_starter_project/3" data-no-tooltip="" translate="no">create_starter_project(name, project_users, with_workflow \\ false)</a>
 
       </div>
 
@@ -189,7 +144,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_users/1" data-no-tooltip translate="no">create_users(opts)</a>
+        <a href="#create_users/1" data-no-tooltip="" translate="no">create_users(opts)</a>
 
       </div>
 
@@ -197,7 +152,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#setup_demo/1" data-no-tooltip translate="no">setup_demo(opts \\ [create_super: false])</a>
+        <a href="#setup_demo/1" data-no-tooltip="" translate="no">setup_demo(opts \\ [create_super: false])</a>
 
       </div>
 
@@ -207,7 +162,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#setup_user/3" data-no-tooltip translate="no">setup_user(user, token \\ nil, credentials \\ nil)</a>
+        <a href="#setup_user/3" data-no-tooltip="" translate="no">setup_user(user, token \\ nil, credentials \\ nil)</a>
 
       </div>
 
@@ -219,7 +174,7 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#tear_down/1" data-no-tooltip translate="no">tear_down(opts \\ [destroy_super: false])</a>
+        <a href="#tear_down/1" data-no-tooltip="" translate="no">tear_down(opts \\ [destroy_super: false])</a>
 
       </div>
 
@@ -241,18 +196,18 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
 <section class="detail" id="confirm_users/1">
 
   <div class="detail-header">
-    <a href="#confirm_users/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#confirm_users/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">confirm_users(users)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L168" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">confirm_users(users)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L168" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -263,18 +218,18 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
 <section class="detail" id="create_dhis2_project/1">
 
   <div class="detail-header">
-    <a href="#create_dhis2_project/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#create_dhis2_project/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_dhis2_project(project_users)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L584" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_dhis2_project(project_users)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L584" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -285,18 +240,18 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
 <section class="detail" id="create_openhie_project/1">
 
   <div class="detail-header">
-    <a href="#create_openhie_project/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#create_openhie_project/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_openhie_project(project_users)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L332" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_openhie_project(project_users)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L332" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -309,18 +264,18 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
     <span id="create_starter_project/2"></span>
 
   <div class="detail-header">
-    <a href="#create_starter_project/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#create_starter_project/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_starter_project(name, project_users, with_workflow \\ false)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L187" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_starter_project(name, project_users, with_workflow \\ false)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L187" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -331,18 +286,18 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
 <section class="detail" id="create_users/1">
 
   <div class="detail-header">
-    <a href="#create_users/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#create_users/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_users(opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L118" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_users(opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L118" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -355,18 +310,18 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
     <span id="setup_demo/0"></span>
 
   <div class="detail-header">
-    <a href="#setup_demo/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#setup_demo/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">setup_demo(opts \\ [create_super: false])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L51" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">setup_demo(opts \\ [create_super: false])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L51" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -393,18 +348,18 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
     <span id="setup_user/2"></span>
 
   <div class="detail-header">
-    <a href="#setup_user/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#setup_user/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">setup_user(user, token \\ nil, credentials \\ nil)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L979" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">setup_user(user, token \\ nil, credentials \\ nil)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L979" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -419,13 +374,7 @@ user, and apiToken, and multiple credentials (owned by the user) so that later
 user, and apiToken, and multiple credentials (owned by the user) so that later
 <code class="inline">openfn deploy</code> calls can make use of these artifacts.</p><p>When run <em>before</em> <code class="inline">openfn deploy</code>, this function makes it possible to set up
 an entire lightning instance with a working project (including secrets)
-without using the web UI.</p><h2 id="setup_user/3-examples" class="section-heading">
-  <a href="#setup_user/3-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<p>  iex&gt; setup_user(%{email: &quot;td@openfn.org&quot;, first_name: &quot;taylor&quot;, last_name: &quot;downs&quot;, password: &quot;shh12345!&quot;}, &quot;secretToken&quot;, [%{name: &quot;openmrs&quot;, schema: &quot;raw&quot;, body: %{&quot;a&quot; =&gt; &quot;secret&quot;}}, %{ name: &quot;dhis2&quot;, schema: &quot;raw&quot;, body: %{&quot;b&quot; =&gt; &quot;safe&quot;}}])
+without using the web UI.</p><h2 id="setup_user/3-examples" class="section-heading"><a href="#setup_user/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>  iex&gt; setup_user(%{email: &quot;td@openfn.org&quot;, first_name: &quot;taylor&quot;, last_name: &quot;downs&quot;, password: &quot;shh12345!&quot;}, &quot;secretToken&quot;, [%{name: &quot;openmrs&quot;, schema: &quot;raw&quot;, body: %{&quot;a&quot; =&gt; &quot;secret&quot;}}, %{ name: &quot;dhis2&quot;, schema: &quot;raw&quot;, body: %{&quot;b&quot; =&gt; &quot;safe&quot;}}])
   :ok</p>
   </section>
 </section>
@@ -434,18 +383,18 @@ without using the web UI.</p><h2 id="setup_user/3-examples" class="section-headi
     <span id="tear_down/0"></span>
 
   <div class="detail-header">
-    <a href="#tear_down/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#tear_down/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">tear_down(opts \\ [destroy_super: false])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L790" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">tear_down(opts \\ [destroy_super: false])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L790" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -474,7 +423,7 @@ without using the web UI.</p><h2 id="setup_user/3-examples" class="section-headi
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

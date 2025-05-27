@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>LightningWeb.UserAuth — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.UserAuth</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">LightningWeb.UserAuth</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,7 +112,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#authenticate_bearer/2" data-no-tooltip translate="no">authenticate_bearer(conn, opts)</a>
+        <a href="#authenticate_bearer/2" data-no-tooltip="" translate="no">authenticate_bearer(conn, opts)</a>
 
       </div>
 
@@ -165,7 +120,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_current_user/2" data-no-tooltip translate="no">fetch_current_user(conn, opts)</a>
+        <a href="#fetch_current_user/2" data-no-tooltip="" translate="no">fetch_current_user(conn, opts)</a>
 
       </div>
 
@@ -176,7 +131,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_bearer/1" data-no-tooltip translate="no">get_bearer(conn)</a>
+        <a href="#get_bearer/1" data-no-tooltip="" translate="no">get_bearer(conn)</a>
 
       </div>
 
@@ -184,7 +139,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_in_user/2" data-no-tooltip translate="no">log_in_user(conn, user)</a>
+        <a href="#log_in_user/2" data-no-tooltip="" translate="no">log_in_user(conn, user)</a>
 
       </div>
 
@@ -194,7 +149,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_out_user/1" data-no-tooltip translate="no">log_out_user(conn)</a>
+        <a href="#log_out_user/1" data-no-tooltip="" translate="no">log_out_user(conn)</a>
 
       </div>
 
@@ -204,7 +159,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#mark_totp_pending/1" data-no-tooltip translate="no">mark_totp_pending(conn)</a>
+        <a href="#mark_totp_pending/1" data-no-tooltip="" translate="no">mark_totp_pending(conn)</a>
 
       </div>
 
@@ -212,7 +167,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new_session/2" data-no-tooltip translate="no">new_session(conn, token)</a>
+        <a href="#new_session/2" data-no-tooltip="" translate="no">new_session(conn, token)</a>
 
       </div>
 
@@ -222,7 +177,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#on_mount/4" data-no-tooltip translate="no">on_mount(atom, params, session, socket)</a>
+        <a href="#on_mount/4" data-no-tooltip="" translate="no">on_mount(atom, params, session, socket)</a>
 
       </div>
 
@@ -232,7 +187,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#reauth_sudo_mode/2" data-no-tooltip translate="no">reauth_sudo_mode(conn, opts)</a>
+        <a href="#reauth_sudo_mode/2" data-no-tooltip="" translate="no">reauth_sudo_mode(conn, opts)</a>
 
       </div>
 
@@ -242,7 +197,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#redirect_if_user_is_authenticated/2" data-no-tooltip translate="no">redirect_if_user_is_authenticated(conn, opts)</a>
+        <a href="#redirect_if_user_is_authenticated/2" data-no-tooltip="" translate="no">redirect_if_user_is_authenticated(conn, opts)</a>
 
       </div>
 
@@ -252,7 +207,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#redirect_with_return_to/2" data-no-tooltip translate="no">redirect_with_return_to(conn, params \\ %{})</a>
+        <a href="#redirect_with_return_to/2" data-no-tooltip="" translate="no">redirect_with_return_to(conn, params \\ %{})</a>
 
       </div>
 
@@ -262,7 +217,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#require_authenticated_api_resource/2" data-no-tooltip translate="no">require_authenticated_api_resource(conn, opts)</a>
+        <a href="#require_authenticated_api_resource/2" data-no-tooltip="" translate="no">require_authenticated_api_resource(conn, opts)</a>
 
       </div>
 
@@ -273,7 +228,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#require_authenticated_user/2" data-no-tooltip translate="no">require_authenticated_user(conn, opts)</a>
+        <a href="#require_authenticated_user/2" data-no-tooltip="" translate="no">require_authenticated_user(conn, opts)</a>
 
       </div>
 
@@ -283,7 +238,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#require_sudo_user/2" data-no-tooltip translate="no">require_sudo_user(conn, opts)</a>
+        <a href="#require_sudo_user/2" data-no-tooltip="" translate="no">require_sudo_user(conn, opts)</a>
 
       </div>
 
@@ -293,7 +248,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#require_superuser/2" data-no-tooltip translate="no">require_superuser(conn, opts)</a>
+        <a href="#require_superuser/2" data-no-tooltip="" translate="no">require_superuser(conn, opts)</a>
 
       </div>
 
@@ -303,7 +258,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#totp_pending?/1" data-no-tooltip translate="no">totp_pending?(conn)</a>
+        <a href="#totp_pending?/1" data-no-tooltip="" translate="no">totp_pending?(conn)</a>
 
       </div>
 
@@ -311,7 +266,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#totp_validated/1" data-no-tooltip translate="no">totp_validated(conn)</a>
+        <a href="#totp_validated/1" data-no-tooltip="" translate="no">totp_validated(conn)</a>
 
       </div>
 
@@ -333,18 +288,18 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 <section class="detail" id="authenticate_bearer/2">
 
   <div class="detail-header">
-    <a href="#authenticate_bearer/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#authenticate_bearer/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">authenticate_bearer(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L178" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">authenticate_bearer(conn, opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L178" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -355,18 +310,18 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 <section class="detail" id="fetch_current_user/2">
 
   <div class="detail-header">
-    <a href="#fetch_current_user/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#fetch_current_user/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fetch_current_user(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L121" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_current_user(conn, opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L121" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -378,18 +333,18 @@ and remember me token.</p>
 <section class="detail" id="get_bearer/1">
 
   <div class="detail-header">
-    <a href="#get_bearer/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_bearer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_bearer(conn)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L191" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_bearer(conn)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L191" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -400,18 +355,18 @@ and remember me token.</p>
 <section class="detail" id="log_in_user/2">
 
   <div class="detail-header">
-    <a href="#log_in_user/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#log_in_user/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">log_in_user(conn, user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L27" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">log_in_user(conn, user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -422,18 +377,18 @@ and remember me token.</p>
 <section class="detail" id="log_out_user/1">
 
   <div class="detail-header">
-    <a href="#log_out_user/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#log_out_user/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">log_out_user(conn)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L101" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">log_out_user(conn)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L101" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -444,18 +399,18 @@ and remember me token.</p>
 <section class="detail" id="mark_totp_pending/1">
 
   <div class="detail-header">
-    <a href="#mark_totp_pending/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#mark_totp_pending/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">mark_totp_pending(conn)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L356" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">mark_totp_pending(conn)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L356" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -466,18 +421,18 @@ and remember me token.</p>
 <section class="detail" id="new_session/2">
 
   <div class="detail-header">
-    <a href="#new_session/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#new_session/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new_session(conn, token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L44" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">new_session(conn, token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L44" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -493,18 +448,18 @@ if you are not using LiveView.</p>
 <section class="detail" id="on_mount/4">
 
   <div class="detail-header">
-    <a href="#on_mount/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#on_mount/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">on_mount(atom, params, session, socket)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L321" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">on_mount(atom, params, session, socket)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L321" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -515,18 +470,18 @@ if you are not using LiveView.</p>
 <section class="detail" id="reauth_sudo_mode/2">
 
   <div class="detail-header">
-    <a href="#reauth_sudo_mode/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#reauth_sudo_mode/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">reauth_sudo_mode(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L148" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reauth_sudo_mode(conn, opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L148" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -537,18 +492,18 @@ if you are not using LiveView.</p>
 <section class="detail" id="redirect_if_user_is_authenticated/2">
 
   <div class="detail-header">
-    <a href="#redirect_if_user_is_authenticated/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#redirect_if_user_is_authenticated/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">redirect_if_user_is_authenticated(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L208" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">redirect_if_user_is_authenticated(conn, opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L208" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -561,18 +516,18 @@ if you are not using LiveView.</p>
     <span id="redirect_with_return_to/1"></span>
 
   <div class="detail-header">
-    <a href="#redirect_with_return_to/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#redirect_with_return_to/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">redirect_with_return_to(conn, params \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L54" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">redirect_with_return_to(conn, params \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L54" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -583,18 +538,18 @@ if you are not using LiveView.</p>
 <section class="detail" id="require_authenticated_api_resource/2">
 
   <div class="detail-header">
-    <a href="#require_authenticated_api_resource/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#require_authenticated_api_resource/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">require_authenticated_api_resource(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L260" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">require_authenticated_api_resource(conn, opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L260" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -606,18 +561,18 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 <section class="detail" id="require_authenticated_user/2">
 
   <div class="detail-header">
-    <a href="#require_authenticated_user/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#require_authenticated_user/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">require_authenticated_user(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L224" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">require_authenticated_user(conn, opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L224" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -629,18 +584,18 @@ they use the application at all, here would be a good place.</p>
 <section class="detail" id="require_sudo_user/2">
 
   <div class="detail-header">
-    <a href="#require_sudo_user/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#require_sudo_user/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">require_sudo_user(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L275" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">require_sudo_user(conn, opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L275" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -651,18 +606,18 @@ they use the application at all, here would be a good place.</p>
 <section class="detail" id="require_superuser/2">
 
   <div class="detail-header">
-    <a href="#require_superuser/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#require_superuser/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">require_superuser(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L293" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">require_superuser(conn, opts)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L293" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -673,18 +628,18 @@ they use the application at all, here would be a good place.</p>
 <section class="detail" id="totp_pending?/1">
 
   <div class="detail-header">
-    <a href="#totp_pending?/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#totp_pending?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">totp_pending?(conn)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L360" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">totp_pending?(conn)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L360" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -695,18 +650,18 @@ they use the application at all, here would be a good place.</p>
 <section class="detail" id="totp_validated/1">
 
   <div class="detail-header">
-    <a href="#totp_validated/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#totp_validated/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">totp_validated(conn)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L364" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">totp_validated(conn)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L364" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -735,7 +690,7 @@ they use the application at all, here would be a good place.</p>
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

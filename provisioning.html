@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Provisioning — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="extras" class="page-extra">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-extra" id="main" data-type="extras">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,50 +77,27 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>Provisioning</h1>
+
 
       <a href="https://github.com/OpenFn/lightning/blob/main/PROVISIONING.md#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
+  </div>
 
-    <span>Provisioning</span>
-  </h1>
 
 <p>Lightning offers the ability to configure projects via the HTTP API.</p><p>By providing a JSON document with the desired configuration, the project can be
-configured to your liking.</p><h2 id="using-the-api" class="section-heading">
-  <a href="#using-the-api" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Using the API</span>
-</h2>
-<p>The API is available at <code class="inline">/api/provision</code>, and expects an <code class="inline">application/json</code>
-Content-Type.</p><h3 id="authentication" class="section-heading">
-  <a href="#authentication" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Authentication</span>
-</h3>
-<p>The API requires a valid auth token to be provided in the <code class="inline">Authorization</code>
-header.</p><h3 id="example-request" class="section-heading">
-  <a href="#example-request" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example Request</span>
-</h3>
-<pre><code class="makeup bash" translate="no"><span class=""> curl -X POST \
+configured to your liking.</p><h2 id="using-the-api" class="section-heading"><a href="#using-the-api" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Using the API</span></h2><p>The API is available at <code class="inline">/api/provision</code>, and expects an <code class="inline">application/json</code>
+Content-Type.</p><h3 id="authentication" class="section-heading"><a href="#authentication" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authentication</span></h3><p>The API requires a valid auth token to be provided in the <code class="inline">Authorization</code>
+header.</p><h3 id="example-request" class="section-heading"><a href="#example-request" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example Request</span></h3><pre><code class="makeup bash" translate="no"><span class=""> curl -X POST \
 </span><span class="">   -d @project.json \
 </span><span class="">   -H &quot;Authorization: Bearer $TOKEN&quot; \
 </span><span class="">   -H &quot;Content-Type: application/json&quot; \
 </span><span class="">   $ENDPOINT/api/provision
-</span></code></pre><h2 id="document-structure" class="section-heading">
-  <a href="#document-structure" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Document Structure</span>
-</h2>
-<p>The provisioning document is a JSON document with the project at the root.</p><blockquote><p>All entities <strong>must have</strong> an <code class="inline">id</code> field, which is a UUIDv4 string. In the
+</span></code></pre><h2 id="document-structure" class="section-heading"><a href="#document-structure" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Document Structure</span></h2><p>The provisioning document is a JSON document with the project at the root.</p><blockquote><p>All entities <strong>must have</strong> an <code class="inline">id</code> field, which is a UUIDv4 string. In the
 case of new entities, this must be generated by the client.</p></blockquote><pre><code class="jsonc">{
   &quot;id&quot;: &quot;&lt;&lt;project-id&gt;&gt;&quot;,
   &quot;name&quot;: &quot;&lt;&lt;project-name&gt;&gt;&quot;,
@@ -204,22 +134,10 @@ case of new entities, this must be generated by the client.</p></blockquote><pre
     }
     // ... more workflows
   ]
-}</code></pre><h2 id="api-behaviour" class="section-heading">
-  <a href="#api-behaviour" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">API Behaviour</span>
-</h2>
-<p>The API expects <strong>all</strong> existing entities to be provided in the provisioning
+}</code></pre><h2 id="api-behaviour" class="section-heading"><a href="#api-behaviour" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">API Behaviour</span></h2><p>The API expects <strong>all</strong> existing entities to be provided in the provisioning
 document.</p><p>If the document provided is out of date (e.g. a new job was added on the
 server), a new reference document should be fetched and the changes applied to
-it.</p><h3 id="deleting-entities" class="section-heading">
-  <a href="#deleting-entities" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Deleting Entities</span>
-</h3>
-<p>Entities can be deleted by setting the <code class="inline">delete</code> key to <code class="inline">true</code>.</p><p>Example:</p><pre><code class="jsonc">{
+it.</p><h3 id="deleting-entities" class="section-heading"><a href="#deleting-entities" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Deleting Entities</span></h3><p>Entities can be deleted by setting the <code class="inline">delete</code> key to <code class="inline">true</code>.</p><p>Example:</p><pre><code class="jsonc">{
   &quot;id&quot;: &quot;&lt;&lt;project-id&gt;&gt;&quot;,
   &quot;workflows&quot;: [
     {
@@ -232,13 +150,7 @@ it.</p><h3 id="deleting-entities" class="section-heading">
       ]
     }
   ]
-}</code></pre><h2 id="relationship-with-projects-as-code" class="section-heading">
-  <a href="#relationship-with-projects-as-code" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Relationship with Projects as Code</span>
-</h2>
-<p>The Projects as Code spec is a superset of the provisioning API.</p><p>Projects as Code allows for the user to specify a key for each entity, which
+}</code></pre><h2 id="relationship-with-projects-as-code" class="section-heading"><a href="#relationship-with-projects-as-code" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Relationship with Projects as Code</span></h2><p>The Projects as Code spec is a superset of the provisioning API.</p><p>Projects as Code allows for the user to specify a key for each entity, which
 makes it easier to manage the project in the future.</p><p>For example:</p><pre><code class="yaml">name: my-project
 workflows:
   workflow-one:
@@ -289,6 +201,7 @@ updated to reflect the new IDs and entities.</p><pre><code class="json">{
     }
   }
 }</code></pre>
+
 </div>
 
 <div class="bottom-actions" id="bottom-actions">
@@ -334,7 +247,7 @@ Changelog
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

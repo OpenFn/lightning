@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.Runs — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Runs</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.Runs</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,7 +112,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#append_run_log/3" data-no-tooltip translate="no">append_run_log(run, params, scrubber \\ nil)</a>
+        <a href="#append_run_log/3" data-no-tooltip="" translate="no">append_run_log(run, params, scrubber \\ nil)</a>
 
       </div>
 
@@ -165,7 +120,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#complete_run/2" data-no-tooltip translate="no">complete_run(run, params)</a>
+        <a href="#complete_run/2" data-no-tooltip="" translate="no">complete_run(run, params)</a>
 
       </div>
 
@@ -173,7 +128,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#complete_step/2" data-no-tooltip translate="no">complete_step(params, options \\ Lightning.Runs.RunOptions)</a>
+        <a href="#complete_step/2" data-no-tooltip="" translate="no">complete_step(params, options \\ Lightning.Runs.RunOptions)</a>
 
       </div>
 
@@ -181,7 +136,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#enqueue/1" data-no-tooltip translate="no">enqueue(run)</a>
+        <a href="#enqueue/1" data-no-tooltip="" translate="no">enqueue(run)</a>
 
       </div>
 
@@ -191,7 +146,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get/2" data-no-tooltip translate="no">get(id, opts \\ [])</a>
+        <a href="#get/2" data-no-tooltip="" translate="no">get(id, opts \\ [])</a>
 
       </div>
 
@@ -201,7 +156,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_credential/2" data-no-tooltip translate="no">get_credential(run, id)</a>
+        <a href="#get_credential/2" data-no-tooltip="" translate="no">get_credential(run, id)</a>
 
       </div>
 
@@ -209,7 +164,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip_body/1" data-no-tooltip translate="no">get_dataclip_body(run)</a>
+        <a href="#get_dataclip_body/1" data-no-tooltip="" translate="no">get_dataclip_body(run)</a>
 
       </div>
 
@@ -219,7 +174,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip_request/1" data-no-tooltip translate="no">get_dataclip_request(run)</a>
+        <a href="#get_dataclip_request/1" data-no-tooltip="" translate="no">get_dataclip_request(run)</a>
 
       </div>
 
@@ -229,7 +184,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_for_worker/1" data-no-tooltip translate="no">get_for_worker(id)</a>
+        <a href="#get_for_worker/1" data-no-tooltip="" translate="no">get_for_worker(id)</a>
 
       </div>
 
@@ -239,7 +194,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_input/1" data-no-tooltip translate="no">get_input(run)</a>
+        <a href="#get_input/1" data-no-tooltip="" translate="no">get_input(run)</a>
 
       </div>
 
@@ -249,7 +204,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_log_lines/2" data-no-tooltip translate="no">get_log_lines(run, order \\ :asc)</a>
+        <a href="#get_log_lines/2" data-no-tooltip="" translate="no">get_log_lines(run, order \\ :asc)</a>
 
       </div>
 
@@ -257,7 +212,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_id_for_run/1" data-no-tooltip translate="no">get_project_id_for_run(run)</a>
+        <a href="#get_project_id_for_run/1" data-no-tooltip="" translate="no">get_project_id_for_run(run)</a>
 
       </div>
 
@@ -265,7 +220,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_run_options/2" data-no-tooltip translate="no">get_run_options(workflow_id, project_id)</a>
+        <a href="#get_run_options/2" data-no-tooltip="" translate="no">get_run_options(workflow_id, project_id)</a>
 
       </div>
 
@@ -273,7 +228,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#mark_run_lost/1" data-no-tooltip translate="no">mark_run_lost(run)</a>
+        <a href="#mark_run_lost/1" data-no-tooltip="" translate="no">mark_run_lost(run)</a>
 
       </div>
 
@@ -281,7 +236,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#mark_steps_lost/1" data-no-tooltip translate="no">mark_steps_lost(steps_query)</a>
+        <a href="#mark_steps_lost/1" data-no-tooltip="" translate="no">mark_steps_lost(steps_query)</a>
 
       </div>
 
@@ -289,7 +244,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_run/2" data-no-tooltip translate="no">start_run(run, params \\ %{})</a>
+        <a href="#start_run/2" data-no-tooltip="" translate="no">start_run(run, params \\ %{})</a>
 
       </div>
 
@@ -297,7 +252,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_step/2" data-no-tooltip translate="no">start_step(run, params)</a>
+        <a href="#start_step/2" data-no-tooltip="" translate="no">start_step(run, params)</a>
 
       </div>
 
@@ -307,7 +262,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#subscribe/1" data-no-tooltip translate="no">subscribe(run)</a>
+        <a href="#subscribe/1" data-no-tooltip="" translate="no">subscribe(run)</a>
 
       </div>
 
@@ -317,7 +272,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_run/1" data-no-tooltip translate="no">update_run(changeset)</a>
+        <a href="#update_run/1" data-no-tooltip="" translate="no">update_run(changeset)</a>
 
       </div>
 
@@ -325,7 +280,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_runs/2" data-no-tooltip translate="no">update_runs(update_query, updates)</a>
+        <a href="#update_runs/2" data-no-tooltip="" translate="no">update_runs(update_query, updates)</a>
 
       </div>
 
@@ -333,7 +288,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#wipe_dataclips/1" data-no-tooltip translate="no">wipe_dataclips(run)</a>
+        <a href="#wipe_dataclips/1" data-no-tooltip="" translate="no">wipe_dataclips(run)</a>
 
       </div>
 
@@ -359,18 +314,18 @@ Pages
     <span id="append_run_log/2"></span>
 
   <div class="detail-header">
-    <a href="#append_run_log/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#append_run_log/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">append_run_log(run, params, scrubber \\ nil)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L252" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">append_run_log(run, params, scrubber \\ nil)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L252" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -381,18 +336,18 @@ Pages
 <section class="detail" id="complete_run/2">
 
   <div class="detail-header">
-    <a href="#complete_run/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#complete_run/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">complete_run(run, params)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L194" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">complete_run(run, params)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L194" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -412,18 +367,18 @@ Pages
     <span id="complete_step/1"></span>
 
   <div class="detail-header">
-    <a href="#complete_step/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#complete_step/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">complete_step(params, options \\ Lightning.Runs.RunOptions)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L291" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">complete_step(params, options \\ Lightning.Runs.RunOptions)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L291" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -441,18 +396,18 @@ Pages
 <section class="detail" id="enqueue/1">
 
   <div class="detail-header">
-    <a href="#enqueue/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#enqueue/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">enqueue(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L28" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">enqueue(run)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -465,18 +420,18 @@ Pages
     <span id="get/1"></span>
 
   <div class="detail-header">
-    <a href="#get/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get(id, opts \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L65" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get(id, opts \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L65" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -487,24 +442,24 @@ Pages
 
       </div>
 
-<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="2378579474-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2378579474-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="2378579474-2">]</span><span class="p" data-group-id="2378579474-1">)</span></code></pre>
+<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="4196745891-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4196745891-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="4196745891-2">]</span><span class="p" data-group-id="4196745891-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_credential/2">
 
   <div class="detail-header">
-    <a href="#get_credential/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_credential/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_credential(run, id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L181" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_credential(run, id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L181" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -522,18 +477,18 @@ Pages
 <section class="detail" id="get_dataclip_body/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip_body/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_dataclip_body/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_dataclip_body(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L115" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_dataclip_body(run)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L115" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -544,18 +499,18 @@ Pages
 <section class="detail" id="get_dataclip_request/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip_request/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_dataclip_request/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_dataclip_request(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L125" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_dataclip_request(run)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L125" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -566,18 +521,18 @@ Pages
 <section class="detail" id="get_for_worker/1">
 
   <div class="detail-header">
-    <a href="#get_for_worker/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_for_worker/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_for_worker(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L74" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_for_worker(id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L74" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -594,18 +549,18 @@ Pages
 <section class="detail" id="get_input/1">
 
   <div class="detail-header">
-    <a href="#get_input/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_input/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_input(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L143" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_input(run)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L143" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -627,18 +582,18 @@ for more details.</p>
     <span id="get_log_lines/1"></span>
 
   <div class="detail-header">
-    <a href="#get_log_lines/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_log_lines/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_log_lines(run, order \\ :asc)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L341" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_log_lines(run, order \\ :asc)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L341" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -649,18 +604,18 @@ for more details.</p>
 <section class="detail" id="get_project_id_for_run/1">
 
   <div class="detail-header">
-    <a href="#get_project_id_for_run/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_project_id_for_run/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_project_id_for_run(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L335" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_project_id_for_run(run)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L335" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -677,18 +632,18 @@ for more details.</p>
 <section class="detail" id="get_run_options/2">
 
   <div class="detail-header">
-    <a href="#get_run_options/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_run_options/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_run_options(workflow_id, project_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L99" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_run_options(workflow_id, project_id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L99" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -708,18 +663,18 @@ for more details.</p>
 <section class="detail" id="mark_run_lost/1">
 
   <div class="detail-header">
-    <a href="#mark_run_lost/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#mark_run_lost/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">mark_run_lost(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L297" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">mark_run_lost(run)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L297" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -736,18 +691,18 @@ for more details.</p>
 <section class="detail" id="mark_steps_lost/1">
 
   <div class="detail-header">
-    <a href="#mark_steps_lost/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#mark_steps_lost/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">mark_steps_lost(steps_query)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L321" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">mark_steps_lost(steps_query)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L321" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -766,18 +721,18 @@ for more details.</p>
     <span id="start_run/1"></span>
 
   <div class="detail-header">
-    <a href="#start_run/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#start_run/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start_run(run, params \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L188" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start_run(run, params \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L188" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -788,18 +743,18 @@ for more details.</p>
 <section class="detail" id="start_step/2">
 
   <div class="detail-header">
-    <a href="#start_step/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#start_step/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start_step(run, params)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L285" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start_step(run, params)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L285" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -817,18 +772,18 @@ for more details.</p>
 <section class="detail" id="subscribe/1">
 
   <div class="detail-header">
-    <a href="#subscribe/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#subscribe/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">subscribe(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L332" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">subscribe(run)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L332" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -839,18 +794,18 @@ for more details.</p>
 <section class="detail" id="update_run/1">
 
   <div class="detail-header">
-    <a href="#update_run/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_run/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_run(changeset)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L200" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_run(changeset)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L200" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -868,18 +823,18 @@ for more details.</p>
 <section class="detail" id="update_runs/2">
 
   <div class="detail-header">
-    <a href="#update_runs/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_runs/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_runs(update_query, updates)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L224" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_runs(update_query, updates)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L224" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -890,18 +845,18 @@ for more details.</p>
 <section class="detail" id="wipe_dataclips/1">
 
   <div class="detail-header">
-    <a href="#wipe_dataclips/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#wipe_dataclips/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">wipe_dataclips(run)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L167" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">wipe_dataclips(run)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L167" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -936,7 +891,7 @@ for more details.</p>
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

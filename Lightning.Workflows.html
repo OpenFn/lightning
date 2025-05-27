@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.Workflows — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Workflows</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.Workflows</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,7 +112,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build_trigger/1" data-no-tooltip translate="no">build_trigger(attrs)</a>
+        <a href="#build_trigger/1" data-no-tooltip="" translate="no">build_trigger(attrs)</a>
 
       </div>
 
@@ -167,7 +122,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#capture_snapshot/1" data-no-tooltip translate="no">capture_snapshot(multi)</a>
+        <a href="#capture_snapshot/1" data-no-tooltip="" translate="no">capture_snapshot(multi)</a>
 
       </div>
 
@@ -177,7 +132,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_workflow/2" data-no-tooltip translate="no">change_workflow(workflow, attrs \\ %{})</a>
+        <a href="#change_workflow/2" data-no-tooltip="" translate="no">change_workflow(workflow, attrs \\ %{})</a>
 
       </div>
 
@@ -187,7 +142,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_edge/2" data-no-tooltip translate="no">create_edge(attrs, actor)</a>
+        <a href="#create_edge/2" data-no-tooltip="" translate="no">create_edge(attrs, actor)</a>
 
       </div>
 
@@ -197,7 +152,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_edge_by_trigger/1" data-no-tooltip translate="no">get_edge_by_trigger(trigger)</a>
+        <a href="#get_edge_by_trigger/1" data-no-tooltip="" translate="no">get_edge_by_trigger(trigger)</a>
 
       </div>
 
@@ -207,7 +162,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_edges_for_cron_execution/1" data-no-tooltip translate="no">get_edges_for_cron_execution(datetime)</a>
+        <a href="#get_edges_for_cron_execution/1" data-no-tooltip="" translate="no">get_edges_for_cron_execution(datetime)</a>
 
       </div>
 
@@ -218,7 +173,7 @@ used by the scheduler, which calls this function once every minute.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_trigger_by_webhook/1" data-no-tooltip translate="no">get_trigger_by_webhook(path)</a>
+        <a href="#get_trigger_by_webhook/1" data-no-tooltip="" translate="no">get_trigger_by_webhook(path)</a>
 
       </div>
 
@@ -228,7 +183,7 @@ used by the scheduler, which calls this function once every minute.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_webhook_trigger/2" data-no-tooltip translate="no">get_webhook_trigger(path, opts \\ [])</a>
+        <a href="#get_webhook_trigger/2" data-no-tooltip="" translate="no">get_webhook_trigger(path, opts \\ [])</a>
 
       </div>
 
@@ -238,7 +193,7 @@ used by the scheduler, which calls this function once every minute.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_workflow/2" data-no-tooltip translate="no">get_workflow(id, opts \\ [])</a>
+        <a href="#get_workflow/2" data-no-tooltip="" translate="no">get_workflow(id, opts \\ [])</a>
 
       </div>
 
@@ -248,7 +203,7 @@ used by the scheduler, which calls this function once every minute.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_workflow!/2" data-no-tooltip translate="no">get_workflow!(id, opts \\ [])</a>
+        <a href="#get_workflow!/2" data-no-tooltip="" translate="no">get_workflow!(id, opts \\ [])</a>
 
       </div>
 
@@ -258,7 +213,7 @@ used by the scheduler, which calls this function once every minute.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_workflows_for/2" data-no-tooltip translate="no">get_workflows_for(project, opts \\ [])</a>
+        <a href="#get_workflows_for/2" data-no-tooltip="" translate="no">get_workflows_for(project, opts \\ [])</a>
 
       </div>
 
@@ -268,7 +223,7 @@ used by the scheduler, which calls this function once every minute.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#has_newer_version?/1" data-no-tooltip translate="no">has_newer_version?(workflow)</a>
+        <a href="#has_newer_version?/1" data-no-tooltip="" translate="no">has_newer_version?(workflow)</a>
 
       </div>
 
@@ -276,7 +231,7 @@ used by the scheduler, which calls this function once every minute.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#jobs_ordered_subquery/0" data-no-tooltip translate="no">jobs_ordered_subquery()</a>
+        <a href="#jobs_ordered_subquery/0" data-no-tooltip="" translate="no">jobs_ordered_subquery()</a>
 
       </div>
 
@@ -287,7 +242,7 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_project_workflows/2" data-no-tooltip translate="no">list_project_workflows(project_id, opts \\ [])</a>
+        <a href="#list_project_workflows/2" data-no-tooltip="" translate="no">list_project_workflows(project_id, opts \\ [])</a>
 
       </div>
 
@@ -297,7 +252,7 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_workflows/0" data-no-tooltip translate="no">list_workflows()</a>
+        <a href="#list_workflows/0" data-no-tooltip="" translate="no">list_workflows()</a>
 
       </div>
 
@@ -307,7 +262,7 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#mark_for_deletion/3" data-no-tooltip translate="no">mark_for_deletion(workflow, actor, attrs \\ %{})</a>
+        <a href="#mark_for_deletion/3" data-no-tooltip="" translate="no">mark_for_deletion(workflow, actor, attrs \\ %{})</a>
 
       </div>
 
@@ -317,7 +272,7 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#maybe_create_latest_snapshot/1" data-no-tooltip translate="no">maybe_create_latest_snapshot(workflow)</a>
+        <a href="#maybe_create_latest_snapshot/1" data-no-tooltip="" translate="no">maybe_create_latest_snapshot(workflow)</a>
 
       </div>
 
@@ -328,7 +283,7 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#publish_kafka_trigger_events/1" data-no-tooltip translate="no">publish_kafka_trigger_events(changeset)</a>
+        <a href="#publish_kafka_trigger_events/1" data-no-tooltip="" translate="no">publish_kafka_trigger_events(changeset)</a>
 
       </div>
 
@@ -336,7 +291,7 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#save_workflow/2" data-no-tooltip translate="no">save_workflow(changeset, actor)</a>
+        <a href="#save_workflow/2" data-no-tooltip="" translate="no">save_workflow(changeset, actor)</a>
 
       </div>
 
@@ -344,7 +299,7 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#subscribe/1" data-no-tooltip translate="no">subscribe(project_id)</a>
+        <a href="#subscribe/1" data-no-tooltip="" translate="no">subscribe(project_id)</a>
 
       </div>
 
@@ -354,7 +309,7 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#to_project_space/1" data-no-tooltip translate="no">to_project_space(workflows)</a>
+        <a href="#to_project_space/1" data-no-tooltip="" translate="no">to_project_space(workflows)</a>
 
       </div>
 
@@ -362,7 +317,7 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_trigger/2" data-no-tooltip translate="no">update_trigger(trigger, attrs)</a>
+        <a href="#update_trigger/2" data-no-tooltip="" translate="no">update_trigger(trigger, attrs)</a>
 
       </div>
 
@@ -372,7 +327,7 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_triggers_enabled_state/2" data-no-tooltip translate="no">update_triggers_enabled_state(changeset, enabled?)</a>
+        <a href="#update_triggers_enabled_state/2" data-no-tooltip="" translate="no">update_triggers_enabled_state(changeset, enabled?)</a>
 
       </div>
 
@@ -382,7 +337,7 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#workflow_exists?/2" data-no-tooltip translate="no">workflow_exists?(project_id, workflow_name)</a>
+        <a href="#workflow_exists?/2" data-no-tooltip="" translate="no">workflow_exists?(project_id, workflow_name)</a>
 
       </div>
 
@@ -406,18 +361,18 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 <section class="detail" id="build_trigger/1">
 
   <div class="detail-header">
-    <a href="#build_trigger/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#build_trigger/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">build_trigger(attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L562" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">build_trigger(attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L562" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -428,18 +383,18 @@ for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is
 <section class="detail" id="capture_snapshot/1">
 
   <div class="detail-header">
-    <a href="#capture_snapshot/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#capture_snapshot/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">capture_snapshot(multi)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L186" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">capture_snapshot(multi)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L186" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -457,47 +412,41 @@ of the workflow before a snapshot is captured.</p>
     <span id="change_workflow/1"></span>
 
   <div class="detail-header">
-    <a href="#change_workflow/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#change_workflow/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">change_workflow(workflow, attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L289" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">change_workflow(workflow, attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L289" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking workflow changes.</p><h2 id="change_workflow/2-examples" class="section-heading">
-  <a href="#change_workflow/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="9794559617-1">(</span><span class="n">workflow</span><span class="p" data-group-id="9794559617-1">)</span><span class="w">
-</span><span class="p" data-group-id="9794559617-2">%</span><span class="nc" data-group-id="9794559617-2">Ecto.Changeset</span><span class="p" data-group-id="9794559617-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9794559617-3">%</span><span class="nc" data-group-id="9794559617-3">Workflow</span><span class="p" data-group-id="9794559617-3">{</span><span class="p" data-group-id="9794559617-3">}</span><span class="p" data-group-id="9794559617-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking workflow changes.</p><h2 id="change_workflow/2-examples" class="section-heading"><a href="#change_workflow/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="1041813581-1">(</span><span class="n">workflow</span><span class="p" data-group-id="1041813581-1">)</span><span class="w">
+</span><span class="p" data-group-id="1041813581-2">%</span><span class="nc" data-group-id="1041813581-2">Ecto.Changeset</span><span class="p" data-group-id="1041813581-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1041813581-3">%</span><span class="nc" data-group-id="1041813581-3">Workflow</span><span class="p" data-group-id="1041813581-3">{</span><span class="p" data-group-id="1041813581-3">}</span><span class="p" data-group-id="1041813581-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_edge/2">
 
   <div class="detail-header">
-    <a href="#create_edge/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#create_edge/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_edge(attrs, actor)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L439" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_edge(attrs, actor)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L439" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -508,64 +457,46 @@ of the workflow before a snapshot is captured.</p>
 <section class="detail" id="get_edge_by_trigger/1">
 
   <div class="detail-header">
-    <a href="#get_edge_by_trigger/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_edge_by_trigger/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_edge_by_trigger(trigger)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L521" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_edge_by_trigger(trigger)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L521" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets an <code class="inline">Edge</code> by its associated <code class="inline">Trigger</code>.</p><h2 id="get_edge_by_trigger/1-parameters" class="section-heading">
-  <a href="#get_edge_by_trigger/1-parameters" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Parameters</span>
-</h2>
-<ul><li><code class="inline">%Trigger{id: trigger_id}</code>: A <code class="inline">Trigger</code> struct from which the associated <code class="inline">Edge</code> is to be found.</li></ul><h2 id="get_edge_by_trigger/1-returns" class="section-heading">
-  <a href="#get_edge_by_trigger/1-returns" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Returns</span>
-</h2>
-<ul><li>Returns an <code class="inline">Edge</code> struct preloaded with its <code class="inline">source_trigger</code> and <code class="inline">target_job</code> if found.</li><li>Returns <code class="inline">nil</code> if no <code class="inline">Edge</code> is associated with the given <code class="inline">Trigger</code>.</li></ul><h2 id="get_edge_by_trigger/1-examples" class="section-heading">
-  <a href="#get_edge_by_trigger/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="0818546550-1">%</span><span class="nc" data-group-id="0818546550-1">Trigger</span><span class="p" data-group-id="0818546550-1">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0818546550-1">}</span><span class="w">
-</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_edge_by_trigger</span><span class="p" data-group-id="0818546550-2">(</span><span class="n">trigger</span><span class="p" data-group-id="0818546550-2">)</span><span class="w">
+<p>Gets an <code class="inline">Edge</code> by its associated <code class="inline">Trigger</code>.</p><h2 id="get_edge_by_trigger/1-parameters" class="section-heading"><a href="#get_edge_by_trigger/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">%Trigger{id: trigger_id}</code>: A <code class="inline">Trigger</code> struct from which the associated <code class="inline">Edge</code> is to be found.</li></ul><h2 id="get_edge_by_trigger/1-returns" class="section-heading"><a href="#get_edge_by_trigger/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>Returns an <code class="inline">Edge</code> struct preloaded with its <code class="inline">source_trigger</code> and <code class="inline">target_job</code> if found.</li><li>Returns <code class="inline">nil</code> if no <code class="inline">Edge</code> is associated with the given <code class="inline">Trigger</code>.</li></ul><h2 id="get_edge_by_trigger/1-examples" class="section-heading"><a href="#get_edge_by_trigger/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="8631233145-1">%</span><span class="nc" data-group-id="8631233145-1">Trigger</span><span class="p" data-group-id="8631233145-1">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8631233145-1">}</span><span class="w">
+</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_edge_by_trigger</span><span class="p" data-group-id="8631233145-2">(</span><span class="n">trigger</span><span class="p" data-group-id="8631233145-2">)</span><span class="w">
 </span><span class="c1"># =&gt; %Edge{source_trigger: %Trigger{}, target_job: %Job{}, ...}</span><span class="w">
 
-</span><span class="n">non_existent_trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="0818546550-3">%</span><span class="nc" data-group-id="0818546550-3">Trigger</span><span class="p" data-group-id="0818546550-3">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">999</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0818546550-3">}</span><span class="w">
-</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_edge_by_trigger</span><span class="p" data-group-id="0818546550-4">(</span><span class="n">non_existent_trigger</span><span class="p" data-group-id="0818546550-4">)</span><span class="w">
+</span><span class="n">non_existent_trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="8631233145-3">%</span><span class="nc" data-group-id="8631233145-3">Trigger</span><span class="p" data-group-id="8631233145-3">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">999</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8631233145-3">}</span><span class="w">
+</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_edge_by_trigger</span><span class="p" data-group-id="8631233145-4">(</span><span class="n">non_existent_trigger</span><span class="p" data-group-id="8631233145-4">)</span><span class="w">
 </span><span class="c1"># =&gt; nil</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_edges_for_cron_execution/1">
 
   <div class="detail-header">
-    <a href="#get_edges_for_cron_execution/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_edges_for_cron_execution/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_edges_for_cron_execution(datetime)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L538" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_edges_for_cron_execution(datetime)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L538" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -583,44 +514,26 @@ used by the scheduler, which calls this function once every minute.</p>
 <section class="detail" id="get_trigger_by_webhook/1">
 
   <div class="detail-header">
-    <a href="#get_trigger_by_webhook/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_trigger_by_webhook/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_trigger_by_webhook(path)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L492" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_trigger_by_webhook(path)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L492" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets a single <code class="inline">Trigger</code> by its <code class="inline">custom_path</code> or <code class="inline">id</code>.</p><h2 id="get_trigger_by_webhook/1-parameters" class="section-heading">
-  <a href="#get_trigger_by_webhook/1-parameters" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Parameters</span>
-</h2>
-<ul><li><code class="inline">path</code>: A binary string representing the <code class="inline">custom_path</code> or <code class="inline">id</code> of the trigger.</li></ul><h2 id="get_trigger_by_webhook/1-returns" class="section-heading">
-  <a href="#get_trigger_by_webhook/1-returns" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Returns</span>
-</h2>
-<ul><li>Returns a <code class="inline">Trigger</code> struct if a trigger is found.</li><li>Returns <code class="inline">nil</code> if no trigger is found for the given <code class="inline">path</code>.</li></ul><h2 id="get_trigger_by_webhook/1-examples" class="section-heading">
-  <a href="#get_trigger_by_webhook/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_trigger_by_webhook</span><span class="p" data-group-id="3079344241-1">(</span><span class="s">&quot;some_path_or_id&quot;</span><span class="p" data-group-id="3079344241-1">)</span><span class="w">
+<p>Gets a single <code class="inline">Trigger</code> by its <code class="inline">custom_path</code> or <code class="inline">id</code>.</p><h2 id="get_trigger_by_webhook/1-parameters" class="section-heading"><a href="#get_trigger_by_webhook/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">path</code>: A binary string representing the <code class="inline">custom_path</code> or <code class="inline">id</code> of the trigger.</li></ul><h2 id="get_trigger_by_webhook/1-returns" class="section-heading"><a href="#get_trigger_by_webhook/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>Returns a <code class="inline">Trigger</code> struct if a trigger is found.</li><li>Returns <code class="inline">nil</code> if no trigger is found for the given <code class="inline">path</code>.</li></ul><h2 id="get_trigger_by_webhook/1-examples" class="section-heading"><a href="#get_trigger_by_webhook/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_trigger_by_webhook</span><span class="p" data-group-id="4168457185-1">(</span><span class="s">&quot;some_path_or_id&quot;</span><span class="p" data-group-id="4168457185-1">)</span><span class="w">
 </span><span class="c1"># =&gt; %Trigger{id: 1, custom_path: &quot;some_path_or_id&quot;, ...}</span><span class="w">
 
-</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_trigger_by_webhook</span><span class="p" data-group-id="3079344241-2">(</span><span class="s">&quot;non_existent_path_or_id&quot;</span><span class="p" data-group-id="3079344241-2">)</span><span class="w">
+</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_trigger_by_webhook</span><span class="p" data-group-id="4168457185-2">(</span><span class="s">&quot;non_existent_path_or_id&quot;</span><span class="p" data-group-id="4168457185-2">)</span><span class="w">
 </span><span class="c1"># =&gt; nil</span></code></pre>
   </section>
 </section>
@@ -629,18 +542,18 @@ used by the scheduler, which calls this function once every minute.</p>
     <span id="get_webhook_trigger/1"></span>
 
   <div class="detail-header">
-    <a href="#get_webhook_trigger/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_webhook_trigger/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_webhook_trigger(path, opts \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L457" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_webhook_trigger(path, opts \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L457" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -653,36 +566,30 @@ used by the scheduler, which calls this function once every minute.</p>
     <span id="get_workflow/1"></span>
 
   <div class="detail-header">
-    <a href="#get_workflow/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_workflow/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_workflow(id, opts \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L96" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_workflow(id, opts \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L96" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets a single workflow with optional preloads, returns <code class="inline">nil</code> if not found.</p><h2 id="get_workflow/2-examples" class="section-heading">
-  <a href="#get_workflow/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="8001198345-1">(</span><span class="mi">123</span><span class="p" data-group-id="8001198345-1">)</span><span class="w">
-</span><span class="p" data-group-id="8001198345-2">%</span><span class="nc" data-group-id="8001198345-2">Workflow</span><span class="p" data-group-id="8001198345-2">{</span><span class="p" data-group-id="8001198345-2">}</span><span class="w">
+<p>Gets a single workflow with optional preloads, returns <code class="inline">nil</code> if not found.</p><h2 id="get_workflow/2-examples" class="section-heading"><a href="#get_workflow/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="7614266010-1">(</span><span class="mi">123</span><span class="p" data-group-id="7614266010-1">)</span><span class="w">
+</span><span class="p" data-group-id="7614266010-2">%</span><span class="nc" data-group-id="7614266010-2">Workflow</span><span class="p" data-group-id="7614266010-2">{</span><span class="p" data-group-id="7614266010-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="8001198345-3">(</span><span class="mi">456</span><span class="p" data-group-id="8001198345-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="7614266010-3">(</span><span class="mi">456</span><span class="p" data-group-id="7614266010-3">)</span><span class="w">
 </span><span class="no">nil</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="8001198345-4">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8001198345-5">[</span><span class="ss">:triggers</span><span class="p" data-group-id="8001198345-5">]</span><span class="p" data-group-id="8001198345-4">)</span><span class="w">
-</span><span class="p" data-group-id="8001198345-6">%</span><span class="nc" data-group-id="8001198345-6">Workflow</span><span class="p" data-group-id="8001198345-6">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8001198345-7">[</span><span class="n">...</span><span class="p" data-group-id="8001198345-7">]</span><span class="p" data-group-id="8001198345-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="7614266010-4">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7614266010-5">[</span><span class="ss">:triggers</span><span class="p" data-group-id="7614266010-5">]</span><span class="p" data-group-id="7614266010-4">)</span><span class="w">
+</span><span class="p" data-group-id="7614266010-6">%</span><span class="nc" data-group-id="7614266010-6">Workflow</span><span class="p" data-group-id="7614266010-6">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7614266010-7">[</span><span class="n">...</span><span class="p" data-group-id="7614266010-7">]</span><span class="p" data-group-id="7614266010-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_workflow!/2">
@@ -690,36 +597,30 @@ used by the scheduler, which calls this function once every minute.</p>
     <span id="get_workflow!/1"></span>
 
   <div class="detail-header">
-    <a href="#get_workflow!/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_workflow!/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_workflow!(id, opts \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L77" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_workflow!(id, opts \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L77" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Gets a single workflow with optional preloads.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Workflow does not exist.</p><h2 id="get_workflow!/2-examples" class="section-heading">
-  <a href="#get_workflow!/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="7450463151-1">(</span><span class="mi">123</span><span class="p" data-group-id="7450463151-1">)</span><span class="w">
-</span><span class="p" data-group-id="7450463151-2">%</span><span class="nc" data-group-id="7450463151-2">Workflow</span><span class="p" data-group-id="7450463151-2">{</span><span class="p" data-group-id="7450463151-2">}</span><span class="w">
+<p>Gets a single workflow with optional preloads.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Workflow does not exist.</p><h2 id="get_workflow!/2-examples" class="section-heading"><a href="#get_workflow!/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="5212910431-1">(</span><span class="mi">123</span><span class="p" data-group-id="5212910431-1">)</span><span class="w">
+</span><span class="p" data-group-id="5212910431-2">%</span><span class="nc" data-group-id="5212910431-2">Workflow</span><span class="p" data-group-id="5212910431-2">{</span><span class="p" data-group-id="5212910431-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="7450463151-3">(</span><span class="mi">456</span><span class="p" data-group-id="7450463151-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="5212910431-3">(</span><span class="mi">456</span><span class="p" data-group-id="5212910431-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="7450463151-4">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7450463151-5">[</span><span class="ss">:triggers</span><span class="p" data-group-id="7450463151-5">]</span><span class="p" data-group-id="7450463151-4">)</span><span class="w">
-</span><span class="p" data-group-id="7450463151-6">%</span><span class="nc" data-group-id="7450463151-6">Workflow</span><span class="p" data-group-id="7450463151-6">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7450463151-7">[</span><span class="n">...</span><span class="p" data-group-id="7450463151-7">]</span><span class="p" data-group-id="7450463151-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="5212910431-4">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5212910431-5">[</span><span class="ss">:triggers</span><span class="p" data-group-id="5212910431-5">]</span><span class="p" data-group-id="5212910431-4">)</span><span class="w">
+</span><span class="p" data-group-id="5212910431-6">%</span><span class="nc" data-group-id="5212910431-6">Workflow</span><span class="p" data-group-id="5212910431-6">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5212910431-7">[</span><span class="n">...</span><span class="p" data-group-id="5212910431-7">]</span><span class="p" data-group-id="5212910431-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_workflows_for/2">
@@ -727,83 +628,59 @@ used by the scheduler, which calls this function once every minute.</p>
     <span id="get_workflows_for/1"></span>
 
   <div class="detail-header">
-    <a href="#get_workflows_for/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_workflows_for/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_workflows_for(project, opts \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L333" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_workflows_for(project, opts \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L333" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns a list of workflows for a project with optional filtering, sorting, and preloading.</p><h2 id="get_workflows_for/2-parameters" class="section-heading">
-  <a href="#get_workflows_for/2-parameters" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Parameters</span>
-</h2>
-<ul><li><code class="inline">project</code> - A %Project{} struct for which to retrieve workflows</li><li><code class="inline">opts</code> - Optional keyword list of options</li></ul><h2 id="get_workflows_for/2-options" class="section-heading">
-  <a href="#get_workflows_for/2-options" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Options</span>
-</h2>
-<ul><li><code class="inline">:search</code> - String to filter workflows by name using case-insensitive partial matching</li><li><code class="inline">:order_by</code> - A tuple containing the field and direction to sort by,
-e.g., <code class="inline">{:name, :asc}</code> or <code class="inline">{:enabled, :desc}</code></li><li><code class="inline">:include</code> - List of associations to preload (defaults to [:triggers, :edges, jobs: [:workflow]])</li></ul><h2 id="get_workflows_for/2-returns" class="section-heading">
-  <a href="#get_workflows_for/2-returns" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Returns</span>
-</h2>
-<p>  A list of %Workflow{} structs that match the criteria</p><h2 id="get_workflows_for/2-examples" class="section-heading">
-  <a href="#get_workflows_for/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="c1"># Get all workflows for a project</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="9951982995-1">(</span><span class="n">project</span><span class="p" data-group-id="9951982995-1">)</span><span class="w">
-</span><span class="p" data-group-id="9951982995-2">[</span><span class="p" data-group-id="9951982995-3">%</span><span class="nc" data-group-id="9951982995-3">Workflow</span><span class="p" data-group-id="9951982995-3">{</span><span class="p" data-group-id="9951982995-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9951982995-2">]</span><span class="w">
+<p>Returns a list of workflows for a project with optional filtering, sorting, and preloading.</p><h2 id="get_workflows_for/2-parameters" class="section-heading"><a href="#get_workflows_for/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">project</code> - A %Project{} struct for which to retrieve workflows</li><li><code class="inline">opts</code> - Optional keyword list of options</li></ul><h2 id="get_workflows_for/2-options" class="section-heading"><a href="#get_workflows_for/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:search</code> - String to filter workflows by name using case-insensitive partial matching</li><li><code class="inline">:order_by</code> - A tuple containing the field and direction to sort by,
+e.g., <code class="inline">{:name, :asc}</code> or <code class="inline">{:enabled, :desc}</code></li><li><code class="inline">:include</code> - List of associations to preload (defaults to [:triggers, :edges, jobs: [:workflow]])</li></ul><h2 id="get_workflows_for/2-returns" class="section-heading"><a href="#get_workflows_for/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  A list of %Workflow{} structs that match the criteria</p><h2 id="get_workflows_for/2-examples" class="section-heading"><a href="#get_workflows_for/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Get all workflows for a project</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="8394860715-1">(</span><span class="n">project</span><span class="p" data-group-id="8394860715-1">)</span><span class="w">
+</span><span class="p" data-group-id="8394860715-2">[</span><span class="p" data-group-id="8394860715-3">%</span><span class="nc" data-group-id="8394860715-3">Workflow</span><span class="p" data-group-id="8394860715-3">{</span><span class="p" data-group-id="8394860715-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8394860715-2">]</span><span class="w">
 
 </span><span class="c1"># Search workflows containing &quot;api&quot; in their name</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="9951982995-4">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">search</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api&quot;</span><span class="p" data-group-id="9951982995-4">)</span><span class="w">
-</span><span class="p" data-group-id="9951982995-5">[</span><span class="p" data-group-id="9951982995-6">%</span><span class="nc" data-group-id="9951982995-6">Workflow</span><span class="p" data-group-id="9951982995-6">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API Gateway&quot;</span><span class="p" data-group-id="9951982995-6">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9951982995-7">%</span><span class="nc" data-group-id="9951982995-7">Workflow</span><span class="p" data-group-id="9951982995-7">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;External API&quot;</span><span class="p" data-group-id="9951982995-7">}</span><span class="p" data-group-id="9951982995-5">]</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="8394860715-4">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">search</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api&quot;</span><span class="p" data-group-id="8394860715-4">)</span><span class="w">
+</span><span class="p" data-group-id="8394860715-5">[</span><span class="p" data-group-id="8394860715-6">%</span><span class="nc" data-group-id="8394860715-6">Workflow</span><span class="p" data-group-id="8394860715-6">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API Gateway&quot;</span><span class="p" data-group-id="8394860715-6">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8394860715-7">%</span><span class="nc" data-group-id="8394860715-7">Workflow</span><span class="p" data-group-id="8394860715-7">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;External API&quot;</span><span class="p" data-group-id="8394860715-7">}</span><span class="p" data-group-id="8394860715-5">]</span><span class="w">
 
 </span><span class="c1"># Sort workflows by name in descending order</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="9951982995-8">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9951982995-9">{</span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:desc</span><span class="p" data-group-id="9951982995-9">}</span><span class="p" data-group-id="9951982995-8">)</span><span class="w">
-</span><span class="p" data-group-id="9951982995-10">[</span><span class="p" data-group-id="9951982995-11">%</span><span class="nc" data-group-id="9951982995-11">Workflow</span><span class="p" data-group-id="9951982995-11">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Zebra&quot;</span><span class="p" data-group-id="9951982995-11">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9951982995-12">%</span><span class="nc" data-group-id="9951982995-12">Workflow</span><span class="p" data-group-id="9951982995-12">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Apple&quot;</span><span class="p" data-group-id="9951982995-12">}</span><span class="p" data-group-id="9951982995-10">]</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="8394860715-8">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8394860715-9">{</span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:desc</span><span class="p" data-group-id="8394860715-9">}</span><span class="p" data-group-id="8394860715-8">)</span><span class="w">
+</span><span class="p" data-group-id="8394860715-10">[</span><span class="p" data-group-id="8394860715-11">%</span><span class="nc" data-group-id="8394860715-11">Workflow</span><span class="p" data-group-id="8394860715-11">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Zebra&quot;</span><span class="p" data-group-id="8394860715-11">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8394860715-12">%</span><span class="nc" data-group-id="8394860715-12">Workflow</span><span class="p" data-group-id="8394860715-12">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Apple&quot;</span><span class="p" data-group-id="8394860715-12">}</span><span class="p" data-group-id="8394860715-10">]</span><span class="w">
 
 </span><span class="c1"># Search and sort combined</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="9951982995-13">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">search</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9951982995-14">{</span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:desc</span><span class="p" data-group-id="9951982995-14">}</span><span class="p" data-group-id="9951982995-13">)</span><span class="w">
-</span><span class="p" data-group-id="9951982995-15">[</span><span class="p" data-group-id="9951982995-16">%</span><span class="nc" data-group-id="9951982995-16">Workflow</span><span class="p" data-group-id="9951982995-16">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;REST API&quot;</span><span class="p" data-group-id="9951982995-16">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9951982995-17">%</span><span class="nc" data-group-id="9951982995-17">Workflow</span><span class="p" data-group-id="9951982995-17">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API Gateway&quot;</span><span class="p" data-group-id="9951982995-17">}</span><span class="p" data-group-id="9951982995-15">]</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="8394860715-13">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">search</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8394860715-14">{</span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:desc</span><span class="p" data-group-id="8394860715-14">}</span><span class="p" data-group-id="8394860715-13">)</span><span class="w">
+</span><span class="p" data-group-id="8394860715-15">[</span><span class="p" data-group-id="8394860715-16">%</span><span class="nc" data-group-id="8394860715-16">Workflow</span><span class="p" data-group-id="8394860715-16">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;REST API&quot;</span><span class="p" data-group-id="8394860715-16">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8394860715-17">%</span><span class="nc" data-group-id="8394860715-17">Workflow</span><span class="p" data-group-id="8394860715-17">{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API Gateway&quot;</span><span class="p" data-group-id="8394860715-17">}</span><span class="p" data-group-id="8394860715-15">]</span><span class="w">
 
 </span><span class="c1"># Customize preloaded associations</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="9951982995-18">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9951982995-19">[</span><span class="ss">:triggers</span><span class="p" data-group-id="9951982995-19">]</span><span class="p" data-group-id="9951982995-18">)</span><span class="w">
-</span><span class="p" data-group-id="9951982995-20">[</span><span class="p" data-group-id="9951982995-21">%</span><span class="nc" data-group-id="9951982995-21">Workflow</span><span class="p" data-group-id="9951982995-21">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9951982995-22">[</span><span class="n">...</span><span class="p" data-group-id="9951982995-22">]</span><span class="p" data-group-id="9951982995-21">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9951982995-20">]</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflows_for</span><span class="p" data-group-id="8394860715-18">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8394860715-19">[</span><span class="ss">:triggers</span><span class="p" data-group-id="8394860715-19">]</span><span class="p" data-group-id="8394860715-18">)</span><span class="w">
+</span><span class="p" data-group-id="8394860715-20">[</span><span class="p" data-group-id="8394860715-21">%</span><span class="nc" data-group-id="8394860715-21">Workflow</span><span class="p" data-group-id="8394860715-21">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8394860715-22">[</span><span class="n">...</span><span class="p" data-group-id="8394860715-22">]</span><span class="p" data-group-id="8394860715-21">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8394860715-20">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="has_newer_version?/1">
 
   <div class="detail-header">
-    <a href="#has_newer_version?/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#has_newer_version?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">has_newer_version?(workflow)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L596" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">has_newer_version?(workflow)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L596" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -814,18 +691,18 @@ e.g., <code class="inline">{:name, :asc}</code> or <code class="inline">{:enable
 <section class="detail" id="jobs_ordered_subquery/0">
 
   <div class="detail-header">
-    <a href="#jobs_ordered_subquery/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#jobs_ordered_subquery/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">jobs_ordered_subquery()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L592" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">jobs_ordered_subquery()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L592" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -839,59 +716,47 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
     <span id="list_project_workflows/1"></span>
 
   <div class="detail-header">
-    <a href="#list_project_workflows/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#list_project_workflows/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">list_project_workflows(project_id, opts \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L49" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_project_workflows(project_id, opts \\ [])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L49" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns the list of workflows for a project.</p><h2 id="list_project_workflows/2-examples" class="section-heading">
-  <a href="#list_project_workflows/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_project_workflows</span><span class="p" data-group-id="9355575915-1">(</span><span class="n">project_id</span><span class="p" data-group-id="9355575915-1">)</span><span class="w">
-</span><span class="p" data-group-id="9355575915-2">[</span><span class="p" data-group-id="9355575915-3">%</span><span class="nc" data-group-id="9355575915-3">Workflow</span><span class="p" data-group-id="9355575915-3">{</span><span class="p" data-group-id="9355575915-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9355575915-2">]</span></code></pre>
+<p>Returns the list of workflows for a project.</p><h2 id="list_project_workflows/2-examples" class="section-heading"><a href="#list_project_workflows/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_project_workflows</span><span class="p" data-group-id="8261255545-1">(</span><span class="n">project_id</span><span class="p" data-group-id="8261255545-1">)</span><span class="w">
+</span><span class="p" data-group-id="8261255545-2">[</span><span class="p" data-group-id="8261255545-3">%</span><span class="nc" data-group-id="8261255545-3">Workflow</span><span class="p" data-group-id="8261255545-3">{</span><span class="p" data-group-id="8261255545-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8261255545-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_workflows/0">
 
   <div class="detail-header">
-    <a href="#list_workflows/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#list_workflows/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">list_workflows()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L36" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_workflows()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L36" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns the list of workflows.</p><h2 id="list_workflows/0-examples" class="section-heading">
-  <a href="#list_workflows/0-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="3325912148-1">(</span><span class="p" data-group-id="3325912148-1">)</span><span class="w">
-</span><span class="p" data-group-id="3325912148-2">[</span><span class="p" data-group-id="3325912148-3">%</span><span class="nc" data-group-id="3325912148-3">Workflow</span><span class="p" data-group-id="3325912148-3">{</span><span class="p" data-group-id="3325912148-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3325912148-2">]</span></code></pre>
+<p>Returns the list of workflows.</p><h2 id="list_workflows/0-examples" class="section-heading"><a href="#list_workflows/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="4131989454-1">(</span><span class="p" data-group-id="4131989454-1">)</span><span class="w">
+</span><span class="p" data-group-id="4131989454-2">[</span><span class="p" data-group-id="4131989454-3">%</span><span class="nc" data-group-id="4131989454-3">Workflow</span><span class="p" data-group-id="4131989454-3">{</span><span class="p" data-group-id="4131989454-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4131989454-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="mark_for_deletion/3">
@@ -899,47 +764,41 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
     <span id="mark_for_deletion/2"></span>
 
   <div class="detail-header">
-    <a href="#mark_for_deletion/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#mark_for_deletion/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">mark_for_deletion(workflow, actor, attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L400" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">mark_for_deletion(workflow, actor, attrs \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L400" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for changing the workflow request_deletion.</p><h2 id="mark_for_deletion/3-examples" class="section-heading">
-  <a href="#mark_for_deletion/3-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_request_deletion</span><span class="p" data-group-id="0360600329-1">(</span><span class="n">workflow</span><span class="p" data-group-id="0360600329-1">)</span><span class="w">
-</span><span class="p" data-group-id="0360600329-2">%</span><span class="nc" data-group-id="0360600329-2">Ecto.Changeset</span><span class="p" data-group-id="0360600329-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0360600329-3">%</span><span class="nc" data-group-id="0360600329-3">Workflow</span><span class="p" data-group-id="0360600329-3">{</span><span class="p" data-group-id="0360600329-3">}</span><span class="p" data-group-id="0360600329-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for changing the workflow request_deletion.</p><h2 id="mark_for_deletion/3-examples" class="section-heading"><a href="#mark_for_deletion/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_request_deletion</span><span class="p" data-group-id="6077462047-1">(</span><span class="n">workflow</span><span class="p" data-group-id="6077462047-1">)</span><span class="w">
+</span><span class="p" data-group-id="6077462047-2">%</span><span class="nc" data-group-id="6077462047-2">Ecto.Changeset</span><span class="p" data-group-id="6077462047-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6077462047-3">%</span><span class="nc" data-group-id="6077462047-3">Workflow</span><span class="p" data-group-id="6077462047-3">{</span><span class="p" data-group-id="6077462047-3">}</span><span class="p" data-group-id="6077462047-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="maybe_create_latest_snapshot/1">
 
   <div class="detail-header">
-    <a href="#maybe_create_latest_snapshot/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#maybe_create_latest_snapshot/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">maybe_create_latest_snapshot(workflow)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L612" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">maybe_create_latest_snapshot(workflow)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L612" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -953,25 +812,25 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
       </div>
 
 <p>Creates a latest snapshot for the given workflow if one does not already exist
-for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is created.</p><blockquote><h4 class="info">Note</h4><p>In normal situations this function is not needed as the snapshot is created
-when the workflow is saved.</p></blockquote>
+for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is created.</p><section role="note" class="admonition info"><h4 class="admonition-title info">Note</h4><p>In normal situations this function is not needed as the snapshot is created
+when the workflow is saved.</p></section>
   </section>
 </section>
 <section class="detail" id="publish_kafka_trigger_events/1">
 
   <div class="detail-header">
-    <a href="#publish_kafka_trigger_events/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#publish_kafka_trigger_events/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">publish_kafka_trigger_events(changeset)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L164" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">publish_kafka_trigger_events(changeset)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L164" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -989,18 +848,18 @@ when the workflow is saved.</p></blockquote>
 <section class="detail" id="save_workflow/2">
 
   <div class="detail-header">
-    <a href="#save_workflow/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#save_workflow/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">save_workflow(changeset, actor)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L112" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">save_workflow(changeset, actor)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L112" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1023,18 +882,18 @@ when the workflow is saved.</p></blockquote>
 <section class="detail" id="subscribe/1">
 
   <div class="detail-header">
-    <a href="#subscribe/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#subscribe/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">subscribe(project_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L23" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">subscribe(project_id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L23" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1045,18 +904,18 @@ when the workflow is saved.</p></blockquote>
 <section class="detail" id="to_project_space/1">
 
   <div class="detail-header">
-    <a href="#to_project_space/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#to_project_space/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">to_project_space(workflows)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L371" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">to_project_space(workflows)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L371" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1073,18 +932,18 @@ when the workflow is saved.</p></blockquote>
 <section class="detail" id="update_trigger/2">
 
   <div class="detail-header">
-    <a href="#update_trigger/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_trigger/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_trigger(trigger, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L571" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_trigger(trigger, attrs)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L571" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1095,74 +954,44 @@ when the workflow is saved.</p></blockquote>
 <section class="detail" id="update_triggers_enabled_state/2">
 
   <div class="detail-header">
-    <a href="#update_triggers_enabled_state/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_triggers_enabled_state/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_triggers_enabled_state(changeset, enabled?)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L671" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_triggers_enabled_state(changeset, enabled?)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L671" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Updates the <code class="inline">enabled</code> state of triggers associated with a given workflow as a struct or as a changeset.</p><h2 id="update_triggers_enabled_state/2-parameters" class="section-heading">
-  <a href="#update_triggers_enabled_state/2-parameters" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text"><strong>Parameters</strong></span>
-</h2>
-<ul><li><strong><code class="inline">workflow_or_changeset</code></strong>:</li><li>An <code class="inline">%Ecto.Changeset{}</code> containing a <code class="inline">:triggers</code> association.</li><li>A <code class="inline">%Workflow{}</code> struct with a <code class="inline">triggers</code> field.</li><li><strong><code class="inline">enabled?</code></strong>:</li><li>A boolean indicating whether to enable (<code class="inline">true</code>) or disable (<code class="inline">false</code>) the triggers.</li></ul><h2 id="update_triggers_enabled_state/2-returns" class="section-heading">
-  <a href="#update_triggers_enabled_state/2-returns" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text"><strong>Returns</strong></span>
-</h2>
-<ul><li>An updated <code class="inline">%Ecto.Changeset{}</code> with the <code class="inline">:triggers</code> association modified.</li><li>An updated <code class="inline">%Ecto.Changeset{}</code> derived from the given <code class="inline">%Workflow{}</code>.</li></ul><h2 id="update_triggers_enabled_state/2-examples" class="section-heading">
-  <a href="#update_triggers_enabled_state/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text"><strong>Examples</strong></span>
-</h2>
-<h3 id="update_triggers_enabled_state/2-using-an-ecto-changeset" class="section-heading">
-  <a href="#update_triggers_enabled_state/2-using-an-ecto-changeset" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text"><strong>Using an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a></strong></span>
-</h3>
-<pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="2909247587-1">(</span><span class="p" data-group-id="2909247587-2">%</span><span class="nc" data-group-id="2909247587-2">Workflow</span><span class="p" data-group-id="2909247587-2">{</span><span class="p" data-group-id="2909247587-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2909247587-3">%{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2909247587-4">[</span><span class="p" data-group-id="2909247587-5">%</span><span class="nc" data-group-id="2909247587-5">Trigger</span><span class="p" data-group-id="2909247587-5">{</span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="2909247587-5">}</span><span class="p" data-group-id="2909247587-4">]</span><span class="p" data-group-id="2909247587-3">}</span><span class="p" data-group-id="2909247587-1">)</span><span class="w">
-</span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">update_triggers_enabled_state</span><span class="p" data-group-id="2909247587-6">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="2909247587-6">)</span><span class="w">
-</span><span class="c1"># The triggers in the changeset will now have `enabled: true`.</span></code></pre><h3 id="update_triggers_enabled_state/2-using-a-workflow-struct" class="section-heading">
-  <a href="#update_triggers_enabled_state/2-using-a-workflow-struct" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text"><strong>Using a <code class="inline">Workflow</code> struct</strong></span>
-</h3>
-<pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2034555413-1">%</span><span class="nc" data-group-id="2034555413-1">Workflow</span><span class="p" data-group-id="2034555413-1">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2034555413-2">[</span><span class="p" data-group-id="2034555413-3">%</span><span class="nc" data-group-id="2034555413-3">Trigger</span><span class="p" data-group-id="2034555413-3">{</span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="2034555413-3">}</span><span class="p" data-group-id="2034555413-2">]</span><span class="p" data-group-id="2034555413-1">}</span><span class="w">
-</span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">update_triggers_enabled_state</span><span class="p" data-group-id="2034555413-4">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="2034555413-4">)</span><span class="w">
+<p>Updates the <code class="inline">enabled</code> state of triggers associated with a given workflow as a struct or as a changeset.</p><h2 id="update_triggers_enabled_state/2-parameters" class="section-heading"><a href="#update_triggers_enabled_state/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><strong>Parameters</strong></span></h2><ul><li><strong><code class="inline">workflow_or_changeset</code></strong>:</li><li>An <code class="inline">%Ecto.Changeset{}</code> containing a <code class="inline">:triggers</code> association.</li><li>A <code class="inline">%Workflow{}</code> struct with a <code class="inline">triggers</code> field.</li><li><strong><code class="inline">enabled?</code></strong>:</li><li>A boolean indicating whether to enable (<code class="inline">true</code>) or disable (<code class="inline">false</code>) the triggers.</li></ul><h2 id="update_triggers_enabled_state/2-returns" class="section-heading"><a href="#update_triggers_enabled_state/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><strong>Returns</strong></span></h2><ul><li>An updated <code class="inline">%Ecto.Changeset{}</code> with the <code class="inline">:triggers</code> association modified.</li><li>An updated <code class="inline">%Ecto.Changeset{}</code> derived from the given <code class="inline">%Workflow{}</code>.</li></ul><h2 id="update_triggers_enabled_state/2-examples" class="section-heading"><a href="#update_triggers_enabled_state/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><strong>Examples</strong></span></h2><h3 id="update_triggers_enabled_state/2-using-an-ecto-changeset" class="section-heading"><a href="#update_triggers_enabled_state/2-using-an-ecto-changeset" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><strong>Using an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a></strong></span></h3><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="4331099360-1">(</span><span class="p" data-group-id="4331099360-2">%</span><span class="nc" data-group-id="4331099360-2">Workflow</span><span class="p" data-group-id="4331099360-2">{</span><span class="p" data-group-id="4331099360-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4331099360-3">%{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4331099360-4">[</span><span class="p" data-group-id="4331099360-5">%</span><span class="nc" data-group-id="4331099360-5">Trigger</span><span class="p" data-group-id="4331099360-5">{</span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="4331099360-5">}</span><span class="p" data-group-id="4331099360-4">]</span><span class="p" data-group-id="4331099360-3">}</span><span class="p" data-group-id="4331099360-1">)</span><span class="w">
+</span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">update_triggers_enabled_state</span><span class="p" data-group-id="4331099360-6">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="4331099360-6">)</span><span class="w">
+</span><span class="c1"># The triggers in the changeset will now have `enabled: true`.</span></code></pre><h3 id="update_triggers_enabled_state/2-using-a-workflow-struct" class="section-heading"><a href="#update_triggers_enabled_state/2-using-a-workflow-struct" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><strong>Using a <code class="inline">Workflow</code> struct</strong></span></h3><pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="5733686968-1">%</span><span class="nc" data-group-id="5733686968-1">Workflow</span><span class="p" data-group-id="5733686968-1">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5733686968-2">[</span><span class="p" data-group-id="5733686968-3">%</span><span class="nc" data-group-id="5733686968-3">Trigger</span><span class="p" data-group-id="5733686968-3">{</span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="5733686968-3">}</span><span class="p" data-group-id="5733686968-2">]</span><span class="p" data-group-id="5733686968-1">}</span><span class="w">
+</span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">update_triggers_enabled_state</span><span class="p" data-group-id="5733686968-4">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="5733686968-4">)</span><span class="w">
 </span><span class="c1"># The returned changeset will have triggers with `enabled: true`.</span></code></pre>
   </section>
 </section>
 <section class="detail" id="workflow_exists?/2">
 
   <div class="detail-header">
-    <a href="#workflow_exists?/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#workflow_exists?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">workflow_exists?(project_id, workflow_name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L580" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">workflow_exists?(project_id, workflow_name)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L580" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -1191,7 +1020,7 @@ when the workflow is saved.</p></blockquote>
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

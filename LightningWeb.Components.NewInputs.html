@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>LightningWeb.Components.NewInputs — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Components.NewInputs</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">LightningWeb.Components.NewInputs</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -158,7 +113,7 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#button/1" data-no-tooltip translate="no">button(assigns)</a>
+        <a href="#button/1" data-no-tooltip="" translate="no">button(assigns)</a>
 
       </div>
 
@@ -168,7 +123,7 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#button_link/1" data-no-tooltip translate="no">button_link(assigns)</a>
+        <a href="#button_link/1" data-no-tooltip="" translate="no">button_link(assigns)</a>
 
       </div>
 
@@ -178,7 +133,7 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#checkbox_element/1" data-no-tooltip translate="no">checkbox_element(assigns)</a>
+        <a href="#checkbox_element/1" data-no-tooltip="" translate="no">checkbox_element(assigns)</a>
 
       </div>
 
@@ -188,7 +143,7 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#error/1" data-no-tooltip translate="no">error(assigns)</a>
+        <a href="#error/1" data-no-tooltip="" translate="no">error(assigns)</a>
 
       </div>
 
@@ -198,7 +153,7 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#errors/1" data-no-tooltip translate="no">errors(assigns)</a>
+        <a href="#errors/1" data-no-tooltip="" translate="no">errors(assigns)</a>
 
       </div>
 
@@ -208,18 +163,18 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#form_hidden_inputs/1" data-no-tooltip translate="no">form_hidden_inputs(assigns)</a>
+        <a href="#form_hidden_inputs/1" data-no-tooltip="" translate="no">form_hidden_inputs(assigns)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Generates hidden inputs for a form.
-Adapted from <a href="https://github.com/phoenixframework/phoenix_html_helpers/blob/v1.0.1/lib/phoenix_html_helpers/form.ex#L406">PhoenixHTMLHelpers.Form.html#hidden_inputs_for/1</a></p></div>
+Adapted from <a>PhoenixHTMLHelpers.Form.html#hidden_inputs_for/1</a></p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#input/1" data-no-tooltip translate="no">input(assigns)</a>
+        <a href="#input/1" data-no-tooltip="" translate="no">input(assigns)</a>
 
       </div>
 
@@ -229,7 +184,7 @@ Adapted from <a href="https://github.com/phoenixframework/phoenix_html_helpers/b
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#input_element/1" data-no-tooltip translate="no">input_element(assigns)</a>
+        <a href="#input_element/1" data-no-tooltip="" translate="no">input_element(assigns)</a>
 
       </div>
 
@@ -239,7 +194,7 @@ Adapted from <a href="https://github.com/phoenixframework/phoenix_html_helpers/b
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#label/1" data-no-tooltip translate="no">label(assigns)</a>
+        <a href="#label/1" data-no-tooltip="" translate="no">label(assigns)</a>
 
       </div>
 
@@ -249,17 +204,17 @@ Adapted from <a href="https://github.com/phoenixframework/phoenix_html_helpers/b
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#simple_button_with_tooltip/1" data-no-tooltip translate="no">simple_button_with_tooltip(assigns)</a>
+        <a href="#simple_button_with_tooltip/1" data-no-tooltip="" translate="no">simple_button_with_tooltip(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">tooltip</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;id&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;name&quot;, &quot;value&quot;, &quot;class&quot;, &quot;type&quot;]</code>.</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li></ul></div>
+        <div class="summary-synopsis"></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#textarea_element/1" data-no-tooltip translate="no">textarea_element(assigns)</a>
+        <a href="#textarea_element/1" data-no-tooltip="" translate="no">textarea_element(assigns)</a>
 
       </div>
 
@@ -283,391 +238,259 @@ Adapted from <a href="https://github.com/phoenixframework/phoenix_html_helpers/b
 <section class="detail" id="button/1">
 
   <div class="detail-header">
-    <a href="#button/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#button/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">button(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L120" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">button(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L120" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Renders a button.</p><h2 id="button/1-attributes" class="section-heading">
-  <a href="#button/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><p><code class="inline">:type</code> - The type of the button. Defaults to <code class="inline">&quot;button&quot;</code>. Acceptable values are:</p><ul><li><code class="inline">&quot;button&quot;</code></li><li><code class="inline">&quot;submit&quot;</code></li></ul></li><li><p><code class="inline">:class</code> - Additional CSS classes to apply to the button. Defaults to an empty string.</p></li><li><p><code class="inline">:theme</code> - The theme of the button. Acceptable values are:</p><ul><li><code class="inline">&quot;primary&quot;</code></li><li><code class="inline">&quot;secondary&quot;</code></li><li><code class="inline">&quot;danger&quot;</code></li><li><code class="inline">&quot;success&quot;</code></li><li><code class="inline">&quot;warning&quot;</code></li><li><code class="inline">&quot;custom&quot;</code></li></ul></li><li><p><code class="inline">:size</code> - The padding size of the button. Defaults to <code class="inline">&quot;md&quot;</code>. Acceptable values are:</p><ul><li><code class="inline">&quot;sm&quot;</code> - Small</li><li><code class="inline">&quot;md&quot;</code> - Medium</li><li><code class="inline">&quot;lg&quot;</code> - Large</li></ul></li><li><p><code class="inline">:tooltip</code> - A tooltip to display when the button is disabled. Defaults to <code class="inline">nil</code>.</p></li><li><p><code class="inline">:rest</code> - Any additional global attributes (e.g., <code class="inline">id</code>, <code class="inline">disabled</code>, <code class="inline">form</code>, <code class="inline">name</code>, <code class="inline">value</code>) that should be applied to the button.</p></li></ul><h2 id="button/1-slots" class="section-heading">
-  <a href="#button/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">:inner_block</code> (required) - The content to render inside the button.</li></ul><h2 id="button/1-examples" class="section-heading">
-  <a href="#button/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<p>Basic button:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="0738040064-out-1">&lt;</span><span class="s">.button</span><span class="p" data-group-id="0738040064-out-1">&gt;</span><span class="s">Click me</span><span class="p" data-group-id="0738040064-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="0738040064-out-2">&gt;</span></code></pre><p>Button with a click event:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="4615998201-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="s">phx-click</span><span class="o">=</span><span class="s">&quot;submit_form&quot;</span><span class="p" data-group-id="4615998201-out-1">&gt;</span><span class="s">Submit</span><span class="p" data-group-id="4615998201-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="4615998201-out-2">&gt;</span></code></pre><p>Button with a custom class:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="9614807621-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">class</span><span class="o">=</span><span class="s">&quot;ml-4&quot;</span><span class="p" data-group-id="9614807621-out-1">&gt;</span><span class="s">Custom Button</span><span class="p" data-group-id="9614807621-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="9614807621-out-2">&gt;</span></code></pre><p>Button with a theme:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="8323639249-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="s">theme</span><span class="o">=</span><span class="s">&quot;primary&quot;</span><span class="p" data-group-id="8323639249-out-1">&gt;</span><span class="s">Primary Button</span><span class="p" data-group-id="8323639249-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="8323639249-out-2">&gt;</span><span class="s">
-</span><span class="p" data-group-id="8323639249-out-3">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="s">theme</span><span class="o">=</span><span class="s">&quot;danger&quot;</span><span class="p" data-group-id="8323639249-out-3">&gt;</span><span class="s">Danger Button</span><span class="p" data-group-id="8323639249-out-4">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="8323639249-out-4">&gt;</span></code></pre><p>Button with a size:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="6675446360-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">size</span><span class="o">=</span><span class="s">&quot;sm&quot;</span><span class="p" data-group-id="6675446360-out-1">&gt;</span><span class="s">Small Button</span><span class="p" data-group-id="6675446360-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="6675446360-out-2">&gt;</span><span class="s">
-</span><span class="p" data-group-id="6675446360-out-3">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">size</span><span class="o">=</span><span class="s">&quot;lg&quot;</span><span class="p" data-group-id="6675446360-out-3">&gt;</span><span class="s">Large Button</span><span class="p" data-group-id="6675446360-out-4">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="6675446360-out-4">&gt;</span></code></pre><p>Button with a tooltip (visible when disabled):</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="8172792277-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">disabled</span><span class="o">=</span><span class="p" data-group-id="8172792277-1">{</span><span class="no">true</span><span class="p" data-group-id="8172792277-1">}</span><span class="s"> </span><span class="s">tooltip</span><span class="o">=</span><span class="s">&quot;You</span><span class="w"> </span><span class="s">cannot</span><span class="w"> </span><span class="s">click</span><span class="w"> </span><span class="s">this</span><span class="w"> </span><span class="k">button</span><span class="w"> </span><span class="s">right</span><span class="w"> </span><span class="s">now&quot;</span><span class="p" data-group-id="8172792277-out-1">&gt;</span><span class="s">
+<p>Renders a button.</p><h2 id="button/1-attributes" class="section-heading"><a href="#button/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><p><code class="inline">:type</code> - The type of the button. Defaults to <code class="inline">&quot;button&quot;</code>. Acceptable values are:</p><ul><li><code class="inline">&quot;button&quot;</code></li><li><code class="inline">&quot;submit&quot;</code></li></ul></li><li><p><code class="inline">:class</code> - Additional CSS classes to apply to the button. Defaults to an empty string.</p></li><li><p><code class="inline">:theme</code> - The theme of the button. Acceptable values are:</p><ul><li><code class="inline">&quot;primary&quot;</code></li><li><code class="inline">&quot;secondary&quot;</code></li><li><code class="inline">&quot;danger&quot;</code></li><li><code class="inline">&quot;success&quot;</code></li><li><code class="inline">&quot;warning&quot;</code></li><li><code class="inline">&quot;custom&quot;</code></li></ul></li><li><p><code class="inline">:size</code> - The padding size of the button. Defaults to <code class="inline">&quot;md&quot;</code>. Acceptable values are:</p><ul><li><code class="inline">&quot;sm&quot;</code> - Small</li><li><code class="inline">&quot;md&quot;</code> - Medium</li><li><code class="inline">&quot;lg&quot;</code> - Large</li></ul></li><li><p><code class="inline">:tooltip</code> - A tooltip to display when the button is disabled. Defaults to <code class="inline">nil</code>.</p></li><li><p><code class="inline">:rest</code> - Any additional global attributes (e.g., <code class="inline">id</code>, <code class="inline">disabled</code>, <code class="inline">form</code>, <code class="inline">name</code>, <code class="inline">value</code>) that should be applied to the button.</p></li></ul><h2 id="button/1-slots" class="section-heading"><a href="#button/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">:inner_block</code> (required) - The content to render inside the button.</li></ul><h2 id="button/1-examples" class="section-heading"><a href="#button/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>Basic button:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="5060722956-out-1">&lt;</span><span class="s">.button</span><span class="p" data-group-id="5060722956-out-1">&gt;</span><span class="s">Click me</span><span class="p" data-group-id="5060722956-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="5060722956-out-2">&gt;</span></code></pre><p>Button with a click event:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="5692472026-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="s">phx-click</span><span class="o">=</span><span class="s">&quot;submit_form&quot;</span><span class="p" data-group-id="5692472026-out-1">&gt;</span><span class="s">Submit</span><span class="p" data-group-id="5692472026-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="5692472026-out-2">&gt;</span></code></pre><p>Button with a custom class:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="5530561276-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">class</span><span class="o">=</span><span class="s">&quot;ml-4&quot;</span><span class="p" data-group-id="5530561276-out-1">&gt;</span><span class="s">Custom Button</span><span class="p" data-group-id="5530561276-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="5530561276-out-2">&gt;</span></code></pre><p>Button with a theme:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="6478374970-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="s">theme</span><span class="o">=</span><span class="s">&quot;primary&quot;</span><span class="p" data-group-id="6478374970-out-1">&gt;</span><span class="s">Primary Button</span><span class="p" data-group-id="6478374970-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="6478374970-out-2">&gt;</span><span class="s">
+</span><span class="p" data-group-id="6478374970-out-3">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="s">theme</span><span class="o">=</span><span class="s">&quot;danger&quot;</span><span class="p" data-group-id="6478374970-out-3">&gt;</span><span class="s">Danger Button</span><span class="p" data-group-id="6478374970-out-4">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="6478374970-out-4">&gt;</span></code></pre><p>Button with a size:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="1201558661-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">size</span><span class="o">=</span><span class="s">&quot;sm&quot;</span><span class="p" data-group-id="1201558661-out-1">&gt;</span><span class="s">Small Button</span><span class="p" data-group-id="1201558661-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="1201558661-out-2">&gt;</span><span class="s">
+</span><span class="p" data-group-id="1201558661-out-3">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">size</span><span class="o">=</span><span class="s">&quot;lg&quot;</span><span class="p" data-group-id="1201558661-out-3">&gt;</span><span class="s">Large Button</span><span class="p" data-group-id="1201558661-out-4">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="1201558661-out-4">&gt;</span></code></pre><p>Button with a tooltip (visible when disabled):</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="0827587547-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">disabled</span><span class="o">=</span><span class="p" data-group-id="0827587547-1">{</span><span class="no">true</span><span class="p" data-group-id="0827587547-1">}</span><span class="s"> </span><span class="s">tooltip</span><span class="o">=</span><span class="s">&quot;You</span><span class="w"> </span><span class="s">cannot</span><span class="w"> </span><span class="s">click</span><span class="w"> </span><span class="s">this</span><span class="w"> </span><span class="k">button</span><span class="w"> </span><span class="s">right</span><span class="w"> </span><span class="s">now&quot;</span><span class="p" data-group-id="0827587547-out-1">&gt;</span><span class="s">
   Disabled Button
-</span><span class="p" data-group-id="8172792277-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="8172792277-out-2">&gt;</span></code></pre><p>Button with additional attributes:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="6407789804-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">id</span><span class="o">=</span><span class="s">&quot;my-button&quot;</span><span class="w"> </span><span class="na">name</span><span class="o">=</span><span class="s">&quot;action&quot;</span><span class="w"> </span><span class="na">value</span><span class="o">=</span><span class="s">&quot;save&quot;</span><span class="w"> </span><span class="s">phx-click</span><span class="o">=</span><span class="s">&quot;save_data&quot;</span><span class="p" data-group-id="6407789804-out-1">&gt;</span><span class="s">
+</span><span class="p" data-group-id="0827587547-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="0827587547-out-2">&gt;</span></code></pre><p>Button with additional attributes:</p><pre><code class="makeup heex" translate="no"><span class="p" data-group-id="7703435784-out-1">&lt;</span><span class="s">.button</span><span class="w"> </span><span class="na">id</span><span class="o">=</span><span class="s">&quot;my-button&quot;</span><span class="w"> </span><span class="na">name</span><span class="o">=</span><span class="s">&quot;action&quot;</span><span class="w"> </span><span class="na">value</span><span class="o">=</span><span class="s">&quot;save&quot;</span><span class="w"> </span><span class="s">phx-click</span><span class="o">=</span><span class="s">&quot;save_data&quot;</span><span class="p" data-group-id="7703435784-out-1">&gt;</span><span class="s">
   Save
-</span><span class="p" data-group-id="6407789804-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="6407789804-out-2">&gt;</span></code></pre><h2 id="button/1-notes" class="section-heading">
-  <a href="#button/1-notes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Notes</span>
-</h2>
-<ul><li>The <code class="inline">theme</code> attribute applies predefined styles to the button. If you use the <code class="inline">&quot;custom&quot;</code> theme, no theme-specific styles will be applied, allowing you to fully customize the button using the <code class="inline">:class</code> attribute.</li><li>The <code class="inline">size</code> attribute adjusts the padding and dimensions of the button.</li><li>If the <code class="inline">tooltip</code> attribute is provided and the button is disabled, a tooltip will be displayed to explain why the button is not clickable.</li></ul><h2 id="button/1-attributes-1" class="section-heading">
-  <a href="#button/1-attributes-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">type</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;button&quot;</code>.</li><li><code class="inline">class</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li><code class="inline">theme</code> (<code class="inline">:string</code>) - Must be one of <code class="inline">&quot;primary&quot;</code>, <code class="inline">&quot;secondary&quot;</code>, <code class="inline">&quot;danger&quot;</code>, <code class="inline">&quot;success&quot;</code>, <code class="inline">&quot;warning&quot;</code>, or <code class="inline">&quot;custom&quot;</code>.</li><li><code class="inline">size</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;md&quot;</code>.</li><li><code class="inline">tooltip</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;id&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;name&quot;, &quot;value&quot;]</code>.</li></ul><h2 id="button/1-slots-1" class="section-heading">
-  <a href="#button/1-slots-1" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code> (required)</li></ul>
+</span><span class="p" data-group-id="7703435784-out-2">&lt;/</span><span class="s">.button</span><span class="p" data-group-id="7703435784-out-2">&gt;</span></code></pre><h2 id="button/1-notes" class="section-heading"><a href="#button/1-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Notes</span></h2><ul><li>The <code class="inline">theme</code> attribute applies predefined styles to the button. If you use the <code class="inline">&quot;custom&quot;</code> theme, no theme-specific styles will be applied, allowing you to fully customize the button using the <code class="inline">:class</code> attribute.</li><li>The <code class="inline">size</code> attribute adjusts the padding and dimensions of the button.</li><li>If the <code class="inline">tooltip</code> attribute is provided and the button is disabled, a tooltip will be displayed to explain why the button is not clickable.</li></ul><h2 id="button/1-attributes-1" class="section-heading"><a href="#button/1-attributes-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">type</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;button&quot;</code>.</li><li><code class="inline">class</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li><code class="inline">theme</code> (<code class="inline">:string</code>) - Must be one of <code class="inline">&quot;primary&quot;</code>, <code class="inline">&quot;secondary&quot;</code>, <code class="inline">&quot;danger&quot;</code>, <code class="inline">&quot;success&quot;</code>, <code class="inline">&quot;warning&quot;</code>, or <code class="inline">&quot;custom&quot;</code>.</li><li><code class="inline">size</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;md&quot;</code>.</li><li><code class="inline">tooltip</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;id&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;name&quot;, &quot;value&quot;]</code>.</li></ul><h2 id="button/1-slots-1" class="section-heading"><a href="#button/1-slots-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="button_link/1">
 
   <div class="detail-header">
-    <a href="#button_link/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#button_link/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">button_link(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L165" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">button_link(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L165" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Renders a link, styled like a button.</p><p>For available options, see <a href="https://hexdocs.pm/phoenix_live_view/1.0.9/Phoenix.Component.html#link/1"><code class="inline">Phoenix.Component.link/1</code></a>.</p><h2 id="button_link/1-attributes" class="section-heading">
-  <a href="#button_link/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">class</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li><code class="inline">theme</code> (<code class="inline">:string</code>) (required) - Must be one of <code class="inline">&quot;primary&quot;</code>, <code class="inline">&quot;secondary&quot;</code>, <code class="inline">&quot;danger&quot;</code>, <code class="inline">&quot;success&quot;</code>, <code class="inline">&quot;warning&quot;</code>, or <code class="inline">&quot;custom&quot;</code>.</li><li><code class="inline">size</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;md&quot;</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;id&quot;, &quot;href&quot;, &quot;patch&quot;, &quot;navigate&quot;, &quot;replace&quot;, &quot;method&quot;, &quot;csrf_token&quot;, &quot;download&quot;, &quot;hreflang&quot;, &quot;referrerpolicy&quot;, &quot;rel&quot;, &quot;target&quot;, &quot;type&quot;]</code>.</li></ul><h2 id="button_link/1-slots" class="section-heading">
-  <a href="#button_link/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code> (required)</li></ul>
+<p>Renders a link, styled like a button.</p><p>For available options, see <a href="https://hexdocs.pm/phoenix_live_view/1.0.9/Phoenix.Component.html#link/1"><code class="inline">Phoenix.Component.link/1</code></a>.</p><h2 id="button_link/1-attributes" class="section-heading"><a href="#button_link/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">class</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li><code class="inline">theme</code> (<code class="inline">:string</code>) (required) - Must be one of <code class="inline">&quot;primary&quot;</code>, <code class="inline">&quot;secondary&quot;</code>, <code class="inline">&quot;danger&quot;</code>, <code class="inline">&quot;success&quot;</code>, <code class="inline">&quot;warning&quot;</code>, or <code class="inline">&quot;custom&quot;</code>.</li><li><code class="inline">size</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;md&quot;</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;id&quot;, &quot;href&quot;, &quot;patch&quot;, &quot;navigate&quot;, &quot;replace&quot;, &quot;method&quot;, &quot;csrf_token&quot;, &quot;download&quot;, &quot;hreflang&quot;, &quot;referrerpolicy&quot;, &quot;rel&quot;, &quot;target&quot;, &quot;type&quot;]</code>.</li></ul><h2 id="button_link/1-slots" class="section-heading"><a href="#button_link/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="checkbox_element/1">
 
   <div class="detail-header">
-    <a href="#checkbox_element/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#checkbox_element/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">checkbox_element(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L911" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">checkbox_element(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L911" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
 <p>Renders a checkbox input element.</p><p>This function is used internally by <a href="#input/1"><code class="inline">input/1</code></a> and generally should not
-be used directly.</p><p>Look at <code class="inline">input type=&quot;checkbox&quot;</code> to see how these values <code class="inline">attr</code> get populated</p><h2 id="checkbox_element/1-attributes" class="section-heading">
-  <a href="#checkbox_element/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">name</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">value</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>)</li><li><code class="inline">checked</code> (<code class="inline">:boolean</code>) - the checked flag for checkbox inputs.</li><li><code class="inline">checked_value</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;true&quot;</code>.</li><li><code class="inline">unchecked_value</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;false&quot;</code>.</li><li><code class="inline">hidden_input</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;disabled&quot;, &quot;form&quot;, &quot;readonly&quot;, &quot;required&quot;]</code>.</li></ul>
+be used directly.</p><p>Look at <code class="inline">input type=&quot;checkbox&quot;</code> to see how these values <code class="inline">attr</code> get populated</p><h2 id="checkbox_element/1-attributes" class="section-heading"><a href="#checkbox_element/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">name</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">value</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>)</li><li><code class="inline">checked</code> (<code class="inline">:boolean</code>) - the checked flag for checkbox inputs.</li><li><code class="inline">checked_value</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;true&quot;</code>.</li><li><code class="inline">unchecked_value</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;false&quot;</code>.</li><li><code class="inline">hidden_input</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;disabled&quot;, &quot;form&quot;, &quot;readonly&quot;, &quot;required&quot;]</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="error/1">
 
   <div class="detail-header">
-    <a href="#error/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#error/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">error(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L1027" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">error(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L1027" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Generates a generic error message.</p><h2 id="error/1-slots" class="section-heading">
-  <a href="#error/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code> (required)</li></ul>
+<p>Generates a generic error message.</p><h2 id="error/1-slots" class="section-heading"><a href="#error/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="errors/1">
 
   <div class="detail-header">
-    <a href="#errors/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#errors/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">errors(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L1004" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">errors(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L1004" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Generic wrapper for rendering error messages in custom input components.</p><h2 id="errors/1-attributes" class="section-heading">
-  <a href="#errors/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">field</code> (<a href="https://hexdocs.pm/phoenix_html/4.2.1/Phoenix.HTML.FormField.html"><code class="inline">Phoenix.HTML.FormField</code></a>) (required)</li></ul>
+<p>Generic wrapper for rendering error messages in custom input components.</p><h2 id="errors/1-attributes" class="section-heading"><a href="#errors/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">field</code> (<a href="https://hexdocs.pm/phoenix_html/4.2.1/Phoenix.HTML.FormField.html"><code class="inline">Phoenix.HTML.FormField</code></a>) (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="form_hidden_inputs/1">
 
   <div class="detail-header">
-    <a href="#form_hidden_inputs/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#form_hidden_inputs/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">form_hidden_inputs(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L961" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">form_hidden_inputs(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L961" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
 <p>Generates hidden inputs for a form.
-Adapted from <a href="https://github.com/phoenixframework/phoenix_html_helpers/blob/v1.0.1/lib/phoenix_html_helpers/form.ex#L406">PhoenixHTMLHelpers.Form.html#hidden_inputs_for/1</a></p><h2 id="form_hidden_inputs/1-attributes" class="section-heading">
-  <a href="#form_hidden_inputs/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">form</code> (<a href="https://hexdocs.pm/phoenix_html/4.2.1/Phoenix.HTML.Form.html"><code class="inline">Phoenix.HTML.Form</code></a>) (required)</li></ul>
+Adapted from <a href="https://github.com/phoenixframework/phoenix_html_helpers/blob/v1.0.1/lib/phoenix_html_helpers/form.ex#L406">PhoenixHTMLHelpers.Form.html#hidden_inputs_for/1</a></p><h2 id="form_hidden_inputs/1-attributes" class="section-heading"><a href="#form_hidden_inputs/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">form</code> (<a href="https://hexdocs.pm/phoenix_html/4.2.1/Phoenix.HTML.Form.html"><code class="inline">Phoenix.HTML.Form</code></a>) (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="input/1">
 
   <div class="detail-header">
-    <a href="#input/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#input/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">input(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L379" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">input(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L379" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
 <p>Renders an input with label and error messages.</p><p>A <a href="https://hexdocs.pm/phoenix_html/4.2.1/Phoenix.HTML.FormField.html"><code class="inline">Phoenix.HTML.FormField</code></a> may be passed as argument,
 which is used to retrieve the input name, id, and values.
-Otherwise all attributes may be passed explicitly.</p><h2 id="input/1-types" class="section-heading">
-  <a href="#input/1-types" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Types</span>
-</h2>
-<p>This function accepts all HTML input types, considering that:</p><ul><li><p>You may also set <code class="inline">type=&quot;select&quot;</code> to render a <code class="inline">&lt;select&gt;</code> tag</p></li><li><p><code class="inline">type=&quot;checkbox&quot;</code> is used exclusively to render boolean values</p></li><li><p><code class="inline">type=&quot;tag&quot;</code> renders a tag input with comma-separated values</p></li><li><p>For live file uploads, see <a href="https://hexdocs.pm/phoenix_live_view/1.0.9/Phoenix.Component.html#live_file_input/1"><code class="inline">Phoenix.Component.live_file_input/1</code></a></p></li></ul><p>See <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input">https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input</a>
-for more information.</p><h2 id="input/1-examples" class="section-heading">
-  <a href="#input/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">field</span><span class="o">=</span><span class="p" data-group-id="4075337813-1">{</span><span class="na">@form</span><span class="p" data-group-id="4075337813-2">[</span><span class="ss">:email</span><span class="p" data-group-id="4075337813-2">]</span><span class="p" data-group-id="4075337813-1">}</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="s">&quot;email&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s">&quot;my-input&quot;</span><span class="w"> </span><span class="n">errors</span><span class="o">=</span><span class="p" data-group-id="4075337813-3">{</span><span class="p" data-group-id="4075337813-4">[</span><span class="s">&quot;oh no!&quot;</span><span class="p" data-group-id="4075337813-4">]</span><span class="p" data-group-id="4075337813-3">}</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">field</span><span class="o">=</span><span class="p" data-group-id="4075337813-5">{</span><span class="na">@form</span><span class="p" data-group-id="4075337813-6">[</span><span class="ss">:tags</span><span class="p" data-group-id="4075337813-6">]</span><span class="p" data-group-id="4075337813-5">}</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="s">&quot;tag&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="input/1-attributes" class="section-heading">
-  <a href="#input/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">name</code> (<code class="inline">:any</code>)</li><li><code class="inline">label</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">sublabel</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">value</code> (<code class="inline">:any</code>)</li><li><code class="inline">type</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;text&quot;</code>.</li><li><code class="inline">field</code> (<a href="https://hexdocs.pm/phoenix_html/4.2.1/Phoenix.HTML.FormField.html"><code class="inline">Phoenix.HTML.FormField</code></a>) - a form field struct retrieved from the form, for example: @form[:email].</li><li><code class="inline">errors</code> (<code class="inline">:list</code>) - Defaults to <code class="inline">[]</code>.</li><li><code class="inline">checked</code> (<code class="inline">:boolean</code>) - the checked flag for checkbox/radio inputs.</li><li><code class="inline">checked_value</code> (<code class="inline">:any</code>) - the value to be sent when the checkbox is checked. Defaults to 'true'. Defaults to <code class="inline">&quot;true&quot;</code>.</li><li><code class="inline">unchecked_value</code> (<code class="inline">:any</code>) - the value to be sent when the checkbox is unchecked, Defaults to 'false'. Defaults to <code class="inline">&quot;false&quot;</code>.</li><li><code class="inline">hidden_input</code> (<code class="inline">:boolean</code>) - controls if this function will generate a hidden input to submit the unchecked value or not. Defaults to 'true'. Defaults to <code class="inline">true</code>.</li><li><code class="inline">prompt</code> (<code class="inline">:string</code>) - the prompt for select inputs. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">options</code> (<code class="inline">:list</code>) - the options to pass to Phoenix.HTML.Form.options_for_select/2.</li><li><code class="inline">multiple</code> (<code class="inline">:boolean</code>) - the multiple flag for select inputs. Defaults to <code class="inline">false</code>.</li><li><code class="inline">button_placement</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">placeholder</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li><code class="inline">stretch</code> (<code class="inline">:boolean</code>) - control the wrapping div classes of some components like the textarea. Defaults to <code class="inline">false</code>.</li><li><code class="inline">display_errors</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">tooltip</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">on_click</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">value_key</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">standalone</code> (<code class="inline">:boolean</code>) - indicates if the tag input operates independently of a form's validation flow. Defaults to <code class="inline">false</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;accept&quot;, &quot;autocomplete&quot;, &quot;capture&quot;, &quot;cols&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;list&quot;, &quot;max&quot;, &quot;maxlength&quot;, &quot;min&quot;, &quot;minlength&quot;, &quot;multiple&quot;, &quot;pattern&quot;, &quot;placeholder&quot;, &quot;readonly&quot;, &quot;required&quot;, &quot;rows&quot;, &quot;size&quot;, &quot;step&quot;]</code>.</li></ul><h2 id="input/1-slots" class="section-heading">
-  <a href="#input/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code></li></ul>
+Otherwise all attributes may be passed explicitly.</p><h2 id="input/1-types" class="section-heading"><a href="#input/1-types" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Types</span></h2><p>This function accepts all HTML input types, considering that:</p><ul><li><p>You may also set <code class="inline">type=&quot;select&quot;</code> to render a <code class="inline">&lt;select&gt;</code> tag</p></li><li><p><code class="inline">type=&quot;checkbox&quot;</code> is used exclusively to render boolean values</p></li><li><p><code class="inline">type=&quot;tag&quot;</code> renders a tag input with comma-separated values</p></li><li><p>For live file uploads, see <a href="https://hexdocs.pm/phoenix_live_view/1.0.9/Phoenix.Component.html#live_file_input/1"><code class="inline">Phoenix.Component.live_file_input/1</code></a></p></li></ul><p>See <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input">https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input</a>
+for more information.</p><h2 id="input/1-examples" class="section-heading"><a href="#input/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">field</span><span class="o">=</span><span class="p" data-group-id="0793703254-1">{</span><span class="na">@form</span><span class="p" data-group-id="0793703254-2">[</span><span class="ss">:email</span><span class="p" data-group-id="0793703254-2">]</span><span class="p" data-group-id="0793703254-1">}</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="s">&quot;email&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
+</span><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s">&quot;my-input&quot;</span><span class="w"> </span><span class="n">errors</span><span class="o">=</span><span class="p" data-group-id="0793703254-3">{</span><span class="p" data-group-id="0793703254-4">[</span><span class="s">&quot;oh no!&quot;</span><span class="p" data-group-id="0793703254-4">]</span><span class="p" data-group-id="0793703254-3">}</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
+</span><span class="o">&lt;</span><span class="o">.</span><span class="n">input</span><span class="w"> </span><span class="n">field</span><span class="o">=</span><span class="p" data-group-id="0793703254-5">{</span><span class="na">@form</span><span class="p" data-group-id="0793703254-6">[</span><span class="ss">:tags</span><span class="p" data-group-id="0793703254-6">]</span><span class="p" data-group-id="0793703254-5">}</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="s">&quot;tag&quot;</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="input/1-attributes" class="section-heading"><a href="#input/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">name</code> (<code class="inline">:any</code>)</li><li><code class="inline">label</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">sublabel</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">value</code> (<code class="inline">:any</code>)</li><li><code class="inline">type</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;text&quot;</code>.</li><li><code class="inline">field</code> (<a href="https://hexdocs.pm/phoenix_html/4.2.1/Phoenix.HTML.FormField.html"><code class="inline">Phoenix.HTML.FormField</code></a>) - a form field struct retrieved from the form, for example: @form[:email].</li><li><code class="inline">errors</code> (<code class="inline">:list</code>) - Defaults to <code class="inline">[]</code>.</li><li><code class="inline">checked</code> (<code class="inline">:boolean</code>) - the checked flag for checkbox/radio inputs.</li><li><code class="inline">checked_value</code> (<code class="inline">:any</code>) - the value to be sent when the checkbox is checked. Defaults to 'true'. Defaults to <code class="inline">&quot;true&quot;</code>.</li><li><code class="inline">unchecked_value</code> (<code class="inline">:any</code>) - the value to be sent when the checkbox is unchecked, Defaults to 'false'. Defaults to <code class="inline">&quot;false&quot;</code>.</li><li><code class="inline">hidden_input</code> (<code class="inline">:boolean</code>) - controls if this function will generate a hidden input to submit the unchecked value or not. Defaults to 'true'. Defaults to <code class="inline">true</code>.</li><li><code class="inline">prompt</code> (<code class="inline">:string</code>) - the prompt for select inputs. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">options</code> (<code class="inline">:list</code>) - the options to pass to Phoenix.HTML.Form.options_for_select/2.</li><li><code class="inline">multiple</code> (<code class="inline">:boolean</code>) - the multiple flag for select inputs. Defaults to <code class="inline">false</code>.</li><li><code class="inline">button_placement</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">placeholder</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li><code class="inline">stretch</code> (<code class="inline">:boolean</code>) - control the wrapping div classes of some components like the textarea. Defaults to <code class="inline">false</code>.</li><li><code class="inline">display_errors</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">tooltip</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">on_click</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">value_key</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">standalone</code> (<code class="inline">:boolean</code>) - indicates if the tag input operates independently of a form's validation flow. Defaults to <code class="inline">false</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;accept&quot;, &quot;autocomplete&quot;, &quot;capture&quot;, &quot;cols&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;list&quot;, &quot;max&quot;, &quot;maxlength&quot;, &quot;min&quot;, &quot;minlength&quot;, &quot;multiple&quot;, &quot;pattern&quot;, &quot;placeholder&quot;, &quot;readonly&quot;, &quot;required&quot;, &quot;rows&quot;, &quot;size&quot;, &quot;step&quot;]</code>.</li></ul><h2 id="input/1-slots" class="section-heading"><a href="#input/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code></li></ul>
   </section>
 </section>
 <section class="detail" id="input_element/1">
 
   <div class="detail-header">
-    <a href="#input_element/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#input_element/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">input_element(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L830" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">input_element(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L830" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
 <p>Renders an input element.</p><p>This function is used internally by <a href="#input/1"><code class="inline">input/1</code></a> and generally should not
 be used directly.</p><p>In the case of inputs that are different enough to warrant a new function,
-this component can be used to maintain style consistency.</p><h2 id="input_element/1-attributes" class="section-heading">
-  <a href="#input_element/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">name</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">type</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">value</code> (<code class="inline">:any</code>)</li><li><code class="inline">errors</code> (<code class="inline">:list</code>) - Defaults to <code class="inline">[]</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;accept&quot;, &quot;autocomplete&quot;, &quot;capture&quot;, &quot;cols&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;list&quot;, &quot;max&quot;, &quot;maxlength&quot;, &quot;min&quot;, &quot;minlength&quot;, &quot;multiple&quot;, &quot;pattern&quot;, &quot;placeholder&quot;, &quot;readonly&quot;, &quot;required&quot;, &quot;rows&quot;, &quot;size&quot;, &quot;step&quot;]</code>.</li></ul>
+this component can be used to maintain style consistency.</p><h2 id="input_element/1-attributes" class="section-heading"><a href="#input_element/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">name</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">type</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">value</code> (<code class="inline">:any</code>)</li><li><code class="inline">errors</code> (<code class="inline">:list</code>) - Defaults to <code class="inline">[]</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;accept&quot;, &quot;autocomplete&quot;, &quot;capture&quot;, &quot;cols&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;list&quot;, &quot;max&quot;, &quot;maxlength&quot;, &quot;min&quot;, &quot;minlength&quot;, &quot;multiple&quot;, &quot;pattern&quot;, &quot;placeholder&quot;, &quot;readonly&quot;, &quot;required&quot;, &quot;rows&quot;, &quot;size&quot;, &quot;step&quot;]</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="label/1">
 
   <div class="detail-header">
-    <a href="#label/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#label/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">label(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L987" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">label(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L987" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Renders a label.</p><h2 id="label/1-attributes" class="section-heading">
-  <a href="#label/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">for</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted.</li></ul><h2 id="label/1-slots" class="section-heading">
-  <a href="#label/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code> (required)</li></ul>
+<p>Renders a label.</p><h2 id="label/1-attributes" class="section-heading"><a href="#label/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">for</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted.</li></ul><h2 id="label/1-slots" class="section-heading"><a href="#label/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="simple_button_with_tooltip/1">
 
   <div class="detail-header">
-    <a href="#simple_button_with_tooltip/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#simple_button_with_tooltip/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">simple_button_with_tooltip(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L222" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">simple_button_with_tooltip(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L222" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<h2 id="simple_button_with_tooltip/1-attributes" class="section-heading">
-  <a href="#simple_button_with_tooltip/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">tooltip</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;id&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;name&quot;, &quot;value&quot;, &quot;class&quot;, &quot;type&quot;]</code>.</li></ul><h2 id="simple_button_with_tooltip/1-slots" class="section-heading">
-  <a href="#simple_button_with_tooltip/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code> (required)</li></ul>
+<h2 id="simple_button_with_tooltip/1-attributes" class="section-heading"><a href="#simple_button_with_tooltip/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">tooltip</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;id&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;name&quot;, &quot;value&quot;, &quot;class&quot;, &quot;type&quot;]</code>.</li></ul><h2 id="simple_button_with_tooltip/1-slots" class="section-heading"><a href="#simple_button_with_tooltip/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="textarea_element/1">
 
   <div class="detail-header">
-    <a href="#textarea_element/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#textarea_element/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">textarea_element(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L871" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">textarea_element(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/new_inputs.ex#L871" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
 <p>Renders a textarea element.</p><p>This function is used internally by <a href="#input/1"><code class="inline">input/1</code></a> and generally should not
-be used directly.</p><p>Look at <code class="inline">input type=&quot;textarea&quot;</code> to see how these values <code class="inline">attr</code> get populated</p><h2 id="textarea_element/1-attributes" class="section-heading">
-  <a href="#textarea_element/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">name</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">value</code> (<code class="inline">:any</code>)</li><li><code class="inline">errors</code> (<code class="inline">:list</code>) - Defaults to <code class="inline">[]</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;accept&quot;, &quot;autocomplete&quot;, &quot;capture&quot;, &quot;cols&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;list&quot;, &quot;max&quot;, &quot;maxlength&quot;, &quot;min&quot;, &quot;minlength&quot;, &quot;multiple&quot;, &quot;pattern&quot;, &quot;placeholder&quot;, &quot;readonly&quot;, &quot;required&quot;, &quot;rows&quot;, &quot;size&quot;, &quot;step&quot;]</code>.</li></ul>
+be used directly.</p><p>Look at <code class="inline">input type=&quot;textarea&quot;</code> to see how these values <code class="inline">attr</code> get populated</p><h2 id="textarea_element/1-attributes" class="section-heading"><a href="#textarea_element/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">name</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">value</code> (<code class="inline">:any</code>)</li><li><code class="inline">errors</code> (<code class="inline">:list</code>) - Defaults to <code class="inline">[]</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;&quot;</code>.</li><li>Global attributes are accepted. Supports all globals plus: <code class="inline">[&quot;accept&quot;, &quot;autocomplete&quot;, &quot;capture&quot;, &quot;cols&quot;, &quot;disabled&quot;, &quot;form&quot;, &quot;list&quot;, &quot;max&quot;, &quot;maxlength&quot;, &quot;min&quot;, &quot;minlength&quot;, &quot;multiple&quot;, &quot;pattern&quot;, &quot;placeholder&quot;, &quot;readonly&quot;, &quot;required&quot;, &quot;rows&quot;, &quot;size&quot;, &quot;step&quot;]</code>.</li></ul>
   </section>
 </section>
 
@@ -691,7 +514,7 @@ be used directly.</p><p>Look at <code class="inline">input type=&quot;textarea&q
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

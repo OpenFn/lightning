@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.AiAssistant — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.AiAssistant</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.AiAssistant</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,7 +112,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_session/3" data-no-tooltip translate="no">create_session(job, user, content)</a>
+        <a href="#create_session/3" data-no-tooltip="" translate="no">create_session(job, user, content)</a>
 
       </div>
 
@@ -165,7 +120,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#enabled?/0" data-no-tooltip translate="no">enabled?()</a>
+        <a href="#enabled?/0" data-no-tooltip="" translate="no">enabled?()</a>
 
       </div>
 
@@ -175,7 +130,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#endpoint_available?/0" data-no-tooltip translate="no">endpoint_available?()</a>
+        <a href="#endpoint_available?/0" data-no-tooltip="" translate="no">endpoint_available?()</a>
 
       </div>
 
@@ -185,7 +140,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_session!/1" data-no-tooltip translate="no">get_session!(id)</a>
+        <a href="#get_session!/1" data-no-tooltip="" translate="no">get_session!(id)</a>
 
       </div>
 
@@ -193,7 +148,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_sessions_for_job/2" data-no-tooltip translate="no">list_sessions_for_job(job, sort_direction \\ :desc)</a>
+        <a href="#list_sessions_for_job/2" data-no-tooltip="" translate="no">list_sessions_for_job(job, sort_direction \\ :desc)</a>
 
       </div>
 
@@ -201,7 +156,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#mark_disclaimer_read/1" data-no-tooltip translate="no">mark_disclaimer_read(user)</a>
+        <a href="#mark_disclaimer_read/1" data-no-tooltip="" translate="no">mark_disclaimer_read(user)</a>
 
       </div>
 
@@ -209,7 +164,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put_expression_and_adaptor/3" data-no-tooltip translate="no">put_expression_and_adaptor(session, expression, adaptor)</a>
+        <a href="#put_expression_and_adaptor/3" data-no-tooltip="" translate="no">put_expression_and_adaptor(session, expression, adaptor)</a>
 
       </div>
 
@@ -217,7 +172,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#query/2" data-no-tooltip translate="no">query(session, content)</a>
+        <a href="#query/2" data-no-tooltip="" translate="no">query(session, content)</a>
 
       </div>
 
@@ -227,7 +182,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#save_message/4" data-no-tooltip translate="no">save_message(session, message, usage \\ %{}, meta \\ nil)</a>
+        <a href="#save_message/4" data-no-tooltip="" translate="no">save_message(session, message, usage \\ %{}, meta \\ nil)</a>
 
       </div>
 
@@ -235,7 +190,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#title_max_length/0" data-no-tooltip translate="no">title_max_length()</a>
+        <a href="#title_max_length/0" data-no-tooltip="" translate="no">title_max_length()</a>
 
       </div>
 
@@ -243,7 +198,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_message_status/3" data-no-tooltip translate="no">update_message_status(session, message, status)</a>
+        <a href="#update_message_status/3" data-no-tooltip="" translate="no">update_message_status(session, message, status)</a>
 
       </div>
 
@@ -253,7 +208,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#user_has_read_disclaimer?/1" data-no-tooltip translate="no">user_has_read_disclaimer?(user)</a>
+        <a href="#user_has_read_disclaimer?/1" data-no-tooltip="" translate="no">user_has_read_disclaimer?(user)</a>
 
       </div>
 
@@ -275,18 +230,18 @@ Pages
 <section class="detail" id="create_session/3">
 
   <div class="detail-header">
-    <a href="#create_session/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#create_session/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_session(job, user, content)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L61" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_session(job, user, content)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L61" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -308,18 +263,18 @@ Pages
 <section class="detail" id="enabled?/0">
 
   <div class="detail-header">
-    <a href="#enabled?/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#enabled?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">enabled?()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L195" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">enabled?()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L195" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -336,18 +291,18 @@ Pages
 <section class="detail" id="endpoint_available?/0">
 
   <div class="detail-header">
-    <a href="#endpoint_available?/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#endpoint_available?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">endpoint_available?()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L240" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">endpoint_available?()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L240" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -364,18 +319,18 @@ Pages
 <section class="detail" id="get_session!/1">
 
   <div class="detail-header">
-    <a href="#get_session!/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_session!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_session!(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L47" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_session!(id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L47" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -394,18 +349,18 @@ Pages
     <span id="list_sessions_for_job/1"></span>
 
   <div class="detail-header">
-    <a href="#list_sessions_for_job/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#list_sessions_for_job/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">list_sessions_for_job(job, sort_direction \\ :desc)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L37" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_sessions_for_job(job, sort_direction \\ :desc)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L37" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -423,18 +378,18 @@ Pages
 <section class="detail" id="mark_disclaimer_read/1">
 
   <div class="detail-header">
-    <a href="#mark_disclaimer_read/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#mark_disclaimer_read/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">mark_disclaimer_read(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L226" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">mark_disclaimer_read(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L226" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -452,18 +407,18 @@ Pages
 <section class="detail" id="put_expression_and_adaptor/3">
 
   <div class="detail-header">
-    <a href="#put_expression_and_adaptor/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#put_expression_and_adaptor/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">put_expression_and_adaptor(session, expression, adaptor)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L27" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">put_expression_and_adaptor(session, expression, adaptor)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -485,18 +440,18 @@ Pages
 <section class="detail" id="query/2">
 
   <div class="detail-header">
-    <a href="#query/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#query/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">query(session, content)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L132" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">query(session, content)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L132" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -509,8 +464,8 @@ Pages
 
       </div>
 
-<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">{:error, reason}</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="3056035550-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="3056035550-1">)</span><span class="w">
-</span><span class="p" data-group-id="3056035550-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="3056035550-2">}</span></code></pre>
+<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">{:error, reason}</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="9826521068-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="9826521068-1">)</span><span class="w">
+</span><span class="p" data-group-id="9826521068-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="9826521068-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="save_message/4">
@@ -520,18 +475,18 @@ Pages
     <span id="save_message/3"></span>
 
   <div class="detail-header">
-    <a href="#save_message/4" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#save_message/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">save_message(session, message, usage \\ %{}, meta \\ nil)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L95" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">save_message(session, message, usage \\ %{}, meta \\ nil)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L95" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -542,18 +497,18 @@ Pages
 <section class="detail" id="title_max_length/0">
 
   <div class="detail-header">
-    <a href="#title_max_length/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#title_max_length/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">title_max_length()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L23" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">title_max_length()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L23" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -564,18 +519,18 @@ Pages
 <section class="detail" id="update_message_status/3">
 
   <div class="detail-header">
-    <a href="#update_message_status/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_message_status/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_message_status(session, message, status)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L251" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_message_status(session, message, status)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L251" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -596,18 +551,18 @@ Pages
 <section class="detail" id="user_has_read_disclaimer?/1">
 
   <div class="detail-header">
-    <a href="#user_has_read_disclaimer?/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#user_has_read_disclaimer?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">user_has_read_disclaimer?(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L203" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">user_has_read_disclaimer?(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L203" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -642,7 +597,7 @@ Pages
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

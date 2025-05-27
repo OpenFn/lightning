@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>LightningWeb.Utils — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Utils</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">LightningWeb.Utils</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,17 +112,17 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#add_dynamic_plugs/1" data-no-tooltip translate="no">add_dynamic_plugs(plugs)</a>
+        <a href="#add_dynamic_plugs/1" data-no-tooltip="" translate="no">add_dynamic_plugs(plugs)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Sets up multiple plugs using <a href="https://hexdocs.pm/replug/0.1.0/Replug.html"><code class="inline">Replug</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Sets up multiple plugs using <a><code class="inline">Replug</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build_params_for_field/3" data-no-tooltip translate="no">build_params_for_field(form, field, value)</a>
+        <a href="#build_params_for_field/3" data-no-tooltip="" translate="no">build_params_for_field(form, field, value)</a>
 
       </div>
 
@@ -177,7 +132,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#decode_one/2" data-no-tooltip translate="no">decode_one(arg, acc \\ %{})</a>
+        <a href="#decode_one/2" data-no-tooltip="" translate="no">decode_one(arg, acc \\ %{})</a>
 
       </div>
 
@@ -187,7 +142,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#pluralize_with_s/2" data-no-tooltip translate="no">pluralize_with_s(n, string)</a>
+        <a href="#pluralize_with_s/2" data-no-tooltip="" translate="no">pluralize_with_s(n, string)</a>
 
       </div>
 
@@ -209,64 +164,52 @@ Pages
 <section class="detail" id="add_dynamic_plugs/1">
 
   <div class="detail-header">
-    <a href="#add_dynamic_plugs/1" class="detail-link" data-no-tooltip title="Link to this macro">
+    <a href="#add_dynamic_plugs/1" class="detail-link" data-no-tooltip="" aria-label="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this macro</span>
     </a>
-    <h1 class="signature" translate="no">add_dynamic_plugs(plugs)</h1>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">add_dynamic_plugs(plugs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L80" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+        <span class="note">(macro)</span>
 
 
-      <span class="note">(macro)</span>
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L80" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
 
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Sets up multiple plugs using <a href="https://hexdocs.pm/replug/0.1.0/Replug.html"><code class="inline">Replug</code></a>.</p><p>Accepts a list of plug configurations, where each configuration is a tuple:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="2555424680-1">{</span><span class="nc">PlugModule</span><span class="p">,</span><span class="w"> </span><span class="n">opts</span><span class="p" data-group-id="2555424680-1">}</span></code></pre><ul><li><code class="inline">PlugModule</code> is the module implementing the plug.</li><li><code class="inline">opts</code> can be a keyword list of options or a tuple like <code class="inline">{module, function}</code>
+<p>Sets up multiple plugs using <a href="https://hexdocs.pm/replug/0.1.0/Replug.html"><code class="inline">Replug</code></a>.</p><p>Accepts a list of plug configurations, where each configuration is a tuple:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="9406306743-1">{</span><span class="nc">PlugModule</span><span class="p">,</span><span class="w"> </span><span class="n">opts</span><span class="p" data-group-id="9406306743-1">}</span></code></pre><ul><li><code class="inline">PlugModule</code> is the module implementing the plug.</li><li><code class="inline">opts</code> can be a keyword list of options or a tuple like <code class="inline">{module, function}</code>
 for dynamic plug configuration.</li></ul><p>This macro will iterate over the provided list, calling <code class="inline">plug Replug, plug: plug, opts: opts</code>
-for each item.</p><h2 id="add_dynamic_plugs/1-examples" class="section-heading">
-  <a href="#add_dynamic_plugs/1-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="na">@pre_session_plugs</span><span class="w"> </span><span class="nc">Application</span><span class="o">.</span><span class="n">compile_env</span><span class="p" data-group-id="5956151511-1">(</span><span class="ss">:my_app</span><span class="p">,</span><span class="w"> </span><span class="ss">:pre_session_plugs</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5956151511-2">[</span><span class="p" data-group-id="5956151511-2">]</span><span class="p" data-group-id="5956151511-1">)</span><span class="w">
-</span><span class="n">add_dynamic_plugs</span><span class="p" data-group-id="5956151511-3">(</span><span class="na">@pre_session_plugs</span><span class="p" data-group-id="5956151511-3">)</span></code></pre>
+for each item.</p><h2 id="add_dynamic_plugs/1-examples" class="section-heading"><a href="#add_dynamic_plugs/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="na">@pre_session_plugs</span><span class="w"> </span><span class="nc">Application</span><span class="o">.</span><span class="n">compile_env</span><span class="p" data-group-id="3227285803-1">(</span><span class="ss">:my_app</span><span class="p">,</span><span class="w"> </span><span class="ss">:pre_session_plugs</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3227285803-2">[</span><span class="p" data-group-id="3227285803-2">]</span><span class="p" data-group-id="3227285803-1">)</span><span class="w">
+</span><span class="n">add_dynamic_plugs</span><span class="p" data-group-id="3227285803-3">(</span><span class="na">@pre_session_plugs</span><span class="p" data-group-id="3227285803-3">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="build_params_for_field/3">
 
   <div class="detail-header">
-    <a href="#build_params_for_field/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#build_params_for_field/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">build_params_for_field(form, field, value)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L32" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">build_params_for_field(form, field, value)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L32" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<p>Builds nested parameters for the given <code class="inline">form</code> field with the specified <code class="inline">value</code>.</p><p>Internally:</p><ol><li>Obtains the param name for the <code class="inline">field</code> using <code class="inline">Form.input_name(form, field)</code>.</li><li>Uses <a href="#decode_one/2"><code class="inline">decode_one/2</code></a> to decode the <code class="inline">{param_name, value}</code> tuple into a map.</li></ol><h2 id="build_params_for_field/3-examples" class="section-heading">
-  <a href="#build_params_for_field/3-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">form</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="c1"># some %Phoenix.HTML.Form{} struct</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">build_params_for_field</span><span class="p" data-group-id="0095229496-1">(</span><span class="n">form</span><span class="p">,</span><span class="w"> </span><span class="ss">:username</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="0095229496-1">)</span><span class="w">
-</span><span class="p" data-group-id="0095229496-2">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="0095229496-3">%{</span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="0095229496-3">}</span><span class="p" data-group-id="0095229496-2">}</span></code></pre>
+<p>Builds nested parameters for the given <code class="inline">form</code> field with the specified <code class="inline">value</code>.</p><p>Internally:</p><ol><li>Obtains the param name for the <code class="inline">field</code> using <code class="inline">Form.input_name(form, field)</code>.</li><li>Uses <a href="#decode_one/2"><code class="inline">decode_one/2</code></a> to decode the <code class="inline">{param_name, value}</code> tuple into a map.</li></ol><h2 id="build_params_for_field/3-examples" class="section-heading"><a href="#build_params_for_field/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">form</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="c1"># some %Phoenix.HTML.Form{} struct</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">build_params_for_field</span><span class="p" data-group-id="7878999372-1">(</span><span class="n">form</span><span class="p">,</span><span class="w"> </span><span class="ss">:username</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="7878999372-1">)</span><span class="w">
+</span><span class="p" data-group-id="7878999372-2">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="7878999372-3">%{</span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="7878999372-3">}</span><span class="p" data-group-id="7878999372-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="decode_one/2">
@@ -274,52 +217,46 @@ for each item.</p><h2 id="add_dynamic_plugs/1-examples" class="section-heading">
     <span id="decode_one/1"></span>
 
   <div class="detail-header">
-    <a href="#decode_one/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#decode_one/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">decode_one(arg, acc \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L55" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decode_one(arg, acc \\ %{})</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L55" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
 <p>Decodes a single <code class="inline">{key, value}</code> pair into a nested map suitable for query/form data.</p><p>This function leverages <a href="https://hexdocs.pm/plug/1.17.0/Plug.Conn.Query.html#decode_each/2"><code class="inline">Plug.Conn.Query.decode_each/2</code></a> and <code class="inline">Query.decode_done/2</code>
 to parse the key and value into the expected nested structure.</p><p>If an accumulator (<code class="inline">acc</code>) is provided, it will merge the newly decoded structure
-into <code class="inline">acc</code>. Otherwise, a new map is returned.</p><h2 id="decode_one/2-examples" class="section-heading">
-  <a href="#decode_one/2-examples" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Examples</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">decode_one</span><span class="p" data-group-id="0818162268-1">(</span><span class="p" data-group-id="0818162268-2">{</span><span class="s">&quot;user[username]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="0818162268-2">}</span><span class="p" data-group-id="0818162268-1">)</span><span class="w">
-</span><span class="p" data-group-id="0818162268-3">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="0818162268-4">%{</span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="0818162268-4">}</span><span class="p" data-group-id="0818162268-3">}</span><span class="w">
+into <code class="inline">acc</code>. Otherwise, a new map is returned.</p><h2 id="decode_one/2-examples" class="section-heading"><a href="#decode_one/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">decode_one</span><span class="p" data-group-id="4100083837-1">(</span><span class="p" data-group-id="4100083837-2">{</span><span class="s">&quot;user[username]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="4100083837-2">}</span><span class="p" data-group-id="4100083837-1">)</span><span class="w">
+</span><span class="p" data-group-id="4100083837-3">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="4100083837-4">%{</span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="4100083837-4">}</span><span class="p" data-group-id="4100083837-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">decode_one</span><span class="p" data-group-id="0818162268-5">(</span><span class="p" data-group-id="0818162268-6">{</span><span class="s">&quot;user[username]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="0818162268-6">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0818162268-7">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="0818162268-8">%{</span><span class="s">&quot;admin&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="0818162268-8">}</span><span class="p" data-group-id="0818162268-7">}</span><span class="p" data-group-id="0818162268-5">)</span><span class="w">
-</span><span class="p" data-group-id="0818162268-9">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="0818162268-10">%{</span><span class="s">&quot;admin&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="no">false</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="0818162268-10">}</span><span class="p" data-group-id="0818162268-9">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">decode_one</span><span class="p" data-group-id="4100083837-5">(</span><span class="p" data-group-id="4100083837-6">{</span><span class="s">&quot;user[username]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="4100083837-6">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4100083837-7">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="4100083837-8">%{</span><span class="s">&quot;admin&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="4100083837-8">}</span><span class="p" data-group-id="4100083837-7">}</span><span class="p" data-group-id="4100083837-5">)</span><span class="w">
+</span><span class="p" data-group-id="4100083837-9">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="4100083837-10">%{</span><span class="s">&quot;admin&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="no">false</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="4100083837-10">}</span><span class="p" data-group-id="4100083837-9">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="pluralize_with_s/2">
 
   <div class="detail-header">
-    <a href="#pluralize_with_s/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#pluralize_with_s/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">pluralize_with_s(n, string)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L14" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">pluralize_with_s(n, string)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/utils.ex#L14" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -348,7 +285,7 @@ into <code class="inline">acc</code>. Otherwise, a new map is returned.</p><h2 i
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

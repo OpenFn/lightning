@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.VersionControl — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.VersionControl</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.VersionControl</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -160,7 +115,7 @@ as running any associated sync jobs</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_github_connection/2" data-no-tooltip translate="no">create_github_connection(attrs, user)</a>
+        <a href="#create_github_connection/2" data-no-tooltip="" translate="no">create_github_connection(attrs, user)</a>
 
       </div>
 
@@ -170,7 +125,7 @@ as running any associated sync jobs</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_github_oauth_grant/1" data-no-tooltip translate="no">delete_github_oauth_grant(user)</a>
+        <a href="#delete_github_oauth_grant/1" data-no-tooltip="" translate="no">delete_github_oauth_grant(user)</a>
 
       </div>
 
@@ -180,18 +135,18 @@ as running any associated sync jobs</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#exchange_code_for_oauth_token/1" data-no-tooltip translate="no">exchange_code_for_oauth_token(code)</a>
+        <a href="#exchange_code_for_oauth_token/1" data-no-tooltip="" translate="no">exchange_code_for_oauth_token(code)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Fetches the oauth access token using the code received from the callback url
-For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app">https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app</a></p></div>
+For more info: <a>https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app</a></p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_installation_repos/1" data-no-tooltip translate="no">fetch_installation_repos(installation_id)</a>
+        <a href="#fetch_installation_repos/1" data-no-tooltip="" translate="no">fetch_installation_repos(installation_id)</a>
 
       </div>
 
@@ -199,7 +154,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_repo_branches/2" data-no-tooltip translate="no">fetch_repo_branches(installation_id, repo_name)</a>
+        <a href="#fetch_repo_branches/2" data-no-tooltip="" translate="no">fetch_repo_branches(installation_id, repo_name)</a>
 
       </div>
 
@@ -207,7 +162,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_user_access_token/1" data-no-tooltip translate="no">fetch_user_access_token(user)</a>
+        <a href="#fetch_user_access_token/1" data-no-tooltip="" translate="no">fetch_user_access_token(user)</a>
 
       </div>
 
@@ -218,7 +173,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_user_installations/1" data-no-tooltip translate="no">fetch_user_installations(user)</a>
+        <a href="#fetch_user_installations/1" data-no-tooltip="" translate="no">fetch_user_installations(user)</a>
 
       </div>
 
@@ -226,7 +181,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_repo_connection_for_project/1" data-no-tooltip translate="no">get_repo_connection_for_project(project_id)</a>
+        <a href="#get_repo_connection_for_project/1" data-no-tooltip="" translate="no">get_repo_connection_for_project(project_id)</a>
 
       </div>
 
@@ -234,7 +189,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_repo_connection_for_token/1" data-no-tooltip translate="no">get_repo_connection_for_token(token)</a>
+        <a href="#get_repo_connection_for_token/1" data-no-tooltip="" translate="no">get_repo_connection_for_token(token)</a>
 
       </div>
 
@@ -242,7 +197,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#github_enabled?/0" data-no-tooltip translate="no">github_enabled?()</a>
+        <a href="#github_enabled?/0" data-no-tooltip="" translate="no">github_enabled?()</a>
 
       </div>
 
@@ -250,7 +205,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#initiate_sync/2" data-no-tooltip translate="no">initiate_sync(repo_connection, commit_message)</a>
+        <a href="#initiate_sync/2" data-no-tooltip="" translate="no">initiate_sync(repo_connection, commit_message)</a>
 
       </div>
 
@@ -258,7 +213,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#oauth_token_valid?/1" data-no-tooltip translate="no">oauth_token_valid?(token)</a>
+        <a href="#oauth_token_valid?/1" data-no-tooltip="" translate="no">oauth_token_valid?(token)</a>
 
       </div>
 
@@ -271,7 +226,7 @@ This function simply checks if the token has a <code class="inline">refresh_toke
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#reconfigure_github_connection/3" data-no-tooltip translate="no">reconfigure_github_connection(repo_connection, params, user)</a>
+        <a href="#reconfigure_github_connection/3" data-no-tooltip="" translate="no">reconfigure_github_connection(repo_connection, params, user)</a>
 
       </div>
 
@@ -279,18 +234,18 @@ This function simply checks if the token has a <code class="inline">refresh_toke
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#refresh_oauth_token/1" data-no-tooltip translate="no">refresh_oauth_token(refresh_token)</a>
+        <a href="#refresh_oauth_token/1" data-no-tooltip="" translate="no">refresh_oauth_token(refresh_token)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Fetches a new access token using the given refresh token
-For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens">https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens</a></p></div>
+For more info: <a>https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens</a></p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#remove_github_connection/2" data-no-tooltip translate="no">remove_github_connection(repo_connection, user)</a>
+        <a href="#remove_github_connection/2" data-no-tooltip="" translate="no">remove_github_connection(repo_connection, user)</a>
 
       </div>
 
@@ -300,7 +255,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#save_oauth_token/3" data-no-tooltip translate="no">save_oauth_token(user, token, opts \\ [notify: true])</a>
+        <a href="#save_oauth_token/3" data-no-tooltip="" translate="no">save_oauth_token(user, token, opts \\ [notify: true])</a>
 
       </div>
 
@@ -308,7 +263,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#subscribe/1" data-no-tooltip translate="no">subscribe(user)</a>
+        <a href="#subscribe/1" data-no-tooltip="" translate="no">subscribe(user)</a>
 
       </div>
 
@@ -318,7 +273,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#verify_github_connection/1" data-no-tooltip translate="no">verify_github_connection(repo_connection)</a>
+        <a href="#verify_github_connection/1" data-no-tooltip="" translate="no">verify_github_connection(repo_connection)</a>
 
       </div>
 
@@ -340,18 +295,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="create_github_connection/2">
 
   <div class="detail-header">
-    <a href="#create_github_connection/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#create_github_connection/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_github_connection(attrs, user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L33" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_github_connection(attrs, user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L33" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -370,18 +325,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="delete_github_oauth_grant/1">
 
   <div class="detail-header">
-    <a href="#delete_github_oauth_grant/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#delete_github_oauth_grant/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete_github_oauth_grant(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L370" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_github_oauth_grant(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L370" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -399,18 +354,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="exchange_code_for_oauth_token/1">
 
   <div class="detail-header">
-    <a href="#exchange_code_for_oauth_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#exchange_code_for_oauth_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">exchange_code_for_oauth_token(code)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L239" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">exchange_code_for_oauth_token(code)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L239" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -429,18 +384,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="fetch_installation_repos/1">
 
   <div class="detail-header">
-    <a href="#fetch_installation_repos/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#fetch_installation_repos/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fetch_installation_repos(installation_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L209" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_installation_repos(installation_id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L209" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -451,18 +406,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="fetch_repo_branches/2">
 
   <div class="detail-header">
-    <a href="#fetch_repo_branches/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#fetch_repo_branches/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fetch_repo_branches(installation_id, repo_name)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L221" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_repo_branches(installation_id, repo_name)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L221" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -473,18 +428,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="fetch_user_access_token/1">
 
   <div class="detail-header">
-    <a href="#fetch_user_access_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#fetch_user_access_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fetch_user_access_token(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L321" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_user_access_token(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L321" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -503,18 +458,18 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 <section class="detail" id="fetch_user_installations/1">
 
   <div class="detail-header">
-    <a href="#fetch_user_installations/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#fetch_user_installations/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fetch_user_installations(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L196" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_user_installations(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L196" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -525,18 +480,18 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 <section class="detail" id="get_repo_connection_for_project/1">
 
   <div class="detail-header">
-    <a href="#get_repo_connection_for_project/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_repo_connection_for_project/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_repo_connection_for_project(project_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L130" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_repo_connection_for_project(project_id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L130" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -547,18 +502,18 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 <section class="detail" id="get_repo_connection_for_token/1">
 
   <div class="detail-header">
-    <a href="#get_repo_connection_for_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_repo_connection_for_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_repo_connection_for_token(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L134" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_repo_connection_for_token(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L134" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -569,18 +524,18 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 <section class="detail" id="github_enabled?/0">
 
   <div class="detail-header">
-    <a href="#github_enabled?/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#github_enabled?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">github_enabled?()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L442" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">github_enabled?()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L442" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -591,18 +546,18 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 <section class="detail" id="initiate_sync/2">
 
   <div class="detail-header">
-    <a href="#initiate_sync/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#initiate_sync/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">initiate_sync(repo_connection, commit_message)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L142" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">initiate_sync(repo_connection, commit_message)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -622,18 +577,18 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 <section class="detail" id="oauth_token_valid?/1">
 
   <div class="detail-header">
-    <a href="#oauth_token_valid?/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#oauth_token_valid?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">oauth_token_valid?(token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L299" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">oauth_token_valid?(token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L299" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -653,18 +608,18 @@ This function simply checks if the token has a <code class="inline">refresh_toke
 <section class="detail" id="reconfigure_github_connection/3">
 
   <div class="detail-header">
-    <a href="#reconfigure_github_connection/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#reconfigure_github_connection/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">reconfigure_github_connection(repo_connection, params, user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L55" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reconfigure_github_connection(repo_connection, params, user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L55" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -685,18 +640,18 @@ This function simply checks if the token has a <code class="inline">refresh_toke
 <section class="detail" id="refresh_oauth_token/1">
 
   <div class="detail-header">
-    <a href="#refresh_oauth_token/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#refresh_oauth_token/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">refresh_oauth_token(refresh_token)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L268" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">refresh_oauth_token(refresh_token)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L268" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -715,18 +670,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="remove_github_connection/2">
 
   <div class="detail-header">
-    <a href="#remove_github_connection/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#remove_github_connection/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">remove_github_connection(repo_connection, user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L110" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">remove_github_connection(repo_connection, user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L110" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -739,18 +694,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
     <span id="save_oauth_token/2"></span>
 
   <div class="detail-header">
-    <a href="#save_oauth_token/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#save_oauth_token/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">save_oauth_token(user, token, opts \\ [notify: true])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L401" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">save_oauth_token(user, token, opts \\ [notify: true])</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L401" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -768,18 +723,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="subscribe/1">
 
   <div class="detail-header">
-    <a href="#subscribe/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#subscribe/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">subscribe(user)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L25" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">subscribe(user)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L25" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -790,18 +745,18 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 <section class="detail" id="verify_github_connection/1">
 
   <div class="detail-header">
-    <a href="#verify_github_connection/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#verify_github_connection/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">verify_github_connection(repo_connection)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L71" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">verify_github_connection(repo_connection)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L71" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -839,7 +794,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

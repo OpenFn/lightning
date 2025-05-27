@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>Lightning.KafkaTriggers — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,17 +77,19 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.KafkaTriggers</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">Lightning.KafkaTriggers</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
@@ -157,7 +112,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#alternate_storage_file_name/2" data-no-tooltip translate="no">alternate_storage_file_name(trigger_id, message)</a>
+        <a href="#alternate_storage_file_name/2" data-no-tooltip="" translate="no">alternate_storage_file_name(trigger_id, message)</a>
 
       </div>
 
@@ -165,7 +120,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build_topic_partition_offset/1" data-no-tooltip translate="no">build_topic_partition_offset(message)</a>
+        <a href="#build_topic_partition_offset/1" data-no-tooltip="" translate="no">build_topic_partition_offset(message)</a>
 
       </div>
 
@@ -176,7 +131,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#convert_rate_limit/0" data-no-tooltip translate="no">convert_rate_limit()</a>
+        <a href="#convert_rate_limit/0" data-no-tooltip="" translate="no">convert_rate_limit()</a>
 
       </div>
 
@@ -184,7 +139,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#enable_disable_triggers/1" data-no-tooltip translate="no">enable_disable_triggers(triggers)</a>
+        <a href="#enable_disable_triggers/1" data-no-tooltip="" translate="no">enable_disable_triggers(triggers)</a>
 
       </div>
 
@@ -192,7 +147,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#failure_notification_tracking_key/1" data-no-tooltip translate="no">failure_notification_tracking_key(trigger_id)</a>
+        <a href="#failure_notification_tracking_key/1" data-no-tooltip="" translate="no">failure_notification_tracking_key(trigger_id)</a>
 
       </div>
 
@@ -200,7 +155,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#find_enabled_triggers/0" data-no-tooltip translate="no">find_enabled_triggers()</a>
+        <a href="#find_enabled_triggers/0" data-no-tooltip="" translate="no">find_enabled_triggers()</a>
 
       </div>
 
@@ -208,7 +163,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_pipeline_child_spec/1" data-no-tooltip translate="no">generate_pipeline_child_spec(trigger)</a>
+        <a href="#generate_pipeline_child_spec/1" data-no-tooltip="" translate="no">generate_pipeline_child_spec(trigger)</a>
 
       </div>
 
@@ -218,7 +173,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_kafka_triggers_being_updated/1" data-no-tooltip translate="no">get_kafka_triggers_being_updated(changeset)</a>
+        <a href="#get_kafka_triggers_being_updated/1" data-no-tooltip="" translate="no">get_kafka_triggers_being_updated(changeset)</a>
 
       </div>
 
@@ -226,7 +181,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#initial_policy/1" data-no-tooltip translate="no">initial_policy(map)</a>
+        <a href="#initial_policy/1" data-no-tooltip="" translate="no">initial_policy(map)</a>
 
       </div>
 
@@ -234,7 +189,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#maybe_write_to_alternate_storage/2" data-no-tooltip translate="no">maybe_write_to_alternate_storage(trigger_id, msg)</a>
+        <a href="#maybe_write_to_alternate_storage/2" data-no-tooltip="" translate="no">maybe_write_to_alternate_storage(trigger_id, msg)</a>
 
       </div>
 
@@ -242,7 +197,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#notify_users_of_trigger_failure/1" data-no-tooltip translate="no">notify_users_of_trigger_failure(trigger_id)</a>
+        <a href="#notify_users_of_trigger_failure/1" data-no-tooltip="" translate="no">notify_users_of_trigger_failure(trigger_id)</a>
 
       </div>
 
@@ -250,7 +205,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#send_notification?/2" data-no-tooltip translate="no">send_notification?(sending_at, last_sent_at)</a>
+        <a href="#send_notification?/2" data-no-tooltip="" translate="no">send_notification?(sending_at, last_sent_at)</a>
 
       </div>
 
@@ -258,7 +213,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_triggers/0" data-no-tooltip translate="no">start_triggers()</a>
+        <a href="#start_triggers/0" data-no-tooltip="" translate="no">start_triggers()</a>
 
       </div>
 
@@ -266,7 +221,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_pipeline/2" data-no-tooltip translate="no">update_pipeline(supervisor, trigger_id)</a>
+        <a href="#update_pipeline/2" data-no-tooltip="" translate="no">update_pipeline(supervisor, trigger_id)</a>
 
       </div>
 
@@ -288,18 +243,18 @@ association with the trigger id.</p></div>
 <section class="detail" id="alternate_storage_file_name/2">
 
   <div class="detail-header">
-    <a href="#alternate_storage_file_name/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#alternate_storage_file_name/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">alternate_storage_file_name(trigger_id, message)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L293" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">alternate_storage_file_name(trigger_id, message)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L293" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -310,18 +265,18 @@ association with the trigger id.</p></div>
 <section class="detail" id="build_topic_partition_offset/1">
 
   <div class="detail-header">
-    <a href="#build_topic_partition_offset/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#build_topic_partition_offset/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">build_topic_partition_offset(message)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L56" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">build_topic_partition_offset(message)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L56" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -333,18 +288,18 @@ association with the trigger id.</p>
 <section class="detail" id="convert_rate_limit/0">
 
   <div class="detail-header">
-    <a href="#convert_rate_limit/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#convert_rate_limit/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">convert_rate_limit()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L189" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">convert_rate_limit()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L189" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -355,18 +310,18 @@ association with the trigger id.</p>
 <section class="detail" id="enable_disable_triggers/1">
 
   <div class="detail-header">
-    <a href="#enable_disable_triggers/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#enable_disable_triggers/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">enable_disable_triggers(triggers)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L62" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">enable_disable_triggers(triggers)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L62" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -377,18 +332,18 @@ association with the trigger id.</p>
 <section class="detail" id="failure_notification_tracking_key/1">
 
   <div class="detail-header">
-    <a href="#failure_notification_tracking_key/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#failure_notification_tracking_key/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">failure_notification_tracking_key(trigger_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L215" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">failure_notification_tracking_key(trigger_id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L215" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -399,18 +354,18 @@ association with the trigger id.</p>
 <section class="detail" id="find_enabled_triggers/0">
 
   <div class="detail-header">
-    <a href="#find_enabled_triggers/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#find_enabled_triggers/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">find_enabled_triggers()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L27" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">find_enabled_triggers()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -421,18 +376,18 @@ association with the trigger id.</p>
 <section class="detail" id="generate_pipeline_child_spec/1">
 
   <div class="detail-header">
-    <a href="#generate_pipeline_child_spec/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#generate_pipeline_child_spec/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">generate_pipeline_child_spec(trigger)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L81" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">generate_pipeline_child_spec(trigger)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L81" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -443,18 +398,18 @@ association with the trigger id.</p>
 <section class="detail" id="get_kafka_triggers_being_updated/1">
 
   <div class="detail-header">
-    <a href="#get_kafka_triggers_being_updated/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#get_kafka_triggers_being_updated/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_kafka_triggers_being_updated(changeset)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L136" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_kafka_triggers_being_updated(changeset)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L136" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -465,18 +420,18 @@ association with the trigger id.</p>
 <section class="detail" id="initial_policy/1">
 
   <div class="detail-header">
-    <a href="#initial_policy/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#initial_policy/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">initial_policy(map)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L38" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">initial_policy(map)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L38" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -487,18 +442,18 @@ association with the trigger id.</p>
 <section class="detail" id="maybe_write_to_alternate_storage/2">
 
   <div class="detail-header">
-    <a href="#maybe_write_to_alternate_storage/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#maybe_write_to_alternate_storage/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">maybe_write_to_alternate_storage(trigger_id, msg)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L252" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">maybe_write_to_alternate_storage(trigger_id, msg)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L252" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -509,18 +464,18 @@ association with the trigger id.</p>
 <section class="detail" id="notify_users_of_trigger_failure/1">
 
   <div class="detail-header">
-    <a href="#notify_users_of_trigger_failure/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#notify_users_of_trigger_failure/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">notify_users_of_trigger_failure(trigger_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L199" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">notify_users_of_trigger_failure(trigger_id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L199" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -531,18 +486,18 @@ association with the trigger id.</p>
 <section class="detail" id="send_notification?/2">
 
   <div class="detail-header">
-    <a href="#send_notification?/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#send_notification?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">send_notification?(sending_at, last_sent_at)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L243" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">send_notification?(sending_at, last_sent_at)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L243" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -553,18 +508,18 @@ association with the trigger id.</p>
 <section class="detail" id="start_triggers/0">
 
   <div class="detail-header">
-    <a href="#start_triggers/0" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#start_triggers/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start_triggers()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L15" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start_triggers()</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L15" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -575,18 +530,18 @@ association with the trigger id.</p>
 <section class="detail" id="update_pipeline/2">
 
   <div class="detail-header">
-    <a href="#update_pipeline/2" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#update_pipeline/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update_pipeline(supervisor, trigger_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L159" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_pipeline(supervisor, trigger_id)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L159" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -615,7 +570,7 @@ association with the trigger id.</p>
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 

@@ -4,35 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.34.2">
+    <meta name="generator" content="ExDoc v0.38.1">
     <meta name="project" content="Lightning v2.12.2">
 
 
     <title>LightningWeb.Components.Viewers — Lightning v2.12.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D535738D.js"></script>
-    <script src="docs_config.js"></script>
-    <script async src="dist/html-YIPIRHGU.js"></script>
+    <script defer src="dist/sidebar_items-28A2EBC2.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
 
   </head>
-  <body data-type="modules" class="page-module">
-    <script>
-
-      try {
-        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
-
-        if (settings.theme === 'dark' ||
-           ((settings.theme === 'system' || settings.theme == null) &&
-             window.matchMedia('(prefers-color-scheme: dark)').matches)
-           ) {
-          document.body.classList.add('dark')
-        }
-      } catch (error) { }
-    </script>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
 
 <div class="body-wrapper">
 
@@ -58,47 +45,13 @@ Lightning
         </div>
       </div>
     </div>
-    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
-      <li>
-        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
-Pages
-        </button>
-      </li>
-
-        <li>
-          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
-            Modules
-          </button>
-        </li>
-
-
-        <li>
-          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
-            <span translate="no">Mix</span> Tasks
-          </button>
-        </li>
-
-    </ul>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
   </div>
-
-  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
-    <ul id="extras-full-list" class="full-list"></ul>
-  </div>
-
-    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
-      <ul id="modules-full-list" class="full-list"></ul>
-    </div>
-
-
-    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
-      <ul id="tasks-full-list" class="full-list"></ul>
-    </div>
-
 </nav>
 
-<main class="content">
-  <output role="status" id="toast"></output>
+<output role="status" id="toast"></output>
 
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -107,8 +60,8 @@ Pages
             <span class="sr-only">Search documentation of Lightning</span>
             <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
           </button>
           <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
             <i class="ri-close-line ri-lg" title="Cancel search"></i>
@@ -124,24 +77,26 @@ Pages
     </div>
 
 <div id="top-content">
-  <h1>
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Components.Viewers</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+
+    </h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">LightningWeb.Components.Viewers</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
-
-  </h1>
+  </div>
 
 
     <section id="moduledoc">
-<p>Components for rendering Logs and Dataclips.</p><blockquote><h4 class="info">Scrolling can be tricky</h4><p>We seldom know how long a log or a dataclip will be, and we want to
+<p>Components for rendering Logs and Dataclips.</p><section role="note" class="admonition info"><h4 class="admonition-title info">Scrolling can be tricky</h4><p>We seldom know how long a log or a dataclip will be, and we want to
 be able to contain the element in a fixed height container.
 In some situations wrapping the component in a <code class="inline">div</code> with <code class="inline">inline-flex</code>
-class will help with scrolling.</p></blockquote>
+class will help with scrolling.</p></section>
     </section>
 
 </div>
@@ -160,17 +115,17 @@ class will help with scrolling.</p></blockquote>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#DataclipViewer/1" data-no-tooltip translate="no">DataclipViewer(assigns)</a>
+        <a href="#DataclipViewer/1" data-no-tooltip="" translate="no">DataclipViewer(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">dataclipId</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">react-id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">react-portal-target</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul></div>
+        <div class="summary-synopsis"></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dataclip_viewer/1" data-no-tooltip translate="no">dataclip_viewer(assigns)</a>
+        <a href="#dataclip_viewer/1" data-no-tooltip="" translate="no">dataclip_viewer(assigns)</a>
 
       </div>
 
@@ -178,7 +133,7 @@ class will help with scrolling.</p></blockquote>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_viewer/1" data-no-tooltip translate="no">log_viewer(assigns)</a>
+        <a href="#log_viewer/1" data-no-tooltip="" translate="no">log_viewer(assigns)</a>
 
       </div>
 
@@ -188,21 +143,21 @@ class will help with scrolling.</p></blockquote>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#step_dataclip_viewer/1" data-no-tooltip translate="no">step_dataclip_viewer(assigns)</a>
+        <a href="#step_dataclip_viewer/1" data-no-tooltip="" translate="no">step_dataclip_viewer(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">step</code> (<code class="inline">:map</code>)</li><li><code class="inline">dataclip</code> (<a href="Lightning.Invocation.Dataclip.html"><code class="inline">Lightning.Invocation.Dataclip</code></a>)</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul></div>
+        <div class="summary-synopsis"></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#wiped_dataclip_viewer/1" data-no-tooltip translate="no">wiped_dataclip_viewer(assigns)</a>
+        <a href="#wiped_dataclip_viewer/1" data-no-tooltip="" translate="no">wiped_dataclip_viewer(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">footer</code></li></ul></div>
+        <div class="summary-synopsis"></div>
 
     </div>
 
@@ -222,46 +177,40 @@ class will help with scrolling.</p></blockquote>
 <section class="detail" id="DataclipViewer/1">
 
   <div class="detail-header">
-    <a href="#DataclipViewer/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#DataclipViewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">DataclipViewer(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L205" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">DataclipViewer(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L205" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<h2 id="DataclipViewer/1-attributes" class="section-heading">
-  <a href="#DataclipViewer/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">dataclipId</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">react-id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">react-portal-target</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul>
+<h2 id="DataclipViewer/1-attributes" class="section-heading"><a href="#DataclipViewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">dataclipId</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">react-id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">react-portal-target</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="dataclip_viewer/1">
 
   <div class="detail-header">
-    <a href="#dataclip_viewer/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#dataclip_viewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">dataclip_viewer(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L207" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dataclip_viewer(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L207" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
@@ -272,102 +221,72 @@ class will help with scrolling.</p></blockquote>
 <section class="detail" id="log_viewer/1">
 
   <div class="detail-header">
-    <a href="#log_viewer/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#log_viewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">log_viewer(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L53" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">log_viewer(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L53" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
 <p>Renders out a log line stream</p><p>Internally it uses the <code class="inline">LogLineHighlight</code> hook to highlight the log line
-with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_viewer/1-example" class="section-heading">
-  <a href="#log_viewer/1-example" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Example</span>
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Viewers</span><span class="o">.</span><span class="n">log_viewer</span><span class="w">
+with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_viewer/1-example" class="section-heading"><a href="#log_viewer/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Viewers</span><span class="o">.</span><span class="n">log_viewer</span><span class="w">
   </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;log-viewer-data&quot;</span><span class="w">
-  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="2070932574-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="2070932574-1">}</span><span class="w">
-  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="2070932574-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="2070932574-2">}</span><span class="w">
-</span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="log_viewer/1-attributes" class="section-heading">
-  <a href="#log_viewer/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">logs_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">selected_step_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">current_user</code> (<a href="Lightning.Accounts.User.html"><code class="inline">Lightning.Accounts.User</code></a>) - for checking log filter preference. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
+  </span><span class="n">stream</span><span class="o">=</span><span class="p" data-group-id="2219205461-1">{</span><span class="na">@log_lines</span><span class="p" data-group-id="2219205461-1">}</span><span class="w">
+  </span><span class="n">highlight_id</span><span class="o">=</span><span class="p" data-group-id="2219205461-2">{</span><span class="na">@selected_step_id</span><span class="p" data-group-id="2219205461-2">}</span><span class="w">
+</span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="log_viewer/1-attributes" class="section-heading"><a href="#log_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">logs_empty?</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">selected_step_id</code> (<code class="inline">:string</code>)</li><li><code class="inline">current_user</code> (<a href="Lightning.Accounts.User.html"><code class="inline">Lightning.Accounts.User</code></a>) - for checking log filter preference. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="step_dataclip_viewer/1">
 
   <div class="detail-header">
-    <a href="#step_dataclip_viewer/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#step_dataclip_viewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">step_dataclip_viewer(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L232" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">step_dataclip_viewer(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L232" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<h2 id="step_dataclip_viewer/1-attributes" class="section-heading">
-  <a href="#step_dataclip_viewer/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">step</code> (<code class="inline">:map</code>)</li><li><code class="inline">dataclip</code> (<a href="Lightning.Invocation.Dataclip.html"><code class="inline">Lightning.Invocation.Dataclip</code></a>)</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul>
+<h2 id="step_dataclip_viewer/1-attributes" class="section-heading"><a href="#step_dataclip_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">run_state</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Additional classes to add to the log viewer container. Defaults to <code class="inline">nil</code>.</li><li><code class="inline">step</code> (<code class="inline">:map</code>)</li><li><code class="inline">dataclip</code> (<a href="Lightning.Invocation.Dataclip.html"><code class="inline">Lightning.Invocation.Dataclip</code></a>)</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul>
   </section>
 </section>
 <section class="detail" id="wiped_dataclip_viewer/1">
 
   <div class="detail-header">
-    <a href="#wiped_dataclip_viewer/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#wiped_dataclip_viewer/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">wiped_dataclip_viewer(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L294" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">wiped_dataclip_viewer(assigns)</h1>
 
 
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/components/viewers.ex#L294" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
   </div>
 
   <section class="docstring">
 
-<h2 id="wiped_dataclip_viewer/1-attributes" class="section-heading">
-  <a href="#wiped_dataclip_viewer/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul><h2 id="wiped_dataclip_viewer/1-slots" class="section-heading">
-  <a href="#wiped_dataclip_viewer/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">footer</code></li></ul>
+<h2 id="wiped_dataclip_viewer/1-attributes" class="section-heading"><a href="#wiped_dataclip_viewer/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">input_or_output</code> (<code class="inline">:atom</code>) (required) - Must be one of <code class="inline">:input</code>, or <code class="inline">:output</code>.</li><li><code class="inline">project_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">admin_contacts</code> (<code class="inline">:list</code>) (required) - list of project admin emails.</li><li><code class="inline">can_edit_data_retention</code> (<code class="inline">:boolean</code>) (required)</li></ul><h2 id="wiped_dataclip_viewer/1-slots" class="section-heading"><a href="#wiped_dataclip_viewer/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Slots</span></h2><ul><li><code class="inline">footer</code></li></ul>
   </section>
 </section>
 
@@ -391,7 +310,7 @@ with the <code class="inline">highlight_id</code> attribute.</p><h2 id="log_view
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
