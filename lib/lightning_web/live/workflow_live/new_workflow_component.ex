@@ -57,6 +57,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     {:noreply,
      socket
      |> assign(selected_method: method)
+     |> assign(selected_template: nil)
      |> push_patch(
        to: "/projects/#{socket.assigns.project.id}/w/new?method=#{method}"
      )}
