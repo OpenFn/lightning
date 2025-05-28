@@ -105,7 +105,6 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         if (selected_dataclip_id) {
           const activeClip = dataclips.find(d => d.id === selected_dataclip_id);
           if (activeClip) {
-            setSelectedOption(SeletableOptions.EXISTING);
             setSelectedDataclip(activeClip);
           }
         }
