@@ -1,8 +1,13 @@
-import type { WithActionProps } from "#/react/lib/with-props";
-import React from "react";
-import { useWorkflowStore, type ChangeArgs, type PendingAction, type WorkflowProps } from "./store"
-import { randomUUID } from "../common";
-import { DEFAULT_TEXT } from "../editor/Editor";
+import type { WithActionProps } from '#/react/lib/with-props';
+import React from 'react';
+import {
+  useWorkflowStore,
+  type ChangeArgs,
+  type PendingAction,
+  type WorkflowProps,
+} from './store';
+import { randomUUID } from '../common';
+import { DEFAULT_TEXT } from '../editor/Editor';
 
 const createNewWorkflow = (): Required<ChangeArgs> => {
   const triggers = [
@@ -32,59 +37,64 @@ const createNewWorkflow = (): Required<ChangeArgs> => {
 };
 
 // This component renders nothing. it just serves as a store sync to the backend
-export const WorkflowStore: WithActionProps = (props) => {
+export const WorkflowStore: WithActionProps = props => {
   const pendingChanges = React.useRef<PendingAction[]>([]);
-  const workflowLoadParamsStart = React.useRef<Date | null>(null)
-  const { applyPatches, setState, add, setSelection, subscribe, setDisabled, setForceFit } = useWorkflowStore();
+  const {
+    applyPatches,
+    setState,
+    add,
+    setSelection,
+    subscribe,
+    setDisabled,
+    setForceFit,
+  } = useWorkflowStore();
 
-  const pushPendingChange = React.useCallback((pendingChange: PendingAction) => {
-    return new Promise((resolve, reject) => {
-      console.debug('pushing change', pendingChange);
-      // How do we _undo_ the change if it fails?
-      props.pushEventTo(
-        'push-change',
-        pendingChange,
-        response => {
+  const pushPendingChange = React.useCallback(
+    (pendingChange: PendingAction) => {
+      return new Promise((resolve, reject) => {
+        console.debug('pushing change', pendingChange);
+        // How do we _undo_ the change if it fails?
+        props.pushEventTo('push-change', pendingChange, response => {
           console.debug('push-change response', response);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          if (response && response.patches) applyPatches(response.patches)
+          if (response && response.patches) applyPatches(response.patches);
           resolve(true);
-        }
-      );
-    });
-  }, [props, applyPatches])
+        });
+      });
+    },
+    [props, applyPatches]
+  );
 
   const processPendingChanges = React.useCallback(async () => {
     while (pendingChanges.current.length > 0) {
       const pendingChange = pendingChanges.current[0];
       pendingChanges.current = pendingChanges.current.slice(1);
-      if (pendingChange)
-        await pushPendingChange(pendingChange)
+      if (pendingChange) await pushPendingChange(pendingChange);
     }
-  }, [pushPendingChange])
+  }, [pushPendingChange]);
 
   React.useEffect(() => {
-    subscribe((v) => {
+    subscribe(v => {
       pendingChanges.current = pendingChanges.current.concat(v);
       void processPendingChanges();
-    })
-  }, [processPendingChanges, subscribe])
+    });
+  }, [processPendingChanges, subscribe]);
 
   React.useEffect(() => {
     props.handleEvent('patches-applied', (response: { patches: Patch[] }) => {
       console.debug('patches-applied', response.patches);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response.patches) applyPatches(response.patches)
-    })
-  }, [applyPatches, props])
+      if (response.patches) applyPatches(response.patches);
+    });
+  }, [applyPatches, props]);
 
   React.useEffect(() => {
     props.handleEvent('state-applied', (response: { state: WorkflowProps }) => {
       console.log('state-applied', response.state);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response.state) setState(response.state)
-    })
-  }, [setState, props])
+      if (response.state) setState(response.state);
+    });
+  }, [setState, props]);
 
   React.useEffect(() => {
     props.handleEvent('navigate', (e: any) => {
@@ -92,44 +102,56 @@ export const WorkflowStore: WithActionProps = (props) => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (e.patch) setSelection(id);
-    })
+    });
     // force fitting
     props.handleEvent('force-fit', () => {
       setForceFit(true);
     });
+  }, [add, props.handleEvent, setSelection, setForceFit]);
 
-    props.handleEvent('current-workflow-params', (payload: { workflow_params: WorkflowProps }) => {
-      const { workflow_params } = payload;
-      setState(workflow_params);
-      if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
-        const diff = createNewWorkflow();
-        add(diff);
+  // Fetch initial state once on mount
+  React.useEffect(() => {
+    const workflowLoadParamsStart = new Date();
+    const eventName = 'workflow-params load';
+    console.debug(
+      'get-current-state pushed',
+      workflowLoadParamsStart.toISOString()
+    );
+    console.time(eventName);
+
+    props.pushEventTo(
+      'get-current-state',
+      {},
+      (response: { workflow_params: WorkflowProps }) => {
+        const { workflow_params } = response;
+        setState(workflow_params);
+        if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
+          const diff = createNewWorkflow();
+          add(diff);
+        }
+
+        const end = new Date();
+        console.debug('current-worflow-params processed', end.toISOString());
+        console.timeEnd(eventName);
+
+        props.pushEventTo('workflow_editor_metrics_report', {
+          metrics: [
+            {
+              event: eventName,
+              start: workflowLoadParamsStart.getTime(),
+              end: end.getTime(),
+            },
+          ],
+        });
       }
-
-      const end = new Date();
-      console.debug('current-worflow-params processed', end.toISOString());
-      console.timeEnd('workflow-params load');
-      props.pushEventTo('workflow_editor_metrics_report', {
-        metrics: [
-          {
-            event: 'workflow-params load',
-            start: workflowLoadParamsStart.current?.getTime(),
-            end: end.getTime(),
-          },
-        ],
-      })
-    })
-    workflowLoadParamsStart.current = new Date();
-    console.debug('get-initial-state pushed', workflowLoadParamsStart.current.toISOString());
-    console.time('workflow-params load');
-    props.pushEventTo('get-initial-state', {});
-  }, [add, props, setState, setSelection])
+    );
+  }, [props.pushEventTo, setState, add]);
 
   React.useEffect(() => {
     props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
       setDisabled(response.disabled);
     });
-  }, [props, setDisabled])
+  }, [props, setDisabled]);
 
-  return <>{props.children}</>
-}
+  return <>{props.children}</>;
+};

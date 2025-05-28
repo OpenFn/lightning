@@ -27,8 +27,8 @@ interface ExistingViewProps {
   setQuery: (v: string) => void;
   setSelected: (v: Dataclip) => void;
   filters: Record<string, string | undefined>;
-  selectedcliptype: string;
-  setSelectedclipType: (v: string) => void;
+  selectedClipType: string;
+  setSelectedClipType: (v: string) => void;
   clearFilter: (v: FilterTypes) => void;
   selectedDates: { before: string; after: string };
   setSelectedDates: SetDates;
@@ -41,8 +41,8 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   setQuery,
   setSelected,
   filters,
-  selectedcliptype,
-  setSelectedclipType,
+  selectedClipType,
+  setSelectedClipType,
   clearFilter,
   selectedDates,
   setSelectedDates,
@@ -174,11 +174,11 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                     <li
                       key={type}
                       onClick={() => {
-                        setSelectedclipType(
-                          type === selectedcliptype ? '' : type
+                        setSelectedClipType(
+                          type === selectedClipType ? '' : type
                         );
                       }}
-                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype
+                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedClipType
                         ? 'bg-blue-200 text-blue-700'
                         : ''
                         }`}
@@ -187,7 +187,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                       {DataclipTypeNames[type]}{' '}
                       <CheckIcon
                         strokeWidth={3}
-                        className={`${iconStyle} ${type !== selectedcliptype ? 'invisible' : ''
+                        className={`${iconStyle} ${type !== selectedClipType ? 'invisible' : ''
                           }`}
                       />{' '}
                     </li>

@@ -2,7 +2,7 @@ import type { WithActionProps } from '#/react/lib/with-props';
 import {
   DocumentIcon,
   PencilSquareIcon,
-  QueueListIcon
+  QueueListIcon,
 } from '@heroicons/react/24/outline';
 import React from 'react';
 import constructQuery from '../utils/constructQuery';
@@ -19,13 +19,26 @@ interface ManualRunPanelProps {
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
-  const { active_panel, type, before, after, query: urlQuery } = useQuery(["active_panel", "type", "before", "after", "query"])
+  const {
+    active_panel,
+    type,
+    before,
+    after,
+    query: urlQuery,
+  } = useQuery(['active_panel', 'type', 'before', 'after', 'query']);
   const { pushEvent, job_id, selected_dataclip_id } = props;
-  const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(active_panel ? Number(active_panel) as unknown as SeletableOptions : SeletableOptions.EMPTY);
+  const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
+    active_panel
+      ? (Number(active_panel) as unknown as SeletableOptions)
+      : SeletableOptions.EMPTY
+  );
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
   const [query, setQuery] = React.useState(urlQuery ? urlQuery : '');
-  const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>();
-  const [selectedcliptype, setSelectedClipType] = React.useState<string>(type ? type : '');
+  const [selectedDataclip, setSelectedDataclip] =
+    React.useState<Dataclip | null>();
+  const [selectedClipType, setSelectedClipType] = React.useState<string>(
+    type ? type : ''
+  );
   const [selectedDates, setSelectedDates] = React.useState({
     before: before ? before : '',
     after: after ? after : '',
@@ -35,7 +48,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   React.useEffect(() => {
     props.handleEvent('manual_run_created', payload => {
       if (payload.dataclip) {
-        setSelectedclip(payload.dataclip);
+        setSelectedDataclip(payload.dataclip);
       }
     });
   }, [props, pushEvent]);
@@ -56,36 +69,36 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
 
   const parsedQuery = React.useMemo(() => {
     const a = { query, filters: {} as Record<string, string | undefined> };
-    if (typeof selectedcliptype === "string" && selectedcliptype) a.filters['type'] = selectedcliptype;
+    if (typeof selectedClipType === 'string' && selectedClipType)
+      a.filters['type'] = selectedClipType;
     else a.filters['type'] = undefined;
-    if (typeof selectedDates.before === "string" && selectedDates.before) a.filters['before'] = selectedDates.before;
+    if (typeof selectedDates.before === 'string' && selectedDates.before)
+      a.filters['before'] = selectedDates.before;
     else a.filters['before'] = undefined;
-    if (typeof selectedDates.after === "string" && selectedDates.after) a.filters['after'] = selectedDates.after;
-    else a.filters["after"] = undefined;
+    if (typeof selectedDates.after === 'string' && selectedDates.after)
+      a.filters['after'] = selectedDates.after;
+    else a.filters['after'] = undefined;
     return a;
-  }, [query, selectedcliptype, selectedDates.before, selectedDates.after]);
+  }, [query, selectedClipType, selectedDates.before, selectedDates.after]);
 
-  const clearFilter = React.useCallback(
-    (type: FilterTypes) => {
-      switch (type) {
-        case FilterTypes.DATACLIP_TYPE:
-          setSelectedClipType('');
-          break;
-        case FilterTypes.BEFORE_DATE:
-          setSelectedDates(p => ({ before: '', after: p.after }));
-          break;
-        case FilterTypes.AFTER_DATE:
-          setSelectedDates(p => ({ before: p.before, after: '' }));
-          break;
-      }
-    },
-    []
-  );
+  const clearFilter = React.useCallback((type: FilterTypes) => {
+    switch (type) {
+      case FilterTypes.DATACLIP_TYPE:
+        setSelectedClipType('');
+        break;
+      case FilterTypes.BEFORE_DATE:
+        setSelectedDates(p => ({ before: '', after: p.after }));
+        break;
+      case FilterTypes.AFTER_DATE:
+        setSelectedDates(p => ({ before: p.before, after: '' }));
+        break;
+    }
+  }, []);
 
   React.useEffect(() => {
     pushEvent(
       'search-selectable-dataclips',
-      { job_id: job_id, search_text: "", limit: 10 },
+      { job_id: job_id, search_text: '', limit: 10 },
       response => {
         const dataclips = response.dataclips as Dataclip[];
         setRecentClips(dataclips);
@@ -93,7 +106,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
           const activeClip = dataclips.find(d => d.id === selected_dataclip_id);
           if (activeClip) {
             setSelectedOption(SeletableOptions.EXISTING);
-            setSelectedclip(activeClip);
+            setSelectedDataclip(activeClip);
           }
         }
       }
@@ -102,8 +115,10 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
 
   const handleSearchSumbit = React.useCallback(() => {
     const queryData = {
-      ...(parsedQuery.query ? { query: parsedQuery.query } : { query: undefined }),
-      ...parsedQuery.filters
+      ...(parsedQuery.query
+        ? { query: parsedQuery.query }
+        : { query: undefined }),
+      ...parsedQuery.filters,
     };
     const q = constructQuery(queryData);
     updateURLParams(queryData);
@@ -116,32 +131,27 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         setRecentClips(dataclips);
       }
     );
-  }, [job_id, parsedQuery, pushEvent])
+  }, [job_id, parsedQuery, pushEvent]);
 
   React.useEffect(() => {
     if (!query.trim()) handleSearchSumbit();
-  }, [query, handleSearchSumbit])
+  }, [query, handleSearchSumbit]);
 
   React.useEffect(() => {
     handleSearchSumbit();
-  }, [selectedcliptype, selectedDates]);
+  }, [selectedClipType, selectedDates]);
 
   React.useEffect(() => {
-    if (selectedclip) {
+    if (selectedDataclip) {
       pushEvent('manual_run_change', {
-        manual: {
-          dataclip_id: selectedclip.id,
-        },
+        manual: { dataclip_id: selectedDataclip.id },
       });
     } else {
       pushEvent('manual_run_change', {
-        manual: {
-          dataclip_id: null,
-          body: null,
-        },
+        manual: { dataclip_id: null, body: null },
       });
     }
-  }, [selectedclip, pushEvent]);
+  }, [selectedDataclip, pushEvent]);
 
   React.useEffect(() => {
     switch (selectedOption) {
@@ -176,9 +186,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             filters={parsedQuery.filters}
             dataclips={recentclips}
             setQuery={setQuery}
-            setSelected={setSelectedclip}
-            selectedcliptype={selectedcliptype}
-            setSelectedclipType={setSelectedClipType}
+            setSelected={setSelectedDataclip}
+            selectedClipType={selectedClipType}
+            setSelectedClipType={setSelectedClipType}
             clearFilter={clearFilter}
             selectedDates={selectedDates}
             setSelectedDates={setSelectedDates}
@@ -196,7 +206,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     query,
     recentclips,
     parsedQuery.filters,
-    selectedcliptype,
+    selectedClipType,
     selectedDates,
     setSelectedDates,
     setSelectedClipType,
@@ -218,8 +228,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   return (
     <>
       <form ref={formRef} id="manual_run_form"></form>
-      {selectedclip ? (
-        <SelectedClipView dataclip={selectedclip} onUnselect={() => { setSelectedclip(null) }} />
+      {selectedDataclip ? (
+        <SelectedClipView
+          dataclip={selectedDataclip}
+          onUnselect={() => {
+            setSelectedDataclip(null);
+          }}
+        />
       ) : (
         <div className="grow overflow-auto no-scrollbar">
           <div className="flex flex-col gap-3 h-full">
