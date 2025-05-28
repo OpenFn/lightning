@@ -38,6 +38,7 @@ defmodule Lightning.Workflows.Workflow do
     field :name, :string
     field :concurrency, :integer, default: nil
     field :enable_job_logs, :boolean, default: true
+    field :positions, :map, virtual: true
 
     has_many :edges, Edge, on_replace: :delete_if_exists
 
@@ -61,7 +62,13 @@ defmodule Lightning.Workflows.Workflow do
   @doc false
   def changeset(workflow, attrs) do
     workflow
-    |> cast(attrs, [:name, :project_id, :concurrency, :enable_job_logs])
+    |> cast(attrs, [
+      :name,
+      :project_id,
+      :concurrency,
+      :enable_job_logs,
+      :positions
+    ])
     |> optimistic_lock(:lock_version)
     |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> cast_assoc(:jobs, with: &Job.changeset/2)
