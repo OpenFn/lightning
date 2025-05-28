@@ -101,6 +101,14 @@ defmodule Lightning.Configtest do
 
       assert expected == actual
     end
+
+    test "returns the per workflow claim limit" do
+      expected = Application.get_env(:lightning, :per_workflow_claim_limit, 50)
+
+      actual = API.per_workflow_claim_limit()
+
+      assert expected == actual
+    end
   end
 
   defp extract_from_config(config, key) do

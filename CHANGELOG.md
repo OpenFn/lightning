@@ -18,8 +18,7 @@ and this project adheres to
 ### Added
 
 - Added a custom metric to track projects that could benefit from additional
-  worker pods.
-  [#3189](https://github.com/OpenFn/lightning/issues/3189)
+  worker pods. [#3189](https://github.com/OpenFn/lightning/issues/3189)
 
 ### Changed
 
@@ -30,6 +29,10 @@ and this project adheres to
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
 - Reduce the cardinality of `lightning_run_lost_count`.
   [#3226](https://github.com/OpenFn/lightning/issues/3226)
+- Optimize run claim query performance with per-workflow limiting strategy
+  [#3245](https://github.com/OpenFn/lightning/pull/3245)
+  - Add configurable per-workflow claim limit (default: 50) via
+    `PER_WORKFLOW_CLAIM_LIMIT` environment variable
 
 ### Fixed
 
