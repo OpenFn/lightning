@@ -22,8 +22,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
              %Job{id: job_id},
              filters,
              limit: limit,
-             offset: offset,
-             load_body: false
+             offset: offset
            ) do
       {:ok, dataclips}
     end
@@ -50,11 +49,6 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
       params,
       [:before, :after, :type, :query]
     )
-    # TODO - figure out why this was added.
-    # |> Lightning.Validators.validate_one_required(
-    #   [:query, :before, :after, :type],
-    #   "at least one filter is required"
-    # )
     |> then(fn changeset ->
       query = Ecto.Changeset.get_field(changeset, :query)
 

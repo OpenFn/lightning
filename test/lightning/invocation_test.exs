@@ -306,8 +306,7 @@ defmodule Lightning.InvocationTest do
                Invocation.list_dataclips_for_job(
                  job1,
                  %{type: "http_request"},
-                 limit: 5,
-                 load_body: false
+                 limit: 5
                )
                |> Enum.map(&Map.merge(&1, %{project: nil}))
     end
@@ -361,23 +360,12 @@ defmodule Lightning.InvocationTest do
         |> Enum.drop(1)
         |> Enum.sort_by(& &1.inserted_at, :desc)
 
-      assert ^dataclips =
-               Invocation.list_dataclips_for_job(
-                 job1,
-                 %{type: "http_request"},
-                 limit: 5,
-                 load_body: true
-               )
-               |> Enum.map(&Map.delete(&1, :project))
-
-      assert ^dataclips =
-               Invocation.list_dataclips_for_job(
-                 job1,
-                 %{type: "http_request"},
-                 limit: 5,
-                 load_body: true
-               )
-               |> Enum.map(&Map.delete(&1, :project))
+      assert_dataclips_list(
+        dataclips,
+        Invocation.list_dataclips_for_job(job1, %{type: "http_request"},
+          limit: 5
+        )
+      )
     end
 
     test "returns latest dataclips for a job filtering by id" do
@@ -395,8 +383,7 @@ defmodule Lightning.InvocationTest do
           Invocation.list_dataclips_for_job(
             job1,
             %{id_prefix: prefix},
-            limit: 10,
-            load_body: true
+            limit: 10
           )
 
         assert Enum.any?(dataclips, &(&1.id == dataclip_id))
@@ -450,14 +437,14 @@ defmodule Lightning.InvocationTest do
 
       insert(:step, input_dataclip: dataclip, job: job1)
 
-      assert [^dataclip] =
-               Invocation.list_dataclips_for_job(
-                 job1,
-                 %{type: "http_request"},
-                 limit: 5,
-                 load_body: true
-               )
-               |> Enum.map(&Map.drop(&1, [:project, :request]))
+      assert_dataclips_list(
+        [dataclip],
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{type: "http_request"},
+          limit: 5
+        )
+      )
     end
   end
 
@@ -1493,9 +1480,7 @@ defmodule Lightning.InvocationTest do
 
   defp format_listed(dataclip) do
     dataclip
-    |> Map.update(:body, nil, fn body ->
-      %{"data" => body, "request" => dataclip.request}
-    end)
+    |> Map.put(:body, nil)
     |> Map.put(:request, nil)
   end
 end
