@@ -127,6 +127,7 @@ const Node = ({
                   top: '52px',
                   width: '128px',
                   height: '128px',
+                  zIndex: 1000,
                   backgroundColor: data.isActiveDropTarget
                     ? 'rgba(79, 70, 229, 0.2)'
                     : 'transparent',
