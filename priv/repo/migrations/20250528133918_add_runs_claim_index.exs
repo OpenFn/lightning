@@ -6,8 +6,8 @@ defmodule Lightning.Repo.Migrations.AddRunsClaimIndex do
 
   def change do
     create index(:runs, [:state, :priority, :inserted_at],
-      concurrently: true,
-      where: "state IN ('available', 'claimed', 'started')"
-    )
+             concurrently: true,
+             where: "state IN ('available', 'claimed', 'started')"
+           )
   end
 end
