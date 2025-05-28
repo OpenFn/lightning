@@ -969,7 +969,7 @@ defmodule Lightning.RunsTest do
         ^lost_run_event,
         ^ref,
         %{count: 1},
-        %{seed_event: false, state: "started", worker_name: ^worker_name}
+        %{}
       }
     end
   end

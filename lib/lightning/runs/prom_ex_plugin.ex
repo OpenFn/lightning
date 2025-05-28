@@ -15,8 +15,9 @@ defmodule Lightning.Runs.PromExPlugin do
 
   @available_count_event [:lightning, :run, :queue, :available]
   @average_claim_event [:lightning, :run, :queue, :claim]
-  @lost_run_event [:lightning, :run, :lost]
   @finalised_count_event [:lightning, :run, :queue, :finalised]
+  @impeded_project_event [:lightning, :run, :project, :impeded]
+  @lost_run_event [:lightning, :run, :lost]
   @stalled_event [:lightning, :run, :queue, :stalled]
 
   @impl true
@@ -49,30 +50,22 @@ defmodule Lightning.Runs.PromExPlugin do
           ),
           Metrics.counter(
             @lost_run_event ++ [:count],
-            description: "A counter of lost runs.",
-            tags: [:seed_event, :state, :worker_name]
+            description: "A counter of lost runs."
           )
         ]
       )
     ]
   end
 
-  def seed_event_metrics, do: fire_lost_run_event(nil, nil, true)
+  def seed_event_metrics, do: fire_lost_run_event()
 
-  def fire_lost_run_event(worker_name, state, seed_event \\ false) do
+  def fire_lost_run_event do
     :telemetry.execute(
       @lost_run_event,
       %{count: 1},
-      %{
-        seed_event: seed_event,
-        state: state |> nil_to_na() |> to_string(),
-        worker_name: worker_name |> nil_to_na()
-      }
+      %{}
     )
   end
-
-  defp nil_to_na(nil), do: "n/a"
-  defp nil_to_na(value), do: value
 
   @impl true
   def polling_metrics(opts) do
@@ -85,6 +78,9 @@ defmodule Lightning.Runs.PromExPlugin do
     {:ok, run_queue_metrics_period_seconds} =
       opts |> Keyword.fetch(:run_queue_metrics_period_seconds)
 
+    {:ok, unclaimed_run_threshold_seconds} =
+      opts |> Keyword.fetch(:unclaimed_run_threshold_seconds)
+
     [
       stalled_run_metrics(
         stalled_run_threshold_seconds,
@@ -92,6 +88,10 @@ defmodule Lightning.Runs.PromExPlugin do
       ),
       run_performance_metrics(
         run_performance_age_seconds,
+        run_queue_metrics_period_seconds
+      ),
+      project_metrics(
+        unclaimed_run_threshold_seconds,
         run_queue_metrics_period_seconds
       )
     ]
@@ -272,5 +272,74 @@ defmodule Lightning.Runs.PromExPlugin do
         where: r.finished_at > ^threshold_time
 
     query |> Repo.aggregate(:count)
+  end
+
+  defp project_metrics(unclaimed_threshold_seconds, period_in_seconds) do
+    Polling.build(
+      :lightning_run_project_metrics,
+      period_in_seconds * 1000,
+      {__MODULE__, :project_metrics, [unclaimed_threshold_seconds]},
+      [
+        last_value(
+          @impeded_project_event ++ [:count],
+          description:
+            "The count of projects impeded due to lack of worker capacity"
+        )
+      ],
+      detach_on_error: false
+    )
+  end
+
+  def project_metrics(unclaimed_threshold_seconds) do
+    if repo = Process.whereis(Repo) do
+      check_repo_state(repo)
+
+      threshold_time =
+        DateTime.add(Lightning.current_time(), -unclaimed_threshold_seconds)
+
+      count =
+        projects_with_available_runs_older_than(threshold_time)
+        |> projects_with_spare_capacity()
+        |> Enum.count()
+
+      :telemetry.execute(
+        @impeded_project_event,
+        %{count: count},
+        %{}
+      )
+    end
+  end
+
+  def projects_with_available_runs_older_than(threshold_time) do
+    query =
+      from r in Run,
+        join: w in assoc(r, :workflow),
+        join: p in assoc(w, :project),
+        where: r.state == :available,
+        where: r.inserted_at <= ^threshold_time,
+        select: [p.id, p.concurrency],
+        distinct: p.id
+
+    Repo.all(query)
+  end
+
+  def projects_with_spare_capacity(projects) do
+    projects
+    |> Enum.filter(fn [project_id, project_concurrency] ->
+      count_in_progress_runs_for(project_id) < project_concurrency
+    end)
+    |> Enum.map(fn [project_id, _project_concurrency] -> project_id end)
+  end
+
+  defp count_in_progress_runs_for(project_id) do
+    query =
+      from r in Run,
+        join: w in assoc(r, :workflow),
+        join: p in assoc(w, :project),
+        where: p.id == ^project_id,
+        where: r.state in [:claimed, :started],
+        select: count(r)
+
+    Repo.one(query)
   end
 end

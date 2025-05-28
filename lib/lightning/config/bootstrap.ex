@@ -585,7 +585,9 @@ defmodule Lightning.Config.Bootstrap do
       run_performance_age_seconds:
         env!("METRICS_RUN_PERFORMANCE_AGE_SECONDS", :integer, 300),
       run_queue_metrics_period_seconds:
-        env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5)
+        env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5),
+      unclaimed_run_threshold_seconds:
+        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 300)
 
     config :lightning, :usage_tracking,
       cleartext_uuids_enabled:

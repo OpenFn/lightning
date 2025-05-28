@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Added a custom metric to track projects that could benefit from additional
+  worker pods.
+  [#3189](https://github.com/OpenFn/lightning/issues/3189)
+
 ### Changed
 
 - Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
@@ -24,8 +28,13 @@ and this project adheres to
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
 - Make the chunk size for deleting expired activty configurable via ENV
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
+- Reduce the cardinality of `lightning_run_lost_count`.
+  [#3226](https://github.com/OpenFn/lightning/issues/3226)
 
 ### Fixed
+
+- Delay purge user having project file(s)
+  [#2919](https://github.com/OpenFn/lightning/issues/2919)
 
 ## [v2.12.2] - 2025-05-01
 
