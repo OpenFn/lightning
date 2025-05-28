@@ -11,7 +11,7 @@ import CustomView from './views/CustomView';
 import EmptyView from './views/EmptyView';
 import ExistingView from './views/ExistingView';
 import SelectedClipView from './views/SelectedClipView';
-import updateURLParams from '../utils/updateURLParams';
+import alterURLParams from '../utils/alterURLParams';
 import useQuery from '../hooks/useQuery';
 interface ManualRunPanelProps {
   job_id: string;
@@ -26,7 +26,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     after,
     query: urlQuery,
   } = useQuery(['active_panel', 'type', 'before', 'after', 'query']);
-  const { pushEvent, job_id, selected_dataclip_id } = props;
+  const { pushEvent, job_id, selected_dataclip_id, navigate } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
     active_panel
       ? (Number(active_panel) as unknown as SeletableOptions)
@@ -120,7 +120,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       ...parsedQuery.filters,
     };
     const q = constructQuery(queryData);
-    updateURLParams(queryData);
+    navigate(alterURLParams(queryData).toString());
 
     pushEvent(
       'search-selectable-dataclips',
@@ -130,7 +130,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         setRecentClips(dataclips);
       }
     );
-  }, [job_id, parsedQuery, pushEvent]);
+  }, [job_id, parsedQuery, pushEvent, navigate]);
 
   React.useEffect(() => {
     if (!query.trim()) handleSearchSumbit();
@@ -172,8 +172,8 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         });
         break;
     }
-    updateURLParams({ active_panel: selectedOption.toString() });
-  }, [selectedOption, pushEvent]);
+    navigate(alterURLParams({ active_panel: selectedOption.toString() }).toString());
+  }, [selectedOption, pushEvent, navigate]);
 
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
