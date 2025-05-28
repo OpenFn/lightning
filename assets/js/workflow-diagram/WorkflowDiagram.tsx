@@ -107,8 +107,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (!autoLayout) {
       setModel(newModel);
 
-      const newPositions = model.nodes.reduce((obj, next) => {
-        console.log('nodes in manual mode', next);
+      const newPositions = newModel.nodes.reduce((obj, next) => {
         obj[next.id] = next.position;
         return obj;
       }, {} as Positions);
@@ -133,9 +132,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           duration: props.layoutDuration ?? LAYOUT_DURATION,
           forceFit: props.forceFit,
         }).then(positions => {
+          // Note we don't update positions until the animation has finished
           chartCache.current.positions = positions;
         });
       } else {
+        // If layout is id, ensure nodes have positions
+        // This is really only needed when there's a single trigger node
         newModel.nodes.forEach(n => {
           if (!n.position) {
             n.position = { x: 0, y: 0 };
@@ -164,7 +166,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
       if ((event.target as HTMLElement).closest('[name=add-node]')) {
-        console.log('parent node', node);
         addPlaceholder(node);
       } else {
         if (node.type != 'placeholder') cancelPlaceholder();
@@ -264,6 +265,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         nodesDraggable={!autoLayout}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        onClick={handleBackgroundClick}
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         onInit={setFlow}
