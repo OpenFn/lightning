@@ -127,17 +127,29 @@ defmodule Lightning.Runs.Query do
   """
   @spec eligible_for_claim() :: Ecto.Queryable.t()
   def eligible_for_claim do
-    Run
-    |> with_cte("in_progress_window", as: ^in_progress_window())
-    |> join(:inner, [r], ipw in fragment(~s("in_progress_window")),
-      on: r.id == ipw.id,
-      as: :in_progress_window
-    )
-    |> where(
-      [r, ipw],
-      r.state == :available and
-        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
-    )
-    |> order_by([r], asc: r.inserted_at)
+    # Get the count of in-progress runs per workflow/project in a single query
+    in_progress_counts = from r in Run,
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      join: p in assoc(w, :project),
+      where: r.state in [:claimed, :started],
+      group_by: [w.id, p.id],
+      select: %{
+        workflow_id: w.id,
+        project_id: p.id,
+        in_progress_count: count(r.id),
+        concurrency: coalesce(w.concurrency, p.concurrency)
+      }
+
+    # Get the oldest available runs that are under concurrency limits
+    from r in Run,
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      join: p in assoc(w, :project),
+      left_join: ipc in subquery(in_progress_counts),
+      on: ipc.workflow_id == w.id and ipc.project_id == p.id,
+      where: r.state == :available,
+      where: is_nil(ipc.in_progress_count) or ipc.in_progress_count < coalesce(w.concurrency, p.concurrency),
+      order_by: [asc: r.inserted_at]
   end
 end
