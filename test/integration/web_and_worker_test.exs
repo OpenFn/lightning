@@ -6,7 +6,6 @@ defmodule Lightning.WebAndWorkerTest do
   import Lightning.Factories
   import Mox
 
-  alias Lightning.Run
   alias Lightning.Runs
   alias Lightning.Runs.Events
   alias Lightning.Invocation
