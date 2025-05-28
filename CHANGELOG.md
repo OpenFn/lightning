@@ -35,6 +35,10 @@ and this project adheres to
 
 - Delay purge user having project file(s)
   [#2919](https://github.com/OpenFn/lightning/issues/2919)
+- Display all github repositories even if they're more than 30
+  [#3206](https://github.com/OpenFn/lightning/issues/3206)
+- Github repo names getting truncated
+  [#3037](https://github.com/OpenFn/lightning/issues/3037)
 
 ## [v2.12.2] - 2025-05-01
 

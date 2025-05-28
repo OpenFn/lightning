@@ -30,8 +30,10 @@ defmodule Lightning.VersionControl.GithubClient do
     client |> get("/user/installations") |> handle_resp([200])
   end
 
-  def get_installation_repos(client) do
-    client |> get("/installation/repositories") |> handle_resp([200])
+  def get_installation_repos(client, query \\ [page: 1, per_page: 100]) do
+    client
+    |> get("/installation/repositories", query: query)
+    |> handle_resp([200])
   end
 
   def get_repo(client, repo_name) do
