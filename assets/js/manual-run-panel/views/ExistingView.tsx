@@ -8,6 +8,7 @@ import {
 } from '../types';
 import useOutsideClick from '#/hooks/useOutsideClick';
 import Pill from '../Pill';
+import DataclipTypePill from '../DataclipTypePill';
 import {
   CalendarDaysIcon,
   CheckIcon,
@@ -57,18 +58,20 @@ const ExistingView: React.FC<ExistingViewProps> = ({
     setTypesOpen(false);
   });
 
-  const pills = Object.entries(filters).filter(([_, value]) => value !== undefined).map(([key, value]) => (
-    <Pill
-      onClose={() => {
-        clearFilter(key as FilterTypes);
-      }}
-    >
-      {key}:{' '}
-      {(key as FilterTypes) === FilterTypes.DATACLIP_TYPE
-        ? DataclipTypeNames[value]
-        : value}{' '}
-    </Pill>
-  ));
+  const pills = Object.entries(filters)
+    .filter(([_, value]) => value !== undefined)
+    .map(([key, value]) => (
+      <Pill
+        onClose={() => {
+          clearFilter(key as FilterTypes);
+        }}
+      >
+        {key}:{' '}
+        {(key as FilterTypes) === FilterTypes.DATACLIP_TYPE
+          ? DataclipTypeNames[value]
+          : value}{' '}
+      </Pill>
+    ));
 
   const keyDownHandler = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') onSubmit();
@@ -115,8 +118,9 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <div
                 ref={calendarRef}
-                className={`absolute right-0 ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none min-w-[260px] ${dateOpen ? '' : 'hidden'
-                  } `}
+                className={`absolute right-0 ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none min-w-[260px] ${
+                  dateOpen ? '' : 'hidden'
+                } `}
               >
                 <div className="py-3" role="none">
                   <div className="px-4 py-1 text-gray-500 text-sm">
@@ -166,8 +170,9 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <ul
                 ref={typesRef}
-                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto overflow-hidden ${typesOpen ? '' : 'hidden'
-                  } `}
+                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto overflow-hidden ${
+                  typesOpen ? '' : 'hidden'
+                } `}
               >
                 {DataclipTypes.map(type => {
                   return (
@@ -178,17 +183,19 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                           type === selectedClipType ? '' : type
                         );
                       }}
-                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedClipType
-                        ? 'bg-blue-200 text-blue-700'
-                        : ''
-                        }`}
+                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${
+                        type === selectedClipType
+                          ? 'bg-blue-200 text-blue-700'
+                          : ''
+                      }`}
                     >
                       {' '}
                       {DataclipTypeNames[type]}{' '}
                       <CheckIcon
                         strokeWidth={3}
-                        className={`${iconStyle} ${type !== selectedClipType ? 'invisible' : ''
-                          }`}
+                        className={`${iconStyle} ${
+                          type !== selectedClipType ? 'invisible' : ''
+                        }`}
                       />{' '}
                     </li>
                   );
@@ -218,12 +225,12 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 }}
                 className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
               >
-                <div className="flex gap-1 items-center text-sm">
-                  {' '}
+                <div className="flex gap-2 items-center text-sm">
                   <DocumentTextIcon
-                    className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600`}
-                  />{' '}
-                  {truncateUid(clip.id)}{' '}
+                    className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600 align-middle h-5 w-5`}
+                  />
+                  <span className="font-mono leading-none align-middle relative top-[1px]">{truncateUid(clip.id)}</span>
+                  <span className="align-middle"><DataclipTypePill type={clip.type} size="small" /></span>
                 </div>
                 <div className="text-xs truncate ml-2">
                   {formatDate(new Date(clip.updated_at))}

@@ -2,12 +2,17 @@ type DataclipType = 'step_result' | 'http_request' | 'global' | 'saved_input';
 
 interface DataclipTypePillProps {
   type: DataclipType;
+  size?: 'default' | 'small';
 }
 
 const DataclipTypePill: React.FC<DataclipTypePillProps> = ({
   type = 'saved_input',
+  size = 'default',
 }) => {
-  const baseClasses = 'px-2 py-1 rounded-full inline-block text-sm font-mono';
+  const baseClasses = {
+    default: 'px-2 py-1 rounded-full inline-block text-sm font-mono',
+    small: 'px-1.5 py-0.5 rounded-full inline-block text-xs font-mono',
+  }[size];
 
   const typeClasses =
     {
