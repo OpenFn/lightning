@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
   Controls,
+  ControlButton,
   ReactFlowProvider,
   applyNodeChanges,
   getNodesBounds,
@@ -50,6 +51,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+  const [autoLayout, setAutoLayout] = useState(true);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
   const updateSelection = useCallback(
@@ -101,6 +103,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // This handles first load and new node safely
       chartCache.current.lastSelection
     );
+
+    if (!autoLayout) {
+      setModel(newModel);
+
+      const newPositions = model.nodes.reduce((obj, next) => {
+        console.log('nodes in manual mode', next);
+        obj[next.id] = next.position;
+        return obj;
+      }, {} as Positions);
+
+      chartCache.current.positions = newPositions;
+      return;
+    }
+
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
         newModel.edges,
@@ -117,12 +133,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           duration: props.layoutDuration ?? LAYOUT_DURATION,
           forceFit: props.forceFit,
         }).then(positions => {
-          // Note we don't update positions until the animation has finished
           chartCache.current.positions = positions;
         });
       } else {
-        // If layout is id, ensure nodes have positions
-        // This is really only needed when there's a single trigger node
         newModel.nodes.forEach(n => {
           if (!n.position) {
             n.position = { x: 0, y: 0 };
@@ -133,7 +146,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el]);
+  }, [workflow, flow, placeholders, el, autoLayout]);
 
   useEffect(() => {
     const updatedModel = updateSelectionStyles(model, selection);
@@ -151,6 +164,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
       if ((event.target as HTMLElement).closest('[name=add-node]')) {
+        console.log('parent node', node);
         addPlaceholder(node);
       } else {
         if (node.type != 'placeholder') cancelPlaceholder();
@@ -247,10 +261,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         nodes={model.nodes}
         edges={model.edges}
         onNodesChange={onNodesChange}
-        nodesDraggable={false}
+        nodesDraggable={!autoLayout}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onClick={handleBackgroundClick}
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         onInit={setFlow}
@@ -260,7 +273,31 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         minZoom={0.2}
         {...connectHandlers}
       >
-        <Controls showInteractive={false} position="bottom-left" />
+        <Controls position="bottom-left" showInteractive={false}>
+          <ControlButton
+            onClick={() => {
+              setAutoLayout(!autoLayout);
+            }}
+          >
+            {autoLayout ? 'MnL' : 'AtL'}
+          </ControlButton>
+          <ControlButton
+            onClick={() =>
+              layout(
+                model,
+                setModel,
+                flow,
+                {
+                  width: workflowDiagramRef.current?.clientWidth ?? 0,
+                  height: workflowDiagramRef.current?.clientHeight ?? 0,
+                },
+                { duration: LAYOUT_DURATION, forceFit: true }
+              )
+            }
+          >
+            FrcL
+          </ControlButton>
+        </Controls>
         <Background />
         <MiniMap
           zoomable
