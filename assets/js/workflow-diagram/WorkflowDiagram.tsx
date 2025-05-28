@@ -22,6 +22,7 @@ import fromWorkflow from './util/from-workflow';
 import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
+import CustomMinimapNode from './components/CustomMinimapNode';
 
 import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
@@ -260,7 +261,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       >
         <Controls showInteractive={false} position="bottom-left" />
         <Background />
-        <MiniMap zoomable pannable className="border border-2 border-gray-200" />
+        <MiniMap 
+          zoomable 
+          pannable 
+          className="border border-2 border-gray-200"
+          nodeComponent={CustomMinimapNode}
+        />
       </ReactFlow>
     </ReactFlowProvider>
   );
