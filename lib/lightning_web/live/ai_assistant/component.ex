@@ -917,7 +917,7 @@ defmodule LightningWeb.AiAssistant.Component do
     ~H"""
     <div id={@id} class="absolute inset-0 z-50 bg-white hidden">
       <div class="h-full w-full overflow-y-auto">
-        <div class="bg-gray-50 p-2 flex justify-between border-solid border-b-1">
+        <div class="bg-gray-50 p-4 flex justify-between border-solid border-b-1">
           <span class="font-medium text-gray-700">
             About the AI Assistant
           </span>
@@ -925,7 +925,7 @@ defmodule LightningWeb.AiAssistant.Component do
             <.icon name="hero-x-mark" class="h-5 w-5" />
           </a>
         </div>
-        <div class="p-2 pt-4 text-sm flex flex-col gap-4">
+        <div class="p-4 text-sm flex flex-col gap-4">
           <p>
             The OpenFn AI Assistant provides a chat interface with an AI Model to help you build workflows. It can:
           </p>
