@@ -589,19 +589,6 @@ defmodule Lightning.Config.Bootstrap do
       unclaimed_run_threshold_seconds:
         env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 300)
 
-    config :lightning,
-           :per_workflow_claim_limit,
-           env!("PER_WORKFLOW_CLAIM_LIMIT", :integer, 50)
-           |> then(fn limit ->
-             if limit <= 0 do
-               raise """
-               PER_WORKFLOW_CLAIM_LIMIT must be a positive integer.
-               """
-             end
-
-             limit
-           end)
-
     config :lightning, :usage_tracking,
       cleartext_uuids_enabled:
         env!("USAGE_TRACKING_UUIDS", :string, nil) == "cleartext",

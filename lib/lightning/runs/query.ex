@@ -60,173 +60,84 @@ defmodule Lightning.Runs.Query do
   end
 
   @doc """
-  Applies concurrency window functions to workflow-limited run data.
+  Query to return a list of runs that are either in progress (started or claimed)
+  or available.
 
-  This function takes the output from `workflow_limited_runs/1` and applies
-  SQL window functions to calculate row numbers within concurrency partitions.
+  It returns a row_number (sequential number) for each run partitioned (grouped by) workflow or project.
+  If workflow concurrency is set it takes precedence over project concurrency.
 
-  ## Partitioning Logic
+  Note that this query does NOT consider the smaller concurrency once it's not enough to assure that
+  project concurrency is always respected (e.g when 2 workflows of same project have concurrency 3 on a project
+  with concurrency 5, 3 is less than 5 but still project concurrency wouldn't be respected).
+  Instead the LV makes sure that a workflow concurrency sum does not exceed the project concurrency.
 
-  Runs are partitioned (grouped) by workflow or project for row numbering.
-  Workflow concurrency takes precedence over project concurrency when both are set.
-  Within each partition, runs are ordered by priority and insertion time.
-
-  ## Return Fields
-
-  Returns a query that selects:
-  - `id` - the run ID
-  - `state` - the current state of the run
-  - `row_number` - sequential number within the concurrency partition
-  - `project_id` - the project ID
-  - `concurrency` - the maximum concurrent runs allowed (workflow or project level)
-  - `inserted_at` - when the run was created
-  - `priority` - the run's priority level
-
-  The `row_number` field is used downstream to enforce concurrency limits by
-  comparing it against the `concurrency` value.
+  The select clause includes:
+  - `id`, the id of the run
+  - `state`, the state of the run
+  - `row_number`, the number of the row in the window, per workflow or per project
+  - `concurrency`, the maximum number of runs that can be claimed for the workflow
   """
   @spec in_progress_window() :: Ecto.Queryable.t()
   def in_progress_window do
-    # Use configurable per-workflow limit for the optimization
-    per_workflow_limit = Lightning.Config.per_workflow_claim_limit()
-
-    from(wlr in subquery(workflow_limited_runs(per_workflow_limit)))
-    |> windows([wlr],
-      partition_window: [
-        partition_by: wlr.partition_key,
-        order_by: [asc: wlr.inserted_at]
-      ]
+    from(r in Run,
+      where: r.state in [:available, :claimed, :started],
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      join: p in assoc(w, :project)
     )
-    |> select([wlr], %{
-      id: wlr.id,
-      state: wlr.state,
-      row_number: row_number() |> over(:partition_window),
-      project_id: wlr.project_id,
-      concurrency: wlr.concurrency,
-      inserted_at: wlr.inserted_at,
-      priority: wlr.priority
-    })
-  end
-
-  @doc """
-  Query to return runs that are eligible for claiming.
-
-  This is the main function used by other parts of the system to get runs ready
-  for execution. It implements a performance-optimized approach to run claiming
-  that ensures fairness across workflows while respecting concurrency limits.
-
-  ## Algorithm
-
-  1. **Workflow Limiting**: Limits the number of runs per workflow to prevent any
-     single workflow from dominating the processing queue
-  2. **Window Processing**: Applies row numbering within concurrency partitions
-     (workflow or project level) on the workflow-limited dataset
-  3. **Concurrency Enforcement**: Uses the row numbers to enforce concurrency
-     limits during run claiming
-  4. **Availability Filtering**: Filters for available runs within concurrency limits
-  5. **Priority Ordering**: Orders results by priority and insertion time
-
-  ## Implementation
-
-  The function uses a multi-step approach for performance optimization:
-
-  1. **Pre-filtering**: Uses `workflow_limited_runs/1` to limit runs per workflow
-     (configurable via `:per_workflow_claim_limit`) preventing any single workflow
-     from dominating the claim queue while ensuring fairness
-  2. **Window Functions**: Applies `in_progress_window/0` to calculate row numbers
-     within concurrency partitions on the smaller, pre-filtered dataset
-  3. **Final Filtering**: Selects only available runs that fall within their
-     concurrency limits (where `row_number <= concurrency`)
-
-  ## Concurrency Logic
-
-  Workflow concurrency takes precedence over project concurrency when both are set.
-  This ensures that workflow-level limits are respected first, with project-level
-  limits serving as a fallback.
-
-  ## Performance Notes
-
-  The dataset is first limited per workflow (default: 50 runs) to manage the size
-  of data processed by expensive window functions, significantly improving query
-  performance on large datasets.
-
-  > ### Note {: .info}
-  > The default `:per_workflow_claim_limit` is 50.
-  > This can be configured via the `PER_WORKFLOW_CLAIM_LIMIT` environment variable.
-  > The value must be larger than the max concurrency of any individual workflow.
-
-  Returns runs ordered by priority and insertion time that can be safely claimed
-  without violating concurrency limits.
-  """
-  @spec eligible_for_claim() :: Ecto.Queryable.t()
-  def eligible_for_claim do
-    Run
-    |> with_cte("subset",
-      as:
-        ^(from(r in Run)
-          |> join(:inner, [r], ipw in subquery(in_progress_window()),
-            on: r.id == ipw.id
-          )
-          |> where(
-            [r, ipw],
-            r.state == :available and
-              (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
-          )
-          |> select([r, ipw], %{id: r.id})
-          |> order_by([r, ipw], asc: r.priority, asc: r.inserted_at))
-    )
-    |> join(:inner, [r], subset in fragment(~s("subset")), on: r.id == subset.id)
-    |> order_by([r], asc: r.priority, asc: r.inserted_at)
-  end
-
-  @doc """
-  Query to return workflow-limited runs with priority-based ranking.
-
-  This function creates a dataset where each workflow contributes at most
-  `per_workflow_limit` runs, ranked by priority and insertion time. This prevents
-  any single workflow from dominating the claim queue while ensuring fairness.
-
-  Returns runs with workflow ranking information needed for further processing.
-  """
-  @spec workflow_limited_runs(pos_integer()) :: Ecto.Queryable.t()
-  def workflow_limited_runs(per_workflow_limit \\ 50) do
-    # Step 1: Rank runs within each workflow by priority and insertion time
-    ranked_runs_query =
-      from(r in Run,
-        where: r.state in [:available, :claimed, :started],
-        join: wo in assoc(r, :work_order),
-        join: w in assoc(wo, :workflow),
-        join: p in assoc(w, :project)
-      )
-      |> windows([r, _wo, w, _p],
-        workflow_window: [
-          partition_by: w.id,
-          order_by: [asc: r.priority, asc: r.inserted_at]
-        ]
-      )
-      |> select([r, _wo, w, p], %{
-        id: r.id,
-        state: r.state,
-        project_id: w.project_id,
-        concurrency: coalesce(w.concurrency, p.concurrency),
-        inserted_at: r.inserted_at,
-        priority: r.priority,
-        workflow_id: w.id,
-        project_id_alt: p.id,
-        partition_key:
+    |> windows([r, _wo, w, p],
+      row_number: [
+        partition_by:
           fragment(
             "CASE WHEN ? IS NOT NULL THEN ? ELSE ? END",
             w.concurrency,
             w.id,
             p.id
           ),
-        workflow_rn: row_number() |> over(:workflow_window)
-      })
-
-    # Step 2: Filter to only keep top N runs per workflow
-    from(wlr in subquery(ranked_runs_query),
-      where: wlr.workflow_rn <= ^per_workflow_limit,
-      select: wlr
+        order_by: [asc: r.inserted_at]
+      ]
     )
+    |> select([r, _wo, w, p], %{
+      id: r.id,
+      state: r.state,
+      # need to check what performance implications are of using row_number
+      # does the subsequent query's limit clause get applied to the row_number
+      # calculated here?
+      row_number: row_number() |> over(:row_number),
+      project_id: w.project_id,
+      concurrency: coalesce(w.concurrency, p.concurrency),
+      inserted_at: r.inserted_at
+    })
+  end
+
+  @doc """
+  Query to return runs that are eligible for claiming.
+
+  Uses `in_progress_window/0` and filters for runs that are either in the
+  available state and have not reached the concurrency limit for their workflow.
+
+  > ### Note {: .info}
+  > This query does not currently take into account the priority of the run.
+  > To allow for prioritization, the query should be updated to order by
+  > priority.
+  >
+  > ```elixir
+  > eligible_for_claim() |> prepend_order_by([:priority])
+  > ```
+  """
+  @spec eligible_for_claim() :: Ecto.Queryable.t()
+  def eligible_for_claim do
+    Run
+    |> with_cte("in_progress_window", as: ^in_progress_window())
+    |> join(:inner, [r], ipw in fragment(~s("in_progress_window")),
+      on: r.id == ipw.id,
+      as: :in_progress_window
+    )
+    |> where(
+      [r, ipw],
+      r.state == :available and
+        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
+    )
+    |> order_by([r], asc: r.inserted_at)
   end
 end
