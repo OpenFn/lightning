@@ -45,10 +45,44 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   });
   const formRef = React.useRef<HTMLFormElement>(null);
 
+  const pushManualChange = React.useCallback((option: SeletableOptions) => {
+    switch (option) {
+      case SeletableOptions.EMPTY:
+        pushEvent('manual_run_change', {
+          manual: {
+            body: '{}',
+            dataclip_id: null,
+          },
+        });
+        break;
+      case SeletableOptions.CUSTOM:
+      case SeletableOptions.EXISTING:
+        pushEvent('manual_run_change', {
+          manual: {
+            body: null,
+            dataclip_id: null,
+          },
+        });
+        break;
+    }
+  }, [pushEvent])
+
+  const setSelectedDataclipHelper = React.useCallback((v: Dataclip | null) => {
+    if (v) {
+      pushEvent('manual_run_change', {
+        manual: { dataclip_id: v.id },
+      });
+    } else {
+      setSelectedOption(SeletableOptions.EXISTING);
+      pushManualChange(SeletableOptions.EXISTING);
+    }
+    setSelectedDataclip(v);
+  }, [pushEvent, pushManualChange])
+
   React.useEffect(() => {
     props.handleEvent('manual_run_created', payload => {
       if (payload.dataclip) {
-        setSelectedDataclip(payload.dataclip);
+        setSelectedDataclipHelper(payload.dataclip);
       }
     });
   }, [props, pushEvent]);
@@ -105,7 +139,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         if (selected_dataclip_id) {
           const activeClip = dataclips.find(d => d.id === selected_dataclip_id);
           if (activeClip) {
-            setSelectedDataclip(activeClip);
+            setSelectedDataclipHelper(activeClip);
           }
         }
       }
@@ -121,6 +155,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     };
     const q = constructQuery(queryData);
     navigate(alterURLParams(queryData).toString());
+    pushManualChange(selectedOption)
 
     pushEvent(
       'search-selectable-dataclips',
@@ -140,41 +175,6 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     handleSearchSumbit();
   }, [selectedClipType, selectedDates]);
 
-  React.useEffect(() => {
-    if (selectedDataclip) {
-      pushEvent('manual_run_change', {
-        manual: { dataclip_id: selectedDataclip.id },
-      });
-    } else {
-      pushEvent('manual_run_change', {
-        manual: { dataclip_id: null, body: null },
-      });
-    }
-  }, [selectedDataclip, pushEvent]);
-
-  React.useEffect(() => {
-    switch (selectedOption) {
-      case SeletableOptions.EMPTY:
-        pushEvent('manual_run_change', {
-          manual: {
-            body: '{}',
-            dataclip_id: null,
-          },
-        });
-        break;
-      case SeletableOptions.CUSTOM:
-      case SeletableOptions.EXISTING:
-        pushEvent('manual_run_change', {
-          manual: {
-            body: null,
-            dataclip_id: null,
-          },
-        });
-        break;
-    }
-    navigate(alterURLParams({ active_panel: selectedOption.toString() }).toString());
-  }, [selectedOption, pushEvent, navigate]);
-
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
       case SeletableOptions.EXISTING:
@@ -185,7 +185,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             filters={parsedQuery.filters}
             dataclips={recentclips}
             setQuery={setQuery}
-            setSelected={setSelectedDataclip}
+            setSelected={setSelectedDataclipHelper}
             selectedClipType={selectedClipType}
             setSelectedClipType={setSelectedClipType}
             clearFilter={clearFilter}
@@ -207,6 +207,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     parsedQuery.filters,
     selectedClipType,
     selectedDates,
+    setSelectedDataclipHelper,
     setSelectedDates,
     setSelectedClipType,
     clearFilter,
@@ -221,6 +222,8 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   };
 
   const selectOptionHandler = (option: SeletableOptions) => () => {
+    navigate(alterURLParams({ active_panel: option.toString() }).toString());
+    pushManualChange(option)
     setSelectedOption(option);
   };
 
@@ -231,7 +234,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         <SelectedClipView
           dataclip={selectedDataclip}
           onUnselect={() => {
-            setSelectedDataclip(null);
+            setSelectedDataclipHelper(null);
           }}
         />
       ) : (
