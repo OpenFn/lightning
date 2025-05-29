@@ -19,11 +19,6 @@ and this project adheres to
 
 ### Changed
 
-- Optimize run claim query performance with per-workflow limiting strategy
-  [#3245](https://github.com/OpenFn/lightning/pull/3245)
-  - Add configurable per-workflow claim limit (default: 50) via
-    `PER_WORKFLOW_CLAIM_LIMIT` environment variable
-
 ### Fixed
 
 ## [v2.12.3-pre] - 2025-05-29
@@ -39,7 +34,10 @@ and this project adheres to
   [#2934](https://github.com/OpenFn/lightning/issues/2934)
 
 ### Changed
-
+- Optimize run claim query performance with per-workflow limiting strategy
+  [#3245](https://github.com/OpenFn/lightning/pull/3245)
+- Add configurable per-workflow claim limit (default: 50) via
+  `PER_WORKFLOW_CLAIM_LIMIT` environment variable
 - Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
 - Standardized table components across the application
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
