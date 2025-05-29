@@ -353,7 +353,9 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")
 
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      select_template(view, "base-webhook-template")
+
+      view |> element("button#create_workflow_btn") |> render_click()
 
       # the panel disappears
       html = render(view)

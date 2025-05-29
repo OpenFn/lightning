@@ -13,30 +13,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   * Manages job-specific context including adaptor and expression
   """
 
-  @behaviour LightningWeb.Live.AiAssistant.ModeBehavior
+  use LightningWeb.Live.AiAssistant.ModeBehavior
 
   alias Lightning.AiAssistant
 
-  # require Logger
-  # require Phoenix.LiveView
-
-  @doc """
-  Creates a new chat session for job code assistance.
-
-  ## Parameters
-    * assigns - A map containing:
-      * selected_job - The job to get assistance for
-      * current_user - The user creating the session
-    * content - The initial message content for the session
-
-  ## Returns
-    * `{:ok, session}` - The session was created successfully
-    * `{:error, reason}` - The session creation failed
-
-  ## Example
-      iex> create_session(%{selected_job: job, current_user: user}, "Help with this job")
-      {:ok, %ChatSession{...}}
-  """
   @impl true
   def create_session(%{selected_job: job, current_user: user}, content) do
     case AiAssistant.create_session(job, user, content) do
@@ -45,47 +25,17 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     end
   end
 
-  @doc """
-  Retrieves and prepares a job session with its context.
-
-  This function not only retrieves the session but also prepares it with the job's
-  expression and adaptor information for proper context in the AI assistance.
-
-  ## Parameters
-    * session_id - The ID of the session to retrieve
-    * assigns - A map containing:
-      * selected_job - The job to get context from
-
-  ## Returns
-    * `session` - The retrieved and prepared chat session
-
-  ## Example
-      iex> get_session!("session_123", %{selected_job: job})
-      %ChatSession{...}
-  """
   @impl true
   def get_session!(session_id, %{selected_job: job}) do
     AiAssistant.get_session!(session_id)
     |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
   end
 
-  @doc """
-  Saves a user message to the job session.
+  @impl true
+  def list_sessions(%{selected_job: selected_job}, sort_direction) do
+    AiAssistant.list_sessions_for_job(selected_job, sort_direction)
+  end
 
-  ## Parameters
-    * socket - The LiveView socket containing:
-      * session - The current chat session
-      * current_user - The user sending the message
-    * content - The message content to save
-
-  ## Returns
-    * `{:ok, session}` - The message was saved successfully
-    * `{:error, reason}` - The message save failed
-
-  ## Example
-      iex> save_message(socket, "How do I fix this error?")
-      {:ok, %ChatSession{...}}
-  """
   @impl true
   def save_message(%{session: session, current_user: user}, content) do
     AiAssistant.save_message(session, %{
@@ -95,21 +45,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     })
   end
 
-  @doc """
-  Processes a message through the job code assistance AI.
-
-  ## Parameters
-    * session - The current chat session
-    * content - The message content to process
-
-  ## Returns
-    * `{:ok, session}` - The message was processed successfully
-    * `{:error, reason}` - The message processing failed
-
-  ## Example
-      iex> query(session, "How do I transform this data?")
-      {:ok, %ChatSession{...}}
-  """
   @impl true
   def query(session, content) do
     AiAssistant.query(session, content)
@@ -127,6 +62,37 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       has_reached_limit?(ai_limit_result) or
       !endpoint_available? or
       !is_nil(pending_message.loading) or job_is_unsaved?(selected_job)
+  end
+
+  @impl true
+  def input_placeholder do
+    "Ask about your job code, debugging, or OpenFn adaptors..."
+  end
+
+  @impl true
+  def chat_title(session) do
+    case session do
+      %{title: title} when is_binary(title) and title != "" ->
+        title
+
+      %{job: %{name: job_name}} when is_binary(job_name) and job_name != "" ->
+        "Help with #{job_name}"
+
+      _ ->
+        "Job Code Help"
+    end
+  end
+
+  @impl true
+  def supports_template_generation?, do: false
+
+  @impl true
+  def metadata do
+    %{
+      name: "Job Code Assistant",
+      description: "Get help with job code, debugging, and OpenFn adaptors",
+      icon: "hero-code-bracket"
+    }
   end
 
   def disabled_tooltip_message(%{

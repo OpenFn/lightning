@@ -183,7 +183,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "form#choose-workflow-template-form")
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       # now let's fill in the name
       workflow_name = "My Workflow"
@@ -360,11 +360,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> render_click("template-parsed", %{"workflow" => payload})
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       click_save(view)
 
-      expected_workflow_name = "Copy of #{cron_template_name}"
+      expected_workflow_name = "Untitled workflow"
 
       assert Lightning.Repo.exists?(
                from w in Workflow,
@@ -378,12 +378,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "creating a new workflow via import handles empty name",
          %{conn: conn, project: project} do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
-
-      # Switch to import mode
-      view
-      |> element("#import-workflow-btn")
-      |> render_click()
+        live(conn, ~p"/projects/#{project.id}/w/new?method=import",
+          on_error: :raise
+        )
 
       # Generate IDs for the workflow components
       job_id = Ecto.UUID.generate()
@@ -415,11 +412,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       })
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       click_save(view)
 
-      expected_workflow_name = "Copy of Untitled Workflow"
+      expected_workflow_name = "Untitled workflow"
 
       assert Lightning.Repo.exists?(
                from w in Workflow,
@@ -477,7 +474,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> render_click("workflow-parsed", %{"workflow" => valid_payload})
 
       refute view
-             |> element("#toggle_new_workflow_panel_btn")
+             |> element("#create_workflow_btn")
              |> render() =~ "disabled=\"disabled\""
 
       # Test with invalid payload (missing required fields)
@@ -497,7 +494,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> render_click("workflow-parsed", %{"workflow" => invalid_payload})
 
       assert view
-             |> element("#toggle_new_workflow_panel_btn")
+             |> element("#create_workflow_btn")
              |> render() =~ "disabled=\"disabled\""
     end
 
@@ -515,7 +512,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       workflow_name = "My Workflow"
 
@@ -2110,7 +2107,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       push_patches_to_view(view, initial_workflow_patchset(project))
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       view
       |> form("#workflow-form")
@@ -2152,7 +2149,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       push_patches_to_view(view, initial_workflow_patchset(project))
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       view
       |> form("#workflow-form")
@@ -2449,7 +2446,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       workflow_name = "My Workflow"
 

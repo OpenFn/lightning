@@ -61,7 +61,7 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
           user: user
         })
 
-      assert Ecto.Changeset.fetch_field!(changeset, :status) == :success
+      assert Ecto.Changeset.fetch_field!(changeset, :status) == :pending
       refute Ecto.Changeset.fetch_field!(changeset, :is_deleted)
       assert Ecto.Changeset.fetch_field!(changeset, :is_public)
     end

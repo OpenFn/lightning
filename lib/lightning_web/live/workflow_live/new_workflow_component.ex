@@ -6,6 +6,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkflowTemplates
   alias LightningWeb.API.ProvisioningJSON
+  alias LightningWeb.Live.AiAssistant.ModeRegistry
 
   @impl true
   def mount(socket) do
@@ -18,6 +19,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> assign(search_term: "")
      |> assign(chat_session_id: nil)
      |> assign(selected_template: nil)
+     |> assign(template_generated: nil)
+     |> assign(validation_failed: true)
      |> assign(selected_method: "template")
      |> assign(base_templates: base_templates)
      |> assign(users_templates: users_templates)
@@ -27,17 +30,23 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   @impl true
   def update(%{action: :template_selected, template: nil}, socket) do
-    update_ui_state(show_canvas_placeholder: true, show_template_tooltip: nil)
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: true,
+      show_template_tooltip: nil
+    })
 
-    {:ok, socket}
+    {:ok, socket |> assign(template_generated: nil)}
   end
 
   def update(%{action: :template_selected, template: template}, socket) do
-    update_ui_state(show_canvas_placeholder: false, show_template_tooltip: nil)
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: false,
+      show_template_tooltip: nil
+    })
 
     {:ok,
      socket
-     |> assign(selected_template: nil)
+     |> assign(template_generated: template)
      |> push_event("template_selected", %{template: template.code})}
   end
 
@@ -52,15 +61,30 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   @impl true
   def handle_event("choose-another-method", %{"method" => method}, socket) do
-    update_ui_state(show_canvas_placeholder: true, show_template_tooltip: nil)
+    case method do
+      "ai" ->
+        handle_ai_method_selection(socket)
 
-    {:noreply,
-     socket
-     |> assign(selected_method: method)
-     |> assign(selected_template: nil)
-     |> push_patch(
-       to: "/projects/#{socket.assigns.project.id}/w/new?method=#{method}"
-     )}
+      _ ->
+        handle_regular_method_selection(socket, method)
+    end
+  end
+
+  def handle_event("create_workflow", _, socket) do
+    case create_disabled?(socket.assigns) do
+      true ->
+        {:noreply,
+         socket
+         |> put_flash(:error, error_flash_message(socket.assigns))
+         |> push_patch(
+           to:
+             "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
+         )}
+
+      false ->
+        notify_parent(:toggle_workflow_panel, %{})
+        {:noreply, socket}
+    end
   end
 
   def handle_event("search-templates", %{"search" => search_term}, socket) do
@@ -74,15 +98,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   end
 
   def handle_event("select-template", %{"template_id" => template_id}, socket) do
-    template =
-      Enum.find(socket.assigns.all_templates, fn template ->
-        template.id == template_id
-      end)
+    template = Enum.find(socket.assigns.all_templates, &(&1.id == template_id))
 
-    update_ui_state(
+    notify_parent(:canvas_state_changed, %{
       show_canvas_placeholder: false,
       show_template_tooltip: template
-    )
+    })
 
     {:noreply,
      socket
@@ -90,50 +111,84 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> push_event("template_selected", %{template: template.code})}
   end
 
-  def handle_event(event_name, %{"workflow" => params}, socket)
+  def handle_event(
+        event_name,
+        %{"workflow" => params},
+        %{assigns: %{project: project, selected_template: template}} = socket
+      )
       when event_name in ["workflow-parsed", "template-parsed"] do
-    %{project: project, selected_template: template} = socket.assigns
-    params_with_name = params_with_name(params, project, template, event_name)
-
-    changeset =
-      Workflow.changeset(socket.assigns.workflow, params_with_name)
+    params = ensure_unique_name(params, project)
+    changeset = Workflow.changeset(socket.assigns.workflow, params)
 
     if changeset.valid? do
       template_for_tooltip = get_template_for_tooltip(event_name, template)
 
-      update_ui_state(
+      notify_parent(:canvas_state_changed, %{
         show_canvas_placeholder: false,
         show_template_tooltip: template_for_tooltip
-      )
+      })
 
-      notify_form_change(params_with_name)
+      notify_parent(:form_changed, %{
+        "workflow" => params,
+        "opts" => [push_patches: false]
+      })
 
-      socket =
-        socket
-        |> update_canvas_state(params_with_name)
-        |> assign(changeset: changeset)
-
-      {:reply, %{}, socket}
+      {:noreply,
+       socket
+       |> assign(changeset: changeset)
+       |> assign(validation_failed: false)
+       |> push_event("workflow-validated", %{"state" => params})
+       |> push_event("state-applied", %{"state" => params})
+       |> push_event("force-fit", %{})}
     else
-      update_ui_state(show_canvas_placeholder: true, show_template_tooltip: nil)
+      notify_parent(:canvas_state_changed, %{
+        show_canvas_placeholder: true,
+        show_template_tooltip: nil
+      })
 
-      {:reply, ProvisioningJSON.error(%{changeset: changeset}),
-       assign_error_changeset(socket, changeset, event_name)}
+      {:noreply,
+       socket
+       |> assign(validation_failed: true)
+       |> assign_error_changeset(changeset, event_name)
+       |> push_event(
+         "workflow-validation-errors",
+         ProvisioningJSON.error(%{changeset: changeset})
+       )}
     end
+  end
+
+  def handle_event(
+        "workflow-parsing-failed",
+        %{"error" => error_message},
+        socket
+      ) do
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: true,
+      show_template_tooltip: nil
+    })
+
+    {:noreply,
+     socket
+     |> assign(validation_failed: true)
+     |> push_event("show-parsing-error", %{error: error_message})}
   end
 
   def handle_event(_event, _params, socket) do
     {:noreply, socket}
   end
 
-  defp params_with_name(params, project, template, event_name) do
-    workflow_name = default_if_empty(params["name"], "Untitled Workflow")
-    template_name = get_template_name(template)
+  defp ensure_unique_name(params, project) do
+    workflow_name =
+      params["name"]
+      |> to_string()
+      |> String.trim()
+      |> case do
+        "" -> "Untitled workflow"
+        name -> name
+      end
 
-    unique_name =
-      project
-      |> Projects.list_workflows()
-      |> generate_workflow_name(workflow_name, template_name, event_name)
+    existing_workflows = Projects.list_workflows(project)
+    unique_name = generate_unique_name(workflow_name, existing_workflows)
 
     Map.put(params, "name", unique_name)
   end
@@ -145,32 +200,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     do: assign(socket, changeset: changeset)
 
   defp assign_error_changeset(socket, _changeset, "template-parsed"), do: socket
-
-  defp get_template_name(nil), do: "Untitled Template"
-
-  defp get_template_name(template) do
-    default_if_empty(template.name, "Untitled Template")
-  end
-
-  defp default_if_empty(name, default) do
-    if String.trim(name || "") == "", do: default, else: name
-  end
-
-  defp generate_workflow_name(
-         existing_workflows,
-         workflow_name,
-         template_name,
-         event_name
-       ) do
-    base_name =
-      "Copy of " <>
-        case event_name do
-          "workflow-parsed" -> workflow_name
-          "template-parsed" -> template_name
-        end
-
-    generate_unique_name(base_name, existing_workflows)
-  end
 
   defp generate_unique_name(base_name, existing_workflows) do
     existing_names = MapSet.new(existing_workflows, & &1.name)
@@ -221,6 +250,74 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   defp filter_templates(templates, _), do: templates
 
+  defp notify_parent(action, payload) do
+    send(self(), {:workflow_component_event, action, payload})
+  end
+
+  defp handle_ai_method_selection(socket) do
+    search_term = socket.assigns.search_term
+
+    if search_term && String.trim(search_term) != "" do
+      case create_ai_session_for_input(socket.assigns, search_term) do
+        {:ok, session_id} ->
+          notify_parent(:canvas_state_changed, %{
+            show_canvas_placeholder: true,
+            show_template_tooltip: nil
+          })
+
+          {:noreply,
+           socket
+           |> assign(selected_method: "ai")
+           |> assign(selected_template: nil)
+           |> assign(chat_session_id: session_id)
+           |> assign(search_term: nil)
+           |> push_patch(
+             to:
+               "/projects/#{socket.assigns.project.id}/w/new?method=ai&chat=#{session_id}"
+           )}
+
+        {:error, reason} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Failed to create AI session: #{reason}")
+           |> handle_regular_method_selection("ai")}
+      end
+    else
+      handle_regular_method_selection(socket, "ai")
+    end
+  end
+
+  defp handle_regular_method_selection(socket, method) do
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: true,
+      show_template_tooltip: nil
+    })
+
+    {:noreply,
+     socket
+     |> assign(selected_method: method)
+     |> assign(selected_template: nil)
+     |> assign(chat_session_id: nil)
+     |> push_patch(
+       to: "/projects/#{socket.assigns.project.id}/w/new?method=#{method}"
+     )}
+  end
+
+  defp create_ai_session_for_input(assigns, input_value) do
+    handler = ModeRegistry.get_handler(:workflow)
+
+    session_assigns = %{
+      project: assigns.project,
+      current_user: assigns.current_user,
+      mode: :workflow
+    }
+
+    case handler.create_session(session_assigns, input_value) do
+      {:ok, session} -> {:ok, session.id}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
   @impl true
   def render(assigns) do
     assigns =
@@ -243,29 +340,26 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             <.create_workflow_from_template
               :if={@selected_method == "template"}
               myself={@myself}
-              base_templates={@base_templates}
-              filtered_templates={@filtered_templates}
-              selected_template={@selected_template}
               search_term={@search_term}
+              filtered_templates={@filtered_templates}
+              base_templates={@base_templates}
+              selected_template={@selected_template}
               project={@project}
             />
-
             <.create_workflow_via_import
               :if={@selected_method == "import"}
-              changeset={@changeset}
               myself={@myself}
+              changeset={@changeset}
             />
           </div>
-
           <.create_workflow_via_ai
             :if={@selected_method == "ai"}
-            myself={@myself}
+            parent_id={@id}
             project={@project}
             current_user={@current_user}
             chat_session_id={@chat_session_id}
-            search_term={@search_term}
             base_url={@base_url}
-            parent_component_id={@id}
+            search_term={@search_term}
           />
         </div>
         <div class="px-4 py-4 sm:p-3 flex flex-row justify-end gap-2 h-max border-t">
@@ -293,14 +387,14 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           >
             Back
           </.button>
-          <%!-- or (@selected_method == "ai" and is_nil(@chat_session_id)) --%>
           <.button
-            id="toggle_new_workflow_panel_btn"
+            id="create_workflow_btn"
             type="button"
             theme="primary"
             class="inline-flex gap-x-1 px-4"
-            phx-click="toggle_new_workflow_panel"
-            disabled={@selected_method == "import" and !@changeset.valid?}
+            phx-click="create_workflow"
+            phx-target={@myself}
+            disabled={create_disabled?(assigns)}
           >
             Create
           </.button>
@@ -472,8 +566,13 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       data-file-input-el="workflow-file"
       data-viewer-el="workflow-code-viewer"
       data-error-el="workflow-errors"
-      class="flex flex-col gap-3 h-full"
+      class="flex flex-col gap-3 h-full relative"
     >
+      <div
+        id="workflow-errors"
+        class="hidden absolute top-0 left-0 right-0 z-10 bg-danger-100/80 border border-danger-200 text-danger-800 px-4 py-3 rounded-lg flex items-start gap-3 shadow-sm"
+      >
+      </div>
       <div
         id="workflow-dropzone"
         phx-hook="FileDropzone"
@@ -511,11 +610,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         </div>
       </div>
       <div class="flex-grow flex flex-col">
-        <div
-          id="workflow-errors"
-          class="error-space mb-1 text-xs text-danger-600 hidden"
-        >
-        </div>
         <.textarea_element
           id="workflow-code-viewer"
           phx-update="ignore"
@@ -547,7 +641,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         base_url={@base_url}
         input_value={@search_term}
         action={if(@chat_session_id, do: :show, else: :new)}
-        parent_component_id={@parent_component_id}
+        parent_component_id={@parent_id}
         id="workflow-ai-assistant"
       />
     </div>
@@ -613,29 +707,24 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     ]
   end
 
-  defp update_ui_state(opts) do
-    send(
-      self(),
-      {:show_canvas_placeholder,
-       Keyword.get(opts, :show_canvas_placeholder, true)}
-    )
-
-    send(
-      self(),
-      {:show_template_tooltip, Keyword.get(opts, :show_template_tooltip, nil)}
-    )
+  defp create_disabled?(assigns) do
+    case assigns.selected_method do
+      "import" -> !assigns.changeset.valid? or assigns.validation_failed
+      "template" -> is_nil(assigns.selected_template)
+      "ai" -> is_nil(assigns.template_generated)
+    end
   end
 
-  defp notify_form_change(params) do
-    send(
-      self(),
-      {"form_changed", %{"workflow" => params, "opts" => [push_patches: false]}}
-    )
-  end
+  defp error_flash_message(assigns) do
+    case assigns.selected_method do
+      "import" ->
+        "Please fix the validation errors before creating the workflow."
 
-  defp update_canvas_state(socket, params) do
-    socket
-    |> push_event("state-applied", %{"state" => params})
-    |> push_event("force-fit", %{})
+      "template" ->
+        "Please select a template to continue."
+
+      "ai" ->
+        "Please generate a workflow using the AI assistant first."
+    end
   end
 end

@@ -132,50 +132,69 @@ defmodule Lightning.AiAssistant do
           {:ok, ChatSession.t()}
           | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content) do
+    pending_user_message = find_pending_user_message(session, content)
+
     ApolloClient.query(
       content,
       %{expression: session.expression, adaptor: session.adaptor},
       build_history(session),
       session.meta || %{}
     )
-    |> handle_apollo_resp(session)
+    |> handle_apollo_resp(session, pending_user_message)
   end
 
   defp handle_apollo_resp(
          {:ok, %Tesla.Env{status: status, body: body}},
-         session
+         session,
+         pending_user_message
        )
        when status in 200..299 do
     message = body["history"] |> Enum.reverse() |> hd()
-    save_message(session, message, body["usage"], body["meta"])
+
+    case save_message(session, message, body["usage"], body["meta"]) do
+      {:ok, updated_session} ->
+        if pending_user_message do
+          update_message_status(updated_session, pending_user_message, :success)
+        else
+          {:ok, updated_session}
+        end
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
-  defp handle_apollo_resp(
-         {:ok, %Tesla.Env{status: status, body: body}},
-         session
-       )
-       when status not in 200..299 do
-    error_message = body["message"]
-    Logger.error("AI query failed for session #{session.id}: #{error_message}")
-    {:error, error_message}
-  end
+  defp handle_apollo_resp(error_response, session, pending_user_message) do
+    if pending_user_message do
+      update_message_status(session, pending_user_message, :error)
+    end
 
-  defp handle_apollo_resp({:error, :timeout}, session) do
-    Logger.error("AI query timed out for session #{session.id}")
-    {:error, "Request timed out. Please try again."}
-  end
+    case error_response do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status not in 200..299 ->
+        error_message = body["message"]
 
-  defp handle_apollo_resp({:error, :econnrefused}, session) do
-    Logger.error("Connection to AI server refused for session #{session.id}")
-    {:error, "Unable to reach the AI server. Please try again later."}
-  end
+        Logger.error(
+          "AI query failed for session #{session.id}: #{error_message}"
+        )
 
-  defp handle_apollo_resp(unexpected_error, session) do
-    Logger.error(
-      "Received an unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
-    )
+        {:error, error_message}
 
-    {:error, "Oops! Something went wrong. Please try again."}
+      {:error, :timeout} ->
+        Logger.error("AI query timed out for session #{session.id}")
+        {:error, "Request timed out. Please try again."}
+
+      {:error, :econnrefused} ->
+        Logger.error("Connection to AI server refused for session #{session.id}")
+        {:error, "Unable to reach the AI server. Please try again later."}
+
+      unexpected_error ->
+        Logger.error(
+          "Received an unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
+        )
+
+        {:error, "Oops! Something went wrong. Please try again."}
+    end
   end
 
   defp build_history(session) do
@@ -352,12 +371,13 @@ defmodule Lightning.AiAssistant do
           {:ok, ChatSession.t()}
           | {:error, String.t() | Ecto.Changeset.t()}
   def query_workflow(session, content, errors \\ nil) do
-    # Find the latest YAML from previous messages
+    pending_user_message = find_pending_user_message(session, content)
+
     latest_yaml =
       session.messages
       |> Enum.reverse()
       |> Enum.find_value(nil, fn
-        %{role: :assistant, yaml: yaml} when not is_nil(yaml) -> yaml
+        %{role: :assistant, workflow_code: yaml} when not is_nil(yaml) -> yaml
         _ -> nil
       end)
 
@@ -368,51 +388,84 @@ defmodule Lightning.AiAssistant do
       build_history(session),
       session.meta || %{}
     )
-    |> handle_workflow_response(session)
+    |> handle_workflow_response(session, pending_user_message)
   end
 
   defp handle_workflow_response(
          {:ok, %Tesla.Env{status: status, body: body}},
-         session
+         session,
+         pending_user_message
        )
        when status in 200..299 do
-    save_message(
-      session,
-      %{
-        role: :assistant,
-        content: body["response"],
-        workflow_code: body["response_yaml"]
-      },
-      body["usage"] || %{}
-    )
+    case save_message(
+           session,
+           %{
+             role: :assistant,
+             content: body["response"],
+             workflow_code: body["response_yaml"]
+           },
+           body["usage"] || %{}
+         ) do
+      {:ok, updated_session} ->
+        if pending_user_message do
+          update_message_status(updated_session, pending_user_message, :success)
+        else
+          {:ok, updated_session}
+        end
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
-  defp handle_workflow_response(
-         {:ok, %Tesla.Env{status: status, body: body}},
-         session
-       )
-       when status not in 200..299 do
-    error_message = body["message"]
+  defp handle_workflow_response(error_response, session, pending_user_message) do
+    if pending_user_message do
+      update_message_status(session, pending_user_message, :error)
+    end
 
-    Logger.error(
-      "Workflow AI query failed for session #{session.id}: #{error_message}"
-    )
+    case error_response do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status not in 200..299 ->
+        error_message = body["message"]
 
-    {:error, error_message}
+        Logger.error(
+          "Workflow AI query failed for session #{session.id}: #{error_message}"
+        )
+
+        {:error, error_message}
+
+      {:error, reason} ->
+        Logger.error(
+          "Workflow AI query failed for session #{session.id}: #{inspect(reason)}"
+        )
+
+        error_message =
+          case reason do
+            :timeout ->
+              "Request timed out. Please try again."
+
+            :econnrefused ->
+              "Unable to reach the AI server. Please try again later."
+
+            _ ->
+              "Oops! Something went wrong. Please try again."
+          end
+
+        {:error, error_message}
+    end
   end
 
-  defp handle_workflow_response({:error, reason}, session) do
-    Logger.error(
-      "Workflow AI query failed for session #{session.id}: #{inspect(reason)}"
-    )
+  defp find_pending_user_message(session, content) do
+    session.messages
+    |> Enum.find(fn message ->
+      message.role == :user &&
+        message.status == :pending &&
+        message.content == content
+    end)
+  end
 
-    error_message =
-      case reason do
-        :timeout -> "Request timed out. Please try again."
-        :econnrefused -> "Unable to reach the AI server. Please try again later."
-        _ -> "Oops! Something went wrong. Please try again."
-      end
-
-    {:error, error_message}
+  def find_pending_user_messages(session) do
+    session.messages
+    |> Enum.filter(&(&1.role == :user && &1.status == :pending))
   end
 end

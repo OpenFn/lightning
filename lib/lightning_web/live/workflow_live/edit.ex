@@ -746,8 +746,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 >
                   Copy Code
                 </.button>
-                <%!-- :if={@current_user.support_user} --%>
                 <.button
+                  :if={@current_user.support_user}
                   theme="primary"
                   id="publish-template-btn"
                   phx-click="publish_template"
@@ -1768,14 +1768,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
      update(socket, :show_missing_dataclip_selector, fn val -> !val end)}
   end
 
-  def handle_event("toggle_new_workflow_panel", _, socket) do
-    {:noreply,
-     socket
-     |> assign(selected_template: nil)
-     |> update(:show_new_workflow_panel, fn val -> !val end)
-     |> maybe_disable_canvas()}
-  end
-
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
     changeset =
       WorkOrders.Manual.new(
@@ -1997,12 +1989,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def handle_info({"form_changed", %{"workflow" => params} = payload}, socket) do
+  def handle_info({:form_changed, %{"workflow" => params} = payload}, socket) do
     {:noreply,
      handle_new_params(socket, params, :workflow, Map.get(payload, "opts", []))}
   end
 
-  def handle_info({"form_changed", %{"snapshot" => params} = payload}, socket) do
+  def handle_info({:form_changed, %{"snapshot" => params} = payload}, socket) do
     {:noreply,
      handle_new_params(socket, params, :snapshot, Map.get(payload, "opts", []))}
   end
@@ -2050,20 +2042,42 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_disable_canvas()}
   end
 
-  def handle_info({:redirect, :patch, to}, socket) do
-    {:noreply, push_patch(socket, to: to)}
-  end
+  def handle_info({:workflow_component_event, action, payload}, socket) do
+    case action do
+      :toggle_workflow_panel ->
+        {:noreply,
+         socket
+         |> assign(selected_template: nil)
+         |> update(:show_new_workflow_panel, fn val -> !val end)
+         |> maybe_disable_canvas()}
 
-  def handle_info({:redirect, :navigate, to}, socket) do
-    {:noreply, push_navigate(socket, to: to)}
-  end
+      :canvas_state_changed ->
+        {:noreply,
+         socket
+         |> assign(
+           show_canvas_placeholder:
+             Map.get(
+               payload,
+               :show_canvas_placeholder,
+               socket.assigns.show_canvas_placeholder
+             ),
+           selected_template:
+             Map.get(
+               payload,
+               :show_template_tooltip,
+               socket.assigns.selected_template
+             )
+         )}
 
-  def handle_info({:show_canvas_placeholder, value}, socket) do
-    {:noreply, assign(socket, show_canvas_placeholder: value)}
-  end
-
-  def handle_info({:show_template_tooltip, template}, socket) do
-    {:noreply, assign(socket, selected_template: template)}
+      :form_changed ->
+        {:noreply,
+         handle_new_params(
+           socket,
+           payload["workflow"],
+           :workflow,
+           Map.get(payload, "opts", [])
+         )}
+    end
   end
 
   def handle_info(%{}, socket) do
@@ -2491,7 +2505,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp send_form_changed(params) do
-    send(self(), {"form_changed", params})
+    send(self(), {:form_changed, params})
   end
 
   defp assign_workflow(socket, workflow) do

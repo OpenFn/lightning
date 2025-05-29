@@ -75,8 +75,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
   ## Example
       iex> available_modes()
       [
-        %{id: :job, name: "Job Code Assistant", description: "Get help with job code"},
-        %{id: :workflow, name: "Workflow Template", description: "Generate workflow templates"}
+        %{id: :job, name: "Job Code Assistant", description: "Get help with job code", icon: "hero-code-bracket"},
+        %{id: :workflow, name: "Workflow Builder", description: "Generate workflow templates", icon: "hero-cog-6-tooth"}
       ]
   """
   def available_modes do
@@ -84,5 +84,43 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
     |> Enum.map(fn {id, module} ->
       Map.put(module.metadata(), :id, id)
     end)
+  end
+
+  @doc """
+  Gets metadata for a specific mode.
+
+  ## Parameters
+    * mode - The mode identifier (atom) to look up
+
+  ## Returns
+    * `map()` - The metadata for the mode, or default metadata if not found
+
+  ## Example
+      iex> get_mode_metadata(:job)
+      %{id: :job, name: "Job Code Assistant", description: "Get help with job code", icon: "hero-code-bracket"}
+  """
+  def get_mode_metadata(mode) do
+    handler = get_handler(mode)
+    Map.put(handler.metadata(), :id, mode)
+  end
+
+  @doc """
+  Checks if a mode supports template generation.
+
+  ## Parameters
+    * mode - The mode identifier (atom) to check
+
+  ## Returns
+    * `boolean()` - Whether the mode supports template generation
+
+  ## Example
+      iex> supports_template_generation?(:workflow)
+      true
+
+      iex> supports_template_generation?(:job)
+      false
+  """
+  def supports_template_generation?(mode) do
+    get_handler(mode).supports_template_generation?()
   end
 end

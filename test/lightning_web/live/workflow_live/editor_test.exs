@@ -506,7 +506,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       select_template(view, "base-webhook-template")
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       view
       |> form("#workflow-form")

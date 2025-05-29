@@ -153,7 +153,7 @@ defmodule Lightning.WorkflowLive.Helpers do
   end
 
   def force_event(view, :form_changed) do
-    view.pid |> send({"form_changed", %{"workflow" => %{"name" => "New Name"}}})
+    view.pid |> send({:form_changed, %{"workflow" => %{"name" => "New Name"}}})
     render(view)
   end
 

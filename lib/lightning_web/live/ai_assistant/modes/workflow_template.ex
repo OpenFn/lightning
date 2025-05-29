@@ -14,29 +14,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   * Manages workflow-specific context and state
   """
 
-  @behaviour LightningWeb.Live.AiAssistant.ModeBehavior
+  use LightningWeb.Live.AiAssistant.ModeBehavior
 
   alias Lightning.AiAssistant
 
-  # require Phoenix.LiveView
-
-  @doc """
-  Creates a new chat session for workflow template generation.
-
-  ## Parameters
-    * assigns - A map containing:
-      * selected_project - The project to generate templates for
-      * current_user - The user creating the session
-    * content - The initial message content for the session
-
-  ## Returns
-    * `{:ok, session}` - The session was created successfully
-    * `{:error, reason}` - The session creation failed
-
-  ## Example
-      iex> create_session(%{selected_project: project, current_user: user}, "Create a workflow")
-      {:ok, %ChatSession{...}}
-  """
   @impl true
   def create_session(
         %{project: project, current_user: current_user},
@@ -45,42 +26,16 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     AiAssistant.create_workflow_session(project, current_user, content)
   end
 
-  @doc """
-  Retrieves a workflow session by ID.
-
-  ## Parameters
-    * session_id - The ID of the session to retrieve
-    * _assigns - Unused in this implementation
-
-  ## Returns
-    * `session` - The retrieved chat session
-
-  ## Example
-      iex> get_session!("session_123", %{})
-      %ChatSession{...}
-  """
   @impl true
   def get_session!(session_id, _assigns) do
     AiAssistant.get_session!(session_id)
   end
 
-  @doc """
-  Saves a user message to the workflow session.
+  @impl true
+  def list_sessions(%{project: project}, sort_direction) do
+    AiAssistant.list_workflow_sessions_for_project(project, sort_direction)
+  end
 
-  ## Parameters
-    * assigns - A map containing:
-      * session - The current chat session
-      * current_user - The user sending the message
-    * content - The message content to save
-
-  ## Returns
-    * `{:ok, session}` - The message was saved successfully
-    * `{:error, reason}` - The message save failed
-
-  ## Example
-      iex> save_message(%{session: session, current_user: user}, "Add a trigger")
-      {:ok, %ChatSession{...}}
-  """
   @impl true
   def save_message(%{session: session, current_user: user}, content) do
     AiAssistant.save_message(session, %{
@@ -90,21 +45,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     })
   end
 
-  @doc """
-  Processes a message through the workflow template generation AI.
-
-  ## Parameters
-    * session - The current chat session
-    * content - The message content to process
-
-  ## Returns
-    * `{:ok, session}` - The message was processed successfully
-    * `{:error, reason}` - The message processing failed
-
-  ## Example
-      iex> query(session, "Create a workflow with HTTP trigger")
-      {:ok, %ChatSession{...}}
-  """
   @impl true
   def query(session, content) do
     AiAssistant.query_workflow(session, content)
@@ -121,6 +61,37 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
       has_reached_limit?(ai_limit_result) or
       !endpoint_available? or
       !is_nil(pending_message.loading)
+  end
+
+  @impl true
+  def input_placeholder do
+    "Describe the workflow you want to create..."
+  end
+
+  @impl true
+  def chat_title(session) do
+    case session do
+      %{title: title} when is_binary(title) and title != "" ->
+        title
+
+      %{project: %{name: project_name}} when is_binary(project_name) ->
+        "#{project_name} Workflow"
+
+      _ ->
+        "New Workflow"
+    end
+  end
+
+  @impl true
+  def supports_template_generation?, do: true
+
+  @impl true
+  def metadata do
+    %{
+      name: "Workflow Builder",
+      description: "Generate complete workflows from your descriptions",
+      icon: "hero-cog-6-tooth"
+    }
   end
 
   defp has_reached_limit?(ai_limit_result) do
@@ -158,4 +129,43 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   def error_message(_error) do
     "Oops! Something went wrong. Please try again."
   end
+
+  @impl true
+  def handle_response_generated(assigns, session_or_message, ui_callback) do
+    case extract_workflow_code(session_or_message) do
+      nil ->
+        assigns
+
+      code ->
+        ui_callback.(:workflow_code_generated, code)
+        assigns
+    end
+  end
+
+  @impl true
+  def on_session_start(socket, ui_callback) do
+    ui_callback.(:clear_template, nil)
+    socket
+  end
+
+  defp extract_workflow_code(%Lightning.AiAssistant.ChatSession{
+         messages: messages
+       }) do
+    messages
+    |> Enum.reverse()
+    |> Enum.find_value(fn message ->
+      if has_workflow_code?(message.workflow_code), do: message.workflow_code
+    end)
+  end
+
+  defp extract_workflow_code(%Lightning.AiAssistant.ChatMessage{
+         workflow_code: code
+       }) do
+    if has_workflow_code?(code), do: code
+  end
+
+  defp extract_workflow_code(_), do: nil
+
+  defp has_workflow_code?(code) when is_binary(code), do: code != ""
+  defp has_workflow_code?(_), do: false
 end

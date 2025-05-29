@@ -6,7 +6,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   import Lightning.Validators, only: [validate_required_assoc: 2]
 
   @type role() :: :user | :assistant
-  @type status() :: :success | :error | :cancelled
+  @type status() :: :pending | :success | :error | :cancelled
 
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
@@ -23,9 +23,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     field :workflow_code, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
 
-    field :status, Ecto.Enum,
-      values: [:success, :error, :cancelled],
-      default: :success
+    field :status, Ecto.Enum, values: [:pending, :success, :error, :cancelled]
 
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
@@ -50,6 +48,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> validate_required([:content, :role])
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
     |> maybe_require_user()
+    |> set_default_status_by_role()
   end
 
   defp maybe_put_user_assoc(changeset, user) do
@@ -65,6 +64,17 @@ defmodule Lightning.AiAssistant.ChatMessage do
       validate_required_assoc(changeset, :user)
     else
       changeset
+    end
+  end
+
+  defp set_default_status_by_role(changeset) do
+    role = get_field(changeset, :role)
+    current_status = get_field(changeset, :status)
+
+    case {role, current_status} do
+      {:user, nil} -> put_change(changeset, :status, :pending)
+      {:assistant, nil} -> put_change(changeset, :status, :success)
+      _ -> changeset
     end
   end
 end
