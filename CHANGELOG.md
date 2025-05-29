@@ -17,8 +17,26 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Optimize run claim query performance with per-workflow limiting strategy
+  [#3245](https://github.com/OpenFn/lightning/pull/3245)
+  - Add configurable per-workflow claim limit (default: 50) via
+    `PER_WORKFLOW_CLAIM_LIMIT` environment variable
+
+### Fixed
+
+## [v2.12.3-pre] - 2025-05-29
+
+### Added
+
 - Added a custom metric to track projects that could benefit from additional
   worker pods. [#3189](https://github.com/OpenFn/lightning/issues/3189)
+- Add a test metric that can be used to test external infrastructure (e.g.
+  alerting) in a deployed Lightning instance.
+  [#3229](https://github.com/OpenFn/lightning/issues/3229)
+- Broadcast work-available to worker when runs are enqueued
+  [#2934](https://github.com/OpenFn/lightning/issues/2934)
 
 ### Changed
 
@@ -29,15 +47,15 @@ and this project adheres to
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
 - Reduce the cardinality of `lightning_run_lost_count`.
   [#3226](https://github.com/OpenFn/lightning/issues/3226)
-- Optimize run claim query performance with per-workflow limiting strategy
-  [#3245](https://github.com/OpenFn/lightning/pull/3245)
-  - Add configurable per-workflow claim limit (default: 50) via
-    `PER_WORKFLOW_CLAIM_LIMIT` environment variable
 
 ### Fixed
 
 - Delay purge user having project file(s)
   [#2919](https://github.com/OpenFn/lightning/issues/2919)
+- Display all github repositories even if they're more than 30
+  [#3206](https://github.com/OpenFn/lightning/issues/3206)
+- Github repo names getting truncated
+  [#3037](https://github.com/OpenFn/lightning/issues/3037)
 
 ## [v2.12.2] - 2025-05-01
 
