@@ -98,7 +98,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :name,
             :adaptor,
             :body,
-            :project_credential_id
+            :project_credential_id,
+            :position
           ]),
         triggers:
           changeset
@@ -108,7 +109,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :type,
             :cron_expression,
             :has_auth_method,
-            :enabled
+            :enabled,
+            :position
           ]),
         edges:
           changeset
