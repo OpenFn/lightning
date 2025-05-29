@@ -66,7 +66,7 @@ defmodule Lightning.CLI do
     def get_messages(%__MODULE__{logs: logs}) do
       logs
       |> Enum.reduce([], fn l, messages ->
-        if Map.keys(l) == ["message"] do
+        if Map.has_key?(l, "message") do
           messages ++ l["message"]
         else
           messages
