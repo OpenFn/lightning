@@ -83,6 +83,10 @@ const fromWorkflow = (
           model.position = positions[node.id];
         }
 
+        // Set initial dimensions to prevent React Flow v12 from recalculating on first interaction
+        model.width = 350;
+        model.height = 200;
+
         model.data.allowPlaceholder = allowPlaceholder;
 
         if (type === 'trigger') {
