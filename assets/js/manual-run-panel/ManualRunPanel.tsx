@@ -45,39 +45,45 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   });
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const pushManualChange = React.useCallback((option: SeletableOptions) => {
-    switch (option) {
-      case SeletableOptions.EMPTY:
-        pushEvent('manual_run_change', {
-          manual: {
-            body: '{}',
-            dataclip_id: null,
-          },
-        });
-        break;
-      case SeletableOptions.CUSTOM:
-      case SeletableOptions.EXISTING:
-        pushEvent('manual_run_change', {
-          manual: {
-            body: null,
-            dataclip_id: null,
-          },
-        });
-        break;
-    }
-  }, [pushEvent])
+  const pushManualChange = React.useCallback(
+    (option: SeletableOptions) => {
+      switch (option) {
+        case SeletableOptions.EMPTY:
+          pushEvent('manual_run_change', {
+            manual: {
+              body: '{}',
+              dataclip_id: null,
+            },
+          });
+          break;
+        case SeletableOptions.CUSTOM:
+        case SeletableOptions.EXISTING:
+          pushEvent('manual_run_change', {
+            manual: {
+              body: null,
+              dataclip_id: null,
+            },
+          });
+          break;
+      }
+    },
+    [pushEvent]
+  );
 
-  const setSelectedDataclipHelper = React.useCallback((v: Dataclip | null) => {
-    if (v) {
-      pushEvent('manual_run_change', {
-        manual: { dataclip_id: v.id },
-      });
-    } else {
-      setSelectedOption(SeletableOptions.EXISTING);
-      pushManualChange(SeletableOptions.EXISTING);
-    }
-    setSelectedDataclip(v);
-  }, [pushEvent, pushManualChange])
+  const setSelectedDataclipHelper = React.useCallback(
+    (v: Dataclip | null) => {
+      if (v) {
+        pushEvent('manual_run_change', {
+          manual: { dataclip_id: v.id },
+        });
+      } else {
+        setSelectedOption(SeletableOptions.EXISTING);
+        pushManualChange(SeletableOptions.EXISTING);
+      }
+      setSelectedDataclip(v);
+    },
+    [pushEvent, pushManualChange]
+  );
 
   React.useEffect(() => {
     props.handleEvent('manual_run_created', payload => {
@@ -155,7 +161,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     };
     const q = constructQuery(queryData);
     navigate(alterURLParams(queryData).toString());
-    pushManualChange(selectedOption)
+    pushManualChange(selectedOption);
 
     pushEvent(
       'search-selectable-dataclips',
@@ -223,7 +229,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
 
   const selectOptionHandler = (option: SeletableOptions) => () => {
     navigate(alterURLParams({ active_panel: option.toString() }).toString());
-    pushManualChange(option)
+    pushManualChange(option);
     setSelectedOption(option);
   };
 
@@ -240,46 +246,55 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       ) : (
         <div className="grow overflow-auto no-scrollbar -mt-2">
           <div className="flex flex-col gap-2 h-full">
-            <div className="flex md:gap-2 sm:gap-1 justify-center flex-wrap">
-              <button
-                type="button"
-                onClick={selectOptionHandler(SeletableOptions.EMPTY)}
-                className={
-                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
-                  getActive(SeletableOptions.EMPTY)
-                }
-              >
-                <DocumentIcon
-                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                />
-                Empty
-              </button>
-              <button
-                type="button"
-                onClick={selectOptionHandler(SeletableOptions.CUSTOM)}
-                className={
-                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
-                  getActive(SeletableOptions.CUSTOM)
-                }
-              >
-                <PencilSquareIcon
-                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                />
-                Custom
-              </button>
-              <button
-                type="button"
-                onClick={selectOptionHandler(SeletableOptions.EXISTING)}
-                className={
-                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
-                  getActive(SeletableOptions.EXISTING)
-                }
-              >
-                <QueueListIcon
-                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                />
-                Existing
-              </button>
+            {/* Tab Navigation */}
+            <div className="flex justify-center">
+              <div className="inline-flex bg-gray-50 p-1 rounded-lg border border-gray-200">
+                <button
+                  type="button"
+                  onClick={selectOptionHandler(SeletableOptions.EMPTY)}
+                  className={`
+                    relative px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 min-w-[90px] justify-center
+                    ${
+                      selectedOption === SeletableOptions.EMPTY
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    }
+                  `}
+                >
+                  <DocumentIcon className="w-4 h-4" />
+                  Empty
+                </button>
+                <button
+                  type="button"
+                  onClick={selectOptionHandler(SeletableOptions.CUSTOM)}
+                  className={`
+                    relative px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 min-w-[90px] justify-center
+                    ${
+                      selectedOption === SeletableOptions.CUSTOM
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    }
+                  `}
+                >
+                  <PencilSquareIcon className="w-4 h-4" />
+                  Custom
+                </button>
+                <button
+                  type="button"
+                  onClick={selectOptionHandler(SeletableOptions.EXISTING)}
+                  className={`
+                    relative px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 min-w-[90px] justify-center
+                    ${
+                      selectedOption === SeletableOptions.EXISTING
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    }
+                  `}
+                >
+                  <QueueListIcon className="w-4 h-4" />
+                  Existing
+                </button>
+              </div>
             </div>
             {innerView}
           </div>
