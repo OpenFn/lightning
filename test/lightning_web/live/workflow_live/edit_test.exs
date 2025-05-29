@@ -3198,7 +3198,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert_patch(view)
 
       # pending message is shown
-      assert render(view) =~ "AI is thinking..."
+      assert render(view) =~ "Processing..."
       refute render(view) =~ "Pong"
 
       # return the response
