@@ -6,7 +6,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
-  alias Lightning.Workflows.WorkflowUsageLimiter
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.Helpers
@@ -26,7 +25,7 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   @impl true
   def render(%{project: %{id: project_id}} = assigns) do
-    assigns = check_workflow_and_run_limits(assigns, project_id)
+    assigns = check_run_limits(assigns, project_id)
 
     ~H"""
     <LayoutComponents.page_content>
@@ -49,7 +48,6 @@ defmodule LightningWeb.WorkflowLive.Index do
           period={@dashboard_period}
           can_create_workflow={@can_create_workflow}
           can_delete_workflow={@can_delete_workflow}
-          workflow_creation_limit_error={@workflow_creation_limit_error}
           workflows_stats={@workflows_stats}
           project={@project}
           sort_key={Atom.to_string(@sort_key)}
@@ -277,22 +275,8 @@ defmodule LightningWeb.WorkflowLive.Index do
     end
   end
 
-  defp check_workflow_and_run_limits(assigns, project_id) do
-    assigns
-    |> assign(
-      workflow_creation_limit_error: limit_workflow_creation_error(project_id)
-    )
-    |> LiveHelpers.check_limits(project_id)
-  end
-
-  defp limit_workflow_creation_error(project_id) do
-    case WorkflowUsageLimiter.limit_workflow_creation(project_id) do
-      :ok ->
-        nil
-
-      {:error, _reason, %{text: error_msg}} ->
-        error_msg
-    end
+  defp check_run_limits(assigns, project_id) do
+    LiveHelpers.check_limits(assigns, project_id)
   end
 
   defp to_sort_key("name"), do: :name
