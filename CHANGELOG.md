@@ -35,17 +35,18 @@ and this project adheres to
   [#2934](https://github.com/OpenFn/lightning/issues/2934)
 
 ### Changed
-- Optimize run claim query performance with per-workflow limiting strategy
-  [#3245](https://github.com/OpenFn/lightning/pull/3245)
-- Add configurable per-workflow claim limit (default: 50) via
-  `PER_WORKFLOW_CLAIM_LIMIT` environment variable
+
 - Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
 - Standardized table components across the application
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
+- Standardize buttons
+  [#3093](https://github.com/OpenFn/lightning/issues/3093)
 - Make the chunk size for deleting expired activty configurable via ENV
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
 - Reduce the cardinality of `lightning_run_lost_count`.
   [#3226](https://github.com/OpenFn/lightning/issues/3226)
+- Improve manual run component
+  [#3089](https://github.com/OpenFn/lightning/issues/3089)
 
 ### Fixed
 
@@ -64,7 +65,6 @@ and this project adheres to
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
 - Re-order nightly cron jobs to reduce acute stress on db
   [#3179](https://github.com/OpenFn/lightning/pull/3179)
-- Standardize buttons [#3093](https://github.com/OpenFn/lightning/issues/3093)
 
 ### Fixed
 
