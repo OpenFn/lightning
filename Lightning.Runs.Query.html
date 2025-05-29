@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.1">
-    <meta name="project" content="Lightning v2.12.2">
+    <meta name="project" content="Lightning v2.12.3-pre">
 
 
-    <title>Lightning.Runs.Query — Lightning v2.12.2</title>
+    <title>Lightning.Runs.Query — Lightning v2.12.3-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-66278873.js"></script>
+    <script defer src="dist/sidebar_items-14C29748.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.12.2
+          v2.12.3-pre
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Runs.Query</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.12.2)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.12.3-pre)</small>
 
     </h1>
 
@@ -192,7 +192,7 @@ still incomplete.</p></div>
 <p>Query to return runs that are eligible for claiming.</p><p>Uses <a href="#in_progress_window/0"><code class="inline">in_progress_window/0</code></a> and filters for runs that are either in the
 available state and have not reached the concurrency limit for their workflow.</p><section role="note" class="admonition info"><h3 id="eligible_for_claim/0-note" class="admonition-title info section-heading"><a href="#eligible_for_claim/0-note" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Note</span></h3><p>This query does not currently take into account the priority of the run.
 To allow for prioritization, the query should be updated to order by
-priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="6711658159-1">(</span><span class="p" data-group-id="6711658159-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="6711658159-2">(</span><span class="p" data-group-id="6711658159-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="6711658159-3">]</span><span class="p" data-group-id="6711658159-2">)</span></code></pre></section>
+priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="1984415348-1">(</span><span class="p" data-group-id="1984415348-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="1984415348-2">(</span><span class="p" data-group-id="1984415348-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="1984415348-3">]</span><span class="p" data-group-id="1984415348-2">)</span></code></pre></section>
   </section>
 </section>
 <section class="detail" id="in_progress_window/0">
