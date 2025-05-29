@@ -985,11 +985,11 @@ defmodule LightningWeb.AiAssistant.Component do
     assigns = assign(assigns, ai_feedback: ai_feedback())
 
     ~H"""
-    <div class="row-span-full flex flex-col bg-gray-50">
+    <div class="row-span-full flex flex-col bg-white">
       <div class="bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-between sticky top-0 z-10">
         <div class="flex items-center gap-3 min-w-0 flex-1">
           <div class="flex-shrink-0">
-            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <div class="w-8 h-8 rounded-full ai-bg-gradient flex items-center justify-center">
               <.icon name="hero-chat-bubble-left-right" class="w-5 h-5 text-white" />
             </div>
           </div>
@@ -1086,12 +1086,12 @@ defmodule LightningWeb.AiAssistant.Component do
           "relative overflow-hidden rounded-2xl max-w-full",
           message_container_classes(@message.status)
         ]}>
-          <div
+          <%!-- <div
             :if={@message.status != :success}
             class="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white z-10"
             class={status_indicator_classes(@message.status)}
           >
-          </div>
+          </div> --%>
 
           <div class="px-4 py-3">
             <p class={[
@@ -1148,7 +1148,7 @@ defmodule LightningWeb.AiAssistant.Component do
     <div class="text-sm flex justify-start">
       <div class="flex items-start gap-4 max-w-[85%]">
         <div class="flex-shrink-0 mt-1">
-          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+          <div class="w-8 h-8 rounded-full ai-bg-gradient flex items-center justify-center">
             <.icon name={@handler.metadata().icon} class="w-6 h-6 text-white" />
           </div>
         </div>
@@ -1170,7 +1170,7 @@ defmodule LightningWeb.AiAssistant.Component do
         >
           <div
             :if={@message.workflow_code && @handler.supports_template_generation?()}
-            class="px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100 group-hover:from-indigo-100 group-hover:to-purple-100 transition-colors"
+            class="px-4 py-2 ai-bg-gradient-light border-b border-gray-100 group-hover:from-indigo-100 group-hover:to-purple-100 transition-colors"
           >
             <div class="flex items-center gap-2 text-sm">
               <.icon name="hero-gift" class="w-4 h-4 text-indigo-600" />
@@ -1221,7 +1221,7 @@ defmodule LightningWeb.AiAssistant.Component do
     <div class="flex justify-start">
       <div class="flex items-start gap-4">
         <div class="flex-shrink-0 mt-1">
-          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+          <div class="w-8 h-8 rounded-full ai-bg-gradient flex items-center justify-center">
             <.icon name={@handler.metadata().icon} class="w-6 h-6 text-white" />
           </div>
         </div>
@@ -1282,10 +1282,10 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp message_container_classes(status) do
     case status do
-      :success -> "bg-gradient-to-br from-indigo-600 to-purple-600"
-      :pending -> "bg-gradient-to-br from-indigo-500 to-purple-500 opacity-80"
-      :error -> "bg-gradient-to-br from-red-500 to-red-600"
-      _ -> "bg-gradient-to-br from-indigo-600 to-purple-600"
+      :success -> "ai-bg-gradient"
+      :pending -> "ai-bg-gradient-pending opacity-80"
+      :error -> "ai-bg-gradient-error"
+      _ -> "ai-bg-gradient"
     end
   end
 
@@ -1312,13 +1312,13 @@ defmodule LightningWeb.AiAssistant.Component do
     end
   end
 
-  defp status_indicator_classes(status) do
-    case status do
-      :pending -> "bg-yellow-400 animate-pulse"
-      :error -> "bg-red-300"
-      _ -> "hidden"
-    end
-  end
+  # defp status_indicator_classes(status) do
+  #   case status do
+  #     :pending -> "bg-yellow-400 animate-pulse"
+  #     :error -> "bg-red-300"
+  #     _ -> "hidden"
+  #   end
+  # end
 
   defp message_count_text(session) do
     case length(session.messages) do

@@ -746,8 +746,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 >
                   Copy Code
                 </.button>
+                <%!-- :if={@current_user.support_user} --%>
                 <.button
-                  :if={@current_user.support_user}
                   theme="primary"
                   id="publish-template-btn"
                   phx-click="publish_template"
@@ -3107,8 +3107,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     >
       <div class="flex items-start gap-3 opacity-100">
         <div class="flex-shrink-0">
-          <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600
-                      flex items-center justify-center">
+          <div class="w-10 h-10 rounded-lg ai-bg-gradient flex items-center justify-center">
             <.icon name="hero-document-text" class="w-5 h-5 text-white" />
           </div>
         </div>
@@ -3131,10 +3130,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div class="flex items-center justify-center w-full h-full p-8">
       <div class="max-w-md text-center space-y-6">
         <div class="relative mx-auto w-24 h-24 mb-8">
-          <div class="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20
-                      rounded-2xl animate-pulse">
-          </div>
-          <div class="relative bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6">
+          <div class="relative ai-bg-gradient rounded-2xl p-6">
             <.icon name="hero-bolt" class="w-12 h-12 text-white" />
           </div>
         </div>

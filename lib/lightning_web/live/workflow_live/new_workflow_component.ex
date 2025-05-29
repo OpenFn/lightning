@@ -417,7 +417,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       phx-click="choose-another-method"
       phx-value-method="ai"
       phx-target={@myself}
-      class="relative flex flex-col cursor-pointer rounded-md border border-indigo-300/40 p-4 transition-all duration-300 no-underline w-full text-left bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 hover:border-indigo-300/80 group h-24"
+      class="relative flex flex-col cursor-pointer rounded-md border border-indigo-300/40 p-4 transition-all duration-300 no-underline w-full text-left ai-bg-gradient ai-bg-gradient-hover hover:border-indigo-300/80 group h-24"
       style="appearance: none;"
     >
       <span class="flex-1 overflow-hidden flex flex-col relative z-10">
