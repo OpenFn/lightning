@@ -1,6 +1,9 @@
 defmodule LightningWeb.AiAssistant.Component do
   @moduledoc """
   The AI Assistant component is a live component that allows users to interact with the AI Assistant.
+
+  Supports multiple modes (job code assistance, workflow template generation) with
+  pagination, error handling, and real-time message processing.
   """
 
   use LightningWeb, :live_component
@@ -22,6 +25,7 @@ defmodule LightningWeb.AiAssistant.Component do
        session: nil,
        error_message: nil,
        ai_limit_result: nil,
+       pagination_meta: nil,
        sort_direction: :desc,
        has_read_disclaimer: false,
        all_sessions: AsyncResult.ok([]),
@@ -49,57 +53,6 @@ defmodule LightningWeb.AiAssistant.Component do
      |> apply_action(action, mode)}
   end
 
-  defp apply_action(socket, :new, _mode) do
-    %{assigns: %{sort_direction: sort_direction, handler: handler} = assigns} =
-      socket
-
-    ui_callback = fn event, _data ->
-      case event do
-        :clear_template ->
-          send_update(
-            LightningWeb.WorkflowLive.NewWorkflowComponent,
-            id: socket.assigns.parent_component_id,
-            action: :template_selected,
-            template: nil
-          )
-
-        _ ->
-          :ok
-      end
-    end
-
-    socket
-    |> handler.on_session_start(ui_callback)
-    |> assign_async(:all_sessions, fn ->
-      {:ok, %{all_sessions: handler.list_sessions(assigns, sort_direction)}}
-    end)
-  end
-
-  defp apply_action(socket, :show, _mode) do
-    session =
-      socket.assigns.handler.get_session!(
-        socket.assigns.chat_session_id,
-        socket.assigns
-      )
-
-    socket = maybe_push_workflow_code(socket, session)
-
-    pending_message = find_pending_user_message(session)
-
-    if pending_message do
-      socket
-      |> assign(:session, session)
-      |> process_message(pending_message.content)
-    else
-      assign(socket, :session, session)
-    end
-  end
-
-  defp find_pending_user_message(session) do
-    session.messages
-    |> Enum.find(&(&1.role == :user && &1.status == :pending))
-  end
-
   def render(assigns) do
     ~H"""
     <div id={@id} class="h-full relative">
@@ -120,18 +73,18 @@ defmodule LightningWeb.AiAssistant.Component do
     if socket.assigns.can_edit_workflow do
       %{action: action} = socket.assigns
 
-      socket
-      |> assign(error_message: nil)
-      |> check_limit()
-      |> then(fn socket ->
-        if socket.assigns.ai_limit_result == :ok do
-          {:noreply,
-           save_message(socket, action, content)
-           |> assign(:form, to_form(%{"content" => nil}))}
-        else
-          {:noreply, socket}
-        end
-      end)
+      socket =
+        socket
+        |> assign(error_message: nil)
+        |> check_limit()
+
+      if socket.assigns.ai_limit_result == :ok do
+        {:noreply,
+         save_message(socket, action, content)
+         |> assign(:form, to_form(%{"content" => nil}))}
+      else
+        {:noreply, socket}
+      end
     else
       {:noreply,
        socket
@@ -144,7 +97,6 @@ defmodule LightningWeb.AiAssistant.Component do
 
   def handle_event("mark_disclaimer_read", _params, socket) do
     {:ok, _} = AiAssistant.mark_disclaimer_read(socket.assigns.current_user)
-
     {:noreply, assign(socket, has_read_disclaimer: true)}
   end
 
@@ -152,10 +104,12 @@ defmodule LightningWeb.AiAssistant.Component do
     new_direction =
       if socket.assigns.sort_direction == :desc, do: :asc, else: :desc
 
-    socket
-    |> assign(:sort_direction, new_direction)
-    |> apply_action(:new, socket.assigns.mode)
-    |> then(fn socket -> {:noreply, socket} end)
+    socket =
+      socket
+      |> assign(:sort_direction, new_direction)
+      |> apply_action(:new, socket.assigns.mode)
+
+    {:noreply, socket}
   end
 
   def handle_event("cancel_message", %{"message-id" => message_id}, socket) do
@@ -198,8 +152,106 @@ defmodule LightningWeb.AiAssistant.Component do
         %{assigns: assigns} = socket
       ) do
     message = Enum.find(assigns.session.messages, &(&1.id == message_id))
-
     {:noreply, maybe_push_workflow_code(socket, message)}
+  end
+
+  def handle_event("retry_load_sessions", _params, socket) do
+    {:noreply, apply_action(socket, :new, socket.assigns.mode)}
+  end
+
+  def handle_event("load_more_sessions", _params, socket) do
+    %{assigns: %{sort_direction: sort_direction, handler: handler} = assigns} =
+      socket
+
+    current_sessions =
+      case socket.assigns.all_sessions do
+        %AsyncResult{result: sessions} when is_list(sessions) -> sessions
+        _ -> []
+      end
+
+    offset = length(current_sessions)
+
+    socket =
+      socket
+      |> assign_async([:all_sessions, :pagination_meta], fn ->
+        case handler.list_sessions(assigns, sort_direction,
+               offset: offset,
+               limit: 20
+             ) do
+          %{sessions: new_sessions, pagination: pagination} ->
+            all_sessions = current_sessions ++ new_sessions
+            {:ok, %{all_sessions: all_sessions, pagination_meta: pagination}}
+        end
+      end)
+
+    {:noreply, socket}
+  end
+
+  def handle_async(:process_message, {:ok, {:ok, session}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:session, session)
+     |> assign(:pending_message, AsyncResult.ok(nil))
+     |> maybe_push_workflow_code(session)}
+  end
+
+  def handle_async(:process_message, {:ok, {:error, error}}, socket),
+    do: handle_failed_async({:error, error}, socket)
+
+  def handle_async(:process_message, {:exit, error}, socket),
+    do: handle_failed_async({:exit, error}, socket)
+
+  defp apply_action(socket, :new, _mode) do
+    %{assigns: %{sort_direction: sort_direction, handler: handler} = assigns} =
+      socket
+
+    ui_callback = fn event, _data ->
+      case event do
+        :clear_template ->
+          send_update(
+            LightningWeb.WorkflowLive.NewWorkflowComponent,
+            id: socket.assigns.parent_component_id,
+            action: :template_selected,
+            template: nil
+          )
+
+        _ ->
+          :ok
+      end
+    end
+
+    socket
+    |> handler.on_session_start(ui_callback)
+    |> assign_async([:all_sessions, :pagination_meta], fn ->
+      case handler.list_sessions(assigns, sort_direction, limit: 20) do
+        %{sessions: sessions, pagination: pagination} ->
+          {:ok, %{all_sessions: sessions, pagination_meta: pagination}}
+      end
+    end)
+  end
+
+  defp apply_action(socket, :show, _mode) do
+    session =
+      socket.assigns.handler.get_session!(
+        socket.assigns.chat_session_id,
+        socket.assigns
+      )
+
+    socket = maybe_push_workflow_code(socket, session)
+    pending_message = find_pending_user_message(session)
+
+    if pending_message do
+      socket
+      |> assign(:session, session)
+      |> process_message(pending_message.content)
+    else
+      assign(socket, :session, session)
+    end
+  end
+
+  defp find_pending_user_message(session) do
+    session.messages
+    |> Enum.find(&(&1.role == :user && &1.status == :pending))
   end
 
   defp save_message(socket, :new, content) do
@@ -241,20 +293,6 @@ defmodule LightningWeb.AiAssistant.Component do
     "#{base_url}?#{query_string}"
   end
 
-  def handle_async(:process_message, {:ok, {:ok, session}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:session, session)
-     |> assign(:pending_message, AsyncResult.ok(nil))
-     |> maybe_push_workflow_code(session)}
-  end
-
-  def handle_async(:process_message, {:ok, {:error, error}}, socket),
-    do: handle_failed_async({:error, error}, socket)
-
-  def handle_async(:process_message, {:exit, error}, socket),
-    do: handle_failed_async({:exit, error}, socket)
-
   defp handle_failed_async(error, socket) do
     message = List.last(socket.assigns.session.messages)
 
@@ -269,13 +307,412 @@ defmodule LightningWeb.AiAssistant.Component do
      end)}
   end
 
+  defp maybe_check_limit(%{assigns: %{ai_limit_result: nil}} = socket) do
+    check_limit(socket)
+  end
+
+  defp maybe_check_limit(socket), do: socket
+
+  defp check_limit(socket) do
+    limit = Limiter.validate_quota(socket.assigns.project.id)
+
+    error_message =
+      if limit != :ok, do: socket.assigns.handler.error_message(limit)
+
+    assign(socket, ai_limit_result: limit, error_message: error_message)
+  end
+
+  defp maybe_show_ellipsis(title) when is_binary(title) do
+    if String.length(title) >= AiAssistant.title_max_length() do
+      "#{title}..."
+    else
+      title
+    end
+  end
+
+  defp display_cancel_message_btn?(session) do
+    user_messages = Enum.filter(session.messages, &(&1.role == :user))
+    length(user_messages) > 1
+  end
+
+  defp ai_feedback do
+    Application.get_env(:lightning, :ai_feedback)
+  end
+
+  defp process_message(socket, message) do
+    session = socket.assigns.session
+    handler = socket.assigns.handler
+
+    socket
+    |> assign(:pending_message, AsyncResult.loading())
+    |> start_async(:process_message, fn -> handler.query(session, message) end)
+  end
+
+  defp maybe_push_workflow_code(socket, session_or_message) do
+    ui_callback = fn event, data ->
+      case event do
+        :workflow_code_generated ->
+          send_update(
+            LightningWeb.WorkflowLive.NewWorkflowComponent,
+            id: socket.assigns.parent_component_id,
+            action: :template_selected,
+            template: %{code: data}
+          )
+
+        _ ->
+          :ok
+      end
+    end
+
+    socket.assigns.handler.handle_response_generated(
+      socket.assigns,
+      session_or_message,
+      ui_callback
+    )
+
+    socket
+  end
+
+  defp render_session(assigns) do
+    ~H"""
+    <div class="grid grid-cols-1 grid-rows-2 h-full flow-root">
+      <%= case @action do %>
+        <% :new -> %>
+          <.render_all_sessions
+            all_sessions={@all_sessions}
+            query_params={@query_params}
+            base_url={@base_url}
+            sort_direction={@sort_direction}
+            pagination_meta={@pagination_meta}
+            target={@myself}
+          />
+        <% :show -> %>
+          <.render_individual_session
+            session={@session}
+            pending_message={@pending_message}
+            query_params={@query_params}
+            base_url={@base_url}
+            target={@myself}
+            handler={@handler}
+          />
+      <% end %>
+
+      <.async_result :let={endpoint_available?} assign={@endpoint_available?}>
+        <:loading>
+          <div class="row-span-full flex items-center justify-center">
+            <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
+              <.icon name="hero-sparkles" class="animate-pulse" />
+            </div>
+          </div>
+        </:loading>
+
+        <.form
+          for={@form}
+          phx-submit="send_message"
+          phx-change="validate"
+          class="row-span-1 pl-2 pr-2 pb-1"
+          phx-target={@myself}
+          phx-hook="SendMessageViaCtrlEnter"
+          data-keybinding-scope="chat"
+          id="ai-assistant-form"
+        >
+          <div
+            :if={@error_message}
+            id="ai-assistant-error"
+            class="alert alert-danger hover:cursor-pointer flex justify-between"
+            role="alert"
+            phx-click={JS.hide()}
+          >
+            <div>{@error_message}</div>
+            <.icon name="hero-x-mark" class="h-5 w-5" />
+          </div>
+
+          <.chat_input
+            form={@form}
+            disabled={
+              @handler.chat_input_disabled?(%{
+                assigns
+                | endpoint_available?: endpoint_available?
+              })
+            }
+            tooltip={@handler.disabled_tooltip_message(assigns)}
+            handler={@handler}
+          />
+        </.form>
+      </.async_result>
+    </div>
+    <.disclaimer />
+    """
+  end
+
+  attr :disabled, :boolean
+  attr :tooltip, :string
+  attr :form, :map, required: true
+  attr :handler, :any, required: true
+
+  defp chat_input(assigns) do
+    ~H"""
+    <div class="mx-2 mb-2 mt-6">
+      <div class="relative flex flex-col bg-white rounded-lg ring-1 ring-gray-200 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-1 transition-shadow">
+        <label for="content" class="sr-only">Describe your request</label>
+
+        <textarea
+          id="content"
+          name={@form[:content].name}
+          rows="6"
+          class="block w-full px-4 py-2 text-sm text-gray-800 bg-transparent border-0 resize-none rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-0"
+          placeholder={@handler.input_placeholder()}
+          disabled={@disabled}
+          phx-hook="TabIndent"
+        ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
+
+        <div class="flex items-center justify-end px-2 py-1 mt-1 border-t border-gray-200 bg-gray-100 rounded-none rounded-b-lg">
+          <span class="text-xs text-gray-500 mr-2 select-none font-bold">
+            Do not paste PII or sensitive business data
+          </span>
+
+          <.simple_button_with_tooltip
+            id="ai-assistant-form-submit-btn"
+            type="submit"
+            disabled={@disabled}
+            tooltip={@tooltip}
+            form="ai-assistant-form"
+            class="p-2 text-white bg-indigo-600 rounded-full hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            <.icon name="hero-paper-airplane-solid" />
+          </.simple_button_with_tooltip>
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <.ai_footer />
+      </div>
+    </div>
+    """
+  end
+
+  attr :all_sessions, AsyncResult, required: true
+  attr :query_params, :map, required: true
+  attr :base_url, :string, required: true
+  attr :sort_direction, :atom, required: true
+  attr :pagination_meta, :any, default: nil
+  attr :target, :string, required: true
+
+  defp render_all_sessions(assigns) do
+    ~H"""
+    <div class="row-span-full px-4 py-4 mb-2 overflow-y-auto">
+      <.async_result :let={all_sessions} assign={@all_sessions}>
+        <:loading>
+          <div class="flex flex-col items-center justify-center py-8">
+            <div class="rounded-full p-3 bg-indigo-100 text-indigo-600 ring-4 ring-white">
+              <.icon name="hero-sparkles" class="size-6 animate-pulse" />
+            </div>
+            <p class="mt-3 text-sm text-gray-600 font-medium">
+              Loading chat history...
+            </p>
+            <p class="text-xs text-gray-500 mt-1">This may take a moment</p>
+          </div>
+        </:loading>
+
+        <:failed :let={_failure}>
+          <div class="text-center py-8">
+            <div class="rounded-full p-3 bg-red-100 text-red-600 ring-4 ring-white mx-auto w-fit mb-3">
+              <.icon name="hero-exclamation-triangle" class="size-6" />
+            </div>
+            <p class="text-red-700 font-medium">Failed to load chat history</p>
+            <p class="text-sm text-gray-500 mt-1">
+              Please check your connection and try again
+            </p>
+            <button
+              phx-click="retry_load_sessions"
+              phx-target={@target}
+              class="mt-3 text-sm text-blue-600 hover:text-blue-800 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-2 py-1 transition-colors duration-200"
+            >
+              Try again
+            </button>
+          </div>
+        </:failed>
+
+        <div :if={length(all_sessions) == 0} class="text-center py-12">
+          <div class="rounded-full p-3 bg-gray-100 text-gray-400 mx-auto w-fit mb-4">
+            <.icon name="hero-chat-bubble-left-right" class="size-8" />
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No chat history yet</h3>
+          <p class="text-gray-500 max-w-sm mx-auto">
+            Start a conversation to see your chat history appear here. All your conversations will be saved automatically.
+          </p>
+        </div>
+
+        <div :if={length(all_sessions) > 0}>
+          <div class="mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <h2 class="text-lg font-semibold text-gray-900">Chat History</h2>
+              <.async_result :let={pagination} assign={@pagination_meta}>
+                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {length(all_sessions)} of {pagination.total_count}
+                </span>
+              </.async_result>
+            </div>
+
+            <button
+              phx-click="toggle_sort"
+              phx-target={@target}
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              aria-label={
+                if @sort_direction == :desc,
+                  do: "Currently showing latest first. Click to sort oldest first.",
+                  else: "Currently showing oldest first. Click to sort latest first."
+              }
+            >
+              <span>
+                {if @sort_direction == :desc, do: "Latest", else: "Oldest"}
+              </span>
+              <%= if @sort_direction == :desc do %>
+                <.icon name="hero-chevron-down" class="size-4" />
+              <% else %>
+                <.icon name="hero-chevron-up" class="size-4" />
+              <% end %>
+            </button>
+          </div>
+
+          <div class="space-y-3" role="list" aria-label="Chat sessions">
+            <%= for session <- all_sessions do %>
+              <.link
+                id={"session-#{session.id}"}
+                patch={
+                  redirect_url(@base_url, Map.put(@query_params, "chat", session.id))
+                }
+                class="group block p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
+                role="listitem"
+                aria-label={"Open chat: #{session.title}"}
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start space-x-3 min-w-0 flex-1">
+                    <div class="flex-shrink-0 mt-0.5">
+                      <.user_avatar user={session.user} />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-medium text-gray-900 truncate group-hover:text-gray-700">
+                        {maybe_show_ellipsis(session.title)}
+                      </p>
+                      <p class="text-xs text-gray-500 mt-1">
+                        {format_session_preview(session)}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex-shrink-0 text-right">
+                    <time
+                      datetime={DateTime.to_iso8601(session.updated_at)}
+                      class="text-xs text-gray-500 group-hover:text-gray-700 whitespace-nowrap block"
+                    >
+                      {time_ago(session.updated_at)}
+                    </time>
+                    <div class="mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <.icon name="hero-chevron-right" class="size-4 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+              </.link>
+            <% end %>
+          </div>
+
+          <.async_result :let={pagination} assign={@pagination_meta}>
+            <div :if={pagination.has_next_page} class="mt-6 text-center">
+              <button
+                phx-click="load_more_sessions"
+                phx-target={@target}
+                class="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded px-3 py-2 transition-colors duration-200"
+              >
+                <span>Load more conversations</span>
+                <span class="text-xs text-gray-500">
+                  ({pagination.total_count - length(all_sessions)} remaining)
+                </span>
+              </button>
+            </div>
+          </.async_result>
+        </div>
+      </.async_result>
+    </div>
+    """
+  end
+
+  defp format_session_preview(session) do
+    session
+    |> get_preview_source()
+    |> format_preview_text()
+  end
+
+  defp get_preview_source(session) do
+    cond do
+      has_message_count?(session) -> {:message_count, session.message_count}
+      has_messages?(session) -> {:messages, length(session.messages)}
+      has_last_message?(session) -> {:last_message, session.last_message}
+      has_updated_at?(session) -> {:updated_at, session.updated_at}
+      true -> {:default, nil}
+    end
+  end
+
+  defp format_preview_text({:message_count, count}),
+    do: format_message_count(count)
+
+  defp format_preview_text({:messages, count}), do: format_message_count(count)
+
+  defp format_preview_text({:last_message, message}),
+    do: format_last_message(message)
+
+  defp format_preview_text({:updated_at, datetime}),
+    do: format_activity_status(datetime)
+
+  defp format_preview_text({:default, _}), do: "Conversation"
+
+  defp has_message_count?(session) do
+    Map.has_key?(session, :message_count) and not is_nil(session.message_count)
+  end
+
+  defp has_messages?(session) do
+    Map.has_key?(session, :messages) and is_list(session.messages)
+  end
+
+  defp has_last_message?(session) do
+    Map.has_key?(session, :last_message) and not is_nil(session.last_message)
+  end
+
+  defp has_updated_at?(session) do
+    Map.has_key?(session, :updated_at)
+  end
+
+  defp format_message_count(0), do: "New conversation"
+  defp format_message_count(1), do: "1 message"
+  defp format_message_count(count), do: "#{count} messages"
+
+  defp format_last_message(message) do
+    message
+    |> String.trim()
+    |> String.slice(0, 50)
+    |> add_ellipsis_if_needed(String.length(message))
+  end
+
+  defp add_ellipsis_if_needed("", _), do: "New conversation"
+
+  defp add_ellipsis_if_needed(preview, original_length)
+       when original_length > 50 do
+    preview <> "..."
+  end
+
+  defp add_ellipsis_if_needed(preview, _), do: preview
+
+  defp format_activity_status(datetime) do
+    if recent_activity?(datetime), do: "Recent activity", else: "Conversation"
+  end
+
+  defp recent_activity?(datetime) do
+    Timex.diff(DateTime.utc_now(), datetime, :hours) < 1
+  end
+
   defp render_onboarding(assigns) do
     assigns =
       assign(assigns,
-        ai_quote:
-          ai_quotes()
-          |> Enum.filter(fn map -> map[:enabled] end)
-          |> Enum.random()
+        ai_quote: ai_quotes() |> Enum.filter(& &1[:enabled]) |> Enum.random()
       )
 
     ~H"""
@@ -283,8 +720,7 @@ defmodule LightningWeb.AiAssistant.Component do
       <div class="flex-1 flex flex-col items-center md:justify-center relative">
         <p class="text-gray-700 font-medium mb-8 w-1/2 text-center">
           The AI Assistant is a chat agent designed to help you write job code.
-          <br />
-          <br />
+          <br /><br />
           Remember that you, the human in control, are responsible for how its output is used.
         </p>
 
@@ -297,23 +733,7 @@ defmodule LightningWeb.AiAssistant.Component do
         >
           Get started with the AI Assistant
         </.button>
-        <blockquote class="text-gray-700 font-medium mb-6 w-2/3 text-center absolute bottom-4 sm:hidden md:block">
-          <div class="inline-block pl-4 border-l-4 border-blue-500">
-            <p class="italic">{@ai_quote.quote}</p>
-            <p class="text-sm font-semibold">
-              -
-              <.link
-                id="ai-quote-source"
-                class="text-primary-400 hover:text-blue-600"
-                href={@ai_quote.source_link}
-                target="_blank"
-                {if(@ai_quote[:source_attribute], do: ["phx-hook": "Tooltip", "aria-label": @ai_quote.source_attribute], else: [])}
-              >
-                {@ai_quote.author}
-              </.link>
-            </p>
-          </div>
-        </blockquote>
+
         <.disclaimer />
       </div>
       <.ai_footer />
@@ -554,181 +974,6 @@ defmodule LightningWeb.AiAssistant.Component do
     """
   end
 
-  defp render_session(assigns) do
-    ~H"""
-    <div class="grid grid-cols-1 grid-rows-2 h-full flow-root">
-      <%= case @action do %>
-        <% :new -> %>
-          <.render_all_sessions
-            all_sessions={@all_sessions}
-            query_params={@query_params}
-            base_url={@base_url}
-            sort_direction={@sort_direction}
-            target={@myself}
-          />
-        <% :show -> %>
-          <.render_individual_session
-            session={@session}
-            pending_message={@pending_message}
-            query_params={@query_params}
-            base_url={@base_url}
-            target={@myself}
-            handler={@handler}
-          />
-      <% end %>
-
-      <.async_result :let={endpoint_available?} assign={@endpoint_available?}>
-        <:loading>
-          <div class="row-span-full flex items-center justify-center">
-            <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-              <.icon name="hero-sparkles" class="animate-pulse" />
-            </div>
-          </div>
-        </:loading>
-        <.form
-          for={@form}
-          phx-submit="send_message"
-          phx-change="validate"
-          class="row-span-1 pl-2 pr-2 pb-1"
-          phx-target={@myself}
-          phx-hook="SendMessageViaCtrlEnter"
-          data-keybinding-scope="chat"
-          id="ai-assistant-form"
-        >
-          <div
-            :if={@error_message}
-            id="ai-assistant-error"
-            class="alert alert-danger hover:cursor-pointer flex justify-between"
-            role="alert"
-            phx-click={JS.hide()}
-          >
-            <div>{@error_message}</div>
-            <.icon name="hero-x-mark" class="h-5 w-5" />
-          </div>
-          <.chat_input
-            form={@form}
-            disabled={
-              @handler.chat_input_disabled?(%{
-                assigns
-                | endpoint_available?: endpoint_available?
-              })
-            }
-            tooltip={@handler.disabled_tooltip_message(assigns)}
-            handler={@handler}
-          />
-        </.form>
-      </.async_result>
-    </div>
-    <.disclaimer />
-    """
-  end
-
-  attr :disabled, :boolean
-  attr :tooltip, :string
-  attr :form, :map, required: true
-  attr :handler, :any, required: true
-
-  defp chat_input(assigns) do
-    ~H"""
-    <div class="mx-2 mb-2 mt-6">
-      <div class="relative flex flex-col bg-white rounded-lg ring-1 ring-gray-200 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-1 transition-shadow">
-        <label for="content" class="sr-only">
-          Describe your request
-        </label>
-        <textarea
-          id="content"
-          name={@form[:content].name}
-          rows="6"
-          class="block w-full px-4 py-2 text-sm text-gray-800 bg-transparent border-0 resize-none rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-0"
-          placeholder={@handler.input_placeholder()}
-          disabled={@disabled}
-          phx-hook="TabIndent"
-        ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
-
-        <div class="flex items-center justify-end px-2 py-1 mt-1 border-t border-gray-200 bg-gray-100 rounded-none rounded-b-lg">
-          <span class="text-xs text-gray-500 mr-2 select-none font-bold">
-            Do not paste PII or sensitive business data
-          </span>
-          <.simple_button_with_tooltip
-            id="ai-assistant-form-submit-btn"
-            type="submit"
-            disabled={@disabled}
-            tooltip={@tooltip}
-            form="ai-assistant-form"
-            class="p-2 text-white bg-indigo-600 rounded-full hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            <.icon name="hero-paper-airplane-solid" />
-          </.simple_button_with_tooltip>
-        </div>
-      </div>
-      <div class="mt-2">
-        <.ai_footer />
-      </div>
-    </div>
-    """
-  end
-
-  attr :all_sessions, AsyncResult, required: true
-  attr :query_params, :map, required: true
-  attr :base_url, :string, required: true
-  attr :sort_direction, :atom, required: true
-  attr :target, :string, required: true
-
-  defp render_all_sessions(assigns) do
-    ~H"""
-    <div class="row-span-full px-4 py-4 mb-2 overflow-y-auto">
-      <.async_result :let={all_sessions} assign={@all_sessions}>
-        <:loading>
-          <div class="flex items-center justify-center">
-            <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-              <.icon name="hero-sparkles" class="animate-pulse" />
-            </div>
-          </div>
-        </:loading>
-        <div
-          :if={length(all_sessions) > 0}
-          class="mb-4 flex items-center justify-between"
-        >
-          <h2 class="text-lg font-semibold text-gray-900">Chat History</h2>
-          <button
-            phx-click="toggle_sort"
-            phx-target={@target}
-            class="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-          >
-            {if @sort_direction == :desc, do: "Latest", else: "Oldest"}
-            <%= if @sort_direction == :desc do %>
-              <.icon name="hero-chevron-down" class="size-5" />
-            <% else %>
-              <.icon name="hero-chevron-up" class="size-5" />
-            <% end %>
-          </button>
-        </div>
-        <div class="space-y-2">
-          <%= for session <- all_sessions do %>
-            <.link
-              id={"session-#{session.id}"}
-              patch={
-                redirect_url(@base_url, Map.put(@query_params, "chat", session.id))
-              }
-              class="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-between group"
-            >
-              <div class="flex items-center space-x-3 min-w-0">
-                <.user_avatar user={session.user} />
-                <span class="text-sm truncate">
-                  {maybe_show_ellipsis(session.title)}
-                </span>
-              </div>
-              <span class="text-xs text-gray-500 group-hover:text-gray-700 whitespace-nowrap">
-                {time_ago(session.updated_at)}
-              </span>
-            </.link>
-          <% end %>
-        </div>
-      </.async_result>
-    </div>
-    """
-  end
-
   attr :session, AiAssistant.ChatSession, required: true
   attr :pending_message, AsyncResult, required: true
   attr :query_params, :map, required: true
@@ -740,126 +985,65 @@ defmodule LightningWeb.AiAssistant.Component do
     assigns = assign(assigns, ai_feedback: ai_feedback())
 
     ~H"""
-    <div class="row-span-full flex flex-col">
-      <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-xs">
-        <span class="font-medium text-gray-900 px-1 truncate max-w-[300px]">
-          {maybe_show_ellipsis(@handler.chat_title(@session))}
-        </span>
-        <.link
-          patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}
-          class="p-2 pr-0 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
-        >
-          <.icon name="hero-x-mark" class="h-5 w-5" />
-        </.link>
+    <div class="row-span-full flex flex-col bg-gray-50">
+      <div class="bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-between sticky top-0 z-10">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <.icon name="hero-chat-bubble-left-right" class="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h1 class="text-sm font-semibold text-gray-900 truncate">
+              {maybe_show_ellipsis(@handler.chat_title(@session))}
+            </h1>
+            <p class="text-xs text-gray-500">
+              {message_count_text(@session)} • {format_session_time(
+                @session.updated_at
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <.link
+            id="close-chat-btn"
+            patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}
+            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            phx-hook="Tooltip"
+            aria-label="Close chat"
+          >
+            <.icon name="hero-x-mark" class="w-6 h-6" />
+          </.link>
+        </div>
       </div>
+
       <div
         id={"ai-session-#{@session.id}-messages"}
         phx-hook="ScrollToBottom"
-        class="text-sm flex flex-col gap-4 p-4 overflow-y-auto w-full h-full"
+        class="flex-1 overflow-y-auto px-6 py-4 space-y-6"
       >
         <%= for message <- @session.messages do %>
-          <div
-            :if={message.role == :user}
-            id={"message-#{message.id}"}
-            class="flex flex-row-reverse items-end gap-x-3 mr-3"
-          >
-            <.user_avatar user={message.user} size_class="min-w-10 h-10 w-10" />
-            <div class="bg-blue-300/50 p-2 mb-0.5 rounded-lg break-words max-w-[70%]">
-              {message.content}
-            </div>
-            <div
-              :if={message.role == :user and message.status == :error}
-              class="flex items-center gap-2 mt-1"
-            >
-              <button
-                id={"retry-message-#{message.id}"}
-                phx-click="retry_message"
-                phx-value-message-id={message.id}
-                phx-target={@target}
-                class="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition duration-200"
-                phx-hook="Tooltip"
-                aria-label="Retry this message"
-              >
-                <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
-              </button>
-              <button
-                :if={display_cancel_message_btn?(@session)}
-                id={"cancel-message-#{message.id}"}
-                phx-click="cancel_message"
-                phx-value-message-id={message.id}
-                phx-target={@target}
-                class="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition duration-200"
-                phx-hook="Tooltip"
-                aria-label="Cancel this message"
-              >
-                <.icon name="hero-x-mark" class="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          <div
-            :if={message.role == :assistant}
-            id={"message-#{message.id}"}
-            {if message.workflow_code && @handler.supports_template_generation?(), do: [
-              "phx-click": "select_assistant_message",
-              "phx-value-message-id": message.id,
-              "phx-target": @target,
-              class: "mr-auto flex items-start gap-x-3 w-full cursor-pointer transition duration-150 hover:bg-gray-50 rounded-lg"
-              ], else: [class: "mr-auto flex items-start gap-x-3 w-full"]}
-          >
-            <div class="rounded-full bg-indigo-200 text-indigo-700 w-10 h-10 flex items-center justify-center">
-              <.icon name={@handler.metadata().icon} class="h-8 w-8" />
-            </div>
-            <div class="break-words max-w-[80%]">
-              <.formatted_content content={message.content} />
-              <div :if={@ai_feedback} class="flex justify-start mt-4">
-                {Phoenix.LiveView.TagEngine.component(
-                  @ai_feedback.component,
-                  %{session_id: @session.id, message_id: message.id},
-                  {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-                )}
-              </div>
-            </div>
-          </div>
+          <%= if message.role == :user do %>
+            <.user_message message={message} session={@session} target={@target} />
+          <% else %>
+            <.assistant_message
+              message={message}
+              handler={@handler}
+              session={@session}
+              target={@target}
+              ai_feedback={@ai_feedback}
+            />
+          <% end %>
         <% end %>
+
         <.async_result assign={@pending_message}>
           <:loading>
-            <div id="assistant-pending-message" class="mr-auto flex gap-x-3">
-              <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white w-11 h-11 flex items-center justify-center">
-                <div class="flex gap-1">
-                  <div class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-dot">
-                  </div>
-                  <div
-                    class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-dot"
-                    style="animation-delay: 0.2s"
-                  >
-                  </div>
-                  <div
-                    class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-dot"
-                    style="animation-delay: 0.4s"
-                  >
-                  </div>
-                </div>
-              </div>
-            </div>
+            <.assistant_typing_indicator handler={@handler} />
           </:loading>
+
           <:failed :let={failure}>
-            <div
-              id="assistant-failed-message"
-              class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2"
-            >
-              <div class="flex-shrink-0">
-                <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                  <.icon name="hero-sparkles" />
-                </div>
-              </div>
-              <div class="flex-1 flex items-center gap-2 bg-red-50 p-3 rounded-lg">
-                <.icon
-                  name="hero-exclamation-triangle"
-                  class="h-5 w-5 flex-shrink-0 text-red-400"
-                />
-                <span class="text-red-700">{@handler.error_message(failure)}</span>
-              </div>
-            </div>
+            <.assistant_error_message failure={failure} handler={@handler} />
           </:failed>
         </.async_result>
       </div>
@@ -867,6 +1051,301 @@ defmodule LightningWeb.AiAssistant.Component do
     """
   end
 
+  defp user_message(assigns) do
+    ~H"""
+    <div class="flex text-sm justify-end">
+      <div class="flex items-end gap-3 max-w-[85%]">
+        <div :if={@message.status == :error} class="flex flex-col gap-1 mb-1">
+          <button
+            id={"retry-message-#{@message.id}"}
+            phx-click="retry_message"
+            phx-value-message-id={@message.id}
+            phx-target={@target}
+            class="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-indigo-600 transition-all duration-200 flex items-center justify-center"
+            phx-hook="Tooltip"
+            aria-label="Retry this message"
+          >
+            <.icon name="hero-arrow-path" class="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            :if={display_cancel_message_btn?(@session)}
+            id={"cancel-message-#{@message.id}"}
+            phx-click="cancel_message"
+            phx-value-message-id={@message.id}
+            phx-target={@target}
+            class="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-red-600 transition-all duration-200 flex items-center justify-center"
+            phx-hook="Tooltip"
+            aria-label="Cancel this message"
+          >
+            <.icon name="hero-x-mark" class="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div class={[
+          "relative overflow-hidden rounded-2xl max-w-full",
+          message_container_classes(@message.status)
+        ]}>
+          <div
+            :if={@message.status != :success}
+            class="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white z-10"
+            class={status_indicator_classes(@message.status)}
+          >
+          </div>
+
+          <div class="px-4 py-3">
+            <p class={[
+              "text-sm leading-relaxed",
+              message_text_classes(@message.status)
+            ]}>
+              {@message.content}
+            </p>
+          </div>
+
+          <div class={[
+            "px-4 py-2 border-t flex items-center justify-between",
+            message_footer_classes(@message.status)
+          ]}>
+            <span class={[
+              "text-xs",
+              message_timestamp_classes(@message.status)
+            ]}>
+              {format_message_time(@message.inserted_at)}
+            </span>
+
+            <div class="flex items-center gap-1">
+              <%= case @message.status do %>
+                <% :pending -> %>
+                  <.icon name="hero-clock" class="w-3.5 h-3.5 text-indigo-300 ml-2" />
+                  <span class="text-xs text-indigo-300">Sending</span>
+                <% :error -> %>
+                  <.icon
+                    name="hero-exclamation-triangle"
+                    class="w-3.5 h-3.5 text-red-300 ml-2"
+                  />
+                  <span class="text-xs text-red-300">Failed</span>
+                <% _ -> %>
+                  <.icon
+                    name="hero-check-circle"
+                    class="w-3.5 h-3.5 text-indigo-300 ml-2"
+                  />
+                  <span class="text-xs text-indigo-300">Sent</span>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex-shrink-0">
+          <.user_avatar user={@message.user} size_class="w-8 h-8" />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp assistant_message(assigns) do
+    ~H"""
+    <div class="text-sm flex justify-start">
+      <div class="flex items-start gap-4 max-w-[85%]">
+        <div class="flex-shrink-0 mt-1">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <.icon name={@handler.metadata().icon} class="w-6 h-6 text-white" />
+          </div>
+        </div>
+
+        <div
+          class={[
+            "flex-1 bg-white rounded-2xl border border-gray-200 overflow-hidden",
+            if(@message.workflow_code && @handler.supports_template_generation?(),
+              do:
+                "cursor-pointer hover:border-indigo-200 transition-all duration-200 group",
+              else: ""
+            )
+          ]}
+          {if @message.workflow_code && @handler.supports_template_generation?(), do: [
+            "phx-click": "select_assistant_message",
+            "phx-value-message-id": @message.id,
+            "phx-target": @target
+          ], else: []}
+        >
+          <div
+            :if={@message.workflow_code && @handler.supports_template_generation?()}
+            class="px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100 group-hover:from-indigo-100 group-hover:to-purple-100 transition-colors"
+          >
+            <div class="flex items-center gap-2 text-sm">
+              <.icon name="hero-gift" class="w-4 h-4 text-indigo-600" />
+              <span class="text-indigo-700 font-medium text-xs">
+                Click to render workflow template
+              </span>
+            </div>
+          </div>
+
+          <div class="px-4 py-4">
+            <.formatted_content
+              id={"message-#{@message.id}-content"}
+              content={@message.content}
+            />
+
+            <div class="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between">
+              <span class="text-xs text-gray-500">
+                {format_message_time(@message.inserted_at)}
+              </span>
+
+              <button
+                id={"copy-message-#{@message.id}-content-btn"}
+                type="button"
+                class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-50 transition-colors"
+                phx-hook="Copy"
+                data-content={@message.content}
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div :if={@ai_feedback} class="px-4 pb-4">
+            {Phoenix.LiveView.TagEngine.component(
+              @ai_feedback.component,
+              %{session_id: @session.id, message_id: @message.id},
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp assistant_typing_indicator(assigns) do
+    ~H"""
+    <div class="flex justify-start">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0 mt-1">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <.icon name={@handler.metadata().icon} class="w-6 h-6 text-white" />
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-100 px-4 py-3">
+          <div class="flex items-center gap-1">
+            <div class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
+            <div
+              class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+              style="animation-delay: 0.1s"
+            >
+            </div>
+            <div
+              class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+              style="animation-delay: 0.2s"
+            >
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">AI is thinking...</p>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp assistant_error_message(assigns) do
+    ~H"""
+    <div id="assistant-failed-message" class="flex justify-start">
+      <div class="flex items-start gap-4 max-w-[85%]">
+        <div class="flex-shrink-0 mt-1">
+          <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+            <.icon name="hero-exclamation-triangle" class="w-4 h-4 text-red-600" />
+          </div>
+        </div>
+
+        <div class="bg-red-50 border border-red-200 rounded-2xl">
+          <div class="px-4 py-3">
+            <div class="flex items-start gap-3">
+              <.icon
+                name="hero-exclamation-triangle"
+                class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
+              />
+              <div class="flex-1">
+                <h4 class="text-sm font-medium text-red-800 mb-1">
+                  Something went wrong
+                </h4>
+                <p class="text-sm text-red-700">
+                  {@handler.error_message(@failure)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp message_container_classes(status) do
+    case status do
+      :success -> "bg-gradient-to-br from-indigo-600 to-purple-600"
+      :pending -> "bg-gradient-to-br from-indigo-500 to-purple-500 opacity-80"
+      :error -> "bg-gradient-to-br from-red-500 to-red-600"
+      _ -> "bg-gradient-to-br from-indigo-600 to-purple-600"
+    end
+  end
+
+  defp message_text_classes(status) do
+    case status do
+      :error -> "text-white"
+      _ -> "text-white font-medium"
+    end
+  end
+
+  defp message_footer_classes(status) do
+    case status do
+      :success -> "border-indigo-500/30 bg-black/5"
+      :pending -> "border-indigo-400/30 bg-black/5"
+      :error -> "border-red-400/30 bg-black/5"
+      _ -> "border-indigo-500/30 bg-black/5"
+    end
+  end
+
+  defp message_timestamp_classes(status) do
+    case status do
+      :error -> "text-red-200"
+      _ -> "text-indigo-200"
+    end
+  end
+
+  defp status_indicator_classes(status) do
+    case status do
+      :pending -> "bg-yellow-400 animate-pulse"
+      :error -> "bg-red-300"
+      _ -> "hidden"
+    end
+  end
+
+  defp message_count_text(session) do
+    case length(session.messages) do
+      0 -> "No messages"
+      1 -> "1 message"
+      count -> "#{count} messages"
+    end
+  end
+
+  defp format_session_time(datetime) do
+    now = DateTime.utc_now()
+    diff_seconds = DateTime.diff(now, datetime, :second)
+
+    cond do
+      diff_seconds < 60 -> "Just now"
+      diff_seconds < 3600 -> "#{div(diff_seconds, 60)}m ago"
+      diff_seconds < 86_400 -> "#{div(diff_seconds, 3600)}h ago"
+      diff_seconds < 604_800 -> "#{div(diff_seconds, 86400)}d ago"
+      true -> Calendar.strftime(datetime, "%b %d")
+    end
+  end
+
+  defp format_message_time(datetime) do
+    Calendar.strftime(datetime, "%I:%M %p")
+  end
+
+  attr :id, :string, required: true
   attr :content, :string, required: true
   attr :attributes, :map, default: %{}
 
@@ -884,7 +1363,7 @@ defmodule LightningWeb.AiAssistant.Component do
       "p" => %{class: "mt-1 mb-2 text-gray-800"},
       "pre" => %{
         class:
-          "rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-x-auto"
+          "rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-auto"
       }
     }
 
@@ -902,7 +1381,7 @@ defmodule LightningWeb.AiAssistant.Component do
       |> then(&assign(assigns, :content, &1))
 
     ~H"""
-    <article>{@content}</article>
+    <article id={@id}>{@content}</article>
     """
   end
 
@@ -942,71 +1421,5 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp time_ago(datetime) do
     Timex.from_now(datetime)
-  end
-
-  defp maybe_check_limit(%{assigns: %{ai_limit_result: nil}} = socket) do
-    check_limit(socket)
-  end
-
-  defp maybe_check_limit(socket), do: socket
-
-  defp check_limit(socket) do
-    limit = Limiter.validate_quota(socket.assigns.project.id)
-
-    error_message =
-      if limit != :ok, do: socket.assigns.handler.error_message(limit)
-
-    assign(socket, ai_limit_result: limit, error_message: error_message)
-  end
-
-  defp maybe_show_ellipsis(title) when is_binary(title) do
-    if String.length(title) >= AiAssistant.title_max_length() do
-      "#{title}..."
-    else
-      title
-    end
-  end
-
-  defp display_cancel_message_btn?(session) do
-    user_messages = Enum.filter(session.messages, &(&1.role == :user))
-    length(user_messages) > 1
-  end
-
-  defp ai_feedback do
-    Application.get_env(:lightning, :ai_feedback)
-  end
-
-  defp process_message(socket, message) do
-    session = socket.assigns.session
-    handler = socket.assigns.handler
-
-    socket
-    |> assign(:pending_message, AsyncResult.loading())
-    |> start_async(:process_message, fn -> handler.query(session, message) end)
-  end
-
-  defp maybe_push_workflow_code(socket, session_or_message) do
-    ui_callback = fn event, data ->
-      case event do
-        :workflow_code_generated ->
-          send_update(
-            LightningWeb.WorkflowLive.NewWorkflowComponent,
-            id: socket.assigns.parent_component_id,
-            action: :template_selected,
-            template: %{code: data}
-          )
-
-        _ ->
-          :ok
-      end
-    end
-
-    socket.assigns.handler.handle_response_generated(
-      socket.assigns,
-      session_or_message,
-      ui_callback
-    )
-
-    socket
   end
 end

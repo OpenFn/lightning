@@ -1,5 +1,11 @@
 defmodule Lightning.AiAssistant.ChatMessage do
-  @moduledoc false
+  @moduledoc """
+  Represents a message within an AI chat session.
+
+  Messages can be from users (role: :user) or from the AI assistant (role: :assistant).
+  User messages start with :pending status and are updated based on processing results.
+  Assistant messages typically have :success status when created.
+  """
 
   use Lightning.Schema
   import Ecto.Changeset
@@ -15,16 +21,18 @@ defmodule Lightning.AiAssistant.ChatMessage do
           role: role(),
           status: status(),
           is_deleted: boolean(),
-          is_public: boolean()
+          is_public: boolean(),
+          chat_session_id: Ecto.UUID.t(),
+          user_id: Ecto.UUID.t() | nil,
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
         }
 
   schema "ai_chat_messages" do
     field :content, :string
     field :workflow_code, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
-
     field :status, Ecto.Enum, values: [:pending, :success, :error, :cancelled]
-
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
 
@@ -34,6 +42,14 @@ defmodule Lightning.AiAssistant.ChatMessage do
     timestamps()
   end
 
+  @doc """
+  Creates a changeset for a chat message.
+
+  ## Validation Rules
+  - `content` and `role` are required
+  - User messages require an associated user
+  - Status defaults based on role: :pending for users, :success for assistant
+  """
   def changeset(chat_message, attrs) do
     chat_message
     |> cast(attrs, [
@@ -46,18 +62,26 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :chat_session_id
     ])
     |> validate_required([:content, :role])
+    |> validate_length(:content, min: 1, max: 10_000)
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
     |> maybe_require_user()
     |> set_default_status_by_role()
   end
 
-  defp maybe_put_user_assoc(changeset, user) do
-    if user do
-      put_assoc(changeset, :user, user)
-    else
-      changeset
-    end
+  @doc """
+  Creates a changeset for updating message status.
+  """
+  def status_changeset(chat_message, status)
+      when status in [:pending, :success, :error, :cancelled] do
+    chat_message
+    |> change(%{status: status})
   end
+
+  defp maybe_put_user_assoc(changeset, user) when not is_nil(user) do
+    put_assoc(changeset, :user, user)
+  end
+
+  defp maybe_put_user_assoc(changeset, _), do: changeset
 
   defp maybe_require_user(changeset) do
     if get_field(changeset, :role) == :user do

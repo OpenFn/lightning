@@ -16,13 +16,11 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
   alias Lightning.AiAssistant
+  alias LightningWeb.Live.AiAssistant.ErrorHandler
 
   @impl true
   def create_session(%{selected_job: job, current_user: user}, content) do
-    case AiAssistant.create_session(job, user, content) do
-      {:ok, session} -> {:ok, session}
-      error -> error
-    end
+    AiAssistant.create_session(job, user, content)
   end
 
   @impl true
@@ -32,8 +30,13 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   end
 
   @impl true
-  def list_sessions(%{selected_job: selected_job}, sort_direction) do
-    AiAssistant.list_sessions_for_job(selected_job, sort_direction)
+  def list_sessions(%{selected_job: job}, sort_direction, opts \\ []) do
+    AiAssistant.list_sessions(job, sort_direction, opts)
+  end
+
+  @impl true
+  def more_sessions?(%{selected_job: job}, current_count) do
+    AiAssistant.has_more_sessions?(job, current_count)
   end
 
   @impl true
@@ -61,7 +64,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     !can_edit_workflow or
       has_reached_limit?(ai_limit_result) or
       !endpoint_available? or
-      !is_nil(pending_message.loading) or job_is_unsaved?(selected_job)
+      !is_nil(pending_message.loading) or
+      job_is_unsaved?(selected_job)
   end
 
   @impl true
@@ -91,53 +95,35 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     %{
       name: "Job Code Assistant",
       description: "Get help with job code, debugging, and OpenFn adaptors",
-      icon: "hero-code-bracket"
+      icon: "hero-cpu-chip"
     }
   end
 
-  def disabled_tooltip_message(%{
-        can_edit_workflow: can_edit_workflow,
-        ai_limit_result: ai_limit_result,
-        selected_job: selected_job
-      }) do
-    case {can_edit_workflow, ai_limit_result, selected_job} do
+  def disabled_tooltip_message(assigns) do
+    case {assigns.can_edit_workflow, assigns.ai_limit_result,
+          assigns.selected_job} do
       {false, _, _} ->
-        "You are not authorized to use the Ai Assistant"
+        "You are not authorized to use the AI Assistant"
 
-      {_, {:error, _reason, _msg} = error, _} ->
-        error_message(error)
+      {_, error, _} when error != :ok ->
+        ErrorHandler.format_limit_error(error)
 
       {_, _, %{__meta__: %{state: :built}}} ->
-        "Save the job first in order to use the AI Assistant"
+        "Save the job first to use the AI Assistant"
 
       _ ->
         nil
     end
   end
 
-  def error_message({:error, message}) when is_binary(message) do
-    message
-  end
-
-  def error_message({:error, %Ecto.Changeset{}}) do
-    "Could not save message. Please try again."
-  end
-
-  def error_message({:error, _reason, %{text: text_message}}) do
-    text_message
-  end
-
-  def error_message(_error) do
-    "Oops! Something went wrong. Please try again."
+  def error_message(error) do
+    ErrorHandler.format_error(error)
   end
 
   defp has_reached_limit?(ai_limit_result) do
     ai_limit_result != :ok
   end
 
-  defp job_is_unsaved?(%{__meta__: %{state: :built}} = _job) do
-    true
-  end
-
+  defp job_is_unsaved?(%{__meta__: %{state: :built}}), do: true
   defp job_is_unsaved?(_job), do: false
 end

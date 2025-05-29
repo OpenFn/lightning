@@ -3033,7 +3033,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           |> form("#ai-assistant-form")
           |> render_submit(%{content: "Hello"})
 
-        assert html =~ "You are not authorized to use the Ai Assistant"
+        assert html =~ "You are not authorized to use the AI Assistant"
       end)
     end
 
@@ -3090,7 +3090,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#ai-assistant-form-submit-btn-tooltip")
 
       assert view |> element("#ai-assistant-form-submit-btn-tooltip") |> render() =~
-               "Save the job first in order to use the AI Assistant"
+               ~s(aria-label="Save the job first to use the AI Assistant")
     end
 
     @tag email: "user@openfn.org"
@@ -3198,7 +3198,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert_patch(view)
 
       # pending message is shown
-      assert has_element?(view, "#assistant-pending-message")
+      assert render(view) =~ "AI is thinking..."
       refute render(view) =~ "Pong"
 
       # return the response
@@ -3341,7 +3341,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#assistant-failed-message")
 
       assert view |> element("#assistant-failed-message") |> render() =~
-               "Oops! Something went wrong. Please try again."
+               "An error occurred: . Please try again."
     end
 
     @tag email: "user@openfn.org"

@@ -103,31 +103,6 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "list_sessions_for_job/1" do
-    test "lists the sessions in descending order of time updated", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
-    } do
-      session_1 =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          updated_at: DateTime.utc_now() |> DateTime.add(-5)
-        )
-
-      session_2 = insert(:chat_session, user: user, job: job_1)
-
-      assert [list_session_1, list_session_2] =
-               AiAssistant.list_sessions_for_job(job_1)
-
-      assert list_session_1.id == session_2.id
-      assert list_session_2.id == session_1.id
-
-      assert is_struct(list_session_1.user),
-             "user who created the session is preloaded"
-    end
-  end
-
   describe "create_session/3" do
     test "creates a new session", %{
       user: user,
@@ -503,37 +478,6 @@ defmodule Lightning.AiAssistantTest do
 
       # Allow for a small time difference
       assert abs(timestamp - now) < 2
-    end
-  end
-
-  describe "list_workflow_sessions_for_project/2" do
-    test "lists sessions for project in descending order", %{
-      user: user,
-      project: project
-    } do
-      session1 =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template",
-          updated_at: DateTime.utc_now() |> DateTime.add(-5)
-        )
-
-      session2 =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      sessions = AiAssistant.list_workflow_sessions_for_project(project)
-      assert length(sessions) == 2
-      assert hd(sessions).id == session2.id
-      assert List.last(sessions).id == session1.id
-    end
-
-    test "returns empty list when no sessions exist", %{project: project} do
-      assert AiAssistant.list_workflow_sessions_for_project(project) == []
     end
   end
 

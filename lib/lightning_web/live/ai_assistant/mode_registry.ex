@@ -31,10 +31,10 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
       }
   """
   def register_modes do
-    %{
-      :job => JobCode,
-      :workflow => WorkflowTemplate
-    }
+    Application.get_env(:lightning, :ai_assistant_modes, %{
+      job: JobCode,
+      workflow: WorkflowTemplate
+    })
   end
 
   @doc """
@@ -57,10 +57,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
       LightningWeb.Live.AiAssistant.Modes.JobCode
   """
   def get_handler(mode) do
-    case register_modes()[mode] do
-      nil -> JobCode
-      handler -> handler
-    end
+    Map.get(register_modes(), mode, JobCode)
   end
 
   @doc """
@@ -75,8 +72,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
   ## Example
       iex> available_modes()
       [
-        %{id: :job, name: "Job Code Assistant", description: "Get help with job code", icon: "hero-code-bracket"},
-        %{id: :workflow, name: "Workflow Builder", description: "Generate workflow templates", icon: "hero-cog-6-tooth"}
+        %{id: :job, name: "Job Code Assistant", description: "Get help with job code", icon: "hero-cpu-chip"},
+        %{id: :workflow, name: "Workflow Builder", description: "Generate workflow templates", icon: "hero-cpu-chip"}
       ]
   """
   def available_modes do
@@ -97,7 +94,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
 
   ## Example
       iex> get_mode_metadata(:job)
-      %{id: :job, name: "Job Code Assistant", description: "Get help with job code", icon: "hero-code-bracket"}
+      %{id: :job, name: "Job Code Assistant", description: "Get help with job code", icon: "hero-cpu-chip"}
   """
   def get_mode_metadata(mode) do
     handler = get_handler(mode)

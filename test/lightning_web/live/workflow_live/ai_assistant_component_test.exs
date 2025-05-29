@@ -16,7 +16,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       """
 
       html =
-        render_component(&AiAssistant.Component.formatted_content/1,
+        render_component(
+          &AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
           content: content
         )
 
@@ -67,7 +69,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       """
 
       html =
-        render_component(&AiAssistant.Component.formatted_content/1,
+        render_component(
+          &AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
           content: content
         )
 
@@ -96,6 +100,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
 
       html =
         render_component(&AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
           content: content
         )
 
@@ -130,6 +135,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
 
       html =
         render_component(&AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
           content: content
         )
 
@@ -151,6 +157,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
 
       html =
         render_component(&AiAssistant.Component.formatted_content/1, %{
+          id: "formatted-content",
           content: content,
           attributes: custom_attributes
         })
@@ -180,7 +187,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       }
 
       assert JobCode.error_message({:error, changeset}) ==
-               "Could not save message. Please try again."
+               "Content is invalid"
     end
 
     test "renders text message from map" do
@@ -192,7 +199,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
 
     test "renders default error message for unhandled cases" do
       assert JobCode.error_message({:error, :unknown_reason}) ==
-               "Oops! Something went wrong. Please try again."
+               "An error occurred: unknown_reason. Please try again."
 
       assert JobCode.error_message(:unexpected_error) ==
                "Oops! Something went wrong. Please try again."

@@ -17,12 +17,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
   alias Lightning.AiAssistant
+  alias LightningWeb.Live.AiAssistant.ErrorHandler
 
   @impl true
-  def create_session(
-        %{project: project, current_user: current_user},
-        content
-      ) do
+  def create_session(%{project: project, current_user: current_user}, content) do
     AiAssistant.create_workflow_session(project, current_user, content)
   end
 
@@ -32,8 +30,13 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   end
 
   @impl true
-  def list_sessions(%{project: project}, sort_direction) do
-    AiAssistant.list_workflow_sessions_for_project(project, sort_direction)
+  def list_sessions(%{project: project}, sort_direction, opts \\ []) do
+    AiAssistant.list_sessions(project, sort_direction, opts)
+  end
+
+  @impl true
+  def more_sessions?(%{project: project}, current_count) do
+    AiAssistant.has_more_sessions?(project, current_count)
   end
 
   @impl true
@@ -90,44 +93,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     %{
       name: "Workflow Builder",
       description: "Generate complete workflows from your descriptions",
-      icon: "hero-cog-6-tooth"
+      icon: "hero-cpu-chip"
     }
-  end
-
-  defp has_reached_limit?(ai_limit_result) do
-    ai_limit_result != :ok
-  end
-
-  def disabled_tooltip_message(%{
-        can_edit_workflow: can_edit_workflow,
-        ai_limit_result: ai_limit_result
-      }) do
-    case {can_edit_workflow, ai_limit_result} do
-      {false, _} ->
-        "You are not authorized to use the Ai Assistant"
-
-      {_, {:error, _reason, _msg} = error} ->
-        error_message(error)
-
-      _ ->
-        nil
-    end
-  end
-
-  def error_message({:error, message}) when is_binary(message) do
-    message
-  end
-
-  def error_message({:error, %Ecto.Changeset{}}) do
-    "Could not save message. Please try again."
-  end
-
-  def error_message({:error, _reason, %{text: text_message}}) do
-    text_message
-  end
-
-  def error_message(_error) do
-    "Oops! Something went wrong. Please try again."
   end
 
   @impl true
@@ -146,6 +113,27 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   def on_session_start(socket, ui_callback) do
     ui_callback.(:clear_template, nil)
     socket
+  end
+
+  def disabled_tooltip_message(assigns) do
+    case {assigns.can_edit_workflow, assigns.ai_limit_result} do
+      {false, _} ->
+        "You are not authorized to use the AI Assistant"
+
+      {_, error} when error != :ok ->
+        ErrorHandler.format_limit_error(error)
+
+      _ ->
+        nil
+    end
+  end
+
+  def error_message(error) do
+    ErrorHandler.format_error(error)
+  end
+
+  defp has_reached_limit?(ai_limit_result) do
+    ai_limit_result != :ok
   end
 
   defp extract_workflow_code(%Lightning.AiAssistant.ChatSession{

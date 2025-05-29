@@ -663,16 +663,30 @@ export const ScrollToBottom = {
 
 export const Copy = {
   mounted() {
-    let { to } = this.el.dataset;
+    let { to, content } = this.el.dataset;
     const phxThenAttribute = this.el.getAttribute('phx-then');
+    
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
-      let target = document.querySelector(to);
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement
-      ) {
-        let text = target.value;
+      
+      let text = '';
+      
+      if (content) {
+        text = content;
+      } 
+      else if (to) {
+        let target = document.querySelector(to);
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement
+        ) {
+          text = target.value;
+        } else if (target) {
+          text = target.textContent || target.innerText || '';
+        }
+      }
+      
+      if (text) {
         let element = this.el;
         navigator.clipboard.writeText(text).then(() => {
           console.log('Copied!');
@@ -685,11 +699,43 @@ export const Copy = {
           } else {
             this.liveSocket.execJS(this.el, phxThenAttribute);
           }
+        }).catch(err => {
+          console.error('Failed to copy text: ', err);
+          this.fallbackCopyTextToClipboard(text, element);
         });
       }
     });
   },
-} as PhoenixHook<{}, { to: string }>;
+
+  fallbackCopyTextToClipboard(text, element) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        console.log('Fallback: Copied!');
+        let originalText = element.textContent;
+        element.textContent = 'Copied!';
+        setTimeout(function () {
+          element.textContent = originalText;
+        }, 3000);
+      }
+    } catch (err) {
+      console.error('Fallback: Unable to copy', err);
+    }
+    
+    document.body.removeChild(textArea);
+  }
+} as PhoenixHook;
 
 export const DownloadText = {
   mounted() {

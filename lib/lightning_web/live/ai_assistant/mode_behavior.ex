@@ -4,6 +4,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   Each mode must implement these callbacks to handle mode-specific operations.
   """
 
+  alias LightningWeb.Live.AiAssistant.PaginationMeta
+
   @doc """
   Creates a new chat session for the given mode.
 
@@ -36,19 +38,30 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
             ) :: map()
 
   @doc """
-  Lists all sessions for the given mode and context.
+  Lists sessions with pagination metadata.
 
   ## Parameters
     * assigns - A map containing the necessary context for session listing
     * sort_direction - The direction to sort sessions (:asc or :desc)
+    * opts - Optional keyword list for pagination and filtering
+      * `:offset` - Number of records to skip (default: 0)
+      * `:limit` - Maximum number of records to return (default: 20)
 
   ## Returns
-    * `[session]` - A list of sessions for this mode
+    * `%{sessions: [session], pagination: PaginationMeta.t()}` - Sessions with pagination info
+
+  ## Examples
+      # Load first 20 sessions
+      list_sessions(assigns, :desc, limit: 20)
+
+      # Load next 20 sessions
+      list_sessions(assigns, :desc, offset: 20, limit: 20)
   """
   @callback list_sessions(
               assigns :: map(),
-              sort_direction :: atom()
-            ) :: [map()]
+              sort_direction :: atom(),
+              opts :: keyword()
+            ) :: %{sessions: [map()], pagination: PaginationMeta.t()}
 
   @doc """
   Saves a new message to an existing session.
@@ -94,6 +107,21 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   @callback chat_input_disabled?(assigns :: map()) :: boolean()
 
   @doc """
+  Checks if more sessions are available beyond the current count.
+
+  ## Parameters
+    * assigns - A map containing the necessary context
+    * current_count - The number of sessions currently loaded
+
+  ## Returns
+    * `boolean()` - true if more sessions exist, false otherwise
+  """
+  @callback more_sessions?(
+              assigns :: map(),
+              current_count :: integer()
+            ) :: boolean()
+
+  @doc """
   Returns the placeholder text for the chat input field.
 
   ## Returns
@@ -131,6 +159,14 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   @doc """
   Handles what to do when the AI generates a response.
   The ui_callback function allows the mode to trigger UI updates.
+
+  ## Parameters
+    * assigns - The current assigns
+    * session_or_message - The session or message that was generated
+    * ui_callback - Function to call for UI updates
+
+  ## Returns
+    * `map()` - Updated assigns
   """
   @callback handle_response_generated(
               assigns :: map(),
@@ -138,6 +174,16 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
               ui_callback :: function()
             ) :: map()
 
+  @doc """
+  Called when a new session starts, allows mode-specific initialization.
+
+  ## Parameters
+    * socket - The LiveView socket
+    * ui_callback - Function to call for UI updates
+
+  ## Returns
+    * `map()` - Updated socket
+  """
   @callback on_session_start(socket :: map(), ui_callback :: function()) :: map()
 
   # Optional callbacks with default implementations
@@ -154,13 +200,21 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
     quote do
       @behaviour LightningWeb.Live.AiAssistant.ModeBehavior
 
+      alias LightningWeb.Live.AiAssistant.ErrorHandler
+
+      # Shared error handling
+      def error_message(error), do: ErrorHandler.format_error(error)
+
       # Default implementations for optional callbacks
       def input_placeholder do
         "Open a previous session or send a message to start a new one"
       end
 
       def chat_title(session) do
-        session.title || "Untitled Chat"
+        case session do
+          %{title: title} when is_binary(title) and title != "" -> title
+          _ -> "Untitled Chat"
+        end
       end
 
       def supports_template_generation?, do: false
@@ -173,8 +227,9 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
         }
       end
 
-      def handle_response_generated(assigns, _session_or_message, _ui_callback),
-        do: assigns
+      def handle_response_generated(assigns, _session_or_message, _ui_callback) do
+        assigns
+      end
 
       def on_session_start(socket, _ui_callback), do: socket
 
@@ -183,7 +238,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
                      supports_template_generation?: 0,
                      metadata: 0,
                      handle_response_generated: 3,
-                     on_session_start: 2
+                     on_session_start: 2,
+                     error_message: 1
     end
   end
 end
