@@ -31,13 +31,24 @@ defmodule Lightning.Storage.Local do
 
   @impl true
   def store(source_path, destination_path) do
-    destination_path = Path.join(storage_dir!(), destination_path)
-    destination_dir = Path.dirname(destination_path)
-    File.mkdir_p!(destination_dir)
+    write_path =
+      Path.join(storage_dir!(), destination_path)
+      |> tap(fn path ->
+        path
+        |> Path.dirname()
+        |> File.mkdir_p!()
+      end)
 
-    File.cp!(source_path, destination_path)
+    File.cp!(source_path, write_path)
 
-    {:ok, Path.basename(destination_path)}
+    {:ok, destination_path}
+  end
+
+  @impl true
+  def delete(object_path) do
+    local_path = Path.join(storage_dir!(), object_path)
+
+    with :ok <- File.rm(local_path), do: {:ok, nil}
   end
 
   @impl true

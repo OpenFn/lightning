@@ -13,6 +13,11 @@ defmodule Lightning.Storage do
   end
 
   @impl true
+  def delete(path) do
+    adapter().delete(path)
+  end
+
+  @impl true
   def get_url(path) do
     adapter().get_url(path)
   end
