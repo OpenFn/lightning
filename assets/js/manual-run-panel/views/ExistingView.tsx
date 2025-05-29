@@ -79,7 +79,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
 
   return (
     <>
-      <div className="flex flex-col gap-3">
+      <div className="mt-2 flex flex-col gap-3">
         <div>
           <div className="flex gap-1">
             <div className="relative rounded-md shadow-xs flex grow">
