@@ -47,6 +47,8 @@ and this project adheres to
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
 - Reduce the cardinality of `lightning_run_lost_count`.
   [#3226](https://github.com/OpenFn/lightning/issues/3226)
+- No longer blocking the "Create new workflow" button based on _active_ workflow
+  limits [#3251](https://github.com/OpenFn/lightning/pull/3251)
 
 ### Fixed
 
