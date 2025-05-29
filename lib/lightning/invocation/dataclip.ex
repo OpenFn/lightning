@@ -37,6 +37,18 @@ defmodule Lightning.Invocation.Dataclip do
           :http_request | :global | :step_result | :saved_input | :kafka
   @source_types [:http_request, :global, :step_result, :saved_input, :kafka]
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :body,
+             :request,
+             :type,
+             :wiped_at,
+             :project_id,
+             :inserted_at,
+             :updated_at
+           ]}
+
   schema "dataclips" do
     field :body, :map, load_in_query: false
     field :request, :map, load_in_query: false

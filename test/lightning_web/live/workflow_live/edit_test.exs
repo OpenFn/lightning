@@ -291,9 +291,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert %{id: workflow_id} =
                Lightning.Repo.one(
-                 from w in Workflow,
+                 from(w in Workflow,
                    where:
                      w.project_id == ^project.id and w.name == ^workflow_name
+                 )
                )
 
       assert_patched(
@@ -378,10 +379,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       expected_workflow_name = "Copy of #{cron_template_name}"
 
       assert Lightning.Repo.exists?(
-               from w in Workflow,
+               from(w in Workflow,
                  where:
                    w.project_id == ^project.id and
                      w.name == ^expected_workflow_name
+               )
              )
     end
 
@@ -433,10 +435,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       expected_workflow_name = "Copy of Untitled Workflow"
 
       assert Lightning.Repo.exists?(
-               from w in Workflow,
+               from(w in Workflow,
                  where:
                    w.project_id == ^project.id and
                      w.name == ^expected_workflow_name
+               )
              )
     end
 
@@ -556,12 +559,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert %{id: workflow_id} =
                Lightning.Repo.one(
-                 from w in Workflow,
+                 from(w in Workflow,
                    where:
                      w.project_id == ^project.id and w.name == ^workflow_name
+                 )
                )
 
-      audit_query = from a in Audit, where: a.event == "snapshot_created"
+      audit_query = from(a in Audit, where: a.event == "snapshot_created")
 
       audit_event = Lightning.Repo.one(audit_query)
 
@@ -973,12 +977,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       force_event(view, :rerun, nil, nil)
 
       snapshots_query =
-        from s in Snapshot, where: s.id not in ^existing_snapshot_ids
+        from(s in Snapshot, where: s.id not in ^existing_snapshot_ids)
 
       [%{id: latest_snapshot_id}] = Lightning.Repo.all(snapshots_query)
 
       audit_query =
-        from a in Audit, where: a.id not in ^existing_audit_ids
+        from(a in Audit, where: a.id not in ^existing_audit_ids)
 
       [audit] = Lightning.Repo.all(audit_query)
 
@@ -1067,9 +1071,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       #        |> has_element?(
       #          "[id='job-editor-#{job_1.id}'][data-disabled='true'][data-source='#{job_1.body}'][data-disabled-message=\"You can't edit while viewing a snapshot, switch to the latest version.\"]"
       #        )
-
-      assert view
-             |> has_element?("select[name='manual[dataclip_id]'][disabled]")
 
       assert view |> has_element?("div", job_1.name)
 
@@ -2306,6 +2307,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              )
     end
 
+    @tag skip: "component moved to react"
     test "manual run form body remains unchanged even after save workflow form is submitted",
          %{conn: conn, project: project, test: test} do
       %{jobs: [job_1, job_2 | _rest]} =
@@ -2586,9 +2588,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert workflow =
                Lightning.Repo.one(
-                 from w in Workflow,
+                 from(w in Workflow,
                    where:
                      w.project_id == ^project.id and w.name == ^workflow_name
+                 )
                )
 
       assert_patched(
@@ -4332,6 +4335,418 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
+  describe "new manual run" do
+    test "gets latest selectable dataclips",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      limit = 4
+      search_text = ""
+
+      dataclips =
+        Enum.map(1..5, fn i ->
+          insert(:dataclip,
+            body: %{"body-field" => "body-value#{i}"},
+            request: %{"headers" => "list"},
+            type: :http_request,
+            inserted_at: DateTime.add(DateTime.utc_now(), i, :millisecond)
+          )
+          |> tap(&insert(:step, input_dataclip: &1, job: job))
+          |> then(fn %{body: body, request: request} = dataclip ->
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
+          end)
+        end)
+        |> Enum.sort_by(& &1.inserted_at, :desc)
+        |> Enum.take(limit)
+
+      render_hook(view, "search-selectable-dataclips", %{
+        "job_id" => job.id,
+        "search_text" => search_text,
+        "limit" => limit
+      })
+
+      assert_reply(view, %{dataclips: ^dataclips})
+    end
+
+    test "searches for dataclips by uuid",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      dataclip =
+        insert(:dataclip,
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :step_result
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+        |> then(fn %{body: body, request: request} = dataclip ->
+          dataclip
+          |> Repo.reload!()
+          |> restore_listed(body, request)
+          |> then(&%{&1 | body: nil})
+        end)
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=#{Ecto.UUID.generate()}",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: []})
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=#{dataclip.id}",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [^dataclip]})
+    end
+
+    test "searches for dataclips by uuid prefix",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      dataclip =
+        insert(:dataclip,
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :step_result
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+        |> then(fn %{body: body, request: request} = dataclip ->
+          dataclip
+          |> Repo.reload!()
+          |> restore_listed(body, request)
+          |> then(&%{&1 | body: nil})
+        end)
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=#{Ecto.UUID.generate()}",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: []})
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=#{String.slice(dataclip.id, 0..3)}",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [^dataclip]})
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=#{String.slice(dataclip.id, 0..3)}",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [^dataclip]})
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" =>
+            "query=#{String.slice(dataclip.id, 0..1)}&type=step_result",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [^dataclip]})
+    end
+
+    test "searches for dataclips by type",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      insert(:dataclip,
+        body: %{"body-field" => "body-value"},
+        request: %{"headers" => "list"},
+        type: :step_result
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      limit = 3
+
+      dataclips =
+        Enum.map(1..5, fn i ->
+          insert(:dataclip,
+            body: %{"body-field" => "body-value#{i}"},
+            request: %{"headers" => "list"},
+            type: :http_request
+          )
+          |> tap(&insert(:step, input_dataclip: &1, job: job))
+          |> then(fn %{body: body, request: request} = dataclip ->
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
+          end)
+        end)
+        |> Enum.sort_by(& &1.inserted_at, :desc)
+        |> Enum.take(limit)
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "type=http_request",
+          "limit" => limit
+        }
+      )
+
+      assert_reply(view, %{dataclips: ^dataclips})
+    end
+
+    test "searches for dataclips created after a datetime",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      datetime_param = DateTime.utc_now()
+
+      dataclips =
+        Enum.map(-1..5, fn i ->
+          type = if rem(i, 2) == 0, do: :http_request, else: :step_result
+          request = if type == :http_request, do: %{"headers" => "list"}
+
+          insert(:dataclip,
+            body: %{"body-field" => "body-value#{i}"},
+            request: request,
+            type: type,
+            inserted_at: DateTime.add(datetime_param, i, :minute)
+          )
+          |> tap(&insert(:step, input_dataclip: &1, job: job))
+          |> then(fn %{body: body, request: request} = dataclip ->
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
+          end)
+        end)
+        |> Enum.sort_by(& &1.inserted_at, :desc)
+        |> Enum.take(5)
+
+      search_text =
+        %{
+          "after" =>
+            DateTime.to_iso8601(datetime_param |> DateTime.add(1, :minute))
+            |> String.slice(0..15)
+        }
+        |> URI.encode_query()
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => search_text,
+          "limit" => 10
+        }
+      )
+
+      assert_reply(view, %{dataclips: ^dataclips})
+    end
+
+    test "searches for dataclips created after a date",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      starting_datetime = ~N[2025-05-15 00:00:00]
+
+      dataclips =
+        Enum.map(-1..5, fn i ->
+          type = if rem(i, 2) == 0, do: :http_request, else: :step_result
+          request = if type == :http_request, do: %{"headers" => "list"}
+
+          insert(:dataclip,
+            body: %{"body-field" => "body-value#{i}"},
+            request: request,
+            type: type,
+            inserted_at: NaiveDateTime.add(starting_datetime, i * 5, :minute)
+          )
+          |> tap(&insert(:step, input_dataclip: &1, job: job))
+          |> then(fn %{body: body, request: request} = dataclip ->
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
+          end)
+        end)
+        |> Enum.drop(1)
+        |> Enum.sort_by(& &1.inserted_at, :desc)
+
+      search_text =
+        %{
+          "after" =>
+            starting_datetime
+            |> NaiveDateTime.to_iso8601()
+            |> String.slice(0..15)
+        }
+        |> URI.encode_query()
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => search_text,
+          "limit" => 10
+        }
+      )
+
+      assert_reply(view, %{dataclips: ^dataclips})
+    end
+
+    test "searches for dataclips from one type created after a date",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      starting_datetime = ~N[2025-05-15 00:00:00]
+
+      dataclips =
+        Enum.map(-1..5, fn i ->
+          type = if rem(i, 2) == 0, do: :http_request, else: :step_result
+          request = if type == :http_request, do: %{"headers" => "list"}
+
+          insert(:dataclip,
+            body: %{"body-field" => "body-value#{i}"},
+            request: request,
+            type: type,
+            inserted_at: NaiveDateTime.add(starting_datetime, i * 5, :minute)
+          )
+          |> tap(&insert(:step, input_dataclip: &1, job: job))
+          |> then(fn %{body: body, request: request} = dataclip ->
+            dataclip
+            |> Repo.reload!()
+            |> restore_listed(body, request)
+            |> then(&%{&1 | body: nil})
+          end)
+        end)
+        |> Enum.drop(1)
+        |> Enum.sort_by(& &1.inserted_at, :desc)
+        |> Enum.filter(&(&1.type == :step_result))
+
+      search_text =
+        %{
+          "after" =>
+            NaiveDateTime.to_iso8601(starting_datetime)
+            |> String.slice(0..15),
+          "type" => "step_result"
+        }
+        |> URI.encode_query()
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => search_text,
+          "limit" => 10
+        }
+      )
+
+      assert_reply(view, %{dataclips: ^dataclips})
+    end
+  end
+
   defp log_viewer_selected_level(log_viewer) do
     log_viewer
     |> render()
@@ -4371,5 +4786,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       preferences: %{"ai_assistant.disclaimer_read_at" => read_at}
     })
     |> Lightning.Repo.update!()
+  end
+
+  defp restore_listed(%{type: :http_request} = dataclip, body, request) do
+    dataclip
+    |> Map.put(:body, %{"data" => body, "request" => request})
+    |> Map.put(:request, nil)
+  end
+
+  defp restore_listed(dataclip, body, _request) do
+    dataclip
+    |> Map.put(:body, body)
+    |> Map.put(:request, nil)
   end
 end
