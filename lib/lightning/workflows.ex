@@ -10,6 +10,8 @@ defmodule Lightning.Workflows do
   alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
+   alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Events
@@ -336,20 +338,49 @@ defmodule Lightning.Workflows do
 
     query =
       from(w in Workflow,
-        where: is_nil(w.deleted_at) and w.project_id == ^project.id,
+        where: w.project_id == ^project.id and is_nil(w.deleted_at),
         preload: ^include
       )
 
-    query =
-      if search = Keyword.get(opts, :search) do
-        from w in query, where: ilike(w.name, ^"%#{search}%")
-      else
-        query
-      end
-
     query
+    |> maybe_filter_by_name(opts)
     |> apply_sorting(order_by)
     |> Repo.all()
+  end
+
+  def get_workflows_for(%Project{id: project_id}, %User{id: user_id}, opts) do
+    chat_session_exists_query =
+      from cs in ChatSession,
+        join: j in Job,
+        on: cs.job_id == j.id,
+        join: w in Workflow,
+        on: j.workflow_id == w.id,
+        where: cs.user_id == ^user_id and w.project_id == parent_as(:workflow).id and is_nil(w.deleted_at),
+        select: 1
+
+    include = Keyword.get(opts, :include, [:triggers])
+    order_by = Keyword.get(opts, :order_by, {:name, :asc})
+
+    query =
+      from(w in Workflow,
+        as: :workflow,
+        where: w.project_id == ^project_id and is_nil(w.deleted_at),
+        select: %{w | has_ai_chat: exists(chat_session_exists_query)},
+        preload: ^include
+      )
+
+    query
+    |> maybe_filter_by_name(opts)
+    |> apply_sorting(order_by)
+    |> Repo.all()
+  end
+
+  defp maybe_filter_by_name(query, opts) do
+    if search = Keyword.get(opts, :search) do
+      where(query, [w], ilike(w.name, ^"%#{search}%"))
+    else
+      query
+    end
   end
 
   defp apply_sorting(query, {:name, direction}) when is_atom(direction) do
