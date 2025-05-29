@@ -20,6 +20,9 @@ and this project adheres to
 - Added a custom metric to track projects that could benefit from additional
   worker pods.
   [#3189](https://github.com/OpenFn/lightning/issues/3189)
+- Add a test metric that can be used to test external infrastructure (e.g.
+  alerting) in a deployed Lightning instance.
+  [#3229](https://github.com/OpenFn/lightning/issues/3229)
 
 ### Changed
 
