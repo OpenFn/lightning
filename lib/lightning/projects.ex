@@ -13,6 +13,7 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.Config
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
@@ -46,7 +47,8 @@ defmodule Lightning.Projects do
       :role,
       :workflows_count,
       :collaborators_count,
-      :last_updated_at
+      :last_updated_at,
+      :has_ai_chat
     ]
   end
 
@@ -67,7 +69,7 @@ defmodule Lightning.Projects do
           role: fragment("'support' as role"),
           workflows_count: count(w.id, :distinct),
           collaborators_count: count(pu_all.user_id, :distinct),
-          last_updated_at: max(w.updated_at)
+          last_updated_at: max(w.updated_at),
         }
       )
       |> Repo.all()
@@ -95,7 +97,17 @@ defmodule Lightning.Projects do
   end
 
   defp projects_overview_query(user_id) do
+    chat_session_exists_query =
+      from cs in ChatSession,
+        join: j in Job,
+        on: cs.job_id == j.id,
+        join: w in Workflow,
+        on: j.workflow_id == w.id,
+        where: cs.user_id == ^user_id and w.project_id == parent_as(:project).id and is_nil(w.deleted_at),
+        select: 1
+
     from(p in Project,
+      as: :project,
       left_join: w in assoc(p, :workflows),
       inner_join: pu in assoc(p, :project_users),
       left_join: pu_all in assoc(p, :project_users),
@@ -107,7 +119,8 @@ defmodule Lightning.Projects do
         role: pu.role,
         workflows_count: count(w.id, :distinct),
         collaborators_count: count(pu_all.user_id, :distinct),
-        last_updated_at: max(w.updated_at)
+        last_updated_at: max(w.updated_at),
+        has_ai_chat: exists(chat_session_exists_query)
       }
     )
   end
