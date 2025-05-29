@@ -109,7 +109,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
         ErrorHandler.format_limit_error(error)
 
       {_, _, %{__meta__: %{state: :built}}} ->
-        "Save the job first to use the AI Assistant"
+        "Save your workflow first to use the AI Assistant"
 
       _ ->
         nil

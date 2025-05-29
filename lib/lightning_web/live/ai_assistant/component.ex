@@ -375,7 +375,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp render_session(assigns) do
     ~H"""
-    <div class="grid grid-cols-1 grid-rows-2 h-full flow-root">
+    <div class="grid grid-cols-1 grid-rows-2 h-full flow-root bg-gray-50">
       <%= case @action do %>
         <% :new -> %>
           <.render_all_sessions
@@ -399,8 +399,8 @@ defmodule LightningWeb.AiAssistant.Component do
 
       <.async_result :let={endpoint_available?} assign={@endpoint_available?}>
         <:loading>
-          <div class="row-span-full flex items-center justify-center">
-            <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
+          <div class="flex items-center justify-center m-4 border-r-2">
+            <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-gray-50">
               <.icon name="hero-sparkles" class="animate-pulse" />
             </div>
           </div>
@@ -453,33 +453,68 @@ defmodule LightningWeb.AiAssistant.Component do
   defp chat_input(assigns) do
     ~H"""
     <div class="mx-2 mb-2 mt-6">
-      <div class="relative flex flex-col bg-white rounded-lg ring-1 ring-gray-200 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-1 transition-shadow">
+      <div class={[
+        "relative flex flex-col rounded-lg ring-1 transition-all duration-200",
+        if(@disabled,
+          do: "bg-gray-50 ring-gray-200 opacity-60",
+          else:
+            "bg-white ring-gray-200 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-1 transition-shadow"
+        )
+      ]}>
         <label for="content" class="sr-only">Describe your request</label>
 
         <textarea
           id="content"
           name={@form[:content].name}
           rows="6"
-          class="block w-full px-4 py-2 text-sm text-gray-800 bg-transparent border-0 resize-none rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-0"
-          placeholder={@handler.input_placeholder()}
+          class={[
+            "block w-full px-4 py-2 text-sm border-0 resize-none rounded-lg focus:outline-none focus:ring-0",
+            if(@disabled,
+              do:
+                "bg-transparent text-gray-400 placeholder:text-gray-400 cursor-not-allowed",
+              else: "bg-transparent text-gray-800 placeholder:text-gray-500"
+            )
+          ]}
+          placeholder={
+            if @disabled, do: @tooltip, else: @handler.input_placeholder()
+          }
           disabled={@disabled}
           phx-hook="TabIndent"
         ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
 
-        <div class="flex items-center justify-end px-2 py-1 mt-1 border-t border-gray-200 bg-gray-100 rounded-none rounded-b-lg">
-          <span class="text-xs text-gray-500 mr-2 select-none font-bold">
-            Do not paste PII or sensitive business data
+        <div
+          class={[
+            "flex items-center justify-end px-2 pt-2 pb-1 rounded-none rounded-b-lg",
+            if(@disabled,
+              do: "border-gray-200 bg-gray-50 cursor-not-allowed",
+              else: "border-gray-200 bg-white cursor-text"
+            )
+          ]}
+          phx-click={JS.focus(to: "#content")}
+        >
+          <span class={[
+            "text-xs mr-2 font-bold",
+            if(@disabled, do: "text-gray-400", else: "text-gray-500")
+          ]}>
+            <em>Do not paste PII or sensitive data</em>
           </span>
 
           <.simple_button_with_tooltip
             id="ai-assistant-form-submit-btn"
             type="submit"
             disabled={@disabled}
-            tooltip={@tooltip}
             form="ai-assistant-form"
-            class="p-2 text-white bg-indigo-600 rounded-full hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            class={[
+              "p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center h-7 w-7",
+              if(@disabled,
+                do:
+                  "text-gray-400 bg-gray-300 cursor-not-allowed focus:ring-gray-300",
+                else:
+                  "text-white bg-indigo-600 hover:bg-indigo-500 focus:ring-indigo-500"
+              )
+            ]}
           >
-            <.icon name="hero-paper-airplane-solid" />
+            <.icon name="hero-paper-airplane-solid" class="h-3 w-3" />
           </.simple_button_with_tooltip>
         </div>
       </div>
@@ -503,8 +538,8 @@ defmodule LightningWeb.AiAssistant.Component do
     <div class="row-span-full px-4 py-4 mb-2 overflow-y-auto">
       <.async_result :let={all_sessions} assign={@all_sessions}>
         <:loading>
-          <div class="flex flex-col items-center justify-center py-8">
-            <div class="rounded-full p-3 bg-indigo-100 text-indigo-600 ring-4 ring-white">
+          <div class="flex flex-col items-center justify-center py-8 m-4">
+            <div class="rounded-full p-3 bg-indigo-100 text-indigo-600 ring-4 ring-gray-50">
               <.icon name="hero-sparkles" class="size-6 animate-pulse" />
             </div>
             <p class="mt-3 text-sm text-gray-600 font-medium">
@@ -548,7 +583,7 @@ defmodule LightningWeb.AiAssistant.Component do
             <div class="flex items-center gap-3">
               <h2 class="text-lg font-semibold text-gray-900">Chat History</h2>
               <.async_result :let={pagination} assign={@pagination_meta}>
-                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                <span class="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
                   {length(all_sessions)} of {pagination.total_count}
                 </span>
               </.async_result>
@@ -582,7 +617,7 @@ defmodule LightningWeb.AiAssistant.Component do
                 patch={
                   redirect_url(@base_url, Map.put(@query_params, "chat", session.id))
                 }
-                class="group block p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
+                class="group bg-white block p-3 pb-1 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
                 role="listitem"
                 aria-label={"Open chat: #{session.title}"}
               >
@@ -607,7 +642,7 @@ defmodule LightningWeb.AiAssistant.Component do
                     >
                       {time_ago(session.updated_at)}
                     </time>
-                    <div class="mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div class="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <.icon name="hero-chevron-right" class="size-4 text-gray-400" />
                     </div>
                   </div>
@@ -882,7 +917,7 @@ defmodule LightningWeb.AiAssistant.Component do
     ~H"""
     <div id={@id} class="absolute inset-0 z-50 bg-white hidden">
       <div class="h-full w-full overflow-y-auto">
-        <div class="bg-gray-100 p-2 flex justify-between border-solid border-t-2 border-b-2">
+        <div class="bg-gray-50 p-2 flex justify-between border-solid border-b-1">
           <span class="font-medium text-gray-700">
             About the AI Assistant
           </span>
@@ -895,6 +930,7 @@ defmodule LightningWeb.AiAssistant.Component do
             The OpenFn AI Assistant provides a chat interface with an AI Model to help you build workflows. It can:
           </p>
           <ul class="list-disc list-inside pl-4">
+            <li>Create a workflow template for you</li>
             <li>Draft job code for you</li>
             <li>Explain adaptor functions and how they are used</li>
             <li>Proofread and debug your job code</li>
@@ -985,7 +1021,7 @@ defmodule LightningWeb.AiAssistant.Component do
     assigns = assign(assigns, ai_feedback: ai_feedback())
 
     ~H"""
-    <div class="row-span-full flex flex-col bg-white">
+    <div class="row-span-full flex flex-col bg-gray-50">
       <div class="bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-between sticky top-0 z-10">
         <div class="flex items-center gap-3 min-w-0 flex-1">
           <div class="flex-shrink-0">
@@ -1170,12 +1206,12 @@ defmodule LightningWeb.AiAssistant.Component do
         >
           <div
             :if={@message.workflow_code && @handler.supports_template_generation?()}
-            class="px-4 py-2 ai-bg-gradient-light border-b border-gray-100 group-hover:from-indigo-100 group-hover:to-purple-100 transition-colors"
+            class="px-4 py-2 ai-bg-gradient-light border-b border-gray-100"
           >
             <div class="flex items-center gap-2 text-sm">
               <.icon name="hero-gift" class="w-4 h-4 text-indigo-600" />
               <span class="text-indigo-700 font-medium text-xs">
-                Click to render workflow template
+                Click to restore workflow to here
               </span>
             </div>
           </div>
@@ -1240,7 +1276,7 @@ defmodule LightningWeb.AiAssistant.Component do
             >
             </div>
           </div>
-          <p class="text-xs text-gray-500 mt-2">AI is thinking...</p>
+          <p class="text-xs text-gray-500 mt-2">Processing...</p>
         </div>
       </div>
     </div>
@@ -1283,7 +1319,7 @@ defmodule LightningWeb.AiAssistant.Component do
   defp message_container_classes(status) do
     case status do
       :success -> "ai-bg-gradient"
-      :pending -> "ai-bg-gradient-pending opacity-80"
+      :pending -> "ai-bg-gradient opacity-70"
       :error -> "ai-bg-gradient-error"
       _ -> "ai-bg-gradient"
     end

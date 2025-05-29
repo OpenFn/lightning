@@ -331,7 +331,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
     ~H"""
     <div id={@id} class="w-1/3">
-      <div class="divide-y divide-gray-200 bg-white h-full flex flex-col">
+      <div class="bg-white h-full flex flex-col border-r-1">
         <div class="flex-grow overflow-hidden flex flex-col">
           <div
             :if={@selected_method != "ai"}
@@ -417,7 +417,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       phx-click="choose-another-method"
       phx-value-method="ai"
       phx-target={@myself}
-      class="relative flex flex-col cursor-pointer rounded-md border border-indigo-300/40 p-4 transition-all duration-300 no-underline w-full text-left ai-bg-gradient ai-bg-gradient-hover hover:border-indigo-300/80 group h-24"
+      class="relative flex flex-col cursor-pointer rounded-md border border-indigo-300/40 p-4 transition-all duration-300 no-underline w-full text-left ai-bg-gradient hover:border-indigo-300/80 group h-24"
       style="appearance: none;"
     >
       <span class="flex-1 overflow-hidden flex flex-col relative z-10">

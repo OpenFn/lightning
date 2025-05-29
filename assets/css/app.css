@@ -335,7 +335,8 @@
     }
   }
 
-  [phx-hook='ReactComponent'][data-react-name='WorkflowEditor'].phx-click-loading ~ form#workflow-form {
+  [phx-hook='ReactComponent'][data-react-name='WorkflowEditor'].phx-click-loading
+    ~ form#workflow-form {
     opacity: 0.5;
     transition: opacity 1s ease-out;
   }
@@ -453,30 +454,37 @@
     }
   }
 
-@keyframes error-shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
-}
-
-.error-shake {
-  animation: error-shake 0.5s ease-in-out;
-}
-
-@keyframes error-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+  @keyframes error-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-4px);
+    }
+    75% {
+      transform: translateX(4px);
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-.error-slide-in {
-  animation: error-slide-in 0.3s ease-out;
-}
+  .error-shake {
+    animation: error-shake 0.5s ease-in-out;
+  }
+
+  @keyframes error-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .error-slide-in {
+    animation: error-slide-in 0.3s ease-out;
+  }
 
   /* Collapsible panels */
   .collapsible-panel.collapsed {
@@ -615,26 +623,14 @@
   }
 
   .ai-bg-gradient {
-    @apply bg-gradient-to-br from-indigo-600 to-purple-600;
-  }
-
-  .ai-bg-gradient-hover {
-    @apply bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500;
+    @apply bg-gradient-to-br from-primary-800 to-primary-500;
   }
 
   .ai-bg-gradient-light {
-    @apply bg-gradient-to-r from-indigo-50 to-purple-50;
-  }
-
-  .ai-bg-gradient-light-hover {
-    @apply bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100;
-  }
-
-  .ai-bg-gradient-pending {
-    @apply bg-gradient-to-br from-indigo-500 to-purple-500
+    @apply bg-gradient-to-r from-indigo-50 to-purple-50 group-hover:from-indigo-100 group-hover:to-purple-100 transition-colors;
   }
 
   .ai-bg-gradient-error {
-    @apply bg-gradient-to-br from-red-400 to-red-500
+    @apply bg-gradient-to-br from-red-300 to-red-400;
   }
 }
