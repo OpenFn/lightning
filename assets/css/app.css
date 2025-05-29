@@ -630,21 +630,6 @@
     @apply bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100;
   }
 
-  .ai-bg-gradient-alt {
-    @apply bg-gradient-to-br from-blue-500 to-purple-600;
-  }
-
-  .ai-bg-gradient-alt-hover {
-    @apply bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500;
-  }
-
-  .ai-gradient-text {
-    @apply bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent;
-  }
-  .ai-gradient-border {
-    @apply border-2 border-transparent bg-gradient-to-br from-indigo-600 to-purple-600 bg-origin-border;
-  }
-
   .ai-bg-gradient-pending {
     @apply bg-gradient-to-br from-indigo-500 to-purple-500
   }
