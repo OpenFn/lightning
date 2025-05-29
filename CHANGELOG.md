@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.12.3-pre] - 2025-05-29
+
+### Added
+
 - Added a custom metric to track projects that could benefit from additional
   worker pods.
   [#3189](https://github.com/OpenFn/lightning/issues/3189)
