@@ -23,6 +23,8 @@ and this project adheres to
 - Add a test metric that can be used to test external infrastructure (e.g.
   alerting) in a deployed Lightning instance.
   [#3229](https://github.com/OpenFn/lightning/issues/3229)
+- Broadcast work-available to worker when runs are enqueued
+  [#2934](https://github.com/OpenFn/lightning/issues/2934)
 
 ### Changed
 
