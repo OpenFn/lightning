@@ -13,6 +13,7 @@ import {
 } from '@xyflow/react';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
+import MiniMapNode from './components/MiniMapNode';
 import edgeTypes from './edges';
 import layout from './layout';
 import nodeTypes from './nodes';
@@ -261,7 +262,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       >
         <Controls showInteractive={false} position="bottom-left" />
         <Background />
-        <MiniMap zoomable pannable className="border border-2 border-gray-200" />
+        <MiniMap
+          zoomable
+          pannable
+          className="border border-2 border-gray-200"
+          nodeComponent={MiniMapNode}
+        />
       </ReactFlow>
     </ReactFlowProvider>
   );

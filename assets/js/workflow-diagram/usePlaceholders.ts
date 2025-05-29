@@ -21,6 +21,8 @@ export const create = (parentNode: Flow.Node) => {
   newModel.nodes.push({
     id: targetId,
     type: 'placeholder',
+    width: 350, // Set initial dimensions to prevent flicker
+    height: 200, // Set initial dimensions to prevent flicker
     position: {
       // mark this as as default position
       // @ts-ignore _default is a temporary flag added by us
