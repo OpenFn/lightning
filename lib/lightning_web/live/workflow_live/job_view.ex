@@ -88,14 +88,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
     ~H"""
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
-        <div class="flex p-4 gap-4">
+        <div class="flex px-4 py-3 gap-4">
           <div class="flex items-center font-semibold">
-            <span>
-              <.icon
-                name="hero-code-bracket-mini"
-                class="align-middle w-4 h-4 mr-1 text-indigo-500"
-              />
-            </span>
             {@job.name}
           </div>
           <.adaptor_block adaptor={@job.adaptor} />
@@ -282,9 +276,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
         icon_class="align-middle text-indigo-500 h-4 w-4"
         icon="hero-cube-mini"
       />
-      <code class="text-xs text-gray-500 font-semibold">
+      <span class="text-xs text-gray-500 font-semibold">
         {@package_name}@{@version}
-      </code>
+      </span>
     </div>
     """
   end
