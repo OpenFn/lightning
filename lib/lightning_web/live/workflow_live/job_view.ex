@@ -88,12 +88,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
     ~H"""
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
-        <div class="flex p-4 gap-4">
+        <div class="flex px-4 py-2 gap-4">
           <div class="flex items-center font-semibold">
             <span>
               <.icon
                 name="hero-code-bracket-mini"
-                class="align-middle w-4 h-4 mr-1 text-indigo-500"
+                class="align-middle w-4 h-4 mr-1 mt-1 text-indigo-500"
               />
             </span>
             {@job.name}
@@ -104,7 +104,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
               @form[:project_credential_id] && @form[:project_credential_id].value
             )
           } />
-          <div class="flex gap-2">
+          <div class="flex gap-2 py-2">
             <LightningWeb.Components.Common.snapshot_version_chip
               id="inspector-workflow-version"
               version={@snapshot_version}
@@ -239,7 +239,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <Common.tooltip
           id="credential-name-tooltip"
           title={"Credential: " <> @credential.name}
-          class="mr-1"
+          class="mr-1 mt-2"
           icon_class="align-middle text-indigo-500 h-4 w-4"
           icon="hero-lock-closed-mini"
         />
@@ -250,7 +250,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <Common.tooltip
           id="credential-name-tooltip"
           title="This step doesn't use a credential."
-          class="mr-1"
+          class="mr-1 mt-2"
           icon_class="align-middle mb-1 text-gray-500 h-4 w-4"
           icon="hero-lock-open-mini"
         />
@@ -278,7 +278,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
       <Common.tooltip
         id="adaptor-name-tooltip"
         title={"Adaptor: " <> @package_name <> "@" <> @version}
-        class="mr-1"
+        class="mr-1 mt-2"
         icon_class="align-middle text-indigo-500 h-4 w-4"
         icon="hero-cube-mini"
       />
