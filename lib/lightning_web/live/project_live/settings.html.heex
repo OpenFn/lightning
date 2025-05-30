@@ -54,155 +54,150 @@
         <.icon name="hero-folder-arrow-down" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">History Exports</span>
       </:tab>
-      <:panel hash="project">
+      <:panel hash="project" class="space-y-4">
         <.section_header
           title="Project setup"
           subtitle="Projects are isolated workspaces that contain workflows, accessible to certain users."
           permissions_message="basic settings, but you can export a copy."
           can_perform_action={@can_edit_project}
         />
-        <div class="bg-white p-4 rounded-md">
-          <div>
-            <h6 class="font-medium text-black">
-              Project Identity
-            </h6>
-            <small class="block my-1 text-xs text-gray-600">
-              This metadata helps you identify the types of workflows managed in this project and the people that have access.
-            </small>
+        <div class="space-y-4">
+          <div class="bg-white p-4 rounded-md space-y-4">
+            <div>
+              <h6 class="font-medium text-black">
+                Project Identity
+              </h6>
+              <small class="block my-1 text-xs text-gray-600">
+                This metadata helps you identify the types of workflows managed in this project and the people that have access.
+              </small>
+            </div>
+            <.form
+              :let={f}
+              for={@project_changeset}
+              id="project-settings-form"
+              phx-change="validate"
+              phx-submit="save"
+              class="space-y-4"
+            >
+              <div class="grid grid-cols gap-6">
+                <div class="md:col-span-2">
+                  <.input
+                    type="text"
+                    field={f[:name]}
+                    disabled={!@can_edit_project}
+                    label="Project name"
+                  />
+                </div>
+              </div>
+              <div class="grid grid-cols gap-6">
+                <div class="md:col-span-2">
+                  <.input
+                    type="textarea"
+                    field={f[:description]}
+                    disabled={!@can_edit_project}
+                    label="Project description"
+                    class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-xs sm:text-sm border-secondary-300 rounded-md"
+                  />
+                  <small class="mt-2 block text-xs text-gray-600">
+                    A short description of a project [max 240 characters]
+                  </small>
+                </div>
+              </div>
+              <div class="grid grid-cols gap-6">
+                <div class="md:col-span-2">
+                  <.button
+                    id="project-identity-submit-btn"
+                    type="submit"
+                    theme="primary"
+                    disabled={!(@project_changeset.valid? and @can_edit_project)}
+                  >
+                    Save
+                  </.button>
+                </div>
+              </div>
+            </.form>
           </div>
-          <.form
-            :let={f}
-            for={@project_changeset}
-            id="project-settings-form"
-            phx-change="validate"
-            phx-submit="save"
-          >
-            <LightningWeb.LayoutComponents.spacer />
-            <div class="grid grid-cols gap-6">
-              <div class="md:col-span-2">
-                <.input
-                  type="text"
-                  field={f[:name]}
-                  disabled={!@can_edit_project}
-                  label="Project name"
-                />
-              </div>
-            </div>
-            <LightningWeb.LayoutComponents.spacer />
-            <div class="grid grid-cols gap-6">
-              <div class="md:col-span-2">
-                <.input
-                  type="textarea"
-                  field={f[:description]}
-                  disabled={!@can_edit_project}
-                  label="Project description"
-                  class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-xs sm:text-sm border-secondary-300 rounded-md"
-                />
-                <small class="mt-2 block text-xs text-gray-600">
-                  A short description of a project [max 240 characters]
-                </small>
-              </div>
-            </div>
-            <LightningWeb.LayoutComponents.spacer />
-            <div class="grid grid-cols gap-6">
-              <div class="md:col-span-2">
-                <.button
-                  id="project-identity-submit-btn"
-                  type="submit"
-                  theme="primary"
-                  disabled={!(@project_changeset.valid? and @can_edit_project)}
-                >
-                  Save
-                </.button>
-              </div>
-            </div>
-          </.form>
-        </div>
-        <LightningWeb.LayoutComponents.spacer />
 
-        <div class="bg-white p-4 rounded-md">
-          <div>
-            <h6 class="font-medium text-black">
-              Concurrency Override
-            </h6>
-            <div class="@container">
-              <div class="@sm:max-w-xl">
-                <p class="text-xs text-gray-600">
-                  By default, runs are executed concurrently in accordance to limits set on individual workflows.
-                  In some situations, you may want to prevent concurrent execution across all workflows in a project.
-                </p>
-                <p class="mt-2 text-xs text-gray-600">
-                  Disabling parallel run execution ensures that only one run
-                  is executed at a time, regardless of workflow, for this entire project.
-                </p>
-              </div>
-            </div>
-          </div>
-          <.form
-            :let={f}
-            for={@project_changeset}
-            id="project-concurrency-form"
-            phx-change="validate"
-            phx-submit="save"
-          >
-            <LightningWeb.LayoutComponents.spacer />
-            <div class="grid grid-cols md:col-span-2">
-              <div class="flex items-center gap-x-4 justify-between">
-                <.live_component
-                  :if={assigns[:concurrency_input_component]}
-                  module={assigns[:concurrency_input_component]}
-                  id="concucurrency-input-component"
-                  field={f[:concurrency]}
-                  project={@project}
-                  disabled={not @can_edit_project}
-                />
-              </div>
-              <div></div>
-              <div class="ml-2 mt-1"></div>
-              <Common.alert
-                :if={
-                  f[:concurrency].value == 1 and
-                    Enum.any?(@project_changeset.changes)
-                }
-                id="heads-up-description"
-                type="warning"
-                header="Heads Up!"
-                class="mt-2"
-              >
-                <:message>
-                  <p>
-                    Disabling parallel run execution may significantly reduce the
-                    overall throughput of your project.
+          <div class="bg-white p-4 rounded-md space-y-4">
+            <div>
+              <h6 class="font-medium text-black">
+                Concurrency Override
+              </h6>
+              <div class="@container">
+                <div class="@sm:max-w-xl">
+                  <p class="text-xs text-gray-600">
+                    By default, runs are executed concurrently in accordance to limits set on individual workflows.
+                    In some situations, you may want to prevent concurrent execution across all workflows in a project.
                   </p>
-                </:message>
-              </Common.alert>
+                  <p class="mt-2 text-xs text-gray-600">
+                    Disabling parallel run execution ensures that only one run
+                    is executed at a time, regardless of workflow, for this entire project.
+                  </p>
+                </div>
+              </div>
             </div>
-            <LightningWeb.LayoutComponents.spacer />
-            <div class="grid grid-cols gap-6">
+            <.form
+              :let={f}
+              for={@project_changeset}
+              id="project-concurrency-form"
+              phx-change="validate"
+              phx-submit="save"
+              class="space-y-4"
+            >
+              <div class="grid grid-cols md:col-span-2">
+                <div class="flex items-center gap-x-4 justify-between">
+                  <.live_component
+                    :if={assigns[:concurrency_input_component]}
+                    module={assigns[:concurrency_input_component]}
+                    id="concucurrency-input-component"
+                    field={f[:concurrency]}
+                    project={@project}
+                    disabled={not @can_edit_project}
+                  />
+                </div>
+                <div></div>
+                <div class="ml-2 mt-1"></div>
+                <Common.alert
+                  :if={
+                    f[:concurrency].value == 1 and
+                      Enum.any?(@project_changeset.changes)
+                  }
+                  id="heads-up-description"
+                  type="warning"
+                  header="Heads Up!"
+                  class="mt-2"
+                >
+                  <:message>
+                    <p>
+                      Disabling parallel run execution may significantly reduce the
+                      overall throughput of your project.
+                    </p>
+                  </:message>
+                </Common.alert>
+              </div>
               <div class="md:col-span-2">
                 <.button
                   id="project-concurrency-submit-btn"
                   type="submit"
                   theme="primary"
                   disabled={
-                    !(Enum.any?(@project_changeset.changes) and @can_edit_project)
+                    !(Enum.any?(@project_changeset.changes) and
+                        @can_edit_project)
                   }
                 >
                   Save
                 </.button>
               </div>
-            </div>
-          </.form>
-        </div>
-        <LightningWeb.LayoutComponents.spacer />
+            </.form>
+          </div>
 
-        <div class="bg-white p-4 rounded-md">
-          <div>
-            <h6 class="font-medium text-black">Export your Project</h6>
-            <p class="block my-1 text-xs text-gray-600">
-              Export your project as code, to save this version or edit your project locally.
-            </p>
-            <LightningWeb.LayoutComponents.spacer />
+          <div class="bg-white p-4 rounded-md space-y-4">
+            <div>
+              <h6 class="font-medium text-black">Export your Project</h6>
+              <p class="block my-1 text-xs text-gray-600">
+                Export your project as code, to save this version or edit your project locally.
+              </p>
+            </div>
             <.button_link
               theme="primary"
               href={~p"/download/yaml?id=#{@project.id}"}
@@ -211,17 +206,14 @@
               Export project
             </.button_link>
           </div>
-        </div>
-        <%= if @can_delete_project do %>
-          <LightningWeb.LayoutComponents.spacer />
-
-          <div class="bg-white p-4 rounded-md">
-            <div>
-              <h6 class="font-medium text-black">The danger zone</h6>
-              <small class="block my-1 text-xs text-gray-600">
-                Deleting your project is irreversible
-              </small>
-              <LightningWeb.LayoutComponents.spacer />
+          <%= if @can_delete_project do %>
+            <div class="bg-white p-4 rounded-md space-y-4">
+              <div>
+                <h6 class="font-medium text-black">The danger zone</h6>
+                <small class="block my-1 text-xs text-gray-600">
+                  Deleting your project is irreversible
+                </small>
+              </div>
               <.button_link
                 theme="danger"
                 navigate={
@@ -235,20 +227,20 @@
                 Delete project
               </.button_link>
             </div>
-          </div>
-        <% end %>
+          <% end %>
 
-        <%= if @live_action == :delete and @can_delete_project do %>
-          <.live_component
-            module={LightningWeb.Components.ProjectDeletionModal}
-            id={@project.id}
-            project={@project}
-            save_return_to={~p"/projects"}
-            cancel_return_to={~p"/projects/#{@project.id}/settings"}
-          />
-        <% end %>
+          <%= if @live_action == :delete and @can_delete_project do %>
+            <.live_component
+              module={LightningWeb.Components.ProjectDeletionModal}
+              id={@project.id}
+              project={@project}
+              save_return_to={~p"/projects"}
+              cancel_return_to={~p"/projects/#{@project.id}/settings"}
+            />
+          <% end %>
+        </div>
       </:panel>
-      <:panel hash="credentials">
+      <:panel hash="credentials" class="space-y-4">
         <.section_header
           title="Project credentials"
           subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
@@ -271,194 +263,197 @@
             }
           ]}
         />
-        <LightningWeb.Components.DataTables.oauth_clients_table
-          id="oauth-clients"
-          title="OAuth Clients"
-          clients={@oauth_clients}
-          show_owner={true}
-        >
-          <:empty_state>
-            <.empty_state
-              icon="hero-plus-circle"
-              message="No OAuth clients found."
-              button_text="Create a new OAuth client"
-              button_id="open-create-oauth-client-modal-big-buttton"
-              button_click={show_modal("new-oauth-client-modal")}
-              button_disabled={!@can_create_project_credential}
-            />
-          </:empty_state>
-          <:actions :let={client}>
-            <div :if={can_edit?(client, @current_user)}>
-              <span>
-                <.link
-                  class="table-action"
-                  phx-click={show_modal("edit-oauth-client-#{client.id}-modal")}
-                >
-                  Edit
-                </.link>
-              </span>
-              <span>
-                <.link
-                  id={"delete-oauth-client-#{client.id}-button"}
-                  class="table-action"
-                  phx-click={
-                    show_modal("delete_oauth_client_#{client.id}_modal")
-                  }
-                >
-                  Delete
-                </.link>
-              </span>
-            </div>
-            <.live_component
-              id={"edit-oauth-client-#{client.id}-modal"}
-              module={LightningWeb.CredentialLive.OauthClientFormComponent}
-              action={:edit}
-              oauth_client={client}
-              projects={@projects}
-              project={@project}
-              allow_global={@current_user.role === :superuser}
-              can_create_oauth_client={@can_create_project_credential}
-              return_to={~p"/projects/#{@project.id}/settings#credentials"}
-            />
-            <LightningWeb.Components.Credentials.delete_oauth_client_modal
-              :if={client.user_id == @current_user.id}
-              id={"delete_oauth_client_#{client.id}_modal"}
-              client={client}
-            />
-          </:actions>
-        </LightningWeb.Components.DataTables.oauth_clients_table>
-        <LightningWeb.LayoutComponents.spacer />
-        <LightningWeb.Components.DataTables.credentials_table
-          id="credentials"
-          title="Credentials"
-          credentials={@credentials}
-          show_owner={true}
-        >
-          <:empty_state>
-            <.empty_state
-              icon="hero-plus-circle"
-              message="No credentials found."
-              button_text="Create a new Credential"
-              button_id="open-create-credential-modal-big-buttton"
-              button_click={show_modal("new-credential-modal")}
-              button_disabled={!@can_create_project_credential}
-            />
-          </:empty_state>
-          <:actions :let={credential}>
-            <div :if={can_edit?(credential, @current_user)}>
-              <span>
-                <.link
-                  class="table-action"
-                  phx-click={
-                    show_modal("transfer-credential-#{credential.id}-modal")
-                  }
-                >
-                  <%= case credential.transfer_status do %>
-                    <% :pending -> %>
-                      Revoke Transfer
-                    <% :completed -> %>
-                      Transfer
-                    <% nil -> %>
-                      Transfer
-                  <% end %>
-                </.link>
-              </span>
-              <span>
-                <.link
-                  class="table-action"
-                  phx-click={
-                    show_modal("edit-credential-#{credential.id}-modal")
-                  }
-                >
-                  Edit
-                </.link>
-              </span>
-              <span>
-                <.link
-                  class="table-action"
-                  phx-click={
-                    show_modal("delete_credential_#{credential.id}_modal")
-                  }
-                >
-                  Delete
-                </.link>
-              </span>
+        <div class="space-y-4">
+          <LightningWeb.Components.DataTables.oauth_clients_table
+            id="oauth-clients"
+            title="OAuth Clients"
+            clients={@oauth_clients}
+            show_owner={true}
+          >
+            <:empty_state>
+              <.empty_state
+                icon="hero-plus-circle"
+                message="No OAuth clients found."
+                button_text="Create a new OAuth client"
+                button_id="open-create-oauth-client-modal-big-buttton"
+                button_click={show_modal("new-oauth-client-modal")}
+                button_disabled={!@can_create_project_credential}
+              />
+            </:empty_state>
+            <:actions :let={client}>
+              <div :if={can_edit?(client, @current_user)}>
+                <span>
+                  <.link
+                    class="table-action"
+                    phx-click={
+                      show_modal("edit-oauth-client-#{client.id}-modal")
+                    }
+                  >
+                    Edit
+                  </.link>
+                </span>
+                <span>
+                  <.link
+                    id={"delete-oauth-client-#{client.id}-button"}
+                    class="table-action"
+                    phx-click={
+                      show_modal("delete_oauth_client_#{client.id}_modal")
+                    }
+                  >
+                    Delete
+                  </.link>
+                </span>
+              </div>
               <.live_component
-                id={"edit-credential-#{credential.id}-modal"}
-                module={LightningWeb.CredentialLive.CredentialFormComponent}
+                id={"edit-oauth-client-#{client.id}-modal"}
+                module={LightningWeb.CredentialLive.OauthClientFormComponent}
                 action={:edit}
-                credential_type={nil}
-                credential={credential}
-                oauth_client={
-                  credential.oauth_token && credential.oauth_token.oauth_client
-                }
+                oauth_client={client}
                 projects={@projects}
                 project={@project}
-                can_create_project_credential={@can_create_project_credential}
-                current_user={@current_user}
+                allow_global={@current_user.role === :superuser}
+                can_create_oauth_client={@can_create_project_credential}
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
-              <LightningWeb.Components.Credentials.delete_credential_modal
-                :if={can_edit?(credential, @current_user)}
-                id={"delete_credential_#{credential.id}_modal"}
-                credential={credential}
+              <LightningWeb.Components.Credentials.delete_oauth_client_modal
+                :if={client.user_id == @current_user.id}
+                id={"delete_oauth_client_#{client.id}_modal"}
+                client={client}
               />
-              <.live_component
-                id={"transfer-credential-#{credential.id}-modal"}
-                module={LightningWeb.CredentialLive.TransferCredentialModal}
-                credential={credential}
-                current_user={@current_user}
-                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+            </:actions>
+          </LightningWeb.Components.DataTables.oauth_clients_table>
+          <LightningWeb.Components.DataTables.credentials_table
+            id="credentials"
+            title="Credentials"
+            credentials={@credentials}
+            show_owner={true}
+          >
+            <:empty_state>
+              <.empty_state
+                icon="hero-plus-circle"
+                message="No credentials found."
+                button_text="Create a new Credential"
+                button_id="open-create-credential-modal-big-buttton"
+                button_click={show_modal("new-credential-modal")}
+                button_disabled={!@can_create_project_credential}
               />
-            </div>
-          </:actions>
-        </LightningWeb.Components.DataTables.credentials_table>
+            </:empty_state>
+            <:actions :let={credential}>
+              <div :if={can_edit?(credential, @current_user)}>
+                <span>
+                  <.link
+                    class="table-action"
+                    phx-click={
+                      show_modal("transfer-credential-#{credential.id}-modal")
+                    }
+                  >
+                    <%= case credential.transfer_status do %>
+                      <% :pending -> %>
+                        Revoke Transfer
+                      <% :completed -> %>
+                        Transfer
+                      <% nil -> %>
+                        Transfer
+                    <% end %>
+                  </.link>
+                </span>
+                <span>
+                  <.link
+                    class="table-action"
+                    phx-click={
+                      show_modal("edit-credential-#{credential.id}-modal")
+                    }
+                  >
+                    Edit
+                  </.link>
+                </span>
+                <span>
+                  <.link
+                    class="table-action"
+                    phx-click={
+                      show_modal("delete_credential_#{credential.id}_modal")
+                    }
+                  >
+                    Delete
+                  </.link>
+                </span>
+                <.live_component
+                  id={"edit-credential-#{credential.id}-modal"}
+                  module={LightningWeb.CredentialLive.CredentialFormComponent}
+                  action={:edit}
+                  credential_type={nil}
+                  credential={credential}
+                  oauth_client={
+                    credential.oauth_token && credential.oauth_token.oauth_client
+                  }
+                  projects={@projects}
+                  project={@project}
+                  can_create_project_credential={@can_create_project_credential}
+                  current_user={@current_user}
+                  return_to={~p"/projects/#{@project.id}/settings#credentials"}
+                />
+                <LightningWeb.Components.Credentials.delete_credential_modal
+                  :if={can_edit?(credential, @current_user)}
+                  id={"delete_credential_#{credential.id}_modal"}
+                  credential={credential}
+                />
+                <.live_component
+                  id={"transfer-credential-#{credential.id}-modal"}
+                  module={LightningWeb.CredentialLive.TransferCredentialModal}
+                  credential={credential}
+                  current_user={@current_user}
+                  return_to={~p"/projects/#{@project.id}/settings#credentials"}
+                />
+              </div>
+            </:actions>
+          </LightningWeb.Components.DataTables.credentials_table>
 
-        <.live_component
-          id="new-credential-modal"
-          module={LightningWeb.CredentialLive.CredentialFormComponent}
-          action={:new}
-          credential_type={@selected_credential_type}
-          credential={
-            %Lightning.Credentials.Credential{
-              user_id: @current_user.id,
-              project_credentials: [
-                %Lightning.Projects.ProjectCredential{
-                  project_id: @project.id
-                }
-              ]
+          <.live_component
+            id="new-credential-modal"
+            module={LightningWeb.CredentialLive.CredentialFormComponent}
+            action={:new}
+            credential_type={@selected_credential_type}
+            credential={
+              %Lightning.Credentials.Credential{
+                user_id: @current_user.id,
+                project_credentials: [
+                  %Lightning.Projects.ProjectCredential{
+                    project_id: @project.id
+                  }
+                ]
+              }
             }
-          }
-          oauth_client={nil}
-          oauth_clients={@oauth_clients}
-          projects={@projects}
-          project={@project}
-          current_user={@current_user}
-          can_create_project_credential={@can_create_project_credential}
-          return_to={~p"/projects/#{@project.id}/settings#credentials"}
-        />
-        <.live_component
-          id="new-oauth-client-modal"
-          module={LightningWeb.CredentialLive.OauthClientFormComponent}
-          action={:new}
-          oauth_client={
-            %Lightning.Credentials.OauthClient{
-              user_id: @current_user.id,
-              project_oauth_clients: [
-                %Lightning.Projects.ProjectOauthClient{
-                  project_id: @project.id
-                }
-              ]
+            oauth_client={nil}
+            oauth_clients={@oauth_clients}
+            projects={@projects}
+            project={@project}
+            current_user={@current_user}
+            can_create_project_credential={@can_create_project_credential}
+            return_to={~p"/projects/#{@project.id}/settings#credentials"}
+          />
+          <.live_component
+            id="new-oauth-client-modal"
+            module={LightningWeb.CredentialLive.OauthClientFormComponent}
+            action={:new}
+            oauth_client={
+              %Lightning.Credentials.OauthClient{
+                user_id: @current_user.id,
+                project_oauth_clients: [
+                  %Lightning.Projects.ProjectOauthClient{
+                    project_id: @project.id
+                  }
+                ]
+              }
             }
-          }
-          projects={@projects}
-          project={@project}
-          allow_global={@current_user.role === :superuser}
-          can_create_oauth_client={@can_create_project_credential}
-          return_to={~p"/projects/#{@project.id}/settings#credentials"}
-        />
+            projects={@projects}
+            project={@project}
+            allow_global={@current_user.role === :superuser}
+            can_create_oauth_client={@can_create_project_credential}
+            return_to={~p"/projects/#{@project.id}/settings#credentials"}
+          />
+        </div>
       </:panel>
-      <:panel hash="collections">
+      <:panel hash="collections" class="space-y-4">
         <.live_component
           module={LightningWeb.ProjectLive.CollectionsComponent}
           id="collections"
@@ -468,7 +463,7 @@
           return_to={~p"/projects/#{@project.id}/settings#collections"}
         />
       </:panel>
-      <:panel hash="webhook_security">
+      <:panel hash="webhook_security" class="space-y-4">
         <.section_header
           title="Webhook security"
           subtitle="Webhook authentication methods that are used with the starting trigger in workflows."
@@ -620,7 +615,7 @@
           </:action>
         </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
       </:panel>
-      <:panel hash="collaboration">
+      <:panel hash="collaboration" class="space-y-4">
         <.section_header
           title="Project collaboration"
           subtitle="View collaborators and manage alert settings for this project."
@@ -717,7 +712,7 @@
           </:empty_state>
         </LightningWeb.Components.DataTables.collaborators_table>
       </:panel>
-      <:panel hash="security">
+      <:panel hash="security" class="space-y-4">
         <.section_header
           title="Project security"
           subtitle="View and manage security settings for this project."
@@ -787,7 +782,7 @@
           </div>
         </div>
       </:panel>
-      <:panel hash="vcs">
+      <:panel hash="vcs" class="space-y-4">
         <.section_header
           title="Version control"
           subtitle="View or modify external version control settings for this project."
@@ -886,7 +881,7 @@
           for full documentation on associated GitHub actions and automated workflows.
         </div>
       </:panel>
-      <:panel hash="data-storage">
+      <:panel hash="data-storage" class="space-y-4">
         <.section_header
           title="Data storage"
           subtitle="View or modify data storage settings for this project."
@@ -1074,7 +1069,7 @@
           </.form>
         </div>
       </:panel>
-      <:panel hash="history-exports">
+      <:panel hash="history-exports" class="space-y-4">
         <.section_header
           title="History exports"
           subtitle="View export status and download work order history for this project."
