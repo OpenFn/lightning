@@ -163,7 +163,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id={@id}>
+    <div id={@id} class="space-y-4">
       <.section_header
         title="Project collections"
         subtitle="Manage collections for this project."

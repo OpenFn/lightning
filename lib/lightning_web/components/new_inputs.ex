@@ -185,7 +185,7 @@ defmodule LightningWeb.Components.NewInputs do
   end
 
   defp button_base_classes do
-    "rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75"
+    "inline-block rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75"
   end
 
   defp button_theme_classes(theme) do
