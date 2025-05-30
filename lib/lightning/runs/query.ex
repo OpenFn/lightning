@@ -161,22 +161,45 @@ defmodule Lightning.Runs.Query do
   @spec eligible_for_claim() :: Ecto.Queryable.t()
   def eligible_for_claim do
     Run
-    |> with_cte("subset",
-      as:
-        ^(from(r in Run)
-          |> join(:inner, [r], ipw in subquery(in_progress_window()),
-            on: r.id == ipw.id
-          )
-          |> where(
-            [r, ipw],
-            r.state == :available and
-              (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
-          )
-          |> select([r, ipw], %{id: r.id, project_id: ipw.project_id})
-          |> order_by([r, ipw], asc: r.priority, asc: r.inserted_at))
-    )
-    |> join(:inner, [r], subset in fragment(~s("subset")), on: r.id == subset.id, as: :subset)
+    |> with_cte("subset", as: ^available_within_concurrency_limits())
+    |> join(:inner, [r], subset in fragment(~s("subset")), on: r.id == subset.id)
     |> order_by([r], asc: r.priority, asc: r.inserted_at)
+  end
+
+  @doc """
+  Query to return available runs that respect concurrency limits.
+
+  This function combines run state filtering with concurrency enforcement by:
+  1. Joining runs with their windowed concurrency data from `in_progress_window/0`
+  2. Filtering for runs in `:available` state only
+  3. Ensuring runs don't exceed their concurrency limits (workflow or project level)
+  4. Ordering by priority and insertion time for fair processing
+
+  ## Concurrency Logic
+
+  A run is included if:
+  - It's in `:available` state (not claimed, started, or finished)
+  - Either no concurrency limit is set (`concurrency` is nil) OR
+  - The run's position within its concurrency group (`row_number`) is within the limit
+
+  Returns run IDs that can be safely claimed without violating concurrency constraints.
+  """
+  @spec available_within_concurrency_limits() :: Ecto.Queryable.t()
+  def available_within_concurrency_limits(
+        in_progress_window_query \\ in_progress_window()
+      ) do
+    from(r in Run)
+    |> join(:inner, [r], ipw in subquery(in_progress_window_query),
+      on: r.id == ipw.id,
+      as: :in_progress_window
+    )
+    |> where(
+      [r, ipw],
+      r.state == :available and
+        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
+    )
+    |> select([r, ipw], %{id: r.id, project_id: ipw.project_id})
+    |> order_by([r, ipw], asc: r.priority, asc: r.inserted_at)
   end
 
   @doc """
