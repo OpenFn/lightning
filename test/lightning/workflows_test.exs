@@ -893,6 +893,145 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "get_workflows_for/3" do
+    setup do
+      project = insert(:project)
+
+      %{user: user} =
+        insert(:project_user, project: project, user: build(:user))
+
+      w1 = insert(:simple_workflow, project: project, name: "WorkflowSilent")
+      w2 = insert(:simple_workflow, project: project, name: "WorkflowChatty1")
+      w3 = insert(:simple_workflow, project: project, name: "WorkflowChatty2")
+
+      assert w1.project.id == project.id
+
+      Repo.update!(Ecto.Changeset.change(hd(w2.triggers), %{enabled: false}))
+
+      insert(:chat_session,
+        user: user,
+        job: hd(w2.jobs),
+        messages: [
+          %{role: :user, content: "what?", user: user}
+        ]
+      )
+
+      insert(:chat_session,
+        user: user,
+        job: hd(w3.jobs),
+        messages: [
+          %{role: :user, content: "what not?", user: user}
+        ]
+      )
+
+      %{project: project, w1: w1, w2: w2, w3: w3, user: user}
+    end
+
+    test "filters workflows by search term", %{project: project, user: user} do
+      workflows =
+        Workflows.get_workflows_for(project, user, search: "chatty")
+        |> Enum.sort_by(& &1.name)
+
+      assert Enum.map(workflows, & &1.name) == [
+               "WorkflowChatty1",
+               "WorkflowChatty2"
+             ]
+
+      assert Enum.map(workflows, & &1.has_ai_chat) == [true, true]
+    end
+
+    test "returns empty list for non-matching search", %{
+      project: project,
+      user: user
+    } do
+      workflows =
+        Workflows.get_workflows_for(project, user, search: "nonexistent")
+
+      assert workflows == []
+    end
+
+    test "sorts workflows by name ascending", %{project: project, user: user} do
+      workflows =
+        Workflows.get_workflows_for(project, user, order_by: {:name, :asc})
+
+      names = Enum.map(workflows, & &1.name)
+      assert names == ["WorkflowChatty1", "WorkflowChatty2", "WorkflowSilent"]
+    end
+
+    test "sorts workflows by name descending", %{project: project, user: user} do
+      workflows =
+        Workflows.get_workflows_for(project, user, order_by: {:name, :desc})
+
+      names = Enum.map(workflows, & &1.name)
+      assert names == ["WorkflowSilent", "WorkflowChatty2", "WorkflowChatty1"]
+    end
+
+    test "sorts workflows by enabled state ascending", %{
+      project: project,
+      user: user
+    } do
+      workflows =
+        Workflows.get_workflows_for(project, user, order_by: {:enabled, :asc})
+
+      first_workflow = List.first(workflows)
+      last_workflow = List.last(workflows)
+
+      assert first_workflow.triggers |> Enum.any?(& &1.enabled) == false
+      assert last_workflow.triggers |> Enum.any?(& &1.enabled) == true
+    end
+
+    test "sorts workflows by enabled state descending", %{
+      project: project,
+      user: user
+    } do
+      workflows =
+        Workflows.get_workflows_for(project, user, order_by: {:enabled, :desc})
+
+      first_workflow = List.first(workflows)
+      last_workflow = List.last(workflows)
+
+      assert first_workflow.triggers |> Enum.any?(& &1.enabled) == true
+      assert last_workflow.triggers |> Enum.any?(& &1.enabled) == false
+    end
+
+    test "uses default sorting for invalid order_by", %{
+      project: project,
+      user: user
+    } do
+      workflows =
+        Workflows.get_workflows_for(project, user, order_by: {:invalid, :asc})
+
+      names = Enum.map(workflows, & &1.name)
+      assert names == ["WorkflowChatty1", "WorkflowChatty2", "WorkflowSilent"]
+    end
+
+    test "customizes preloaded associations", %{project: project, user: user} do
+      workflows =
+        Workflows.get_workflows_for(project, user, include: [:triggers])
+
+      workflow = List.first(workflows)
+
+      assert workflow.triggers != %Ecto.Association.NotLoaded{}
+      assert match?(%Ecto.Association.NotLoaded{}, workflow.edges)
+    end
+
+    test "always includes triggers even if not specified", %{
+      project: project,
+      user: user
+    } do
+      workflows = Workflows.get_workflows_for(project, user, include: [:edges])
+      workflow = List.first(workflows)
+
+      assert workflow.triggers != %Ecto.Association.NotLoaded{}
+      assert workflow.edges != %Ecto.Association.NotLoaded{}
+    end
+
+    test "ignores empty search term", %{project: project, user: user} do
+      workflows = Workflows.get_workflows_for(project, user, search: "")
+      assert length(workflows) == 3
+    end
+  end
+
   defp assert_trigger_state_audit(
          workflow_id,
          user_id,
