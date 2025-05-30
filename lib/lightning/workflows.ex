@@ -7,11 +7,11 @@ defmodule Lightning.Workflows do
 
   alias Ecto.Multi
 
+  alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
-  alias Lightning.Accounts.User
-  alias Lightning.AiAssistant.ChatSession
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Events
@@ -355,9 +355,8 @@ defmodule Lightning.Workflows do
         on: cs.job_id == j.id,
         join: w in Workflow,
         on: j.workflow_id == w.id,
-        where:
-          cs.user_id == ^user_id and w.project_id == parent_as(:workflow).id and
-            is_nil(w.deleted_at),
+        where: cs.user_id == ^user_id,
+        where: w.project_id == ^project_id and is_nil(w.deleted_at),
         select: 1
 
     include = Keyword.get(opts, :include, [:triggers])
