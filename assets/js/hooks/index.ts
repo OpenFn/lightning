@@ -701,39 +701,9 @@ export const Copy = {
           }
         }).catch(err => {
           console.error('Failed to copy text: ', err);
-          this.fallbackCopyTextToClipboard(text, element);
         });
       }
     });
-  },
-
-  fallbackCopyTextToClipboard(text, element) {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    
-    textArea.style.top = "0";
-    textArea.style.left = "0";
-    textArea.style.position = "fixed";
-    
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-      const successful = document.execCommand('copy');
-      if (successful) {
-        console.log('Fallback: Copied!');
-        let originalText = element.textContent;
-        element.textContent = 'Copied!';
-        setTimeout(function () {
-          element.textContent = originalText;
-        }, 3000);
-      }
-    } catch (err) {
-      console.error('Fallback: Unable to copy', err);
-    }
-    
-    document.body.removeChild(textArea);
   }
 } as PhoenixHook;
 
