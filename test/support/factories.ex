@@ -327,6 +327,51 @@ defmodule Lightning.Factories do
     }
   end
 
+  def ai_assistant_message_factory do
+    %Lightning.AiAssistant.ChatMessage{
+      content: sequence(:ai_message_content, &"AI response #{&1}"),
+      role: :assistant,
+      status: :success,
+      is_deleted: false,
+      is_public: true,
+      workflow_code: nil,
+      user: nil,
+      chat_session: build(:chat_session)
+    }
+  end
+
+  def ai_message_with_workflow_factory do
+    %Lightning.AiAssistant.ChatMessage{
+      content: "Here's your generated workflow:",
+      role: :assistant,
+      status: :success,
+      is_deleted: false,
+      is_public: true,
+      workflow_code: """
+      name: Event-based Workflow
+      jobs:
+        Transform-data:
+          name: Transform data
+          adaptor: "@openfn/language-common@latest"
+          body: |
+            // Check out the Job Writing Guide for help getting started:
+            // https://docs.openfn.org/documentation/jobs/job-writing-guide
+      triggers:
+        webhook:
+          type: webhook
+          enabled: true
+      edges:
+        webhook->Transform-data:
+          source_trigger: webhook
+          target_job: Transform-data
+          condition_type: always
+          enabled: true
+      """,
+      user: nil,
+      chat_session: build(:chat_session)
+    }
+  end
+
   def collection_factory do
     %Lightning.Collections.Collection{
       project: build(:project),
