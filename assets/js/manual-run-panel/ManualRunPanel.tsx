@@ -6,6 +6,7 @@ import {
 } from '@heroicons/react/24/outline';
 import React from 'react';
 import constructQuery from '../utils/constructQuery';
+import { Tabs } from '../components/Tabs';
 import { type Dataclip, FilterTypes, SeletableOptions } from './types';
 import CustomView from './views/CustomView';
 import EmptyView from './views/EmptyView';
@@ -13,6 +14,7 @@ import ExistingView from './views/ExistingView';
 import SelectedClipView from './views/SelectedClipView';
 import alterURLParams from '../utils/alterURLParams';
 import useQuery from '../hooks/useQuery';
+
 interface ManualRunPanelProps {
   job_id: string;
   selected_dataclip_id: string | null;
@@ -175,6 +177,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     handleSearchSumbit();
   }, [selectedClipType, selectedDates]);
 
+  const handleTabSelectionChange = React.useCallback((newSelection: string) => {
+    const option = Number(newSelection) as SeletableOptions;
+    navigate(alterURLParams({ active_panel: option.toString() }).toString());
+    pushManualChange(option);
+    setSelectedOption(option);
+  }, [navigate, pushManualChange]);
+
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
       case SeletableOptions.EXISTING:
@@ -215,18 +224,6 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     handleSearchSumbit,
   ]);
 
-  const getActive = (v: SeletableOptions) => {
-    if (selectedOption === v)
-      return ' border-primary-600 text-primary-600 bg-slate-100';
-    return '';
-  };
-
-  const selectOptionHandler = (option: SeletableOptions) => () => {
-    navigate(alterURLParams({ active_panel: option.toString() }).toString());
-    pushManualChange(option)
-    setSelectedOption(option);
-  };
-
   return (
     <>
       <form ref={formRef} id="manual_run_form"></form>
@@ -241,45 +238,16 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         <div className="grow overflow-auto no-scrollbar -mt-2">
           <div className="flex flex-col gap-2 h-full">
             <div className="flex md:gap-2 sm:gap-1 justify-center flex-wrap">
-              <button
-                type="button"
-                onClick={selectOptionHandler(SeletableOptions.EMPTY)}
-                className={
-                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
-                  getActive(SeletableOptions.EMPTY)
-                }
-              >
-                <DocumentIcon
-                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                />
-                Empty
-              </button>
-              <button
-                type="button"
-                onClick={selectOptionHandler(SeletableOptions.CUSTOM)}
-                className={
-                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
-                  getActive(SeletableOptions.CUSTOM)
-                }
-              >
-                <PencilSquareIcon
-                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                />
-                Custom
-              </button>
-              <button
-                type="button"
-                onClick={selectOptionHandler(SeletableOptions.EXISTING)}
-                className={
-                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
-                  getActive(SeletableOptions.EXISTING)
-                }
-              >
-                <QueueListIcon
-                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                />
-                Existing
-              </button>
+              <Tabs
+                options={[
+                  { label: 'Empty', id: SeletableOptions.EMPTY.toString(), icon: DocumentIcon },
+                  { label: 'Custom', id: SeletableOptions.CUSTOM.toString(), icon: PencilSquareIcon },
+                  { label: 'Existing', id: SeletableOptions.EXISTING.toString(), icon: QueueListIcon },
+                ]}
+                initialSelection={selectedOption.toString()}
+                onSelectionChange={handleTabSelectionChange}
+                verticalCollapse={false}
+              />
             </div>
             {innerView}
           </div>
