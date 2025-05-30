@@ -113,6 +113,7 @@ export default ({
                 : 'flex-row',
               'w-full',
               'justify-items-end',
+              'items-center',
               'sticky',
             ].join(' ')}
           >
