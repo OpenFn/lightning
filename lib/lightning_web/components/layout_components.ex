@@ -284,44 +284,47 @@ defmodule LightningWeb.LayoutComponents do
 
   def section_header(assigns) do
     ~H"""
-    <div class="flex justify-between content-center pb-4">
-      <div class="leading-loose">
-        <h6 class="font-medium text-black">{@title}</h6>
-        <small class="block text-xs text-gray-600">
-          {@subtitle}
-        </small>
-        <%= if !@can_perform_action do %>
-          <.permissions_message section={@permissions_message} />
-        <% end %>
-      </div>
-      <%= if @action_button_text || @options do %>
-        <div class="sm:block" aria-hidden="true">
-          <%= if @options do %>
-            <LightningWeb.Components.Credentials.options_menu_button
-              id={@action_button_id}
-              options={@options}
-              disabled={@action_button_disabled}
-            >
-              {@action_button_text || "Add new"}
-            </LightningWeb.Components.Credentials.options_menu_button>
-          <% else %>
-            <.button
-              :if={@action_button_id}
-              id={@action_button_id}
-              type="button"
-              theme="primary"
-              size="lg"
-              phx-click={@action_button_click}
-              phx-value-action={@action_button_value_action}
-              phx-target={@action_button_target}
-              disabled={@action_button_disabled}
-              tooltip={@action_button_tooltip}
-            >
-              {@action_button_text}
-            </.button>
+    <div>
+      <div class="flex justify-between content-center">
+        <div>
+          <h6 class="font-medium text-black">{@title}</h6>
+          <small class="block my-1 text-xs text-gray-600">
+            {@subtitle}
+          </small>
+          <%= if !@can_perform_action do %>
+            <.permissions_message section={@permissions_message} />
           <% end %>
         </div>
-      <% end %>
+        <%= if @action_button_text || @options do %>
+          <div class="sm:block" aria-hidden="true">
+            <%= if @options do %>
+              <LightningWeb.Components.Credentials.options_menu_button
+                id={@action_button_id}
+                options={@options}
+                disabled={@action_button_disabled}
+              >
+                {@action_button_text || "Add new"}
+              </LightningWeb.Components.Credentials.options_menu_button>
+            <% else %>
+              <.button
+                :if={@action_button_id}
+                id={@action_button_id}
+                type="button"
+                theme="primary"
+                size="lg"
+                phx-click={@action_button_click}
+                phx-value-action={@action_button_value_action}
+                phx-target={@action_button_target}
+                disabled={@action_button_disabled}
+                tooltip={@action_button_tooltip}
+              >
+                {@action_button_text}
+              </.button>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+      <LightningWeb.LayoutComponents.spacer />
     </div>
     """
   end
@@ -333,6 +336,38 @@ defmodule LightningWeb.LayoutComponents do
     <small class="mt-2 text-red-700">
       Role based permissions: You cannot modify this project's {@section}
     </small>
+    """
+  end
+
+  def spacer(assigns) do
+    assigns = assign_new(assigns, :vertical, fn -> true end)
+    assigns = assign_new(assigns, :horizontal, fn -> false end)
+    assigns = assign_new(assigns, :size, fn -> "2" end)
+    assigns = assign_new(assigns, :vertical_size, fn -> assigns.size end)
+    assigns = assign_new(assigns, :horizontal_size, fn -> assigns.size end)
+    assigns = assign_new(assigns, :responsive, fn -> true end)
+
+    vertical_class =
+      if assigns.vertical, do: "py-#{assigns.vertical_size}", else: ""
+
+    horizontal_class =
+      if assigns.horizontal, do: "px-#{assigns.horizontal_size}", else: ""
+
+    responsive_class = if assigns.responsive, do: "hidden sm:block", else: ""
+
+    assigns =
+      assign(
+        assigns,
+        :classes,
+        [responsive_class, vertical_class, horizontal_class]
+        |> Enum.filter(&(&1 != ""))
+        |> Enum.join(" ")
+      )
+
+    ~H"""
+    <div class={@classes} aria-hidden="true">
+      <div></div>
+    </div>
     """
   end
 end

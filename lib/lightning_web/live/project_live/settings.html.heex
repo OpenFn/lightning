@@ -54,7 +54,7 @@
         <.icon name="hero-folder-arrow-down" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">History Exports</span>
       </:tab>
-      <:panel hash="project" class="">
+      <:panel hash="project">
         <.section_header
           title="Project setup"
           subtitle="Projects are isolated workspaces that contain workflows, accessible to certain users."
@@ -77,6 +77,7 @@
             phx-change="validate"
             phx-submit="save"
           >
+            <LightningWeb.LayoutComponents.spacer />
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
                 <.input
@@ -87,6 +88,7 @@
                 />
               </div>
             </div>
+            <LightningWeb.LayoutComponents.spacer />
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
                 <.input
@@ -101,6 +103,7 @@
                 </small>
               </div>
             </div>
+            <LightningWeb.LayoutComponents.spacer />
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
                 <.button
@@ -115,6 +118,8 @@
             </div>
           </.form>
         </div>
+        <LightningWeb.LayoutComponents.spacer />
+
         <div class="bg-white p-4 rounded-md">
           <div>
             <h6 class="font-medium text-black">
@@ -140,16 +145,7 @@
             phx-change="validate"
             phx-submit="save"
           >
-            <div class="grid grid-cols gap-6">
-              <div class="md:col-span-2">
-                <.input type="hidden" field={f[:name]} />
-              </div>
-            </div>
-            <div class="grid grid-cols gap-6">
-              <div class="md:col-span-2">
-                <.input type="hidden" field={f[:description]} />
-              </div>
-            </div>
+            <LightningWeb.LayoutComponents.spacer />
             <div class="grid grid-cols md:col-span-2">
               <div class="flex items-center gap-x-4 justify-between">
                 <.live_component
@@ -181,6 +177,7 @@
                 </:message>
               </Common.alert>
             </div>
+            <LightningWeb.LayoutComponents.spacer />
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
                 <.button
@@ -197,6 +194,7 @@
             </div>
           </.form>
         </div>
+        <LightningWeb.LayoutComponents.spacer />
 
         <div class="bg-white p-4 rounded-md">
           <div>
@@ -204,29 +202,26 @@
             <p class="block my-1 text-xs text-gray-600">
               Export your project as code, to save this version or edit your project locally.
             </p>
-            <div class="my-2">
-              <.button_link
-                theme="primary"
-                href={~p"/download/yaml?id=#{@project.id}"}
-                target="_blank"
-              >
-                Export project
-              </.button_link>
-            </div>
-
-            <%!--  --%>
+            <LightningWeb.LayoutComponents.spacer />
+            <.button_link
+              theme="primary"
+              href={~p"/download/yaml?id=#{@project.id}"}
+              target="_blank"
+            >
+              Export project
+            </.button_link>
           </div>
         </div>
         <%= if @can_delete_project do %>
+          <LightningWeb.LayoutComponents.spacer />
+
           <div class="bg-white p-4 rounded-md">
             <div>
               <h6 class="font-medium text-black">The danger zone</h6>
               <small class="block my-1 text-xs text-gray-600">
                 Deleting your project is irreversible
               </small>
-              <div class="hidden sm:block" aria-hidden="true">
-                <div class="py-2"></div>
-              </div>
+              <LightningWeb.LayoutComponents.spacer />
               <.button_link
                 theme="danger"
                 navigate={

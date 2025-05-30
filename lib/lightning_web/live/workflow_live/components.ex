@@ -331,9 +331,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       />
       <%= case @type do %>
         <% :cron -> %>
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
+          <LightningWeb.LayoutComponents.spacer />
           <.live_component
             id="cron-setup-component"
             form={@form}
@@ -342,9 +340,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         <% :kafka -> %>
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
+          <LightningWeb.LayoutComponents.spacer />
           <.live_component
             id="kafka-setup-component"
             form={@form}
