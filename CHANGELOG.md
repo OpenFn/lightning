@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix magic metadata [#3134](https://github.com/OpenFn/lightning/issues/3134)
+
 ## [v2.12.3-pre] - 2025-05-29
 
 ### Added
@@ -38,8 +40,7 @@ and this project adheres to
 - Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
 - Standardized table components across the application
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
-- Standardize buttons
-  [#3093](https://github.com/OpenFn/lightning/issues/3093)
+- Standardize buttons [#3093](https://github.com/OpenFn/lightning/issues/3093)
 - Make the chunk size for deleting expired activty configurable via ENV
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
 - Reduce the cardinality of `lightning_run_lost_count`.

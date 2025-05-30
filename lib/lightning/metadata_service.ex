@@ -113,7 +113,7 @@ defmodule Lightning.MetadataService do
     path =
       result
       |> CLI.Result.get_messages()
-      |> List.first()
+      |> List.last()
 
     cond do
       path ->

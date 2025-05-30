@@ -81,9 +81,12 @@ defmodule Lightning.CLITest do
       assert res.status == 0
       assert res.end_time - res.start_time >= 0
 
-      assert CLI.Result.get_messages(res) == [
+      last =
+        CLI.Result.get_messages(res)
+        |> List.last()
+
+      assert last ==
                "/tmp/openfn/repo/meta/b57c9a0c121b0a835b25436133e69221035602da3ff9981e1fcf2d6128aec622.json"
-             ]
     end
   end
 
