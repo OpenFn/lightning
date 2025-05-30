@@ -335,36 +335,4 @@ defmodule LightningWeb.LayoutComponents do
     </small>
     """
   end
-
-  def spacer(assigns) do
-    assigns = assign_new(assigns, :vertical, fn -> true end)
-    assigns = assign_new(assigns, :horizontal, fn -> false end)
-    assigns = assign_new(assigns, :size, fn -> "2" end)
-    assigns = assign_new(assigns, :vertical_size, fn -> assigns.size end)
-    assigns = assign_new(assigns, :horizontal_size, fn -> assigns.size end)
-    assigns = assign_new(assigns, :responsive, fn -> true end)
-
-    vertical_class =
-      if assigns.vertical, do: "py-#{assigns.vertical_size}", else: ""
-
-    horizontal_class =
-      if assigns.horizontal, do: "px-#{assigns.horizontal_size}", else: ""
-
-    responsive_class = if assigns.responsive, do: "hidden sm:block", else: ""
-
-    assigns =
-      assign(
-        assigns,
-        :classes,
-        [responsive_class, vertical_class, horizontal_class]
-        |> Enum.filter(&(&1 != ""))
-        |> Enum.join(" ")
-      )
-
-    ~H"""
-    <div class={@classes} aria-hidden="true">
-      <div></div>
-    </div>
-    """
-  end
 end
