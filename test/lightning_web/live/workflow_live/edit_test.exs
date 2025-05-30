@@ -3087,10 +3087,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(submit_btn)
       assert render(submit_btn) =~ "disabled=\"disabled\""
 
-      assert has_element?(view, "#ai-assistant-form-submit-btn-tooltip")
-
-      assert view |> element("#ai-assistant-form-submit-btn-tooltip") |> render() =~
-               ~s(aria-label="Save the job first to use the AI Assistant")
+      # Check that the tooltip text appears as the textarea placeholder
+      assert render(input_element) =~
+               ~s(placeholder="Save your workflow first to use the AI Assistant")
     end
 
     @tag email: "user@openfn.org"
@@ -3433,7 +3432,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       view |> element("#get-started-with-ai-btn") |> render_click()
 
       assert has_element?(view, "#ai-assistant-error", error_message)
-      assert render(view) =~ "aria-label=\"#{error_message}\""
+
+      input_element = element(view, "#ai-assistant-form textarea")
+
+      assert render(input_element) =~
+               ~s(placeholder="#{error_message}")
 
       # submiting a message shows the flash
       view

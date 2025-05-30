@@ -486,7 +486,7 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
   - Preserves error message context and parameters
   - Designed for internationalization support
   """
-  @spec extract_changeset_errors(%Ecto.Changeset{}) :: [String.t()]
+  @spec extract_changeset_errors(Ecto.Changeset.t()) :: [String.t()]
   def extract_changeset_errors(%Ecto.Changeset{errors: errors}) do
     errors
     |> Enum.map(fn {field, {message, opts}} ->
