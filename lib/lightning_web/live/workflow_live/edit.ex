@@ -1502,15 +1502,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_event("get-initial-state", _params, socket) do
-    {:noreply,
-     socket
-     |> push_event("current-workflow-params", %{
-       workflow_params: socket.assigns.workflow_params
-     })}
-  end
-
-  @impl true
   def handle_event("workflow_editor_metrics_report", params, socket) do
     UiMetrics.log_workflow_editor_metrics(
       socket.assigns.workflow,
@@ -1521,7 +1512,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("get-current-state", _params, socket) do
-    {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
+    %{workflow_params: workflow_params, current_user: current_user} =
+      socket.assigns
+
+    {:reply,
+     %{
+       workflow_params: update_jobs_with_chat_info(workflow_params, current_user)
+     }, socket}
   end
 
   def handle_event(
@@ -2835,8 +2832,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket
     |> assign(
       changeset: changeset,
-      workflow_params:
-        update_jobs_with_chat_info(workflow_params, socket.assigns.current_user)
+      workflow_params: workflow_params
     )
   end
 
