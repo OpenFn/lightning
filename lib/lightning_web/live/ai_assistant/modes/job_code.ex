@@ -1,16 +1,80 @@
 defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   @moduledoc """
-  Implementation of the ModeBehavior protocol for job code assistance.
+  AI Assistant mode for job-specific code assistance and debugging.
 
-  This module provides functionality for AI-assisted job code development and debugging.
-  It implements the `ModeBehavior` protocol to handle job-specific operations like
-  session creation, message handling, and code assistance.
+  This mode provides intelligent assistance for developing, debugging, and optimizing
+  job code within Lightning workflows. It leverages job-specific context including
+  the expression code and adaptor information to provide targeted AI assistance.
 
-  ## Features
-  * Creates job-specific chat sessions
-  * Handles user messages and AI responses
-  * Provides code assistance and debugging help
-  * Manages job-specific context including adaptor and expression
+  ## Key Features
+
+  ### Contextual Code Assistance
+  - **Expression-aware help** - AI understands the current job's code context
+  - **Adaptor-specific guidance** - Targeted advice for specific OpenFn adaptors
+  - **Debugging assistance** - Help identifying and fixing code issues
+  - **Best practices** - Recommendations for code improvement and optimization
+
+  ### Job Integration
+  - **Automatic context loading** - Job expression and adaptor are automatically included
+  - **Permission-aware** - Respects workflow editing permissions
+  - **Save state validation** - Requires saved jobs for AI assistance
+  - **Usage limit enforcement** - Tracks and enforces AI usage limits
+
+  ## Usage Context
+
+  This mode is activated when:
+  - A specific job is selected in the workflow editor
+  - User has edit permissions for the workflow
+  - Job has been saved (not in draft state)
+  - AI service is available and within usage limits
+
+  ## AI Assistance Types
+
+  ### Code Development
+  - Writing new expression code
+  - Adaptor function recommendations
+  - State transformation patterns
+  - Error handling implementation
+
+  ### Debugging & Troubleshooting
+  - Error message interpretation
+  - Code review and optimization
+  - Performance improvement suggestions
+  - Common pattern identification
+
+  ### Adaptor-Specific Help
+  - Function documentation and examples
+  - Configuration guidance
+  - Integration patterns
+  - Version-specific features
+
+  ## Example Interactions
+
+      # Getting help with HTTP requests
+      "How do I add authentication headers to my HTTP request?"
+
+      # Debugging assistance
+      "Why am I getting a 'Cannot read property' error?"
+
+      # Adaptor guidance
+      "What's the best way to transform this Salesforce data?"
+
+      # Code optimization
+      "How can I make this data transformation more efficient?"
+
+  ## Security & Permissions
+
+  - Requires `can_edit_workflow` permission
+  - Validates job ownership and access rights
+  - Enforces organizational AI usage limits
+  - Protects sensitive job data through secure context handling
+
+  ## Integration with Lightning Core
+
+  - Uses `Lightning.AiAssistant` for session management
+  - Integrates with `Lightning.ApolloClient` for AI queries
+  - Respects Lightning's permission system
+  - Follows Lightning's error handling patterns
   """
 
   use LightningWeb.Live.AiAssistant.ModeBehavior
@@ -18,28 +82,141 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   alias Lightning.AiAssistant
   alias LightningWeb.Live.AiAssistant.ErrorHandler
 
+  @doc """
+  Creates a new job-specific AI assistance session.
+
+  Initializes a session with job context, including the job's expression code
+  and adaptor information for targeted AI assistance.
+
+  ## Required Assigns
+
+  - `:selected_job` - The job struct to provide assistance for
+  - `:current_user` - The user creating the session
+
+  ## Examples
+
+      # Create session for debugging help
+      {:ok, session} = JobCode.create_session(
+        %{selected_job: job, current_user: user},
+        "Help me debug this HTTP request error"
+      )
+
+  ## Implementation Notes
+
+  - Automatically includes job expression and adaptor context
+  - Associates session with the specific job for future reference
+  - Creates initial user message with the provided content
+  """
   @impl true
+  @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
   def create_session(%{selected_job: job, current_user: user}, content) do
     AiAssistant.create_session(job, user, content)
   end
 
+  @doc """
+  Retrieves and enriches a session with job-specific context.
+
+  Loads the session and adds the current job's expression and adaptor
+  information, enabling the AI to provide contextual assistance.
+
+  ## Required Assigns
+
+  - `:selected_job` - The job struct to provide context from
+
+  ## Examples
+
+      session = JobCode.get_session!(session_id, %{selected_job: current_job})
+      # session now includes job.body as expression and job.adaptor
+
+  ## Implementation Notes
+
+  - Enriches session with current job's expression (body) and adaptor
+  - Enables AI to understand the specific code context
+  - Resolves adaptor information for targeted guidance
+  """
   @impl true
+  @spec get_session!(String.t(), map()) :: map()
   def get_session!(session_id, %{selected_job: job}) do
     AiAssistant.get_session!(session_id)
     |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
   end
 
+  @doc """
+  Lists job-specific AI assistance sessions with pagination.
+
+  Retrieves sessions associated with the currently selected job,
+  ordered by recency for easy access to recent conversations.
+
+  ## Required Assigns
+
+  - `:selected_job` - The job to filter sessions by
+
+  ## Examples
+
+      # Load recent sessions for current job
+      %{sessions: sessions, pagination: meta} = JobCode.list_sessions(
+        %{selected_job: job},
+        :desc,
+        limit: 10
+      )
+
+  ## Implementation Notes
+
+  - Filters sessions to only those associated with the current job
+  - Includes message counts for session preview
+  - Respects pagination parameters for efficient loading
+  """
   @impl true
+  @spec list_sessions(map(), atom(), keyword()) :: %{
+          sessions: [map()],
+          pagination: map()
+        }
   def list_sessions(%{selected_job: job}, sort_direction, opts \\ []) do
     AiAssistant.list_sessions(job, sort_direction, opts)
   end
 
+  @doc """
+  Checks if more sessions exist for the current job.
+
+  Determines if additional sessions are available beyond the current count
+  for implementing "Load More" functionality.
+
+  ## Required Assigns
+
+  - `:selected_job` - The job to check session count for
+
+  ## Examples
+
+      if JobCode.more_sessions?(%{selected_job: job}, 20) do
+        # Show "Load More" button
+      end
+  """
   @impl true
+  @spec more_sessions?(map(), integer()) :: boolean()
   def more_sessions?(%{selected_job: job}, current_count) do
     AiAssistant.has_more_sessions?(job, current_count)
   end
 
+  @doc """
+  Saves a user message to the job assistance session.
+
+  Adds the user's message to the conversation history with proper
+  role and user attribution for AI processing.
+
+  ## Required Assigns
+
+  - `:session` - The target session
+  - `:current_user` - The user sending the message
+
+  ## Examples
+
+      {:ok, updated_session} = JobCode.save_message(
+        %{session: session, current_user: user},
+        "How do I handle this API error?"
+      )
+  """
   @impl true
+  @spec save_message(map(), String.t()) :: {:ok, map()} | {:error, any()}
   def save_message(%{session: session, current_user: user}, content) do
     AiAssistant.save_message(session, %{
       role: :user,
@@ -48,12 +225,90 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     })
   end
 
+  @doc """
+  Processes user queries through the job-specific AI assistant.
+
+  Sends the user's question along with job context (expression and adaptor)
+  to the AI service for targeted code assistance and debugging help.
+
+  ## Parameters
+
+  - `session` - Session with job context (expression and adaptor)
+  - `content` - User's question or request for assistance
+
+  ## Examples
+
+      # Get help with specific code issue
+      {:ok, updated_session} = JobCode.query(
+        session,
+        "Why is my data transformation returning undefined?"
+      )
+
+      # Request adaptor-specific guidance
+      {:ok, updated_session} = JobCode.query(
+        session,
+        "What's the best way to handle errors in HTTP requests?"
+      )
+
+  ## AI Context Provided
+
+  - Job's expression code for understanding current implementation
+  - Adaptor information for targeted guidance
+  - Previous conversation history for context
+  - OpenFn-specific knowledge for accurate assistance
+  """
   @impl true
+  @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
   def query(session, content) do
     AiAssistant.query(session, content)
   end
 
+  @doc """
+  Determines if the chat input should be disabled for job assistance.
+
+  Evaluates multiple conditions to ensure AI assistance is only available
+  when appropriate permissions, limits, and job state allow it.
+
+  ## Required Assigns
+
+  - `:selected_job` - Current job selection state
+  - `:can_edit_workflow` - User's edit permissions
+  - `:ai_limit_result` - Current AI usage limit status
+  - `:endpoint_available?` - AI service availability
+  - `:pending_message` - Loading state for current message
+
+  ## Disabled Conditions
+
+  - User lacks workflow editing permissions
+  - AI usage limits have been reached
+  - AI service endpoint is unavailable
+  - Message is currently being processed
+  - Selected job is in unsaved/draft state
+
+  ## Examples
+
+      # Input disabled due to unsaved job
+      chat_input_disabled?(%{
+        selected_job: %{__meta__: %{state: :built}},
+        can_edit_workflow: true,
+        ai_limit_result: :ok,
+        endpoint_available?: true,
+        pending_message: %{loading: nil}
+      })
+      # => true
+
+      # Input enabled for saved job with permissions
+      chat_input_disabled?(%{
+        selected_job: %{__meta__: %{state: :loaded}},
+        can_edit_workflow: true,
+        ai_limit_result: :ok,
+        endpoint_available?: true,
+        pending_message: %{loading: nil}
+      })
+      # => false
+  """
   @impl true
+  @spec chat_input_disabled?(map()) :: boolean()
   def chat_input_disabled?(%{
         selected_job: selected_job,
         can_edit_workflow: can_edit_workflow,
@@ -68,12 +323,46 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       job_is_unsaved?(selected_job)
   end
 
+  @doc """
+  Provides job-specific placeholder text for the chat input.
+
+  Guides users on the types of assistance available for job development
+  and debugging.
+  """
   @impl true
+  @spec input_placeholder() :: String.t()
   def input_placeholder do
     "Ask about your job code, debugging, or OpenFn adaptors..."
   end
 
+  @doc """
+  Generates contextual titles for job assistance sessions.
+
+  Creates descriptive titles that include job context when available,
+  making it easier to identify sessions in lists.
+
+  ## Title Priority
+
+  1. Session's custom title (if set)
+  2. "Help with [Job Name]" (if job name available)
+  3. "Job Code Help" (fallback)
+
+  ## Examples
+
+      # With custom title
+      chat_title(%{title: "Debug HTTP 401 error"})
+      # => "Debug HTTP 401 error"
+
+      # With job context
+      chat_title(%{job: %{name: "Fetch Salesforce Data"}})
+      # => "Help with Fetch Salesforce Data"
+
+      # Fallback
+      chat_title(%{})
+      # => "Job Code Help"
+  """
   @impl true
+  @spec chat_title(map()) :: String.t()
   def chat_title(session) do
     case session do
       %{title: title} when is_binary(title) and title != "" ->
@@ -87,10 +376,24 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     end
   end
 
+  @doc """
+  Indicates that job assistance doesn't generate templates.
+
+  Job mode focuses on helping with existing code rather than generating
+  new templates or workflows.
+  """
   @impl true
+  @spec supports_template_generation?() :: boolean()
   def supports_template_generation?, do: false
 
+  @doc """
+  Provides metadata for the job assistance mode.
+
+  Returns information used by the UI to display mode selection options
+  and identify the mode's capabilities.
+  """
   @impl true
+  @spec metadata() :: map()
   def metadata do
     %{
       name: "Job Code Assistant",
@@ -99,6 +402,35 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     }
   end
 
+  @doc """
+  Generates appropriate tooltip messages when chat input is disabled.
+
+  Provides specific explanations for why AI assistance is unavailable,
+  helping users understand what actions they need to take.
+
+  ## Parameters
+
+  - `assigns` - Map containing permission and state information
+
+  ## Returns
+
+  String explanation or `nil` if input should be enabled.
+
+  ## Examples
+
+      # Permission denied
+      disabled_tooltip_message(%{can_edit_workflow: false})
+      # => "You are not authorized to use the AI Assistant"
+
+      # Usage limit reached
+      disabled_tooltip_message(%{ai_limit_result: {:error, :limit_exceeded}})
+      # => "Monthly AI usage limit exceeded"
+
+      # Unsaved job
+      disabled_tooltip_message(%{selected_job: %{__meta__: %{state: :built}}})
+      # => "Save your workflow first to use the AI Assistant"
+  """
+  @spec disabled_tooltip_message(map()) :: String.t() | nil
   def disabled_tooltip_message(assigns) do
     case {assigns.can_edit_workflow, assigns.ai_limit_result,
           assigns.selected_job} do
@@ -116,6 +448,29 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     end
   end
 
+  @doc """
+  Formats errors consistently for job assistance mode.
+
+  Leverages shared error handling to provide user-friendly error messages
+  for various failure scenarios.
+
+  ## Parameters
+
+  - `error` - Error to format (changeset, atom, string, etc.)
+
+  ## Returns
+
+  Human-readable error message string.
+
+  ## Examples
+
+      error_message({:error, :timeout})
+      # => "Request timed out. Please try again."
+
+      error_message(%Ecto.Changeset{})
+      # => "Validation failed: [specific field errors]"
+  """
+  @spec error_message(any()) :: String.t()
   def error_message(error) do
     ErrorHandler.format_error(error)
   end

@@ -1,5 +1,222 @@
 defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
-  @moduledoc false
+  @moduledoc """
+  Comprehensive LiveView component for creating new workflows through multiple methods.
+
+  This component provides a unified interface for workflow creation, supporting three
+  distinct creation methods while maintaining a consistent user experience and
+  validation pipeline. It serves as the primary entry point for all workflow
+  creation workflows within Lightning.
+
+  ## Workflow Creation Methods
+
+  ### Template-Based Creation
+  - **Base Templates** - Predefined workflow structures for common patterns
+  - **User Templates** - Custom templates created by users and shared within organization
+  - **Template Search** - Intelligent filtering and discovery of relevant templates
+  - **Template Preview** - Visual preview and validation before application
+
+  ### AI-Powered Generation
+  - **Natural Language Input** - Create workflows from plain text descriptions
+  - **AI Assistant Integration** - Seamless integration with Lightning's AI Assistant
+  - **Iterative Refinement** - Real-time workflow generation and improvement
+  - **Template Application** - Automatic application of AI-generated workflow YAML
+
+  ### File Import
+  - **YAML Import** - Import existing workflow definitions from YAML files
+  - **Drag & Drop** - Intuitive file upload interface with drag-and-drop support
+  - **Live Validation** - Real-time validation and error feedback during import
+  - **Code Editor** - Built-in YAML editor for manual workflow definition
+
+  ## Component Architecture
+
+  ### State Management
+  The component maintains complex state across multiple creation methods:
+
+  #### Template State
+  - `base_templates` - System-provided template collection
+  - `users_templates` - Organization-specific custom templates
+  - `filtered_templates` - Search-filtered template results
+  - `selected_template` - Currently selected template for creation
+
+  #### AI Integration State
+  - `chat_session_id` - Active AI Assistant session identifier
+  - `template_generated` - AI-generated workflow template data
+  - `search_term` - User input for AI workflow generation
+
+  #### Import State
+  - `changeset` - Validation state for imported workflow data
+  - `validation_failed` - Boolean flag for validation status
+
+  #### UI State
+  - `selected_method` - Current creation method ("template", "ai", "import")
+  - `base_url` - URL context for navigation and state management
+
+  ### Parent Component Communication
+  The component integrates with parent workflow management components through
+  structured message passing:
+
+  #### Canvas Integration
+  ```elixir
+  notify_parent(:canvas_state_changed, %{
+    show_canvas_placeholder: boolean(),
+    show_template_tooltip: template_or_nil()
+  })
+  ```
+
+  #### Form Synchronization
+  ```elixir
+  notify_parent(:form_changed, %{
+    "workflow" => workflow_params,
+    "opts" => [push_patches: false]
+  })
+  ```
+
+  #### Workflow Panel Control
+  ```elixir
+  notify_parent(:toggle_workflow_panel, %{})
+  ```
+
+  ### Template System Integration
+
+  #### Base Templates
+  Provides foundational workflow patterns:
+  - **Event-based Workflows** - Webhook-triggered workflow structures
+  - **Scheduled Workflows** - Cron-based automation patterns
+  - **Data Integration** - Common data transformation workflows
+
+  #### User Templates
+  Supports organization-specific templates:
+  - **Custom Patterns** - Organization-specific workflow patterns
+  - **Best Practices** - Codified organizational standards
+  - **Reusable Components** - Shared workflow building blocks
+
+  ## Validation & Error Handling
+
+  ### Multi-Method Validation
+  Each creation method implements specific validation:
+
+  #### Template Validation
+  - **Selection Requirement** - Ensures template is selected before creation
+  - **Template Integrity** - Validates template structure and content
+  - **Name Uniqueness** - Ensures workflow names are unique within project
+
+  #### AI Generation Validation
+  - **Generation Completion** - Ensures AI has generated valid workflow
+  - **YAML Validation** - Validates AI-generated workflow syntax
+  - **Business Rules** - Ensures generated workflows meet Lightning requirements
+
+  #### Import Validation
+  - **YAML Syntax** - Validates imported file structure and syntax
+  - **Schema Compliance** - Ensures workflow meets Lightning schema requirements
+  - **Dependency Validation** - Validates adaptor and trigger configurations
+
+  ### Error Recovery
+  - **Graceful Degradation** - Maintains functionality when validation fails
+  - **User Guidance** - Provides clear feedback and resolution steps
+  - **State Preservation** - Maintains user input during error recovery
+
+  ## AI Assistant Integration
+
+  ### Workflow Generation Pipeline
+  1. **Natural Language Processing** - User describes desired workflow functionality
+  2. **AI Query Creation** - Converts description to AI Assistant session
+  3. **Template Generation** - AI generates complete workflow YAML
+  4. **Real-time Application** - Generated template applied to workflow canvas
+  5. **Iterative Refinement** - Users can refine and improve generated workflows
+
+  ### Session Management
+  - **Session Creation** - Automatic creation of AI Assistant sessions
+  - **Context Preservation** - Maintains workflow context across AI interactions
+  - **State Synchronization** - Coordinates between AI Assistant and workflow editor
+
+  ## User Experience Features
+
+  ### Intelligent Template Discovery
+  - **Search-Driven Selection** - Natural language search across template collection
+  - **AI Suggestion** - Automatic AI option when no templates match search
+  - **Progressive Disclosure** - Reveals relevant options based on user input
+
+  ### Responsive Design
+  - **Mobile Optimization** - Adaptive interface for different screen sizes
+  - **Touch-Friendly** - Optimized interactions for touch devices
+  - **Keyboard Navigation** - Complete keyboard accessibility
+
+  ### Real-Time Feedback
+  - **Live Validation** - Immediate feedback during workflow definition
+  - **Visual Status** - Clear indication of completion status for each method
+  - **Progress Indication** - Visual feedback during AI generation and import
+
+  ## Performance Optimizations
+
+  ### Efficient Template Loading
+  - **Lazy Loading** - Templates loaded on demand for better performance
+  - **Intelligent Caching** - Template data cached for repeated access
+  - **Search Optimization** - Efficient filtering algorithms for large template sets
+
+  ### State Management
+  - **Minimal Re-renders** - Optimized state updates to reduce unnecessary renders
+  - **Debounced Search** - Prevents excessive API calls during template search
+  - **Memory Efficiency** - Cleanup of unused state during method transitions
+
+  ## Security Considerations
+
+  ### Template Security
+  - **Template Validation** - All templates validated before application
+  - **Code Sanitization** - User-provided templates sanitized for security
+  - **Access Control** - Template access based on user permissions
+
+  ### Import Security
+  - **File Validation** - Uploaded files validated for type and size
+  - **Content Scanning** - YAML content scanned for malicious patterns
+  - **Size Limits** - File size limits prevent resource exhaustion
+
+  ## Extension Points
+
+  ### Custom Templates
+  - **Template Registry** - Extensible system for adding new template types
+  - **Validation Hooks** - Custom validation for specialized templates
+  - **Metadata System** - Rich metadata support for template categorization
+
+  ### Method Integration
+  - **Plugin Architecture** - Support for additional creation methods
+  - **Validation Pipeline** - Extensible validation system for new methods
+  - **UI Components** - Modular UI components for method-specific interfaces
+
+  ## Examples
+
+  ### Basic Template Creation
+  ```elixir
+  # User selects webhook template
+  handle_event("select-template", %{"template_id" => "base-webhook-template"}, socket)
+  # Template applied to canvas
+  # User clicks "Create" button
+  handle_event("create_workflow", _, socket)
+  # Workflow created and user redirected to editor
+  ```
+
+  ### AI-Powered Generation
+  ```elixir
+  # User enters natural language description
+  handle_event("search-templates", %{"search" => "sync Salesforce to database"}, socket)
+  # User clicks AI option
+  handle_event("choose-another-method", %{"method" => "ai"}, socket)
+  # AI session created and workflow generated
+  # Generated template automatically applied
+  ```
+
+  ### YAML Import
+  ```elixir
+  # User uploads YAML file or pastes content
+  handle_event("workflow-parsed", %{"workflow" => parsed_params}, socket)
+  # Real-time validation provides feedback
+  # User clicks "Create" when validation passes
+  ```
+
+  This component represents the convergence of traditional workflow creation
+  methods with modern AI-powered development, providing users with flexible,
+  powerful tools for creating Lightning workflows while maintaining the
+  reliability and validation necessary for production data integration.
+  """
   use LightningWeb, :live_component
 
   alias Lightning.Projects

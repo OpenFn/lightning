@@ -1,9 +1,133 @@
 defmodule LightningWeb.AiAssistant.Component do
   @moduledoc """
-  The AI Assistant component is a live component that allows users to interact with the AI Assistant.
+  Comprehensive LiveView component for AI-powered assistance in Lightning.
 
-  Supports multiple modes (job code assistance, workflow template generation) with
-  pagination, error handling, and real-time message processing.
+  This component provides a rich, interactive chat interface that integrates multiple
+  AI assistance modes, real-time message processing, session management, and user
+  experience optimizations. It serves as the primary user interface for all AI
+  Assistant functionality within Lightning.
+
+  ## Architecture Overview
+
+  The component implements a sophisticated state management system:
+
+  ### Multi-Mode Support
+  - **Mode Registry Integration** - Dynamic mode switching and handler delegation
+  - **Pluggable Architecture** - Extensible design for new AI assistance types
+  - **Context-Aware Processing** - Mode-specific UI adaptations and workflows
+  - **Feature Detection** - Dynamic UI based on mode capabilities
+
+  ### Real-Time Processing
+  - **Async Message Handling** - Non-blocking AI query processing
+  - **Live Updates** - Real-time message status and response streaming
+  - **Error Recovery** - Automatic retry mechanisms and graceful degradation
+  - **Progress Indication** - Visual feedback for long-running operations
+
+  ### Session Management
+  - **Pagination Support** - Efficient loading of conversation history
+  - **State Persistence** - Session continuity across page navigation
+  - **Conversation Threading** - Organized message history and context
+  - **Multi-User Support** - Shared conversations with proper attribution
+
+  ## User Experience Features
+
+  ### Intelligent Chat Interface
+  - **Markdown Rendering** - Rich text formatting for AI responses
+  - **Code Highlighting** - Syntax highlighting for generated code
+  - **Copy Functionality** - Easy copying of AI-generated content
+  - **Message Status** - Clear indication of message processing states
+
+  ### Accessibility & Usability
+  - **Keyboard Navigation** - Full keyboard support (Ctrl+Enter to send)
+  - **Screen Reader Support** - ARIA labels and semantic markup
+  - **Responsive Design** - Optimized for desktop and mobile interfaces
+  - **Loading States** - Clear feedback during async operations
+
+  ### Advanced Features
+  - **Template Generation** - Workflow template creation and application
+  - **Error Handling** - Comprehensive error recovery and user guidance
+  - **Usage Limits** - Integration with AI usage tracking and quotas
+  - **Disclaimer Management** - User onboarding and consent handling
+
+  ## State Management
+
+  The component maintains complex state including:
+
+  ### Core Session State
+  - `session` - Current active chat session with messages
+  - `pending_message` - AsyncResult for message processing status
+  - `all_sessions` - AsyncResult for paginated session list
+  - `pagination_meta` - Pagination metadata for session navigation
+
+  ### User Interface State
+  - `form` - Current message input form state
+  - `error_message` - User-facing error display
+  - `sort_direction` - Session list sorting preference
+  - `has_read_disclaimer` - User onboarding completion status
+
+  ### System State
+  - `mode` - Current AI assistance mode identifier
+  - `handler` - Mode-specific behavior implementation
+  - `ai_limit_result` - Usage quota validation status
+  - `endpoint_available?` - AI service availability status
+
+  ## Integration Patterns
+
+  ### Parent Component Communication
+  ```elixir
+  # Template generation integration
+  send_update(
+    LightningWeb.WorkflowLive.NewWorkflowComponent,
+    id: socket.assigns.parent_component_id,
+    action: :template_selected,
+    template: %{code: generated_yaml}
+  )
+  ```
+
+  ### Mode Handler Delegation
+  ```elixir
+  # Dynamic mode behavior
+  handler = ModeRegistry.get_handler(current_mode)
+  {:ok, session} = handler.create_session(assigns, content)
+  ```
+
+  ### Async Processing Pipeline
+  ```elixir
+  # Non-blocking AI queries
+  socket
+  |> assign(:pending_message, AsyncResult.loading())
+  |> start_async(:process_message, fn ->
+      handler.query(session, message)
+     end)
+  ```
+
+  ## Performance Optimizations
+
+  ### Efficient Data Loading
+  - **Lazy Session Loading** - Progressive loading of conversation history
+  - **Async State Management** - Non-blocking UI updates during AI processing
+  - **Intelligent Caching** - Session state persistence across navigation
+  - **Pagination Optimization** - Efficient handling of large conversation lists
+
+  ### Resource Management
+  - **Memory Efficiency** - Cleanup of unused session data
+  - **Network Optimization** - Batched API calls and response streaming
+  - **Error Boundaries** - Isolated error handling preventing cascade failures
+  - **Debounced Input** - Optimized form validation and submission
+
+  ## Security Considerations
+
+  ### Data Protection
+  - **PII Warnings** - Clear guidance against sharing sensitive information
+  - **Content Validation** - Input sanitization and length limits
+  - **Permission Enforcement** - Workflow editing permission validation
+  - **Session Isolation** - Proper user and project scoping
+
+  ### Usage Controls
+  - **Quota Enforcement** - AI usage limit tracking and enforcement
+  - **Rate Limiting** - Protection against excessive API usage
+  - **Audit Trail** - Complete conversation logging for compliance
+  - **Disclaimer Management** - User consent and awareness tracking
   """
 
   use LightningWeb, :live_component
@@ -1122,13 +1246,6 @@ defmodule LightningWeb.AiAssistant.Component do
           "relative overflow-hidden rounded-2xl max-w-full",
           message_container_classes(@message.status)
         ]}>
-          <%!-- <div
-            :if={@message.status != :success}
-            class="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white z-10"
-            class={status_indicator_classes(@message.status)}
-          >
-          </div> --%>
-
           <div class="px-4 py-3">
             <p class={[
               "text-sm leading-relaxed",
@@ -1347,14 +1464,6 @@ defmodule LightningWeb.AiAssistant.Component do
       _ -> "text-indigo-200"
     end
   end
-
-  # defp status_indicator_classes(status) do
-  #   case status do
-  #     :pending -> "bg-yellow-400 animate-pulse"
-  #     :error -> "bg-red-300"
-  #     _ -> "hidden"
-  #   end
-  # end
 
   defp message_count_text(session) do
     case length(session.messages) do
