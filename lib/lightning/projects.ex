@@ -69,7 +69,7 @@ defmodule Lightning.Projects do
           role: fragment("'support' as role"),
           workflows_count: count(w.id, :distinct),
           collaborators_count: count(pu_all.user_id, :distinct),
-          last_updated_at: max(w.updated_at),
+          last_updated_at: max(w.updated_at)
         }
       )
       |> Repo.all()
@@ -103,7 +103,9 @@ defmodule Lightning.Projects do
         on: cs.job_id == j.id,
         join: w in Workflow,
         on: j.workflow_id == w.id,
-        where: cs.user_id == ^user_id and w.project_id == parent_as(:project).id and is_nil(w.deleted_at),
+        where:
+          cs.user_id == ^user_id and w.project_id == parent_as(:project).id and
+            is_nil(w.deleted_at),
         select: 1
 
     from(p in Project,

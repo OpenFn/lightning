@@ -6,6 +6,9 @@ defmodule Lightning.Jobs do
   import Ecto.Query
 
   alias Ecto.Multi
+
+  alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows
@@ -35,6 +38,17 @@ defmodule Lightning.Jobs do
   @spec jobs_for_project(Project.t()) :: [Job.t()]
   def jobs_for_project(%Project{} = project) do
     jobs_for_project_query(project) |> Repo.all()
+  end
+
+  def filter_with_chat_user(jobs_ids, %User{id: user_id}) do
+    from(j in Job,
+      inner_join: cs in ChatSession,
+      on: cs.job_id == j.id,
+      where:
+        j.id in ^jobs_ids and
+          cs.user_id == ^user_id and not cs.is_deleted
+    )
+    |> Repo.all()
   end
 
   @doc """

@@ -323,7 +323,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               class="flex-shrink truncate text-gray-900 font-medium workflow-name"
               style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
             >
-              {@workflow.name} <.icon :if={@workflow.has_ai_chat} name="hero-sparkles" class="size-4" />
+              {@workflow.name}
+              <.icon :if={@workflow.has_ai_chat} name="hero-sparkles" class="size-4" />
             </span>
           </div>
           <%= if @trigger_enabled do %>
