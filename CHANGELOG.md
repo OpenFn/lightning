@@ -21,13 +21,15 @@ and this project adheres to
 
 ### Fixed
 
+- Padding Changes on Project Setup Page
+  [#3257](https://github.com/OpenFn/lightning/issues/3257)
+
 ## [v2.12.3-pre] - 2025-05-29
 
 ### Added
 
 - Added a custom metric to track projects that could benefit from additional
-  worker pods.
-  [#3189](https://github.com/OpenFn/lightning/issues/3189)
+  worker pods. [#3189](https://github.com/OpenFn/lightning/issues/3189)
 - Add a test metric that can be used to test external infrastructure (e.g.
   alerting) in a deployed Lightning instance.
   [#3229](https://github.com/OpenFn/lightning/issues/3229)
@@ -39,8 +41,7 @@ and this project adheres to
 - Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
 - Standardized table components across the application
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
-- Standardize buttons
-  [#3093](https://github.com/OpenFn/lightning/issues/3093)
+- Standardize buttons [#3093](https://github.com/OpenFn/lightning/issues/3093)
 - Make the chunk size for deleting expired activty configurable via ENV
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
 - Reduce the cardinality of `lightning_run_lost_count`.
