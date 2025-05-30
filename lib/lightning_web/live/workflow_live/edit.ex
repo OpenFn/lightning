@@ -253,7 +253,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     default_hash="manual"
                   >
                     <:panel hash="manual" class="overflow-auto h-full">
-                      <div class="grow flex flex-col gap-4 p-2 min-h-0 h-full">
+                      <div class="grow flex flex-col p-2 min-h-0 h-full">
                         <.ManualRunPanel
                           :if={@selection_mode === "expand"}
                           job_id={@selected_job.id}

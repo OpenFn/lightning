@@ -235,9 +235,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
           }}
         />
       ) : (
-        <div className="grow overflow-auto no-scrollbar -mt-2">
-          <div className="flex flex-col gap-2 h-full">
-            <div className="flex md:gap-2 sm:gap-1 justify-center flex-wrap">
+        <div className="grow overflow-auto no-scrollbar">
+          <div className="flex flex-col h-full">
+            <div className="flex justify-center flex-wrap">
               <Tabs
                 options={[
                   { label: 'Empty', id: SeletableOptions.EMPTY.toString(), icon: DocumentIcon },
