@@ -81,10 +81,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
     end
 
     test "correctly lists changes with both before and after (atom keys)" do
@@ -104,10 +104,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
     end
 
     test "correctly lists changes if before is nil (string keys)" do
@@ -121,10 +121,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*foo_after"s
     end
 
     test "correctly lists changes if before is nil (atom keys)" do
@@ -138,10 +138,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*foo_after"s
     end
 
     test "correctly lists changes if before is empty (string keys)" do
@@ -155,10 +155,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*foo_after"s
     end
 
     test "correctly lists changes if before is empty (atom keys)" do
@@ -172,10 +172,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*foo_after"s
     end
 
     test "correctly lists changes if after is nil (string keys)" do
@@ -189,10 +189,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
     end
 
     test "correctly lists changes if after is nil (atom keys)" do
@@ -206,10 +206,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
     end
 
     test "correctly lists changes if after is empty (string keys)" do
@@ -223,10 +223,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
     end
 
     test "correctly lists changes if after is empty (atom keys)" do
@@ -240,10 +240,10 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
     end
 
     test "includes any extra keys in the before (string keys)" do
@@ -264,13 +264,13 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">baz</span>&nbsp; baz_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">baz</span>&nbsp; baz_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
     end
 
     test "includes any extra keys in the before (atom keys)" do
@@ -291,13 +291,13 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">baz</span>&nbsp; baz_before.*?<span class=\"align-top hero-arrow-right.*?</span>\s*"s
+               ~r"<span class=\"font-semibold\">baz</span>&nbsp; baz_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
     end
 
     test "includes any extra keys in the after (string keys)" do
@@ -318,13 +318,13 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">baz</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*baz_after"s
+               ~r"<span class=\"font-semibold\">baz</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*baz_after"s
     end
 
     test "includes any extra keys in the after (atom keys)" do
@@ -345,13 +345,13 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?bar_after"s
+               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"align-top hero-arrow-right.*?</span>.*?foo_after"s
+               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
 
       assert html =~
-               ~r"<span class=\"font-semibold\">baz</span>&nbsp;\s*<span class=\"align-top hero-arrow-right.*?</span>\s*baz_after"s
+               ~r"<span class=\"font-semibold\">baz</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*baz_after"s
     end
 
     test "list changes in order (string keys)" do
