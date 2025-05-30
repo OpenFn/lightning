@@ -422,6 +422,40 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "per_workflow_claim_limit" do
+    test "defaults to 50" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :per_workflow_claim_limit) == 50
+    end
+
+    test "can be set to a different value" do
+      Dotenvy.source([%{"PER_WORKFLOW_CLAIM_LIMIT" => "100"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :per_workflow_claim_limit) == 100
+    end
+
+    test "must be a positive integer" do
+      Dotenvy.source([%{"PER_WORKFLOW_CLAIM_LIMIT" => "0"}])
+
+      assert_raise RuntimeError,
+                   ~r/PER_WORKFLOW_CLAIM_LIMIT must be a positive integer/,
+                   fn ->
+                     Bootstrap.configure()
+                   end
+    end
+
+    test "must be an integer" do
+      Dotenvy.source([%{"PER_WORKFLOW_CLAIM_LIMIT" => "foo"}])
+
+      assert_raise RuntimeError,
+                   "Error converting variable PER_WORKFLOW_CLAIM_LIMIT to integer: Unparsable as integer",
+                   fn ->
+                     Bootstrap.configure()
+                   end
+    end
+  end
+
   # A helper function to get a value from the process dictionary
   # that is stored by the Config module.
   defp get_env(app) do
