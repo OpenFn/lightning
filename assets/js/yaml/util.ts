@@ -86,8 +86,7 @@ export const convertWorkflowStateToSpec = (
 };
 
 export const convertWorkflowSpecToState = (
-  workflowSpec: WorkflowSpec,
-  forceEnabled: boolean = false
+  workflowSpec: WorkflowSpec
 ): WorkflowState => {
   const stateJobs: Record<string, StateJob> = {};
   Object.entries(workflowSpec.jobs).forEach(([key, specJob]) => {
@@ -104,15 +103,11 @@ export const convertWorkflowSpecToState = (
     const trigger = {
       id: randomUUID(),
       type: specTrigger.type,
-      enabled: specTrigger.enabled,
+      enabled: true,
     };
 
     if (specTrigger.type === 'cron') {
       trigger.cron_expression = specTrigger.cron_expression;
-    }
-
-    if (forceEnabled) {
-      trigger.enabled = true;
     }
 
     // TODO: handle kafka config

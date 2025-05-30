@@ -5,6 +5,52 @@ defmodule Lightning.AiAssistant.ChatMessage do
   Messages can be from users (role: :user) or from the AI assistant (role: :assistant).
   User messages start with :pending status and are updated based on processing results.
   Assistant messages typically have :success status when created.
+
+  ## Schema Fields
+
+  * `content` - The text content of the message (required, 1-10,000 characters)
+  * `workflow_code` - Optional code associated with the message (e.g., generated workflows)
+  * `role` - Who sent the message: `:user` or `:assistant`
+  * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
+  * `is_deleted` - Soft deletion flag (defaults to false)
+  * `is_public` - Whether the message is publicly visible (defaults to true)
+  * `chat_session_id` - Reference to the parent chat session
+  * `user_id` - Reference to the user who sent the message (required for user messages)
+
+  ## Message Lifecycle
+
+  ### User Messages
+  1. Created with `:pending` status
+  2. Processed by AI assistant
+  3. Status updated to `:success`, `:error`, or `:cancelled` based on processing outcome
+
+  ### Assistant Messages
+  1. Created with `:success` status (typically generated successfully)
+  2. May be updated to `:error` if post-processing fails
+
+  ## Examples
+
+      # Create a user message
+      %ChatMessage{}
+      |> ChatMessage.changeset(%{
+        content: "Help me create a workflow",
+        role: :user,
+        user: user,
+        chat_session_id: session_id
+      })
+
+      # Create an assistant message
+      %ChatMessage{}
+      |> ChatMessage.changeset(%{
+        content: "Here's your workflow...",
+        workflow_code: "defmodule MyWorkflow...",
+        role: :assistant,
+        chat_session_id: session_id
+      })
+
+      # Update message status
+      message
+      |> ChatMessage.status_changeset(:success)
   """
 
   use Lightning.Schema
@@ -45,10 +91,43 @@ defmodule Lightning.AiAssistant.ChatMessage do
   @doc """
   Creates a changeset for a chat message.
 
+  ## Parameters
+
+  * `chat_message` - The ChatMessage struct to update (typically `%ChatMessage{}`)
+  * `attrs` - Map of attributes to set/update
+
   ## Validation Rules
-  - `content` and `role` are required
-  - User messages require an associated user
-  - Status defaults based on role: :pending for users, :success for assistant
+
+  * `content` and `role` are required
+  * `content` must be between 1 and 10,000 characters
+  * User messages (role: `:user`) require an associated user
+  * Status defaults based on role: `:pending` for users, `:success` for assistant
+  * If status is explicitly provided, it takes precedence over role-based defaults
+
+  ## Examples
+
+      # Valid user message
+      ChatMessage.changeset(%ChatMessage{}, %{
+        content: "Hello AI",
+        role: :user,
+        user: %User{id: "123"},
+        chat_session_id: "session-456"
+      })
+
+      # Valid assistant message
+      ChatMessage.changeset(%ChatMessage{}, %{
+        content: "Hello! How can I help?",
+        role: :assistant,
+        chat_session_id: "session-456"
+      })
+
+      # With explicit status (overrides default)
+      ChatMessage.changeset(%ChatMessage{}, %{
+        content: "Processing...",
+        role: :assistant,
+        status: :pending,
+        chat_session_id: "session-456"
+      })
   """
   def changeset(chat_message, attrs) do
     chat_message
@@ -70,6 +149,22 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   @doc """
   Creates a changeset for updating message status.
+
+  This is a focused changeset that only updates the status field,
+  useful for updating message state during processing.
+
+  ## Parameters
+
+  * `chat_message` - The existing ChatMessage struct
+  * `status` - New status (`:pending`, `:success`, `:error`, or `:cancelled`)
+
+  ## Examples
+
+      # Mark message as successful
+      ChatMessage.status_changeset(message, :success)
+
+      # Mark message as failed
+      ChatMessage.status_changeset(message, :error)
   """
   def status_changeset(chat_message, status)
       when status in [:pending, :success, :error, :cancelled] do

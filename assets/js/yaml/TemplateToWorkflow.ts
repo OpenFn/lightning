@@ -3,9 +3,9 @@ import { parseWorkflowTemplate, convertWorkflowSpecToState } from './util';
 
 const TemplateToWorkflow = {
   mounted() {
-    this.handleEvent('template_selected', (payload: { template: string, enable: boolean}) => {
+    this.handleEvent('template_selected', (payload: { template: string }) => {
       const workflowSpec = parseWorkflowTemplate(payload.template);
-      const workflowState = convertWorkflowSpecToState(workflowSpec, payload.enable);
+      const workflowState = convertWorkflowSpecToState(workflowSpec);
       this.pushEventTo(this.el, 'template-parsed', {
         workflow: workflowState,
       });

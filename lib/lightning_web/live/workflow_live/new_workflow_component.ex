@@ -47,7 +47,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     {:ok,
      socket
      |> assign(template_generated: template)
-     |> push_event("template_selected", %{template: template.code, enable: false})}
+     |> push_event("template_selected", %{template: template.code})}
   end
 
   def update(assigns, socket) do
@@ -108,7 +108,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     {:noreply,
      socket
      |> assign(selected_template: template)
-     |> push_event("template_selected", %{template: template.code, enable: true})}
+     |> push_event("template_selected", %{template: template.code})}
   end
 
   def handle_event(
