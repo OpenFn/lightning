@@ -127,7 +127,7 @@ export default ({
               verticalCollapse={!vertical && !showPanel}
             />
             <div
-              className={`flex select-none flex-1 text-right py-2 ${!showPanel && !vertical ? 'flex-col-reverse' : 'flex-row'
+              className={`flex select-none flex-1 text-right ${!showPanel && !vertical ? 'flex-col-reverse' : 'flex-row'
                 }`}
             >
               <ViewColumnsIcon
