@@ -120,7 +120,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
   """
 
   alias LightningWeb.Live.AiAssistant.Modes.JobCode
-  alias LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
 
   @doc """
   Returns the complete registry of available AI Assistant modes.
@@ -172,10 +171,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
   """
   @spec register_modes() :: %{atom() => module()}
   def register_modes do
-    Application.get_env(:lightning, :ai_assistant_modes, %{
-      job: JobCode,
-      workflow: WorkflowTemplate
-    })
+    Lightning.Config.ai_assistant_modes()
   end
 
   @doc """

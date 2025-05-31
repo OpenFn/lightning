@@ -202,7 +202,7 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
   end
 
   def format_error({:error, _reason, %{text: text_message}})
-      when is_binary(text_message),
+      when is_binary(text_message) and text_message != "",
       do: text_message
 
   def format_error({:error, :timeout}),
@@ -300,7 +300,7 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
   """
   @spec format_limit_error(any()) :: String.t()
   def format_limit_error({:error, _reason, %{text: text_message}})
-      when is_binary(text_message),
+      when is_binary(text_message) and text_message != "",
       do: text_message
 
   def format_limit_error({:error, :quota_exceeded}),
@@ -489,8 +489,8 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
   @spec extract_changeset_errors(Ecto.Changeset.t()) :: [String.t()]
   def extract_changeset_errors(%Ecto.Changeset{errors: errors}) do
     errors
+    |> Enum.filter(fn {_field, {message, _opts}} -> message != "" end)
     |> Enum.map(fn {field, {message, opts}} ->
-      # Humanize field names and interpolate values
       field_name =
         field |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
@@ -691,7 +691,7 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
 
   defp interpolate_error_message(message, opts) do
     Enum.reduce(opts, message, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", to_string(value))
+      String.replace(acc, "%{#{key}}", inspect(value))
     end)
   end
 end

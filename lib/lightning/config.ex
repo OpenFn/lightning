@@ -310,6 +310,14 @@ defmodule Lightning.Config do
       Application.get_env(:lightning, Lightning.Extensions, [])
       |> Keyword.get(:external_metrics)
     end
+
+    @impl true
+    def ai_assistant_modes do
+      %{
+        job: LightningWeb.Live.AiAssistant.Modes.JobCode,
+        workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
+      }
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -359,6 +367,7 @@ defmodule Lightning.Config do
   @callback gdpr_banner() :: map() | false
   @callback gdpr_preferences() :: map() | false
   @callback external_metrics_module() :: module() | nil
+  @callback ai_assistant_modes() :: %{atom() => module()}
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -567,6 +576,10 @@ defmodule Lightning.Config do
 
   def external_metrics_module do
     impl().external_metrics_module()
+  end
+
+  def ai_assistant_modes do
+    impl().ai_assistant_modes()
   end
 
   defp impl do
