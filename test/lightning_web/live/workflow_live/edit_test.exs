@@ -98,6 +98,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       # Naively add a job via the editor (calling the push-change event)
       assert view
              |> push_patches_to_view([add_job_patch()])
@@ -144,6 +146,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
       workflow_name = view |> get_workflow_params() |> Map.get("name")
@@ -174,20 +178,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # the panel for creating workflow appears
       html = render(view)
-      assert html =~ "Build your workflow from templates"
-      assert html =~ "Browse templates"
+      assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
 
-      # the base webhook template is selected by default
-      assert view
-             |> element(
-               "form#choose-workflow-template-form label[data-selected='true']"
-             )
-             |> render() =~ "base-webhook"
-
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       # now let's fill in the name
       workflow_name = "My Workflow"
@@ -198,8 +194,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # the panel disappears
       html = render(view)
-      refute html =~ "Build your workflow from templates"
-      refute html =~ "Browse templates"
+      refute html =~ "Describe your workflow"
       refute has_element?(view, "form#search-templates-form")
       refute has_element?(view, "form#choose-workflow-template-form")
 
@@ -316,19 +311,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       # the panel for creating workflow is visible
       html = render(view)
-      assert html =~ "Build your workflow from templates"
-      assert html =~ "Browse templates"
+      assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
-
-      # the base webhook template is selected by default
-      assert view
-             |> element(
-               "form#choose-workflow-template-form label[data-selected='true']"
-             )
-             |> render() =~ "base-webhook"
 
       # lets select the cron one
       template_id = "base-cron-template"
@@ -372,11 +361,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> render_click("template-parsed", %{"workflow" => payload})
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       click_save(view)
 
-      expected_workflow_name = "Copy of #{cron_template_name}"
+      expected_workflow_name = "Untitled workflow"
 
       assert Lightning.Repo.exists?(
                from(w in Workflow,
@@ -391,12 +380,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "creating a new workflow via import handles empty name",
          %{conn: conn, project: project} do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
-
-      # Switch to import mode
-      view
-      |> element("#import-workflow-btn")
-      |> render_click()
+        live(conn, ~p"/projects/#{project.id}/w/new?method=import",
+          on_error: :raise
+        )
 
       # Generate IDs for the workflow components
       job_id = Ecto.UUID.generate()
@@ -428,11 +414,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       })
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       click_save(view)
 
-      expected_workflow_name = "Copy of Untitled Workflow"
+      expected_workflow_name = "Untitled workflow"
 
       assert Lightning.Repo.exists?(
                from(w in Workflow,
@@ -491,7 +477,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> render_click("workflow-parsed", %{"workflow" => valid_payload})
 
       refute view
-             |> element("#toggle_new_workflow_panel_btn")
+             |> element("#create_workflow_btn")
              |> render() =~ "disabled=\"disabled\""
 
       # Test with invalid payload (missing required fields)
@@ -504,12 +490,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         ]
       }
 
+      view |> render_click("choose-another-method", %{"method" => "import"})
+
       view
       |> with_target("#new-workflow-panel")
       |> render_click("workflow-parsed", %{"workflow" => invalid_payload})
 
       assert view
-             |> element("#toggle_new_workflow_panel_btn")
+             |> element("#create_workflow_btn")
              |> render() =~ "disabled=\"disabled\""
     end
 
@@ -520,12 +508,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       user: %{id: user_id}
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
+        live(conn, ~p"/projects/#{project.id}/w/new")
+
+      select_template(view, "base-cron-template")
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       workflow_name = "My Workflow"
 
@@ -2113,10 +2103,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       push_patches_to_view(view, initial_workflow_patchset(project))
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       view
       |> form("#workflow-form")
@@ -2153,10 +2145,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       push_patches_to_view(view, initial_workflow_patchset(project))
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       view
       |> form("#workflow-form")
@@ -2449,10 +2443,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
+      select_template(view, "base-webhook-template")
+
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
       # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      view |> element("button#create_workflow_btn") |> render_click()
 
       workflow_name = "My Workflow"
 
@@ -3040,7 +3036,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           |> form("#ai-assistant-form")
           |> render_submit(%{content: "Hello"})
 
-        assert html =~ "You are not authorized to use the Ai Assistant"
+        assert html =~ "You are not authorized to use the AI Assistant"
       end)
     end
 
@@ -3094,10 +3090,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(submit_btn)
       assert render(submit_btn) =~ "disabled=\"disabled\""
 
-      assert has_element?(view, "#ai-assistant-form-submit-btn-tooltip")
-
-      assert view |> element("#ai-assistant-form-submit-btn-tooltip") |> render() =~
-               "Save the job first in order to use the AI Assistant"
+      # Check that the tooltip text appears as the textarea placeholder
+      assert render(input_element) =~
+               ~s(placeholder="Save your workflow first to use the AI Assistant")
     end
 
     @tag email: "user@openfn.org"
@@ -3205,7 +3200,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert_patch(view)
 
       # pending message is shown
-      assert has_element?(view, "#assistant-pending-message")
+      assert render(view) =~ "Processing..."
       refute render(view) =~ "Pong"
 
       # return the response
@@ -3348,7 +3343,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#assistant-failed-message")
 
       assert view |> element("#assistant-failed-message") |> render() =~
-               "Oops! Something went wrong. Please try again."
+               "An error occurred: . Please try again."
     end
 
     @tag email: "user@openfn.org"
@@ -3440,7 +3435,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       view |> element("#get-started-with-ai-btn") |> render_click()
 
       assert has_element?(view, "#ai-assistant-error", error_message)
-      assert render(view) =~ "aria-label=\"#{error_message}\""
+
+      input_element = element(view, "#ai-assistant-form textarea")
+
+      assert render(input_element) =~
+               ~s(placeholder="#{error_message}")
 
       # submiting a message shows the flash
       view

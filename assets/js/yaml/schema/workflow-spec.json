@@ -4,7 +4,7 @@
   "type": "object",
   "properties": {
     "name": {
-      "type": "string"
+      "type": ["string", "null"]
     },
     "jobs": {
       "type": "object",
@@ -82,6 +82,6 @@
       "additionalProperties": false
     }
   },
-  "required": ["name", "jobs", "triggers", "edges"],
+  "required": ["jobs", "triggers", "edges"],
   "additionalProperties": false
 }

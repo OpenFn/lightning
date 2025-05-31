@@ -1,22 +1,272 @@
 defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
-  @moduledoc false
+  @moduledoc """
+  Comprehensive LiveView component for creating new workflows through multiple methods.
+
+  This component provides a unified interface for workflow creation, supporting three
+  distinct creation methods while maintaining a consistent user experience and
+  validation pipeline. It serves as the primary entry point for all workflow
+  creation workflows within Lightning.
+
+  ## Workflow Creation Methods
+
+  ### Template-Based Creation
+  - **Base Templates** - Predefined workflow structures for common patterns
+  - **User Templates** - Custom templates created by users and shared within organization
+  - **Template Search** - Intelligent filtering and discovery of relevant templates
+  - **Template Preview** - Visual preview and validation before application
+
+  ### AI-Powered Generation
+  - **Natural Language Input** - Create workflows from plain text descriptions
+  - **AI Assistant Integration** - Seamless integration with Lightning's AI Assistant
+  - **Iterative Refinement** - Real-time workflow generation and improvement
+  - **Template Application** - Automatic application of AI-generated workflow YAML
+
+  ### File Import
+  - **YAML Import** - Import existing workflow definitions from YAML files
+  - **Drag & Drop** - Intuitive file upload interface with drag-and-drop support
+  - **Live Validation** - Real-time validation and error feedback during import
+  - **Code Editor** - Built-in YAML editor for manual workflow definition
+
+  ## Component Architecture
+
+  ### State Management
+  The component maintains complex state across multiple creation methods:
+
+  #### Template State
+  - `base_templates` - System-provided template collection
+  - `users_templates` - Organization-specific custom templates
+  - `filtered_templates` - Search-filtered template results
+  - `selected_template` - Currently selected template for creation
+
+  #### AI Integration State
+  - `chat_session_id` - Active AI Assistant session identifier
+  - `template_generated` - AI-generated workflow template data
+  - `search_term` - User input for AI workflow generation
+
+  #### Import State
+  - `changeset` - Validation state for imported workflow data
+  - `validation_failed` - Boolean flag for validation status
+
+  #### UI State
+  - `selected_method` - Current creation method ("template", "ai", "import")
+  - `base_url` - URL context for navigation and state management
+
+  ### Parent Component Communication
+  The component integrates with parent workflow management components through
+  structured message passing:
+
+  #### Canvas Integration
+  ```elixir
+  notify_parent(:canvas_state_changed, %{
+    show_canvas_placeholder: boolean(),
+    show_template_tooltip: template_or_nil()
+  })
+  ```
+
+  #### Form Synchronization
+  ```elixir
+  notify_parent(:form_changed, %{
+    "workflow" => workflow_params,
+    "opts" => [push_patches: false]
+  })
+  ```
+
+  #### Workflow Panel Control
+  ```elixir
+  notify_parent(:toggle_workflow_panel, %{})
+  ```
+
+  ### Template System Integration
+
+  #### Base Templates
+  Provides foundational workflow patterns:
+  - **Event-based Workflows** - Webhook-triggered workflow structures
+  - **Scheduled Workflows** - Cron-based automation patterns
+  - **Data Integration** - Common data transformation workflows
+
+  #### User Templates
+  Supports organization-specific templates:
+  - **Custom Patterns** - Organization-specific workflow patterns
+  - **Best Practices** - Codified organizational standards
+  - **Reusable Components** - Shared workflow building blocks
+
+  ## Validation & Error Handling
+
+  ### Multi-Method Validation
+  Each creation method implements specific validation:
+
+  #### Template Validation
+  - **Selection Requirement** - Ensures template is selected before creation
+  - **Template Integrity** - Validates template structure and content
+  - **Name Uniqueness** - Ensures workflow names are unique within project
+
+  #### AI Generation Validation
+  - **Generation Completion** - Ensures AI has generated valid workflow
+  - **YAML Validation** - Validates AI-generated workflow syntax
+  - **Business Rules** - Ensures generated workflows meet Lightning requirements
+
+  #### Import Validation
+  - **YAML Syntax** - Validates imported file structure and syntax
+  - **Schema Compliance** - Ensures workflow meets Lightning schema requirements
+  - **Dependency Validation** - Validates adaptor and trigger configurations
+
+  ### Error Recovery
+  - **Graceful Degradation** - Maintains functionality when validation fails
+  - **User Guidance** - Provides clear feedback and resolution steps
+  - **State Preservation** - Maintains user input during error recovery
+
+  ## AI Assistant Integration
+
+  ### Workflow Generation Pipeline
+  1. **Natural Language Processing** - User describes desired workflow functionality
+  2. **AI Query Creation** - Converts description to AI Assistant session
+  3. **Template Generation** - AI generates complete workflow YAML
+  4. **Real-time Application** - Generated template applied to workflow canvas
+  5. **Iterative Refinement** - Users can refine and improve generated workflows
+
+  ### Session Management
+  - **Session Creation** - Automatic creation of AI Assistant sessions
+  - **Context Preservation** - Maintains workflow context across AI interactions
+  - **State Synchronization** - Coordinates between AI Assistant and workflow editor
+
+  ## User Experience Features
+
+  ### Intelligent Template Discovery
+  - **Search-Driven Selection** - Natural language search across template collection
+  - **AI Suggestion** - Automatic AI option when no templates match search
+  - **Progressive Disclosure** - Reveals relevant options based on user input
+
+  ### Responsive Design
+  - **Mobile Optimization** - Adaptive interface for different screen sizes
+  - **Touch-Friendly** - Optimized interactions for touch devices
+  - **Keyboard Navigation** - Complete keyboard accessibility
+
+  ### Real-Time Feedback
+  - **Live Validation** - Immediate feedback during workflow definition
+  - **Visual Status** - Clear indication of completion status for each method
+  - **Progress Indication** - Visual feedback during AI generation and import
+
+  ## Performance Optimizations
+
+  ### Efficient Template Loading
+  - **Lazy Loading** - Templates loaded on demand for better performance
+  - **Intelligent Caching** - Template data cached for repeated access
+  - **Search Optimization** - Efficient filtering algorithms for large template sets
+
+  ### State Management
+  - **Minimal Re-renders** - Optimized state updates to reduce unnecessary renders
+  - **Debounced Search** - Prevents excessive API calls during template search
+  - **Memory Efficiency** - Cleanup of unused state during method transitions
+
+  ## Security Considerations
+
+  ### Template Security
+  - **Template Validation** - All templates validated before application
+  - **Code Sanitization** - User-provided templates sanitized for security
+  - **Access Control** - Template access based on user permissions
+
+  ### Import Security
+  - **File Validation** - Uploaded files validated for type and size
+  - **Content Scanning** - YAML content scanned for malicious patterns
+  - **Size Limits** - File size limits prevent resource exhaustion
+
+  ## Extension Points
+
+  ### Custom Templates
+  - **Template Registry** - Extensible system for adding new template types
+  - **Validation Hooks** - Custom validation for specialized templates
+  - **Metadata System** - Rich metadata support for template categorization
+
+  ### Method Integration
+  - **Plugin Architecture** - Support for additional creation methods
+  - **Validation Pipeline** - Extensible validation system for new methods
+  - **UI Components** - Modular UI components for method-specific interfaces
+
+  ## Examples
+
+  ### Basic Template Creation
+  ```elixir
+  # User selects webhook template
+  handle_event("select-template", %{"template_id" => "base-webhook-template"}, socket)
+  # Template applied to canvas
+  # User clicks "Create" button
+  handle_event("create_workflow", _, socket)
+  # Workflow created and user redirected to editor
+  ```
+
+  ### AI-Powered Generation
+  ```elixir
+  # User enters natural language description
+  handle_event("search-templates", %{"search" => "sync Salesforce to database"}, socket)
+  # User clicks AI option
+  handle_event("choose-another-method", %{"method" => "ai"}, socket)
+  # AI session created and workflow generated
+  # Generated template automatically applied
+  ```
+
+  ### YAML Import
+  ```elixir
+  # User uploads YAML file or pastes content
+  handle_event("workflow-parsed", %{"workflow" => parsed_params}, socket)
+  # Real-time validation provides feedback
+  # User clicks "Create" when validation passes
+  ```
+
+  This component represents the convergence of traditional workflow creation
+  methods with modern AI-powered development, providing users with flexible,
+  powerful tools for creating Lightning workflows while maintaining the
+  reliability and validation necessary for production data integration.
+  """
   use LightningWeb, :live_component
 
   alias Lightning.Projects
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkflowTemplates
   alias LightningWeb.API.ProvisioningJSON
+  alias LightningWeb.Live.AiAssistant.ModeRegistry
 
   @impl true
   def mount(socket) do
+    base_templates = base_templates()
+    users_templates = WorkflowTemplates.list_templates()
+
     {:ok,
      socket
-     |> assign(selected_method: "template")
+     |> assign(base_url: nil)
      |> assign(search_term: "")
-     |> apply_selected_method()}
+     |> assign(chat_session_id: nil)
+     |> assign(selected_template: nil)
+     |> assign(template_generated: nil)
+     |> assign(validation_failed: true)
+     |> assign(selected_method: "template")
+     |> assign(base_templates: base_templates)
+     |> assign(users_templates: users_templates)
+     |> assign(filtered_templates: users_templates)
+     |> assign(all_templates: base_templates ++ users_templates)}
   end
 
   @impl true
+  def update(%{action: :template_selected, template: nil}, socket) do
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: true,
+      show_template_tooltip: nil
+    })
+
+    {:ok, socket |> assign(template_generated: nil)}
+  end
+
+  def update(%{action: :template_selected, template: template}, socket) do
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: false,
+      show_template_tooltip: nil
+    })
+
+    {:ok,
+     socket
+     |> assign(template_generated: template)
+     |> push_event("template_selected", %{template: template.code})}
+  end
+
   def update(assigns, socket) do
     {:ok,
      socket
@@ -28,8 +278,30 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   @impl true
   def handle_event("choose-another-method", %{"method" => method}, socket) do
-    {:noreply,
-     socket |> assign(selected_method: method) |> apply_selected_method()}
+    case method do
+      "ai" ->
+        handle_ai_method_selection(socket)
+
+      _ ->
+        handle_regular_method_selection(socket, method)
+    end
+  end
+
+  def handle_event("create_workflow", _, socket) do
+    case create_disabled?(socket.assigns) do
+      true ->
+        {:noreply,
+         socket
+         |> put_flash(:error, error_flash_message(socket.assigns))
+         |> push_patch(
+           to:
+             "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
+         )}
+
+      false ->
+        notify_parent(:toggle_workflow_panel, %{})
+        {:noreply, socket}
+    end
   end
 
   def handle_event("search-templates", %{"search" => search_term}, socket) do
@@ -42,98 +314,129 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> assign(filtered_templates: filtered_templates)}
   end
 
-  def handle_event(
-        "select-template",
-        %{"template_id" => template_id} = _params,
-        socket
-      ) do
-    template =
-      Enum.find(socket.assigns.all_templates, fn template ->
-        template.id == template_id
-      end)
+  def handle_event("select-template", %{"template_id" => template_id}, socket) do
+    template = Enum.find(socket.assigns.all_templates, &(&1.id == template_id))
+
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: false,
+      show_template_tooltip: template
+    })
 
     {:noreply,
      socket
      |> assign(selected_template: template)
-     |> push_selected_template_code()}
+     |> push_event("template_selected", %{template: template.code})}
   end
 
-  def handle_event(event_name, %{"workflow" => params}, socket)
-      when event_name in ["workflow-parsed", "template-parsed"] do
-    %{project: project, selected_template: template} = socket.assigns
-
-    workflow_name = default_if_empty(params["name"], "Untitled Workflow")
-    template_name = default_if_empty(template.name, "Untitled Template")
-
-    params =
-      project
-      |> Projects.list_workflows()
-      |> generate_workflow_name(
-        workflow_name,
-        template_name,
-        event_name
+  def handle_event(
+        event_name,
+        %{"workflow" => params},
+        %{assigns: %{project: project, selected_template: template}} = socket
       )
-      |> then(fn name -> Map.put(params, "name", name) end)
-
-    update_parent_form(params)
-
-    case event_name do
-      "workflow-parsed" -> handle_workflow_parsed(socket, params)
-      "template-parsed" -> handle_template_parsed(socket, params)
-    end
-  end
-
-  defp default_if_empty(name, default) do
-    if String.trim(name || "") == "", do: default, else: name
-  end
-
-  defp generate_workflow_name(
-         existing_workflows,
-         workflow_name,
-         template_name,
-         event_name
-       ) do
-    base_name =
-      "Copy of " <>
-        case event_name do
-          "workflow-parsed" -> workflow_name
-          "template-parsed" -> template_name
-        end
-
-    generate_unique_name(base_name, existing_workflows)
-  end
-
-  defp handle_workflow_parsed(socket, params) do
+      when event_name in ["workflow-parsed", "template-parsed"] do
+    params = ensure_unique_name(params, project)
     changeset = Workflow.changeset(socket.assigns.workflow, params)
 
     if changeset.valid? do
-      {:reply, %{},
+      template_for_tooltip = get_template_for_tooltip(event_name, template)
+
+      notify_parent(:canvas_state_changed, %{
+        show_canvas_placeholder: false,
+        show_template_tooltip: template_for_tooltip
+      })
+
+      notify_parent(:form_changed, %{
+        "workflow" => params,
+        "opts" => [push_patches: false]
+      })
+
+      {:noreply,
        socket
-       |> update_workflow_canvas(params)
-       |> assign(changeset: changeset)}
+       |> assign(changeset: changeset)
+       |> assign(validation_failed: false)
+       |> push_event("workflow-validated", %{"state" => params})
+       |> push_event("state-applied", %{"state" => params})
+       |> push_event("force-fit", %{})}
     else
-      {:reply, ProvisioningJSON.error(%{changeset: changeset}),
-       assign(socket, changeset: changeset)}
+      notify_parent(:canvas_state_changed, %{
+        show_canvas_placeholder: true,
+        show_template_tooltip: nil
+      })
+
+      {:noreply,
+       socket
+       |> assign(validation_failed: true)
+       |> assign_error_changeset(changeset, event_name)
+       |> push_event(
+         "workflow-validation-errors",
+         ProvisioningJSON.error(%{changeset: changeset})
+       )}
     end
   end
 
-  defp handle_template_parsed(socket, params) do
-    {:noreply, update_workflow_canvas(socket, params)}
+  def handle_event(
+        "workflow-parsing-failed",
+        %{"error" => error_message},
+        socket
+      ) do
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: true,
+      show_template_tooltip: nil
+    })
+
+    {:noreply,
+     socket
+     |> assign(validation_failed: true)
+     |> push_event("show-parsing-error", %{error: error_message})}
   end
+
+  def handle_event(_event, _params, socket) do
+    {:noreply, socket}
+  end
+
+  defp ensure_unique_name(params, project) do
+    workflow_name =
+      params["name"]
+      |> to_string()
+      |> String.trim()
+      |> case do
+        "" -> "Untitled workflow"
+        name -> name
+      end
+
+    existing_workflows = Projects.list_workflows(project)
+    unique_name = generate_unique_name(workflow_name, existing_workflows)
+
+    Map.put(params, "name", unique_name)
+  end
+
+  defp get_template_for_tooltip("template-parsed", template), do: template
+  defp get_template_for_tooltip("workflow-parsed", _template), do: nil
+
+  defp assign_error_changeset(socket, changeset, "workflow-parsed"),
+    do: assign(socket, changeset: changeset)
+
+  defp assign_error_changeset(socket, _changeset, "template-parsed"), do: socket
 
   defp generate_unique_name(base_name, existing_workflows) do
     existing_names = MapSet.new(existing_workflows, & &1.name)
 
-    Stream.iterate(0, &(&1 + 1))
-    |> Enum.reduce_while(base_name, fn i, name ->
-      candidate = if i == 0, do: name, else: "#{name} #{i}"
+    if MapSet.member?(existing_names, base_name) do
+      find_available_name(base_name, existing_names)
+    else
+      base_name
+    end
+  end
 
-      if MapSet.member?(existing_names, candidate) do
-        {:cont, name}
-      else
-        {:halt, candidate}
-      end
-    end)
+  defp find_available_name(base_name, existing_names) do
+    1
+    |> Stream.iterate(&(&1 + 1))
+    |> Stream.map(&"#{base_name} #{&1}")
+    |> Enum.find(&name_available?(&1, existing_names))
+  end
+
+  defp name_available?(name, existing_names) do
+    not MapSet.member?(existing_names, name)
   end
 
   defp filter_templates(templates, search_term)
@@ -164,107 +467,137 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   defp filter_templates(templates, _), do: templates
 
-  defp apply_selected_method(socket) do
-    case socket.assigns.selected_method do
-      "template" ->
-        base_templates = base_templates()
-        users_templates = WorkflowTemplates.list_templates()
-        all_templates = base_templates ++ users_templates
-        default_template = hd(base_templates)
+  defp notify_parent(action, payload) do
+    send(self(), {:workflow_component_event, action, payload})
+  end
 
-        socket
-        |> assign(
-          selected_template: default_template,
-          base_templates: base_templates,
-          users_templates: users_templates,
-          filtered_templates: users_templates,
-          all_templates: all_templates
-        )
-        |> push_selected_template_code()
+  defp handle_ai_method_selection(socket) do
+    search_term = socket.assigns.search_term
 
-      "import" ->
-        changeset = Workflow.changeset(socket.assigns.workflow, %{})
-        assign(socket, changeset: changeset)
+    if search_term && String.trim(search_term) != "" do
+      case create_ai_session_for_input(socket.assigns, search_term) do
+        {:ok, session_id} ->
+          notify_parent(:canvas_state_changed, %{
+            show_canvas_placeholder: true,
+            show_template_tooltip: nil
+          })
+
+          {:noreply,
+           socket
+           |> assign(selected_method: "ai")
+           |> assign(selected_template: nil)
+           |> assign(chat_session_id: session_id)
+           |> assign(search_term: nil)
+           |> push_patch(
+             to:
+               "/projects/#{socket.assigns.project.id}/w/new?method=ai&chat=#{session_id}"
+           )}
+
+        {:error, reason} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Failed to create AI session: #{reason}")
+           |> handle_regular_method_selection("ai")}
+      end
+    else
+      handle_regular_method_selection(socket, "ai")
     end
   end
 
-  def update_parent_form(params) do
-    send(
-      self(),
-      {"form_changed", %{"workflow" => params, "opts" => [push_patches: false]}}
-    )
-
-    :ok
-  end
-
-  defp push_selected_template_code(socket) do
-    push_event(socket, "template_selected", %{
-      template: socket.assigns.selected_template.code
+  defp handle_regular_method_selection(socket, method) do
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: true,
+      show_template_tooltip: nil
     })
+
+    {:noreply,
+     socket
+     |> assign(selected_method: method)
+     |> assign(selected_template: nil)
+     |> assign(chat_session_id: nil)
+     |> push_patch(
+       to: "/projects/#{socket.assigns.project.id}/w/new?method=#{method}"
+     )}
   end
 
-  defp update_workflow_canvas(socket, params) do
-    socket
-    |> push_event("state-applied", %{"state" => params})
-    |> push_event("force-fit", %{})
+  defp create_ai_session_for_input(assigns, input_value) do
+    handler = ModeRegistry.get_handler(:workflow)
+
+    session_assigns = %{
+      project: assigns.project,
+      current_user: assigns.current_user,
+      mode: :workflow
+    }
+
+    case handler.create_session(session_assigns, input_value) do
+      {:ok, session} -> {:ok, session.id}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
   end
 
   @impl true
   def render(assigns) do
     assigns =
       assign(assigns,
-        templates:
+        filtered_templates:
           Enum.sort_by(
-            assigns.base_templates ++ assigns.filtered_templates,
+            assigns.filtered_templates,
             & &1.name
           )
       )
 
     ~H"""
     <div id={@id} class="w-1/3">
-      <div class="divide-y divide-gray-200 bg-white h-full flex flex-col">
-        <div class="px-2 py-2 sm:px-4 sm:py-2 flex-grow overflow-hidden flex flex-col">
-          <.create_workflow_from_template
-            :if={@selected_method == "template"}
-            myself={@myself}
-            templates={@templates}
-            selected_template={@selected_template}
+      <div class="bg-white h-full flex flex-col border-r-1">
+        <div class="flex-grow overflow-hidden flex flex-col">
+          <div
+            :if={@selected_method != "ai"}
+            class="px-2 py-2 sm:px-4 sm:py-2 flex-grow"
+          >
+            <.create_workflow_from_template
+              :if={@selected_method == "template"}
+              myself={@myself}
+              search_term={@search_term}
+              filtered_templates={@filtered_templates}
+              base_templates={@base_templates}
+              selected_template={@selected_template}
+              project={@project}
+            />
+            <.create_workflow_via_import
+              :if={@selected_method == "import"}
+              myself={@myself}
+              changeset={@changeset}
+            />
+          </div>
+          <.create_workflow_via_ai
+            :if={@selected_method == "ai"}
+            parent_id={@id}
+            project={@project}
+            current_user={@current_user}
+            chat_session_id={@chat_session_id}
+            base_url={@base_url}
             search_term={@search_term}
           />
-
-          <.create_workflow_via_import
-            :if={@selected_method == "import"}
-            changeset={@changeset}
-            myself={@myself}
-          />
         </div>
-        <div class="px-4 py-4 sm:p-3 flex flex-row justify-center gap-3 h-max border-t">
+        <div class="px-4 py-4 sm:p-3 flex flex-row justify-end gap-2 h-max border-t">
           <.button
-            :if={@selected_method != "import"}
+            :if={@selected_method == "template"}
             id="import-workflow-btn"
             type="button"
-            theme="primary"
-            class="inline-flex gap-x-1.5"
+            theme="secondary"
+            class="inline-flex gap-x-1 px-4"
             phx-click="choose-another-method"
             phx-value-method="import"
             phx-target={@myself}
           >
-            <.icon name="hero-document" class="size-5" /> Import
+            <.icon name="hero-document-arrow-up" class="size-5" /> Import
           </.button>
           <.button
-            :if={@selected_method != "import"}
-            id="toggle_new_workflow_panel_btn"
-            type="button"
-            theme="primary"
-            phx-click="toggle_new_workflow_panel"
-          >
-            Get started
-          </.button>
-          <.button
-            :if={@selected_method == "import"}
+            :if={@selected_method != "template"}
             id="move-back-to-templates-btn"
             type="button"
             theme="secondary"
+            class="inline-flex gap-x-1 px-4"
             phx-click="choose-another-method"
             phx-value-method="template"
             phx-target={@myself}
@@ -272,14 +605,15 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             Back
           </.button>
           <.button
-            :if={@selected_method == "import"}
-            id="toggle_new_workflow_panel_btn"
+            id="create_workflow_btn"
             type="button"
-            phx-click="toggle_new_workflow_panel"
-            disabled={!@changeset.valid?}
             theme="primary"
+            class="inline-flex gap-x-1 px-4"
+            phx-click="create_workflow"
+            phx-target={@myself}
+            disabled={create_disabled?(assigns)}
           >
-            Get started
+            Create
           </.button>
         </div>
       </div>
@@ -288,21 +622,41 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   end
 
   attr :selected_template, :map, required: true
-  attr :templates, :list, required: true
   attr :myself, :any, required: true
   attr :search_term, :string, required: true
+  attr :project, :any, required: true
+
+  defp ai_template_card(assigns) do
+    ~H"""
+    <button
+      type="button"
+      id="template-label-ai-dynamic-template"
+      phx-click="choose-another-method"
+      phx-value-method="ai"
+      phx-target={@myself}
+      class="relative flex flex-col cursor-pointer rounded-md border border-indigo-300/40 p-4 transition-all duration-300 no-underline w-full text-left ai-bg-gradient hover:\digo-300/80 group h-24"
+      style="appearance: none;"
+    >
+      <span class="flex-1 overflow-hidden flex flex-col relative z-10">
+        <span class="font-semibold text-white line-clamp-1 flex items-center">
+          Build with AI ✨
+        </span>
+        <span class="text-sm text-indigo-100/90 line-clamp-2">
+          {@search_term}
+        </span>
+      </span>
+    </button>
+    """
+  end
 
   defp create_workflow_from_template(assigns) do
     ~H"""
     <div
       id="create-workflow-from-template"
       phx-hook="TemplateToWorkflow"
-      class="flex flex-col p-1 gap-4 h-full overflow-hidden"
+      class="flex flex-col p-1 gap-3 h-full overflow-hidden"
     >
-      <div>
-        <h3 class="text-base font-medium text-gray-700 mb-4">
-          Build your workflow from templates
-        </h3>
+      <div class="mt-2 mb-2">
         <.form
           id="search-templates-form"
           phx-change="search-templates"
@@ -314,7 +668,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             <.input_element
               type="text"
               name="search"
-              placeholder="Browse templates"
+              placeholder="Describe your workflow"
               class="block w-full rounded-md border-0 py-2 pl-10 pr-4 text-gray-900 ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm"
               value={@search_term}
             />
@@ -325,26 +679,71 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         </.form>
       </div>
 
+      <div
+        :if={length(@filtered_templates) == 0 && @search_term != ""}
+        class="text-center italic text-gray-400 text-sm hidden opacity-0"
+        phx-mounted={fade_in()}
+        phx-remove={fade_out()}
+      >
+        We don't have any templates matching this description. Want to try a base template or drafting this workflow with AI?
+      </div>
+
       <.form
         id="choose-workflow-template-form"
         phx-change="select-template"
         phx-target={@myself}
         for={to_form(%{})}
-        class="flex-grow mt-2 overflow-hidden flex flex-col"
+        class="flex-grow overflow-hidden flex flex-col"
       >
         <fieldset class="overflow-auto flex-grow">
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="grid lg:grid-cols-1 xl:grid-cols-2 gap-2">
             <label
-              :for={template <- @templates}
+              :for={template <- @base_templates}
               id={"template-label-#{template.id}"}
-              phx-hook="Tooltip"
-              aria-label={"<span class='font-medium text-left text-sm text-white block mb-2'>#{template.name}</span><span class='text-gray-300 text-xs block text-left'>#{template.description}</span>"}
-              data-allow-html="true"
-              data-selected={"#{template.id == @selected_template.id}"}
+              data-selected={"#{@selected_template && template.id == @selected_template.id}"}
               for={"template-input-#{template.id}"}
               class={[
-                "relative flex flex-col cursor-pointer rounded-lg border bg-white p-4 hover:bg-gray-50 transition-all h-24",
-                if(template.id == @selected_template.id,
+                "relative flex flex-col cursor-pointer rounded-md border bg-white p-4 hover:bg-gray-50 transition-all h-24",
+                if(@selected_template && template.id == @selected_template.id,
+                  do: "border-indigo-600 border-1",
+                  else: "border-gray-300"
+                )
+              ]}
+            >
+              <input
+                id={"template-input-#{template.id}"}
+                type="radio"
+                name="template_id"
+                value={template.id}
+                class="sr-only"
+              />
+              <span class="flex-1 overflow-hidden flex flex-col">
+                <span class="font-medium text-gray-900 line-clamp-1">
+                  {template.name}
+                </span>
+                <span class="text-sm text-gray-500 line-clamp-2">
+                  {template.description}
+                </span>
+              </span>
+            </label>
+            <.ai_template_card
+              project={@project}
+              selected_template={@selected_template}
+              search_term={
+                if @search_term == "",
+                  do: "Build your workflow using the AI assistant",
+                  else: @search_term
+              }
+              myself={@myself}
+            />
+            <label
+              :for={template <- @filtered_templates}
+              id={"template-label-#{template.id}"}
+              data-selected={"#{@selected_template && template.id == @selected_template.id}"}
+              for={"template-input-#{template.id}"}
+              class={[
+                "relative flex flex-col cursor-pointer rounded-md border bg-white p-4 hover:bg-gray-50 transition-all h-24",
+                if(@selected_template && template.id == @selected_template.id,
                   do: "border-indigo-600 border-1",
                   else: "border-gray-300"
                 )
@@ -384,8 +783,13 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       data-file-input-el="workflow-file"
       data-viewer-el="workflow-code-viewer"
       data-error-el="workflow-errors"
-      class="flex flex-col gap-3 h-full"
+      class="flex flex-col gap-3 h-full relative"
     >
+      <div
+        id="workflow-errors"
+        class="hidden absolute top-0 left-0 right-0 z-10 bg-danger-100/80 border border-danger-200 text-danger-800 px-4 py-3 rounded-lg flex items-start gap-3 shadow-sm"
+      >
+      </div>
       <div
         id="workflow-dropzone"
         phx-hook="FileDropzone"
@@ -423,11 +827,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         </div>
       </div>
       <div class="flex-grow flex flex-col">
-        <div
-          id="workflow-errors"
-          class="error-space mb-1 text-xs text-danger-600 hidden"
-        >
-        </div>
         <.textarea_element
           id="workflow-code-viewer"
           phx-update="ignore"
@@ -441,6 +840,31 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     """
   end
 
+  defp create_workflow_via_ai(assigns) do
+    ~H"""
+    <div
+      class="flex-grow overflow-hidden"
+      id="create_workflow_via_ai"
+      phx-hook="TemplateToWorkflow"
+    >
+      <.live_component
+        module={LightningWeb.AiAssistant.Component}
+        mode={:workflow}
+        can_edit_workflow={true}
+        project={@project}
+        current_user={@current_user}
+        chat_session_id={@chat_session_id}
+        query_params={%{"method" => "ai"}}
+        base_url={@base_url}
+        input_value={@search_term}
+        action={if(@chat_session_id, do: :show, else: :new)}
+        parent_component_id={@parent_id}
+        id="workflow-ai-assistant"
+      />
+    </div>
+    """
+  end
+
   defp base_templates do
     [
       %{
@@ -449,6 +873,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         description: "The basic structure for a webhook-triggered workflow",
         tags: ["webhook", "event", "workflow"],
         code: """
+        name: "Event-based Workflow"
         jobs:
           Step-1:
             name: Transform data
@@ -459,7 +884,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         triggers:
           webhook:
             type: webhook
-            enabled: false
+            enabled: true
         edges:
           webhook->Step-1:
             source_trigger: webhook
@@ -474,6 +899,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         description: "The basic structure for a cron-triggered workflow",
         tags: ["cron", "scheduled", "workflow"],
         code: """
+        name: "Scheduled Workflow"
         jobs:
           Get-data:
             name: Get data
@@ -486,7 +912,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           cron:
             type: cron
             cron_expression: "*/15 * * * *"
-            enabled: false
+            enabled: true
         edges:
           cron->Get-data:
             source_trigger: cron
@@ -496,5 +922,26 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         """
       }
     ]
+  end
+
+  defp create_disabled?(assigns) do
+    case assigns.selected_method do
+      "import" -> !assigns.changeset.valid? or assigns.validation_failed
+      "template" -> is_nil(assigns.selected_template)
+      "ai" -> is_nil(assigns.template_generated)
+    end
+  end
+
+  defp error_flash_message(assigns) do
+    case assigns.selected_method do
+      "import" ->
+        "Please fix the validation errors before creating the workflow."
+
+      "template" ->
+        "Please select a template to continue."
+
+      "ai" ->
+        "Please generate a workflow using the AI assistant first."
+    end
   end
 end

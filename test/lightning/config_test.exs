@@ -54,6 +54,15 @@ defmodule Lightning.Configtest do
       assert expected == actual
     end
 
+    test "returns configured AI modes" do
+      modes = API.ai_assistant_modes()
+
+      assert modes[:job] == LightningWeb.Live.AiAssistant.Modes.JobCode
+
+      assert modes[:workflow] ==
+               LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
+    end
+
     test "returns number of seconds that constitutes stalled run threshold" do
       expected =
         extract_from_config(

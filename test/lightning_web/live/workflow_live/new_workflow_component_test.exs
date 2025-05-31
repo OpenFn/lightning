@@ -47,10 +47,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
   describe "workflow creation methods" do
     test "displays template and import options", %{conn: conn, project: project} do
-      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Initial state should show template selection
-      assert html =~ "Build your workflow from templates"
       assert view |> element("#create-workflow-from-template") |> has_element?()
       assert view |> element("#import-workflow-btn") |> has_element?()
       refute view |> element("#workflow-importer") |> has_element?()
@@ -83,10 +82,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       view |> element("#import-workflow-btn") |> render_click()
 
       # Click back button
-      html = view |> element("#move-back-to-templates-btn") |> render_click()
+      _html = view |> element("#move-back-to-templates-btn") |> render_click()
 
       # Should show template selection again
-      assert html =~ "Build your workflow from templates"
       assert view |> element("#create-workflow-from-template") |> has_element?()
       refute view |> element("#workflow-importer") |> has_element?()
     end

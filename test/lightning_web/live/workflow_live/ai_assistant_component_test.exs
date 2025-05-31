@@ -1,9 +1,10 @@
-defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
+defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
   use ExUnit.Case, async: true
 
   import Phoenix.LiveViewTest
 
-  alias LightningWeb.WorkflowLive.AiAssistantComponent
+  alias LightningWeb.Live.AiAssistant.Modes.JobCode
+  alias LightningWeb.AiAssistant
 
   describe "formatted_content/1" do
     test "renders assistant messages with properly styled links" do
@@ -15,7 +16,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
       """
 
       html =
-        render_component(&AiAssistantComponent.formatted_content/1,
+        render_component(
+          &AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
           content: content
         )
 
@@ -66,7 +69,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
       """
 
       html =
-        render_component(&AiAssistantComponent.formatted_content/1,
+        render_component(
+          &AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
           content: content
         )
 
@@ -94,7 +99,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
       """
 
       html =
-        render_component(&AiAssistantComponent.formatted_content/1,
+        render_component(&AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
           content: content
         )
 
@@ -128,7 +134,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
       """
 
       html =
-        render_component(&AiAssistantComponent.formatted_content/1,
+        render_component(&AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
           content: content
         )
 
@@ -149,7 +156,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
       }
 
       html =
-        render_component(&AiAssistantComponent.formatted_content/1, %{
+        render_component(&AiAssistant.Component.formatted_content/1, %{
+          id: "formatted-content",
           content: content,
           attributes: custom_attributes
         })
@@ -167,7 +175,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
 
   describe "error_message/1" do
     test "renders string error message" do
-      assert AiAssistantComponent.error_message({:error, "Something went wrong"}) ==
+      assert JobCode.error_message({:error, "Something went wrong"}) ==
                "Something went wrong"
     end
 
@@ -178,24 +186,22 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
         data: %Lightning.AiAssistant.ChatSession{}
       }
 
-      assert AiAssistantComponent.error_message({:error, changeset}) ==
-               "Could not save message. Please try again."
+      assert JobCode.error_message({:error, changeset}) ==
+               "Content is invalid"
     end
 
     test "renders text message from map" do
       error_data = %{text: "Specific error message"}
 
-      assert AiAssistantComponent.error_message(
-               {:error, :custom_reason, error_data}
-             ) ==
+      assert JobCode.error_message({:error, :custom_reason, error_data}) ==
                "Specific error message"
     end
 
     test "renders default error message for unhandled cases" do
-      assert AiAssistantComponent.error_message({:error, :unknown_reason}) ==
-               "Oops! Something went wrong. Please try again."
+      assert JobCode.error_message({:error, :unknown_reason}) ==
+               "An error occurred: unknown_reason. Please try again."
 
-      assert AiAssistantComponent.error_message(:unexpected_error) ==
+      assert JobCode.error_message(:unexpected_error) ==
                "Oops! Something went wrong. Please try again."
     end
 
@@ -207,7 +213,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
       """
 
       html =
-        render_component(&AiAssistantComponent.formatted_content/1,
+        render_component(&AiAssistant.Component.formatted_content/1,
           id: "formatted-content",
           content: content
         )
@@ -243,7 +249,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
       """
 
       html =
-        render_component(&AiAssistantComponent.formatted_content/1,
+        render_component(&AiAssistant.Component.formatted_content/1,
           id: "formatted-content",
           content: content
         )
@@ -266,7 +272,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
       }
 
       html =
-        render_component(&AiAssistantComponent.formatted_content/1, %{
+        render_component(&AiAssistant.Component.formatted_content/1, %{
           id: "formatted-content",
           content: content,
           attributes: custom_attributes

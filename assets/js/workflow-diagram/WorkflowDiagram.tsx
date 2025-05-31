@@ -236,6 +236,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     <ReactFlowProvider>
       <ReactFlow
         ref={workflowDiagramRef}
+        maxZoom={1}
         proOptions={{ account: 'paid-pro', hideAttribution: true }}
         nodes={model.nodes}
         edges={model.edges}

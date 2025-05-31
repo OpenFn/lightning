@@ -3,7 +3,7 @@ import type { WorkflowSpec, WorkflowState } from './types';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from './util';
 
 function transformServerErrors(
-  errors: Record<string, any>,
+  errors: Record<string, unknown>,
   basePath: string = ''
 ): string[] {
   const result: string[] = [];
@@ -12,13 +12,11 @@ function transformServerErrors(
     const currentPath = basePath ? `${basePath}/${key}` : key;
 
     if (Array.isArray(value)) {
-      // If value is an array, these are error messages
       value.forEach(message => {
-        result.push(`'${message}' at '${currentPath}'`);
+        result.push(`'${String(message)}' at '${currentPath}'`);
       });
     } else if (typeof value === 'object' && value !== null) {
-      // If value is an object, recursively process it
-      const nestedErrors = transformServerErrors(value, currentPath);
+      const nestedErrors = transformServerErrors(value as Record<string, unknown>, currentPath);
       result.push(...nestedErrors);
     }
   }
@@ -46,11 +44,16 @@ const YAMLToWorkflow = {
       throw new Error('Viewer or file picker or error element not found');
     }
 
-    this.viewerEl = viewerEl;
-    this.fileInputEl = fileInputEl;
+    this.viewerEl = viewerEl as HTMLTextAreaElement;
+    this.fileInputEl = fileInputEl as HTMLInputElement;
     this.errorEl = errorEl;
 
-    fileInputEl.addEventListener('change', event => {
+    this.setupEventListeners();
+    this.setupServerEventHandlers();
+  },
+
+  setupEventListeners() {
+    this.fileInputEl.addEventListener('change', event => {
       const target = event.target as HTMLInputElement;
       const file = target.files ? target.files[0] : null;
       if (!file) return;
@@ -58,55 +61,100 @@ const YAMLToWorkflow = {
       const reader = new FileReader();
       reader.onload = () => {
         const fileContent = reader.result as string;
-        viewerEl.value = fileContent;
+        this.viewerEl.value = fileContent;
         this.validateYAML(fileContent);
       };
       reader.readAsText(file);
     });
 
-    viewerEl.addEventListener('input', event => {
+    this.viewerEl.addEventListener('input', event => {
       const target = event.target as HTMLTextAreaElement;
       const yamlString = target.value;
-
       this.validateYAML(yamlString);
     });
   },
+
+  setupServerEventHandlers() {
+    this.handleEvent("workflow-validated", () => {
+      this.clearErrors();
+    });
+
+    this.handleEvent("workflow-validation-errors", (payload: { errors: Record<string, unknown> }) => {
+      const errors = transformServerErrors(payload.errors);
+      this.showError(errors[0] || "Validation failed");
+    });
+
+    this.handleEvent("show-parsing-error", (payload: { error: string }) => {
+      this.showError(payload.error);
+    });
+  },
+
   validateYAML(workflowYAML: string) {
-    this.errorEl.classList.add('hidden');
-    this.errorEl.textContent = '';
+    this.clearErrors();
+    
     try {
       this.workflowSpec = parseWorkflowYAML(workflowYAML);
       this.workflowState = convertWorkflowSpecToState(this.workflowSpec);
 
-      this.pushEventTo(
-        this.el,
-        'workflow-parsed',
-        { workflow: this.workflowState },
-        response => {
-          if (response['errors']) {
-            // these are based on those sent by the provisioner API. ideally, we should have the provisioner return the id of the affected node
-            // then we can map them to the YAML path here. At this point we have both the Spec and State
-            const errors = transformServerErrors(response['errors']);
-            this.errorEl.textContent = errors[0];
-            this.errorEl.classList.remove('hidden');
-          }
-        }
-      );
+      this.pushEventTo(this.el, 'workflow-parsed', { 
+        workflow: this.workflowState 
+      });
     } catch (error) {
-      this.errorEl.textContent = error.message;
-      this.errorEl.classList.remove('hidden');
-
-      // dummy invalidate the server parsed worklow
-      this.pushEventTo(this.el, 'workflow-parsed', { workflow: {} });
+      const errorMessage = this.getErrorMessage(error);
+      
+      this.pushEventTo(this.el, 'workflow-parsing-failed', {
+        error: errorMessage
+      });
     }
   },
+
+  getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    return 'An unknown error occurred';
+  },
+
+  clearErrors() {
+    this.errorEl.classList.add('hidden');
+    this.errorEl.textContent = '';
+    this.errorEl.classList.remove('error-shake', 'error-slide-in');
+  },
+
+  showError(message: string) {
+    this.errorEl.innerHTML = `
+      <span class="flex-1">${message}</span>
+      <button class="text-danger-600 hover:text-danger-800 ml-2" onclick="this.closest('#workflow-errors').classList.add('hidden')">
+        ✕
+      </button>
+    `;
+    
+    this.errorEl.classList.remove('hidden');
+    this.errorEl.classList.add('error-slide-in');
+    
+    setTimeout(() => {
+      this.errorEl.classList.add('error-shake');
+    }, 300);
+    
+    setTimeout(() => {
+      this.errorEl.classList.remove('error-shake');
+    }, 800);
+  }
 } as PhoenixHook<{
   workflowSpec: undefined | WorkflowSpec;
   workflowState: WorkflowState;
   validateYAML: (workflowYAML: string) => void;
   updateServerState: (state: WorkflowState) => void;
-  fileInputEl: HTMLElement;
-  viewerEl: HTMLElement;
+  setupEventListeners: () => void;
+  setupServerEventHandlers: () => void;
+  getErrorMessage: (error: unknown) => string;
+  clearErrors: () => void;
+  showError: (message: string) => void;
+  fileInputEl: HTMLInputElement;
+  viewerEl: HTMLTextAreaElement;
   errorEl: HTMLElement;
 }>;
 
