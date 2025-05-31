@@ -130,26 +130,28 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # dataclip dropdown is disabled
-      assert view
-             |> element(
-               ~s{#manual-job-#{job.id} form select[name='manual[dataclip_id]'][disabled]}
-             )
-             |> has_element?()
+      # TODO: test this in the react component
+      # assert view
+      #        |> element(
+      #          ~s{#manual-job-#{job.id} form select[name='manual[dataclip_id]'][disabled]}
+      #        )
+      #        |> has_element?()
 
-      assert view
-             |> element(
-               ~s{button[type='submit'][form='manual_run_form'][disabled]}
-             )
-             |> has_element?()
+      # assert view
+      #        |> element(
+      #          ~s{button[type='submit'][form='manual_run_form'][disabled]}
+      #        )
+      #        |> has_element?()
 
       # Check that the liveview can handle an empty submit (dataclip dropdown is disabled)
       # which happens on socket reconnects.
-      view |> element(~s{#manual-job-#{job.id} form}) |> render_change()
+      view |> render_change("manual_run_change")
 
       assert view |> render_click("manual_run_submit", %{"manual" => %{}}) =~
                "You are not authorized to perform this action."
     end
 
+    @tag skip: "component moved to react"
     test "can see the last 3 dataclips", %{
       conn: conn,
       project: project,
@@ -224,13 +226,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       body = %{"a" => 1}
 
-      view
-      |> form("#manual-job-#{job.id} form",
+      render_submit(view, "manual_run_submit",
         manual: %{
           body: Jason.encode!(body)
         }
       )
-      |> render_submit()
 
       assert where(
                Lightning.Invocation.Dataclip,
@@ -245,7 +245,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
-    @tag role: :editor
+    @tag role: :editor, skip: "component moved to react"
     test "can't with a new dataclip if it's invalid", %{
       conn: conn,
       project: p,
@@ -299,12 +299,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       )
 
       assert view
-             |> form("#manual-job-#{job.id} form",
+             |> render_submit("manual_run_submit",
                manual: %{
                  body: Jason.encode!(%{"a" => 1})
                }
              )
-             |> render_submit()
              |> Floki.parse_fragment!()
 
       assert view
@@ -326,11 +325,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              )
              |> has_element?()
 
-      view
-      |> form("#manual-job-#{job.id} form", %{
+      render_change(view, "manual_run_change", %{
         "manual" => %{"body" => "{}"}
       })
-      |> render_change()
 
       refute view
              |> element(
@@ -340,9 +337,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       assert [] == live_children(view)
 
-      view
-      |> element("#manual-job-#{job.id} form")
-      |> render_submit()
+      render_submit(view, "manual_run_submit", %{})
 
       assert [run_viewer] = live_children(view)
       render_async(run_viewer)
@@ -352,6 +347,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              |> has_element?()
     end
 
+    @tag skip: "component moved to react"
     test "the new dataclip is selected after running job", %{
       conn: conn,
       project: p,
@@ -459,11 +455,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       view |> change_editor_text("some body")
 
-      view
-      |> form("#manual_run_form", %{
+      render_submit(view, "manual_run_submit", %{
         manual: %{body: Jason.encode!(%{})}
       })
-      |> render_submit()
 
       assert_patch(view)
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -540,11 +534,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # subscribe to workflow events
       Lightning.Workflows.subscribe(project.id)
 
-      view
-      |> form("#manual_run_form", %{
+      render_submit(view, "manual_run_submit", %{
         manual: %{body: Jason.encode!(%{})}
       })
-      |> render_submit()
 
       assert_patch(view)
       # render_async(view)
@@ -690,6 +682,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
+    @tag skip: "component moved to react"
     test "selects the input dataclip for the step if a run is followed",
          %{
            conn: conn,
@@ -806,6 +799,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       render_async(run_viewer_live)
     end
 
+    @tag skip: "component moved to react"
     test "selects the input dataclip for the run if no step has been added yet",
          %{
            conn: conn,
@@ -885,6 +879,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
+    @tag skip: "component moved to react"
     test "shows the body of selected dataclip correctly after retrying a workorder from a non-first step",
          %{
            conn: conn,
@@ -982,6 +977,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
+    @tag skip: "component moved to react"
     test "does not show the dataclip select input if the step dataclip is not available",
          %{
            conn: conn,
@@ -1055,6 +1051,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
+    @tag skip: "component moved to react"
     test "shows the wiped dataclip viewer if the step dataclip was wiped",
          %{
            conn: conn,
@@ -1130,6 +1127,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
+    @tag skip: "component moved to react"
     test "shows the missing dataclip viewer if the selected step wasn't executed in the run",
          %{
            conn: conn,
@@ -1232,9 +1230,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "button", "Create New Work Order")
 
       # if we choose a different dataclip, the retry button disappears
-      view
-      |> form("#manual_run_form", manual: %{dataclip_id: hd(dataclips).id})
-      |> render_change()
+      render_change(view, "manual_run_change",
+        manual: %{dataclip_id: hd(dataclips).id}
+      )
 
       refute has_element?(view, "button", "Retry from here")
       assert has_element?(view, "button", "Create New Work Order")
@@ -1242,9 +1240,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # if we choose the step input dataclip, the retry button becomes available
       step = Enum.find(run.steps, fn step -> step.job_id == job_2.id end)
 
-      view
-      |> form("#manual_run_form", manual: %{dataclip_id: step.input_dataclip_id})
-      |> render_change()
+      render_change(view, "manual_run_change",
+        manual: %{dataclip_id: step.input_dataclip_id}
+      )
 
       assert has_element?(view, "button", "Retry from here")
       assert has_element?(view, "button", "Create New Work Order")
@@ -1408,6 +1406,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
+    @tag skip: "component moved to react"
     test "selected dataclip viewer is updated correctly if dataclip is wiped",
          %{
            conn: conn,
@@ -1531,11 +1530,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       Repo.delete_all(Audit)
 
-      view
-      |> form("#manual_run_form", %{
+      render_submit(view, "manual_run_submit", %{
         manual: %{body: Jason.encode!(%{})}
       })
-      |> render_submit()
 
       audit = Audit |> Repo.one()
 
@@ -1620,11 +1617,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "button", "Create New Work Order")
 
       # submit the manual run form
-      view
-      |> form("#manual_run_form", %{
+      render_submit(view, "manual_run_submit", %{
         manual: %{body: "{}"}
       })
-      |> render_submit()
 
       uri = view |> assert_patch() |> URI.parse()
       run_id = Plug.Conn.Query.decode(uri.query)["a"]
@@ -1894,8 +1889,17 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
         # input panel shows correct information
         assert view
-               |> dataclip_viewer("selected-dataclip-#{input_dataclip.id}")
+               |> dataclip_viewer("step-input-dataclip-viewer")
                |> has_element?()
+
+        input_dataclip_viewer_json =
+          view
+          |> dataclip_viewer("step-input-dataclip-viewer")
+          |> get_attrs_and_inner_html()
+          |> decode_inner_json()
+          |> elem(1)
+
+        assert input_dataclip_viewer_json["dataclipId"] == input_dataclip.id
 
         # output panel shows correct information
         output_dataclip_viewer_json =

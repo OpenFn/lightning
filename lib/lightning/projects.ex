@@ -17,9 +17,9 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects
   alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
-  alias Lightning.Projects.File
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -49,6 +49,8 @@ defmodule Lightning.Projects do
       :last_updated_at
     ]
   end
+
+  defdelegate subscribe, to: Events
 
   def get_projects_overview(user, opts \\ [])
 
@@ -156,6 +158,7 @@ defmodule Lightning.Projects do
     project = get_project!(project_id)
     delete_history_for(project)
     wipe_dataclips_for(project)
+    remove_expired_files_for(project)
 
     :ok
   end
@@ -879,6 +882,29 @@ defmodule Lightning.Projects do
     {:error, :missing_dataclip_retention_period}
   end
 
+  defp remove_expired_files_for(%Project{
+         id: project_id,
+         history_retention_period: period
+       }) do
+    if not is_nil(period) do
+      from(f in Projects.File,
+        where:
+          f.project_id == ^project_id and f.inserted_at < ago(^period, "day")
+      )
+      |> Repo.all()
+      |> Enum.each(fn %{path: object_path} = project_file ->
+        result = Lightning.Storage.delete(object_path)
+
+        if match?({:ok, _res}, result) or
+             match?({:error, %{status: 404}}, result) do
+          Repo.delete(project_file)
+        end
+      end)
+    end
+
+    :ok
+  end
+
   defp delete_history_for(
          %Project{
            history_retention_period: period_days
@@ -1173,7 +1199,7 @@ defmodule Lightning.Projects do
   def list_project_files(%Project{id: project_id}, opts \\ []) do
     sort_order = Keyword.get(opts, :sort, :desc)
 
-    from(pf in File,
+    from(pf in Projects.File,
       where: pf.project_id == ^project_id,
       order_by: [{^sort_order, pf.inserted_at}],
       preload: [:created_by]

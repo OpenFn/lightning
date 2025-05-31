@@ -33,6 +33,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.WorkOrders
   alias LightningWeb.UiMetrics
   alias LightningWeb.WorkflowLive.Helpers
+  alias LightningWeb.WorkflowLive.NewManualRun
   alias LightningWeb.WorkflowNewLive.WorkflowParams
   alias Phoenix.LiveView.JS
 
@@ -42,6 +43,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
+
+  attr :job_id, :string
+  attr :selected_dataclip_id, :string, required: false
+  jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
@@ -249,7 +254,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   >
                     <:panel hash="manual" class="overflow-auto h-full">
                       <div class="grow flex flex-col gap-4 p-2 min-h-0 h-full">
-                        <LightningWeb.WorkflowLive.ManualWorkorder.component
+                        <.ManualRunPanel
+                          :if={@selection_mode === "expand"}
+                          job_id={@selected_job.id}
+                          selected_dataclip_id={@step && @step.input_dataclip_id}
+                        />
+                        <%!-- <LightningWeb.WorkflowLive.ManualWorkorder.component
                           id={"manual-job-#{@selected_job.id}"}
                           form={@manual_run_form}
                           dataclips={@selectable_dataclips}
@@ -265,7 +275,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           show_missing_dataclip_selector={
                             @show_missing_dataclip_selector
                           }
-                        />
+                        /> --%>
                       </div>
                     </:panel>
                     <:panel hash="aichat" class="h-full">
@@ -1480,6 +1490,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
   end
 
+  def handle_event(
+        "search-selectable-dataclips",
+        %{"job_id" => job_id, "search_text" => search_text, "limit" => limit} =
+          params,
+        socket
+      ) do
+    offset = Map.get(params, "offset")
+
+    case NewManualRun.search_selectable_dataclips(
+           job_id,
+           search_text,
+           limit,
+           offset
+         ) do
+      {:ok, dataclips} ->
+        {:reply, %{dataclips: dataclips}, socket}
+
+      {:error, changeset} ->
+        {:reply, %{errors: LightningWeb.ChangesetJSON.errors(changeset)}, socket}
+    end
+  end
+
   def handle_event("switch-version", %{"type" => type}, socket) do
     updated_socket =
       case type do
@@ -1873,11 +1905,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
+          # Get the dataclip for the run
+          dataclip = Invocation.get_dataclip_for_run(run.id)
+
           {:noreply,
            socket
            |> assign_workflow(workflow, snapshot)
            |> follow_run(run)
-           |> push_event("push-hash", %{"hash" => "log"})}
+           |> push_event("push-hash", %{"hash" => "log"})
+           |> push_event("manual_run_created", %{dataclip: dataclip})}
 
         {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
           {:noreply,
@@ -2326,7 +2362,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             project: socket.assigns.project,
             workflow: socket.assigns.workflow,
             job: socket.assigns.selected_job,
-            user: socket.assigns.current_user
+            created_by: socket.assigns.current_user
           )
 
         selectable_dataclips =
@@ -2422,14 +2458,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         can_edit_workflow: can_edit_workflow,
         can_run_workflow: can_run_workflow
       } ->
-        form_valid =
-          if manual_run_form.source.errors == [
-               created_by: {"can't be blank", [validation: :required]}
-             ] and Map.get(manual_run_form.params, "dataclip_id") do
-            true
-          else
-            !Enum.any?(manual_run_form.source.errors)
-          end
+        form_valid = manual_run_form.source.valid?
 
         !form_valid or
           !changeset.valid? or

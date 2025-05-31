@@ -31,7 +31,6 @@ defmodule LightningWeb.Components.Icons do
     <span
       class={[
         @naked && "text-gray-500 hover:text-primary-400",
-        "align-top",
         @name,
         @class
       ]}

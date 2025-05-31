@@ -11,6 +11,7 @@ defmodule Lightning.Invocation do
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows.Job
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.ExportAudit
   alias Lightning.WorkOrders.ExportWorker
@@ -35,7 +36,7 @@ defmodule Lightning.Invocation do
     Repo.all(Dataclip)
   end
 
-  @spec list_dataclips_query(project :: Project.t()) :: Ecto.Queryable.t()
+  @spec list_dataclips_query(Project.t()) :: Ecto.Queryable.t()
   def list_dataclips_query(%Project{id: project_id}) do
     from(d in Dataclip,
       where: d.project_id == ^project_id,
@@ -43,16 +44,57 @@ defmodule Lightning.Invocation do
     )
   end
 
-  @spec list_dataclips(project :: Project.t()) :: [Dataclip.t()]
+  @spec list_dataclips(Project.t()) :: [Dataclip.t()]
   def list_dataclips(%Project{id: project_id}) do
     list_dataclips_query(%Project{id: project_id}) |> Repo.all()
   end
 
-  def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}) do
-    Query.last_n_for_job(job_id, 5)
-    |> Query.select_as_input()
+  @spec list_dataclips_for_job(Job.t(), limit :: pos_integer()) :: [Dataclip.t()]
+  def list_dataclips_for_job(%Job{id: job_id}, limit \\ 5) do
+    Query.last_n_for_job(job_id, limit)
     |> where([d], is_nil(d.wiped_at))
     |> Repo.all()
+  end
+
+  @spec list_dataclips_for_job(
+          Job.t(),
+          user_filters :: map(),
+          opts :: Keyword.t()
+        ) :: [Dataclip.t()]
+  def list_dataclips_for_job(%Job{id: job_id}, user_filters, opts) do
+    limit = Keyword.fetch!(opts, :limit)
+    offset = Keyword.get(opts, :offset)
+
+    db_filters =
+      Enum.reduce(user_filters, dynamic(true), fn
+        {:id, uuid}, dynamic ->
+          dynamic([d], ^dynamic and d.id == ^uuid)
+
+        {:id_prefix, id_prefix}, dynamic ->
+          {id_prefix_start, id_prefix_end} =
+            id_prefix_interval(id_prefix)
+
+          dynamic(
+            [d],
+            ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
+          )
+
+        {:type, type}, dynamic ->
+          dynamic([d], ^dynamic and d.type == ^type)
+
+        {:after, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at >= ^ts)
+
+        {:before, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at <= ^ts)
+      end)
+
+    Query.last_n_for_job(job_id, limit)
+    |> where([d], is_nil(d.wiped_at))
+    |> where([d], ^db_filters)
+    |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
+    |> Repo.all()
+    |> maybe_filter_uuid_prefix(user_filters)
   end
 
   @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
@@ -706,5 +748,47 @@ defmodule Lightning.Invocation do
       )
     end)
     |> Repo.transaction()
+  end
+
+  defp id_prefix_interval(id_prefix) do
+    prefix_bin =
+      id_prefix
+      |> String.to_charlist()
+      |> Enum.chunk_every(2)
+      |> Enum.reduce(<<>>, fn
+        [_single_char], prefix_bin ->
+          prefix_bin
+
+        byte_list, prefix_bin ->
+          byte_int = byte_list |> :binary.list_to_bin() |> String.to_integer(16)
+          prefix_bin <> <<byte_int>>
+      end)
+
+    prefix_size = byte_size(prefix_bin)
+
+    # UUIDs are 128 bits (16 bytes) in binary form.
+    # We calculate how many bytes are missing from the prefix.
+    # missing_byte_size is the number of bytes to pad to reach a full UUID binary.
+    # We pad with 0s for the lower bound and 255s for the upper bound.
+    missing_byte_size = 16 - prefix_size
+
+    {
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<0>>, missing_byte_size)),
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<255>>, missing_byte_size))
+    }
+  end
+
+  # A pair of hex chars on UUID strings comprise a byte on UUID binary
+  # Searching by prefix with an odd number of chars (not in pairs) requires
+  # additional filtering once you can't filter half of a byte on the database
+  # using > or < operators
+  defp maybe_filter_uuid_prefix(dataclips, filters) do
+    case Map.get(filters, :id_prefix, "") do
+      id_prefix when rem(byte_size(id_prefix), 2) == 1 ->
+        Enum.filter(dataclips, &String.starts_with?(&1.id, id_prefix))
+
+      _ ->
+        dataclips
+    end
   end
 end

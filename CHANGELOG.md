@@ -19,13 +19,44 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Padding Changes on Project Setup Page
+  [#3257](https://github.com/OpenFn/lightning/issues/3257)
+
+## [v2.12.3-pre] - 2025-05-29
+
+### Added
+
+- Added a custom metric to track projects that could benefit from additional
+  worker pods. [#3189](https://github.com/OpenFn/lightning/issues/3189)
+- Add a test metric that can be used to test external infrastructure (e.g.
+  alerting) in a deployed Lightning instance.
+  [#3229](https://github.com/OpenFn/lightning/issues/3229)
+- Broadcast work-available to worker when runs are enqueued
+  [#2934](https://github.com/OpenFn/lightning/issues/2934)
+
+### Changed
+
 - Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
 - Standardized table components across the application
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
+- Standardize buttons [#3093](https://github.com/OpenFn/lightning/issues/3093)
 - Make the chunk size for deleting expired activty configurable via ENV
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
+- Reduce the cardinality of `lightning_run_lost_count`.
+  [#3226](https://github.com/OpenFn/lightning/issues/3226)
+- Improve manual run component
+  [#3089](https://github.com/OpenFn/lightning/issues/3089)
 
 ### Fixed
+
+- Delay purge user having project file(s)
+  [#2919](https://github.com/OpenFn/lightning/issues/2919)
+- Display all github repositories even if they're more than 30
+  [#3206](https://github.com/OpenFn/lightning/issues/3206)
+- Github repo names getting truncated
+  [#3037](https://github.com/OpenFn/lightning/issues/3037)
 
 ## [v2.12.2] - 2025-05-01
 
@@ -35,7 +66,6 @@ and this project adheres to
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
 - Re-order nightly cron jobs to reduce acute stress on db
   [#3179](https://github.com/OpenFn/lightning/pull/3179)
-- Standardize buttons [#3093](https://github.com/OpenFn/lightning/issues/3093)
 
 ### Fixed
 

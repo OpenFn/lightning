@@ -478,7 +478,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     ~H"""
     <div>
       <div class="flex items-center gap-x-2">
-        <span class="inline-block relative flex h-2 w-2">
+        <span class="relative inline-flex h-2 w-2">
           <%= if @state in [:pending, :running] do %>
             <span class={[
               "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",

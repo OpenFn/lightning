@@ -11,8 +11,6 @@ defmodule Lightning.WorkOrder do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 
-  require Run
-
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,

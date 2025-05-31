@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.12.2",
+      version: "2.12.3-pre",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -136,7 +136,7 @@ defmodule Lightning.MixProject do
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
-      {:dotenvy, "~> 0.8.0"},
+      {:dotenvy, "~> 1.1.0"},
       {:goth, "~> 1.3"},
       {:gcs_signed_url, "~> 0.4.6"},
       {:packmatic, "~> 1.2"},

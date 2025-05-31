@@ -219,27 +219,28 @@ defmodule Lightning.Runs.QueryTest do
       end)
       |> Enum.with_index()
       |> Enum.each(fn {window_item, i} ->
-        eligible_snapshot =
-          from([run, ipw] in Query.eligible_for_claim(),
-            select: [
-              type(ipw.id, :string),
-              run.state,
-              ipw.row_number,
-              ipw.project_id,
-              ipw.concurrency
-            ]
-          )
-          |> Repo.all()
-
+        # Test the actual claiming behavior instead of inspecting internal structure
         if window_item.state == "available" do
+          # Get current state before claiming
+          available_count_before =
+            from(r in Lightning.Run,
+              where: r.state == :available,
+              select: count()
+            )
+            |> Repo.one()
+
           {:ok, [run]} =
             Lightning.Runs.Queue.claim(demand, Query.eligible_for_claim())
 
+          # Verify the right run was claimed
           assert run.id == window_item.id,
                  """
                  Expected run id to be #{window_item.id}, got #{run.id} at index #{i}.
-                 #{eligible_snapshot |> inspect(pretty: true)}
+                 Available count before: #{available_count_before}
                  """
+
+          # Verify state changed correctly
+          assert %{state: :claimed} = Repo.reload!(run)
         end
       end)
     end
@@ -296,7 +297,8 @@ defmodule Lightning.Runs.QueryTest do
             %{project_id: blue.project.id, row_number: 3, concurrency: 3}
           ],
           fn run, extra ->
-            Map.take(run, [:id, :state, :inserted_at]) |> Map.merge(extra)
+            Map.take(run, [:id, :state, :inserted_at, :priority])
+            |> Map.merge(extra)
           end
         )
 

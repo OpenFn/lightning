@@ -6,16 +6,13 @@
     phx-target={@myself}
     phx-change="validate"
     phx-submit="save"
+    class="space-y-2"
   >
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <.label for={:first_name}>First Name</.label>
         <.input type="text" field={f[:first_name]} />
       </div>
-    </div>
-
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
     </div>
 
     <div class="grid grid-cols-6 gap-6">
@@ -25,10 +22,6 @@
       </div>
     </div>
 
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <.label for={:email}>Email</.label>
@@ -36,19 +29,11 @@
       </div>
     </div>
 
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <.label for={:password}>Password</.label>
         <.input type="password" field={f[:password]} />
       </div>
-    </div>
-
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
     </div>
 
     <div class="grid grid-cols-6 gap-6">
@@ -60,10 +45,6 @@
           options={user_options()}
         />
       </div>
-    </div>
-
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
     </div>
 
     <div class="grid grid-cols-6 gap-6">
@@ -91,10 +72,6 @@
       </div>
     </div>
 
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-
     <%= if @action in [:edit] do %>
       <%= if @role == :user do %>
         <div class="grid grid-cols-6 gap-6">
@@ -104,10 +81,6 @@
           </div>
         </div>
       <% end %>
-
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-2"></div>
-      </div>
 
       <div class="flex items-start">
         <div class="flex items-center h-5">
@@ -121,10 +94,6 @@
           </p>
         </div>
       </div>
-
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-2"></div>
-      </div>
     <% end %>
 
     <div>
@@ -137,14 +106,12 @@
       >
         Save
       </.button>
-      <span>
-        <.button_link
-          navigate={Routes.user_index_path(@socket, :index)}
-          theme="secondary"
-        >
-          Cancel
-        </.button_link>
-      </span>
+      <.button_link
+        navigate={Routes.user_index_path(@socket, :index)}
+        theme="secondary"
+      >
+        Cancel
+      </.button_link>
     </div>
   </.form>
 </div>

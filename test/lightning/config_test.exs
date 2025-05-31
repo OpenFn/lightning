@@ -62,6 +62,62 @@ defmodule Lightning.Configtest do
       assert modes[:workflow] ==
                LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
     end
+
+    test "returns number of seconds that constitutes stalled run threshold" do
+      expected =
+        extract_from_config(
+          :metrics,
+          :stalled_run_threshold_seconds
+        )
+
+      actual = API.metrics_stalled_run_threshold_seconds()
+
+      assert expected == actual
+    end
+
+    test "returns max allowable age of a run when considering run performance" do
+      expected =
+        extract_from_config(
+          :metrics,
+          :run_performance_age_seconds
+        )
+
+      actual = API.metrics_run_performance_age_seconds()
+
+      assert expected == actual
+    end
+
+    test "returns the polling period in seconds for run queue metrics" do
+      expected =
+        extract_from_config(
+          :metrics,
+          :run_queue_metrics_period_seconds
+        )
+
+      actual = API.metrics_run_queue_metrics_period_seconds()
+
+      assert expected == actual
+    end
+
+    test "returns the number of seconds before a run is 'unclaimed'" do
+      expected =
+        extract_from_config(
+          :metrics,
+          :unclaimed_run_threshold_seconds
+        )
+
+      actual = API.metrics_unclaimed_run_threshold_seconds()
+
+      assert expected == actual
+    end
+
+    test "returns the per workflow claim limit" do
+      expected = Application.get_env(:lightning, :per_workflow_claim_limit, 50)
+
+      actual = API.per_workflow_claim_limit()
+
+      assert expected == actual
+    end
   end
 
   defp extract_from_config(config, key) do

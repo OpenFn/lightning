@@ -318,6 +318,33 @@ defmodule Lightning.Config do
         workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
       }
     end
+
+    @impl true
+    def per_workflow_claim_limit do
+      Application.get_env(:lightning, :per_workflow_claim_limit, 50)
+    end
+
+    @impl true
+    def metrics_run_performance_age_seconds do
+      metrics_config() |> Keyword.get(:run_performance_age_seconds)
+    end
+
+    @impl true
+    def metrics_run_queue_metrics_period_seconds do
+      metrics_config() |> Keyword.get(:run_queue_metrics_period_seconds)
+    end
+
+    @impl true
+    def metrics_stalled_run_threshold_seconds do
+      metrics_config() |> Keyword.get(:stalled_run_threshold_seconds)
+    end
+
+    @impl true
+    def metrics_unclaimed_run_threshold_seconds do
+      metrics_config() |> Keyword.get(:unclaimed_run_threshold_seconds)
+    end
+
+    defp metrics_config, do: Application.get_env(:lightning, :metrics)
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -337,6 +364,10 @@ defmodule Lightning.Config do
   @callback kafka_number_of_messages_per_second() :: float()
   @callback kafka_number_of_processors() :: integer()
   @callback kafka_triggers_enabled?() :: boolean()
+  @callback metrics_run_performance_age_seconds() :: integer()
+  @callback metrics_run_queue_metrics_period_seconds() :: integer()
+  @callback metrics_stalled_run_threshold_seconds() :: integer()
+  @callback metrics_unclaimed_run_threshold_seconds() :: integer()
   @callback oauth_provider(key :: atom()) :: keyword() | nil
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
@@ -368,6 +399,7 @@ defmodule Lightning.Config do
   @callback gdpr_preferences() :: map() | false
   @callback external_metrics_module() :: module() | nil
   @callback ai_assistant_modes() :: %{atom() => module()}
+  @callback per_workflow_claim_limit() :: pos_integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -580,6 +612,26 @@ defmodule Lightning.Config do
 
   def ai_assistant_modes do
     impl().ai_assistant_modes()
+  end
+  
+  def metrics_run_performance_age_seconds do
+    impl().metrics_run_performance_age_seconds()
+  end
+
+  def metrics_run_queue_metrics_period_seconds do
+    impl().metrics_run_queue_metrics_period_seconds()
+  end
+
+  def metrics_stalled_run_threshold_seconds do
+    impl().metrics_stalled_run_threshold_seconds()
+  end
+
+  def metrics_unclaimed_run_threshold_seconds do
+    impl().metrics_unclaimed_run_threshold_seconds()
+  end
+
+  def per_workflow_claim_limit do
+    impl().per_workflow_claim_limit()
   end
 
   defp impl do
