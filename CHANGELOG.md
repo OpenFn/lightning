@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Generate workflows using AI 
+  [#3174](https://github.com/OpenFn/lightning/issues/3174)
+- Enhance workflows templates UI
+  [#3175](https://github.com/OpenFn/lightning/issues/3175)
+
 ### Changed
 
 ### Fixed

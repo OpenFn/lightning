@@ -17,22 +17,6 @@ defmodule Lightning.ApolloClient do
   - `:endpoint` - Base URL of the Apollo service
   - `:ai_assistant_api_key` - Authentication key for API access
 
-  These are configured via `Lightning.Config.apollo/1`.
-
-  ## Service Architecture
-
-  Apollo is designed as a microservice architecture with specialized endpoints:
-  - `/services/job_chat` - Job-specific code assistance
-  - `/services/workflow_chat` - Workflow template generation
-  - `/` - Health check endpoint
-
-  ## Error Handling
-
-  All functions return `Tesla.Env.result()` tuples:
-  - `{:ok, %Tesla.Env{status: 200, body: response}}` - Successful response
-  - `{:ok, %Tesla.Env{status: 4xx|5xx, body: error}}` - HTTP error with details
-  - `{:error, reason}` - Network or connection errors (e.g., `:timeout`, `:econnrefused`)
-
   ## Usage Examples
 
       # Check service availability
@@ -57,12 +41,6 @@ defmodule Lightning.ApolloClient do
         [],
         %{}
       )
-
-  ## Security Considerations
-
-  - API keys are automatically included in all requests
-  - All communication uses HTTPS in production
-  - Sensitive data should not be logged or exposed in error messages
   """
 
   @typedoc """
@@ -154,16 +132,6 @@ defmodule Lightning.ApolloClient do
         ],
         %{session_id: session.id}
       )
-
-  ## Error Responses
-
-      # Service error
-      {:ok, %{status: 400, body: %{"message" => "Invalid request format"}}}
-
-      # Network error
-      {:error, :timeout}
-      {:error, :econnrefused}
-
   """
   @spec job_chat(String.t(), context(), list(), map()) :: Tesla.Env.result()
   def job_chat(content, context \\ %{}, history \\ [], meta \\ %{}) do
@@ -253,26 +221,6 @@ defmodule Lightning.ApolloClient do
         previous_conversation,
         %{project_id: project.id}
       )
-
-  ## Workflow Generation Process
-
-  1. **Analysis** - AI analyzes the request and identifies required components
-  2. **Template Selection** - Chooses appropriate workflow patterns and adaptors
-  3. **YAML Generation** - Creates complete, valid workflow definition
-  4. **Optimization** - Applies best practices and Lightning conventions
-  5. **Validation** - Ensures generated YAML meets Lightning requirements
-
-  ## Error Handling
-
-      # Invalid request
-      {:ok, %{status: 400, body: %{"message" => "Content cannot be empty"}}}
-
-      # Service error
-      {:ok, %{status: 500, body: %{"message" => "Internal server error"}}}
-
-      # Network timeout
-      {:error, :timeout}
-
   """
   @spec workflow_chat(
           String.t(),
