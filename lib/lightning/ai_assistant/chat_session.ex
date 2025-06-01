@@ -36,40 +36,6 @@ defmodule Lightning.AiAssistant.ChatSession do
   ### Session Type Requirements
   * **job_code sessions**: Must have a `job_id`
   * **workflow_template sessions**: Must have a `project_id`
-
-  ## Examples
-
-      # Create a job code session
-      %ChatSession{}
-      |> ChatSession.changeset(%{
-        title: "Debug payment processing job",
-        session_type: "job_code",
-        user_id: user.id,
-        job_id: job.id
-      })
-
-      # Create a workflow template session
-      %ChatSession{}
-      |> ChatSession.changeset(%{
-        title: "New data pipeline workflow",
-        session_type: "workflow_template",
-        user_id: user.id,
-        project_id: project.id,
-        is_public: true
-      })
-
-      # Session with metadata
-      %ChatSession{}
-      |> ChatSession.changeset(%{
-        title: "API integration helper",
-        session_type: "job_code",
-        user_id: user.id,
-        job_id: job.id,
-        meta: %{
-          "api_version" => "v2",
-          "last_error" => "timeout"
-        }
-      })
   """
 
   use Lightning.Schema
@@ -107,7 +73,6 @@ defmodule Lightning.AiAssistant.ChatSession do
     field :is_public, :boolean, default: false
     field :is_deleted, :boolean, default: false
 
-    # Virtual fields for runtime data
     field :expression, :string, virtual: true
     field :adaptor, :string, virtual: true
     field :message_count, :integer, virtual: true
@@ -133,7 +98,7 @@ defmodule Lightning.AiAssistant.ChatSession do
   ## Validation Rules
 
   * `title` and `user_id` are required
-  * `session_type` must be one of: #{inspect(@valid_session_types)}
+  * `session_type` must be one of: # {inspect(@valid_session_types)}
   * **job_code sessions** require `job_id`
   * **workflow_template sessions** require `project_id`
   * Associated messages are cast and validated

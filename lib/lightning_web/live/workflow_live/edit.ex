@@ -3130,6 +3130,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp selected_template_label(assigns) do
     ~H"""
     <div
+      id={"selected-template-label-#{@template.id}"}
       phx-mounted={fade_in()}
       phx-remove={fade_out()}
       class="absolute z-[9999] m-4 opacity-75 bg-white/100 border border-gray-200 rounded-lg p-6"

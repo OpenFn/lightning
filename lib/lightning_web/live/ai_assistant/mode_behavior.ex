@@ -5,83 +5,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   This behaviour enables the AI Assistant to support multiple interaction patterns
   and contexts through a pluggable mode system. Each mode implements specific
   callbacks to handle different types of AI assistance workflows.
-
-  ## Mode System Architecture
-
-  The AI Assistant supports different modes of operation:
-
-  - **Job Mode** - Provides coding assistance for specific workflow jobs
-  - **Workflow Template Mode** - Generates complete workflow templates
-  - **General Mode** - Offers broad AI assistance without specific context
-  - **Custom Modes** - Allow extending functionality for specific use cases
-
-  ## Implementation Pattern
-
-  Modes are implemented as modules that use this behaviour and provide
-  mode-specific implementations for session management, AI querying, and
-  UI interactions.
-
-  ## Callback Categories
-
-  ### Core Session Management
-  - Session creation, retrieval, and listing
-  - Message saving and processing
-  - AI query handling
-
-  ### UI Integration
-  - Input state management and placeholders
-  - Session titles and metadata
-  - Response handling and UI updates
-
-  ### Mode Configuration
-  - Feature capabilities and metadata
-  - Lifecycle event handling
-
-  ## Usage Example
-
-      defmodule MyCustomMode do
-        use LightningWeb.Live.AiAssistant.ModeBehavior
-
-        @impl true
-        def create_session(assigns, content) do
-          # Mode-specific session creation logic
-        end
-
-        @impl true
-        def query(session, content) do
-          # Mode-specific AI query logic
-        end
-
-        # Override optional callbacks as needed
-        @impl true
-        def input_placeholder, do: "Ask me about custom workflows..."
-
-        @impl true
-        def metadata do
-          %{
-            name: "Custom Assistant",
-            description: "Specialized assistance for custom workflows",
-            icon: "hero-cog"
-          }
-        end
-      end
-
-  ## Error Handling
-
-  All modes have access to shared error handling through `ErrorHandler.format_error/1`
-  which provides consistent error messaging across different interaction modes.
-
-  ## Default Implementations
-
-  The behaviour provides sensible defaults for optional callbacks, allowing
-  modes to override only the functionality they need to customize.
-
-  ## LiveView Integration
-
-  Modes integrate seamlessly with Phoenix LiveView through:
-  - Socket state management via assigns
-  - UI callback functions for real-time updates
-  - Event-driven response handling
   """
 
   alias LightningWeb.Live.AiAssistant.PaginationMeta
@@ -603,26 +526,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
 
   Provides shared functionality and default implementations for optional
   callbacks, allowing modes to focus on their specific requirements.
-
-  ## Usage
-
-      defmodule MyMode do
-        use LightningWeb.Live.AiAssistant.ModeBehavior
-
-        # Implement required callbacks
-        @impl true
-        def create_session(assigns, content), do: # ...
-
-        # Override optional callbacks as needed
-        @impl true
-        def input_placeholder, do: "Custom placeholder..."
-      end
-
-  ## Provided Functionality
-
-  - Shared error handling via `error_message/1`
-  - Default implementations for all optional callbacks
-  - Imports necessary aliases and modules
   """
   defmacro __using__(_opts) do
     quote do

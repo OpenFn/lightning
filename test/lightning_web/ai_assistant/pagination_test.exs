@@ -1,5 +1,5 @@
 defmodule LightningWeb.AiAssistant.PaginationTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias LightningWeb.Live.AiAssistant.PaginationMeta
 

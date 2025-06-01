@@ -613,7 +613,7 @@ defmodule Lightning.Config do
   def ai_assistant_modes do
     impl().ai_assistant_modes()
   end
-  
+
   def metrics_run_performance_age_seconds do
     impl().metrics_run_performance_age_seconds()
   end

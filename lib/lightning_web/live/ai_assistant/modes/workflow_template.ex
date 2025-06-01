@@ -6,86 +6,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   into complete, production-ready Lightning workflow templates. It provides an intuitive
   interface for creating complex data integration workflows without requiring deep
   technical knowledge of Lightning's YAML structure.
-
-  ## Key Features
-
-  ### Intelligent Template Generation
-  - **Natural language processing** - Converts descriptions into structured workflows
-  - **Complete YAML generation** - Produces valid Lightning workflow definitions
-  - **Multi-step workflow support** - Handles complex data transformation pipelines
-  - **Best practices integration** - Applies Lightning conventions and patterns
-
-  ### Advanced Workflow Capabilities
-  - **Adaptor selection** - Intelligently chooses appropriate OpenFn adaptors
-  - **Trigger configuration** - Sets up cron schedules and webhook triggers
-  - **Data flow modeling** - Maps input sources to output destinations
-  - **Error handling patterns** - Includes robust error management strategies
-
-  ### Iterative Improvement
-  - **Template refinement** - Allows modification of existing workflows
-  - **Validation error fixing** - Helps resolve YAML validation issues
-  - **Feature enhancement** - Adds new capabilities to existing templates
-  - **Performance optimization** - Suggests improvements for efficiency
-
-  ## Usage Scenarios
-
-  ### Initial Workflow Creation
-  ```
-  "Create a daily sync from Salesforce to PostgreSQL that:
-   - Fetches new contacts created in the last 24 hours
-   - Transforms the data to match our database schema
-   - Handles API rate limits gracefully
-   - Sends error notifications to Slack"
-  ```
-
-  ### Template Enhancement
-  ```
-  "Add retry logic to the HTTP requests and include data validation
-   before inserting into the database"
-  ```
-
-  ### Error Resolution
-  ```
-  "Fix the validation error about the invalid cron expression
-   and make the sync run every 6 hours instead of daily"
-  ```
-
-  ## Workflow Generation Process
-
-  1. **Requirements Analysis** - AI analyzes the natural language description
-  2. **Architecture Design** - Determines optimal workflow structure and components
-  3. **Adaptor Selection** - Chooses appropriate OpenFn adaptors for integrations
-  4. **YAML Generation** - Creates complete, valid Lightning workflow definition
-  5. **Validation & Optimization** - Ensures compliance and applies best practices
-  6. **Documentation Generation** - Provides explanations and usage guidance
-
-  ## Integration Points
-
-  ### Lightning Core Integration
-  - Project-scoped template generation
-  - Lightning workflow validation
-  - OpenFn adaptor registry integration
-  - Lightning permission system compliance
-
-  ### UI Integration
-  - Real-time template preview
-  - Apply template functionality
-  - Validation error display
-  - Template export capabilities
-
-  ## Security & Governance
-
-  - **Permission enforcement** - Respects workflow editing permissions
-  - **Project isolation** - Templates scoped to specific projects
-  - **Usage limit compliance** - Tracks and enforces AI usage quotas
-  - **Data protection** - Secure handling of sensitive configuration data
-
-  ## Template Quality Assurance
-
-  - **Syntax validation** - Ensures valid YAML structure
-  - **Lightning compliance** - Follows Lightning workflow specifications
-  - **Best practice application** - Implements recommended patterns
-  - **Performance optimization** - Optimizes for efficiency and reliability
   """
 
   use LightningWeb.Live.AiAssistant.ModeBehavior
@@ -100,11 +20,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   The session is configured for template generation with appropriate
   metadata and context for the AI service.
 
-  ## Required Assigns
-
-  - `:project` - The project where the workflow will be created
-  - `:current_user` - The user requesting template generation
-
   ## Examples
 
       # Create session for new workflow
@@ -118,13 +33,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
         %{project: project, current_user: user},
         "Add error handling and retry logic to existing webhook workflow"
       )
-
-  ## Implementation Notes
-
-  - Associates session with the target project for proper scoping
-  - Sets session type to "workflow_template" for specialized handling
-  - Creates initial user message describing the desired workflow
-  - Prepares session for template generation workflow
   """
   @impl true
   @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
@@ -142,13 +50,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
       session = WorkflowTemplate.get_session!(session_id, %{})
       # Session includes all messages and any generated workflow YAML
-
-  ## Implementation Notes
-
-  - Loads complete message history for context
-  - Includes any previously generated workflow code
-  - Prepares session for continued template development
-  - No additional context enrichment needed (unlike job mode)
   """
   @impl true
   @spec get_session!(String.t(), map()) :: map()
@@ -162,10 +63,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   Retrieves paginated sessions associated with the project, filtered
   to show only workflow template generation conversations.
 
-  ## Required Assigns
-
-  - `:project` - The project to filter sessions by
-
   ## Examples
 
       # Load recent template sessions
@@ -174,13 +71,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
         :desc,
         limit: 15
       )
-
-  ## Implementation Notes
-
-  - Filters to workflow template sessions only
-  - Project-scoped for proper isolation
-  - Includes session metadata for preview display
-  - Supports pagination for performance
   """
   @impl true
   @spec list_sessions(map(), atom(), keyword()) :: %{
@@ -196,10 +86,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Determines if additional sessions are available beyond the current count
   for implementing pagination controls.
-
-  ## Required Assigns
-
-  - `:project` - The project to check session count for
 
   ## Examples
 
@@ -218,11 +104,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Adds user requests, modifications, or questions to the conversation
   history for AI processing and template generation.
-
-  ## Required Assigns
-
-  - `:session` - The target template generation session
-  - `:current_user` - The user sending the message
 
   ## Examples
 
@@ -273,22 +154,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
         session,
         "Add error notifications to Slack when the sync fails"
       )
-
-  ## AI Processing Features
-
-  - **Template generation** - Creates complete workflow YAML
-  - **Iterative improvement** - Modifies existing templates
-  - **Error correction** - Fixes validation issues
-  - **Best practices** - Applies Lightning conventions
-  - **Documentation** - Provides usage explanations
-
-  ## Response Content
-
-  The AI response includes:
-  - Human-readable explanation of the generated workflow
-  - Complete YAML workflow definition
-  - Usage guidance and configuration notes
-  - Best practice recommendations
   """
   @impl true
   @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
@@ -302,20 +167,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   Evaluates conditions specific to template generation to ensure the
   feature is only available when appropriate permissions and service
   availability allow it.
-
-  ## Required Assigns
-
-  - `:can_edit_workflow` - User's workflow editing permissions
-  - `:ai_limit_result` - Current AI usage limit status
-  - `:endpoint_available?` - AI service availability
-  - `:pending_message` - Current message processing state
-
-  ## Disabled Conditions
-
-  - User lacks workflow editing permissions
-  - AI usage limits have been reached
-  - AI service endpoint is unavailable
-  - Template generation is currently in progress
 
   ## Examples
 
@@ -336,12 +187,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
         pending_message: %{loading: nil}
       })
       # => true
-
-  ## Implementation Notes
-
-  - No job save state validation needed (unlike job mode)
-  - Focuses on permissions and service availability
-  - Considers template generation processing state
   """
   @impl true
   @spec chat_input_disabled?(map()) :: boolean()
@@ -374,12 +219,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Creates descriptive titles that include project context when available,
   making it easier to identify and organize template generation sessions.
-
-  ## Title Priority
-
-  1. Session's custom title (if set)
-  2. "[Project Name] Workflow" (if project name available)
-  3. "New Workflow" (fallback)
 
   ## Examples
 
@@ -457,13 +296,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
       # When no YAML is present
       handle_response_generated(assigns, session_without_yaml, ui_callback)
       # No UI update triggered, returns assigns unchanged
-
-  ## Implementation Notes
-
-  - Extracts workflow YAML from the latest AI response
-  - Triggers UI callback to enable template application features
-  - Enables real-time template preview and validation
-  - Supports iterative template improvement workflow
   """
   @impl true
   @spec handle_response_generated(map(), map(), function()) :: map()
@@ -494,12 +326,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
       # Starting new template session
       on_session_start(socket, ui_callback)
       # Triggers :clear_template to reset UI state
-
-  ## Implementation Notes
-
-  - Ensures clean state for new template generation
-  - Prevents confusion from previous template data
-  - Prepares UI for fresh workflow creation process
   """
   @impl true
   @spec on_session_start(map(), function()) :: map()

@@ -1,5 +1,5 @@
 defmodule LightningWeb.AiAssistant.Modes.WorkflowTemplateTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
 

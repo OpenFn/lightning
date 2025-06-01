@@ -16,41 +16,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
   * `is_public` - Whether the message is publicly visible (defaults to true)
   * `chat_session_id` - Reference to the parent chat session
   * `user_id` - Reference to the user who sent the message (required for user messages)
-
-  ## Message Lifecycle
-
-  ### User Messages
-  1. Created with `:pending` status
-  2. Processed by AI assistant
-  3. Status updated to `:success`, `:error`, or `:cancelled` based on processing outcome
-
-  ### Assistant Messages
-  1. Created with `:success` status (typically generated successfully)
-  2. May be updated to `:error` if post-processing fails
-
-  ## Examples
-
-      # Create a user message
-      %ChatMessage{}
-      |> ChatMessage.changeset(%{
-        content: "Help me create a workflow",
-        role: :user,
-        user: user,
-        chat_session_id: session_id
-      })
-
-      # Create an assistant message
-      %ChatMessage{}
-      |> ChatMessage.changeset(%{
-        content: "Here's your workflow...",
-        workflow_code: "defmodule MyWorkflow...",
-        role: :assistant,
-        chat_session_id: session_id
-      })
-
-      # Update message status
-      message
-      |> ChatMessage.status_changeset(:success)
   """
 
   use Lightning.Schema

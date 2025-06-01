@@ -5,110 +5,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
   This module provides intelligent pagination support for AI Assistant sessions,
   handling the complexities of offset-based pagination, infinite scroll patterns,
   and "Load More" functionality commonly used in chat interfaces.
-
-  ## Pagination Patterns Supported
-
-  ### Traditional Page-Based Navigation
-  - **Page numbers** with prev/next navigation
-  - **Page size control** for different viewing preferences
-  - **Total page calculation** for complete navigation
-  - **Current page tracking** for state management
-
-  ### Infinite Scroll & Load More
-  - **Progressive loading** of sessions as user scrolls
-  - **Load more buttons** for explicit content expansion
-  - **Has more detection** for enabling/disabling controls
-  - **Offset calculation** for efficient database queries
-
-  ### Chat Interface Optimization
-  - **Recent-first ordering** typical in chat applications
-  - **Session preview** with efficient message counting
-  - **Responsive pagination** adapting to different screen sizes
-  - **Performance optimization** for large session lists
-
-  ## Key Features
-
-  ### Intelligent Page Calculation
-  - **Dynamic page detection** based on loaded item count
-  - **Boundary handling** for edge cases (empty lists, partial pages)
-  - **Flexible page sizing** supporting different UI requirements
-  - **Accurate navigation state** for prev/next controls
-
-  ### Database Query Integration
-  - **Offset calculation** for LIMIT/OFFSET queries
-  - **Efficient batch loading** minimizing database round trips
-  - **Count optimization** with separate count queries when needed
-  - **Performance-aware pagination** for large datasets
-
-  ### User Experience Enhancement
-  - **Loading state management** for progressive content
-  - **Navigation feedback** with clear current position
-  - **Accessibility support** with semantic pagination controls
-  - **Mobile-friendly patterns** for touch interfaces
-
-  ## Usage Patterns
-
-  ### Basic Session Pagination
-  ```elixir
-  # Load first page of sessions
-  %{sessions: sessions, pagination: meta} =
-    AiAssistant.list_sessions(resource, :desc, offset: 0, limit: 20)
-
-  # Meta provides: %PaginationMeta{current_page: 1, has_next_page: true, ...}
-  ```
-
-  ### Load More Implementation
-  ```elixir
-  # Check if more content available
-  if meta.has_next_page do
-    # Calculate next offset
-    next_offset = meta.current_page * meta.page_size
-    # Load next batch...
-  end
-  ```
-
-  ### UI Navigation Integration
-  ```elixir
-  # Generate page navigation
-  for page <- 1..PaginationMeta.total_pages(meta) do
-    render_page_link(page, page == meta.current_page)
-  end
-  ```
-
-  ## Implementation Philosophy
-
-  The module follows a "progressive loading" philosophy where:
-  - **Sessions load incrementally** as users explore conversation history
-  - **Navigation state adapts** to the current loading progress
-  - **Database queries optimize** for the most common access patterns
-  - **UI components receive** all necessary state for intelligent rendering
-
-  ## Performance Considerations
-
-  - **Efficient calculations** using integer arithmetic for page math
-  - **Minimal memory footprint** with simple struct design
-  - **Database-friendly offsets** for optimal query performance
-  - **Lazy evaluation** where calculations happen on-demand
-  """
-
-  @typedoc """
-  Pagination metadata structure containing all information needed for navigation.
-
-  ## Fields
-
-  - `:current_page` - One-based page number indicating current position
-  - `:page_size` - Number of items per page (consistent across pagination)
-  - `:total_count` - Total number of items available across all pages
-  - `:has_next_page` - Boolean indicating if more content is available to load
-  - `:has_prev_page` - Boolean indicating if user can navigate to previous content
-
-  ## Usage
-
-  This struct is designed to be used with UI components for:
-  - Enabling/disabling navigation buttons
-  - Calculating database query offsets
-  - Displaying progress information
-  - Managing loading states
   """
   @type t :: %__MODULE__{
           current_page: pos_integer(),
@@ -192,13 +88,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
       #   has_next_page: false,
       #   has_prev_page: false
       # }
-
-  ## Implementation Notes
-
-  - Uses `max(1, ...)` to ensure page numbers start at 1
-  - Handles edge cases like empty datasets gracefully
-  - Optimized for incremental loading patterns
-  - Compatible with standard database LIMIT/OFFSET patterns
   """
   @spec new(non_neg_integer(), pos_integer(), non_neg_integer()) :: t()
   def new(current_sessions_count, page_size, total_count) do
@@ -266,13 +155,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
       if PaginationMeta.total_pages(meta) > 1 do
         show_pagination_controls()
       end
-
-  ## Implementation Notes
-
-  - Uses ceiling division with `div(total - 1, size) + 1` pattern
-  - Ensures minimum of 1 page even for empty datasets
-  - Handles partial last pages correctly
-  - O(1) constant time calculation
   """
   @spec total_pages(t()) :: pos_integer()
   def total_pages(%__MODULE__{total_count: total_count, page_size: page_size}) do
@@ -328,13 +210,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
         offset: PaginationMeta.current_offset(meta),
         limit: meta.page_size
       )
-
-  ## Implementation Notes
-
-  - Zero-based offset compatible with SQL OFFSET clause
-  - Direct calculation without iteration for O(1) performance
-  - Works with both forward and backward pagination
-  - Consistent with database pagination standards
   """
   @spec current_offset(t()) :: non_neg_integer()
   def current_offset(%__MODULE__{
@@ -385,40 +260,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
       meta = PaginationMeta.new(0, 20, 0)
       PaginationMeta.summary(meta)
       # => "No items"
-
-  ## UI Integration
-
-      # In pagination footer
-      <div class="pagination-info">
-        <%= PaginationMeta.summary(@pagination) %>
-      </div>
-
-      # In accessible pagination controls
-      <nav aria-label="Sessions pagination">
-        <p><%= PaginationMeta.summary(@pagination) %></p>
-        <!-- pagination buttons -->
-      </nav>
-
-      # In loading states
-      <%= if @loading do %>
-        Loading more sessions...
-      <% else %>
-        <%= PaginationMeta.summary(@pagination) %>
-      <% end %>
-
-  ## Accessibility Features
-
-  - **Clear language** describing visible content range
-  - **Total context** helping users understand dataset size
-  - **Empty state handling** with appropriate messaging
-  - **Screen reader friendly** text for assistive technologies
-
-  ## Implementation Notes
-
-  - Handles edge cases like empty datasets gracefully
-  - Uses 1-based numbering for user-friendly display
-  - Ensures end_item never exceeds total_count
-  - Optimized string formatting for performance
   """
   @spec summary(t()) :: String.t()
   def summary(%__MODULE__{
@@ -451,12 +292,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
       meta = PaginationMeta.new(40, 20, 100)
       PaginationMeta.first_page?(meta)
       # => false
-
-  ## UI Usage
-
-      <%= if not PaginationMeta.first_page?(@pagination) do %>
-        <button phx-click="goto_first_page">First</button>
-      <% end %>
   """
   @spec first_page?(t()) :: boolean()
   def first_page?(%__MODULE__{current_page: 1}), do: true
@@ -477,12 +312,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
       meta = PaginationMeta.new(40, 20, 100)   # More sessions available
       PaginationMeta.last_page?(meta)
       # => false
-
-  ## UI Usage
-
-      <%= if not PaginationMeta.last_page?(@pagination) do %>
-        <button phx-click="goto_last_page">Last</button>
-      <% end %>
   """
   @spec last_page?(t()) :: boolean()
   def last_page?(%__MODULE__{has_next_page: false}), do: true
@@ -511,12 +340,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
       # Calculate offset for page 3
       PaginationMeta.current_offset(page3_meta)
       # => 40
-
-  ## Implementation Notes
-
-  - Preserves page_size and total_count from original metadata
-  - Recalculates navigation state for the target page
-  - Useful for implementing "jump to page" functionality
   """
   @spec for_page(t(), pos_integer()) :: t()
   def for_page(
@@ -548,18 +371,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
       meta = PaginationMeta.new(120, 20, 200)  # Page 6 of 10
       PaginationMeta.page_range(meta, 5)
       # => [4, 5, 6, 7, 8]
-
-  ## UI Usage
-
-      <%= for page <- PaginationMeta.page_range(@pagination) do %>
-        <button
-          class={if page == @pagination.current_page, do: "active"}
-          phx-click="goto_page"
-          phx-value-page={page}
-        >
-          <%= page %>
-        </button>
-      <% end %>
   """
   @spec page_range(t(), pos_integer()) :: [pos_integer()]
   def page_range(%__MODULE__{} = meta, max_pages \\ 5) do

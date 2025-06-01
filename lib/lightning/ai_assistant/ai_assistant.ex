@@ -9,40 +9,6 @@ defmodule Lightning.AiAssistant do
      adaptor-specific guidance for individual workflow jobs
   2. **Workflow template generation** - Assists in creating complete workflow
      templates from natural language descriptions
-
-  ## Key Features
-
-  - Chat session management with message history
-  - Integration with Apollo AI service for intelligent responses
-  - Usage tracking and rate limiting
-  - User disclaimer management
-  - Pagination support for session lists
-  - Real-time message status tracking
-
-  ## Session Types
-
-  - **Job sessions** - Associated with specific jobs, include expression and adaptor context
-  - **Workflow template sessions** - Associated with projects, help generate workflow YAML
-
-  ## Architecture
-
-  The module integrates with several Lightning components:
-  - `Lightning.ApolloClient` - External AI service communication
-  - `Lightning.Services.UsageLimiter` - AI usage tracking and limits
-  - `Lightning.Accounts` - User preference management
-  - Database models: `ChatSession`, `ChatMessage`
-
-  ## Example Usage
-
-      # Create a job-specific session
-      {:ok, session} = AiAssistant.create_session(job, user, "Help me debug this code")
-
-      # Query the AI for assistance
-      {:ok, updated_session} = AiAssistant.query(session, "What's wrong with my expression?")
-
-      # Create workflow template session
-      {:ok, workflow_session} = AiAssistant.create_workflow_session(project, user, "Create a data sync workflow")
-
   """
 
   import Ecto.Query, warn: false
@@ -297,6 +263,7 @@ defmodule Lightning.AiAssistant do
   - All non-cancelled messages ordered by creation time
   - User information for each message
   - Session metadata
+  - Project information (for workflow template sessions)
 
   ## Parameters
 
@@ -305,6 +272,7 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   A `ChatSession` struct with preloaded `:messages` and nested `:user` data.
+  For workflow template sessions, the `:project` association is also preloaded.
 
   ## Raises
 
@@ -312,11 +280,15 @@ defmodule Lightning.AiAssistant do
 
   ## Examples
 
+      # Job session
       session = AiAssistant.get_session!("123e4567-e89b-12d3-a456-426614174000")
       IO.puts("Session has # {length(session.messages)} messages")
 
+      # Workflow template session (includes project)
+      session = AiAssistant.get_session!("workflow-session-id")
+      IO.puts("Workflow for project: # {session.project.name}")
+
   """
-  @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
   def get_session!(id) do
     message_query =
       from(m in ChatMessage,
@@ -324,9 +296,16 @@ defmodule Lightning.AiAssistant do
         order_by: [asc: :inserted_at]
       )
 
-    ChatSession
-    |> Repo.get!(id)
-    |> Repo.preload(messages: {message_query, :user})
+    session =
+      ChatSession
+      |> Repo.get!(id)
+      |> Repo.preload(messages: {message_query, :user})
+
+    if session.session_type == "workflow_template" do
+      Repo.preload(session, :project)
+    else
+      session
+    end
   end
 
   @doc """
@@ -338,7 +317,7 @@ defmodule Lightning.AiAssistant do
 
   ## Parameters
 
-  - `resource` - A `%Project{}` or `%Job{}` struct to filter sessions by
+  - `resource` - A `%Project{}`, `%Job{}`, or `%Snapshot.Job{}` struct to filter sessions by
   - `sort_direction` - Sort order, either `:asc` or `:desc` (default: `:desc`)
   - `opts` - Keyword list of options:
     - `:offset` - Number of records to skip (default: 0)
@@ -361,18 +340,17 @@ defmodule Lightning.AiAssistant do
         AiAssistant.list_sessions(job, :asc, offset: 10, limit: 5)
 
   """
-  @spec list_sessions(
-          Project.t() | Job.t(),
-          :asc | :desc,
-          keyword()
-        ) :: %{sessions: [ChatSession.t()], pagination: PaginationMeta.t()}
+  @spec list_sessions(Project.t() | Job.t(), :asc | :desc, keyword()) :: %{
+          sessions: [ChatSession.t()],
+          pagination: PaginationMeta.t()
+        }
   def list_sessions(resource, sort_direction \\ :desc, opts \\ []) do
     offset = Keyword.get(opts, :offset, 0)
     limit = Keyword.get(opts, :limit, 20)
 
     {sessions, total_count} =
       case resource do
-        %Project{} = project ->
+        %{__struct__: Lightning.Projects.Project} = project ->
           get_workflow_sessions_with_count(
             project,
             sort_direction,
@@ -380,7 +358,11 @@ defmodule Lightning.AiAssistant do
             limit
           )
 
-        %Job{} = job ->
+        %{__struct__: struct_type} = job
+        when struct_type in [
+               Lightning.Workflows.Job,
+               Lightning.Workflows.Snapshot.Job
+             ] ->
           get_job_sessions_with_count(job, sort_direction, offset, limit)
       end
 

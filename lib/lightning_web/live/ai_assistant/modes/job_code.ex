@@ -5,76 +5,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   This mode provides intelligent assistance for developing, debugging, and optimizing
   job code within Lightning workflows. It leverages job-specific context including
   the expression code and adaptor information to provide targeted AI assistance.
-
-  ## Key Features
-
-  ### Contextual Code Assistance
-  - **Expression-aware help** - AI understands the current job's code context
-  - **Adaptor-specific guidance** - Targeted advice for specific OpenFn adaptors
-  - **Debugging assistance** - Help identifying and fixing code issues
-  - **Best practices** - Recommendations for code improvement and optimization
-
-  ### Job Integration
-  - **Automatic context loading** - Job expression and adaptor are automatically included
-  - **Permission-aware** - Respects workflow editing permissions
-  - **Save state validation** - Requires saved jobs for AI assistance
-  - **Usage limit enforcement** - Tracks and enforces AI usage limits
-
-  ## Usage Context
-
-  This mode is activated when:
-  - A specific job is selected in the workflow editor
-  - User has edit permissions for the workflow
-  - Job has been saved (not in draft state)
-  - AI service is available and within usage limits
-
-  ## AI Assistance Types
-
-  ### Code Development
-  - Writing new expression code
-  - Adaptor function recommendations
-  - State transformation patterns
-  - Error handling implementation
-
-  ### Debugging & Troubleshooting
-  - Error message interpretation
-  - Code review and optimization
-  - Performance improvement suggestions
-  - Common pattern identification
-
-  ### Adaptor-Specific Help
-  - Function documentation and examples
-  - Configuration guidance
-  - Integration patterns
-  - Version-specific features
-
-  ## Example Interactions
-
-      # Getting help with HTTP requests
-      "How do I add authentication headers to my HTTP request?"
-
-      # Debugging assistance
-      "Why am I getting a 'Cannot read property' error?"
-
-      # Adaptor guidance
-      "What's the best way to transform this Salesforce data?"
-
-      # Code optimization
-      "How can I make this data transformation more efficient?"
-
-  ## Security & Permissions
-
-  - Requires `can_edit_workflow` permission
-  - Validates job ownership and access rights
-  - Enforces organizational AI usage limits
-  - Protects sensitive job data through secure context handling
-
-  ## Integration with Lightning Core
-
-  - Uses `Lightning.AiAssistant` for session management
-  - Integrates with `Lightning.ApolloClient` for AI queries
-  - Respects Lightning's permission system
-  - Follows Lightning's error handling patterns
   """
 
   use LightningWeb.Live.AiAssistant.ModeBehavior
@@ -100,12 +30,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
         %{selected_job: job, current_user: user},
         "Help me debug this HTTP request error"
       )
-
-  ## Implementation Notes
-
-  - Automatically includes job expression and adaptor context
-  - Associates session with the specific job for future reference
-  - Creates initial user message with the provided content
   """
   @impl true
   @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
@@ -127,12 +51,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
       session = JobCode.get_session!(session_id, %{selected_job: current_job})
       # session now includes job.body as expression and job.adaptor
-
-  ## Implementation Notes
-
-  - Enriches session with current job's expression (body) and adaptor
-  - Enables AI to understand the specific code context
-  - Resolves adaptor information for targeted guidance
   """
   @impl true
   @spec get_session!(String.t(), map()) :: map()
@@ -159,12 +77,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
         :desc,
         limit: 10
       )
-
-  ## Implementation Notes
-
-  - Filters sessions to only those associated with the current job
-  - Includes message counts for session preview
-  - Respects pagination parameters for efficient loading
   """
   @impl true
   @spec list_sessions(map(), atom(), keyword()) :: %{
@@ -249,13 +161,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
         session,
         "What's the best way to handle errors in HTTP requests?"
       )
-
-  ## AI Context Provided
-
-  - Job's expression code for understanding current implementation
-  - Adaptor information for targeted guidance
-  - Previous conversation history for context
-  - OpenFn-specific knowledge for accurate assistance
   """
   @impl true
   @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
@@ -268,22 +173,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   Evaluates multiple conditions to ensure AI assistance is only available
   when appropriate permissions, limits, and job state allow it.
-
-  ## Required Assigns
-
-  - `:selected_job` - Current job selection state
-  - `:can_edit_workflow` - User's edit permissions
-  - `:ai_limit_result` - Current AI usage limit status
-  - `:endpoint_available?` - AI service availability
-  - `:pending_message` - Loading state for current message
-
-  ## Disabled Conditions
-
-  - User lacks workflow editing permissions
-  - AI usage limits have been reached
-  - AI service endpoint is unavailable
-  - Message is currently being processed
-  - Selected job is in unsaved/draft state
 
   ## Examples
 
@@ -340,12 +229,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   Creates descriptive titles that include job context when available,
   making it easier to identify sessions in lists.
-
-  ## Title Priority
-
-  1. Session's custom title (if set)
-  2. "Help with [Job Name]" (if job name available)
-  3. "Job Code Help" (fallback)
 
   ## Examples
 

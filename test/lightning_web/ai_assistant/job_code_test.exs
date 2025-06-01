@@ -1,5 +1,5 @@
 defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias LightningWeb.Live.AiAssistant.Modes.JobCode
 
