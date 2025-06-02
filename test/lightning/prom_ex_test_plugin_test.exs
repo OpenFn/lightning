@@ -1,4 +1,4 @@
-defmodule Lightning.Runs.PromExPluginText do
+defmodule Lightning.PromExPluginTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.PromExTestPlugin

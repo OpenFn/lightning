@@ -1,4 +1,4 @@
-defmodule Lightning.Runs.PromExPluginText do
+defmodule Lightning.Runs.PromExPluginTest do
   use Lightning.DataCase, async: false
 
   import Lightning.Factories
