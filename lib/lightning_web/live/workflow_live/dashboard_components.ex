@@ -13,7 +13,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :period, :string, default: "last 30 days"
   attr :can_create_workflow, :boolean
   attr :can_delete_workflow, :boolean
-  attr :workflow_creation_limit_error, :string
   attr :workflows_stats, :list
   attr :project, :map
   attr :sort_key, :string, default: "name"
@@ -29,7 +28,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <.search_workflows_input search_term={@search_term} />
           <.create_workflow_card
             project_id={@project.id}
-            limit_error={@workflow_creation_limit_error}
             can_create_workflow={@can_create_workflow}
           />
         </div>
@@ -350,16 +348,15 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   attr :can_create_workflow, :boolean, required: true
   attr :project_id, :string, required: true
-  attr :limit_error, :string
 
   def create_workflow_card(assigns) do
     assigns =
       assigns
       |> assign_new(:disabled, fn ->
-        !assigns.can_create_workflow or is_binary(assigns.limit_error)
+        !assigns.can_create_workflow
       end)
       |> assign_new(:tooltip, fn ->
-        assigns.limit_error || "You are not authorized to perform this action."
+        "You are not authorized to perform this action."
       end)
 
     ~H"""

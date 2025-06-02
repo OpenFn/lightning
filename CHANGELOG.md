@@ -28,6 +28,8 @@ and this project adheres to
 
 - Standardize sub-tabs (tabs inside tabs on Inspector)
   [#3261](https://github.com/OpenFn/lightning/pull/3261)
+- No longer blocking the "Create new workflow" button based on _active_ workflow
+  limits [#3251](https://github.com/OpenFn/lightning/pull/3251)
 
 ### Fixed
 
