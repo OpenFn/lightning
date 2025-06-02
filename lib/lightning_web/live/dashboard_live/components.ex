@@ -182,6 +182,11 @@ defmodule LightningWeb.DashboardLive.Components do
               >
                 <.td>
                   {project.name}
+                  <.icon
+                    :if={project.has_ai_chat}
+                    name="hero-sparkles"
+                    class="size-4"
+                  />
                 </.td>
                 <.td class="break-words max-w-[25rem]">
                   {String.capitalize(to_string(project.role))}
