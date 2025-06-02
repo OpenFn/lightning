@@ -39,7 +39,6 @@ defmodule Lightning.Workflows.Trigger do
     field :custom_path, :string
     field :cron_expression, :string
     field :enabled, :boolean, default: false
-    field :position, :map, virtual: true
 
     belongs_to :workflow, Workflow
 
@@ -85,8 +84,7 @@ defmodule Lightning.Workflows.Trigger do
       :type,
       :workflow_id,
       :cron_expression,
-      :has_auth_method,
-      :position
+      :has_auth_method
     ])
   end
 

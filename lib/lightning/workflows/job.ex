@@ -43,7 +43,6 @@ defmodule Lightning.Workflows.Job do
 
     field :name, :string
     field :adaptor, :string, default: "@openfn/language-common@latest"
-    field :position, :map, virtual: true
 
     belongs_to :project_credential, ProjectCredential
     has_one :credential, through: [:project_credential, :credential]
@@ -72,7 +71,6 @@ defmodule Lightning.Workflows.Job do
       :name,
       :body,
       :adaptor,
-      :position,
       :project_credential_id,
       :workflow_id
     ])

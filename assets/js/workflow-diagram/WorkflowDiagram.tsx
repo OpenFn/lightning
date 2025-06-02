@@ -47,12 +47,23 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const { jobs, triggers, edges, disabled } = useWorkflowStore();
+  const { jobs, triggers, edges, disabled, positions, updatePositions } =
+    useWorkflowStore();
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
-  const [autoLayout, setAutoLayout] = useState(true);
+  const [autoLayout, setAutoLayout] = useState(
+    positions === null ? true : false
+  );
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
+
+  const toggleAutoLayout = () => {
+    if (!autoLayout) {
+      updatePositions(null);
+    }
+
+    setAutoLayout(!autoLayout);
+  };
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -81,8 +92,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   );
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
+
   const chartCache = useRef<ChartCache>({
-    positions: {},
+    positions: positions || {},
     // This will set the initial selection into the cache
     lastSelection: selection,
     lastLayout: undefined,
@@ -113,6 +125,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       }, {} as Positions);
 
       chartCache.current.positions = newPositions;
+      updatePositions(newPositions);
       return;
     }
 
@@ -148,7 +161,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, autoLayout]);
+  }, [workflow, flow, placeholders, el, autoLayout, updatePositions]);
 
   useEffect(() => {
     const updatedModel = updateSelectionStyles(model, selection);
@@ -159,6 +172,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     (changes: NodeChange[]) => {
       const newNodes = applyNodeChanges(changes, model.nodes);
       setModel({ nodes: newNodes, edges: model.edges });
+
+      if (!autoLayout) {
+        const newPositions = newNodes.reduce((obj, next) => {
+          obj[next.id] = next.position;
+          return obj;
+        }, {} as Positions);
+        chartCache.current.positions = newPositions;
+        updatePositions(newPositions);
+      }
     },
     [setModel, model]
   );
@@ -276,11 +298,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         {...connectHandlers}
       >
         <Controls position="bottom-left" showInteractive={false}>
-          <ControlButton
-            onClick={() => {
-              setAutoLayout(!autoLayout);
-            }}
-          >
+          <ControlButton onClick={toggleAutoLayout}>
             {autoLayout ? 'MnL' : 'AtL'}
           </ControlButton>
           <ControlButton

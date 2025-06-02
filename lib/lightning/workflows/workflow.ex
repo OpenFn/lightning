@@ -38,7 +38,7 @@ defmodule Lightning.Workflows.Workflow do
     field :name, :string
     field :concurrency, :integer, default: nil
     field :enable_job_logs, :boolean, default: true
-    field :positions, :map, virtual: true
+    field :positions, :map
 
     has_many :edges, Edge, on_replace: :delete_if_exists
 
