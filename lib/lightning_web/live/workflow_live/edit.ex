@@ -187,8 +187,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
           module={LightningWeb.WorkflowLive.NewWorkflowComponent}
           workflow={@workflow}
           project={@project}
+          selected_method={@method || "template"}
+          base_url={@base_url}
+          chat_session_id={@chat_session_id}
+          current_user={@current_user}
+          class="transition-all duration-300 ease-in-out"
         />
-        <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
+        <div
+          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "w-2/3", else: ""}"}
+          id={"workflow-edit-#{@workflow.id}"}
+        >
+          <.selected_template_label
+            :if={@selected_template && @show_new_workflow_panel}
+            template={@selected_template}
+            class="transition-all duration-300 ease-in-out"
+          />
+          <.canvas_placeholder_card :if={@show_canvas_placeholder} />
           <div class="flex-none" id="job-editor-pane">
             <div
               :if={@selected_job && @selection_mode == "expand"}
@@ -268,9 +282,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       <%= if @ai_assistant_enabled do %>
                         <div class="grow min-h-0 h-full text-sm">
                           <.live_component
-                            module={LightningWeb.WorkflowLive.AiAssistantComponent}
+                            module={LightningWeb.AiAssistant.Component}
+                            mode={:job}
                             can_edit_workflow={@can_edit_workflow}
-                            project_id={@project.id}
+                            project={@project}
                             current_user={@current_user}
                             selected_job={@selected_job}
                             chat_session_id={@chat_session_id}
@@ -366,7 +381,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </div>
           </div>
 
-          <.WorkflowEditor react-portal-target="workflow-mount" />
+          <.WorkflowEditor
+            :if={!@show_canvas_placeholder}
+            react-portal-target="workflow-mount"
+          />
           <.live_component
             :if={@selected_job}
             id="new-credential-modal"
@@ -1174,44 +1192,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     Permissions.can(ProjectUsers, :create_workflow, current_user, project_user)
     |> then(fn
       :ok ->
-        socket
-        |> assign(
-          can_edit_workflow:
-            Permissions.can?(
-              ProjectUsers,
-              :edit_workflow,
-              current_user,
-              project_user
-            ),
-          can_run_workflow:
-            Permissions.can?(
-              ProjectUsers,
-              :run_workflow,
-              current_user,
-              project_user
-            ),
-          can_write_webhook_auth_method:
-            Permissions.can?(
-              ProjectUsers,
-              :write_webhook_auth_method,
-              current_user,
-              project_user
-            ),
-          can_edit_data_retention:
-            Permissions.can?(
-              ProjectUsers,
-              :edit_data_retention,
-              current_user,
-              project_user
-            ),
-          can_edit_run_settings:
-            Permissions.can?(
-              ProjectUsers,
-              :edit_run_settings,
-              current_user,
-              project_user
-            )
-        )
+        assign_permissions(socket, current_user, project_user)
 
       {:error, _} ->
         socket
@@ -1222,7 +1203,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def authorize(%{assigns: %{live_action: :edit}} = socket) do
     %{project_user: project_user, current_user: current_user} = socket.assigns
+    assign_permissions(socket, current_user, project_user)
+  end
 
+  defp assign_permissions(socket, current_user, project_user) do
     socket
     |> assign(
       can_write_webhook_auth_method:
@@ -1261,7 +1245,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @impl true
   def mount(_params, _session, %{assigns: assigns} = socket) do
     view_only_users_ids =
-      assigns.project |> view_only_users() |> Enum.map(fn pu -> pu.user.id end)
+      assigns.project
+      |> view_only_users()
+      |> Enum.map(fn pu -> pu.user.id end)
 
     {:ok,
      socket
@@ -1272,6 +1258,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        expanded_job: nil,
        ai_assistant_enabled: AiAssistant.enabled?(),
        chat_session_id: nil,
+       selected_template: nil,
        follow_run: nil,
        step: nil,
        manual_run_form: nil,
@@ -1286,7 +1273,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
          "m" => nil,
          "a" => nil,
          "v" => nil,
-         "chat" => nil
+         "chat" => nil,
+         "method" => nil
        },
        workflow: nil,
        snapshot: nil,
@@ -1298,9 +1286,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
        oauth_clients: OauthClients.list_clients(assigns.project),
        show_missing_dataclip_selector: false,
        show_new_workflow_panel: assigns.live_action == :new,
+       show_canvas_placeholder: assigns.live_action == :new,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        publish_template: false,
+       method: nil,
        workflow_code: nil,
        project_repo_connection:
          VersionControl.get_repo_connection_for_project(assigns.project.id),
@@ -1810,13 +1800,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
      update(socket, :show_missing_dataclip_selector, fn val -> !val end)}
   end
 
-  def handle_event("toggle_new_workflow_panel", _, socket) do
-    {:noreply,
-     socket
-     |> update(:show_new_workflow_panel, fn val -> !val end)
-     |> maybe_disable_canvas()}
-  end
-
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
     changeset =
       WorkOrders.Manual.new(
@@ -1999,6 +1982,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, assign(socket, publish_template: false)}
   end
 
+  def handle_event("close_template_tooltip", _params, socket) do
+    {:noreply, assign(socket, selected_template: nil)}
+  end
+
   def handle_event(_unhandled_event, _params, socket) do
     # TODO: add a warning and/or log for unhandled events
     {:noreply, socket}
@@ -2038,12 +2025,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def handle_info({"form_changed", %{"workflow" => params} = payload}, socket) do
+  def handle_info({:form_changed, %{"workflow" => params} = payload}, socket) do
     {:noreply,
      handle_new_params(socket, params, :workflow, Map.get(payload, "opts", []))}
   end
 
-  def handle_info({"form_changed", %{"snapshot" => params} = payload}, socket) do
+  def handle_info({:form_changed, %{"snapshot" => params} = payload}, socket) do
     {:noreply,
      handle_new_params(socket, params, :snapshot, Map.get(payload, "opts", []))}
   end
@@ -2089,6 +2076,44 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(summary)
      |> maybe_switch_workflow_version()
      |> maybe_disable_canvas()}
+  end
+
+  def handle_info({:workflow_component_event, action, payload}, socket) do
+    case action do
+      :toggle_workflow_panel ->
+        {:noreply,
+         socket
+         |> assign(selected_template: nil)
+         |> update(:show_new_workflow_panel, fn val -> !val end)
+         |> maybe_disable_canvas()}
+
+      :canvas_state_changed ->
+        {:noreply,
+         socket
+         |> assign(
+           show_canvas_placeholder:
+             Map.get(
+               payload,
+               :show_canvas_placeholder,
+               socket.assigns.show_canvas_placeholder
+             ),
+           selected_template:
+             Map.get(
+               payload,
+               :show_template_tooltip,
+               socket.assigns.selected_template
+             )
+         )}
+
+      :form_changed ->
+        {:noreply,
+         handle_new_params(
+           socket,
+           payload["workflow"],
+           :workflow,
+           Map.get(payload, "opts", [])
+         )}
+    end
   end
 
   def handle_info(%{}, socket) do
@@ -2509,7 +2534,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp send_form_changed(params) do
-    send(self(), {"form_changed", params})
+    send(self(), {:form_changed, params})
   end
 
   defp assign_workflow(socket, workflow) do
@@ -2572,55 +2597,84 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a", "v", "chat"])
+        |> Map.take(["s", "m", "a", "v", "chat", "code", "method"])
         |> Enum.into(%{
           "s" => nil,
           "m" => nil,
           "a" => nil,
           "v" => nil,
-          "chat" => nil
+          "chat" => nil,
+          "code" => nil,
+          "method" => nil
         })
     )
     |> apply_query_params()
   end
 
   defp apply_query_params(socket) do
-    socket.assigns.query_params
-    |> case do
-      %{"m" => "settings", "s" => nil, "a" => nil} ->
-        socket |> unselect_all() |> set_mode("settings")
-
-      %{"m" => "code", "s" => nil, "a" => nil} ->
-        socket
-        |> unselect_all()
-        |> set_mode("code")
-        |> assign(publish_template: false)
-
-      # Nothing is selected
-      %{"s" => nil} ->
-        socket |> unselect_all() |> set_mode(nil)
-
-      # Try to select the given item, possibly with a mode (such as `expand`)
-      %{"s" => selected_id, "m" => mode} ->
-        case find_item(socket.assigns.changeset, selected_id) do
-          [type, selected] ->
-            socket
-            |> set_selected_node(type, selected)
-            |> set_mode(if mode in ["expand"], do: mode, else: nil)
-
-          nil ->
-            socket |> unselect_all()
-        end
-    end
-    |> then(fn socket ->
-      if socket.assigns.show_new_workflow_panel do
-        socket |> unselect_all() |> set_mode(nil)
-      else
-        socket
-      end
-    end)
+    socket
+    |> apply_mode_and_selection()
+    |> handle_new_workflow_panel()
     |> assign_follow_run(socket.assigns.query_params)
     |> assign_chat_session_id(socket.assigns.query_params)
+  end
+
+  defp apply_mode_and_selection(socket) do
+    case socket.assigns.query_params do
+      %{"m" => "settings", "s" => nil, "a" => nil} ->
+        handle_settings_mode(socket)
+
+      %{"m" => "code", "s" => nil, "a" => nil} ->
+        handle_code_mode(socket)
+
+      %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
+        handle_method_assignment(socket, method)
+
+      %{"s" => nil} ->
+        handle_no_selection(socket)
+
+      %{"s" => selected_id, "m" => mode} ->
+        handle_selection_with_mode(socket, selected_id, mode)
+    end
+  end
+
+  defp handle_settings_mode(socket) do
+    socket |> unselect_all() |> set_mode("settings")
+  end
+
+  defp handle_code_mode(socket) do
+    socket
+    |> unselect_all()
+    |> set_mode("code")
+    |> assign(publish_template: false)
+  end
+
+  defp handle_method_assignment(socket, method) do
+    socket |> unselect_all() |> assign(method: method)
+  end
+
+  defp handle_no_selection(socket) do
+    socket |> unselect_all() |> set_mode(nil)
+  end
+
+  defp handle_selection_with_mode(socket, selected_id, mode) do
+    case find_item(socket.assigns.changeset, selected_id) do
+      [type, selected] ->
+        socket
+        |> set_selected_node(type, selected)
+        |> set_mode(if mode in ["expand"], do: mode, else: nil)
+
+      nil ->
+        socket |> unselect_all()
+    end
+  end
+
+  defp handle_new_workflow_panel(socket) do
+    if socket.assigns.show_new_workflow_panel do
+      socket |> unselect_all() |> set_mode(nil)
+    else
+      socket
+    end
   end
 
   defp assign_chat_session_id(socket, %{"chat" => session_id})
@@ -2731,7 +2785,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           is_first_job: first_job?(socket.assigns.changeset, value.id),
           selected_job: value,
           selected_trigger: nil,
-          selected_edge: nil
+          selected_edge: nil,
+          chat_session_id: nil
         )
 
       :triggers ->
@@ -3069,6 +3124,59 @@ defmodule LightningWeb.WorkflowLive.Edit do
     >
       <.icon name="hero-adjustments-vertical" />
     </.link>
+    """
+  end
+
+  defp selected_template_label(assigns) do
+    ~H"""
+    <div
+      id={"selected-template-label-#{@template.id}"}
+      phx-mounted={fade_in()}
+      phx-remove={fade_out()}
+      class="absolute z-[9999] m-4 opacity-75 bg-white/100 border border-gray-200 rounded-lg p-6"
+    >
+      <div class="flex items-start gap-3 opacity-100">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 rounded-lg ai-bg-gradient flex items-center justify-center">
+            <.icon name="hero-document-text" class="w-5 h-5 text-white" />
+          </div>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <h3 class="text-sm font-medium text-gray-900 tracking-tight leading-tight mb-2">
+            {@template.name}
+          </h3>
+          <p class="text-sm text-gray-600 leading-relaxed">
+            {@template.description}
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp canvas_placeholder_card(assigns) do
+    ~H"""
+    <div class="flex items-center justify-center w-full h-full p-8">
+      <div class="max-w-md text-center space-y-6">
+        <div class="relative mx-auto w-24 h-24 mb-8">
+          <div class="relative ai-bg-gradient rounded-2xl p-6">
+            <.icon name="hero-bolt" class="w-12 h-12 text-white" />
+          </div>
+        </div>
+        <div class="space-y-3">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            Ready for a new workflow?
+          </h3>
+          <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
+            Get started by selecting a template, importing a workflow, or opening a chat with the AI assistant.
+          </p>
+        </div>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-6">
+          Not sure where to start? Try browsing our template library first.
+        </p>
+      </div>
+    </div>
     """
   end
 end
