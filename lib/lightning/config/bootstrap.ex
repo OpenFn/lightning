@@ -106,6 +106,12 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
+      timeout:
+        env!(
+          "APOLLO_TIMEOUT",
+          :integer,
+          Utils.get_env([:lightning, :apollo, :timeout])
+        ),
       ai_assistant_api_key: env!("AI_ASSISTANT_API_KEY", :string, nil)
 
     config :lightning, Lightning.Runtime.RuntimeManager,

@@ -9,12 +9,7 @@ defmodule Lightning.ApolloClientTest do
 
   describe "query/4" do
     test "sends a query" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         %{method: :post, url: url, body: body} = env
@@ -52,12 +47,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "sends a query with all parameters" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       context = %{
         expression: "fn(state) => state",
@@ -99,12 +89,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "sends a query with partial parameters" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       context = %{expression: "console.log('hello')"}
 
@@ -126,12 +111,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles error responses" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
         {:ok,
@@ -144,12 +124,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles network errors" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
         {:error, :timeout}
@@ -161,12 +136,7 @@ defmodule Lightning.ApolloClientTest do
 
   describe "job_chat/4" do
     test "sends a job chat request with all parameters" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       context = %{
         expression: "fn(state) => http.get('/api/data')",
@@ -220,12 +190,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "sends job chat with minimal parameters" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         %{body: body} = env
@@ -244,12 +209,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles job chat error responses" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
         {:ok,
@@ -262,12 +222,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles network errors in job chat" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
         {:error, :econnrefused}
@@ -279,12 +234,7 @@ defmodule Lightning.ApolloClientTest do
 
   describe "workflow_chat/5" do
     test "sends a workflow chat request with all parameters" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         %{method: :post, url: url, body: body} = env
@@ -324,12 +274,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "sends a workflow chat request with minimal parameters" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         %{method: :post, url: url, body: body} = env
@@ -360,12 +305,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles error responses" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
         {:ok,
@@ -381,12 +321,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "filters out nil parameters correctly" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         %{body: body} = env
@@ -416,12 +351,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles workflow chat with existing_yaml only" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         %{body: body} = env
@@ -441,12 +371,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles workflow chat with errors only" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         %{body: body} = env
@@ -465,12 +390,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles network errors in workflow chat" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
         {:error, :timeout}
@@ -480,12 +400,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles various HTTP error codes" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
         {:ok, %Tesla.Env{status: 401, body: %{"message" => "Unauthorized"}}}
@@ -509,12 +424,7 @@ defmodule Lightning.ApolloClientTest do
 
   describe "test/0" do
     test "returns :ok when endpoint is available" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
         {:ok, %Tesla.Env{status: 200}}
@@ -524,12 +434,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "returns :error when endpoint is not available" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
         {:ok, %Tesla.Env{status: 404}}
@@ -539,12 +444,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "returns :error when request fails" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
         {:error, :econnrefused}
@@ -554,12 +454,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "returns :ok for all 2xx status codes" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
         {:ok, %Tesla.Env{status: 201}}
@@ -581,12 +476,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "returns :error for non-2xx status codes" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
         {:ok, %Tesla.Env{status: 301}}
@@ -608,12 +498,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "makes request to correct endpoint" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn %{method: :get, url: url}, _opts ->
         assert url == "http://localhost:3000/"
@@ -624,12 +509,7 @@ defmodule Lightning.ApolloClientTest do
     end
 
     test "handles various network errors" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
         {:error, :timeout}
@@ -655,12 +535,7 @@ defmodule Lightning.ApolloClientTest do
     test "all functions use the correct endpoint configuration" do
       custom_endpoint = "https://custom-apollo.example.com"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> custom_endpoint
-          :ai_assistant_api_key -> "custom_api_key"
-        end
-      end)
+      stub_apollo_config(custom_endpoint, "custom_api_key")
 
       expect(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
         assert String.starts_with?(url, custom_endpoint)
@@ -687,12 +562,7 @@ defmodule Lightning.ApolloClientTest do
     test "all functions use the correct API key" do
       custom_api_key = "sk-custom-api-key-12345"
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> custom_api_key
-        end
-      end)
+      stub_apollo_config("http://localhost:3000", custom_api_key)
 
       expect(Lightning.Tesla.Mock, :call, fn %{body: body}, _opts ->
         decoded = Jason.decode!(body)
@@ -714,12 +584,7 @@ defmodule Lightning.ApolloClientTest do
 
   describe "legacy compatibility" do
     test "query/4 is an alias for job_chat/4" do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-        end
-      end)
+      stub_apollo_config()
 
       context = %{expression: "test"}
       history = [%{role: "user", content: "test"}]
@@ -741,5 +606,18 @@ defmodule Lightning.ApolloClientTest do
 
       assert response1.body == response2.body
     end
+  end
+
+  # Private helper function to stub Apollo configuration
+  defp stub_apollo_config(
+         endpoint \\ "http://localhost:3000",
+         api_key \\ "api_key"
+       ) do
+    Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+      case key do
+        :endpoint -> endpoint
+        :ai_assistant_api_key -> api_key
+      end
+    end)
   end
 end
