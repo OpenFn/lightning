@@ -30,6 +30,23 @@ defmodule Lightning.AdaptorsTest do
     assert Lightning.Adaptors.all(%{
              strategy: {MockAdaptorStrategy, [config: "foo"]},
              cache: :adaptors_test
-           }) == []
+           }) == ["@openfn/language-foo"]
+  end
+
+  test "all/1 caches results in the specified cachex process" do
+    start_supervised!({Cachex, [:adaptors_cache_test, []]})
+
+    config = %{
+      strategy: {MockAdaptorStrategy, [config: "foo"]},
+      cache: :adaptors_cache_test
+    }
+
+    # Call all/1 to populate the cache
+    result = Lightning.Adaptors.all(config)
+    assert result == ["@openfn/language-foo"]
+
+    # Query the cache directly to verify the data is stored
+    {:ok, cached_result} = Cachex.get(:adaptors_cache_test, :adaptors)
+    assert cached_result == ["@openfn/language-foo"]
   end
 end
