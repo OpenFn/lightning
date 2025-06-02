@@ -12,6 +12,7 @@ import {
 import Docs from '../adaptor-docs/Docs';
 import Editor from '../editor/Editor';
 import Metadata from '../metadata-explorer/Explorer';
+import { Tabs } from '../components/Tabs';
 
 enum SettingsKeys {
   ORIENTATION = 'lightning.job-editor.orientation',
@@ -24,9 +25,9 @@ const persistedSettings = localStorage.getItem('lightning.job-editor.settings');
 const settings = persistedSettings
   ? JSON.parse(persistedSettings)
   : {
-    [SettingsKeys.ORIENTATION]: 'h',
-    [SettingsKeys.SHOW_PANEL]: false,
-  };
+      [SettingsKeys.ORIENTATION]: 'h',
+      [SettingsKeys.SHOW_PANEL]: false,
+    };
 
 const persistSettings = () =>
   localStorage.setItem(
@@ -34,72 +35,7 @@ const persistSettings = () =>
     JSON.stringify(settings)
   );
 
-const iconStyle = 'inline cursor-pointer h-6 w-6 mr-1 hover:text-primary-600';
-
-type TabSpec = {
-  label: string;
-  id: string;
-  icon: React.JSXElementConstructor<React.SVGAttributes<SVGSVGElement>>;
-};
-
-type TabsProps = {
-  options: TabSpec[];
-  onSelectionChange?: (newName: string) => void;
-  verticalCollapse: boolean;
-  initialSelection?: String;
-};
-
-const Tabs = ({
-  options,
-  onSelectionChange,
-  verticalCollapse,
-  initialSelection,
-}: TabsProps) => {
-  const [selected, setSelected] = useState(initialSelection);
-
-  const handleSelectionChange = (name: string) => {
-    if (name !== selected) {
-      setSelected(name);
-      onSelectionChange?.(name);
-    }
-  };
-
-  const commonStyle = 'flex';
-  const horizStyle = 'flex-space-x-2 w-full';
-  const vertStyle = 'flex-space-y-2';
-
-  const style: React.CSSProperties = verticalCollapse
-    ? {
-      writingMode: 'vertical-rl',
-      textOrientation: 'mixed',
-    }
-    : {};
-
-  return (
-    <nav
-      className={`${commonStyle} ${verticalCollapse ? vertStyle : horizStyle}`}
-      aria-label="Tabs"
-      style={style}
-    >
-      {options.map(({ label, id, icon }) => {
-        const style =
-          id === selected
-            ? 'bg-primary-50 text-gray-700'
-            : 'text-gray-400 hover:text-gray-700';
-        return (
-          <div
-            key={id}
-            onClick={() => handleSelectionChange(id)}
-            className={`${style} select-none rounded-md px-3 py-2 text-sm font-medium cursor-pointer flex-row whitespace-nowrap`}
-          >
-            {React.createElement(icon, { className: iconStyle })}
-            <span className="align-bottom">{label}</span>
-          </div>
-        );
-      })}
-    </nav>
-  );
-};
+const iconStyle = 'inline cursor-pointer h-5 w-5 ml-1 hover:text-primary-600';
 
 type JobEditorComponentProps = {
   adaptor: string;
@@ -168,49 +104,41 @@ export default ({
           />
         </div>
         <div
-          className={`${showPanel ? 'flex flex-1 flex-col z-10 overflow-hidden' : ''
-            } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
+          className={`${
+            showPanel ? 'flex flex-col flex-1 z-10 overflow-hidden' : ''
+          } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
         >
-          <div
-            className={[
-              'flex',
-              !vertical && !showPanel
-                ? 'flex-col-reverse items-center'
-                : 'flex-row',
-              'w-full',
-              'justify-items-end',
-              'sticky',
-            ].join(' ')}
-          >
+          <div className={`relative flex`}>
             <Tabs
               options={[
                 { label: 'Docs', id: 'docs', icon: DocumentTextIcon },
-                { label: 'Metadata', id: 'metadata', icon: SparklesIcon }, // TODO if active, colour it
+                { label: 'Metadata', id: 'metadata', icon: SparklesIcon },
               ]}
               initialSelection={selectedTab}
               onSelectionChange={handleSelectionChange}
-              verticalCollapse={!vertical && !showPanel}
+              collapsedVertical={!vertical && !showPanel}
             />
-            <div
-              className={`flex select-none flex-1 text-right py-2 ${!showPanel && !vertical ? 'flex-col-reverse' : 'flex-row'
-                }`}
-            >
-              <ViewColumnsIcon
-                className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`}
-                onClick={toggleOrientiation}
-                title="Toggle panel orientation"
-              />
-              <CollapseIcon
-                className={iconStyle}
-                onClick={toggleShowPanel}
-                title="Collapse panel"
-              />
-            </div>
+            {/* Floating controls in top right corner */}
+            {showPanel && (
+              <div className="bg-white rounded-lg p-1 flex space-x-1 z-20 items-center">
+                <ViewColumnsIcon
+                  className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`}
+                  onClick={toggleOrientiation}
+                  title="Toggle panel orientation"
+                />
+                <CollapseIcon
+                  className={iconStyle}
+                  onClick={toggleShowPanel}
+                  title="Collapse panel"
+                />
+              </div>
+            )}
           </div>
           {showPanel && (
             <div
-              className={`flex flex-1 ${vertical ? 'overflow-auto' : 'overflow-hidden'
-                }`}
+              className={`flex flex-1 mt-1 ${
+                vertical ? 'overflow-auto' : 'overflow-hidden'
+              }`}
             >
               {selectedTab === 'docs' && <Docs adaptor={adaptor} />}
               {selectedTab === 'metadata' && (

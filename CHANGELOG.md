@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Changed
 
+- Standardize sub-tabs (tabs inside tabs on Inspector)
+  [#3261](https://github.com/OpenFn/lightning/pull/3261)
+
 ### Fixed
 
 - Padding Changes on Project Setup Page
