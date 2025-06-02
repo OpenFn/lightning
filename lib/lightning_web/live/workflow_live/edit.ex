@@ -3324,7 +3324,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       jobs
       |> Enum.map(& &1["id"])
       |> Jobs.filter_with_chat_user(current_user)
-      |> MapSet.new()
+      |> MapSet.new(& &1.id)
 
     Map.update(workflow_params, "jobs", [], fn jobs ->
       Enum.map(jobs, fn job ->

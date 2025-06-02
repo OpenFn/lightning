@@ -2393,6 +2393,31 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # manual run form body is cleared
       refute view |> element("#manual_run_form") |> render() =~ body_part
     end
+
+    test "Indicates a job has AI chat", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      [job1 | _jobs] = workflow.jobs
+
+      insert(:chat_session,
+        user: user,
+        job: dbg(job1),
+        messages: [%{role: :user, content: "what?", user: user}]
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      render_hook(view, "get-current-state", %{})
+
+      assert_reply(view, %{workflow_params: %{"jobs" => reply_jobs}})
+
+      assert Enum.find(reply_jobs, & &1["id"] == job1.id and &1["has_ai_chat"])
+      refute Enum.find(reply_jobs, & &1["id"] != job1.id and &1["has_ai_chat"])
+    end
   end
 
   describe "Tracking Workflow editor metrics" do
