@@ -8,7 +8,7 @@ defmodule Lightning.Adaptors.NPMTest do
 
   setup :verify_on_exit!
 
-  describe "get_all_packages/0" do
+  describe "fetch_adaptors/1" do
     setup do
       %{
         default_npm_response:
@@ -44,7 +44,7 @@ defmodule Lightning.Adaptors.NPMTest do
       )
 
       adaptors =
-        NPM.fetch_adaptors(%{
+        NPM.fetch_adaptors(
           user: "openfn",
           max_concurrency: 10,
           timeout: 30_000,
@@ -57,7 +57,7 @@ defmodule Lightning.Adaptors.NPMTest do
             ] &&
               Regex.match?(~r/@openfn\/language-\w+/, name)
           end
-        })
+        )
 
       expected_adaptors =
         [
@@ -79,12 +79,12 @@ defmodule Lightning.Adaptors.NPMTest do
         returns: fn _env, [] -> {:error, :nxdomain} end
       )
 
-      assert NPM.fetch_adaptors(%{
+      assert NPM.fetch_adaptors(
                user: "openfn",
                max_concurrency: 10,
                timeout: 30_000,
                filter: fn _ -> true end
-             }) == {:error, :nxdomain}
+             ) == {:error, :nxdomain}
     end
 
     test "handles errors when fetching adaptor details", %{
@@ -118,18 +118,107 @@ defmodule Lightning.Adaptors.NPMTest do
       )
 
       response =
-        NPM.fetch_adaptors(%{
+        NPM.fetch_adaptors(
           user: "openfn",
           max_concurrency: 10,
           timeout: 30_000,
           filter: fn _ -> true end
-        })
+        )
 
       assert Enum.any?(response, fn adaptor ->
                adaptor.name == "@openfn/language-common"
              end)
 
       refute {:name, "@openfn/language-asana"} in response
+    end
+  end
+
+  describe "config validation" do
+    test "validates required user field" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors([])
+
+      assert error.message =~ "required :user option not found"
+    end
+
+    test "validates user field type" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors(user: 123)
+
+      assert error.message =~ "expected string, got: 123"
+    end
+
+    test "validates max_concurrency type" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors(user: "openfn", max_concurrency: "invalid")
+
+      assert error.message =~ "expected positive integer"
+    end
+
+    test "validates max_concurrency is positive" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors(user: "openfn", max_concurrency: 0)
+
+      assert error.message =~ "expected positive integer, got: 0"
+    end
+
+    test "validates timeout type" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors(user: "openfn", timeout: "invalid")
+
+      assert error.message =~ "expected positive integer"
+    end
+
+    test "validates timeout is positive" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors(user: "openfn", timeout: -1)
+
+      assert error.message =~ "expected positive integer, got: -1"
+    end
+
+    test "validates filter function arity" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors(user: "openfn", filter: fn -> true end)
+
+      assert error.message =~ "expected function of arity 1"
+    end
+
+    test "validates filter type" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors(user: "openfn", filter: "not_a_function")
+
+      assert error.message =~ "expected function of arity 1"
+    end
+
+    test "accepts valid minimal config with defaults" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn _env, [] -> {:error, :nxdomain} end
+      )
+
+      assert {:error, :nxdomain} = NPM.fetch_adaptors(user: "openfn")
+    end
+
+    test "accepts valid full config" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn _env, [] -> {:error, :nxdomain} end
+      )
+
+      assert {:error, :nxdomain} =
+               NPM.fetch_adaptors(
+                 user: "openfn",
+                 max_concurrency: 5,
+                 timeout: 15_000,
+                 filter: fn name -> String.contains?(name, "language") end
+               )
+    end
+
+    test "rejects unknown options" do
+      assert {:error, %NimbleOptions.ValidationError{} = error} =
+               NPM.fetch_adaptors(user: "openfn", unknown_option: "rejected")
+
+      assert error.message =~ "unknown options [:unknown_option]"
     end
   end
 end

@@ -103,6 +103,7 @@ defmodule Lightning.MixProject do
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
+      {:nimble_options, "~> 1.1"},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.18"},
       {:petal_components, "~> 3.0"},

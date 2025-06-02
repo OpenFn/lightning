@@ -15,32 +15,64 @@ defmodule Lightning.Adaptors.NPM do
   @impl true
   @spec fetch_adaptors(config :: config()) :: {:ok, [map()]} | {:error, term()}
   def fetch_adaptors(config) do
-    user_packages(config[:user])
-    |> case do
-      {:ok, response} ->
-        response
-        |> Map.get(:body)
-        |> Enum.map(fn {name, _} -> name end)
-        |> Enum.filter(Map.get(config, :filter, fn _ -> true end))
-        |> Task.async_stream(
-          &fetch_package_details/1,
-          ordered: false,
-          max_concurrency: config[:max_concurrency],
-          timeout: config[:timeout]
-        )
-        |> Stream.map(fn result ->
-          case result do
-            {:ok, {:error, error}} -> {:error, error}
-            {:ok, detail} -> {:ok, detail}
-          end
-        end)
-        |> Stream.filter(&match?({:ok, _}, &1))
-        |> Stream.map(fn {:ok, detail} -> detail end)
-        |> Enum.to_list()
+    with {:ok, validated_config} <- validate_config(config) do
+      user_packages(validated_config[:user])
+      |> case do
+        {:ok, response} ->
+          response
+          |> Map.get(:body)
+          |> Enum.map(fn {name, _} -> name end)
+          |> Enum.filter(validated_config[:filter])
+          |> Task.async_stream(
+            &fetch_package_details/1,
+            ordered: false,
+            max_concurrency: validated_config[:max_concurrency],
+            timeout: validated_config[:timeout]
+          )
+          |> Stream.map(fn result ->
+            case result do
+              {:ok, {:error, error}} -> {:error, error}
+              {:ok, detail} -> {:ok, detail}
+            end
+          end)
+          |> Stream.filter(&match?({:ok, _}, &1))
+          |> Stream.map(fn {:ok, detail} -> detail end)
+          |> Enum.to_list()
 
-      {:error, error} ->
-        {:error, error}
+        {:error, error} ->
+          {:error, error}
+      end
     end
+  end
+
+  defp validate_config(config) do
+    config_schema =
+      NimbleOptions.new!(
+        user: [
+          type: :string,
+          required: true,
+          doc: "NPM user or organization name"
+        ],
+        max_concurrency: [
+          type: :pos_integer,
+          default: 10,
+          doc:
+            "Maximum number of concurrent requests when fetching package details"
+        ],
+        timeout: [
+          type: :pos_integer,
+          default: 30_000,
+          doc: "Timeout in milliseconds for individual package detail requests"
+        ],
+        filter: [
+          type: {:fun, 1},
+          default: fn _ -> true end,
+          doc:
+            "Function to filter package names. Takes a package name string and returns boolean"
+        ]
+      )
+
+    NimbleOptions.validate(config, config_schema)
   end
 
   @doc """
