@@ -1,7 +1,5 @@
 import React from 'react';
 
-export const iconStyle = 'inline cursor-pointer h-4 w-4 hover:text-primary-600';
-
 export type TabSpec = {
   label: string;
   id: string;

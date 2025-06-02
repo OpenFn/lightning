@@ -12,7 +12,7 @@ import {
 import Docs from '../adaptor-docs/Docs';
 import Editor from '../editor/Editor';
 import Metadata from '../metadata-explorer/Explorer';
-import { Tabs, iconStyle } from '../components/Tabs';
+import { Tabs } from '../components/Tabs';
 
 enum SettingsKeys {
   ORIENTATION = 'lightning.job-editor.orientation',
@@ -34,6 +34,8 @@ const persistSettings = () =>
     'lightning.job-editor.settings',
     JSON.stringify(settings)
   );
+
+const iconStyle = 'inline cursor-pointer h-5 w-5 ml-1 hover:text-primary-600';
 
 type JobEditorComponentProps = {
   adaptor: string;
@@ -118,7 +120,7 @@ export default ({
             />
             {/* Floating controls in top right corner */}
             {showPanel && (
-              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg border border-2 border-gray-200 p-1 flex space-x-1 z-20">
+              <div className="bg-white rounded-lg p-1 flex space-x-1 z-20 items-center">
                 <ViewColumnsIcon
                   className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`}
                   onClick={toggleOrientiation}
