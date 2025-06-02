@@ -623,7 +623,7 @@
   }
 
   .ai-bg-gradient {
-    @apply bg-gradient-to-br from-primary-800 to-primary-500;
+    @apply bg-gradient-to-br from-primary-700 to-primary-400;
   }
 
   .ai-bg-gradient-light {

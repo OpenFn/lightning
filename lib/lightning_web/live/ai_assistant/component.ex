@@ -1323,7 +1323,7 @@ defmodule LightningWeb.AiAssistant.Component do
   defp message_text_classes(status) do
     case status do
       :error -> "text-white"
-      _ -> "text-white font-medium"
+      _ -> "text-white"
     end
   end
 
