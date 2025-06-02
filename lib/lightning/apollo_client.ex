@@ -143,7 +143,8 @@ defmodule Lightning.ApolloClient do
       "meta" => meta
     }
 
-    client() |> Tesla.post("/services/job_chat", payload)
+    client()
+    |> Tesla.post("/services/job_chat", payload)
   end
 
   @doc """
@@ -252,11 +253,14 @@ defmodule Lightning.ApolloClient do
   end
 
   defp client do
-    Tesla.client([
-      {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
-      Tesla.Middleware.JSON,
-      Tesla.Middleware.KeepRequest,
-      {Tesla.Middleware.Timeout, timeout: Lightning.Config.apollo(:timeout)}
-    ])
+    Tesla.client(
+      [
+        {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
+        Tesla.Middleware.JSON,
+        Tesla.Middleware.KeepRequest
+      ],
+      {Tesla.Adapter.Finch,
+       name: Lightning.Finch, receive_timeout: Lightning.Config.apollo(:timeout)}
+    )
   end
 end
