@@ -254,15 +254,17 @@ defmodule Lightning.ApolloClient do
 
   defp client do
     client_params = [
-        {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
-        Tesla.Middleware.JSON,
-        Tesla.Middleware.KeepRequest
-      ]
+      {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
+      Tesla.Middleware.JSON,
+      Tesla.Middleware.KeepRequest
+    ]
 
     if match?({Tesla.Adapter.Finch, _}, Application.get_env(:tesla, :adapter)) do
-      Tesla.client(client_params,
+      Tesla.client(
+        client_params,
         {Tesla.Adapter.Finch,
-        name: Lightning.Finch, receive_timeout: Lightning.Config.apollo(:timeout)}
+         name: Lightning.Finch,
+         receive_timeout: Lightning.Config.apollo(:timeout)}
       )
     else
       Tesla.client(client_params)
