@@ -15,8 +15,7 @@ defmodule Lightning.DistributedRateLimiter do
     %{
       id: id,
       start: {__MODULE__, :start_link, [Keyword.put(opts, :name, name)]},
-      shutdown: 10_000,
-      restart: :transient
+      shutdown: 10_000
     }
   end
 
