@@ -2998,10 +2998,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
             phx-click="toggle_github_sync_modal"
             theme="secondary"
             class={[
-              "hidden absolute right-0 z-10 w-max",
+              "absolute right-0 z-10 w-max",
               if(@dropdown_position == :top, do: "bottom-9 mb-2"),
               if(@dropdown_position == :bottom, do: "top-9 mt-2")
             ]}
+            style="display: none;"
             disabled={@disabled}
             phx-hook="OpenSyncModalViaCtrlShiftS"
           >
