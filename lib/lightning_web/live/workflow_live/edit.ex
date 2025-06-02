@@ -914,7 +914,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           type="submit"
           form={@manual_run_form.id}
           theme="secondary"
-          class="hidden absolute right-0 bottom-9 z-10 mb-2 w-max"
+          class="absolute right-0 bottom-9 z-10 mb-2 w-max"
+          style="display: none;"
           disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
         >
           <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Create New Work Order
