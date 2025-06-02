@@ -16,7 +16,6 @@ const model = (model: Flow.Model) => {
   model.nodes.forEach(node => {
     const wfNode: Partial<Lightning.JobNode> = {
       id: node.id,
-      position: node.position,
       name: node.data?.name,
       body: node.data?.body,
       adaptor: node.data?.adaptor,

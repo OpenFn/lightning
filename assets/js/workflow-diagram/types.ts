@@ -6,7 +6,6 @@ export namespace Lightning {
     id: string;
     name: string;
     workflow_id: string;
-    position: { x: number; y: number };
 
     // Not technically from Lightning, but we'll infer this and scribble it
     placeholder?: boolean;
@@ -58,6 +57,7 @@ export namespace Lightning {
     jobs: JobNode[];
     edges: Edge[];
     disabled: boolean;
+    positions: Positions;
   };
 }
 

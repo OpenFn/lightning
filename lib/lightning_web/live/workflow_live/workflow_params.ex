@@ -87,7 +87,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   defp to_serializable(%Ecto.Changeset{} = changeset, accessor)
        when is_function(accessor) do
     Map.merge(
-      changeset |> to_serializable([:project_id, :name]),
+      changeset |> to_serializable([:project_id, :name, :positions]),
       %{
         jobs:
           changeset
@@ -98,8 +98,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :name,
             :adaptor,
             :body,
-            :project_credential_id,
-            :position
+            :project_credential_id
           ]),
         triggers:
           changeset
@@ -109,8 +108,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :type,
             :cron_expression,
             :has_auth_method,
-            :enabled,
-            :position
+            :enabled
           ]),
         edges:
           changeset
