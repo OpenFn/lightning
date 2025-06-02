@@ -129,4 +129,4 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :lightning, :is_resettable_demo, true
 
-config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 5_000
+config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 30_000
