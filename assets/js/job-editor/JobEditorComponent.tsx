@@ -118,7 +118,7 @@ export default ({
             />
             {/* Floating controls in top right corner */}
             {showPanel && (
-              <div className="absolute top-0 left-0 bg-white rounded-lg shadow-sm border border-gray-200 p-1 flex space-x-1 z-20">
+              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg border border-2 border-gray-200 p-1 flex space-x-1 z-20">
                 <ViewColumnsIcon
                   className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`}
                   onClick={toggleOrientiation}
