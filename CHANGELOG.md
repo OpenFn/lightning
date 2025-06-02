@@ -19,15 +19,19 @@ and this project adheres to
 
 - Set timeout for Apollo client requests.
   [#3009](https://github.com/OpenFn/lightning/issues/3009)
-- Generate workflows using AI 
+- Generate workflows using AI
   [#3174](https://github.com/OpenFn/lightning/issues/3174)
 - Enhance workflows templates UI
   [#3175](https://github.com/OpenFn/lightning/issues/3175)
 
 ### Changed
 
+- Standardize sub-tabs (tabs inside tabs on Inspector)
+  [#3261](https://github.com/OpenFn/lightning/pull/3261)
+
 ### Fixed
 
+- Fix magic metadata [#3134](https://github.com/OpenFn/lightning/issues/3134)
 - Padding Changes on Project Setup Page
   [#3257](https://github.com/OpenFn/lightning/issues/3257)
 
