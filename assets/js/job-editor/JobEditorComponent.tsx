@@ -25,9 +25,9 @@ const persistedSettings = localStorage.getItem('lightning.job-editor.settings');
 const settings = persistedSettings
   ? JSON.parse(persistedSettings)
   : {
-    [SettingsKeys.ORIENTATION]: 'h',
-    [SettingsKeys.SHOW_PANEL]: false,
-  };
+      [SettingsKeys.ORIENTATION]: 'h',
+      [SettingsKeys.SHOW_PANEL]: false,
+    };
 
 const persistSettings = () =>
   localStorage.setItem(
@@ -102,50 +102,41 @@ export default ({
           />
         </div>
         <div
-          className={`${showPanel ? 'flex flex-1 flex-col z-10 overflow-hidden' : ''
-            } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
+          className={`${
+            showPanel ? 'flex flex-col flex-1 z-10 overflow-hidden' : ''
+          } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
         >
-          <div
-            className={[
-              'flex',
-              !vertical && !showPanel
-                ? 'flex-col-reverse items-center'
-                : 'flex-row',
-              'w-full',
-              'justify-items-end',
-              'items-center',
-              'sticky',
-            ].join(' ')}
-          >
+          <div className={`relative flex`}>
             <Tabs
               options={[
                 { label: 'Docs', id: 'docs', icon: DocumentTextIcon },
-                { label: 'Metadata', id: 'metadata', icon: SparklesIcon }, // TODO if active, colour it
+                { label: 'Metadata', id: 'metadata', icon: SparklesIcon },
               ]}
               initialSelection={selectedTab}
               onSelectionChange={handleSelectionChange}
-              verticalCollapse={!vertical && !showPanel}
+              collapsedVertical={!vertical && !showPanel}
             />
-            <div
-              className={`flex select-none flex-1 text-right ${!showPanel && !vertical ? 'flex-col-reverse' : 'flex-row'
-                }`}
-            >
-              <ViewColumnsIcon
-                className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`}
-                onClick={toggleOrientiation}
-                title="Toggle panel orientation"
-              />
-              <CollapseIcon
-                className={iconStyle}
-                onClick={toggleShowPanel}
-                title="Collapse panel"
-              />
-            </div>
+            {/* Floating controls in top right corner */}
+            {showPanel && (
+              <div className="absolute top-0 left-0 bg-white rounded-lg shadow-sm border border-gray-200 p-1 flex space-x-1 z-20">
+                <ViewColumnsIcon
+                  className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`}
+                  onClick={toggleOrientiation}
+                  title="Toggle panel orientation"
+                />
+                <CollapseIcon
+                  className={iconStyle}
+                  onClick={toggleShowPanel}
+                  title="Collapse panel"
+                />
+              </div>
+            )}
           </div>
           {showPanel && (
             <div
-              className={`flex flex-1 ${vertical ? 'overflow-auto' : 'overflow-hidden'
-                }`}
+              className={`flex flex-1 mt-1 ${
+                vertical ? 'overflow-auto' : 'overflow-hidden'
+              }`}
             >
               {selectedTab === 'docs' && <Docs adaptor={adaptor} />}
               {selectedTab === 'metadata' && (
