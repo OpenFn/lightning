@@ -48,7 +48,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        2,
+        0,
         fn %{type: :activate_workflow}, %{project_id: ^project_id} ->
           {:error, :too_many_workflows, %{text: error_message}}
         end
