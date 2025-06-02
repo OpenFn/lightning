@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="Lightning v2.12.3-pre">
+
+
+    <title>LightningWeb.Live.AiAssistant.ModeBehavior — Lightning v2.12.3-pre</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
+
+    <script defer src="dist/sidebar_items-855C5EA5.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.12.3-pre
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-behaviour" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Live.AiAssistant.ModeBehavior</span> <small>behaviour</small>
+      <small class="app-vsn" translate="no">(Lightning v2.12.3-pre)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Defines the behavior contract for AI Assistant interaction modes.</p><p>This behaviour enables the AI Assistant to support multiple interaction patterns
+and contexts through a pluggable mode system. Each mode implements specific
+callbacks to handle different types of AI assistance workflows.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-callbacks summary">
+  <h2>
+    <a href="#callbacks">Callbacks</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:chat_input_disabled?/1" data-no-tooltip="" translate="no">chat_input_disabled?(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Determines if the chat input should be disabled based on mode conditions.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:chat_title/1" data-no-tooltip="" translate="no">chat_title(session)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the display title for a chat session.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:create_session/2" data-no-tooltip="" translate="no">create_session(assigns, content)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Creates a new chat session for the specific mode.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:get_session!/2" data-no-tooltip="" translate="no">get_session!(session_id, assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Retrieves and prepares a session with mode-specific context.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:handle_response_generated/3" data-no-tooltip="" translate="no">handle_response_generated(assigns, session_or_message, ui_callback)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Handles post-processing after the AI generates a response.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:input_placeholder/0" data-no-tooltip="" translate="no">input_placeholder()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the placeholder text for the chat input field.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:list_sessions/3" data-no-tooltip="" translate="no">list_sessions(assigns, sort_direction, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Lists sessions with pagination and mode-specific filtering.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:metadata/0" data-no-tooltip="" translate="no">metadata()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns metadata about this mode for UI display and configuration.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:more_sessions?/2" data-no-tooltip="" translate="no">more_sessions?(assigns, current_count)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Checks if additional sessions are available beyond the current count.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:on_session_start/2" data-no-tooltip="" translate="no">on_session_start(socket, ui_callback)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Called when a new session starts, allows mode-specific initialization.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:query/2" data-no-tooltip="" translate="no">query(session, content)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Processes a message through the AI assistant for mode-specific assistance.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:save_message/2" data-no-tooltip="" translate="no">save_message(assigns, content)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Saves a new message to an existing session.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:supports_template_generation?/0" data-no-tooltip="" translate="no">supports_template_generation?()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Indicates whether this mode supports template or code generation.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#__using__/1" data-no-tooltip="" translate="no">__using__(opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Macro for implementing the ModeBehavior with sensible defaults.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="callbacks" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#callbacks">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Callbacks</span>
+    </h1>
+    <div class="callbacks-list">
+<section class="detail" id="c:chat_input_disabled?/1">
+
+  <div class="detail-header">
+    <a href="#c:chat_input_disabled?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">chat_input_disabled?(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L284" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> chat_input_disabled?(assigns :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Determines if the chat input should be disabled based on mode conditions.</p><p>Evaluates mode-specific conditions to determine when users should not be
+able to send new messages. This enables proper UX during loading states,
+error conditions, or when required context is missing.</p><h2 id="c:chat_input_disabled?/1-parameters" class="section-heading"><a href="#c:chat_input_disabled?/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - LiveView assigns containing state to evaluate:<ul><li><code class="inline">:session</code> - Current session state</li><li><code class="inline">:loading</code> - Loading state flags</li><li><code class="inline">:selected_job</code> - Job selection state (for job modes)</li><li>Mode-specific state variables</li></ul></li></ul><h2 id="c:chat_input_disabled?/1-returns" class="section-heading"><a href="#c:chat_input_disabled?/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">true</code> if chat input should be disabled, <code class="inline">false</code> otherwise.</p><h2 id="c:chat_input_disabled?/1-examples" class="section-heading"><a href="#c:chat_input_disabled?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Job mode disables input when no job is selected</span><span class="w">
+</span><span class="kd">defp</span><span class="w"> </span><span class="nf">chat_input_disabled?</span><span class="p" data-group-id="0157864810-1">(</span><span class="p" data-group-id="0157864810-2">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="0157864810-2">}</span><span class="p" data-group-id="0157864810-1">)</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+</span><span class="kd">defp</span><span class="w"> </span><span class="nf">chat_input_disabled?</span><span class="p" data-group-id="0157864810-3">(</span><span class="p" data-group-id="0157864810-4">%{</span><span class="ss">loading</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="0157864810-4">}</span><span class="p" data-group-id="0157864810-3">)</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+</span><span class="kd">defp</span><span class="w"> </span><span class="nf">chat_input_disabled?</span><span class="p" data-group-id="0157864810-5">(</span><span class="bp">_</span><span class="p" data-group-id="0157864810-5">)</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="w">
+
+</span><span class="c1"># Workflow mode disables during template generation</span><span class="w">
+</span><span class="kd">defp</span><span class="w"> </span><span class="nf">chat_input_disabled?</span><span class="p" data-group-id="0157864810-6">(</span><span class="p" data-group-id="0157864810-7">%{</span><span class="ss">generating_template</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="0157864810-7">}</span><span class="p" data-group-id="0157864810-6">)</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="no">true</span></code></pre><h2 id="c:chat_input_disabled?/1-implementation-notes" class="section-heading"><a href="#c:chat_input_disabled?/1-implementation-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Implementation Notes</span></h2><ul><li>Should check for required context availability</li><li>Must consider loading and error states</li><li>Should provide clear user feedback when disabled</li></ul>
+  </section>
+</section>
+<section class="detail" id="c:chat_title/1">
+
+  <div class="detail-header">
+    <a href="#c:chat_title/1" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">chat_title(session)</h1>
+
+        <span class="note">(optional)</span>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L374" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> chat_title(session :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Returns the display title for a chat session.</p><p>Formats session titles for display in session lists and headers.
+Can customize title generation based on mode-specific context.</p><h2 id="c:chat_title/1-parameters" class="section-heading"><a href="#c:chat_title/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session</code> - The chat session map</li></ul><h2 id="c:chat_title/1-returns" class="section-heading"><a href="#c:chat_title/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A formatted string to display as the session title.</p><h2 id="c:chat_title/1-examples" class="section-heading"><a href="#c:chat_title/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Job mode with job context</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">chat_title</span><span class="p" data-group-id="3136225760-1">(</span><span class="p" data-group-id="3136225760-2">%{</span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="ss">job</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3136225760-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="n">job_name</span><span class="p" data-group-id="3136225760-3">}</span><span class="p" data-group-id="3136225760-2">}</span><span class="p" data-group-id="3136225760-1">)</span><span class="w"> </span><span class="k" data-group-id="3136225760-4">do</span><span class="w">
+  </span><span class="s">&quot;# {title} (# {job_name})&quot;</span><span class="w">
+</span><span class="k" data-group-id="3136225760-4">end</span><span class="w">
+
+</span><span class="c1"># Workflow mode with workflow context</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">chat_title</span><span class="p" data-group-id="3136225760-5">(</span><span class="p" data-group-id="3136225760-6">%{</span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3136225760-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="n">workflow_name</span><span class="p" data-group-id="3136225760-7">}</span><span class="p" data-group-id="3136225760-6">}</span><span class="p" data-group-id="3136225760-5">)</span><span class="w"> </span><span class="k" data-group-id="3136225760-8">do</span><span class="w">
+  </span><span class="s">&quot;# {workflow_name}: # {title}&quot;</span><span class="w">
+</span><span class="k" data-group-id="3136225760-8">end</span></code></pre><h2 id="c:chat_title/1-default-implementation" class="section-heading"><a href="#c:chat_title/1-default-implementation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Default Implementation</span></h2><p>Returns the session's title field, or &quot;Untitled Chat&quot; if empty.</p>
+  </section>
+</section>
+<section class="detail" id="c:create_session/2">
+
+  <div class="detail-header">
+    <a href="#c:create_session/2" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_session(assigns, content)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L52" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> create_session(
+  assigns :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  content :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>Creates a new chat session for the specific mode.</p><p>Initializes a new AI conversation with mode-specific context and configuration.
+This is the entry point for starting new AI assistance workflows.</p><h2 id="c:create_session/2-parameters" class="section-heading"><a href="#c:create_session/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - LiveView assigns containing necessary context:<ul><li><code class="inline">:current_user</code> - The user creating the session</li><li><code class="inline">:selected_job</code> - Job context (for job-specific modes)</li><li><code class="inline">:project</code> - Project context (for workflow template modes)</li><li>Mode-specific context data</li></ul></li><li><code class="inline">content</code> - Initial message content that starts the conversation</li></ul><h2 id="c:create_session/2-returns" class="section-heading"><a href="#c:create_session/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, session}</code> - Session created successfully with initial message</li><li><code class="inline">{:error, reason}</code> - Creation failed due to validation or system errors</li></ul><h2 id="c:create_session/2-examples" class="section-heading"><a href="#c:create_session/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Job mode session creation</span><span class="w">
+</span><span class="p" data-group-id="0783505726-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="0783505726-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyJobMode</span><span class="o">.</span><span class="n">create_session</span><span class="p" data-group-id="0783505726-2">(</span><span class="w">
+  </span><span class="p" data-group-id="0783505726-3">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="0783505726-3">}</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Help me debug this HTTP request&quot;</span><span class="w">
+</span><span class="p" data-group-id="0783505726-2">)</span><span class="w">
+
+</span><span class="c1"># Workflow template mode session creation</span><span class="w">
+</span><span class="p" data-group-id="0783505726-4">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="0783505726-4">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowMode</span><span class="o">.</span><span class="n">create_session</span><span class="p" data-group-id="0783505726-5">(</span><span class="w">
+  </span><span class="p" data-group-id="0783505726-6">%{</span><span class="ss">project</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="0783505726-6">}</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Create a daily Salesforce sync workflow&quot;</span><span class="w">
+</span><span class="p" data-group-id="0783505726-5">)</span></code></pre><h2 id="c:create_session/2-implementation-notes" class="section-heading"><a href="#c:create_session/2-implementation-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Implementation Notes</span></h2><ul><li>Should validate required context in assigns</li><li>Must associate session with appropriate resources (job, project, etc.)</li><li>Should set mode-specific metadata and configuration</li></ul>
+  </section>
+</section>
+<section class="detail" id="c:get_session!/2">
+
+  <div class="detail-header">
+    <a href="#c:get_session!/2" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_session!(session_id, assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L94" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> get_session!(
+  session_id :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  assigns :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Retrieves and prepares a session with mode-specific context.</p><p>Loads an existing session and enriches it with any mode-specific data
+needed for proper AI assistance. This includes loading related resources,
+setting context variables, and preparing the session for interaction.</p><h2 id="c:get_session!/2-parameters" class="section-heading"><a href="#c:get_session!/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session_id</code> - UUID string of the session to retrieve</li><li><code class="inline">assigns</code> - LiveView assigns containing context for session preparation:<ul><li><code class="inline">:selected_job</code> - Current job context</li><li><code class="inline">:project</code> - Current project context</li><li>Mode-specific preparation data</li></ul></li></ul><h2 id="c:get_session!/2-returns" class="section-heading"><a href="#c:get_session!/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A fully prepared session map with:</p><ul><li>Preloaded messages and user data</li><li>Mode-specific context (expressions, adaptors, etc.)</li><li>UI-ready metadata</li></ul><h2 id="c:get_session!/2-examples" class="section-heading"><a href="#c:get_session!/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Retrieve job session with expression context</span><span class="w">
+</span><span class="n">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobMode</span><span class="o">.</span><span class="n">get_session!</span><span class="p" data-group-id="4969269449-1">(</span><span class="n">session_id</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4969269449-2">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="n">job</span><span class="p" data-group-id="4969269449-2">}</span><span class="p" data-group-id="4969269449-1">)</span><span class="w">
+</span><span class="c1"># session now includes job.expression and job.adaptor</span><span class="w">
+
+</span><span class="c1"># Retrieve workflow session with project context</span><span class="w">
+</span><span class="n">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowMode</span><span class="o">.</span><span class="n">get_session!</span><span class="p" data-group-id="4969269449-3">(</span><span class="n">session_id</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4969269449-4">%{</span><span class="ss">project</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4969269449-4">}</span><span class="p" data-group-id="4969269449-3">)</span></code></pre><h2 id="c:get_session!/2-implementation-notes" class="section-heading"><a href="#c:get_session!/2-implementation-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Implementation Notes</span></h2><ul><li>Should handle session not found errors gracefully</li><li>Must enrich session with mode-specific context</li><li>Should preload necessary associations for efficient rendering</li></ul>
+  </section>
+</section>
+<section class="detail" id="c:handle_response_generated/3">
+
+  <div class="detail-header">
+    <a href="#c:handle_response_generated/3" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">handle_response_generated(assigns, session_or_message, ui_callback)</h1>
+
+        <span class="note">(optional)</span>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L471" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> handle_response_generated(
+  assigns :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  session_or_message :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  ui_callback :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">function</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Handles post-processing after the AI generates a response.</p><p>Called after successful AI response generation to allow mode-specific
+handling, UI updates, or additional processing. The ui_callback parameter
+enables triggering LiveView updates.</p><h2 id="c:handle_response_generated/3-parameters" class="section-heading"><a href="#c:handle_response_generated/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - Current LiveView assigns</li><li><code class="inline">session_or_message</code> - The updated session or generated message</li><li><code class="inline">ui_callback</code> - Function to call for triggering UI updates</li></ul><h2 id="c:handle_response_generated/3-returns" class="section-heading"><a href="#c:handle_response_generated/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>Updated assigns map with any mode-specific changes.</p><h2 id="c:handle_response_generated/3-examples" class="section-heading"><a href="#c:handle_response_generated/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Workflow mode processes generated YAML</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">handle_response_generated</span><span class="p" data-group-id="5575489499-1">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="n">ui_callback</span><span class="p" data-group-id="5575489499-1">)</span><span class="w"> </span><span class="k" data-group-id="5575489499-2">do</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="n">generated_workflow_yaml?</span><span class="p" data-group-id="5575489499-3">(</span><span class="n">session</span><span class="p" data-group-id="5575489499-3">)</span><span class="w"> </span><span class="k" data-group-id="5575489499-4">do</span><span class="w">
+    </span><span class="n">ui_callback</span><span class="o">.</span><span class="p" data-group-id="5575489499-5">(</span><span class="ss">:show_apply_template_button</span><span class="p" data-group-id="5575489499-5">)</span><span class="w">
+  </span><span class="k" data-group-id="5575489499-4">end</span><span class="w">
+  </span><span class="n">assigns</span><span class="w">
+</span><span class="k" data-group-id="5575489499-2">end</span><span class="w">
+
+</span><span class="c1"># Job mode tracks successful assistance</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">handle_response_generated</span><span class="p" data-group-id="5575489499-6">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="n">ui_callback</span><span class="p" data-group-id="5575489499-6">)</span><span class="w"> </span><span class="k" data-group-id="5575489499-7">do</span><span class="w">
+  </span><span class="n">track_successful_assistance</span><span class="p" data-group-id="5575489499-8">(</span><span class="n">session</span><span class="p" data-group-id="5575489499-8">)</span><span class="w">
+  </span><span class="n">assigns</span><span class="w">
+</span><span class="k" data-group-id="5575489499-7">end</span></code></pre><h2 id="c:handle_response_generated/3-default-implementation" class="section-heading"><a href="#c:handle_response_generated/3-default-implementation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Default Implementation</span></h2><p>Returns assigns unchanged - no additional processing.</p>
+  </section>
+</section>
+<section class="detail" id="c:input_placeholder/0">
+
+  <div class="detail-header">
+    <a href="#c:input_placeholder/0" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">input_placeholder()</h1>
+
+        <span class="note">(optional)</span>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L342" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> input_placeholder() :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Returns the placeholder text for the chat input field.</p><p>Provides mode-specific guidance to users about what they can ask or
+request from the AI assistant.</p><h2 id="c:input_placeholder/0-returns" class="section-heading"><a href="#c:input_placeholder/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A string to display as placeholder text in the chat input.</p><h2 id="c:input_placeholder/0-examples" class="section-heading"><a href="#c:input_placeholder/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Job mode placeholder</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">input_placeholder</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Ask about code, debugging, or adaptor usage...&quot;</span><span class="w">
+
+</span><span class="c1"># Workflow mode placeholder</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">input_placeholder</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Describe the workflow you want to create...&quot;</span></code></pre><h2 id="c:input_placeholder/0-default-implementation" class="section-heading"><a href="#c:input_placeholder/0-default-implementation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Default Implementation</span></h2><p>Returns a generic placeholder encouraging users to start a conversation.</p>
+  </section>
+</section>
+<section class="detail" id="c:list_sessions/3">
+
+  <div class="detail-header">
+    <a href="#c:list_sessions/3" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_sessions(assigns, sort_direction, opts)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L147" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> list_sessions(
+  assigns :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  sort_direction :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(),
+  opts :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: %{
+  sessions: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()],
+  pagination: <a href="LightningWeb.Live.AiAssistant.PaginationMeta.html#t:t/0">LightningWeb.Live.AiAssistant.PaginationMeta.t</a>()
+}</pre>
+
+      </div>
+
+<p>Lists sessions with pagination and mode-specific filtering.</p><p>Retrieves a paginated list of sessions relevant to the current mode and context.
+Includes metadata for pagination controls and session preview information.</p><h2 id="c:list_sessions/3-parameters" class="section-heading"><a href="#c:list_sessions/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - LiveView assigns containing filtering context:<ul><li><code class="inline">:selected_job</code> - Filter sessions for specific job</li><li><code class="inline">:project</code> - Filter sessions for specific project</li><li><code class="inline">:current_user</code> - User-specific session filtering</li></ul></li><li><code class="inline">sort_direction</code> - Sort order for sessions:<ul><li><code class="inline">:desc</code> - Most recent first (default)</li><li><code class="inline">:asc</code> - Oldest first</li></ul></li><li><code class="inline">opts</code> - Pagination and filtering options:<ul><li><code class="inline">:offset</code> - Number of records to skip (default: 0)</li><li><code class="inline">:limit</code> - Maximum records to return (default: 20)</li><li><code class="inline">:search</code> - Optional search term for filtering</li></ul></li></ul><h2 id="c:list_sessions/3-returns" class="section-heading"><a href="#c:list_sessions/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A map containing:</p><ul><li><code class="inline">:sessions</code> - List of session maps with preview data</li><li><code class="inline">:pagination</code> - <code class="inline">PaginationMeta</code> struct with navigation info</li></ul><h2 id="c:list_sessions/3-examples" class="section-heading"><a href="#c:list_sessions/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Load recent sessions for a job</span><span class="w">
+</span><span class="p" data-group-id="6991035981-1">%{</span><span class="ss">sessions</span><span class="p">:</span><span class="w"> </span><span class="n">sessions</span><span class="p">,</span><span class="w"> </span><span class="ss">pagination</span><span class="p">:</span><span class="w"> </span><span class="n">meta</span><span class="p" data-group-id="6991035981-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobMode</span><span class="o">.</span><span class="n">list_sessions</span><span class="p" data-group-id="6991035981-2">(</span><span class="w">
+  </span><span class="p" data-group-id="6991035981-3">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="6991035981-3">}</span><span class="p">,</span><span class="w">
+  </span><span class="ss">:desc</span><span class="p">,</span><span class="w">
+  </span><span class="ss">limit</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w">
+</span><span class="p" data-group-id="6991035981-2">)</span><span class="w">
+
+</span><span class="c1"># Load sessions with search</span><span class="w">
+</span><span class="p" data-group-id="6991035981-4">%{</span><span class="ss">sessions</span><span class="p">:</span><span class="w"> </span><span class="n">sessions</span><span class="p">,</span><span class="w"> </span><span class="ss">pagination</span><span class="p">:</span><span class="w"> </span><span class="n">meta</span><span class="p" data-group-id="6991035981-4">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Mode</span><span class="o">.</span><span class="n">list_sessions</span><span class="p" data-group-id="6991035981-5">(</span><span class="w">
+  </span><span class="n">assigns</span><span class="p">,</span><span class="w">
+  </span><span class="ss">:desc</span><span class="p">,</span><span class="w">
+  </span><span class="ss">offset</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="ss">limit</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="ss">search</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;debugging&quot;</span><span class="w">
+</span><span class="p" data-group-id="6991035981-5">)</span></code></pre><h2 id="c:list_sessions/3-implementation-notes" class="section-heading"><a href="#c:list_sessions/3-implementation-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Implementation Notes</span></h2><ul><li>Should respect mode-specific filtering rules</li><li>Must include message counts for session previews</li><li>Should optimize queries for large session lists</li></ul>
+  </section>
+</section>
+<section class="detail" id="c:metadata/0">
+
+  <div class="detail-header">
+    <a href="#c:metadata/0" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">metadata()</h1>
+
+        <span class="note">(optional)</span>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L432" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> metadata() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Returns metadata about this mode for UI display and configuration.</p><p>Provides information used by the UI to display mode options,
+icons, descriptions, and other mode-specific details.</p><h2 id="c:metadata/0-returns" class="section-heading"><a href="#c:metadata/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A map containing mode metadata:</p><ul><li><code class="inline">:name</code> - Display name for the mode</li><li><code class="inline">:description</code> - Brief description of mode capabilities</li><li><code class="inline">:icon</code> - Icon class for UI display</li><li><code class="inline">:category</code> - Optional grouping category</li><li><code class="inline">:features</code> - Optional list of supported features</li></ul><h2 id="c:metadata/0-examples" class="section-heading"><a href="#c:metadata/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="kd">def</span><span class="w"> </span><span class="nf">metadata</span><span class="w"> </span><span class="k" data-group-id="5313906734-1">do</span><span class="w">
+  </span><span class="p" data-group-id="5313906734-2">%{</span><span class="w">
+    </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Job Assistant&quot;</span><span class="p">,</span><span class="w">
+    </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Get help with coding tasks and debugging&quot;</span><span class="p">,</span><span class="w">
+    </span><span class="ss">icon</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;hero-code-bracket&quot;</span><span class="p">,</span><span class="w">
+    </span><span class="ss">category</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;development&quot;</span><span class="p">,</span><span class="w">
+    </span><span class="ss">features</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5313906734-3">[</span><span class="s">&quot;code_help&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;debugging&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;adaptor_guidance&quot;</span><span class="p" data-group-id="5313906734-3">]</span><span class="w">
+  </span><span class="p" data-group-id="5313906734-2">}</span><span class="w">
+</span><span class="k" data-group-id="5313906734-1">end</span></code></pre><h2 id="c:metadata/0-default-implementation" class="section-heading"><a href="#c:metadata/0-default-implementation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Default Implementation</span></h2><p>Returns basic metadata with generic name, description, and icon.</p>
+  </section>
+</section>
+<section class="detail" id="c:more_sessions?/2">
+
+  <div class="detail-header">
+    <a href="#c:more_sessions?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">more_sessions?(assigns, current_count)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L315" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> more_sessions?(
+  assigns :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  current_count :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Checks if additional sessions are available beyond the current count.</p><p>Determines whether there are more sessions to load without fetching them.
+Used for implementing &quot;Load More&quot; UI patterns and infinite scroll.</p><h2 id="c:more_sessions?/2-parameters" class="section-heading"><a href="#c:more_sessions?/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - LiveView assigns containing context for availability check</li><li><code class="inline">current_count</code> - Number of sessions currently loaded in the UI</li></ul><h2 id="c:more_sessions?/2-returns" class="section-heading"><a href="#c:more_sessions?/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">true</code> if more sessions exist, <code class="inline">false</code> if all sessions are loaded.</p><h2 id="c:more_sessions?/2-examples" class="section-heading"><a href="#c:more_sessions?/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="k">if</span><span class="w"> </span><span class="nc">Mode</span><span class="o">.</span><span class="n">more_sessions?</span><span class="p" data-group-id="4846005193-1">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">length</span><span class="p" data-group-id="4846005193-2">(</span><span class="n">loaded_sessions</span><span class="p" data-group-id="4846005193-2">)</span><span class="p" data-group-id="4846005193-1">)</span><span class="w"> </span><span class="k" data-group-id="4846005193-3">do</span><span class="w">
+  </span><span class="c1"># Show &quot;Load More&quot; button</span><span class="w">
+</span><span class="k" data-group-id="4846005193-3">else</span><span class="w">
+  </span><span class="c1"># Hide pagination controls</span><span class="w">
+</span><span class="k" data-group-id="4846005193-3">end</span></code></pre><h2 id="c:more_sessions?/2-implementation-notes" class="section-heading"><a href="#c:more_sessions?/2-implementation-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Implementation Notes</span></h2><ul><li>Should be efficient and avoid loading actual session data</li><li>Must respect same filtering as <code class="inline">list_sessions/3</code></li><li>Should handle edge cases gracefully</li></ul>
+  </section>
+</section>
+<section class="detail" id="c:on_session_start/2">
+
+  <div class="detail-header">
+    <a href="#c:on_session_start/2" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">on_session_start(socket, ui_callback)</h1>
+
+        <span class="note">(optional)</span>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L513" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> on_session_start(socket :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), ui_callback :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">function</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Called when a new session starts, allows mode-specific initialization.</p><p>Provides an opportunity for modes to perform setup tasks when users
+start new conversations, such as UI initialization, state preparation,
+or welcome message display.</p><h2 id="c:on_session_start/2-parameters" class="section-heading"><a href="#c:on_session_start/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">socket</code> - The LiveView socket with current state</li><li><code class="inline">ui_callback</code> - Function for triggering UI updates</li></ul><h2 id="c:on_session_start/2-returns" class="section-heading"><a href="#c:on_session_start/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>Updated socket with mode-specific initialization.</p><h2 id="c:on_session_start/2-examples" class="section-heading"><a href="#c:on_session_start/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Job mode ensures job is selected</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">on_session_start</span><span class="p" data-group-id="3057080389-1">(</span><span class="n">socket</span><span class="p">,</span><span class="w"> </span><span class="n">ui_callback</span><span class="p" data-group-id="3057080389-1">)</span><span class="w"> </span><span class="k" data-group-id="3057080389-2">do</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="n">is_nil</span><span class="p" data-group-id="3057080389-3">(</span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">selected_job</span><span class="p" data-group-id="3057080389-3">)</span><span class="w"> </span><span class="k" data-group-id="3057080389-4">do</span><span class="w">
+    </span><span class="n">ui_callback</span><span class="o">.</span><span class="p" data-group-id="3057080389-5">(</span><span class="ss">:prompt_job_selection</span><span class="p" data-group-id="3057080389-5">)</span><span class="w">
+  </span><span class="k" data-group-id="3057080389-4">end</span><span class="w">
+  </span><span class="n">socket</span><span class="w">
+</span><span class="k" data-group-id="3057080389-2">end</span><span class="w">
+
+</span><span class="c1"># Workflow mode shows template options</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">on_session_start</span><span class="p" data-group-id="3057080389-6">(</span><span class="n">socket</span><span class="p">,</span><span class="w"> </span><span class="n">ui_callback</span><span class="p" data-group-id="3057080389-6">)</span><span class="w"> </span><span class="k" data-group-id="3057080389-7">do</span><span class="w">
+  </span><span class="n">ui_callback</span><span class="o">.</span><span class="p" data-group-id="3057080389-8">(</span><span class="ss">:show_template_suggestions</span><span class="p" data-group-id="3057080389-8">)</span><span class="w">
+  </span><span class="n">socket</span><span class="w">
+</span><span class="k" data-group-id="3057080389-7">end</span></code></pre><h2 id="c:on_session_start/2-default-implementation" class="section-heading"><a href="#c:on_session_start/2-default-implementation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Default Implementation</span></h2><p>Returns socket unchanged - no initialization needed.</p>
+  </section>
+</section>
+<section class="detail" id="c:query/2">
+
+  <div class="detail-header">
+    <a href="#c:query/2" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">query(session, content)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L244" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> query(
+  session :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  content :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>Processes a message through the AI assistant for mode-specific assistance.</p><p>Sends the user's message to the appropriate AI service with mode-specific
+context and handles the response. This is where the actual AI interaction
+happens, tailored to the mode's specific use case.</p><h2 id="c:query/2-parameters" class="section-heading"><a href="#c:query/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session</code> - Current chat session with full context</li><li><code class="inline">content</code> - User message content to process</li></ul><h2 id="c:query/2-returns" class="section-heading"><a href="#c:query/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, session}</code> - AI processed successfully, returns updated session with response</li><li><code class="inline">{:error, reason}</code> - Processing failed due to AI service or system errors</li></ul><h2 id="c:query/2-examples" class="section-heading"><a href="#c:query/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Job mode AI query with code context</span><span class="w">
+</span><span class="p" data-group-id="7839775930-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="7839775930-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobMode</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="7839775930-2">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;How do I add error handling?&quot;</span><span class="p" data-group-id="7839775930-2">)</span><span class="w">
+</span><span class="c1"># Uses job expression and adaptor for targeted assistance</span><span class="w">
+
+</span><span class="c1"># Workflow mode AI query for template generation</span><span class="w">
+</span><span class="p" data-group-id="7839775930-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="7839775930-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowMode</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="7839775930-4">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Add logging to this workflow&quot;</span><span class="p" data-group-id="7839775930-4">)</span><span class="w">
+</span><span class="c1"># Generates updated workflow YAML</span></code></pre><h2 id="c:query/2-error-handling" class="section-heading"><a href="#c:query/2-error-handling" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Error Handling</span></h2><pre><code class="makeup elixir" translate="no"><span class="k">case</span><span class="w"> </span><span class="nc">Mode</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="5180043970-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p" data-group-id="5180043970-1">)</span><span class="w"> </span><span class="k" data-group-id="5180043970-2">do</span><span class="w">
+  </span><span class="p" data-group-id="5180043970-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="5180043970-3">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+    </span><span class="c1"># AI responded successfully</span><span class="w">
+  </span><span class="p" data-group-id="5180043970-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Request timed out. Please try again.&quot;</span><span class="p" data-group-id="5180043970-4">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+    </span><span class="c1"># Handle timeout</span><span class="w">
+  </span><span class="p" data-group-id="5180043970-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="n">changeset</span><span class="p" data-group-id="5180043970-5">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+    </span><span class="c1"># Handle validation errors</span><span class="w">
+</span><span class="k" data-group-id="5180043970-2">end</span></code></pre><h2 id="c:query/2-implementation-notes" class="section-heading"><a href="#c:query/2-implementation-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Implementation Notes</span></h2><ul><li>Should use appropriate AI service endpoint (job_chat, workflow_chat)</li><li>Must include mode-specific context in AI requests</li><li>Should handle various error types gracefully</li><li>Must update message statuses appropriately</li></ul>
+  </section>
+</section>
+<section class="detail" id="c:save_message/2">
+
+  <div class="detail-header">
+    <a href="#c:save_message/2" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">save_message(assigns, content)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L194" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> save_message(
+  assigns :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  content :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>Saves a new message to an existing session.</p><p>Adds a user message to the conversation history and prepares it for AI processing.
+Handles message validation, status tracking, and session updates.</p><h2 id="c:save_message/2-parameters" class="section-heading"><a href="#c:save_message/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - LiveView assigns containing:<ul><li><code class="inline">:session</code> - Target session for the message</li><li><code class="inline">:current_user</code> - User sending the message</li><li>Mode-specific context</li></ul></li><li><code class="inline">content</code> - Message content to save</li></ul><h2 id="c:save_message/2-returns" class="section-heading"><a href="#c:save_message/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, session}</code> - Message saved successfully, returns updated session</li><li><code class="inline">{:error, reason}</code> - Save failed due to validation or system errors</li></ul><h2 id="c:save_message/2-examples" class="section-heading"><a href="#c:save_message/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Save user message to job session</span><span class="w">
+</span><span class="p" data-group-id="0197056942-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="0197056942-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobMode</span><span class="o">.</span><span class="n">save_message</span><span class="p" data-group-id="0197056942-2">(</span><span class="w">
+  </span><span class="p" data-group-id="0197056942-3">%{</span><span class="ss">session</span><span class="p">:</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="0197056942-3">}</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Can you explain this error message?&quot;</span><span class="w">
+</span><span class="p" data-group-id="0197056942-2">)</span><span class="w">
+
+</span><span class="c1"># Save message with validation</span><span class="w">
+</span><span class="k">case</span><span class="w"> </span><span class="nc">Mode</span><span class="o">.</span><span class="n">save_message</span><span class="p" data-group-id="0197056942-4">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">message_content</span><span class="p" data-group-id="0197056942-4">)</span><span class="w"> </span><span class="k" data-group-id="0197056942-5">do</span><span class="w">
+  </span><span class="p" data-group-id="0197056942-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="0197056942-6">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+    </span><span class="c1"># Continue with AI processing</span><span class="w">
+  </span><span class="p" data-group-id="0197056942-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="n">changeset</span><span class="p" data-group-id="0197056942-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+    </span><span class="c1"># Handle validation errors</span><span class="w">
+</span><span class="k" data-group-id="0197056942-5">end</span></code></pre><h2 id="c:save_message/2-implementation-notes" class="section-heading"><a href="#c:save_message/2-implementation-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Implementation Notes</span></h2><ul><li>Should validate message content and length</li><li>Must set appropriate message status (pending, etc.)</li><li>Should update session metadata as needed</li></ul>
+  </section>
+</section>
+<section class="detail" id="c:supports_template_generation?/0">
+
+  <div class="detail-header">
+    <a href="#c:supports_template_generation?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">supports_template_generation?()</h1>
+
+        <span class="note">(optional)</span>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L399" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> supports_template_generation?() :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Indicates whether this mode supports template or code generation.</p><p>Determines if the mode can generate templates, code, or other artifacts
+that users might want to apply or save. Affects UI elements like
+&quot;Apply Template&quot; buttons.</p><h2 id="c:supports_template_generation?/0-returns" class="section-heading"><a href="#c:supports_template_generation?/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">true</code> if mode generates templates/code, <code class="inline">false</code> otherwise.</p><h2 id="c:supports_template_generation?/0-examples" class="section-heading"><a href="#c:supports_template_generation?/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Workflow template mode supports generation</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">supports_template_generation?</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+
+</span><span class="c1"># Job assistance mode doesn&#39;t generate templates</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">supports_template_generation?</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="no">false</span></code></pre><h2 id="c:supports_template_generation?/0-default-implementation" class="section-heading"><a href="#c:supports_template_generation?/0-default-implementation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Default Implementation</span></h2><p>Returns <code class="inline">false</code> - most modes provide assistance rather than generation.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="__using__/1">
+
+  <div class="detail-header">
+    <a href="#__using__/1" class="detail-link" data-no-tooltip="" aria-label="Link to this macro">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">__using__(opts)</h1>
+
+        <span class="note">(macro)</span>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_behavior.ex#L530" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Macro for implementing the ModeBehavior with sensible defaults.</p><p>Provides shared functionality and default implementations for optional
+callbacks, allowing modes to focus on their specific requirements.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

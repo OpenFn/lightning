@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="Lightning v2.12.3-pre">
+
+
+    <title>LightningWeb.Live.AiAssistant.PaginationMeta — Lightning v2.12.3-pre</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
+
+    <script defer src="dist/sidebar_items-855C5EA5.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.12.3-pre
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Live.AiAssistant.PaginationMeta</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.3-pre)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Comprehensive pagination metadata for AI Assistant session management.</p><p>This module provides intelligent pagination support for AI Assistant sessions,
+handling the complexities of offset-based pagination, infinite scroll patterns,
+and &quot;Load More&quot; functionality commonly used in chat interfaces.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:t/0" data-no-tooltip="" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#current_offset/1" data-no-tooltip="" translate="no">current_offset(pagination_meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Calculates the database offset for the current page.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#first_page?/1" data-no-tooltip="" translate="no">first_page?(pagination_meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Determines if the current pagination represents the first page.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#for_page/2" data-no-tooltip="" translate="no">for_page(pagination_meta, target_page)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Calculates pagination metadata for a specific page number.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#last_page?/1" data-no-tooltip="" translate="no">last_page?(pagination_meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Determines if the current pagination represents the last page.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new/3" data-no-tooltip="" translate="no">new(current_sessions_count, page_size, total_count)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Creates pagination metadata from current loading state and totals.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#page_range/2" data-no-tooltip="" translate="no">page_range(meta, max_pages \\ 5)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the range of page numbers for pagination navigation.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#summary/1" data-no-tooltip="" translate="no">summary(pagination_meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Generates a human-readable summary of the current pagination state.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#total_pages/1" data-no-tooltip="" translate="no">total_pages(pagination_meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Calculates the total number of pages in the complete dataset.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">t()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L9" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: %LightningWeb.Live.AiAssistant.PaginationMeta{
+  current_page: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>(),
+  has_next_page: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  has_prev_page: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  page_size: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>(),
+  total_count: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="current_offset/1">
+
+  <div class="detail-header">
+    <a href="#current_offset/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">current_offset(pagination_meta)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L215" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> current_offset(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()</pre>
+
+      </div>
+
+<p>Calculates the database offset for the current page.</p><p>Determines the starting position for database queries using LIMIT/OFFSET
+patterns. Essential for efficient pagination with large datasets.</p><h2 id="current_offset/1-parameters" class="section-heading"><a href="#current_offset/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">meta</code> - PaginationMeta struct containing current_page and page_size</li></ul><h2 id="current_offset/1-returns" class="section-heading"><a href="#current_offset/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>The zero-based offset for database queries.</p><h2 id="current_offset/1-examples" class="section-heading"><a href="#current_offset/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># First page (page 1) = offset 0</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="1659040930-1">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="1659040930-1">)</span><span class="w">  </span><span class="c1"># current_page: 1</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">current_offset</span><span class="p" data-group-id="1659040930-2">(</span><span class="n">meta</span><span class="p" data-group-id="1659040930-2">)</span><span class="w">
+</span><span class="c1"># =&gt; 0</span><span class="w">
+
+</span><span class="c1"># Second page (page 2) = offset 20</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="1659040930-3">(</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="1659040930-3">)</span><span class="w">  </span><span class="c1"># current_page: 2</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">current_offset</span><span class="p" data-group-id="1659040930-4">(</span><span class="n">meta</span><span class="p" data-group-id="1659040930-4">)</span><span class="w">
+</span><span class="c1"># =&gt; 20</span><span class="w">
+
+</span><span class="c1"># Third page (page 3) = offset 40</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="1659040930-5">(</span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="1659040930-5">)</span><span class="w">  </span><span class="c1"># current_page: 3</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">current_offset</span><span class="p" data-group-id="1659040930-6">(</span><span class="n">meta</span><span class="p" data-group-id="1659040930-6">)</span><span class="w">
+</span><span class="c1"># =&gt; 40</span></code></pre><h2 id="current_offset/1-database-query-integration" class="section-heading"><a href="#current_offset/1-database-query-integration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Database Query Integration</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Use with Ecto queries</span><span class="w">
+</span><span class="n">offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">current_offset</span><span class="p" data-group-id="6122149598-1">(</span><span class="n">meta</span><span class="p" data-group-id="6122149598-1">)</span><span class="w">
+
+</span><span class="n">from</span><span class="p" data-group-id="6122149598-2">(</span><span class="n">s</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nc">ChatSession</span><span class="p">,</span><span class="w">
+  </span><span class="ss">limit</span><span class="p">:</span><span class="w"> </span><span class="o">^</span><span class="n">meta</span><span class="o">.</span><span class="n">page_size</span><span class="p">,</span><span class="w">
+  </span><span class="ss">offset</span><span class="p">:</span><span class="w"> </span><span class="o">^</span><span class="n">offset</span><span class="p">,</span><span class="w">
+  </span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6122149598-3">[</span><span class="ss">desc</span><span class="p">:</span><span class="w"> </span><span class="ss">:updated_at</span><span class="p" data-group-id="6122149598-3">]</span><span class="w">
+</span><span class="p" data-group-id="6122149598-2">)</span><span class="w">
+
+</span><span class="c1"># Use with AiAssistant functions</span><span class="w">
+</span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">list_sessions</span><span class="p" data-group-id="6122149598-4">(</span><span class="w">
+  </span><span class="n">resource</span><span class="p">,</span><span class="w">
+  </span><span class="ss">:desc</span><span class="p">,</span><span class="w">
+  </span><span class="ss">offset</span><span class="p">:</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">current_offset</span><span class="p" data-group-id="6122149598-5">(</span><span class="n">meta</span><span class="p" data-group-id="6122149598-5">)</span><span class="p">,</span><span class="w">
+  </span><span class="ss">limit</span><span class="p">:</span><span class="w"> </span><span class="n">meta</span><span class="o">.</span><span class="n">page_size</span><span class="w">
+</span><span class="p" data-group-id="6122149598-4">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="first_page?/1">
+
+  <div class="detail-header">
+    <a href="#first_page?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">first_page?(pagination_meta)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L297" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> first_page?(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Determines if the current pagination represents the first page.</p><p>Useful for conditionally enabling/disabling &quot;Previous&quot; or &quot;First&quot; navigation
+buttons in UI components.</p><h2 id="first_page?/1-examples" class="section-heading"><a href="#first_page?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="0743204457-1">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="0743204457-1">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">first_page?</span><span class="p" data-group-id="0743204457-2">(</span><span class="n">meta</span><span class="p" data-group-id="0743204457-2">)</span><span class="w">
+</span><span class="c1"># =&gt; true</span><span class="w">
+
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="0743204457-3">(</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="0743204457-3">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">first_page?</span><span class="p" data-group-id="0743204457-4">(</span><span class="n">meta</span><span class="p" data-group-id="0743204457-4">)</span><span class="w">
+</span><span class="c1"># =&gt; false</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="for_page/2">
+
+  <div class="detail-header">
+    <a href="#for_page/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">for_page(pagination_meta, target_page)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L345" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> for_page(<a href="#t:t/0">t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>()) :: <a href="#t:t/0">t</a>()</pre>
+
+      </div>
+
+<p>Calculates pagination metadata for a specific page number.</p><p>Creates new pagination metadata as if the user had navigated to a specific
+page, useful for implementing direct page navigation or calculating states
+for different pages.</p><h2 id="for_page/2-parameters" class="section-heading"><a href="#for_page/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">meta</code> - Current PaginationMeta struct</li><li><code class="inline">target_page</code> - The page number to calculate metadata for</li></ul><h2 id="for_page/2-examples" class="section-heading"><a href="#for_page/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">current_meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="2866103679-1">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="2866103679-1">)</span><span class="w">
+
+</span><span class="c1"># Calculate metadata for page 3</span><span class="w">
+</span><span class="n">page3_meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">for_page</span><span class="p" data-group-id="2866103679-2">(</span><span class="n">current_meta</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="2866103679-2">)</span><span class="w">
+</span><span class="c1"># =&gt; %PaginationMeta{current_page: 3, has_prev_page: true, ...}</span><span class="w">
+
+</span><span class="c1"># Calculate offset for page 3</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">current_offset</span><span class="p" data-group-id="2866103679-3">(</span><span class="n">page3_meta</span><span class="p" data-group-id="2866103679-3">)</span><span class="w">
+</span><span class="c1"># =&gt; 40</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="last_page?/1">
+
+  <div class="detail-header">
+    <a href="#last_page?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">last_page?(pagination_meta)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L317" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> last_page?(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Determines if the current pagination represents the last page.</p><p>Useful for conditionally enabling/disabling &quot;Next&quot; or &quot;Last&quot; navigation
+buttons in UI components.</p><h2 id="last_page?/1-examples" class="section-heading"><a href="#last_page?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5418958108-1">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="5418958108-1">)</span><span class="w">  </span><span class="c1"># All sessions loaded</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">last_page?</span><span class="p" data-group-id="5418958108-2">(</span><span class="n">meta</span><span class="p" data-group-id="5418958108-2">)</span><span class="w">
+</span><span class="c1"># =&gt; true</span><span class="w">
+
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5418958108-3">(</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="5418958108-3">)</span><span class="w">   </span><span class="c1"># More sessions available</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">last_page?</span><span class="p" data-group-id="5418958108-4">(</span><span class="n">meta</span><span class="p" data-group-id="5418958108-4">)</span><span class="w">
+</span><span class="c1"># =&gt; false</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="new/3">
+
+  <div class="detail-header">
+    <a href="#new/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">new(current_sessions_count, page_size, total_count)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L93" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> new(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()) :: <a href="#t:t/0">t</a>()</pre>
+
+      </div>
+
+<p>Creates pagination metadata from current loading state and totals.</p><p>This is the primary constructor for pagination metadata, designed to work with
+progressive loading patterns where sessions are loaded incrementally rather
+than all at once.</p><h2 id="new/3-parameters" class="section-heading"><a href="#new/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">current_sessions_count</code> - Number of sessions currently loaded in the UI</li><li><code class="inline">page_size</code> - Number of sessions per page/batch</li><li><code class="inline">total_count</code> - Total number of sessions available from the data source</li></ul><h2 id="new/3-page-calculation-logic" class="section-heading"><a href="#new/3-page-calculation-logic" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Page Calculation Logic</span></h2><p>The current page is calculated based on how many sessions have been loaded:</p><ul><li><strong>Page 1</strong>: 1 to page_size sessions loaded</li><li><strong>Page 2</strong>: (page_size + 1) to (2 * page_size) sessions loaded</li><li><strong>Page N</strong>: ((N-1) <em> page_size + 1) to (N </em> page_size) sessions loaded</li></ul><h2 id="new/3-navigation-state-logic" class="section-heading"><a href="#new/3-navigation-state-logic" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Navigation State Logic</span></h2><ul><li><strong>has_next_page</strong>: <code class="inline">true</code> if <code class="inline">current_sessions_count &lt; total_count</code></li><li><strong>has_prev_page</strong>: <code class="inline">true</code> if <code class="inline">current_sessions_count &gt; page_size</code></li></ul><h2 id="new/3-examples" class="section-heading"><a href="#new/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># First page - 20 sessions loaded out of 100 total</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5478663301-1">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="5478663301-1">)</span><span class="w">
+</span><span class="c1"># =&gt; %PaginationMeta{</span><span class="w">
+</span><span class="c1">#   current_page: 1,</span><span class="w">
+</span><span class="c1">#   page_size: 20,</span><span class="w">
+</span><span class="c1">#   total_count: 100,</span><span class="w">
+</span><span class="c1">#   has_next_page: true,</span><span class="w">
+</span><span class="c1">#   has_prev_page: false</span><span class="w">
+</span><span class="c1"># }</span><span class="w">
+
+</span><span class="c1"># Second page - 40 sessions loaded out of 100 total</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5478663301-2">(</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="5478663301-2">)</span><span class="w">
+</span><span class="c1"># =&gt; %PaginationMeta{</span><span class="w">
+</span><span class="c1">#   current_page: 2,</span><span class="w">
+</span><span class="c1">#   page_size: 20,</span><span class="w">
+</span><span class="c1">#   total_count: 100,</span><span class="w">
+</span><span class="c1">#   has_next_page: true,</span><span class="w">
+</span><span class="c1">#   has_prev_page: true</span><span class="w">
+</span><span class="c1"># }</span><span class="w">
+
+</span><span class="c1"># Last page - all 100 sessions loaded</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5478663301-3">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="5478663301-3">)</span><span class="w">
+</span><span class="c1"># =&gt; %PaginationMeta{</span><span class="w">
+</span><span class="c1">#   current_page: 5,</span><span class="w">
+</span><span class="c1">#   page_size: 20,</span><span class="w">
+</span><span class="c1">#   total_count: 100,</span><span class="w">
+</span><span class="c1">#   has_next_page: false,</span><span class="w">
+</span><span class="c1">#   has_prev_page: true</span><span class="w">
+</span><span class="c1"># }</span><span class="w">
+
+</span><span class="c1"># Empty state - no sessions available</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5478663301-4">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p" data-group-id="5478663301-4">)</span><span class="w">
+</span><span class="c1"># =&gt; %PaginationMeta{</span><span class="w">
+</span><span class="c1">#   current_page: 1,</span><span class="w">
+</span><span class="c1">#   page_size: 20,</span><span class="w">
+</span><span class="c1">#   total_count: 0,</span><span class="w">
+</span><span class="c1">#   has_next_page: false,</span><span class="w">
+</span><span class="c1">#   has_prev_page: false</span><span class="w">
+</span><span class="c1"># }</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="page_range/2">
+
+    <span id="page_range/1"></span>
+
+  <div class="detail-header">
+    <a href="#page_range/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">page_range(meta, max_pages \\ 5)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L376" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> page_range(<a href="#t:t/0">t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>()) :: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>()]</pre>
+
+      </div>
+
+<p>Returns the range of page numbers for pagination navigation.</p><p>Calculates a sensible range of page numbers to display in pagination
+controls, typically centering around the current page with a maximum
+number of visible pages.</p><h2 id="page_range/2-parameters" class="section-heading"><a href="#page_range/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">meta</code> - Current PaginationMeta struct</li><li><code class="inline">max_pages</code> - Maximum number of page links to show (default: 5)</li></ul><h2 id="page_range/2-examples" class="section-heading"><a href="#page_range/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6579679530-1">(</span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p" data-group-id="6579679530-1">)</span><span class="w">  </span><span class="c1"># Page 3 of 10</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">page_range</span><span class="p" data-group-id="6579679530-2">(</span><span class="n">meta</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="6579679530-2">)</span><span class="w">
+</span><span class="c1"># =&gt; [1, 2, 3, 4, 5]</span><span class="w">
+
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6579679530-3">(</span><span class="mi">120</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p" data-group-id="6579679530-3">)</span><span class="w">  </span><span class="c1"># Page 6 of 10</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">page_range</span><span class="p" data-group-id="6579679530-4">(</span><span class="n">meta</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="6579679530-4">)</span><span class="w">
+</span><span class="c1"># =&gt; [4, 5, 6, 7, 8]</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="summary/1">
+
+  <div class="detail-header">
+    <a href="#summary/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">summary(pagination_meta)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L265" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> summary(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Generates a human-readable summary of the current pagination state.</p><p>Creates user-friendly text describing what portion of the total dataset
+is currently visible. Commonly used in pagination controls and progress
+indicators to help users understand their position in the data.</p><h2 id="summary/1-parameters" class="section-heading"><a href="#summary/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">meta</code> - PaginationMeta struct with current pagination state</li></ul><h2 id="summary/1-returns" class="section-heading"><a href="#summary/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A string describing the visible range and total count.</p><h2 id="summary/1-examples" class="section-heading"><a href="#summary/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># First page showing 20 of 100 sessions</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6848042973-1">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="6848042973-1">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">summary</span><span class="p" data-group-id="6848042973-2">(</span><span class="n">meta</span><span class="p" data-group-id="6848042973-2">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Showing 1-20 of 100&quot;</span><span class="w">
+
+</span><span class="c1"># Second page showing next 20 of 100 sessions</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6848042973-3">(</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="6848042973-3">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">summary</span><span class="p" data-group-id="6848042973-4">(</span><span class="n">meta</span><span class="p" data-group-id="6848042973-4">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Showing 21-40 of 100&quot;</span><span class="w">
+
+</span><span class="c1"># Last page showing partial results</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6848042973-5">(</span><span class="mi">95</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">95</span><span class="p" data-group-id="6848042973-5">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">summary</span><span class="p" data-group-id="6848042973-6">(</span><span class="n">meta</span><span class="p" data-group-id="6848042973-6">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Showing 81-95 of 95&quot;</span><span class="w">
+
+</span><span class="c1"># Single page with fewer items than page size</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6848042973-7">(</span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p" data-group-id="6848042973-7">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">summary</span><span class="p" data-group-id="6848042973-8">(</span><span class="n">meta</span><span class="p" data-group-id="6848042973-8">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Showing 1-15 of 15&quot;</span><span class="w">
+
+</span><span class="c1"># Empty dataset</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6848042973-9">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p" data-group-id="6848042973-9">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">summary</span><span class="p" data-group-id="6848042973-10">(</span><span class="n">meta</span><span class="p" data-group-id="6848042973-10">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;No items&quot;</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="total_pages/1">
+
+  <div class="detail-header">
+    <a href="#total_pages/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">total_pages(pagination_meta)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/pagination_meta.ex#L160" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> total_pages(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>()</pre>
+
+      </div>
+
+<p>Calculates the total number of pages in the complete dataset.</p><p>Determines how many pages are needed to display all available sessions
+with the current page size. Useful for generating complete page navigation
+and progress indicators.</p><h2 id="total_pages/1-parameters" class="section-heading"><a href="#total_pages/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">meta</code> - PaginationMeta struct containing total_count and page_size</li></ul><h2 id="total_pages/1-returns" class="section-heading"><a href="#total_pages/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>The total number of pages as a positive integer (minimum 1).</p><h2 id="total_pages/1-examples" class="section-heading"><a href="#total_pages/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># 100 sessions with 20 per page = 5 pages</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="8442820478-1">(</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="8442820478-1">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">total_pages</span><span class="p" data-group-id="8442820478-2">(</span><span class="n">meta</span><span class="p" data-group-id="8442820478-2">)</span><span class="w">
+</span><span class="c1"># =&gt; 5</span><span class="w">
+
+</span><span class="c1"># 95 sessions with 20 per page = 5 pages (partial last page)</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="8442820478-3">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">95</span><span class="p" data-group-id="8442820478-3">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">total_pages</span><span class="p" data-group-id="8442820478-4">(</span><span class="n">meta</span><span class="p" data-group-id="8442820478-4">)</span><span class="w">
+</span><span class="c1"># =&gt; 5</span><span class="w">
+
+</span><span class="c1"># 20 sessions with 20 per page = 1 page (exact fit)</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="8442820478-5">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p" data-group-id="8442820478-5">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">total_pages</span><span class="p" data-group-id="8442820478-6">(</span><span class="n">meta</span><span class="p" data-group-id="8442820478-6">)</span><span class="w">
+</span><span class="c1"># =&gt; 1</span><span class="w">
+
+</span><span class="c1"># Empty dataset = 1 page (for consistency)</span><span class="w">
+</span><span class="n">meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="8442820478-7">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p" data-group-id="8442820478-7">)</span><span class="w">
+</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">total_pages</span><span class="p" data-group-id="8442820478-8">(</span><span class="n">meta</span><span class="p" data-group-id="8442820478-8">)</span><span class="w">
+</span><span class="c1"># =&gt; 1</span></code></pre><h2 id="total_pages/1-usage-patterns" class="section-heading"><a href="#total_pages/1-usage-patterns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage Patterns</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Generate complete page navigation</span><span class="w">
+</span><span class="k">for</span><span class="w"> </span><span class="n">page</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="mi">1</span><span class="o">..</span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">total_pages</span><span class="p" data-group-id="9715464779-1">(</span><span class="n">meta</span><span class="p" data-group-id="9715464779-1">)</span><span class="w"> </span><span class="k" data-group-id="9715464779-2">do</span><span class="w">
+  </span><span class="n">render_page_number</span><span class="p" data-group-id="9715464779-3">(</span><span class="n">page</span><span class="p">,</span><span class="w"> </span><span class="n">page</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">meta</span><span class="o">.</span><span class="n">current_page</span><span class="p" data-group-id="9715464779-3">)</span><span class="w">
+</span><span class="k" data-group-id="9715464779-2">end</span><span class="w">
+
+</span><span class="c1"># Show progress indicator</span><span class="w">
+</span><span class="s">&quot;Page # {meta.current_page} of # {PaginationMeta.total_pages(meta)}&quot;</span><span class="w">
+
+</span><span class="c1"># Determine if pagination needed</span><span class="w">
+</span><span class="k">if</span><span class="w"> </span><span class="nc">PaginationMeta</span><span class="o">.</span><span class="n">total_pages</span><span class="p" data-group-id="9715464779-4">(</span><span class="n">meta</span><span class="p" data-group-id="9715464779-4">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k" data-group-id="9715464779-5">do</span><span class="w">
+  </span><span class="n">show_pagination_controls</span><span class="p" data-group-id="9715464779-6">(</span><span class="p" data-group-id="9715464779-6">)</span><span class="w">
+</span><span class="k" data-group-id="9715464779-5">end</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

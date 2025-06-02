@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="Lightning v2.12.3-pre">
+
+
+    <title>LightningWeb.Live.AiAssistant.ErrorHandler — Lightning v2.12.3-pre</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
+
+    <script defer src="dist/sidebar_items-855C5EA5.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.12.3-pre
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Live.AiAssistant.ErrorHandler</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.3-pre)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/error_handler.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Comprehensive error handling and message formatting for AI Assistant interactions.</p><p>This module provides a centralized, consistent approach to error handling across
+all AI Assistant modes and operations. It transforms technical errors into
+user-friendly messages that provide clear guidance and actionable feedback.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#extract_changeset_errors/1" data-no-tooltip="" translate="no">extract_changeset_errors(arg1)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Extracts and formats validation errors from Ecto changesets.
+Processes Ecto changeset validation errors into user-friendly messages
+suitable for form display and user guidance. Handles field name
+humanization, error message interpolation, and multiple error aggregation.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#format_error/1" data-no-tooltip="" translate="no">format_error(arg1)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Transforms various error types into user-friendly, actionable messages.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#format_limit_error/1" data-no-tooltip="" translate="no">format_limit_error(arg1)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Formats AI usage limit and quota errors with specific guidance.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="extract_changeset_errors/1">
+
+  <div class="detail-header">
+    <a href="#extract_changeset_errors/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">extract_changeset_errors(arg1)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/error_handler.ex#L196" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> extract_changeset_errors(<a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()) :: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()]</pre>
+
+      </div>
+
+<p>Extracts and formats validation errors from Ecto changesets.
+Processes Ecto changeset validation errors into user-friendly messages
+suitable for form display and user guidance. Handles field name
+humanization, error message interpolation, and multiple error aggregation.</p><h2 id="extract_changeset_errors/1-parameters" class="section-heading"><a href="#extract_changeset_errors/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">changeset</code> - An <code class="inline">%Ecto.Changeset{}</code> containing validation errors</li></ul><h2 id="extract_changeset_errors/1-returns" class="section-heading"><a href="#extract_changeset_errors/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A list of formatted error messages, each containing:</p><ul><li>Humanized field name</li><li>Interpolated error message</li><li>Clear, actionable guidance</li></ul><h2 id="extract_changeset_errors/1-examples" class="section-heading"><a href="#extract_changeset_errors/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>  # Single field validation error
+  changeset = %Ecto.Changeset{</p><pre><code class="makeup elixir" translate="no"><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4152318046-1">[</span><span class="ss">content</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4152318046-2">{</span><span class="s">&quot;can&#39;t be blank&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4152318046-3">[</span><span class="ss">validation</span><span class="p">:</span><span class="w"> </span><span class="ss">:required</span><span class="p" data-group-id="4152318046-3">]</span><span class="p" data-group-id="4152318046-2">}</span><span class="p" data-group-id="4152318046-1">]</span></code></pre><p>  }
+  ErrorHandler.extract_changeset_errors(changeset)
+  # =&gt; [&quot;Content can't be blank&quot;]
+  # Multiple field errors
+  changeset = %Ecto.Changeset{</p><pre><code class="makeup elixir" translate="no"><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5839084398-1">[</span><span class="w">
+  </span><span class="ss">content</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5839084398-2">{</span><span class="s">&quot;can&#39;t be blank&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5839084398-3">[</span><span class="ss">validation</span><span class="p">:</span><span class="w"> </span><span class="ss">:required</span><span class="p" data-group-id="5839084398-3">]</span><span class="p" data-group-id="5839084398-2">}</span><span class="p">,</span><span class="w">
+  </span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5839084398-4">{</span><span class="s">&quot;should be at least %{count} character(s)&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5839084398-5">[</span><span class="ss">count</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="ss">validation</span><span class="p">:</span><span class="w"> </span><span class="ss">:length</span><span class="p" data-group-id="5839084398-5">]</span><span class="p" data-group-id="5839084398-4">}</span><span class="w">
+</span><span class="p" data-group-id="5839084398-1">]</span></code></pre><p>  }
+  ErrorHandler.extract_changeset_errors(changeset)
+  # =&gt; [&quot;Content can't be blank&quot;, &quot;Title should be at least 3 character(s)&quot;]
+  # Complex field names
+  changeset = %Ecto.Changeset{</p><pre><code class="makeup elixir" translate="no"><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0006719049-1">[</span><span class="ss">user_email</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0006719049-2">{</span><span class="s">&quot;has invalid format&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0006719049-3">[</span><span class="ss">validation</span><span class="p">:</span><span class="w"> </span><span class="ss">:format</span><span class="p" data-group-id="0006719049-3">]</span><span class="p" data-group-id="0006719049-2">}</span><span class="p" data-group-id="0006719049-1">]</span></code></pre><p>  }
+  ErrorHandler.extract_changeset_errors(changeset)
+  # =&gt; [&quot;User email has invalid format&quot;]
+  # Non-changeset input (safety)
+  ErrorHandler.extract_changeset_errors(&quot;not a changeset&quot;)
+  # =&gt; []</p>
+  </section>
+</section>
+<section class="detail" id="format_error/1">
+
+  <div class="detail-header">
+    <a href="#format_error/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">format_error(arg1)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/error_handler.ex#L62" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> format_error(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Transforms various error types into user-friendly, actionable messages.</p><p>This is the primary error formatting function that handles the most common
+error scenarios across the AI Assistant system. It provides intelligent
+error detection and appropriate message formatting for different error types.</p><h2 id="format_error/1-parameters" class="section-heading"><a href="#format_error/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">error</code> - Error to format, supporting multiple types:<ul><li><code class="inline">{:error, String.t()}</code> - Direct error messages</li><li><code class="inline">{:error, %Ecto.Changeset{}}</code> - Validation errors</li><li><code class="inline">{:error, atom()}</code> - Categorized error types</li><li><code class="inline">{:error, reason, %{text: String.t()}}</code> - Structured errors with text</li><li>Any other format - Falls back to generic message</li></ul></li></ul><h2 id="format_error/1-returns" class="section-heading"><a href="#format_error/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A user-friendly string message that:</p><ul><li>Uses clear, non-technical language</li><li>Provides actionable guidance when possible</li><li>Maintains consistent tone and style</li><li>Includes recovery suggestions where appropriate</li></ul><h2 id="format_error/1-examples" class="section-heading"><a href="#format_error/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Direct string errors (pre-formatted)</span><span class="w">
+</span><span class="nc">ErrorHandler</span><span class="o">.</span><span class="n">format_error</span><span class="p" data-group-id="6847425287-1">(</span><span class="p" data-group-id="6847425287-2">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Invalid API key configuration&quot;</span><span class="p" data-group-id="6847425287-2">}</span><span class="p" data-group-id="6847425287-1">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Invalid API key configuration&quot;</span><span class="w">
+
+</span><span class="c1"># Validation errors from forms</span><span class="w">
+</span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="6847425287-3">%</span><span class="nc" data-group-id="6847425287-3">Ecto.Changeset</span><span class="p" data-group-id="6847425287-3">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6847425287-4">[</span><span class="ss">content</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6847425287-5">{</span><span class="s">&quot;can&#39;t be blank&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6847425287-6">[</span><span class="ss">validation</span><span class="p">:</span><span class="w"> </span><span class="ss">:required</span><span class="p" data-group-id="6847425287-6">]</span><span class="p" data-group-id="6847425287-5">}</span><span class="p" data-group-id="6847425287-4">]</span><span class="p" data-group-id="6847425287-3">}</span><span class="w">
+</span><span class="nc">ErrorHandler</span><span class="o">.</span><span class="n">format_error</span><span class="p" data-group-id="6847425287-7">(</span><span class="p" data-group-id="6847425287-8">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="n">changeset</span><span class="p" data-group-id="6847425287-8">}</span><span class="p" data-group-id="6847425287-7">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Content can&#39;t be blank&quot;</span><span class="w">
+
+</span><span class="c1"># Network timeout errors</span><span class="w">
+</span><span class="nc">ErrorHandler</span><span class="o">.</span><span class="n">format_error</span><span class="p" data-group-id="6847425287-9">(</span><span class="p" data-group-id="6847425287-10">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:timeout</span><span class="p" data-group-id="6847425287-10">}</span><span class="p" data-group-id="6847425287-9">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Request timed out. Please try again.&quot;</span><span class="w">
+
+</span><span class="c1"># Connection failures</span><span class="w">
+</span><span class="nc">ErrorHandler</span><span class="o">.</span><span class="n">format_error</span><span class="p" data-group-id="6847425287-11">(</span><span class="p" data-group-id="6847425287-12">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:econnrefused</span><span class="p" data-group-id="6847425287-12">}</span><span class="p" data-group-id="6847425287-11">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Unable to reach the AI server. Please try again later.&quot;</span><span class="w">
+
+</span><span class="c1"># Structured errors with custom text</span><span class="w">
+</span><span class="nc">ErrorHandler</span><span class="o">.</span><span class="n">format_error</span><span class="p" data-group-id="6847425287-13">(</span><span class="p" data-group-id="6847425287-14">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:custom_reason</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6847425287-15">%{</span><span class="ss">text</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Service maintenance in progress&quot;</span><span class="p" data-group-id="6847425287-15">}</span><span class="p" data-group-id="6847425287-14">}</span><span class="p" data-group-id="6847425287-13">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Service maintenance in progress&quot;</span><span class="w">
+
+</span><span class="c1"># Unknown error types (fallback)</span><span class="w">
+</span><span class="nc">ErrorHandler</span><span class="o">.</span><span class="n">format_error</span><span class="p" data-group-id="6847425287-16">(</span><span class="p" data-group-id="6847425287-17">{</span><span class="ss">:unexpected</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:format</span><span class="p" data-group-id="6847425287-17">}</span><span class="p" data-group-id="6847425287-16">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Oops! Something went wrong. Please try again.&quot;</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="format_limit_error/1">
+
+  <div class="detail-header">
+    <a href="#format_limit_error/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">format_limit_error(arg1)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/error_handler.ex#L138" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> format_limit_error(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Formats AI usage limit and quota errors with specific guidance.</p><p>Provides specialized handling for usage limit errors, offering more specific
+guidance about limits, quotas, and resolution paths. These errors require
+different messaging because they often involve administrative actions or
+subscription management.</p><h2 id="format_limit_error/1-parameters" class="section-heading"><a href="#format_limit_error/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">error</code> - Limit-related error to format:<ul><li><code class="inline">{:error, :quota_exceeded}</code> - Usage quota exhausted</li><li><code class="inline">{:error, :rate_limited}</code> - Request rate too high</li><li><code class="inline">{:error, :insufficient_credits}</code> - Account credits depleted</li><li><code class="inline">{:error, reason, %{text: String.t()}}</code> - Custom limit messages</li></ul></li></ul><h2 id="format_limit_error/1-returns" class="section-heading"><a href="#format_limit_error/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>Specialized limit error messages that:</p><ul><li>Explain the specific limit condition</li><li>Provide timeframe expectations when relevant</li><li>Suggest appropriate escalation paths</li><li>Include contact information for resolution</li></ul><h2 id="format_limit_error/1-examples" class="section-heading"><a href="#format_limit_error/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>  # Quota exhaustion with custom message
+  ErrorHandler.format_limit_error({:error, :quota_exceeded, %{text: &quot;Monthly AI usage limit reached&quot;}})
+  # =&gt; &quot;Monthly AI usage limit reached&quot;</p><p>  # Standard quota exceeded
+  ErrorHandler.format_limit_error({:error, :quota_exceeded})
+  # =&gt; &quot;AI usage limit reached. Please try again later or contact support.&quot;</p><p>  # Rate limiting (temporary)
+  ErrorHandler.format_limit_error({:error, :rate_limited})
+  # =&gt; &quot;Too many requests. Please wait a moment before trying again.&quot;</p><p>  # Credit depletion (requires admin action)
+  ErrorHandler.format_limit_error({:error, :insufficient_credits})
+  # =&gt; &quot;Insufficient AI credits. Please contact your administrator.&quot;</p><p>  # Unknown limit error (fallback)
+  ErrorHandler.format_limit_error(:unknown_limit_type)
+  # =&gt; &quot;AI usage limit reached. Please try again later.&quot;</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

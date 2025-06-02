@@ -8,11 +8,11 @@
     <meta name="project" content="Lightning v2.12.3-pre">
 
 
-    <title>LightningWeb.WorkflowLive.AiAssistantComponent — Lightning v2.12.3-pre</title>
+    <title>LightningWeb.AiAssistant.Component — Lightning v2.12.3-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-7F911387.js"></script>
+    <script defer src="dist/sidebar_items-855C5EA5.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -79,18 +79,25 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">LightningWeb.WorkflowLive.AiAssistantComponent</span> 
+      <span translate="no">LightningWeb.AiAssistant.Component</span> 
       <small class="app-vsn" translate="no">(Lightning v2.12.3-pre)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/ai_assistant_component.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/component.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
   </div>
 
+
+    <section id="moduledoc">
+<p>Comprehensive LiveView component for AI-powered assistance in Lightning.</p><p>This component provides a rich, interactive chat interface that integrates multiple
+AI assistance modes, real-time message processing, session management, and user
+experience optimizations. It serves as the primary user interface for all AI
+Assistant functionality within Lightning.</p>
+    </section>
 
 </div>
 
@@ -105,14 +112,6 @@ Lightning
   <h2>
     <a href="#functions">Functions</a>
   </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#error_message/1" data-no-tooltip="" translate="no">error_message(error)</a>
-
-      </div>
-
-    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -187,28 +186,6 @@ Lightning
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="error_message/1">
-
-  <div class="detail-header">
-    <a href="#error_message/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">error_message(error)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/ai_assistant_component.ex#L200" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
 <section class="detail" id="formatted_content/1">
 
   <div class="detail-header">
@@ -219,7 +196,7 @@ Lightning
       <h1 class="signature" translate="no">formatted_content(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/ai_assistant_component.ex#L887" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/component.ex#L1375" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -228,7 +205,7 @@ Lightning
 
   <section class="docstring">
 
-<h2 id="formatted_content/1-attributes" class="section-heading"><a href="#formatted_content/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">content</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">attributes</code> (<code class="inline">:map</code>) - Defaults to <code class="inline">%{}</code>.</li></ul>
+<h2 id="formatted_content/1-attributes" class="section-heading"><a href="#formatted_content/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">content</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">attributes</code> (<code class="inline">:map</code>) - Defaults to <code class="inline">%{}</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="handle_async/3">
@@ -241,7 +218,7 @@ Lightning
       <h1 class="signature" translate="no">handle_async(atom, arg, socket)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/ai_assistant_component.ex#L236" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/component.ex#L192" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -263,7 +240,7 @@ Lightning
       <h1 class="signature" translate="no">handle_event(binary, params, socket)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/ai_assistant_component.ex#L87" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/component.ex#L70" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -285,7 +262,7 @@ Lightning
       <h1 class="signature" translate="no">mount(socket)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/ai_assistant_component.ex#L13" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/component.ex#L23" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -307,7 +284,7 @@ Lightning
       <h1 class="signature" translate="no">render(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/ai_assistant_component.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/component.ex#L58" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -329,7 +306,7 @@ Lightning
       <h1 class="signature" translate="no">update(assigns, socket)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/ai_assistant_component.ex#L32" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/component.ex#L42" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

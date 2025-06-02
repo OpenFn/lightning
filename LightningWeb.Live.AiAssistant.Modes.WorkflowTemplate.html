@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="Lightning v2.12.3-pre">
+
+
+    <title>LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate — Lightning v2.12.3-pre</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
+
+    <script defer src="dist/sidebar_items-855C5EA5.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.12.3-pre
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.12.3-pre)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>AI Assistant mode for intelligent workflow template generation and management.</p><p>This mode leverages advanced AI capabilities to transform natural language descriptions
+into complete, production-ready Lightning workflow templates. It provides an intuitive
+interface for creating complex data integration workflows without requiring deep
+technical knowledge of Lightning's YAML structure.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#chat_input_disabled?/1" data-no-tooltip="" translate="no">chat_input_disabled?(map)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Determines if workflow template input should be disabled.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#chat_title/1" data-no-tooltip="" translate="no">chat_title(session)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Generates contextual titles for workflow template sessions.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#create_session/2" data-no-tooltip="" translate="no">create_session(map, content)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Creates a new workflow template generation session.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#disabled_tooltip_message/1" data-no-tooltip="" translate="no">disabled_tooltip_message(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Generates appropriate tooltip messages when template input is disabled.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#error_message/1" data-no-tooltip="" translate="no">error_message(error)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Formats errors consistently for workflow template mode.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_session!/2" data-no-tooltip="" translate="no">get_session!(session_id, assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Retrieves a workflow template session with full context.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#handle_response_generated/3" data-no-tooltip="" translate="no">handle_response_generated(assigns, session_or_message, ui_callback)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Handles post-processing after workflow template generation.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#input_placeholder/0" data-no-tooltip="" translate="no">input_placeholder()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Provides workflow-specific placeholder text for input guidance.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_sessions/3" data-no-tooltip="" translate="no">list_sessions(map, sort_direction, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Lists workflow template sessions for the current project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#metadata/0" data-no-tooltip="" translate="no">metadata()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Provides metadata for the workflow template generation mode.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#more_sessions?/2" data-no-tooltip="" translate="no">more_sessions?(map, current_count)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Checks if more workflow template sessions exist for the project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#on_session_start/2" data-no-tooltip="" translate="no">on_session_start(socket, ui_callback)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Initializes the UI state when starting a new template session.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#query/2" data-no-tooltip="" translate="no">query(session, content)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Processes workflow template requests through the AI service.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#save_message/2" data-no-tooltip="" translate="no">save_message(map, content)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Saves a user message to the workflow template session.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#supports_template_generation?/0" data-no-tooltip="" translate="no">supports_template_generation?()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Indicates that workflow mode supports template generation.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="chat_input_disabled?/1">
+
+  <div class="detail-header">
+    <a href="#chat_input_disabled?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">chat_input_disabled?(map)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L193" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> chat_input_disabled?(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Determines if workflow template input should be disabled.</p><p>Evaluates conditions specific to template generation to ensure the
+feature is only available when appropriate permissions and service
+availability allow it.</p><h2 id="chat_input_disabled?/1-examples" class="section-heading"><a href="#chat_input_disabled?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Input enabled for template generation</span><span class="w">
+</span><span class="n">chat_input_disabled?</span><span class="p" data-group-id="6519002214-1">(</span><span class="p" data-group-id="6519002214-2">%{</span><span class="w">
+  </span><span class="ss">can_edit_workflow</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
+  </span><span class="ss">ai_limit_result</span><span class="p">:</span><span class="w"> </span><span class="ss">:ok</span><span class="p">,</span><span class="w">
+  </span><span class="ss">endpoint_available?</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
+  </span><span class="ss">pending_message</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6519002214-3">%{</span><span class="ss">loading</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="6519002214-3">}</span><span class="w">
+</span><span class="p" data-group-id="6519002214-2">}</span><span class="p" data-group-id="6519002214-1">)</span><span class="w">
+</span><span class="c1"># =&gt; false</span><span class="w">
+
+</span><span class="c1"># Input disabled due to usage limits</span><span class="w">
+</span><span class="n">chat_input_disabled?</span><span class="p" data-group-id="6519002214-4">(</span><span class="p" data-group-id="6519002214-5">%{</span><span class="w">
+  </span><span class="ss">can_edit_workflow</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
+  </span><span class="ss">ai_limit_result</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6519002214-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:limit_exceeded</span><span class="p" data-group-id="6519002214-6">}</span><span class="p">,</span><span class="w">
+  </span><span class="ss">endpoint_available?</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
+  </span><span class="ss">pending_message</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6519002214-7">%{</span><span class="ss">loading</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="6519002214-7">}</span><span class="w">
+</span><span class="p" data-group-id="6519002214-5">}</span><span class="p" data-group-id="6519002214-4">)</span><span class="w">
+</span><span class="c1"># =&gt; true</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="chat_title/1">
+
+  <div class="detail-header">
+    <a href="#chat_title/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">chat_title(session)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L239" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> chat_title(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Generates contextual titles for workflow template sessions.</p><p>Creates descriptive titles that include project context when available,
+making it easier to identify and organize template generation sessions.</p><h2 id="chat_title/1-examples" class="section-heading"><a href="#chat_title/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># With custom title</span><span class="w">
+</span><span class="n">chat_title</span><span class="p" data-group-id="8224305894-1">(</span><span class="p" data-group-id="8224305894-2">%{</span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Salesforce to PostgreSQL Sync&quot;</span><span class="p" data-group-id="8224305894-2">}</span><span class="p" data-group-id="8224305894-1">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Salesforce to PostgreSQL Sync&quot;</span><span class="w">
+
+</span><span class="c1"># With project context</span><span class="w">
+</span><span class="n">chat_title</span><span class="p" data-group-id="8224305894-3">(</span><span class="p" data-group-id="8224305894-4">%{</span><span class="ss">project</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8224305894-5">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Customer Data Platform&quot;</span><span class="p" data-group-id="8224305894-5">}</span><span class="p" data-group-id="8224305894-4">}</span><span class="p" data-group-id="8224305894-3">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Customer Data Platform Workflow&quot;</span><span class="w">
+
+</span><span class="c1"># Fallback</span><span class="w">
+</span><span class="n">chat_title</span><span class="p" data-group-id="8224305894-6">(</span><span class="p" data-group-id="8224305894-7">%{</span><span class="p" data-group-id="8224305894-7">}</span><span class="p" data-group-id="8224305894-6">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;New Workflow&quot;</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="create_session/2">
+
+  <div class="detail-header">
+    <a href="#create_session/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">create_session(map, content)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L39" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> create_session(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>Creates a new workflow template generation session.</p><p>Initializes a project-scoped session for AI-powered workflow creation.
+The session is configured for template generation with appropriate
+metadata and context for the AI service.</p><h2 id="create_session/2-examples" class="section-heading"><a href="#create_session/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Create session for new workflow</span><span class="w">
+</span><span class="p" data-group-id="7387480029-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="7387480029-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">create_session</span><span class="p" data-group-id="7387480029-2">(</span><span class="w">
+  </span><span class="p" data-group-id="7387480029-3">%{</span><span class="ss">project</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="7387480029-3">}</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Create a daily Salesforce to PostgreSQL sync workflow&quot;</span><span class="w">
+</span><span class="p" data-group-id="7387480029-2">)</span><span class="w">
+
+</span><span class="c1"># Create session for workflow enhancement</span><span class="w">
+</span><span class="p" data-group-id="7387480029-4">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="7387480029-4">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">create_session</span><span class="p" data-group-id="7387480029-5">(</span><span class="w">
+  </span><span class="p" data-group-id="7387480029-6">%{</span><span class="ss">project</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="7387480029-6">}</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Add error handling and retry logic to existing webhook workflow&quot;</span><span class="w">
+</span><span class="p" data-group-id="7387480029-5">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="disabled_tooltip_message/1">
+
+  <div class="detail-header">
+    <a href="#disabled_tooltip_message/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">disabled_tooltip_message(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L366" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> disabled_tooltip_message(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil</pre>
+
+      </div>
+
+<p>Generates appropriate tooltip messages when template input is disabled.</p><p>Provides specific explanations for why workflow template generation
+is unavailable, helping users understand required actions.</p><h2 id="disabled_tooltip_message/1-parameters" class="section-heading"><a href="#disabled_tooltip_message/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - Map containing permission and limit information</li></ul><h2 id="disabled_tooltip_message/1-returns" class="section-heading"><a href="#disabled_tooltip_message/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>String explanation or <code class="inline">nil</code> if input should be enabled.</p><h2 id="disabled_tooltip_message/1-examples" class="section-heading"><a href="#disabled_tooltip_message/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Permission denied</span><span class="w">
+</span><span class="n">disabled_tooltip_message</span><span class="p" data-group-id="4187530801-1">(</span><span class="p" data-group-id="4187530801-2">%{</span><span class="ss">can_edit_workflow</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="4187530801-2">}</span><span class="p" data-group-id="4187530801-1">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;You are not authorized to use the AI Assistant&quot;</span><span class="w">
+
+</span><span class="c1"># Usage limit reached</span><span class="w">
+</span><span class="n">disabled_tooltip_message</span><span class="p" data-group-id="4187530801-3">(</span><span class="p" data-group-id="4187530801-4">%{</span><span class="ss">ai_limit_result</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4187530801-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:monthly_limit</span><span class="p" data-group-id="4187530801-5">}</span><span class="p" data-group-id="4187530801-4">}</span><span class="p" data-group-id="4187530801-3">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Monthly AI usage limit exceeded&quot;</span><span class="w">
+
+</span><span class="c1"># Service available</span><span class="w">
+</span><span class="n">disabled_tooltip_message</span><span class="p" data-group-id="4187530801-6">(</span><span class="p" data-group-id="4187530801-7">%{</span><span class="ss">can_edit_workflow</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w"> </span><span class="ss">ai_limit_result</span><span class="p">:</span><span class="w"> </span><span class="ss">:ok</span><span class="p" data-group-id="4187530801-7">}</span><span class="p" data-group-id="4187530801-6">)</span><span class="w">
+</span><span class="c1"># =&gt; nil</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="error_message/1">
+
+  <div class="detail-header">
+    <a href="#error_message/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">error_message(error)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L402" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> error_message(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+          <pre translate="no"><span class="attribute">@spec</span> error_message(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Formats errors consistently for workflow template mode.</p><p>Leverages shared error handling to provide user-friendly error messages
+for template generation failures and validation issues.</p><h2 id="error_message/1-parameters" class="section-heading"><a href="#error_message/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">error</code> - Error to format (changeset, atom, string, etc.)</li></ul><h2 id="error_message/1-returns" class="section-heading"><a href="#error_message/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>Human-readable error message string.</p><h2 id="error_message/1-examples" class="section-heading"><a href="#error_message/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">error_message</span><span class="p" data-group-id="2703120200-1">(</span><span class="p" data-group-id="2703120200-2">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:service_unavailable</span><span class="p" data-group-id="2703120200-2">}</span><span class="p" data-group-id="2703120200-1">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;AI service is temporarily unavailable. Please try again.&quot;</span><span class="w">
+
+</span><span class="n">error_message</span><span class="p" data-group-id="2703120200-3">(</span><span class="p" data-group-id="2703120200-4">%</span><span class="nc" data-group-id="2703120200-4">Ecto.Changeset</span><span class="p" data-group-id="2703120200-4">{</span><span class="p" data-group-id="2703120200-4">}</span><span class="p" data-group-id="2703120200-3">)</span><span class="w">
+</span><span class="c1"># =&gt; &quot;Template validation failed: [specific field errors]&quot;</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="get_session!/2">
+
+  <div class="detail-header">
+    <a href="#get_session!/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_session!(session_id, assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L56" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_session!(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Retrieves a workflow template session with full context.</p><p>Loads the complete session including all messages, generated templates,
+and conversation history for template generation continuation.</p><h2 id="get_session!/2-examples" class="section-heading"><a href="#get_session!/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">get_session!</span><span class="p" data-group-id="9260517429-1">(</span><span class="n">session_id</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9260517429-2">%{</span><span class="p" data-group-id="9260517429-2">}</span><span class="p" data-group-id="9260517429-1">)</span><span class="w">
+</span><span class="c1"># Session includes all messages and any generated workflow YAML</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="handle_response_generated/3">
+
+  <div class="detail-header">
+    <a href="#handle_response_generated/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">handle_response_generated(assigns, session_or_message, ui_callback)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L302" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> handle_response_generated(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">function</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Handles post-processing after workflow template generation.</p><p>Detects when the AI has generated workflow YAML code and triggers
+appropriate UI updates to enable template application and preview.</p><h2 id="handle_response_generated/3-parameters" class="section-heading"><a href="#handle_response_generated/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - Current LiveView assigns</li><li><code class="inline">session_or_message</code> - Updated session or new message with potential YAML</li><li><code class="inline">ui_callback</code> - Function for triggering UI updates</li></ul><h2 id="handle_response_generated/3-examples" class="section-heading"><a href="#handle_response_generated/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># When YAML is generated</span><span class="w">
+</span><span class="n">handle_response_generated</span><span class="p" data-group-id="5681726768-1">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">session_with_yaml</span><span class="p">,</span><span class="w"> </span><span class="n">ui_callback</span><span class="p" data-group-id="5681726768-1">)</span><span class="w">
+</span><span class="c1"># Triggers :workflow_code_generated event with the YAML content</span><span class="w">
+
+</span><span class="c1"># When no YAML is present</span><span class="w">
+</span><span class="n">handle_response_generated</span><span class="p" data-group-id="5681726768-2">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">session_without_yaml</span><span class="p">,</span><span class="w"> </span><span class="n">ui_callback</span><span class="p" data-group-id="5681726768-2">)</span><span class="w">
+</span><span class="c1"># No UI update triggered, returns assigns unchanged</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="input_placeholder/0">
+
+  <div class="detail-header">
+    <a href="#input_placeholder/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">input_placeholder()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L213" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> input_placeholder() :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Provides workflow-specific placeholder text for input guidance.</p><p>Encourages users to describe their desired workflow functionality
+in natural language for AI template generation.</p>
+  </section>
+</section>
+<section class="detail" id="list_sessions/3">
+
+    <span id="list_sessions/2"></span>
+
+  <div class="detail-header">
+    <a href="#list_sessions/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_sessions(map, sort_direction, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L80" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_sessions(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: %{
+  sessions: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()],
+  pagination: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
+}</pre>
+
+      </div>
+
+<p>Lists workflow template sessions for the current project.</p><p>Retrieves paginated sessions associated with the project, filtered
+to show only workflow template generation conversations.</p><h2 id="list_sessions/3-examples" class="section-heading"><a href="#list_sessions/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Load recent template sessions</span><span class="w">
+</span><span class="p" data-group-id="0899983816-1">%{</span><span class="ss">sessions</span><span class="p">:</span><span class="w"> </span><span class="n">sessions</span><span class="p">,</span><span class="w"> </span><span class="ss">pagination</span><span class="p">:</span><span class="w"> </span><span class="n">meta</span><span class="p" data-group-id="0899983816-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">list_sessions</span><span class="p" data-group-id="0899983816-2">(</span><span class="w">
+  </span><span class="p" data-group-id="0899983816-3">%{</span><span class="ss">project</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="0899983816-3">}</span><span class="p">,</span><span class="w">
+  </span><span class="ss">:desc</span><span class="p">,</span><span class="w">
+  </span><span class="ss">limit</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w">
+</span><span class="p" data-group-id="0899983816-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="metadata/0">
+
+  <div class="detail-header">
+    <a href="#metadata/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">metadata()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L270" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> metadata() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Provides metadata for the workflow template generation mode.</p><p>Returns information used by the UI to display mode selection options
+and identify the mode's template generation capabilities.</p>
+  </section>
+</section>
+<section class="detail" id="more_sessions?/2">
+
+  <div class="detail-header">
+    <a href="#more_sessions?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">more_sessions?(map, current_count)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L98" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> more_sessions?(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Checks if more workflow template sessions exist for the project.</p><p>Determines if additional sessions are available beyond the current count
+for implementing pagination controls.</p><h2 id="more_sessions?/2-examples" class="section-heading"><a href="#more_sessions?/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="k">if</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">more_sessions?</span><span class="p" data-group-id="6059734930-1">(</span><span class="p" data-group-id="6059734930-2">%{</span><span class="ss">project</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="6059734930-2">}</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p" data-group-id="6059734930-1">)</span><span class="w"> </span><span class="k" data-group-id="6059734930-3">do</span><span class="w">
+  </span><span class="c1"># Show &quot;Load More&quot; button</span><span class="w">
+</span><span class="k" data-group-id="6059734930-3">end</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="on_session_start/2">
+
+  <div class="detail-header">
+    <a href="#on_session_start/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">on_session_start(socket, ui_callback)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L332" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> on_session_start(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">function</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Initializes the UI state when starting a new template session.</p><p>Clears any existing template data and prepares the interface for
+new workflow generation.</p><h2 id="on_session_start/2-parameters" class="section-heading"><a href="#on_session_start/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">socket</code> - LiveView socket with current state</li><li><code class="inline">ui_callback</code> - Function for triggering UI updates</li></ul><h2 id="on_session_start/2-examples" class="section-heading"><a href="#on_session_start/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Starting new template session</span><span class="w">
+</span><span class="n">on_session_start</span><span class="p" data-group-id="1056985391-1">(</span><span class="n">socket</span><span class="p">,</span><span class="w"> </span><span class="n">ui_callback</span><span class="p" data-group-id="1056985391-1">)</span><span class="w">
+</span><span class="c1"># Triggers :clear_template to reset UI state</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="query/2">
+
+  <div class="detail-header">
+    <a href="#query/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">query(session, content)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L160" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> query(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>Processes workflow template requests through the AI service.</p><p>Sends user descriptions and requirements to the specialized workflow
+generation AI service, which returns complete YAML templates and
+explanatory content.</p><h2 id="query/2-parameters" class="section-heading"><a href="#query/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session</code> - Session with conversation history and context</li><li><code class="inline">content</code> - User's workflow description or modification request</li></ul><h2 id="query/2-examples" class="section-heading"><a href="#query/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Generate new workflow template</span><span class="w">
+</span><span class="p" data-group-id="1296496824-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="1296496824-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="1296496824-2">(</span><span class="w">
+  </span><span class="n">session</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Create a workflow that processes CSV files uploaded to Google Drive&quot;</span><span class="w">
+</span><span class="p" data-group-id="1296496824-2">)</span><span class="w">
+
+</span><span class="c1"># Modify existing template</span><span class="w">
+</span><span class="p" data-group-id="1296496824-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="1296496824-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="1296496824-4">(</span><span class="w">
+  </span><span class="n">session</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Add error notifications to Slack when the sync fails&quot;</span><span class="w">
+</span><span class="p" data-group-id="1296496824-4">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="save_message/2">
+
+  <div class="detail-header">
+    <a href="#save_message/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">save_message(map, content)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L124" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> save_message(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>Saves a user message to the workflow template session.</p><p>Adds user requests, modifications, or questions to the conversation
+history for AI processing and template generation.</p><h2 id="save_message/2-examples" class="section-heading"><a href="#save_message/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Save template modification request</span><span class="w">
+</span><span class="p" data-group-id="4362138430-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="4362138430-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">save_message</span><span class="p" data-group-id="4362138430-2">(</span><span class="w">
+  </span><span class="p" data-group-id="4362138430-3">%{</span><span class="ss">session</span><span class="p">:</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="4362138430-3">}</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Add data validation before database insertion&quot;</span><span class="w">
+</span><span class="p" data-group-id="4362138430-2">)</span><span class="w">
+
+</span><span class="c1"># Save error correction request</span><span class="w">
+</span><span class="p" data-group-id="4362138430-4">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="4362138430-4">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowTemplate</span><span class="o">.</span><span class="n">save_message</span><span class="p" data-group-id="4362138430-5">(</span><span class="w">
+  </span><span class="p" data-group-id="4362138430-6">%{</span><span class="ss">session</span><span class="p">:</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="4362138430-6">}</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;Fix the cron expression to run every 2 hours&quot;</span><span class="w">
+</span><span class="p" data-group-id="4362138430-5">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="supports_template_generation?/0">
+
+  <div class="detail-header">
+    <a href="#supports_template_generation?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">supports_template_generation?()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/workflow_template.ex#L260" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> supports_template_generation?() :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Indicates that workflow mode supports template generation.</p><p>This mode's primary purpose is generating workflow templates,
+enabling UI features like template application and export.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>
