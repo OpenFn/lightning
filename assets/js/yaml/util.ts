@@ -103,7 +103,7 @@ export const convertWorkflowSpecToState = (
     const trigger = {
       id: randomUUID(),
       type: specTrigger.type,
-      enabled: specTrigger.enabled,
+      enabled: true,
     };
 
     if (specTrigger.type === 'cron') {

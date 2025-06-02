@@ -312,6 +312,19 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def ai_assistant_modes do
+      %{
+        job: LightningWeb.Live.AiAssistant.Modes.JobCode,
+        workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
+      }
+    end
+
+    @impl true
+    def per_workflow_claim_limit do
+      Application.get_env(:lightning, :per_workflow_claim_limit, 50)
+    end
+
+    @impl true
     def metrics_run_performance_age_seconds do
       metrics_config() |> Keyword.get(:run_performance_age_seconds)
     end
@@ -385,6 +398,8 @@ defmodule Lightning.Config do
   @callback gdpr_banner() :: map() | false
   @callback gdpr_preferences() :: map() | false
   @callback external_metrics_module() :: module() | nil
+  @callback ai_assistant_modes() :: %{atom() => module()}
+  @callback per_workflow_claim_limit() :: pos_integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -595,6 +610,10 @@ defmodule Lightning.Config do
     impl().external_metrics_module()
   end
 
+  def ai_assistant_modes do
+    impl().ai_assistant_modes()
+  end
+
   def metrics_run_performance_age_seconds do
     impl().metrics_run_performance_age_seconds()
   end
@@ -609,6 +628,10 @@ defmodule Lightning.Config do
 
   def metrics_unclaimed_run_threshold_seconds do
     impl().metrics_unclaimed_run_threshold_seconds()
+  end
+
+  def per_workflow_claim_limit do
+    impl().per_workflow_claim_limit()
   end
 
   defp impl do

@@ -23,7 +23,7 @@ defmodule LightningWeb.Components.DataTables do
   def credentials_table(assigns) do
     ~H"""
     <div id={"#{@id}-table-container"}>
-      <div :if={@display_table_title} class="py-4 leading-loose">
+      <div :if={@display_table_title} class="pb-1 leading-loose">
         <h6 class="font-normal text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@credentials) do %>
@@ -113,7 +113,7 @@ defmodule LightningWeb.Components.DataTables do
   def oauth_clients_table(assigns) do
     ~H"""
     <div id={"#{@id}-table-container"}>
-      <div class="pb-4 leading-loose">
+      <div class="leading-loose pb-2">
         <h6 class="font-normal text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@clients) do %>

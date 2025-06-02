@@ -284,10 +284,10 @@ defmodule LightningWeb.LayoutComponents do
 
   def section_header(assigns) do
     ~H"""
-    <div class="flex justify-between content-center pb-4">
-      <div class="leading-loose">
+    <div class="flex justify-between content-center">
+      <div>
         <h6 class="font-medium text-black">{@title}</h6>
-        <small class="block text-xs text-gray-600">
+        <small class="block my-1 text-xs text-gray-600">
           {@subtitle}
         </small>
         <%= if !@can_perform_action do %>

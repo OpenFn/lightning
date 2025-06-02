@@ -52,7 +52,7 @@ defmodule LightningWeb.Components.Common do
     <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 #{@class}"}>
       <div class="flex">
         <div class="flex-shrink-0">
-          <.icon name={@icon} class={"h-5 w-5 text-#{@color}-400"} />
+          <.icon name={@icon} class={"align-top h-5 w-5 text-#{@color}-400"} />
         </div>
         <div class={[
           "ml-3",
@@ -142,7 +142,7 @@ defmodule LightningWeb.Components.Common do
     >
       <p class="text-sm leading-6">
         <%= if @icon == true do %>
-          <.icon name={@icon_name} class="h-5 w-5 align-middle mr-1" />
+          <.icon name={@icon_name} class="h-5 w-5 align-top mr-1" />
         <% end %>
         {@message}
         <%= if assigns[:action] do %>

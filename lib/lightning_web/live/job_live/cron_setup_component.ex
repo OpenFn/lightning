@@ -24,77 +24,76 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id={@id} class="col-span-4 @md:col-span-2 grid grid-cols-4 gap-2">
-      <div class="col-span-4">
-        <.frequency_field
-          target={@myself}
-          values={@initial_values["frequencies"]}
-          selected={Map.get(@cron_data, :frequency, "hourly")}
-          disabled={@disabled}
-        />
-      </div>
-      <div class="col-span-4">
-        <%= if Map.get(@cron_data, :frequency) == "hourly" do %>
-          <div class="grid grid-cols-2 gap-1">
-            <.minute_field
-              target={@myself}
-              values={@initial_values["minutes"]}
-              selected={Map.get(@cron_data, :minute, "00")}
-              disabled={@disabled}
-            />
-          </div>
-        <% end %>
-        <%= if Map.get(@cron_data, :frequency) == "daily" do %>
-          <div class="grid grid-cols-2 gap-1">
-            <.time_field
-              target={@myself}
-              minute_values={@initial_values["minutes"]}
-              hour_values={@initial_values["hours"]}
-              selected_minute={Map.get(@cron_data, :minute, "00")}
-              selected_hour={Map.get(@cron_data, :hour, "00")}
-              disabled={@disabled}
-            />
-          </div>
-        <% end %>
-        <%= if Map.get(@cron_data, :frequency) == "weekly" do %>
-          <div class="grid grid-cols-2 gap-1">
-            <.weekday_field
-              target={@myself}
-              values={@initial_values["weekdays"]}
-              selected={Map.get(@cron_data, :weekday, 1)}
-              disabled={@disabled}
-            />
-            <.time_field
-              target={@myself}
-              minute_values={@initial_values["minutes"]}
-              hour_values={@initial_values["hours"]}
-              selected_minute={Map.get(@cron_data, :minute, "00")}
-              selected_hour={Map.get(@cron_data, :hour, "00")}
-              disabled={@disabled}
-            />
-          </div>
-        <% end %>
-        <%= if Map.get(@cron_data, :frequency) == "monthly" do %>
-          <div class="grid grid-cols-3 gap-1">
-            <.monthday_field
-              target={@myself}
-              values={@initial_values["monthdays"]}
-              selected={Map.get(@cron_data, :monthday, "01")}
-              disabled={@disabled}
-            />
-            <.time_field
-              target={@myself}
-              minute_values={@initial_values["minutes"]}
-              hour_values={@initial_values["hours"]}
-              selected_minute={Map.get(@cron_data, :minute, "00")}
-              selected_hour={Map.get(@cron_data, :hour, "00")}
-              disabled={@disabled}
-            />
-          </div>
-        <% end %>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-2"></div>
+    <div id={@id} class="col-span-4 @md:col-span-2 space-y-8">
+      <div class="space-y-2 grid grid-cols-4">
+        <div class="col-span-4">
+          <.frequency_field
+            target={@myself}
+            values={@initial_values["frequencies"]}
+            selected={Map.get(@cron_data, :frequency, "hourly")}
+            disabled={@disabled}
+          />
+        </div>
+        <div class="col-span-4">
+          <%= if Map.get(@cron_data, :frequency) == "hourly" do %>
+            <div class="grid grid-cols-2 gap-1">
+              <.minute_field
+                target={@myself}
+                values={@initial_values["minutes"]}
+                selected={Map.get(@cron_data, :minute, "00")}
+                disabled={@disabled}
+              />
+            </div>
+          <% end %>
+          <%= if Map.get(@cron_data, :frequency) == "daily" do %>
+            <div class="grid grid-cols-2 gap-1">
+              <.time_field
+                target={@myself}
+                minute_values={@initial_values["minutes"]}
+                hour_values={@initial_values["hours"]}
+                selected_minute={Map.get(@cron_data, :minute, "00")}
+                selected_hour={Map.get(@cron_data, :hour, "00")}
+                disabled={@disabled}
+              />
+            </div>
+          <% end %>
+          <%= if Map.get(@cron_data, :frequency) == "weekly" do %>
+            <div class="grid grid-cols-2 gap-1">
+              <.weekday_field
+                target={@myself}
+                values={@initial_values["weekdays"]}
+                selected={Map.get(@cron_data, :weekday, 1)}
+                disabled={@disabled}
+              />
+              <.time_field
+                target={@myself}
+                minute_values={@initial_values["minutes"]}
+                hour_values={@initial_values["hours"]}
+                selected_minute={Map.get(@cron_data, :minute, "00")}
+                selected_hour={Map.get(@cron_data, :hour, "00")}
+                disabled={@disabled}
+              />
+            </div>
+          <% end %>
+          <%= if Map.get(@cron_data, :frequency) == "monthly" do %>
+            <div class="grid grid-cols-3 gap-1">
+              <.monthday_field
+                target={@myself}
+                values={@initial_values["monthdays"]}
+                selected={Map.get(@cron_data, :monthday, "01")}
+                disabled={@disabled}
+              />
+              <.time_field
+                target={@myself}
+                minute_values={@initial_values["minutes"]}
+                hour_values={@initial_values["hours"]}
+                selected_minute={Map.get(@cron_data, :minute, "00")}
+                selected_hour={Map.get(@cron_data, :hour, "00")}
+                disabled={@disabled}
+              />
+            </div>
+          <% end %>
+        </div>
       </div>
       <div class="col-span-4 @md:col-span-4">
         <Form.text_field field={:cron_expression} form={@form} disabled={@disabled} />

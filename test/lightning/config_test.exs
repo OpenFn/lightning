@@ -54,6 +54,15 @@ defmodule Lightning.Configtest do
       assert expected == actual
     end
 
+    test "returns configured AI modes" do
+      modes = API.ai_assistant_modes()
+
+      assert modes[:job] == LightningWeb.Live.AiAssistant.Modes.JobCode
+
+      assert modes[:workflow] ==
+               LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
+    end
+
     test "returns number of seconds that constitutes stalled run threshold" do
       expected =
         extract_from_config(
@@ -98,6 +107,14 @@ defmodule Lightning.Configtest do
         )
 
       actual = API.metrics_unclaimed_run_threshold_seconds()
+
+      assert expected == actual
+    end
+
+    test "returns the per workflow claim limit" do
+      expected = Application.get_env(:lightning, :per_workflow_claim_limit, 50)
+
+      actual = API.per_workflow_claim_limit()
 
       assert expected == actual
     end

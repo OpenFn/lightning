@@ -45,12 +45,18 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
     %{templates: templates}
   end
 
+  defp skip_disclaimer(user, read_at \\ DateTime.utc_now() |> DateTime.to_unix()) do
+    Ecto.Changeset.change(user, %{
+      preferences: %{"ai_assistant.disclaimer_read_at" => read_at}
+    })
+    |> Lightning.Repo.update!()
+  end
+
   describe "workflow creation methods" do
     test "displays template and import options", %{conn: conn, project: project} do
-      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Initial state should show template selection
-      assert html =~ "Build your workflow from templates"
       assert view |> element("#create-workflow-from-template") |> has_element?()
       assert view |> element("#import-workflow-btn") |> has_element?()
       refute view |> element("#workflow-importer") |> has_element?()
@@ -83,10 +89,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       view |> element("#import-workflow-btn") |> render_click()
 
       # Click back button
-      html = view |> element("#move-back-to-templates-btn") |> render_click()
+      _html = view |> element("#move-back-to-templates-btn") |> render_click()
 
       # Should show template selection again
-      assert html =~ "Build your workflow from templates"
       assert view |> element("#create-workflow-from-template") |> has_element?()
       refute view |> element("#workflow-importer") |> has_element?()
     end
@@ -351,6 +356,258 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
                "#workflow-dropzone[phx-hook='FileDropzone'][data-target='#workflow-file']"
              )
              |> has_element?()
+    end
+  end
+
+  describe "AI method integration" do
+    test "switching to AI method without search term shows AI interface", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      ai_assistant = element(view, "#workflow-ai-assistant")
+
+      refute has_element?(ai_assistant)
+
+      skip_disclaimer(user)
+
+      view
+      |> element("#template-label-ai-dynamic-template")
+      |> render_click()
+
+      assert has_element?(ai_assistant)
+
+      html = render(ai_assistant)
+
+      assert html =~ "Start a conversation to see your chat history appear here"
+    end
+
+    test "switching to AI method with search term creates session and shows AI interface",
+         %{
+           conn: conn,
+           project: project,
+           user: user
+         } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      ai_assistant = element(view, "#workflow-ai-assistant")
+
+      refute has_element?(ai_assistant)
+
+      view
+      |> form("#search-templates-form", %{"search" => "sync data from API"})
+      |> render_change()
+
+      skip_disclaimer(user)
+
+      view
+      |> element("#template-label-ai-dynamic-template")
+      |> render_click()
+
+      assert has_element?(ai_assistant)
+
+      html = render(ai_assistant)
+
+      assert html =~ "sync data from API"
+    end
+
+    test "AI template card displays search term correctly", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      view
+      |> form("#search-templates-form", %{"search" => "process webhook data"})
+      |> render_change()
+
+      build_with_button = element(view, "#template-label-ai-dynamic-template")
+
+      html = render(build_with_button)
+      assert html =~ "process webhook data"
+      assert html =~ "Build with AI ✨"
+
+      sessions_before =
+        Lightning.AiAssistant.list_sessions(project)
+        |> Map.get(:sessions)
+
+      assert Enum.empty?(sessions_before)
+
+      build_with_button |> render_click()
+
+      assert view |> element("#create_workflow_via_ai") |> has_element?()
+
+      sessions_after =
+        Lightning.AiAssistant.list_sessions(project)
+        |> Map.get(:sessions)
+
+      refute Enum.empty?(sessions_after)
+
+      assert sessions_after |> Enum.any?(&(&1.title == "process webhook data"))
+    end
+
+    test "AI template card shows default text when no search term", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      html = render(view)
+      assert html =~ "Build with AI ✨"
+      assert html =~ "Build your workflow using the AI assistant"
+    end
+
+    test "can switch back from AI method to templates", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      view |> element("#template-label-ai-dynamic-template") |> render_click()
+
+      assert view |> element("#create_workflow_via_ai") |> has_element?()
+
+      html = view |> element("#move-back-to-templates-btn") |> render_click()
+
+      assert html =~ "create-workflow-from-template"
+      assert view |> element("#create-workflow-from-template") |> has_element?()
+      refute view |> element("#create_workflow_via_ai") |> has_element?()
+    end
+  end
+
+  describe "template selection events" do
+    test "selecting a template notifies parent liveview", %{
+      conn: conn,
+      project: project,
+      templates: [%{id: id, code: code} | _]
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      view
+      |> element("#choose-workflow-template-form")
+      |> render_change(%{"template_id" => id})
+
+      view |> has_element?("#selected-template-label-#{id}")
+
+      assert_push_event(view, "template_selected", %{template: ^code})
+    end
+
+    test "selecting different templates changes the selection", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      view
+      |> element("#choose-workflow-template-form")
+      |> render_change(%{"template_id" => "base-webhook-template"})
+
+      assert_push_event(view, "template_selected", %{template: webhook_template})
+
+      view
+      |> element("#choose-workflow-template-form")
+      |> render_change(%{"template_id" => "base-cron-template"})
+
+      assert_push_event(view, "template_selected", %{template: cron_template})
+
+      refute webhook_template == cron_template
+      assert cron_template =~ "Scheduled Workflow"
+      assert webhook_template =~ "Event-based Workflow"
+    end
+  end
+
+  describe "workflow creation validation" do
+    test "create button is disabled when no template selected", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      assert view
+             |> element("#create_workflow_btn[disabled]")
+             |> has_element?()
+    end
+
+    test "create button is enabled when template is selected", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      view
+      |> element("#choose-workflow-template-form")
+      |> render_change(%{"template_id" => "base-webhook-template"})
+
+      refute view
+             |> element("#create_workflow_btn[disabled]")
+             |> has_element?()
+
+      element(view, "#create_workflow_btn") |> render_click()
+
+      refute element(view, "#new-workflow-panel")
+             |> has_element?()
+    end
+
+    test "clicking create without template shows error message", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      assert element(view, "#create_workflow_btn[disabled]") |> has_element?()
+
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_click("create_workflow", %{})
+
+      assert_patch(view, ~p"/projects/#{project.id}/w/new?method=template")
+      assert render(view) =~ "Please select a template to continue."
+    end
+
+    test "create button disabled in import mode when validation fails", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      element(view, "#import-workflow-btn") |> render_click()
+
+      assert_patch(view, ~p"/projects/#{project.id}/w/new?method=import")
+
+      assert view
+             |> element("#create_workflow_btn[disabled]")
+             |> has_element?()
+
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_click("create_workflow", %{})
+
+      assert render(view) =~
+               "Please fix the validation errors before creating the workflow."
+    end
+
+    test "create button disabled in AI mode when no template generated", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      view |> element("#template-label-ai-dynamic-template") |> render_click()
+
+      assert_patch(view, ~p"/projects/#{project.id}/w/new?method=ai")
+
+      assert view
+             |> element("#create_workflow_btn[disabled]")
+             |> has_element?()
+
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_click("create_workflow", %{})
+
+      assert render(view) =~
+               "Please generate a workflow using the AI assistant first."
     end
   end
 end
