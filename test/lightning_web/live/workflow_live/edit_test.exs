@@ -2415,8 +2415,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_reply(view, %{workflow_params: %{"jobs" => reply_jobs}})
 
-      assert Enum.find(reply_jobs, & &1["id"] == job1.id and &1["has_ai_chat"])
-      refute Enum.find(reply_jobs, & &1["id"] != job1.id and &1["has_ai_chat"])
+      assert Enum.find(reply_jobs, &(&1["id"] == job1.id and &1["has_ai_chat"]))
+      refute Enum.find(reply_jobs, &(&1["id"] != job1.id and &1["has_ai_chat"]))
     end
   end
 
