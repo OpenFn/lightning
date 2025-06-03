@@ -9,16 +9,19 @@ defmodule Lightning.Adaptors do
         }
 
   def all(config \\ %{}) do
-    {_, result} = Cachex.fetch(config[:cache], :adaptors, fn _key ->
-      {module, strategy_config} = split_strategy(config.strategy)
-      {:ok, adaptors} = module.fetch_adaptors(strategy_config)
+    {_, result} =
+      Cachex.fetch(config[:cache], :adaptors, fn _key ->
+        {module, strategy_config} = split_strategy(config.strategy)
+        {:ok, adaptors} = module.fetch_adaptors(strategy_config)
 
-      adaptor_names = adaptors |> Enum.map(fn adaptor ->
-        adaptor.name
+        adaptor_names =
+          adaptors
+          |> Enum.map(fn adaptor ->
+            adaptor.name
+          end)
+
+        {:commit, adaptor_names}
       end)
-
-      {:commit, adaptor_names}
-    end)
 
     result
   end
