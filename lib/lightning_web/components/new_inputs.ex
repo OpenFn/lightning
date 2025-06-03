@@ -169,6 +169,11 @@ defmodule LightningWeb.Components.NewInputs do
         [
           # Base classes
           button_base_classes(),
+          # TODO: consider another approach:
+          # https://github.com/OpenFn/lightning/issues/3269
+          # We want a way to style these links as buttons without interfering
+          # with JS.show()—using `inline-block` leads to a Tailwind gotcha.
+          "inline-block",
           # size variants
           button_size_classes(@size),
           # theme variants
@@ -185,7 +190,7 @@ defmodule LightningWeb.Components.NewInputs do
   end
 
   defp button_base_classes do
-    "inline-block rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75"
+    "rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75"
   end
 
   defp button_theme_classes(theme) do
