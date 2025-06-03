@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Removed heavy Arcade videos, replaced with time-aware, friendly greeting.
+  [#3267](https://github.com/OpenFn/lightning/issues/3267)
+
 ### Fixed
 
 - Don't display hidden secondary buttons

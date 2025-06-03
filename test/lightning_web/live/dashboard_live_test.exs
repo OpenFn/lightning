@@ -441,55 +441,6 @@ defmodule LightningWeb.DashboardLiveTest do
       assert project_last_activities_from_html ==
                projects_sorted_by_last_updated_at_desc
     end
-
-    test "Toggles the welcome banner", %{conn: conn, user: user} do
-      {:ok, view, _html} = live(conn, ~p"/projects")
-
-      assert has_element?(
-               view,
-               "#welcome-banner-content[class~='max-h-[500px]']"
-             )
-
-      view
-      |> element("button[phx-click='toggle-welcome-banner']")
-      |> render_click()
-
-      refute has_element?(
-               view,
-               "#welcome-banner-content[class~='max-h-[500px]']"
-             )
-
-      assert has_element?(view, "#welcome-banner-content[class~='max-h-0']")
-
-      assert Repo.reload(user)
-             |> Map.get(:preferences)
-             |> Map.get("welcome.collapsed")
-
-      view
-      |> element("button[phx-click='toggle-welcome-banner']")
-      |> render_click()
-
-      assert has_element?(
-               view,
-               "#welcome-banner-content[class~='max-h-[500px]']"
-             )
-
-      refute Repo.reload(user)
-             |> Map.get(:preferences)
-             |> Map.get("welcome.collapsed")
-    end
-
-    test "Selects an arcade resource", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/projects")
-
-      view
-      |> element(
-        "button[phx-click='select-arcade-resource'][phx-value-resource='1']"
-      )
-      |> render_click()
-
-      assert has_element?(view, "div#arcade-modal-1")
-    end
   end
 
   defp assert_project_listed(view, project, user, max_updated_at) do
