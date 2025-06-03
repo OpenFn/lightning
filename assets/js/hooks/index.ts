@@ -26,7 +26,7 @@ import {
   CloseNodePanelViaEscape,
 } from './KeyHandlers';
 
-import FileDropzone from "./FileDropzone";
+import FileDropzone from './FileDropzone';
 
 export {
   LogLineHighlight,
@@ -392,123 +392,132 @@ export const TagInput = {
     this.tagList = document.getElementById(this.el.dataset.tagList);
 
     if (!this.textInput) {
-      console.error("TagInput: textInput element not found.", { textInput: this.textInput });
+      console.error('TagInput: textInput element not found.', {
+        textInput: this.textInput,
+      });
       return;
     }
     if (!this.hiddenInput) {
-      console.error("TagInput: hiddenInput element not found.", { hiddenInput: this.hiddenInput });
+      console.error('TagInput: hiddenInput element not found.', {
+        hiddenInput: this.hiddenInput,
+      });
       return;
     }
     if (!this.tagList) {
-      console.error("TagInput: tagList element not found.", { tagList: this.tagList });
+      console.error('TagInput: tagList element not found.', {
+        tagList: this.tagList,
+      });
       return;
     }
 
-    this.isInForm = !!this.el.closest("form[phx-change]");
+    this.isInForm = !!this.el.closest('form[phx-change]');
 
     this.setupTextInputEvents();
     this.setupTagListEvents();
   },
-  
+
   setupTextInputEvents() {
-    this.textInput.addEventListener("keydown", (e) => {
-      if (e.key === "," || e.key === "Enter" || e.key === "Tab") {
+    this.textInput.addEventListener('keydown', e => {
+      if (e.key === ',' || e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
         this.addTag();
       }
     });
-    
-    this.textInput.addEventListener("blur", () => {
+
+    this.textInput.addEventListener('blur', () => {
       this.addTag();
     });
   },
-  
+
   setupTagListEvents() {
-    this.tagList.addEventListener("click", (e) => {
+    this.tagList.addEventListener('click', e => {
       const button = e.target.closest('button');
       if (!button) return;
-      
+
       const tagSpan = button.closest('span[data-tag]');
       if (!tagSpan) return;
-      
+
       const tagToRemove = tagSpan.dataset.tag;
       this.removeTag(tagToRemove);
     });
-    
-    this.tagList.addEventListener("dblclick", (e) => {
+
+    this.tagList.addEventListener('dblclick', e => {
       const tagSpan = e.target.closest('span[data-tag]');
       if (!tagSpan) return;
-      
+
       const tagToEdit = tagSpan.dataset.tag;
       this.editTag(tagToEdit);
     });
   },
-  
+
   addTag() {
     const value = this.textInput.value.trim();
     if (!value) return;
-    
-    const cleanValue = value.replace(/,+$/, "");
+
+    const cleanValue = value.replace(/,+$/, '');
     if (!cleanValue) return;
-    
+
     let currentTags = this.getCurrentTags();
-    
+
     const newTags = cleanValue
-      .split(",")
+      .split(',')
       .map(tag => tag.trim())
-      .filter(tag => tag !== "");
-    
+      .filter(tag => tag !== '');
+
     for (const tag of newTags) {
       if (!currentTags.includes(tag)) {
         currentTags.push(tag);
       }
     }
-    
+
     currentTags.sort();
     this.updateTags(currentTags);
-    this.textInput.value = "";
+    this.textInput.value = '';
   },
-  
+
   removeTag(tagToRemove) {
     let currentTags = this.getCurrentTags();
     const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
     this.updateTags(updatedTags);
   },
-  
+
   editTag(tagToEdit) {
     let currentTags = this.getCurrentTags();
     const updatedTags = currentTags.filter(tag => tag !== tagToEdit);
-    
+
     this.updateTags(updatedTags);
-    
+
     this.textInput.focus();
     this.textInput.value = tagToEdit;
   },
-  
+
   getCurrentTags() {
     const value = this.hiddenInput.value.trim();
     return value
-      ? value.split(",").map(tag => tag.trim()).filter(tag => tag !== "")
+      ? value
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag !== '')
       : [];
   },
-  
+
   updateTags(tags) {
-    this.hiddenInput.value = tags.join(",");
-    
-    this.hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
-    
-    if (!this.isInForm || this.el.dataset.standaloneMode === "true") {
-      this.pushEvent("tags_updated", { tags: tags });
+    this.hiddenInput.value = tags.join(',');
+
+    this.hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    if (!this.isInForm || this.el.dataset.standaloneMode === 'true') {
+      this.pushEvent('tags_updated', { tags: tags });
     }
-  }
+  },
 };
 
 export const ClearInput = {
   mounted() {
-    this.handleEvent("clear_input", () => {
-      this.el.value = "";
+    this.handleEvent('clear_input', () => {
+      this.el.value = '';
     });
-  }
+  },
 };
 
 export const ModalHook = {
@@ -665,16 +674,15 @@ export const Copy = {
   mounted() {
     let { to, content } = this.el.dataset;
     const phxThenAttribute = this.el.getAttribute('phx-then');
-    
+
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
-      
+
       let text = '';
-      
+
       if (content) {
         text = content;
-      } 
-      else if (to) {
+      } else if (to) {
         let target = document.querySelector(to);
         if (
           target instanceof HTMLInputElement ||
@@ -685,26 +693,29 @@ export const Copy = {
           text = target.textContent || target.innerText || '';
         }
       }
-      
+
       if (text) {
         let element = this.el;
-        navigator.clipboard.writeText(text).then(() => {
-          console.log('Copied!');
-          if (phxThenAttribute == null) {
-            let originalText = element.textContent;
-            element.textContent = 'Copied!';
-            setTimeout(function () {
-              element.textContent = originalText;
-            }, 3000);
-          } else {
-            this.liveSocket.execJS(this.el, phxThenAttribute);
-          }
-        }).catch(err => {
-          console.error('Failed to copy text: ', err);
-        });
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            console.log('Copied!');
+            if (phxThenAttribute == null) {
+              let originalText = element.textContent;
+              element.textContent = 'Copied!';
+              setTimeout(function () {
+                element.textContent = originalText;
+              }, 3000);
+            } else {
+              this.liveSocket.execJS(this.el, phxThenAttribute);
+            }
+          })
+          .catch(err => {
+            console.error('Failed to copy text: ', err);
+          });
       }
     });
-  }
+  },
 } as PhoenixHook;
 
 export const DownloadText = {
@@ -758,3 +769,48 @@ export const CheckboxIndeterminate = {
     this.el.indeterminate = this.el.classList.contains('indeterminate');
   },
 } as PhoenixHook<{}, {}, HTMLInputElement>;
+
+// assets/js/typewriter_hook.js
+export const TypewriterHook = {
+  mounted() {
+    const h1Text = this.el.dataset.h1Text;
+    const pText = this.el.dataset.pText;
+
+    const h1Element = this.el.querySelector('#typewriter-h1');
+    const pElement = this.el.querySelector('#typewriter-p');
+    const h1Cursor = this.el.querySelector('#cursor-h1');
+    const pCursor = this.el.querySelector('#cursor-p');
+
+    let h1Index = 0;
+    let pIndex = 0;
+
+    const typeH1 = () => {
+      if (h1Index < h1Text.length) {
+        h1Element.textContent = h1Text.slice(0, h1Index + 1);
+        h1Index++;
+        setTimeout(typeH1, 50);
+      } else {
+        // Move cursor from h1 to p
+        h1Cursor.style.display = 'none';
+        pCursor.style.display = 'inline';
+        setTimeout(typeP, 200);
+      }
+    };
+
+    const typeP = () => {
+      if (pIndex < pText.length) {
+        pElement.textContent = pText.slice(0, pIndex + 1);
+        pIndex++;
+        setTimeout(typeP, 50);
+      } else {
+        // Remove cursor after 1.5 seconds
+        setTimeout(() => {
+          pCursor.style.display = 'none';
+        }, 1500);
+      }
+    };
+
+    // Start the typewriter effect
+    typeH1();
+  },
+};

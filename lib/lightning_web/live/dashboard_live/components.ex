@@ -6,11 +6,35 @@ defmodule LightningWeb.DashboardLive.Components do
 
   def welcome_banner(assigns) do
     ~H"""
-    <div class="flex justify-between items-center pt-6">
-      <h1 class="text-2xl font-medium">
-        Good day, {@user.first_name}!
-        <span class="text-xs">How you doin?</span>
-      </h1>
+    <div class="mb-2"
+         phx-hook="TypewriterHook"
+         id="welcome-banner-typewriter"
+         data-h1-text={"Good day, #{@user.first_name}!"}
+         data-p-text="Click on a project below to get started.">
+      <div class="flex justify-between items-center pt-6">
+        <h1 class="text-2xl font-medium">
+          <span id="typewriter-h1"></span><span id="cursor-h1" class="typewriter-cursor"></span>
+        </h1>
+      </div>
+
+      <div id="welcome-banner-content">
+        <p class="mb-6 mt-4">
+          <span id="typewriter-p"></span><span id="cursor-p" class="typewriter-cursor" style="display: none;"></span>
+        </p>
+      </div>
+
+      <style>
+        .typewriter-cursor::after {
+          content: '|';
+          animation: blink 1s infinite;
+          color: #666;
+        }
+
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+      </style>
     </div>
     """
   end
