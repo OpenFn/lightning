@@ -257,7 +257,6 @@ LightningWeb.DashboardLive.Components.html
 LightningWeb.DashboardLive.Index.html
 LightningWeb.DashboardLive.ProjectCreationModal.html
 LightningWeb.DashboardLive.UserProjectsSection.html
-LightningWeb.DashboardLive.WelcomeSection.html
 LightningWeb.DataclipController.html
 LightningWeb.DataclipLive.FormComponent.html
 LightningWeb.DataclipLive.Show.html
@@ -370,8 +369,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-0872C63A.js
-dist/sidebar_items-802AA35D.js
+dist/search_data-83AE247F.js
+dist/sidebar_items-26D30DDB.js
 index.html
 provisioning.html
 readme.html
