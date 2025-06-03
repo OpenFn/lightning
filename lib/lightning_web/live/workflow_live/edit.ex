@@ -259,61 +259,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           job_id={@selected_job.id}
                           selected_dataclip_id={@step && @step.input_dataclip_id}
                         />
-                        <%!-- <LightningWeb.WorkflowLive.ManualWorkorder.component
-                          id={"manual-job-#{@selected_job.id}"}
-                          form={@manual_run_form}
-                          dataclips={@selectable_dataclips}
-                          disabled={
-                            !@can_run_workflow ||
-                              @snapshot_version_tag != "latest"
-                          }
-                          project={@project}
-                          admin_contacts={@admin_contacts}
-                          can_edit_data_retention={@can_edit_data_retention}
-                          follow_run={@follow_run}
-                          step={@step}
-                          show_missing_dataclip_selector={
-                            @show_missing_dataclip_selector
-                          }
-                        /> --%>
                       </div>
                     </:panel>
                     <:panel hash="aichat" class="h-full">
-                      <%= if @ai_assistant_enabled do %>
-                        <div class="grow min-h-0 h-full text-sm">
-                          <.live_component
-                            module={LightningWeb.AiAssistant.Component}
-                            mode={:job}
-                            can_edit_workflow={@can_edit_workflow}
-                            project={@project}
-                            current_user={@current_user}
-                            selected_job={@selected_job}
-                            chat_session_id={@chat_session_id}
-                            query_params={@query_params}
-                            base_url={@base_url}
-                            action={if(@chat_session_id, do: :show, else: :new)}
-                            id={"aichat-#{@selected_job.id}"}
-                          />
-                        </div>
-                      <% else %>
-                        <div class="flex flex-col items-center justify-center h-full">
-                          <div class="text-center w-1/2">
-                            <p class="text-gray-500 text-sm mb-2">
-                              AI Assistant has not been configured for your instance - contact your admin for support.
-                            </p>
-                            <p class="text-gray-500 text-sm mb-2">
-                              Try the AI Assistant on Openfn cloud for free at
-                              <a
-                                href="https://app.openfn.org"
-                                target="_blank"
-                                class="text-primary-600"
-                              >
-                                app.openfn.org
-                              </a>
-                            </p>
-                          </div>
-                        </div>
-                      <% end %>
+                      <div class="grow min-h-0 h-full text-sm">
+                        <.live_component
+                          module={LightningWeb.AiAssistant.Component}
+                          mode={:job}
+                          can_edit_workflow={@can_edit_workflow}
+                          project={@project}
+                          current_user={@current_user}
+                          selected_job={@selected_job}
+                          chat_session_id={@chat_session_id}
+                          query_params={@query_params}
+                          base_url={@base_url}
+                          action={if(@chat_session_id, do: :show, else: :new)}
+                          id={"aichat-#{@selected_job.id}"}
+                        />
+                      </div>
                     </:panel>
                   </LightningWeb.Components.Tabbed.panels>
                 </.collapsible_panel>
@@ -3132,7 +3095,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div
       id={"selected-template-label-#{@template.id}"}
       phx-mounted={fade_in()}
-      phx-remove={fade_out()}
       class="absolute z-[9999] m-4 opacity-75 bg-white/100 border border-gray-200 rounded-lg p-6"
     >
       <div class="flex items-start gap-3 opacity-100">
