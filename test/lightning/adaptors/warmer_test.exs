@@ -5,111 +5,95 @@ defmodule Lightning.Adaptors.WarmerTest do
   alias Lightning.Adaptors.Warmer
 
   describe "execute/1" do
-    defmodule MockAdaptorStrategy do
+    defmodule MockStrategySuccess do
       @behaviour Lightning.Adaptors.Strategy
-
-      def fetch_adaptors(_config) do
+      def fetch_packages(_config) do
         {:ok,
          [
            %Lightning.Adaptors.Package{
-             name: "@openfn/language-foo",
-             repo: "https://github.com/openfn/foo",
-             latest: "1.0.0",
-             versions: [%{version: "1.0.0"}]
-           },
-           %Lightning.Adaptors.Package{
-             name: "@openfn/language-bar",
-             repo: "https://github.com/openfn/bar",
-             latest: "2.1.0",
-             versions: [%{version: "2.0.0"}, %{version: "2.1.0"}]
+             name: "@openfn/language-dhis2",
+             repo: "git+https://github.com/OpenFn/language-dhis2.git",
+             latest: "3.2.8",
+             versions: [
+               %{version: "3.2.0"},
+               %{version: "3.2.8"}
+             ]
            }
          ]}
       end
 
-      def fetch_credential_schema(_adaptor_name, _version) do
-        {:error, :not_implemented}
-      end
+      def fetch_credential_schema(_name, _version),
+        do: {:error, :not_implemented}
 
-      def fetch_icon(_adaptor_name, _version) do
-        {:error, :not_implemented}
-      end
+      def fetch_icon(_name, _version), do: {:error, :not_implemented}
     end
 
-    defmodule MockFailingAdaptorStrategy do
+    defmodule MockStrategyFailure do
       @behaviour Lightning.Adaptors.Strategy
-
-      def fetch_adaptors(_config) do
-        {:error, :network_timeout}
+      def fetch_packages(_config) do
+        {:error, "Something bad happened"}
       end
 
-      def fetch_credential_schema(_adaptor_name, _version) do
-        {:error, :not_implemented}
-      end
+      def fetch_credential_schema(_name, _version),
+        do: {:error, :not_implemented}
 
-      def fetch_icon(_adaptor_name, _version) do
-        {:error, :not_implemented}
-      end
+      def fetch_icon(_name, _version), do: {:error, :not_implemented}
     end
 
     test "returns cache pairs for adaptors list and individual adaptors on success" do
       config = %{
-        strategy: {MockAdaptorStrategy, [config: "test"]},
+        strategy: {MockStrategySuccess, [config: "test"]},
         cache: :test_cache
       }
 
       result = Warmer.execute(config)
 
       assert {:ok, pairs} = result
-      # :adaptors key + 2 individual adaptors
-      assert length(pairs) == 3
+      # :adaptors key + 1 individual adaptor
+      assert length(pairs) == 2
 
       # Check the :adaptors key pair
       adaptors_pair = List.first(pairs)
 
-      assert {:adaptors, ["@openfn/language-foo", "@openfn/language-bar"]} =
+      assert {:adaptors, ["@openfn/language-dhis2"]} =
                adaptors_pair
 
       # Check individual adaptor pairs
       remaining_pairs = Enum.drop(pairs, 1)
 
-      assert {"@openfn/language-foo",
+      assert {"@openfn/language-dhis2",
               %Lightning.Adaptors.Package{
-                name: "@openfn/language-foo",
-                repo: "https://github.com/openfn/foo",
-                latest: "1.0.0",
-                versions: [%{version: "1.0.0"}]
-              }} in remaining_pairs
-
-      assert {"@openfn/language-bar",
-              %Lightning.Adaptors.Package{
-                name: "@openfn/language-bar",
-                repo: "https://github.com/openfn/bar",
-                latest: "2.1.0",
-                versions: [%{version: "2.0.0"}, %{version: "2.1.0"}]
+                name: "@openfn/language-dhis2",
+                repo: "git+https://github.com/OpenFn/language-dhis2.git",
+                latest: "3.2.8",
+                versions: [
+                  %{version: "3.2.0"},
+                  %{version: "3.2.8"}
+                ]
               }} in remaining_pairs
     end
 
     test "works with strategy module without config tuple" do
       config = %{
-        strategy: MockAdaptorStrategy,
+        strategy: MockStrategySuccess,
         cache: :test_cache
       }
 
       result = Warmer.execute(config)
 
       assert {:ok, pairs} = result
-      assert length(pairs) == 3
+      assert length(pairs) == 2
 
       # Verify the :adaptors key is present
       adaptors_pair = List.first(pairs)
 
-      assert {:adaptors, ["@openfn/language-foo", "@openfn/language-bar"]} =
+      assert {:adaptors, ["@openfn/language-dhis2"]} =
                adaptors_pair
     end
 
     test "returns :ignore when strategy returns error" do
       config = %{
-        strategy: {MockFailingAdaptorStrategy, []},
+        strategy: {MockStrategyFailure, []},
         cache: :test_cache
       }
 
@@ -133,7 +117,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       defmodule EmptyAdaptorStrategy do
         @behaviour Lightning.Adaptors.Strategy
 
-        def fetch_adaptors(_config) do
+        def fetch_packages(_config) do
           {:ok, []}
         end
 
@@ -164,7 +148,7 @@ defmodule Lightning.Adaptors.WarmerTest do
     defmodule IntegrationMockAdaptorStrategy do
       @behaviour Lightning.Adaptors.Strategy
 
-      def fetch_adaptors(_config) do
+      def fetch_packages(_config) do
         {:ok,
          [
            %Lightning.Adaptors.Package{
@@ -194,7 +178,7 @@ defmodule Lightning.Adaptors.WarmerTest do
     defmodule IntegrationMockFailingAdaptorStrategy do
       @behaviour Lightning.Adaptors.Strategy
 
-      def fetch_adaptors(_config) do
+      def fetch_packages(_config) do
         {:error, :network_timeout}
       end
 

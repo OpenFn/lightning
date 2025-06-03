@@ -1,6 +1,6 @@
 defmodule MockAdaptorStrategy do
   @behaviour Lightning.Adaptors.Strategy
-  def fetch_adaptors(_config) do
+  def fetch_packages(_config) do
     {:ok,
      [
        %Lightning.Adaptors.Package{

@@ -60,7 +60,7 @@ defmodule Lightning.Adaptors.Warmer do
     try do
       {module, strategy_config} = split_strategy(config.strategy)
 
-      case module.fetch_adaptors(strategy_config) do
+      case module.fetch_packages(strategy_config) do
         {:ok, adaptors} ->
           # Create pairs for individual adaptors
           adaptor_pairs =

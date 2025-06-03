@@ -29,7 +29,7 @@ defmodule Lightning.Adaptors do
     {_, result} =
       Cachex.fetch(config[:cache], :adaptors, fn _key ->
         {module, strategy_config} = split_strategy(config.strategy)
-        {:ok, adaptors} = module.fetch_adaptors(strategy_config)
+        {:ok, adaptors} = module.fetch_packages(strategy_config)
 
         # Cache individual adaptors for efficient lookup
         Enum.each(adaptors, fn adaptor ->

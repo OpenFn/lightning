@@ -8,7 +8,7 @@ defmodule Lightning.Adaptors.NPMTest do
 
   setup :verify_on_exit!
 
-  describe "fetch_adaptors/1" do
+  describe "fetch_packages/1" do
     setup do
       %{
         default_npm_response:
@@ -43,8 +43,8 @@ defmodule Lightning.Adaptors.NPMTest do
         end
       )
 
-      adaptors =
-        NPM.fetch_adaptors(
+      {:ok, adaptors} =
+        NPM.fetch_packages(
           user: "openfn",
           max_concurrency: 10,
           timeout: 30_000,
@@ -79,7 +79,7 @@ defmodule Lightning.Adaptors.NPMTest do
         returns: fn _env, [] -> {:error, :nxdomain} end
       )
 
-      assert NPM.fetch_adaptors(
+      assert NPM.fetch_packages(
                user: "openfn",
                max_concurrency: 10,
                timeout: 30_000,
@@ -117,8 +117,8 @@ defmodule Lightning.Adaptors.NPMTest do
         end
       )
 
-      response =
-        NPM.fetch_adaptors(
+      {:ok, response} =
+        NPM.fetch_packages(
           user: "openfn",
           max_concurrency: 10,
           timeout: 30_000,
@@ -136,56 +136,56 @@ defmodule Lightning.Adaptors.NPMTest do
   describe "config validation" do
     test "validates required user field" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors([])
+               NPM.fetch_packages([])
 
       assert error.message =~ "required :user option not found"
     end
 
     test "validates user field type" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors(user: 123)
+               NPM.fetch_packages(user: 123)
 
       assert error.message =~ "expected string, got: 123"
     end
 
     test "validates max_concurrency type" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors(user: "openfn", max_concurrency: "invalid")
+               NPM.fetch_packages(user: "openfn", max_concurrency: "invalid")
 
       assert error.message =~ "expected positive integer"
     end
 
     test "validates max_concurrency is positive" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors(user: "openfn", max_concurrency: 0)
+               NPM.fetch_packages(user: "openfn", max_concurrency: 0)
 
       assert error.message =~ "expected positive integer, got: 0"
     end
 
     test "validates timeout type" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors(user: "openfn", timeout: "invalid")
+               NPM.fetch_packages(user: "openfn", timeout: "invalid")
 
       assert error.message =~ "expected positive integer"
     end
 
     test "validates timeout is positive" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors(user: "openfn", timeout: -1)
+               NPM.fetch_packages(user: "openfn", timeout: -1)
 
       assert error.message =~ "expected positive integer, got: -1"
     end
 
     test "validates filter function arity" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors(user: "openfn", filter: fn -> true end)
+               NPM.fetch_packages(user: "openfn", filter: fn -> true end)
 
       assert error.message =~ "expected function of arity 1"
     end
 
     test "validates filter type" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors(user: "openfn", filter: "not_a_function")
+               NPM.fetch_packages(user: "openfn", filter: "not_a_function")
 
       assert error.message =~ "expected function of arity 1"
     end
@@ -196,7 +196,7 @@ defmodule Lightning.Adaptors.NPMTest do
         returns: fn _env, [] -> {:error, :nxdomain} end
       )
 
-      assert {:error, :nxdomain} = NPM.fetch_adaptors(user: "openfn")
+      assert {:error, :nxdomain} = NPM.fetch_packages(user: "openfn")
     end
 
     test "accepts valid full config" do
@@ -206,7 +206,7 @@ defmodule Lightning.Adaptors.NPMTest do
       )
 
       assert {:error, :nxdomain} =
-               NPM.fetch_adaptors(
+               NPM.fetch_packages(
                  user: "openfn",
                  max_concurrency: 5,
                  timeout: 15_000,
@@ -216,7 +216,7 @@ defmodule Lightning.Adaptors.NPMTest do
 
     test "rejects unknown options" do
       assert {:error, %NimbleOptions.ValidationError{} = error} =
-               NPM.fetch_adaptors(user: "openfn", unknown_option: "rejected")
+               NPM.fetch_packages(user: "openfn", unknown_option: "rejected")
 
       assert error.message =~ "unknown options [:unknown_option]"
     end

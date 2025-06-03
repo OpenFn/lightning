@@ -1,7 +1,4 @@
 defmodule Lightning.Adaptors.NPM do
-  @moduledoc """
-  NPM strategy implementation for adaptor registry.
-  """
   @behaviour Lightning.Adaptors.Strategy
   require Logger
 
@@ -31,33 +28,43 @@ defmodule Lightning.Adaptors.NPM do
 
   @type config() :: [unquote(NimbleOptions.option_typespec(@config_schema))]
 
+  @moduledoc """
+  NPM strategy implementation for adaptor registry.
+
+  Config options:
+  #{NimbleOptions.docs(@config_schema)}
+  """
+
   @doc "Supported options:\n#{NimbleOptions.docs(@config_schema)}"
   @impl true
-  @spec fetch_adaptors(config :: config()) :: {:ok, [map()]} | {:error, term()}
-  def fetch_adaptors(config) do
+  @spec fetch_packages(config :: config()) :: {:ok, [map()]} | {:error, term()}
+  def fetch_packages(config) do
     with {:ok, validated_config} <- validate_config(config) do
-      user_packages(validated_config[:user])
+      user_packages(validated_config)
       |> case do
         {:ok, response} ->
-          response
-          |> Map.get(:body)
-          |> Enum.map(fn {name, _} -> name end)
-          |> Enum.filter(validated_config[:filter] || fn _ -> true end)
-          |> Task.async_stream(
-            &fetch_package_details/1,
-            ordered: false,
-            max_concurrency: validated_config[:max_concurrency],
-            timeout: validated_config[:timeout]
-          )
-          |> Stream.map(fn result ->
-            case result do
-              {:ok, {:error, error}} -> {:error, error}
-              {:ok, detail} -> {:ok, detail}
-            end
-          end)
-          |> Stream.filter(&match?({:ok, _}, &1))
-          |> Stream.map(fn {:ok, detail} -> detail end)
-          |> Enum.to_list()
+          adaptors =
+            response
+            |> Map.get(:body)
+            |> Enum.map(fn {name, _} -> name end)
+            |> Enum.filter(validated_config[:filter] || fn _ -> true end)
+            |> Task.async_stream(
+              &fetch_package_details/1,
+              ordered: false,
+              max_concurrency: validated_config[:max_concurrency],
+              timeout: validated_config[:timeout]
+            )
+            |> Stream.map(fn result ->
+              case result do
+                {:ok, {:error, error}} -> {:error, error}
+                {:ok, detail} -> {:ok, detail}
+              end
+            end)
+            |> Stream.filter(&match?({:ok, _}, &1))
+            |> Stream.map(fn {:ok, detail} -> detail end)
+            |> Enum.to_list()
+
+          {:ok, adaptors}
 
         {:error, error} ->
           {:error, error}
@@ -65,9 +72,10 @@ defmodule Lightning.Adaptors.NPM do
     end
   end
 
+  @impl true
   @spec validate_config(config :: config()) ::
           {:ok, keyword()} | {:error, term()}
-  defp validate_config(config) do
+  def validate_config(config) do
     NimbleOptions.validate(config, @config_schema)
   end
 
@@ -75,9 +83,9 @@ defmodule Lightning.Adaptors.NPM do
   Retrieve all packages for a given user or organization. Return empty list if
   application cannot connect to NPM. (E.g., because it's started offline.)
   """
-  @spec user_packages(user :: String.t()) :: Tesla.Env.result()
-  def user_packages(user) do
-    Tesla.get(client(), "/-/user/#{user}/package")
+  @spec user_packages(config :: config()) :: Tesla.Env.result()
+  def user_packages(config) do
+    Tesla.get(client(), "/-/user/#{config[:user]}/package")
   end
 
   @doc """
