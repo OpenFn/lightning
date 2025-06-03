@@ -32,7 +32,8 @@ defmodule LightningWeb.AiAssistant.Component do
        has_read_disclaimer: false,
        all_sessions: AsyncResult.ok([]),
        form: to_form(%{"content" => nil}),
-       pending_message: AsyncResult.ok(nil)
+       pending_message: AsyncResult.ok(nil),
+       ai_enabled?: AiAssistant.enabled?()
      })
      |> assign_async(:endpoint_available?, fn ->
        {:ok, %{endpoint_available?: AiAssistant.endpoint_available?()}}
@@ -58,10 +59,17 @@ defmodule LightningWeb.AiAssistant.Component do
   def render(assigns) do
     ~H"""
     <div id={@id} class="h-full relative">
-      <%= if !@has_read_disclaimer do %>
-        <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
+      <%= if !@ai_enabled? do %>
+        <.render_ai_not_configured />
       <% else %>
-        <.render_session {assigns} />
+        <%= if !@has_read_disclaimer do %>
+          <.render_onboarding
+            myself={@myself}
+            can_edit_workflow={@can_edit_workflow}
+          />
+        <% else %>
+          <.render_session {assigns} />
+        <% end %>
       <% end %>
     </div>
     """
@@ -373,6 +381,48 @@ defmodule LightningWeb.AiAssistant.Component do
     )
 
     socket
+  end
+
+  defp render_ai_not_configured(assigns) do
+    ~H"""
+    <div class="flex flex-col items-center justify-center h-full">
+      <div class="text-center w-1/2">
+        <div class="mx-auto w-16 h-16 mb-6">
+          <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+            <.icon name="hero-cpu-chip" class="w-8 h-8 text-gray-400" />
+          </div>
+        </div>
+
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          AI Assistant Not Available
+        </h3>
+
+        <p class="text-gray-500 text-sm mb-4">
+          AI Assistant has not been configured for your instance - contact your admin for support.
+        </p>
+
+        <p class="text-gray-500 text-sm mb-6">
+          Try the AI Assistant on OpenFn cloud for free at
+          <a
+            href="https://app.openfn.org"
+            target="_blank"
+            class="text-primary-600 hover:text-primary-700 underline"
+          >
+            app.openfn.org
+          </a>
+        </p>
+
+        <div class="text-xs text-gray-400 space-y-1">
+          <p>To enable AI Assistant, your administrator needs to:</p>
+          <ul class="list-disc list-inside text-left max-w-sm mx-auto mt-2 space-y-1">
+            <li>Configure the Apollo endpoint URL</li>
+            <li>Set up the AI Assistant API key</li>
+            <li>Restart the Lightning application</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   defp render_session(assigns) do
