@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Don't display hidden secondary buttons
+  [#3265](https://github.com/OpenFn/lightning/issues/3265)
+
 ## [v2.13.0-pre] - 2025-06-02
 
 ### Added
