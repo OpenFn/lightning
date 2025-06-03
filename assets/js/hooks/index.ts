@@ -773,8 +773,32 @@ export const CheckboxIndeterminate = {
 // assets/js/typewriter_hook.js
 export const TypewriterHook = {
   mounted() {
-    const h1Text = this.el.dataset.h1Text;
+    const userName = this.el.dataset.userName;
     const pText = this.el.dataset.pText;
+
+    // Generate time-based greeting
+    const now = new Date();
+    const hour = now.getHours();
+    
+    let greeting;
+    if (hour >= 22 || hour < 3) {
+      // 10pm - 3am
+      greeting = `Good evening, ${userName}. You're up late!`;
+    } else if (hour >= 3 && hour < 7) {
+      // 3am - 7am
+      greeting = `Good morning, ${userName}. You're up early!`;
+    } else if (hour >= 7 && hour < 12) {
+      // 7am - 12pm
+      greeting = `Good morning, ${userName}!`;
+    } else if (hour >= 12 && hour < 18) {
+      // 12pm - 6pm
+      greeting = `Good afternoon, ${userName}!`;
+    } else {
+      // 6pm - 10pm
+      greeting = `Good evening, ${userName}!`;
+    }
+
+    const h1Text = greeting;
 
     const h1Element = this.el.querySelector('#typewriter-h1');
     const pElement = this.el.querySelector('#typewriter-p');

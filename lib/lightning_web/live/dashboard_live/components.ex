@@ -9,7 +9,7 @@ defmodule LightningWeb.DashboardLive.Components do
     <div class="mb-2"
          phx-hook="TypewriterHook"
          id="welcome-banner-typewriter"
-         data-h1-text={"Good day, #{@user.first_name}!"}
+         data-user-name={@user.first_name}
          data-p-text="Click on a project below to get started.">
       <div class="flex justify-between items-center pt-6">
         <h1 class="text-2xl font-medium">
