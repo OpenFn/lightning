@@ -774,8 +774,12 @@ export const CheckboxIndeterminate = {
 export const TypewriterHook = {
   mounted() {
     const userName = this.el.dataset.userName;
-    const pText = this.el.dataset.pText;
     const pHtml = this.el.dataset.pHtml;
+
+    // Extract plain text from HTML for typing animation
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = pHtml;
+    const pText = tempDiv.textContent || tempDiv.innerText || '';
 
     // Generate time-based greeting
     const now = new Date();
