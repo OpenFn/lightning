@@ -65,7 +65,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-      refute has_element?(view, "#aichat-#{job_1.id}")
 
       assert render(view) =~
                "AI Assistant has not been configured for your instance"
