@@ -6,7 +6,7 @@ defmodule LightningWeb.DashboardLive.Components do
 
   def welcome_banner(assigns) do
     ~H"""
-    <div class="mb-2"
+    <div class="mb-2 min-h-[100px]"
          phx-hook="TypewriterHook"
          id="welcome-banner-typewriter"
          data-user-name={@user.first_name}
