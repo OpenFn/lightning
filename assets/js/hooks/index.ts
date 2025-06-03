@@ -775,6 +775,7 @@ export const TypewriterHook = {
   mounted() {
     const userName = this.el.dataset.userName;
     const pText = this.el.dataset.pText;
+    const pHtml = this.el.dataset.pHtml;
 
     // Generate time-based greeting
     const now = new Date();
@@ -827,10 +828,13 @@ export const TypewriterHook = {
         pIndex++;
         setTimeout(typeP, 50);
       } else {
-        // Remove cursor after 1.5 seconds
+        // Remove cursor and replace with HTML version if available
         setTimeout(() => {
           pCursor.style.display = 'none';
-        }, 1500);
+          if (pHtml) {
+            pElement.innerHTML = pHtml;
+          }
+        }, 1000);
       }
     };
 

@@ -10,7 +10,8 @@ defmodule LightningWeb.DashboardLive.Components do
          phx-hook="TypewriterHook"
          id="welcome-banner-typewriter"
          data-user-name={@user.first_name}
-         data-p-text="Click on a project below to get started.">
+         data-p-text="Click on a project to get started. If you need some help, head to docs.openfn.org or community.openfn.org to learn more."
+         data-p-html={~s|Click on a project to get started. If you need some help, head to <a href="https://docs.openfn.org" target="_blank" class="link">docs.openfn.org</a> or <a href="https://community.openfn.org" target="_blank" class="link">community.openfn.org</a> to learn more.|}>
       <div class="flex justify-between items-center pt-6">
         <h1 class="text-2xl font-medium">
           <span id="typewriter-h1"></span><span id="cursor-h1" class="typewriter-cursor"></span>
