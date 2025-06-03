@@ -6,20 +6,31 @@ defmodule LightningWeb.DashboardLive.Components do
 
   def welcome_banner(assigns) do
     ~H"""
-    <div class="mb-2 min-h-[100px]"
-         phx-hook="TypewriterHook"
-         id="welcome-banner-typewriter"
-         data-user-name={@user.first_name}
-         data-p-html={~s|Click on a project to get started. If you need some help, head to <a href="https://docs.openfn.org" target="_blank" class="link">docs.openfn.org</a> or <a href="https://community.openfn.org" target="_blank" class="link">community.openfn.org</a> to learn more.|}>
+    <div
+      class="mb-2 min-h-[100px]"
+      phx-hook="TypewriterHook"
+      id="welcome-banner-typewriter"
+      data-user-name={@user.first_name}
+      data-p-html={
+        ~s|Click on a project to get started. If you need some help, head to <a href="https://docs.openfn.org" target="_blank" class="link">docs.openfn.org</a> or <a href="https://community.openfn.org" target="_blank" class="link">community.openfn.org</a> to learn more.|
+      }
+    >
       <div class="flex justify-between items-center pt-6">
         <h1 class="text-2xl font-medium">
-          <span id="typewriter-h1"></span><span id="cursor-h1" class="typewriter-cursor"></span>
+          <span id="typewriter-h1"></span><span
+            id="cursor-h1"
+            class="typewriter-cursor"
+          ></span>
         </h1>
       </div>
 
       <div id="welcome-banner-content">
         <p class="mb-6 mt-4">
-          <span id="typewriter-p"></span><span id="cursor-p" class="typewriter-cursor" style="display: none;"></span>
+          <span id="typewriter-p"></span><span
+            id="cursor-p"
+            class="typewriter-cursor"
+            style="display: none;"
+          ></span>
         </p>
       </div>
 
