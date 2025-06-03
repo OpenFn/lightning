@@ -5,33 +5,31 @@ defmodule Lightning.Adaptors.NPM do
   @behaviour Lightning.Adaptors.Strategy
   require Logger
 
-  @config_schema NimbleOptions.new!(
-                   user: [
-                     type: :string,
-                     required: true,
-                     doc: "NPM user or organization name"
-                   ],
-                   max_concurrency: [
-                     type: :pos_integer,
-                     default: 10,
-                     doc:
-                       "Maximum number of concurrent requests when fetching package details"
-                   ],
-                   timeout: [
-                     type: :pos_integer,
-                     default: 30_000,
-                     doc:
-                       "Timeout in milliseconds for individual package detail requests"
-                   ],
-                   filter: [
-                     type: {:or, [{:fun, 1}, nil]},
-                     default: nil,
-                     doc:
-                       "Function to filter package names. Takes a package name string and returns boolean"
-                   ]
-                 )
+  @config_schema [
+    user: [
+      type: :string,
+      required: true,
+      doc: "NPM user or organization name"
+    ],
+    max_concurrency: [
+      type: :pos_integer,
+      default: 10,
+      doc: "Maximum number of concurrent requests when fetching package details"
+    ],
+    timeout: [
+      type: :pos_integer,
+      default: 30_000,
+      doc: "Timeout in milliseconds for individual package detail requests"
+    ],
+    filter: [
+      type: {:or, [{:fun, 1}, nil]},
+      default: nil,
+      doc:
+        "Function to filter package names. Takes a package name string and returns boolean"
+    ]
+  ]
 
-  @type config() :: unquote(NimbleOptions.option_typespec(@config_schema))
+  @type config() :: [unquote(NimbleOptions.option_typespec(@config_schema))]
 
   @doc "Supported options:\n#{NimbleOptions.docs(@config_schema)}"
   @impl true
