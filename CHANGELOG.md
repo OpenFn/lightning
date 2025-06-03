@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.13.0-pre1] - 2025-06-03
+
+### Changed
+
 - Removed heavy Arcade videos, replaced with time-aware, friendly greeting.
   [#3267](https://github.com/OpenFn/lightning/issues/3267)
 
