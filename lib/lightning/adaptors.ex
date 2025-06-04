@@ -287,13 +287,13 @@ defmodule Lightning.Adaptors do
       # Using named instance
       versions = Lightning.Adaptors.versions_for(MyAdaptors, "@openfn/language-http")
   """
-  def versions_for(name_or_module_name, module_name \\ nil)
+  def versions_for(name, module_name \\ nil)
 
-  def versions_for(module_name, nil) do
+  def versions_for(name, nil) do
     # Single argument case - use default instance
     __MODULE__
     |> config()
-    |> Lightning.Adaptors.Repository.versions_for(module_name)
+    |> Lightning.Adaptors.Repository.versions_for(name)
   end
 
   def versions_for(name, module_name) do
@@ -317,13 +317,13 @@ defmodule Lightning.Adaptors do
       # Using named instance
       latest = Lightning.Adaptors.latest_for(MyAdaptors, "@openfn/language-http")
   """
-  def latest_for(name_or_module_name, module_name \\ nil)
+  def latest_for(name, module_name \\ nil)
 
-  def latest_for(module_name, nil) do
+  def latest_for(name, nil) do
     # Single argument case - use default instance
     __MODULE__
     |> config()
-    |> Lightning.Adaptors.Repository.latest_for(module_name)
+    |> Lightning.Adaptors.Repository.latest_for(name)
   end
 
   def latest_for(name, module_name) do
@@ -339,35 +339,11 @@ defmodule Lightning.Adaptors do
   Returns :ok if successful or if no persist_path is configured,
   {:error, reason} if saving fails.
   """
-  def save_cache(config) when is_map(config) do
-    case Map.get(config, :persist_path) do
-      nil ->
-        :ok
-
-      path when is_binary(path) ->
-        case Cachex.save(config[:cache], path) do
-          {:ok, true} ->
-            Logger.debug("Adaptor cache saved to #{path}")
-            :ok
-
-          {:error, reason} = error ->
-            Logger.error(
-              "Failed to save adaptor cache to #{path}: #{inspect(reason)}"
-            )
-
-            error
-        end
-
-      _ ->
-        Logger.warning(
-          "Invalid persist_path configuration: #{inspect(config[:persist_path])}"
-        )
-
-        :ok
-    end
+  def save_cache(name \\ __MODULE__) do
+    name
+    |> config()
+    |> Lightning.Adaptors.Repository.save_cache()
   end
-
-  def save_cache(_config), do: :ok
 
   @doc """
   Restores the cache from disk if persist_path is configured.
@@ -375,42 +351,11 @@ defmodule Lightning.Adaptors do
   Returns :ok if successful or if no persist_path is configured,
   {:error, reason} if restoration fails.
   """
-  def restore_cache(config) when is_map(config) do
-    case Map.get(config, :persist_path) do
-      nil ->
-        :ok
-
-      path when is_binary(path) ->
-        case File.exists?(path) do
-          false ->
-            Logger.debug("No cache file found at #{path}, skipping restore")
-            :ok
-
-          true ->
-            case Cachex.restore(config[:cache], path) do
-              {:ok, _} ->
-                Logger.debug("Adaptor cache restored from #{path}")
-                :ok
-
-              {:error, reason} = error ->
-                Logger.error(
-                  "Failed to restore adaptor cache from #{path}: #{inspect(reason)}"
-                )
-
-                error
-            end
-        end
-
-      _ ->
-        Logger.warning(
-          "Invalid persist_path configuration: #{inspect(config[:persist_path])}"
-        )
-
-        :ok
-    end
+  def restore_cache(name \\ __MODULE__) do
+    name
+    |> config()
+    |> Lightning.Adaptors.Repository.restore_cache()
   end
-
-  def restore_cache(_config), do: :ok
 
   @doc """
   Clears the persisted cache file if it exists.
@@ -418,40 +363,17 @@ defmodule Lightning.Adaptors do
   Returns :ok if successful or if no persist_path is configured,
   {:error, reason} if deletion fails.
   """
-  def clear_persisted_cache(config) when is_map(config) do
-    case Map.get(config, :persist_path) do
-      nil ->
-        :ok
-
-      path when is_binary(path) ->
-        case File.rm(path) do
-          :ok ->
-            Logger.debug("Persisted adaptor cache cleared from #{path}")
-            :ok
-
-          {:error, :enoent} ->
-            :ok
-
-          {:error, reason} = error ->
-            Logger.error(
-              "Failed to clear persisted adaptor cache at #{path}: #{inspect(reason)}"
-            )
-
-            error
-        end
-
-      _ ->
-        :ok
-    end
+  def clear_persisted_cache(name \\ __MODULE__) do
+    name
+    |> config()
+    |> Lightning.Adaptors.Repository.clear_persisted_cache()
   end
-
-  def clear_persisted_cache(_config), do: :ok
 
   defp restore_cache_if_needed(config) do
     # Only restore if cache appears to be empty (no :adaptors key)
     case Cachex.get(config[:cache], :adaptors) do
       {:ok, nil} ->
-        restore_cache(config)
+        Lightning.Adaptors.Repository.restore_cache(config)
 
       _ ->
         :ok

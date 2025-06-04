@@ -340,9 +340,8 @@ defmodule Lightning.AdaptorsTest do
       # Populate the cache
       Lightning.Adaptors.all(adaptors_name)
 
-      # Get config and manually save the cache
-      config = Lightning.Adaptors.config(adaptors_name)
-      assert Lightning.Adaptors.save_cache(config) == :ok
+      # Save the cache
+      assert Lightning.Adaptors.save_cache(adaptors_name) == :ok
 
       # Verify file was created
       assert File.exists?(cache_path)
@@ -369,7 +368,7 @@ defmodule Lightning.AdaptorsTest do
       # First, populate and save cache
       Lightning.Adaptors.all(adaptors_name)
       config = Lightning.Adaptors.config(adaptors_name)
-      Lightning.Adaptors.save_cache(config)
+      Lightning.Adaptors.save_cache(adaptors_name)
 
       # Clear the cache
       Cachex.clear(config[:cache])
@@ -378,7 +377,7 @@ defmodule Lightning.AdaptorsTest do
       {:ok, nil} = Cachex.get(config[:cache], :adaptors)
 
       # Restore from disk
-      assert Lightning.Adaptors.restore_cache(config) == :ok
+      assert Lightning.Adaptors.restore_cache(adaptors_name) == :ok
 
       # Verify cache was restored
       {:ok, cached_adaptors} = Cachex.get(config[:cache], :adaptors)
@@ -405,14 +404,13 @@ defmodule Lightning.AdaptorsTest do
 
       # Create and save cache
       Lightning.Adaptors.all(adaptors_name)
-      config = Lightning.Adaptors.config(adaptors_name)
-      Lightning.Adaptors.save_cache(config)
+      Lightning.Adaptors.save_cache(adaptors_name)
 
       # Verify file exists
       assert File.exists?(cache_path)
 
       # Clear persisted cache
-      assert Lightning.Adaptors.clear_persisted_cache(config) == :ok
+      assert Lightning.Adaptors.clear_persisted_cache(adaptors_name) == :ok
 
       # Verify file was deleted
       refute File.exists?(cache_path)

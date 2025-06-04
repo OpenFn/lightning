@@ -35,7 +35,7 @@ defmodule Lightning.Adaptors.Repository do
              end)
 
            # Save cache to disk after populating
-           Lightning.Adaptors.save_cache(config)
+           save_cache(config)
 
            {:commit, adaptor_names}
          end) do
@@ -142,11 +142,125 @@ defmodule Lightning.Adaptors.Repository do
     end
   end
 
+  @doc """
+  Saves the cache to disk if persist_path is configured.
+
+  Returns :ok if successful or if no persist_path is configured,
+  {:error, reason} if saving fails.
+  """
+  def save_cache(config) when is_map(config) do
+    case Map.get(config, :persist_path) do
+      nil ->
+        :ok
+
+      path when is_binary(path) ->
+        case Cachex.save(config[:cache], path) do
+          {:ok, true} ->
+            Logger.debug("Adaptor cache saved to #{path}")
+            :ok
+
+          {:error, reason} = error ->
+            Logger.error(
+              "Failed to save adaptor cache to #{path}: #{inspect(reason)}"
+            )
+
+            error
+        end
+
+      _ ->
+        Logger.warning(
+          "Invalid persist_path configuration: #{inspect(config[:persist_path])}"
+        )
+
+        :ok
+    end
+  end
+
+  def save_cache(_config), do: :ok
+
+  @doc """
+  Restores the cache from disk if persist_path is configured.
+
+  Returns :ok if successful or if no persist_path is configured,
+  {:error, reason} if restoration fails.
+  """
+  def restore_cache(config) when is_map(config) do
+    case Map.get(config, :persist_path) do
+      nil ->
+        :ok
+
+      path when is_binary(path) ->
+        case File.exists?(path) do
+          false ->
+            Logger.debug("No cache file found at #{path}, skipping restore")
+            :ok
+
+          true ->
+            case Cachex.restore(config[:cache], path) do
+              {:ok, _} ->
+                Logger.debug("Adaptor cache restored from #{path}")
+                :ok
+
+              {:error, reason} = error ->
+                Logger.error(
+                  "Failed to restore adaptor cache from #{path}: #{inspect(reason)}"
+                )
+
+                error
+            end
+        end
+
+      _ ->
+        Logger.warning(
+          "Invalid persist_path configuration: #{inspect(config[:persist_path])}"
+        )
+
+        :ok
+    end
+  end
+
+  def restore_cache(_config), do: :ok
+
+  @doc """
+  Clears the persisted cache file if it exists.
+
+  Returns :ok if successful or if no persist_path is configured,
+  {:error, reason} if deletion fails.
+  """
+  def clear_persisted_cache(config) when is_map(config) do
+    case Map.get(config, :persist_path) do
+      nil ->
+        :ok
+
+      path when is_binary(path) ->
+        case File.rm(path) do
+          :ok ->
+            Logger.debug("Persisted adaptor cache cleared from #{path}")
+            :ok
+
+          {:error, :enoent} ->
+            :ok
+
+          {:error, reason} = error ->
+            Logger.error(
+              "Failed to clear persisted adaptor cache at #{path}: #{inspect(reason)}"
+            )
+
+            error
+        end
+
+      _ ->
+        :ok
+    end
+  end
+
+  def clear_persisted_cache(_config), do: :ok
+
   defp restore_cache_if_needed(config) do
     # Only restore if cache appears to be empty (no :adaptors key)
     case Cachex.get(config[:cache], :adaptors) do
       {:ok, nil} ->
-        Lightning.Adaptors.restore_cache(config)
+        restore_cache(config)
 
       {:error, reason} ->
         Logger.warning(
