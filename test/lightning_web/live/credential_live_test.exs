@@ -86,7 +86,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ credential.name
     end
 
-    test "lists all credentials for support user", %{
+    test "ensure support user only sees credentials they own on /credentials", %{
       conn: conn,
       user: user,
       credential: credential
@@ -120,8 +120,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Production"
       assert html =~ credential.schema
       assert html =~ credential.name
-      assert html =~ support_credential.schema
-      assert html =~ support_credential.name
+      refute html =~ support_credential.name
     end
 
     # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
