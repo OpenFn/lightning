@@ -129,9 +129,51 @@ defmodule Lightning.Adaptors.NPM do
     ])
   end
 
+  defp schema_client do
+    Tesla.client([
+      {Tesla.Middleware.BaseUrl, "https://cdn.jsdelivr.net"},
+      {Tesla.Middleware.JSON, engine_opts: [objects: :ordered_objects]}
+    ])
+  end
+
   @impl true
-  def fetch_credential_schema(_adaptor_name, _version) do
-    {:error, :not_implemented}
+  def fetch_credential_schema(adaptor_name, version) do
+    Logger.debug("Fetching credential schema for: #{adaptor_name}@#{version}")
+
+    Tesla.get(
+      schema_client(),
+      "/npm/#{adaptor_name}@#{version}/configuration-schema.json"
+    )
+    |> case do
+      {:ok, %Tesla.Env{status: 200, body: schema_json}} ->
+        {:ok, schema_json}
+
+      {:ok, %Tesla.Env{status: 404}} ->
+        Logger.debug("No credential schema found for #{adaptor_name}@#{version}")
+        {:error, :not_found}
+
+      {:ok, %Tesla.Env{status: status}} ->
+        Logger.warning(
+          "Unexpected status #{status} when fetching schema for #{adaptor_name}@#{version}"
+        )
+
+        {:error, {:unexpected_status, status}}
+
+      {:error,
+       {Tesla.Middleware.JSON, :decode, %Jason.DecodeError{} = decode_error}} ->
+        Logger.error(
+          "Failed to decode JSON schema for #{adaptor_name}@#{version}: #{inspect(decode_error)}"
+        )
+
+        {:error, {:invalid_json, decode_error}}
+
+      {:error, reason} = error ->
+        Logger.error(
+          "Failed to fetch credential schema for #{adaptor_name}@#{version}: #{inspect(reason)}"
+        )
+
+        error
+    end
   end
 
   @impl true

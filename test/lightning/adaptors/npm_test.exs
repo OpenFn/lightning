@@ -1,6 +1,7 @@
 defmodule Lightning.Adaptors.NPMTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
   import Mox
   import Tesla.Test
 
@@ -219,6 +220,153 @@ defmodule Lightning.Adaptors.NPMTest do
                NPM.fetch_packages(user: "openfn", unknown_option: "rejected")
 
       assert error.message =~ "unknown options [:unknown_option]"
+    end
+  end
+
+  describe "fetch_credential_schema/2" do
+    test "successfully fetches credential schema" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn env, [] ->
+          assert env.url ==
+                   "https://cdn.jsdelivr.net/npm/@openfn/language-http@1.2.3/configuration-schema.json"
+
+          # Return raw JSON string, not decoded JSON
+          schema_json = File.read!("test/fixtures/schemas/http.json")
+          {:ok, json(%Tesla.Env{status: 200}, schema_json)}
+        end
+      )
+
+      assert {:ok, schema} =
+               NPM.fetch_credential_schema("@openfn/language-http", "1.2.3")
+
+      # Verify the schema structure - schema is a Jason.OrderedObject
+      assert %Jason.OrderedObject{} = schema
+      assert schema["$schema"] == "http://json-schema.org/draft-07/schema#"
+      assert schema["type"] == "object"
+      assert %Jason.OrderedObject{} = schema["properties"]
+      assert schema["properties"]["username"]["title"] == "Username"
+      assert schema["properties"]["password"]["writeOnly"] == true
+    end
+
+    test "handles 404 when schema not found" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn env, [] ->
+          assert env.url ==
+                   "https://cdn.jsdelivr.net/npm/@openfn/language-common@2.0.0/configuration-schema.json"
+
+          {:ok, %Tesla.Env{status: 404, body: %{}}}
+        end
+      )
+
+      assert {:error, :not_found} =
+               NPM.fetch_credential_schema("@openfn/language-common", "2.0.0")
+    end
+
+    test "handles unexpected HTTP status codes" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn env, [] ->
+          assert env.url ==
+                   "https://cdn.jsdelivr.net/npm/@openfn/language-dhis2@latest/configuration-schema.json"
+
+          {:ok, %Tesla.Env{status: 500, body: %{}}}
+        end
+      )
+
+      assert {:error, {:unexpected_status, 500}} =
+               NPM.fetch_credential_schema("@openfn/language-dhis2", "latest")
+    end
+
+    test "handles network errors" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn _env, [] ->
+          {:error, :nxdomain}
+        end
+      )
+
+      assert {:error, :nxdomain} =
+               NPM.fetch_credential_schema("@openfn/language-http", "1.0.0")
+    end
+
+    test "handles timeout errors" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn _env, [] ->
+          {:error, :timeout}
+        end
+      )
+
+      assert {:error, :timeout} =
+               NPM.fetch_credential_schema("@openfn/language-http", "1.0.0")
+    end
+
+    test "preserves JSON object key ordering" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn _env, [] ->
+          # Return the schema as raw JSON string to test decoding
+          schema_json = File.read!("test/fixtures/schemas/http.json")
+          {:ok, json(%Tesla.Env{status: 200}, schema_json)}
+        end
+      )
+
+      assert {:ok, schema} =
+               NPM.fetch_credential_schema("@openfn/language-http", "1.0.0")
+
+      # Verify that the schema is decoded as OrderedObject (which preserves order)
+      assert %Jason.OrderedObject{} = schema
+      assert schema["properties"]["username"]["title"] == "Username"
+      assert schema["properties"]["password"]["writeOnly"] == true
+      assert schema["properties"]["baseUrl"]["format"] == "uri"
+
+      # Verify it's actually an OrderedObject, not a regular map
+      assert %Jason.OrderedObject{} = schema["properties"]
+      assert %Jason.OrderedObject{} = schema["properties"]["username"]
+    end
+
+    @tag :capture_log
+    test "handles malformed JSON gracefully" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn _env, [] ->
+          {:ok, json(%Tesla.Env{status: 200}, "invalid json content")}
+        end
+      )
+
+      assert capture_log(fn ->
+               assert {:error, {:invalid_json, %Jason.DecodeError{}}} =
+                        NPM.fetch_credential_schema(
+                          "@openfn/language-http",
+                          "1.0.0"
+                        )
+             end) =~
+               "Failed to decode JSON schema for @openfn/language-http@1.0.0: "
+    end
+
+    test "constructs correct URLs for different package names and versions" do
+      test_cases = [
+        {"@openfn/language-http", "1.2.3",
+         "https://cdn.jsdelivr.net/npm/@openfn/language-http@1.2.3/configuration-schema.json"},
+        {"@openfn/language-dhis2", "latest",
+         "https://cdn.jsdelivr.net/npm/@openfn/language-dhis2@latest/configuration-schema.json"},
+        {"some-package", "0.1.0",
+         "https://cdn.jsdelivr.net/npm/some-package@0.1.0/configuration-schema.json"}
+      ]
+
+      Enum.each(test_cases, fn {package_name, version, expected_url} ->
+        expect_tesla_call(
+          times: 1,
+          returns: fn env, [] ->
+            assert env.url == expected_url
+            {:ok, %Tesla.Env{status: 404, body: %{}}}
+          end
+        )
+
+        NPM.fetch_credential_schema(package_name, version)
+      end)
     end
   end
 end
