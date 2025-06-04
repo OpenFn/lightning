@@ -612,7 +612,7 @@ defmodule LightningWeb.ProjectLive.Settings do
           <br /> Do you wish to proceed with this action?
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mt-2">
+      <div class="flex flex-row-reverse gap-4 mt-4">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
