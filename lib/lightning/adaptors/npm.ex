@@ -40,6 +40,8 @@ defmodule Lightning.Adaptors.NPM do
   @spec fetch_packages(config :: config()) :: {:ok, [map()]} | {:error, term()}
   def fetch_packages(config) do
     with {:ok, validated_config} <- validate_config(config) do
+      Logger.debug("Fetching NPM packages for: #{validated_config[:user]}")
+
       user_packages(validated_config)
       |> case do
         {:ok, response} ->
@@ -94,6 +96,8 @@ defmodule Lightning.Adaptors.NPM do
   @spec fetch_package(config :: config(), package_name :: String.t()) ::
           Tesla.Env.result()
   def fetch_package(_config, package_name) do
+    Logger.debug("Fetching NPM package: #{package_name}")
+
     Tesla.get(client(), "/#{package_name}")
     |> case do
       {:ok, %Tesla.Env{status: 200, body: details}} ->

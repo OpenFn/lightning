@@ -16,7 +16,8 @@ defmodule Lightning.Adaptors.Warmer do
       # Define your config
       config = %{
         strategy: {Lightning.Adaptors.NPM, [user: "openfn"]},
-        cache: :my_adaptors_cache
+        cache: :my_adaptors_cache,
+        persist_path: "/path/to/cache.bin"  # Optional persistence
       }
 
       # Start cache with warmer
@@ -37,6 +38,8 @@ defmodule Lightning.Adaptors.Warmer do
 
   This allows `Lightning.Adaptors.all/1` to return immediately from cache, and
   `Lightning.Adaptors.versions_for/2` to avoid triggering cache population on every call.
+
+  If `persist_path` is configured, the cache will also be saved to disk after population.
   """
 
   use Cachex.Warmer
@@ -51,6 +54,7 @@ defmodule Lightning.Adaptors.Warmer do
     - config: A map with keys:
       - :strategy - {module, strategy_config} tuple or just module
       - :cache - Cachex cache reference (not used in warmer, but part of config)
+      - :persist_path - Optional path for cache persistence
 
   ## Returns
     - {:ok, pairs} where pairs is a list of {key, value} tuples for caching
@@ -73,7 +77,20 @@ defmodule Lightning.Adaptors.Warmer do
           adaptors_list_pair = {:adaptors, adaptor_names}
 
           # Return all pairs together
-          {:ok, [adaptors_list_pair | adaptor_pairs]}
+          result = {:ok, [adaptors_list_pair | adaptor_pairs]}
+
+          # Save cache to disk asynchronously if persistence is configured
+          # This will run after the warmer has finished populating the cache
+          if Map.has_key?(config, :persist_path) and
+               not is_nil(config.persist_path) do
+            Task.start(fn ->
+              # Small delay to ensure cache is fully populated
+              Process.sleep(500)
+              Lightning.Adaptors.save_cache(config)
+            end)
+          end
+
+          result
 
         {:error, _reason} ->
           :ignore

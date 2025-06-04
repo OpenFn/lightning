@@ -198,4 +198,194 @@ defmodule Lightning.AdaptorsTest do
       assert cached_adaptors == ["@openfn/language-foo", "@openfn/language-bar"]
     end
   end
+
+  describe "cache persistence" do
+    test "save_cache/1 saves cache to disk when persist_path is configured" do
+      start_supervised!({Cachex, [:persistence_save_test, []]})
+
+      # Create a temporary file for testing
+      cache_path =
+        Path.join(System.tmp_dir!(), "test_cache_#{:rand.uniform(1000)}.bin")
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :persistence_save_test,
+        persist_path: cache_path
+      }
+
+      # Populate the cache
+      Lightning.Adaptors.all(config)
+
+      # Manually save the cache
+      assert Lightning.Adaptors.save_cache(config) == :ok
+
+      # Verify file was created
+      assert File.exists?(cache_path)
+
+      # Cleanup
+      File.rm!(cache_path)
+    end
+
+    test "save_cache/1 returns :ok when persist_path is nil" do
+      start_supervised!({Cachex, [:persistence_save_nil_test, []]})
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :persistence_save_nil_test,
+        persist_path: nil
+      }
+
+      assert Lightning.Adaptors.save_cache(config) == :ok
+    end
+
+    test "restore_cache/1 restores cache from disk when persist_path is configured" do
+      start_supervised!({Cachex, [:persistence_restore_test, []]})
+
+      cache_path =
+        Path.join(System.tmp_dir!(), "test_cache_#{:rand.uniform(1000)}.bin")
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :persistence_restore_test,
+        persist_path: cache_path
+      }
+
+      # First, populate and save cache
+      Lightning.Adaptors.all(config)
+      Lightning.Adaptors.save_cache(config)
+
+      # Clear the cache
+      Cachex.clear(config[:cache])
+
+      # Verify cache is empty
+      {:ok, nil} = Cachex.get(config[:cache], :adaptors)
+
+      # Restore from disk
+      assert Lightning.Adaptors.restore_cache(config) == :ok
+
+      # Verify cache was restored
+      {:ok, cached_adaptors} = Cachex.get(config[:cache], :adaptors)
+      assert cached_adaptors == ["@openfn/language-foo", "@openfn/language-bar"]
+
+      # Cleanup
+      File.rm!(cache_path)
+    end
+
+    test "restore_cache/1 returns :ok when no cache file exists" do
+      start_supervised!({Cachex, [:persistence_restore_no_file_test, []]})
+
+      cache_path = Path.join(System.tmp_dir!(), "non_existent_cache.bin")
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :persistence_restore_no_file_test,
+        persist_path: cache_path
+      }
+
+      assert Lightning.Adaptors.restore_cache(config) == :ok
+    end
+
+    test "restore_cache/1 returns :ok when persist_path is nil" do
+      start_supervised!({Cachex, [:persistence_restore_nil_test, []]})
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :persistence_restore_nil_test,
+        persist_path: nil
+      }
+
+      assert Lightning.Adaptors.restore_cache(config) == :ok
+    end
+
+    test "clear_persisted_cache/1 removes cache file when persist_path is configured" do
+      start_supervised!({Cachex, [:persistence_clear_test, []]})
+
+      cache_path =
+        Path.join(System.tmp_dir!(), "test_cache_#{:rand.uniform(1000)}.bin")
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :persistence_clear_test,
+        persist_path: cache_path
+      }
+
+      # Create and save cache
+      Lightning.Adaptors.all(config)
+      Lightning.Adaptors.save_cache(config)
+
+      # Verify file exists
+      assert File.exists?(cache_path)
+
+      # Clear persisted cache
+      assert Lightning.Adaptors.clear_persisted_cache(config) == :ok
+
+      # Verify file was deleted
+      refute File.exists?(cache_path)
+    end
+
+    test "clear_persisted_cache/1 returns :ok when persist_path is nil" do
+      config = %{
+        persist_path: nil
+      }
+
+      assert Lightning.Adaptors.clear_persisted_cache(config) == :ok
+    end
+
+    test "all/1 automatically restores cache on first access when persist_path is configured" do
+      start_supervised!({Cachex, [:persistence_auto_restore_test, []]})
+
+      cache_path =
+        Path.join(System.tmp_dir!(), "test_cache_#{:rand.uniform(10000)}.bin")
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :persistence_auto_restore_test,
+        persist_path: cache_path
+      }
+
+      # First, populate and save cache
+      Lightning.Adaptors.all(config)
+      Lightning.Adaptors.save_cache(config)
+
+      # Clear the in-memory cache to simulate app restart
+      Cachex.clear(config[:cache])
+
+      # Verify cache is empty
+      {:ok, nil} = Cachex.get(config[:cache], :adaptors)
+
+      # Now call all/1 again - it should automatically restore from disk
+      result = Lightning.Adaptors.all(config)
+      assert result == ["@openfn/language-foo", "@openfn/language-bar"]
+
+      # Verify individual adaptors were also restored
+      {:ok, foo_adaptor} = Cachex.get(config[:cache], "@openfn/language-foo")
+      assert foo_adaptor.name == "@openfn/language-foo"
+
+      # Cleanup
+      File.rm!(cache_path)
+    end
+
+    test "all/1 automatically saves cache after populating when persist_path is configured" do
+      start_supervised!({Cachex, [:persistence_auto_save_test, []]})
+
+      cache_path =
+        Path.join(System.tmp_dir!(), "test_cache_#{:rand.uniform(1000)}.bin")
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :persistence_auto_save_test,
+        persist_path: cache_path
+      }
+
+      # Call all/1 which should populate and save cache
+      result = Lightning.Adaptors.all(config)
+      assert result == ["@openfn/language-foo", "@openfn/language-bar"]
+
+      # Verify file was created
+      assert File.exists?(cache_path)
+
+      # Cleanup
+      File.rm!(cache_path)
+    end
+  end
 end

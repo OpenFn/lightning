@@ -125,8 +125,6 @@ defmodule Lightning.Adaptors.NPMTest do
           filter: fn _ -> true end
         )
 
-      IO.inspect(packages)
-
       assert Enum.any?(packages, fn adaptor ->
                adaptor.name == "@openfn/language-common"
              end)
