@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Only show credentials owned by current user in `/credentials` (not those
+  shared with them also) [3273](https://github.com/OpenFn/lightning/issues/3273)
+
 ## [v2.13.0-pre1] - 2025-06-03
 
 ### Changed
