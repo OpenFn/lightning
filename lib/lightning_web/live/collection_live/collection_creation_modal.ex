@@ -132,7 +132,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
           phx-change="validate"
           phx-submit="save"
         >
-          <div class="container mx-auto px-6 space-y-6 bg-white">
+          <div class="container mx-auto space-y-6 bg-white">
             <div class="space-y-4">
               <.input
                 type="text"
@@ -160,7 +160,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
               />
             </div>
           </div>
-          <.modal_footer class="mt-6 mx-6">
+          <.modal_footer class="mt-6">
             <div class="sm:flex sm:flex-row-reverse gap-3">
               <.button
                 id={"save-collection-#{@collection.id || "new"}"}

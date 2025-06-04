@@ -126,7 +126,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
           </div>
         </:title>
         <:subtitle>
-          <span class="text-xs">
+          <span class="text-xs text-left text-wrap">
             <.modal_subtitle {assigns} />
           </span>
         </:subtitle>
@@ -171,7 +171,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
 
   defp form_fields(assigns) do
     ~H"""
-    <div class="px-6 space-y-5">
+    <div class="space-y-5">
       <div class="flex items-center space-x-4">
         <div class="flex-1">
           <.input
@@ -191,7 +191,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
 
   defp form_footer(assigns) do
     ~H"""
-    <.modal_footer class="mx-6 mt-6">
+    <.modal_footer class="mt-6">
       <.footer_buttons {assigns} />
     </.modal_footer>
     """

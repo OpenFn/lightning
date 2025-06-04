@@ -279,7 +279,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <div class="container mx-auto px-6 space-y-6 bg-white">
+        <div class="container mx-auto space-y-6 bg-white">
           <div class="space-y-4">
             <.input type="text" field={f[:raw_name]} label="Name" required="true" />
             <.input type="hidden" field={f[:name]} />
@@ -291,7 +291,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
             </small>
           </div>
         </div>
-        <.modal_footer class="mt-6 mx-6">
+        <.modal_footer class="mt-6">
           <div class="sm:flex sm:flex-row-reverse gap-3">
             <.button
               id={"submit-btn-#{@id}"}
@@ -342,7 +342,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           </button>
         </div>
       </:title>
-      <div class="px-6">
+      <div class="">
         <p class="text-sm text-gray-500">
           Are you sure you want to delete the collection
           <span class="font-medium">{@collection.name}</span>
@@ -350,7 +350,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           If you wish to proceed with this action, click on the delete button. To cancel click on the cancel button.<br /><br />
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <div class="flex flex-row-reverse gap-4 mt-2">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"

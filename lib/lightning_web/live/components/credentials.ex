@@ -26,14 +26,14 @@ defmodule LightningWeb.Components.Credentials do
           </button>
         </div>
       </:title>
-      <div class="px-6">
+      <div class="text-left text-wrap">
         <p class="text-sm text-gray-500">
           You are about the delete the credential "{@credential.name}" which may be used in other projects. All jobs using this credential will fail.
-          <br /><br />Do you want to proceed with this action?
+          <br />Do you want to proceed with this action?
         </p>
       </div>
       <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-      <div class="flex flex-row-reverse gap-4 mx-6">
+      <div class="flex flex-row-reverse gap-4">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -72,14 +72,14 @@ defmodule LightningWeb.Components.Credentials do
           </button>
         </div>
       </:title>
-      <div class="px-6">
+      <div class="text-left text-wrap">
         <p class="text-sm text-gray-500">
           You are about the delete the Oauth client "{@client.name}" which may be used in other projects. All jobs dependent on this client will fail.
           <br /><br />Do you want to proceed with this action?
         </p>
       </div>
       <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-      <div class="flex flex-row-reverse gap-4 mx-6">
+      <div class="flex flex-row-reverse gap-4">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"

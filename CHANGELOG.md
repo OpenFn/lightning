@@ -23,6 +23,8 @@ and this project adheres to
 
 - Only show credentials owned by current user in `/credentials` (not those
   shared with them also) [3273](https://github.com/OpenFn/lightning/issues/3273)
+- Fix texts not getting wrapped in modals that are inside table rows
+  [3274](https://github.com/OpenFn/lightning/issues/3274)
 
 ## [v2.13.0-pre1] - 2025-06-03
 

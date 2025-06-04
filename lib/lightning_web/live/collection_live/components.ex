@@ -22,7 +22,7 @@ defmodule LightningWeb.CollectionLive.Components do
           </button>
         </div>
       </:title>
-      <div class="px-6">
+      <div class="text-left text-wrap">
         <p class="text-sm text-gray-500">
           Are you sure you want to delete the collection
           <span class="font-medium">{@collection.name}</span>
@@ -30,7 +30,7 @@ defmodule LightningWeb.CollectionLive.Components do
           If you wish to proceed with this action, click on the delete button. To cancel click on the cancel button.<br /><br />
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <div class="flex flex-row-reverse gap-4 mt-2">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"

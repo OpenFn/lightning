@@ -606,13 +606,13 @@ defmodule LightningWeb.ProjectLive.Settings do
           </button>
         </div>
       </:title>
-      <div class="px-6">
+      <div class="text-left text-wrap">
         <p class="text-sm text-gray-500">
           Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project? {@access_text}{@credentials_text}.
-          Do you wish to proceed with this action?
+          <br /> Do you wish to proceed with this action?
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <div class="flex flex-row-reverse gap-4 mt-4">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
