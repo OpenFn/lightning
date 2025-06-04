@@ -49,7 +49,7 @@ defmodule Lightning.Adaptors.NPM do
             |> Enum.map(fn {name, _} -> name end)
             |> Enum.filter(validated_config[:filter] || fn _ -> true end)
             |> Task.async_stream(
-              &fetch_package_details/1,
+              &fetch_package(validated_config, &1),
               ordered: false,
               max_concurrency: validated_config[:max_concurrency],
               timeout: validated_config[:timeout]
@@ -91,13 +91,10 @@ defmodule Lightning.Adaptors.NPM do
   @doc """
   Retrieve all details for an NPM package
   """
-  @spec package_detail(package_name :: String.t()) :: Tesla.Env.result()
-  def package_detail(package_name) do
+  @spec fetch_package(config :: config(), package_name :: String.t()) ::
+          Tesla.Env.result()
+  def fetch_package(_config, package_name) do
     Tesla.get(client(), "/#{package_name}")
-  end
-
-  defp fetch_package_details(package_name) do
-    package_detail(package_name)
     |> case do
       {:ok, %Tesla.Env{status: 200, body: details}} ->
         %Lightning.Adaptors.Package{

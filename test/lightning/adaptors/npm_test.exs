@@ -117,7 +117,7 @@ defmodule Lightning.Adaptors.NPMTest do
         end
       )
 
-      {:ok, response} =
+      {:ok, packages} =
         NPM.fetch_packages(
           user: "openfn",
           max_concurrency: 10,
@@ -125,11 +125,13 @@ defmodule Lightning.Adaptors.NPMTest do
           filter: fn _ -> true end
         )
 
-      assert Enum.any?(response, fn adaptor ->
+      IO.inspect(packages)
+
+      assert Enum.any?(packages, fn adaptor ->
                adaptor.name == "@openfn/language-common"
              end)
 
-      refute {:name, "@openfn/language-asana"} in response
+      refute {:name, "@openfn/language-asana"} in packages
     end
   end
 
