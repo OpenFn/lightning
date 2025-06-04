@@ -223,13 +223,13 @@ defmodule Lightning.Adaptors.NPMTest do
     end
   end
 
-  describe "fetch_credential_schema/2" do
+  describe "fetch_credential_schema/1" do
     test "successfully fetches credential schema" do
       expect_tesla_call(
         times: 1,
         returns: fn env, [] ->
           assert env.url ==
-                   "https://cdn.jsdelivr.net/npm/@openfn/language-http@1.2.3/configuration-schema.json"
+                   "https://cdn.jsdelivr.net/npm/@openfn/language-http/configuration-schema.json"
 
           # Return raw JSON string, not decoded JSON
           schema_json = File.read!("test/fixtures/schemas/http.json")
@@ -238,7 +238,7 @@ defmodule Lightning.Adaptors.NPMTest do
       )
 
       assert {:ok, schema} =
-               NPM.fetch_credential_schema("@openfn/language-http", "1.2.3")
+               NPM.fetch_credential_schema("@openfn/language-http")
 
       # Verify the schema structure - schema is a Jason.OrderedObject
       assert %Jason.OrderedObject{} = schema
@@ -254,14 +254,14 @@ defmodule Lightning.Adaptors.NPMTest do
         times: 1,
         returns: fn env, [] ->
           assert env.url ==
-                   "https://cdn.jsdelivr.net/npm/@openfn/language-common@2.0.0/configuration-schema.json"
+                   "https://cdn.jsdelivr.net/npm/@openfn/language-common/configuration-schema.json"
 
           {:ok, %Tesla.Env{status: 404, body: %{}}}
         end
       )
 
       assert {:error, :not_found} =
-               NPM.fetch_credential_schema("@openfn/language-common", "2.0.0")
+               NPM.fetch_credential_schema("@openfn/language-common")
     end
 
     test "handles unexpected HTTP status codes" do
@@ -269,14 +269,17 @@ defmodule Lightning.Adaptors.NPMTest do
         times: 1,
         returns: fn env, [] ->
           assert env.url ==
-                   "https://cdn.jsdelivr.net/npm/@openfn/language-dhis2@latest/configuration-schema.json"
+                   "https://cdn.jsdelivr.net/npm/@openfn/language-dhis2/configuration-schema.json"
 
           {:ok, %Tesla.Env{status: 500, body: %{}}}
         end
       )
 
-      assert {:error, {:unexpected_status, 500}} =
-               NPM.fetch_credential_schema("@openfn/language-dhis2", "latest")
+      assert capture_log(fn ->
+               assert {:error, {:unexpected_status, 500}} =
+                        NPM.fetch_credential_schema("@openfn/language-dhis2")
+             end) =~
+               "Unexpected status 500 when fetching schema for @openfn/language-dhis2"
     end
 
     test "handles network errors" do
@@ -287,8 +290,11 @@ defmodule Lightning.Adaptors.NPMTest do
         end
       )
 
-      assert {:error, :nxdomain} =
-               NPM.fetch_credential_schema("@openfn/language-http", "1.0.0")
+      assert capture_log(fn ->
+               assert {:error, :nxdomain} =
+                        NPM.fetch_credential_schema("@openfn/language-http")
+             end) =~
+               "Failed to fetch credential schema for @openfn/language-http: "
     end
 
     test "handles timeout errors" do
@@ -299,8 +305,11 @@ defmodule Lightning.Adaptors.NPMTest do
         end
       )
 
-      assert {:error, :timeout} =
-               NPM.fetch_credential_schema("@openfn/language-http", "1.0.0")
+      assert capture_log(fn ->
+               assert {:error, :timeout} =
+                        NPM.fetch_credential_schema("@openfn/language-http")
+             end) =~
+               "Failed to fetch credential schema for @openfn/language-http: "
     end
 
     test "preserves JSON object key ordering" do
@@ -314,7 +323,7 @@ defmodule Lightning.Adaptors.NPMTest do
       )
 
       assert {:ok, schema} =
-               NPM.fetch_credential_schema("@openfn/language-http", "1.0.0")
+               NPM.fetch_credential_schema("@openfn/language-http")
 
       # Verify that the schema is decoded as OrderedObject (which preserves order)
       assert %Jason.OrderedObject{} = schema
@@ -338,25 +347,22 @@ defmodule Lightning.Adaptors.NPMTest do
 
       assert capture_log(fn ->
                assert {:error, {:invalid_json, %Jason.DecodeError{}}} =
-                        NPM.fetch_credential_schema(
-                          "@openfn/language-http",
-                          "1.0.0"
-                        )
+                        NPM.fetch_credential_schema("@openfn/language-http")
              end) =~
-               "Failed to decode JSON schema for @openfn/language-http@1.0.0: "
+               "Failed to decode JSON schema for @openfn/language-http: "
     end
 
-    test "constructs correct URLs for different package names and versions" do
+    test "constructs correct URLs for different package names" do
       test_cases = [
-        {"@openfn/language-http", "1.2.3",
-         "https://cdn.jsdelivr.net/npm/@openfn/language-http@1.2.3/configuration-schema.json"},
-        {"@openfn/language-dhis2", "latest",
-         "https://cdn.jsdelivr.net/npm/@openfn/language-dhis2@latest/configuration-schema.json"},
-        {"some-package", "0.1.0",
-         "https://cdn.jsdelivr.net/npm/some-package@0.1.0/configuration-schema.json"}
+        {"@openfn/language-http",
+         "https://cdn.jsdelivr.net/npm/@openfn/language-http/configuration-schema.json"},
+        {"@openfn/language-dhis2",
+         "https://cdn.jsdelivr.net/npm/@openfn/language-dhis2/configuration-schema.json"},
+        {"some-package",
+         "https://cdn.jsdelivr.net/npm/some-package/configuration-schema.json"}
       ]
 
-      Enum.each(test_cases, fn {package_name, version, expected_url} ->
+      Enum.each(test_cases, fn {package_name, expected_url} ->
         expect_tesla_call(
           times: 1,
           returns: fn env, [] ->
@@ -365,7 +371,7 @@ defmodule Lightning.Adaptors.NPMTest do
           end
         )
 
-        NPM.fetch_credential_schema(package_name, version)
+        NPM.fetch_credential_schema(package_name)
       end)
     end
   end

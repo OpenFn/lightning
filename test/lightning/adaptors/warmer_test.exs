@@ -22,7 +22,7 @@ defmodule Lightning.Adaptors.WarmerTest do
          ]}
       end
 
-      def fetch_credential_schema(_name, _version),
+      def fetch_credential_schema(_name),
         do: {:error, :not_implemented}
 
       def fetch_icon(_name, _version), do: {:error, :not_implemented}
@@ -34,7 +34,7 @@ defmodule Lightning.Adaptors.WarmerTest do
         {:error, "Something bad happened"}
       end
 
-      def fetch_credential_schema(_name, _version),
+      def fetch_credential_schema(_name),
         do: {:error, :not_implemented}
 
       def fetch_icon(_name, _version), do: {:error, :not_implemented}
@@ -121,7 +121,7 @@ defmodule Lightning.Adaptors.WarmerTest do
           {:ok, []}
         end
 
-        def fetch_credential_schema(_adaptor_name, _version) do
+        def fetch_credential_schema(_adaptor_name) do
           {:error, :not_implemented}
         end
 
@@ -166,7 +166,7 @@ defmodule Lightning.Adaptors.WarmerTest do
          ]}
       end
 
-      def fetch_credential_schema(_adaptor_name, _version) do
+      def fetch_credential_schema(_adaptor_name) do
         {:error, :not_implemented}
       end
 
@@ -182,7 +182,7 @@ defmodule Lightning.Adaptors.WarmerTest do
         {:error, :network_timeout}
       end
 
-      def fetch_credential_schema(_adaptor_name, _version) do
+      def fetch_credential_schema(_adaptor_name) do
         {:error, :not_implemented}
       end
 
