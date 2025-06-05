@@ -182,7 +182,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         updatePositions(newPositions);
       }
     },
-    [setModel, model]
+    [setModel, model, autoLayout, updatePositions]
   );
 
   const handleNodeClick = useCallback(
@@ -212,7 +212,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         event.target instanceof HTMLElement &&
         event.target.classList?.contains('react-flow__pane')
       ) {
-        cancelPlaceholder();
+        // cancelPlaceholder();
         updateSelection(null);
       }
     },
@@ -274,7 +274,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }
   }, [flow, model, el]);
 
-  const connectHandlers = useConnect(model, setModel);
+  const connectHandlers = useConnect(model, setModel, addPlaceholder);
   return (
     <ReactFlowProvider>
       <ReactFlow

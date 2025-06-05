@@ -11,7 +11,7 @@ import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';
 
 // generates a placeholder node and edge as child of the parent
-export const create = (parentNode: Flow.Node) => {
+export const create = (parentNode: Flow.Node, position?: { x: number; y: number }) => {
   const newModel: Flow.Model = {
     nodes: [],
     edges: [],
@@ -28,8 +28,8 @@ export const create = (parentNode: Flow.Node) => {
       // @ts-ignore _default is a temporary flag added by us
       _default: true,
       // Offset the position of the placeholder to be more pleasing during animation
-      x: parentNode.position.x,
-      y: parentNode.position.y + 100,
+      x: position?.x ?? parentNode.position.x,
+      y: position?.y ?? parentNode.position.y + 100,
     },
     data: {
       body: DEFAULT_TEXT,
@@ -61,9 +61,9 @@ export default (
     edges: [],
   });
 
-  const add = useCallback((parentNode: Flow.Node) => {
+  const add = useCallback((parentNode: Flow.Node, position?: { x: number; y: number }) => {
     // Generate a placeholder node and edge
-    const updated = create(parentNode);
+    const updated = create(parentNode, position);
     setPlaceholders(updated);
 
     requestSelectionChange(updated.nodes[0].id);
