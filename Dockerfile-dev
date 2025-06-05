@@ -53,6 +53,8 @@ RUN mkdir config
 # to ensure any relevant config change will trigger the dependencies
 # to be re-compiled.
 COPY config config
+COPY assets assets
+RUN npm install --prefix assets
 RUN mix deps.compile
 
 COPY priv priv
@@ -62,8 +64,7 @@ RUN mix lightning.install_schemas
 RUN mix lightning.install_adaptor_icons
 
 COPY bin bin
-COPY assets assets
-RUN npm install --prefix assets
+
 
 
 ENTRYPOINT ["/app/bin/entrypoint"]
