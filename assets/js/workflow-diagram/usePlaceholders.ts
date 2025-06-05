@@ -11,7 +11,10 @@ import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';
 
 // generates a placeholder node and edge as child of the parent
-export const create = (parentNode: Flow.Node, position?: { x: number; y: number }) => {
+export const create = (
+  parentNode: Flow.Node,
+  position?: { x: number; y: number }
+) => {
   const newModel: Flow.Model = {
     nodes: [],
     edges: [],
@@ -61,13 +64,16 @@ export default (
     edges: [],
   });
 
-  const add = useCallback((parentNode: Flow.Node, position?: { x: number; y: number }) => {
-    // Generate a placeholder node and edge
-    const updated = create(parentNode, position);
-    setPlaceholders(updated);
+  const add = useCallback(
+    (parentNode: Flow.Node, position?: { x: number; y: number }) => {
+      // Generate a placeholder node and edge
+      const updated = create(parentNode, position);
+      setPlaceholders(updated);
 
-    requestSelectionChange(updated.nodes[0].id);
-  }, []);
+      requestSelectionChange(updated.nodes[0].id);
+    },
+    []
+  );
 
   const commit = useCallback(
     (evt: CustomEvent<any>) => {
