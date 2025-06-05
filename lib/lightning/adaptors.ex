@@ -133,10 +133,25 @@ defmodule Lightning.Adaptors do
         Lightning.Adaptors.latest_for(__MODULE__, module_name)
       end
 
+      def save_cache do
+        Lightning.Adaptors.save_cache(__MODULE__)
+      end
+
+      def restore_cache do
+        Lightning.Adaptors.restore_cache(__MODULE__)
+      end
+
+      def clear_persisted_cache do
+        Lightning.Adaptors.clear_persisted_cache(__MODULE__)
+      end
+
       defoverridable config: 0,
                      all: 0,
                      versions_for: 1,
-                     latest_for: 1
+                     latest_for: 1,
+                     save_cache: 0,
+                     restore_cache: 0,
+                     clear_persisted_cache: 0
     end
   end
 
@@ -175,6 +190,9 @@ defmodule Lightning.Adaptors do
   """
   @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
+    # Ensure Registry is started if needed
+    ensure_registry_started()
+
     name = Keyword.get(opts, :name, __MODULE__)
     cache_name = :"adaptors_cache_#{name}"
 
@@ -388,5 +406,23 @@ defmodule Lightning.Adaptors do
       "@openfn/language-collections"
     ] &&
       Regex.match?(~r/@openfn\/language-\w+/, name)
+  end
+
+  defp ensure_registry_started do
+    case Process.whereis(Lightning.Adaptors.Registry) do
+      nil ->
+        # Start Registry directly when not in a supervision tree
+        case Registry.start_link(
+               keys: :unique,
+               name: Lightning.Adaptors.Registry
+             ) do
+          {:ok, _pid} -> :ok
+          {:error, {:already_started, _pid}} -> :ok
+          error -> error
+        end
+
+      _pid ->
+        :ok
+    end
   end
 end
