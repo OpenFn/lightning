@@ -126,7 +126,8 @@ const resetModel = (model: Flow.Model) => ({
 export default (
   model: Flow.Model,
   setModel: React.Dispatch<React.SetStateAction<Flow.Model>>,
-  addPlaceholder: (node: Flow.Node, position: { x: number; y: number }) => void
+  addPlaceholder: (node: Flow.Node, position: { x: number; y: number }) => void,
+  flow: ReactFlowInstance
 ) => {
   const [dragActive, setDragActive] = useState<string | false>(false);
   const { add: addTo } = useWorkflowStore();
@@ -134,7 +135,7 @@ export default (
   const onConnect: F.OnConnect = useCallback(args => {
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
-
+    console.log('on connect to node');
     addTo(wf);
   }, []);
 
@@ -149,15 +150,18 @@ export default (
   const onConnectEnd: F.OnConnectEnd = useCallback(
     (evt, connectionState) => {
       // when a connection is dropped on the pane it's not valid
-      console.log('onConnectEnd', evt);
       if (!connectionState.isValid) {
         const { clientX, clientY } =
           'changedTouches' in evt ? evt.changedTouches[0] : evt;
-        console.log('connectionState', connectionState);
-        addPlaceholder(connectionState.fromNode, {
+
+        // Use screenToFlowPosition to calculate flow coordinates
+        const position = flow.screenToFlowPosition({
           x: clientX,
           y: clientY,
         });
+
+        console.log('adding node with link button');
+        addPlaceholder(connectionState.fromNode, position);
       }
       setDragActive(false);
       setModel(resetModel(model));
