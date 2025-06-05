@@ -71,7 +71,11 @@ defmodule Lightning.Adaptors.NPMTest do
         ]
         |> MapSet.new()
 
-      assert adaptors |> Enum.map(& &1.name) |> MapSet.new() == expected_adaptors
+      received_adaptors =
+        adaptors |> Enum.map(fn {name, _} -> name end) |> MapSet.new()
+
+      assert expected_adaptors |> MapSet.subset?(received_adaptors),
+             "should have top level adaptors in the list"
     end
 
     test "handles errors when fetching user packages" do
@@ -126,11 +130,11 @@ defmodule Lightning.Adaptors.NPMTest do
           filter: fn _ -> true end
         )
 
-      assert Enum.any?(packages, fn adaptor ->
-               adaptor.name == "@openfn/language-common"
-             end)
+      package_keys =
+        packages |> Enum.map(fn {name, _} -> name end) |> MapSet.new()
 
-      refute {:name, "@openfn/language-asana"} in packages
+      assert MapSet.member?(package_keys, "@openfn/language-common")
+      refute MapSet.member?(package_keys, "@openfn/language-asana")
     end
   end
 
@@ -373,6 +377,41 @@ defmodule Lightning.Adaptors.NPMTest do
 
         NPM.fetch_credential_schema(package_name)
       end)
+    end
+  end
+
+  describe "unravel_package/1" do
+    test "returns a list of all package versions" do
+      package =
+        File.read!("test/fixtures/language-salesforce-npm.json")
+        |> Jason.decode!()
+
+      original_length = length(package["versions"] |> Map.keys())
+      dist_tags_length = length(package["dist-tags"] |> Map.keys())
+
+      deprecated_length =
+        length(
+          package["versions"]
+          |> Map.values()
+          |> Enum.filter(& &1["deprecated"])
+        )
+
+      assert original_length == 87
+      assert deprecated_length == 2
+      assert dist_tags_length == 2
+
+      unraveled_package = NPM.unravel_package(package)
+
+      for version <- ["5.0.1", "4.4.0"] do
+        refute Enum.any?(
+                 unraveled_package,
+                 &match?(%{"version" => ^version}, &1)
+               ),
+               "#{version} shouldn't be included in the list because it's deprecated"
+      end
+
+      assert length(unraveled_package) ==
+               original_length + dist_tags_length - deprecated_length + 1
     end
   end
 end

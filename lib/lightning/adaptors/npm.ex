@@ -57,13 +57,14 @@ defmodule Lightning.Adaptors.NPM do
               timeout: validated_config[:timeout]
             )
             |> Stream.map(fn result ->
+              # inspect(result, pretty: true) |> String.slice(0, 100) |> IO.puts()
               case result do
                 {:ok, {:error, error}} -> {:error, error}
                 {:ok, detail} -> {:ok, detail}
               end
             end)
             |> Stream.filter(&match?({:ok, _}, &1))
-            |> Stream.map(fn {:ok, detail} -> detail end)
+            |> Stream.flat_map(fn {:ok, detail} -> detail end)
             |> Enum.to_list()
 
           {:ok, adaptors}
@@ -101,18 +102,7 @@ defmodule Lightning.Adaptors.NPM do
     Tesla.get(client(), "/#{package_name}")
     |> case do
       {:ok, %Tesla.Env{status: 200, body: details}} ->
-        %Lightning.Adaptors.Package{
-          name: details["name"],
-          repo: details["repository"]["url"],
-          latest: details["dist-tags"]["latest"],
-          versions:
-            Enum.reject(details["versions"], fn {_version, detail} ->
-              detail["deprecated"]
-            end)
-            |> Enum.map(fn {version, _detail} ->
-              %{version: version}
-            end)
-        }
+        unravel_package(details)
 
       {:ok, %Tesla.Env{status: 404}} ->
         {:error, :not_found}
@@ -126,13 +116,6 @@ defmodule Lightning.Adaptors.NPM do
     Tesla.client([
       {Tesla.Middleware.BaseUrl, "https://registry.npmjs.org"},
       Tesla.Middleware.JSON
-    ])
-  end
-
-  defp schema_client do
-    Tesla.client([
-      {Tesla.Middleware.BaseUrl, "https://cdn.jsdelivr.net"},
-      {Tesla.Middleware.JSON, engine_opts: [objects: :ordered_objects]}
     ])
   end
 
@@ -176,8 +159,71 @@ defmodule Lightning.Adaptors.NPM do
     end
   end
 
+  defp schema_client do
+    Tesla.client([
+      {Tesla.Middleware.BaseUrl, "https://cdn.jsdelivr.net"},
+      {Tesla.Middleware.JSON, engine_opts: [objects: :ordered_objects]}
+    ])
+  end
+
   @impl true
   def fetch_icon(_adaptor_name, _version) do
     {:error, :not_implemented}
+  end
+
+  @doc """
+  Unravel a package body into a list of tuples, one for each version and dist-tag.
+
+  Returns a list of tuples, where the first element is the package name and the
+  second element is the package body.
+
+  Example:
+
+  ```elixir
+  [
+    {"@openfn/language-common", %{
+      "name" => "@openfn/language-common", ...
+    }},
+    {"@openfn/language-common@latest", %{
+      "name" => "@openfn/language-common",
+      "version" => "1.0.0"
+    }},
+    {"@openfn/language-common@1.0.0", %{
+      "name" => "@openfn/language-common",
+      "version" => "1.0.0"
+    }}
+  ]
+  ```
+  """
+  @spec unravel_package(package_body :: map()) :: list({String.t(), map()})
+  def unravel_package(package_body) do
+    package_name = package_body["name"]
+    versions = Map.get(package_body, "versions", %{})
+    dist_tags = Map.get(package_body, "dist-tags", %{})
+
+    # Base package without versions key
+    base_package = Map.delete(package_body, "versions")
+    base_entry = {package_name, base_package}
+
+    # Version entries - one for each non-deprecated version
+    version_entries =
+      versions
+      |> Enum.reject(fn {_version, detail} -> detail["deprecated"] end)
+      |> Enum.map(fn {version, detail} ->
+        {"#{package_name}@#{version}", detail}
+      end)
+
+    # Dist-tag entries - one for each dist-tag pointing to its version
+    dist_tag_entries =
+      dist_tags
+      |> Enum.map(fn {tag, version} ->
+        case Map.get(versions, version) do
+          nil -> nil
+          version_detail -> {"#{package_name}@#{tag}", version_detail}
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    [base_entry] ++ version_entries ++ dist_tag_entries
   end
 end
