@@ -246,7 +246,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </.label>
           <.input type="text" field={f[:confirmation]} />
         </div>
-        <.modal_footer class="mx-6 mt-6">
+        <div class="flex-grow bg-gray-100 h-0.5 mt-[16px]"></div>
+        <div class="pt-[24px]">
           <div class="sm:flex sm:flex-row-reverse gap-3">
             <.button
               type="submit"
@@ -264,7 +265,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
               Cancel
             </.button>
           </div>
-        </.modal_footer>
+        </div>
       </.form>
     </div>
     """
@@ -320,7 +321,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         </div>
         <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
       </div>
-      <.modal_footer class="mx-6 mt-6">
+      <div class="flex-grow bg-gray-100 h-0.5 mt-[16px]"></div>
+      <div class="pt-[24px]">
         <div class="sm:flex sm:flex-row-reverse gap-3">
           <.button type="submit" theme="primary">
             Done
@@ -334,7 +336,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
             Cancel
           </.button>
         </div>
-      </.modal_footer>
+      </div>
     </.form>
     """
   end
@@ -362,7 +364,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           {assigns}
         />
       </div>
-      <.modal_footer class="mx-6 mt-6">
+      <div class="flex-grow bg-gray-100 h-0.5 mt-[16px]"></div>
+      <div class="pt-[24px]">
         <div class="sm:flex sm:flex-row-reverse gap-3">
           <.button type="submit" disabled={!@changeset.valid?} theme="primary">
             <%= if @action == :new do %>
@@ -373,7 +376,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </.button>
           <.cancel_button return_to={@return_to} />
         </div>
-      </.modal_footer>
+      </div>
     </.form>
     """
   end

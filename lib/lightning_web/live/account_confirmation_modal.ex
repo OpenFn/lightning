@@ -85,7 +85,7 @@ defmodule LightningWeb.AccountConfirmationModal do
             </:message>
           </Common.alert>
         </div>
-        <.modal_footer class="mt-6 mx-6">
+        <:footer>
           <div class="sm:flex sm:flex-row-reverse gap-3">
             <.button
               id="resend-confirmation-email-button"
@@ -101,7 +101,7 @@ defmodule LightningWeb.AccountConfirmationModal do
               Update email address
             </.button_link>
           </div>
-        </.modal_footer>
+        </:footer>
       </.modal>
     </div>
     """

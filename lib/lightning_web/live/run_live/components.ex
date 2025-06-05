@@ -617,127 +617,100 @@ defmodule LightningWeb.RunLive.Components do
 
   def bulk_rerun_modal(assigns) do
     ~H"""
-    <div
-      class="relative z-10 hidden"
-      aria-labelledby={"#{@id}-title"}
+    <.modal
       id={@id}
-      role="dialog"
-      aria-modal="true"
-      phx-mounted={@show && show_modal(@id)}
-      phx-remove={hide_modal(@id)}
+      show={@show}
+      width="max-w-lg"
+      on_close={hide_modal(@id)}
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-500/75 transition-opacity">
+      <:title>
+        Run Selected Work Orders
+      </:title>
+      <div class="mt-2">
+        <p class="text-sm text-gray-500">
+          <%= if @all_selected? do %>
+            You've selected all {@selected_count} work orders from page {@page_number} of {@pages}. There are a total of {@total_entries} that match your current query: {humanize_search_params(
+              @filters,
+              @workflows
+            )}.
+          <% else %>
+            You've selected {@selected_count} work orders to rerun from the start. This will create a new run for each selected work order.
+          <% end %>
+        </p>
       </div>
-
-      <div
-        aria-labelledby={"#{@id}-title"}
-        class="fixed inset-0 z-10 overflow-y-auto"
-      >
-        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-          <.focus_wrap
-            id={"#{@id}-container"}
-            phx-mounted={@show && show_modal(@id)}
-            phx-window-keydown={hide_modal(@id)}
-            phx-key="escape"
-            phx-click-away={hide_modal(@id)}
-            class="hidden relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
+      <:footer class={
+        if(@all_selected? and @total_entries > 1 and @pages > 1,
+          do: "mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3",
+          else: "mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
+        )
+      }>
+        <%= if @all_selected? and @total_entries > 1 and @pages > 1 do %>
+          <.button
+            type="button"
+            theme="primary"
+            phx-click="bulk-rerun"
+            phx-value-type="selected"
+            phx-disable-with="Running..."
+            class="sm:col-start-1"
           >
-            <div id={"#{@id}-content"} class="mt-3 text-center sm:mt-5">
-              <h3
-                class="text-base font-semibold leading-6 text-gray-900"
-                id={"#{@id}-title"}
-              >
-                Run Selected Work Orders
-              </h3>
-              <div class="mt-2">
-                <p class="text-sm text-gray-500">
-                  <%= if @all_selected? do %>
-                    You've selected all {@selected_count} work orders from page {@page_number} of {@pages}. There are a total of {@total_entries} that match your current query: {humanize_search_params(
-                      @filters,
-                      @workflows
-                    )}.
-                  <% else %>
-                    You've selected {@selected_count} work orders to rerun from the start. This will create a new run for each selected work order.
-                  <% end %>
-                </p>
-              </div>
+            Rerun {@selected_count} selected work order{if @selected_count >
+                                                           1,
+                                                         do: "s",
+                                                         else: ""} from start
+          </.button>
+          <.button
+            type="button"
+            theme="primary"
+            phx-click="bulk-rerun"
+            phx-value-type="all"
+            phx-disable-with="Running..."
+            class="w-full sm:col-start-2"
+          >
+            Rerun all {@total_entries} matching work orders from start
+          </.button>
+          <div class="relative col-start-1 col-end-3">
+            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+              <div class="w-full border-t border-gray-300"></div>
             </div>
-            <div
-              :if={@all_selected? and @total_entries > 1 and @pages > 1}
-              class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
-            >
-              <.button
-                type="button"
-                theme="primary"
-                phx-click="bulk-rerun"
-                phx-value-type="selected"
-                phx-disable-with="Running..."
-                class="sm:col-start-1"
-              >
-                Rerun {@selected_count} selected work order{if @selected_count >
-                                                                 1,
-                                                               do: "s",
-                                                               else: ""} from start
-              </.button>
-              <.button
-                type="button"
-                theme="primary"
-                phx-click="bulk-rerun"
-                phx-value-type="all"
-                phx-disable-with="Running..."
-                class="w-full sm:col-start-2"
-              >
-                Rerun all {@total_entries} matching work orders from start
-              </.button>
-              <div class="relative col-start-1 col-end-3">
-                <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div class="w-full border-t border-gray-300"></div>
-                </div>
-                <div class="relative flex justify-center">
-                  <span class="bg-white px-2 text-sm text-gray-500">
-                    OR
-                  </span>
-                </div>
-              </div>
-              <.button
-                type="button"
-                theme="secondary"
-                class="w-full sm:col-start-1 sm:col-end-3"
-                phx-click={hide_modal(@id)}
-              >
-                Cancel
-              </.button>
+            <div class="relative flex justify-center">
+              <span class="bg-white px-2 text-sm text-gray-500">
+                OR
+              </span>
             </div>
-            <div
-              :if={!@all_selected? or @total_entries == 1 or @pages == 1}
-              class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
-            >
-              <.button
-                type="button"
-                theme="primary"
-                phx-click="bulk-rerun"
-                phx-value-type="selected"
-                phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
-              >
-                Rerun {@selected_count} selected work order{if @selected_count >
-                                                                 1,
-                                                               do: "s",
-                                                               else: ""} from start
-              </.button>
-              <.button
-                type="button"
-                theme="secondary"
-                class="w-full sm:col-start-1"
-                phx-click={hide_modal(@id)}
-              >
-                Cancel
-              </.button>
-            </div>
-          </.focus_wrap>
-        </div>
-      </div>
-    </div>
+          </div>
+          <.button
+            type="button"
+            theme="secondary"
+            class="w-full sm:col-start-1 sm:col-end-3"
+            phx-click={hide_modal(@id)}
+          >
+            Cancel
+          </.button>
+        <% else %>
+          <.button
+            type="button"
+            theme="primary"
+            phx-click="bulk-rerun"
+            phx-value-type="selected"
+            phx-disable-with="Running..."
+            class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+          >
+            Rerun {@selected_count} selected work order{if @selected_count >
+                                                           1,
+                                                         do: "s",
+                                                         else: ""} from start
+          </.button>
+          <.button
+            type="button"
+            theme="secondary"
+            class="w-full sm:col-start-1"
+            phx-click={hide_modal(@id)}
+          >
+            Cancel
+          </.button>
+        <% end %>
+      </:footer>
+    </.modal>
     """
   end
 

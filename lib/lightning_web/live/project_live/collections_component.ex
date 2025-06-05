@@ -289,15 +289,17 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
       <%= f[:name].value %></span>.
               <% end %>
             </small>
+                      </div>
           </div>
-        </div>
-        <.modal_footer class="mt-6">
+        </.form>
+        <:footer>
           <div class="sm:flex sm:flex-row-reverse gap-3">
             <.button
               id={"submit-btn-#{@id}"}
               type="submit"
               theme="primary"
               disabled={!@changeset.valid?}
+              form={"collection-form-#{@id}"}
             >
               Save
             </.button>
@@ -311,8 +313,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
               Cancel
             </.button>
           </div>
-        </.modal_footer>
-      </.form>
+        </:footer>
     </.modal>
     """
   end

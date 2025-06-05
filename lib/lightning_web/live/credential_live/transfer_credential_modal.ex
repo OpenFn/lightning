@@ -131,6 +131,9 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
           </span>
         </:subtitle>
         <.modal_content {assigns} />
+        <:footer>
+          <.footer_buttons {assigns} />
+        </:footer>
       </.modal>
     </div>
     """
@@ -164,7 +167,6 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       phx-submit="transfer-credential"
     >
       <.form_fields f={f} myself={@myself} />
-      <.form_footer id={@id} myself={@myself} changeset={@changeset} />
     </.form>
     """
   end
@@ -189,13 +191,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     """
   end
 
-  defp form_footer(assigns) do
-    ~H"""
-    <.modal_footer class="mt-6">
-      <.footer_buttons {assigns} />
-    </.modal_footer>
-    """
-  end
+
 
   defp modal_content(%{revoke_transfer: true} = assigns) do
     ~H"""
@@ -203,7 +199,6 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       <p class="text-sm text-gray-600">
         Revoking this transfer will cancel the pending request. This will keep the credential under your ownership. You will need to initiate a new transfer request to transfer it in the future.
       </p>
-      <.form_footer {assigns} />
     </div>
     """
   end
