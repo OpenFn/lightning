@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Handle, type NodeProps, Position } from 'reactflow';
+import { Handle, type NodeProps, Position } from '@xyflow/react';
 import {
   CheckCircleIcon,
   InformationCircleIcon,

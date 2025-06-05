@@ -106,7 +106,7 @@
 }
 
 @import '../js/monaco/styles.css' layer(utilities);
-@import 'reactflow/dist/style.css' layer(utilities);
+@import '@xyflow/react/dist/style.css' layer(utilities);
 @import '../../deps/petal_components/assets/default.css';
 
 @layer base {

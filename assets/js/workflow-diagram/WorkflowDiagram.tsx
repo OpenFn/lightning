@@ -1,15 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   Controls,
+  ControlButton,
   ReactFlowProvider,
   applyNodeChanges,
-  getRectOfNodes,
+  getNodesBounds,
+  MiniMap,
+  Background,
   type NodeChange,
   type ReactFlowInstance,
-  type Rect
-} from 'reactflow';
+  type Rect,
+} from '@xyflow/react';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
+import MiniMapNode from './components/MiniMapNode';
 import edgeTypes from './edges';
 import layout from './layout';
 import nodeTypes from './nodes';
@@ -42,11 +47,23 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const { jobs, triggers, edges, disabled } = useWorkflowStore();
+  const { jobs, triggers, edges, disabled, positions, updatePositions } =
+    useWorkflowStore();
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
-  const workflowDiagramRef = useRef<HTMLDivElement>(null)
+  const [autoLayout, setAutoLayout] = useState(
+    positions === null ? true : false
+  );
+  const workflowDiagramRef = useRef<HTMLDivElement>(null);
+
+  const toggleAutoLayout = () => {
+    if (!autoLayout) {
+      updatePositions(null);
+    }
+
+    setAutoLayout(!autoLayout);
+  };
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -64,17 +81,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     cancel: cancelPlaceholder,
   } = usePlaceholders(el, updateSelection);
 
-
-  const workflow = React.useMemo(() => ({
-    jobs,
-    triggers,
-    edges,
-    disabled,
-  }), [jobs, triggers, edges, disabled])
+  const workflow = React.useMemo(
+    () => ({
+      jobs,
+      triggers,
+      edges,
+      disabled,
+    }),
+    [jobs, triggers, edges, disabled]
+  );
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
+
   const chartCache = useRef<ChartCache>({
-    positions: {},
+    positions: positions || {},
     // This will set the initial selection into the cache
     lastSelection: selection,
     lastLayout: undefined,
@@ -86,6 +106,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
+    console.log('placeholders', placeholders);
     const { positions } = chartCache.current;
     const newModel = fromWorkflow(
       workflow,
@@ -95,6 +116,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // This handles first load and new node safely
       chartCache.current.lastSelection
     );
+
+    if (!autoLayout) {
+      setModel(newModel);
+
+      const newPositions = newModel.nodes.reduce((obj, next) => {
+        obj[next.id] = next.position;
+        return obj;
+      }, {} as Positions);
+
+      chartCache.current.positions = newPositions;
+      updatePositions(newPositions);
+      return;
+    }
+
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
         newModel.edges,
@@ -127,7 +162,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el]);
+  }, [workflow, flow, placeholders, el, autoLayout, updatePositions]);
 
   useEffect(() => {
     const updatedModel = updateSelectionStyles(model, selection);
@@ -138,17 +173,27 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     (changes: NodeChange[]) => {
       const newNodes = applyNodeChanges(changes, model.nodes);
       setModel({ nodes: newNodes, edges: model.edges });
+
+      if (!autoLayout) {
+        const newPositions = newNodes.reduce((obj, next) => {
+          obj[next.id] = next.position;
+          return obj;
+        }, {} as Positions);
+        chartCache.current.positions = newPositions;
+        updatePositions(newPositions);
+      }
     },
-    [setModel, model]
+    [setModel, model, autoLayout, updatePositions]
   );
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
       if ((event.target as HTMLElement).closest('[name=add-node]')) {
+        console.log('adding node with plus button');
         addPlaceholder(node);
       } else {
         if (node.type != 'placeholder') cancelPlaceholder();
-
+        console.log('cancelled placeholder on node click');
         updateSelection(node.id);
       }
     },
@@ -169,7 +214,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         event.target instanceof HTMLElement &&
         event.target.classList?.contains('react-flow__pane')
       ) {
-        cancelPlaceholder();
+        // cancelPlaceholder();
         updateSelection(null);
       }
     },
@@ -205,7 +250,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           const visible = model.nodes.filter(n =>
             isPointInRect(n.position, rect)
           );
-          cachedTargetBounds = getRectOfNodes(visible);
+          cachedTargetBounds = getNodesBounds(visible);
         }
 
         // Run an animated fit
@@ -231,7 +276,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }
   }, [flow, model, el]);
 
-  const connectHandlers = useConnect(model, setModel);
+  const connectHandlers = useConnect(model, setModel, addPlaceholder, flow);
   return (
     <ReactFlowProvider>
       <ReactFlow
@@ -241,7 +286,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         nodes={model.nodes}
         edges={model.edges}
         onNodesChange={onNodesChange}
-        nodesDraggable={false}
+        nodesDraggable={!autoLayout}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onClick={handleBackgroundClick}
@@ -254,8 +299,35 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         minZoom={0.2}
         {...connectHandlers}
       >
-        <Controls showInteractive={false} position="bottom-left" />
+        <Controls position="bottom-left" showInteractive={false}>
+          <ControlButton onClick={toggleAutoLayout}>
+            {autoLayout ? 'MnL' : 'AtL'}
+          </ControlButton>
+          <ControlButton
+            onClick={() =>
+              layout(
+                model,
+                setModel,
+                flow,
+                {
+                  width: workflowDiagramRef.current?.clientWidth ?? 0,
+                  height: workflowDiagramRef.current?.clientHeight ?? 0,
+                },
+                { duration: LAYOUT_DURATION, forceFit: true }
+              )
+            }
+          >
+            FrcL
+          </ControlButton>
+        </Controls>
+        <Background />
+        <MiniMap
+          zoomable
+          pannable
+          className="border border-2 border-gray-200"
+          nodeComponent={MiniMapNode}
+        />
       </ReactFlow>
     </ReactFlowProvider>
   );
-};
+}

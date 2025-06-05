@@ -1,4 +1,4 @@
-import { Handle } from 'reactflow';
+import { Handle } from '@xyflow/react';
 import { LinkIcon } from '@heroicons/react/24/outline';
 
 function PathButton() {

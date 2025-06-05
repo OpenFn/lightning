@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Position } from 'reactflow';
+import { Position } from '@xyflow/react';
 import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { kafkaIcon, lockClosedIcon } from '../components/trigger-icons';
 import cronstrue from 'cronstrue';
