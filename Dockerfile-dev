@@ -66,7 +66,6 @@ RUN mix lightning.install_adaptor_icons
 COPY bin bin
 
 
-
 ENTRYPOINT ["/app/bin/entrypoint"]
 
 ARG PORT
