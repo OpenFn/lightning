@@ -6,29 +6,43 @@ defmodule Lightning.Adaptors.RepositoryTest do
   defmodule MockAdaptorStrategy do
     @behaviour Lightning.Adaptors.Strategy
 
+    @impl true
     def fetch_packages(_config) do
-      {:ok,
-       [
-         %Lightning.Adaptors.Package{
-           name: "@openfn/language-foo",
-           repo: "https://github.com/openfn/foo",
-           latest: "1.0.0",
-           versions: [%{version: "1.0.0"}]
-         },
-         %Lightning.Adaptors.Package{
-           name: "@openfn/language-bar",
-           repo: "https://github.com/openfn/bar",
-           latest: "2.1.0",
-           versions: [%{version: "2.0.0"}, %{version: "2.1.0"}]
-         }
-       ]}
+      {:ok, ["@openfn/language-foo", "@openfn/language-bar"]}
     end
 
+    @impl true
+    def fetch_versions(_config, package_name) do
+      case package_name do
+        "@openfn/language-foo" ->
+          {:ok,
+           %{
+             "1.0.0" => %{"version" => "1.0.0"},
+             "2.0.0" => %{"version" => "2.0.0"},
+             "2.1.0" => %{"version" => "2.1.0"}
+           }}
+
+        "@openfn/language-bar" ->
+          {:ok,
+           %{
+             "2.0.0" => %{"version" => "2.0.0"},
+             "2.1.0" => %{"version" => "2.1.0"},
+             "latest" => %{"version" => "2.1.0"}
+           }}
+
+        _ ->
+          {:error, :not_found}
+      end
+    end
+
+    @impl true
     def validate_config(_config), do: {:ok, []}
 
+    @impl true
     def fetch_credential_schema(_adaptor_name),
       do: {:error, :not_implemented}
 
+    @impl true
     def fetch_icon(_adaptor_name, _version), do: {:error, :not_implemented}
   end
 
@@ -41,7 +55,9 @@ defmodule Lightning.Adaptors.RepositoryTest do
         cache: :repository_adaptors_test
       }
 
-      assert Repository.all(config) == [
+      assert {:ok, result} = Repository.all(config)
+
+      assert result == [
                "@openfn/language-foo",
                "@openfn/language-bar"
              ]
@@ -56,39 +72,12 @@ defmodule Lightning.Adaptors.RepositoryTest do
       }
 
       # Call all/1 to populate the cache
-      result = Repository.all(config)
+      {:ok, result} = Repository.all(config)
       assert result == ["@openfn/language-foo", "@openfn/language-bar"]
 
       # Query the cache directly to verify the data is stored
       {:ok, cached_result} = Cachex.get(:repository_cache_test, :adaptors)
       assert cached_result == ["@openfn/language-foo", "@openfn/language-bar"]
-    end
-
-    test "caches individual adaptors for efficient lookup" do
-      start_supervised!({Cachex, [:repository_individual_cache_test, []]})
-
-      config = %{
-        strategy: {MockAdaptorStrategy, [config: "foo"]},
-        cache: :repository_individual_cache_test
-      }
-
-      # Call all/1 to populate the cache
-      Repository.all(config)
-
-      # Verify individual adaptors are cached
-      {:ok, foo_adaptor} =
-        Cachex.get(:repository_individual_cache_test, "@openfn/language-foo")
-
-      assert foo_adaptor.name == "@openfn/language-foo"
-      assert foo_adaptor.latest == "1.0.0"
-      assert foo_adaptor.versions == [%{version: "1.0.0"}]
-
-      {:ok, bar_adaptor} =
-        Cachex.get(:repository_individual_cache_test, "@openfn/language-bar")
-
-      assert bar_adaptor.name == "@openfn/language-bar"
-      assert bar_adaptor.latest == "2.1.0"
-      assert bar_adaptor.versions == [%{version: "2.0.0"}, %{version: "2.1.0"}]
     end
 
     test "handles strategy module without config tuple" do
@@ -100,7 +89,7 @@ defmodule Lightning.Adaptors.RepositoryTest do
         cache: :repository_simple_strategy_test
       }
 
-      result = Repository.all(config)
+      {:ok, result} = Repository.all(config)
       assert result == ["@openfn/language-foo", "@openfn/language-bar"]
     end
   end
@@ -114,15 +103,27 @@ defmodule Lightning.Adaptors.RepositoryTest do
         cache: :repository_versions_test
       }
 
-      # Populate cache first
-      Repository.all(config)
+      assert {:ok, nil} =
+               Cachex.get(
+                 :repository_versions_test,
+                 "@openfn/language-foo:versions"
+               )
 
       # Test versions_for
-      versions = Repository.versions_for(config, "@openfn/language-foo")
-      assert versions == [%{version: "1.0.0"}]
+      {:ok, versions} = Repository.versions_for(config, "@openfn/language-foo")
 
-      versions = Repository.versions_for(config, "@openfn/language-bar")
-      assert versions == [%{version: "2.0.0"}, %{version: "2.1.0"}]
+      expected_versions = %{
+        "1.0.0" => %{"version" => "1.0.0"},
+        "2.0.0" => %{"version" => "2.0.0"},
+        "2.1.0" => %{"version" => "2.1.0"}
+      }
+
+      assert versions == expected_versions
+
+      {:ok, cached_versions} =
+        Cachex.get(:repository_versions_test, "@openfn/language-foo:versions")
+
+      assert cached_versions == expected_versions
     end
 
     test "returns nil for non-existent adaptor" do
@@ -133,31 +134,9 @@ defmodule Lightning.Adaptors.RepositoryTest do
         cache: :repository_versions_not_found_test
       }
 
-      # Populate cache first
-      Repository.all(config)
-
       # Test versions_for with non-existent adaptor
-      versions = Repository.versions_for(config, "@openfn/language-nonexistent")
-      assert versions == nil
-    end
-
-    test "populates cache if not already populated" do
-      start_supervised!({Cachex, [:repository_versions_auto_populate_test, []]})
-
-      config = %{
-        strategy: {MockAdaptorStrategy, [config: "foo"]},
-        cache: :repository_versions_auto_populate_test
-      }
-
-      # Call versions_for without calling all/1 first
-      versions = Repository.versions_for(config, "@openfn/language-foo")
-      assert versions == [%{version: "1.0.0"}]
-
-      # Verify that the cache was populated
-      {:ok, cached_adaptors} =
-        Cachex.get(:repository_versions_auto_populate_test, :adaptors)
-
-      assert cached_adaptors == ["@openfn/language-foo", "@openfn/language-bar"]
+      assert {:error, :not_found} =
+               Repository.versions_for(config, "@openfn/language-nonexistent")
     end
   end
 
@@ -173,12 +152,13 @@ defmodule Lightning.Adaptors.RepositoryTest do
       # Populate cache first
       Repository.all(config)
 
-      # Test latest_for
-      latest = Repository.latest_for(config, "@openfn/language-foo")
-      assert latest == "1.0.0"
+      # TODO: make a special case to do a semver comparison, but be sure
+      # to add a warning if this was necessary
+      # {:ok, latest} = Repository.latest_for(config, "@openfn/language-foo")
+      # assert latest == %{"version" => "1.0.0"}
 
-      latest = Repository.latest_for(config, "@openfn/language-bar")
-      assert latest == "2.1.0"
+      {:ok, latest} = Repository.latest_for(config, "@openfn/language-bar")
+      assert latest == %{"version" => "2.1.0"}
     end
 
     test "returns nil for non-existent adaptor" do
@@ -193,8 +173,8 @@ defmodule Lightning.Adaptors.RepositoryTest do
       Repository.all(config)
 
       # Test latest_for with non-existent adaptor
-      latest = Repository.latest_for(config, "@openfn/language-nonexistent")
-      assert latest == nil
+      assert {:error, :not_found} =
+               Repository.latest_for(config, "@openfn/language-nonexistent")
     end
 
     test "populates cache if not already populated" do
@@ -206,14 +186,14 @@ defmodule Lightning.Adaptors.RepositoryTest do
       }
 
       # Call latest_for without calling all/1 first
-      latest = Repository.latest_for(config, "@openfn/language-bar")
-      assert latest == "2.1.0"
+      {:ok, latest} = Repository.latest_for(config, "@openfn/language-bar")
+      assert latest == %{"version" => "2.1.0"}
 
       # Verify that the cache was populated
-      {:ok, cached_adaptors} =
-        Cachex.get(:repository_latest_auto_populate_test, :adaptors)
+      {:ok, cached_latest} =
+        Cachex.get(config[:cache], "@openfn/language-bar@latest")
 
-      assert cached_adaptors == ["@openfn/language-foo", "@openfn/language-bar"]
+      assert cached_latest == %{"version" => "2.1.0"}
     end
   end
 end

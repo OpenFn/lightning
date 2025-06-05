@@ -4,6 +4,8 @@ defmodule Lightning.Adaptors.Strategy do
   """
 
   @callback fetch_packages(config :: term()) :: {:ok, [map()]} | {:error, term()}
+  @callback fetch_versions(config :: term(), package_name :: String.t()) ::
+              {:ok, [String.t()]} | {:error, term()}
   @callback validate_config(config :: term()) ::
               {:ok, keyword()} | {:error, term()}
   @callback fetch_credential_schema(adaptor_name :: String.t()) ::

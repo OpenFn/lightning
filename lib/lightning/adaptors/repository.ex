@@ -16,47 +16,24 @@ defmodule Lightning.Adaptors.Repository do
   On first access, attempts to restore cache from disk if persist_path is configured.
   """
   def all(config) do
-    # Try to restore cache from disk if persist_path is configured and cache is empty
-    restore_cache_if_needed(config)
+    do_fetch(config, :adaptors, fn _key ->
+      with {module, strategy_config} <- split_strategy(config.strategy),
+           {:ok, adaptor_names} <- module.fetch_packages(strategy_config) do
+        {:commit, adaptor_names}
+      else
+        {:error, reason} ->
+          {:ignore, reason}
+      end
+    end)
+  end
 
-    case Cachex.fetch(config[:cache], :adaptors, fn _key ->
-           {module, strategy_config} = split_strategy(config.strategy)
-           {:ok, adaptors} = module.fetch_packages(strategy_config)
+  defp do_fetch(config, key, fun) do
+    case Cachex.fetch(config[:cache], key, fun) do
+      {status, result} when status in [:ok, :commit] ->
+        {:ok, result}
 
-           # Cache individual adaptors for efficient lookup
-           Enum.each(adaptors, fn adaptor ->
-             Cachex.put(config[:cache], adaptor.name, adaptor)
-           end)
-
-           adaptor_names =
-             adaptors
-             |> Enum.map(fn adaptor ->
-               adaptor.name
-             end)
-
-           # Save cache to disk after populating
-           save_cache(config)
-
-           {:commit, adaptor_names}
-         end) do
-      {:ok, result} ->
-        result
-
-      {:commit, result} ->
-        result
-
-      {:error, reason} ->
-        Logger.warning("Cache fetch failed: #{inspect(reason)}")
-        # Try direct strategy call without caching
-        try do
-          {module, strategy_config} = split_strategy(config.strategy)
-          {:ok, adaptors} = module.fetch_packages(strategy_config)
-          Enum.map(adaptors, fn adaptor -> adaptor.name end)
-        rescue
-          error ->
-            Logger.error("Direct strategy call failed: #{inspect(error)}")
-            []
-        end
+      {:ignore, reason} ->
+        {:error, reason}
     end
   end
 
@@ -67,38 +44,17 @@ defmodule Lightning.Adaptors.Repository do
   Returns nil if the adaptor is not found.
   """
   def versions_for(config, module_name) do
-    case Cachex.get(config[:cache], module_name) do
-      {:ok, nil} ->
-        # If not in cache, try to populate cache by calling all/1 first
-        all(config)
+    key = "#{module_name}:versions"
 
-        # Try again after populating cache
-        case Cachex.get(config[:cache], module_name) do
-          {:ok, nil} ->
-            nil
-
-          {:ok, adaptor} ->
-            adaptor.versions
-
-          {:error, reason} ->
-            Logger.warning("Cache access failed: #{inspect(reason)}")
-            nil
-        end
-
-      {:ok, adaptor} ->
-        adaptor.versions
-
-      {:error, reason} ->
-        Logger.warning("Cache access failed: #{inspect(reason)}")
-        # Try to populate cache and retry
-        all(config)
-
-        case Cachex.get(config[:cache], module_name) do
-          {:ok, nil} -> nil
-          {:ok, adaptor} -> adaptor.versions
-          {:error, _} -> nil
-        end
-    end
+    do_fetch(config, key, fn _key ->
+      with {module, strategy_config} <- split_strategy(config.strategy),
+           {:ok, versions} <- module.fetch_versions(strategy_config, module_name) do
+        {:commit, versions}
+      else
+        {:error, reason} ->
+          {:ignore, reason}
+      end
+    end)
   end
 
   @doc """
@@ -108,38 +64,17 @@ defmodule Lightning.Adaptors.Repository do
   Returns nil if the adaptor is not found.
   """
   def latest_for(config, module_name) do
-    case Cachex.get(config[:cache], module_name) do
-      {:ok, nil} ->
-        # If not in cache, try to populate cache by calling all/1 first
-        all(config)
+    key = "#{module_name}@latest"
 
-        # Try again after populating cache
-        case Cachex.get(config[:cache], module_name) do
-          {:ok, nil} ->
-            nil
-
-          {:ok, adaptor} ->
-            adaptor.latest
-
-          {:error, reason} ->
-            Logger.warning("Cache access failed: #{inspect(reason)}")
-            nil
-        end
-
-      {:ok, adaptor} ->
-        adaptor.latest
-
-      {:error, reason} ->
-        Logger.warning("Cache access failed: #{inspect(reason)}")
-        # Try to populate cache and retry
-        all(config)
-
-        case Cachex.get(config[:cache], module_name) do
-          {:ok, nil} -> nil
-          {:ok, adaptor} -> adaptor.latest
-          {:error, _} -> nil
-        end
-    end
+    do_fetch(config, key, fn _key ->
+      with {:ok, versions} <- versions_for(config, module_name),
+           latest <- Map.get(versions, "latest") do
+        {:commit, latest}
+      else
+        {:error, reason} ->
+          {:ignore, reason}
+      end
+    end)
   end
 
   @doc """
@@ -256,23 +191,23 @@ defmodule Lightning.Adaptors.Repository do
 
   def clear_persisted_cache(_config), do: :ok
 
-  defp restore_cache_if_needed(config) do
-    # Only restore if cache appears to be empty (no :adaptors key)
-    case Cachex.get(config[:cache], :adaptors) do
-      {:ok, nil} ->
-        restore_cache(config)
+  # defp restore_cache_if_needed(config) do
+  #   # Only restore if cache appears to be empty (no :adaptors key)
+  #   case Cachex.get(config[:cache], :adaptors) do
+  #     {:ok, nil} ->
+  #       restore_cache(config)
 
-      {:error, reason} ->
-        Logger.warning(
-          "Cache access failed during restore check: #{inspect(reason)}"
-        )
+  #     {:error, reason} ->
+  #       Logger.warning(
+  #         "Cache access failed during restore check: #{inspect(reason)}"
+  #       )
 
-        :ok
+  #       :ok
 
-      _ ->
-        :ok
-    end
-  end
+  #     _ ->
+  #       :ok
+  #   end
+  # end
 
   defp split_strategy(strategy) do
     case strategy do

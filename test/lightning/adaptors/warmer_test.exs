@@ -7,6 +7,8 @@ defmodule Lightning.Adaptors.WarmerTest do
   describe "execute/1" do
     defmodule MockStrategySuccess do
       @behaviour Lightning.Adaptors.Strategy
+
+      @impl true
       def fetch_packages(_config) do
         {:ok,
          [

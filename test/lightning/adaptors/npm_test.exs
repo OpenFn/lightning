@@ -9,19 +9,20 @@ defmodule Lightning.Adaptors.NPMTest do
 
   setup :verify_on_exit!
 
-  describe "fetch_packages/1" do
-    setup do
-      %{
-        default_npm_response:
-          File.read!("test/fixtures/language-common-npm.json") |> Jason.decode!()
-      }
-    end
+  setup_all do
+    %{
+      language_common_body:
+        File.read!("test/fixtures/language-common-npm.json") |> Jason.decode!(),
+      language_salesforce_body:
+        File.read!("test/fixtures/language-salesforce-npm.json")
+        |> Jason.decode!()
+    }
+  end
 
-    test "returns a list of all packages", %{
-      default_npm_response: default_npm_response
-    } do
+  describe "fetch_packages/1" do
+    test "returns a list of all packages" do
       expect_tesla_call(
-        times: 7,
+        times: 1,
         returns: fn env, [] ->
           case env.url do
             "https://registry.npmjs.org/-/user/openfn/package" ->
@@ -30,15 +31,6 @@ defmodule Lightning.Adaptors.NPMTest do
                  %Tesla.Env{status: 200},
                  File.read!("test/fixtures/openfn-packages-npm.json")
                  |> Jason.decode!()
-               )}
-
-            "https://registry.npmjs.org/@openfn/" <> adaptor ->
-              {:ok,
-               json(
-                 %Tesla.Env{status: 200},
-                 Map.merge(default_npm_response, %{
-                   "name" => "@openfn/#{adaptor}"
-                 })
                )}
           end
         end
@@ -69,13 +61,8 @@ defmodule Lightning.Adaptors.NPMTest do
           "@openfn/language-http",
           "@openfn/language-salesforce"
         ]
-        |> MapSet.new()
 
-      received_adaptors =
-        adaptors |> Enum.map(fn {name, _} -> name end) |> MapSet.new()
-
-      assert expected_adaptors |> MapSet.subset?(received_adaptors),
-             "should have top level adaptors in the list"
+      assert adaptors |> Enum.sort() == expected_adaptors |> Enum.sort()
     end
 
     test "handles errors when fetching user packages" do
@@ -91,50 +78,53 @@ defmodule Lightning.Adaptors.NPMTest do
                filter: fn _ -> true end
              ) == {:error, :nxdomain}
     end
+  end
 
-    test "handles errors when fetching adaptor details", %{
-      default_npm_response: default_npm_response
+  describe "fetch_versions/1" do
+    test "returns a list of all versions", %{
+      language_salesforce_body: language_salesforce_body
     } do
       expect_tesla_call(
-        times: 14,
+        times: 1,
         returns: fn env, [] ->
-          case env.url do
-            "https://registry.npmjs.org/-/user/openfn/package" ->
-              {:ok,
-               json(
-                 %Tesla.Env{status: 200},
-                 File.read!("test/fixtures/openfn-packages-npm.json")
-                 |> Jason.decode!()
-               )}
+          assert env.url ==
+                   "https://registry.npmjs.org/@openfn/language-salesforce"
 
-            "https://registry.npmjs.org/@openfn/language-asana" ->
-              {:ok, json(%Tesla.Env{status: 404}, %{})}
-
-            "https://registry.npmjs.org/@openfn/" <> adaptor ->
-              {:ok,
-               json(
-                 %Tesla.Env{status: 200},
-                 Map.merge(default_npm_response, %{
-                   "name" => "@openfn/#{adaptor}"
-                 })
-               )}
-          end
+          {:ok, json(%Tesla.Env{status: 200}, language_salesforce_body)}
         end
       )
 
-      {:ok, packages} =
-        NPM.fetch_packages(
-          user: "openfn",
-          max_concurrency: 10,
-          timeout: 30_000,
-          filter: fn _ -> true end
+      deprecated_length =
+        length(
+          language_salesforce_body["versions"]
+          |> Map.values()
+          |> Enum.filter(& &1["deprecated"])
         )
 
-      package_keys =
-        packages |> Enum.map(fn {name, _} -> name end) |> MapSet.new()
+      dist_tags_length =
+        length(language_salesforce_body["dist-tags"] |> Map.keys())
 
-      assert MapSet.member?(package_keys, "@openfn/language-common")
-      refute MapSet.member?(package_keys, "@openfn/language-asana")
+      {:ok, versions} =
+        NPM.fetch_versions(
+          [timeout: 30_000, user: "openfn"],
+          "@openfn/language-salesforce"
+        )
+
+      version_keys = versions |> Map.keys() |> Enum.sort()
+
+      assert length(version_keys) == 87 - deprecated_length + dist_tags_length
+    end
+
+    test "handles errors when fetching package versions" do
+      expect_tesla_call(
+        times: 1,
+        returns: fn _env, [] -> {:error, :nxdomain} end
+      )
+
+      assert NPM.fetch_versions(
+               [timeout: 30_000, user: "openfn"],
+               "@openfn/language-salesforce"
+             ) == {:error, :nxdomain}
     end
   end
 

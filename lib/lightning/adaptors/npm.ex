@@ -44,33 +44,52 @@ defmodule Lightning.Adaptors.NPM do
 
       user_packages(validated_config)
       |> case do
-        {:ok, response} ->
-          adaptors =
-            response
-            |> Map.get(:body)
-            |> Enum.map(fn {name, _} -> name end)
-            |> Enum.filter(validated_config[:filter] || fn _ -> true end)
-            |> Task.async_stream(
-              &fetch_package(validated_config, &1),
-              ordered: false,
-              max_concurrency: validated_config[:max_concurrency],
-              timeout: validated_config[:timeout]
-            )
-            |> Stream.map(fn result ->
-              # inspect(result, pretty: true) |> String.slice(0, 100) |> IO.puts()
-              case result do
-                {:ok, {:error, error}} -> {:error, error}
-                {:ok, detail} -> {:ok, detail}
+        {:ok, %Tesla.Env{status: 200, body: body}} ->
+          {:ok,
+           body
+           |> Enum.map(fn {name, _} -> name end)
+           |> Enum.filter(validated_config[:filter] || fn _ -> true end)}
+
+        {:ok, %Tesla.Env{status: 404}} ->
+          {:error, :not_found}
+
+        {:error, _} = error ->
+          error
+      end
+    end
+  end
+
+  @impl true
+  def fetch_versions(config, package_name) do
+    with {:ok, validated_config} <- validate_config(config) do
+      fetch_package(validated_config, package_name)
+      |> case do
+        {:ok, %Tesla.Env{status: 200, body: body}} ->
+          dist_tags = Map.get(body, "dist-tags", %{})
+
+          versions =
+            body
+            |> Map.get("versions")
+            |> Map.reject(fn {_version, detail} -> detail["deprecated"] end)
+
+          dist_tags_with_versions =
+            Enum.map(dist_tags, fn {tag, version} ->
+              case Map.get(versions, version) do
+                nil -> nil
+                version_detail -> {tag, version_detail}
               end
             end)
-            |> Stream.filter(&match?({:ok, _}, &1))
-            |> Stream.flat_map(fn {:ok, detail} -> detail end)
-            |> Enum.to_list()
+            |> Enum.reject(&is_nil/1)
+            |> Map.new()
 
-          {:ok, adaptors}
+          versions = versions |> Map.merge(dist_tags_with_versions)
+          {:ok, versions}
 
-        {:error, error} ->
-          {:error, error}
+        {:ok, %Tesla.Env{status: 404}} ->
+          {:error, :not_found}
+
+        {:error, _} = error ->
+          error
       end
     end
   end
@@ -100,16 +119,6 @@ defmodule Lightning.Adaptors.NPM do
     Logger.debug("Fetching NPM package: #{package_name}")
 
     Tesla.get(client(), "/#{package_name}")
-    |> case do
-      {:ok, %Tesla.Env{status: 200, body: details}} ->
-        unravel_package(details)
-
-      {:ok, %Tesla.Env{status: 404}} ->
-        {:error, :not_found}
-
-      {:error, _} = error ->
-        error
-    end
   end
 
   defp client do
