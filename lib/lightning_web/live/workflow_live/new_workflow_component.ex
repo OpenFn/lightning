@@ -485,8 +485,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         for={to_form(%{})}
         class="flex-grow overflow-hidden flex flex-col"
       >
-        <fieldset class="overflow-auto flex-grow">
-          <div class="grid lg:grid-cols-1 xl:grid-cols-2 gap-2">
+        <fieldset class="overflow-y-auto flex-grow min-h-0 h-0">
+          <div class="grid lg:grid-cols-1 xl:grid-cols-2 gap-2 pb-4">
             <label
               :for={template <- @base_templates}
               id={"template-label-#{template.id}"}

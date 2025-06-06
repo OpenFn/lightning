@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Allow scrolling in the template grid
+  [#3284](https://github.com/OpenFn/lightning/issues/3284)
+
 ## [v2.13.0] - 2025-06-04
 
 ## [v2.13.0-pre2] - 2025-06-04
