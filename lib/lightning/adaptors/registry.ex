@@ -11,7 +11,6 @@ defmodule Lightning.Adaptors.Registry do
   def child_spec(_arg) do
     [keys: :unique, name: __MODULE__]
     |> Registry.child_spec()
-    |> Supervisor.child_spec(id: __MODULE__)
   end
 
   @doc """

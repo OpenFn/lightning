@@ -215,17 +215,14 @@ defmodule Lightning.AdaptorsTest do
 
       config = Lightning.Adaptors.config(adaptors_name)
 
-      {:ok, nil} = Cachex.get(config[:cache], "@openfn/language-foo:versions")
-
-      # Call versions_for without calling all/1 first
-      {:ok, versions} =
-        Lightning.Adaptors.versions_for(adaptors_name, "@openfn/language-foo")
-
       expected_versions = %{
         "1.0.0" => %{"version" => "1.0.0"},
         "2.0.0" => %{"version" => "2.0.0"},
         "2.1.0" => %{"version" => "2.1.0"}
       }
+
+      {:ok, versions} =
+        Lightning.Adaptors.versions_for(adaptors_name, "@openfn/language-foo")
 
       assert versions == expected_versions
 

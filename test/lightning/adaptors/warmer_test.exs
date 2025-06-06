@@ -80,7 +80,7 @@ defmodule Lightning.Adaptors.WarmerTest do
 
       assert {:ok, pairs} = Warmer.execute(config)
 
-      assert {:adaptors, ["@openfn/language-dhis2"]} in pairs
+      assert {"adaptors", ["@openfn/language-dhis2"]} in pairs
 
       assert {"@openfn/language-dhis2:versions",
               %{
@@ -97,7 +97,7 @@ defmodule Lightning.Adaptors.WarmerTest do
 
       assert {:ok, pairs} = Warmer.execute(config)
 
-      assert {:adaptors, ["@openfn/language-dhis2"]} in pairs
+      assert {"adaptors", ["@openfn/language-dhis2"]} in pairs
 
       assert {"@openfn/language-dhis2:versions",
               %{
@@ -149,7 +149,7 @@ defmodule Lightning.Adaptors.WarmerTest do
         cache: :test_cache
       }
 
-      assert {:ok, [{:adaptors, []}]} = Warmer.execute(config)
+      assert {:ok, [{"adaptors", []}]} = Warmer.execute(config)
     end
 
     test "includes version fetch failures in cache pairs" do
@@ -160,7 +160,7 @@ defmodule Lightning.Adaptors.WarmerTest do
 
       assert {:ok, pairs} = Warmer.execute(config)
 
-      assert {:adaptors, ["@openfn/language-dhis2"]} in pairs
+      assert {"adaptors", ["@openfn/language-dhis2"]} in pairs
 
       assert {"@openfn/language-dhis2:versions",
               {:ignore, :version_fetch_failed}} in pairs
@@ -199,7 +199,7 @@ defmodule Lightning.Adaptors.WarmerTest do
 
       assert {:ok, pairs} = Warmer.execute(config)
 
-      assert {:adaptors,
+      assert {"adaptors",
               ["@openfn/language-success", "@openfn/language-failure"]} in pairs
 
       assert {"@openfn/language-success:versions",
@@ -308,7 +308,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       )
 
       # Verify cache contents
-      {:ok, adaptors_list} = Cachex.get(:warmer_integration_test, :adaptors)
+      {:ok, adaptors_list} = Cachex.get(:warmer_integration_test, "adaptors")
       assert adaptors_list == ["@openfn/language-foo", "@openfn/language-bar"]
 
       {:ok, foo_versions} =
@@ -349,7 +349,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       {:ok, _} = Cachex.warm(:warmer_error_test, wait: true)
 
       # Cache should be empty since warmer returned :ignore
-      {:ok, adaptors_list} = Cachex.get(:warmer_error_test, :adaptors)
+      {:ok, adaptors_list} = Cachex.get(:warmer_error_test, "adaptors")
       assert adaptors_list == nil
     end
   end
