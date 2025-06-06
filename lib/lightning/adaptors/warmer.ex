@@ -61,42 +61,52 @@ defmodule Lightning.Adaptors.Warmer do
     - :ignore if an error occurs during fetching
   """
   def execute(config) do
-    try do
-      {module, strategy_config} = split_strategy(config.strategy)
+    {module, strategy_config} = split_strategy(config.strategy)
 
-      case module.fetch_packages(strategy_config) do
-        {:ok, adaptors} ->
-          # Create pairs for individual adaptors
-          adaptor_pairs =
-            Enum.map(adaptors, fn adaptor ->
-              {adaptor.name, adaptor}
-            end)
+    with :ok <- validate_module(module),
+         {:ok, adaptors} <- module.fetch_packages(strategy_config) do
+      cache_pairs =
+        adaptors
+        |> Task.async_stream(
+          fn module_name ->
+            [
+              {"#{module_name}:versions",
+               module.fetch_versions(strategy_config, module_name)
+               |> case do
+                 {:ok, versions} ->
+                   versions
 
-          # Create the list of adaptor names for the :adaptors key
-          adaptor_names = Enum.map(adaptors, & &1.name)
-          adaptors_list_pair = {:adaptors, adaptor_names}
-
-          # Return all pairs together
-          result = {:ok, [adaptors_list_pair | adaptor_pairs]}
-
-          # Save cache to disk asynchronously if persistence is configured
-          # This will run after the warmer has finished populating the cache
-          if Map.has_key?(config, :persist_path) and
-               not is_nil(config.persist_path) do
-            Task.start(fn ->
-              # Small delay to ensure cache is fully populated
-              Process.sleep(500)
-              Lightning.Adaptors.save_cache(config)
-            end)
-          end
-
+                 {:error, reason} ->
+                   {:ignore, reason}
+               end}
+            ]
+          end,
+          max_concurrency: 10
+        )
+        |> Stream.filter(fn {status, _result} ->
+          status == :ok
+        end)
+        |> Stream.flat_map(fn {_, result} ->
           result
+        end)
+        |> Stream.concat([{:adaptors, adaptors}])
+        |> Enum.to_list()
 
-        {:error, _reason} ->
-          :ignore
-      end
-    rescue
-      _error ->
+      # TODO: add persistence after the cache is populated
+      # Save cache to disk asynchronously if persistence is configured
+      # This will run after the warmer has finished populating the cache
+      # if Map.has_key?(config, :persist_path) and
+      #      not is_nil(config.persist_path) do
+      #   Task.start(fn ->
+      #     # Small delay to ensure cache is fully populated
+      #     Process.sleep(500)
+      #     Lightning.Adaptors.save_cache(config)
+      #   end)
+      # end
+
+      {:ok, cache_pairs}
+    else
+      {:error, _reason} ->
         :ignore
     end
   end
@@ -105,6 +115,15 @@ defmodule Lightning.Adaptors.Warmer do
     case strategy do
       {module, config} -> {module, config}
       module -> {module, []}
+    end
+  end
+
+  defp validate_module(module) do
+    with true <- Code.ensure_loaded?(module) || {:error, :module_not_found},
+         true <-
+           function_exported?(module, :fetch_packages, 1) ||
+             {:error, :function_not_exported} do
+      :ok
     end
   end
 end
