@@ -76,7 +76,7 @@ defmodule Lightning.Adaptors.RepositoryTest do
       assert result == ["@openfn/language-foo", "@openfn/language-bar"]
 
       # Query the cache directly to verify the data is stored
-      {:ok, cached_result} = Cachex.get(:repository_cache_test, :adaptors)
+      {:ok, cached_result} = Cachex.get(:repository_cache_test, "adaptors")
       assert cached_result == ["@openfn/language-foo", "@openfn/language-bar"]
     end
 

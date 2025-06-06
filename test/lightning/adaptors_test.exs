@@ -112,7 +112,7 @@ defmodule Lightning.AdaptorsTest do
 
       config = Lightning.Adaptors.config(adaptors_name)
 
-      {:ok, cached_result} = Cachex.get(config[:cache], :adaptors)
+      {:ok, cached_result} = Cachex.get(config[:cache], "adaptors")
       assert cached_result == ["@openfn/language-foo", "@openfn/language-bar"]
     end
   end
@@ -379,13 +379,13 @@ defmodule Lightning.AdaptorsTest do
       Cachex.clear(config[:cache])
 
       # Verify cache is empty
-      {:ok, nil} = Cachex.get(config[:cache], :adaptors)
+      {:ok, nil} = Cachex.get(config[:cache], "adaptors")
 
       # Restore from disk
       assert Lightning.Adaptors.restore_cache(adaptors_name) == :ok
 
       # Verify cache was restored
-      {:ok, cached_adaptors} = Cachex.get(config[:cache], :adaptors)
+      {:ok, cached_adaptors} = Cachex.get(config[:cache], "adaptors")
       assert cached_adaptors == ["@openfn/language-foo", "@openfn/language-bar"]
 
       # Cleanup

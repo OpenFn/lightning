@@ -16,7 +16,7 @@ defmodule Lightning.Adaptors.Repository do
   On first access, attempts to restore cache from disk if persist_path is configured.
   """
   def all(config) do
-    do_fetch(config, :adaptors, fn _key ->
+    do_fetch(config, "adaptors", fn _key ->
       with {module, strategy_config} <- split_strategy(config.strategy),
            {:ok, adaptor_names} <- module.fetch_packages(strategy_config) do
         {:commit, adaptor_names}
@@ -192,8 +192,8 @@ defmodule Lightning.Adaptors.Repository do
   def clear_persisted_cache(_config), do: :ok
 
   # defp restore_cache_if_needed(config) do
-  #   # Only restore if cache appears to be empty (no :adaptors key)
-  #   case Cachex.get(config[:cache], :adaptors) do
+  #   # Only restore if cache appears to be empty (no "adaptors" key)
+  #   case Cachex.get(config[:cache], "adaptors") do
   #     {:ok, nil} ->
   #       restore_cache(config)
 

@@ -3,7 +3,7 @@ defmodule Lightning.Adaptors.Warmer do
   Proactive cache warmer for Lightning adaptors.
 
   This warmer fetches adaptors from the configured strategy and populates the cache
-  with both a list of all adaptor names (under the :adaptors key) and individual
+  with both a list of all adaptor names (under the "adaptors" key) and individual
   adaptor details (under each adaptor's name key).
 
   This ensures that both Lightning.Adaptors.all/1 and Lightning.Adaptors.versions_for/2
@@ -33,7 +33,7 @@ defmodule Lightning.Adaptors.Warmer do
       ])
 
   After the warmer runs, your cache will contain:
-  - `:adaptors` key with a list of all adaptor names
+  - `"adaptors"` key with a list of all adaptor names
   - Individual keys for each adaptor (e.g., `"@openfn/language-common"`)
 
   This allows `Lightning.Adaptors.all/1` to return immediately from cache, and
@@ -89,7 +89,7 @@ defmodule Lightning.Adaptors.Warmer do
         |> Stream.flat_map(fn {_, result} ->
           result
         end)
-        |> Stream.concat([{:adaptors, adaptors}])
+        |> Stream.concat([{"adaptors", adaptors}])
         |> Enum.to_list()
 
       # TODO: add persistence after the cache is populated

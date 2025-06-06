@@ -37,7 +37,7 @@ defmodule Lightning.Adaptors do
 
   The registry uses a two-level caching approach:
   1. Individual adaptors are cached by their name for efficient lookup
-  2. A list of all adaptor names is cached under the `:adaptors` key
+  2. A list of all adaptor names is cached under the `"adaptors"` key
 
   This allows both fast listing (for AdaptorPicker) and fast individual lookups
   (for versions_for/latest_for functions).
@@ -388,8 +388,8 @@ defmodule Lightning.Adaptors do
   end
 
   defp restore_cache_if_needed(config) do
-    # Only restore if cache appears to be empty (no :adaptors key)
-    case Cachex.get(config[:cache], :adaptors) do
+    # Only restore if cache appears to be empty (no "adaptors" key)
+    case Cachex.get(config[:cache], "adaptors") do
       {:ok, nil} ->
         Lightning.Adaptors.Repository.restore_cache(config)
 
