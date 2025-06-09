@@ -1,5 +1,10 @@
 defmodule Lightning.Adaptors.NPM do
+  @moduledoc """
+  NPM strategy implementation for adaptor registry.
+  """
+
   @behaviour Lightning.Adaptors.Strategy
+
   require Logger
 
   @config_schema [
@@ -28,16 +33,8 @@ defmodule Lightning.Adaptors.NPM do
 
   @type config() :: [unquote(NimbleOptions.option_typespec(@config_schema))]
 
-  @moduledoc """
-  NPM strategy implementation for adaptor registry.
-
-  Config options:
-  #{NimbleOptions.docs(@config_schema)}
-  """
-
   @doc "Supported options:\n#{NimbleOptions.docs(@config_schema)}"
   @impl true
-  @spec fetch_packages(config :: config()) :: {:ok, [map()]} | {:error, term()}
   def fetch_packages(config) do
     with {:ok, validated_config} <- validate_config(config) do
       Logger.debug("Fetching NPM packages for: #{validated_config[:user]}")
@@ -82,7 +79,13 @@ defmodule Lightning.Adaptors.NPM do
             |> Enum.reject(&is_nil/1)
             |> Map.new()
 
-          versions = versions |> Map.merge(dist_tags_with_versions)
+          versions =
+            versions
+            |> Map.merge(dist_tags_with_versions)
+            |> Enum.into(%{}, fn {version, detail} ->
+              {version, pick_package_details(detail)}
+            end)
+
           {:ok, versions}
 
         {:ok, %Tesla.Env{status: 404}} ->
@@ -180,59 +183,8 @@ defmodule Lightning.Adaptors.NPM do
     {:error, :not_implemented}
   end
 
-  @doc """
-  Unravel a package body into a list of tuples, one for each version and dist-tag.
-
-  Returns a list of tuples, where the first element is the package name and the
-  second element is the package body.
-
-  Example:
-
-  ```elixir
-  [
-    {"@openfn/language-common", %{
-      "name" => "@openfn/language-common", ...
-    }},
-    {"@openfn/language-common@latest", %{
-      "name" => "@openfn/language-common",
-      "version" => "1.0.0"
-    }},
-    {"@openfn/language-common@1.0.0", %{
-      "name" => "@openfn/language-common",
-      "version" => "1.0.0"
-    }}
-  ]
-  ```
-  """
-  @spec unravel_package(package_body :: map()) :: list({String.t(), map()})
-  def unravel_package(package_body) do
-    package_name = package_body["name"]
-    versions = Map.get(package_body, "versions", %{})
-    dist_tags = Map.get(package_body, "dist-tags", %{})
-
-    # Base package without versions key
-    base_package = Map.delete(package_body, "versions")
-    base_entry = {package_name, base_package}
-
-    # Version entries - one for each non-deprecated version
-    version_entries =
-      versions
-      |> Enum.reject(fn {_version, detail} -> detail["deprecated"] end)
-      |> Enum.map(fn {version, detail} ->
-        {"#{package_name}@#{version}", detail}
-      end)
-
-    # Dist-tag entries - one for each dist-tag pointing to its version
-    dist_tag_entries =
-      dist_tags
-      |> Enum.map(fn {tag, version} ->
-        case Map.get(versions, version) do
-          nil -> nil
-          version_detail -> {"#{package_name}@#{tag}", version_detail}
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
-
-    [base_entry] ++ version_entries ++ dist_tag_entries
+  defp pick_package_details(package) when is_map(package) do
+    package
+    |> Map.take(~w(name version author license homepage bugs description))
   end
 end

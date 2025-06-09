@@ -3,10 +3,16 @@ defmodule Lightning.Adaptors.Strategy do
   Behaviour for adaptor registry strategies (NPM, local, etc).
   """
 
-  @callback fetch_packages(config :: term()) :: {:ok, [map()]} | {:error, term()}
-  @callback fetch_versions(config :: term(), package_name :: String.t()) ::
+  @type strategy_config :: term()
+
+  @callback fetch_packages(config :: strategy_config()) ::
               {:ok, [String.t()]} | {:error, term()}
-  @callback validate_config(config :: term()) ::
+  @callback fetch_versions(
+              config :: strategy_config(),
+              package_name :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
+  @callback validate_config(config :: strategy_config()) ::
               {:ok, keyword()} | {:error, term()}
   @callback fetch_configuration_schema(adaptor_name :: String.t()) ::
               {:ok, map()} | {:error, term()}

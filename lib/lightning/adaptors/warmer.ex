@@ -69,30 +69,28 @@ defmodule Lightning.Adaptors.Warmer do
         |> Task.async_stream(
           fn module_name ->
             versions_pair =
-              {"#{module_name}:versions",
-               module.fetch_versions(strategy_config, module_name)
-               |> case do
-                 {:ok, versions} ->
-                   versions
-
-                 {:error, reason} ->
-                   {:ignore, reason}
-               end}
+              Task.async(fn ->
+                {"#{module_name}:versions",
+                 case module.fetch_versions(strategy_config, module_name) do
+                   {:ok, versions} -> versions
+                   {:error, reason} -> {:ignore, reason}
+                 end}
+              end)
 
             schema_pair =
-              {"#{module_name}:schema",
-               module.fetch_configuration_schema(module_name)
-               |> case do
-                 {:ok, schema} ->
-                   schema
-
-                 {:error, reason} ->
-                   {:ignore, reason}
-               end}
+              Task.async(fn ->
+                {"#{module_name}:schema",
+                 case module.fetch_configuration_schema(module_name) do
+                   {:ok, schema} -> schema
+                   {:error, reason} -> {:ignore, reason}
+                 end}
+              end)
 
             [versions_pair, schema_pair]
+            |> Task.await_many(:timer.seconds(60))
           end,
-          max_concurrency: 10
+          max_concurrency: 10,
+          timeout: :timer.seconds(60)
         )
         |> Stream.filter(fn {status, _result} ->
           status == :ok

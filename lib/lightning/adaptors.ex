@@ -50,6 +50,8 @@ defmodule Lightning.Adaptors do
   """
 
   use Supervisor
+  import Cachex.Spec
+  alias Lightning.Adaptors.Repository
   require Logger
 
   @doc """
@@ -133,6 +135,10 @@ defmodule Lightning.Adaptors do
         Lightning.Adaptors.latest_for(__MODULE__, module_name)
       end
 
+      def fetch_configuration_schema(module_name) do
+        Lightning.Adaptors.fetch_configuration_schema(__MODULE__, module_name)
+      end
+
       def save_cache do
         Lightning.Adaptors.save_cache(__MODULE__)
       end
@@ -182,51 +188,39 @@ defmodule Lightning.Adaptors do
     |> Supervisor.child_spec(id: Keyword.get(opts, :name, __MODULE__))
   end
 
-  import Cachex.Spec
-
   @impl Supervisor
   def init(config) do
-    # Config already includes the cache name from start_link/1
-
-    # Only start Registry if it's not already running
-    registry_child =
-      case Process.whereis(Lightning.Adaptors.Registry) do
-        nil -> [Lightning.Adaptors.Registry]
-        _pid -> []
-      end
-
     children =
-      registry_child ++
-        [
-          # Start the cache process
-          {Cachex,
+      [
+        # Start the cache process
+        {Cachex,
+         [
+           config.cache,
            [
-             config.cache,
-             [
-               warmers: [
-                 warmer(
-                   state: config,
-                   module: Lightning.Adaptors.Warmer,
-                   required: true
-                 )
-               ]
+             warmers: [
+               warmer(
+                 state: config,
+                 module: Lightning.Adaptors.Warmer,
+                 required: true
+               )
              ]
-           ]}
-          # Start a task to restore cache if needed
-          # {Task,
-          #  fn ->
-          #    try do
-          #      restore_cache_if_needed(config)
-          #    rescue
-          #      error ->
-          #        Logger.warning(
-          #          "Failed to restore adaptor cache on startup: #{inspect(error)}"
-          #        )
+           ]
+         ]}
+        # Start a task to restore cache if needed
+        # {Task,
+        #  fn ->
+        #    try do
+        #      restore_cache_if_needed(config)
+        #    rescue
+        #      error ->
+        #        Logger.warning(
+        #          "Failed to restore adaptor cache on startup: #{inspect(error)}"
+        #        )
 
-          #        :ok
-          #    end
-          #  end}
-        ]
+        #        :ok
+        #    end
+        #  end}
+      ]
 
     Supervisor.init(children, strategy: :one_for_all)
   end
@@ -243,14 +237,23 @@ defmodule Lightning.Adaptors do
   ## Example
 
       {:ok, pid} = Lightning.Adaptors.start_link([
-        strategy: {Lightning.Adaptors.NPMStrategy, []},
+        strategy: {Lightning.Adaptors.NPM, []},
         persist_path: "/tmp/adaptors_cache"
       ])
   """
   @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
     # # Ensure Registry is started if needed
-    # ensure_registry_started()
+    if Process.whereis(Lightning.Adaptors.Registry) == nil do
+      Logger.warning("""
+      Can't find running Adaptors.Registry process.
+
+      Usually the Adaptors.Registry process is started by the Application.start/2 callback.
+      If you are not using an Application, you can start it manually with:
+
+      {:ok, _} = Supervisor.start_link([Lightning.Adaptors.Registry], strategy: :one_for_all)
+      """)
+    end
 
     name = Keyword.get(opts, :name, __MODULE__)
     cache_name = :"adaptors_cache_#{name}"
@@ -258,8 +261,7 @@ defmodule Lightning.Adaptors do
     config = %{
       name: name,
       cache: cache_name,
-      strategy:
-        Keyword.get(opts, :strategy, {Lightning.Adaptors.NPMStrategy, []}),
+      strategy: Keyword.get(opts, :strategy, nil),
       persist_path: Keyword.get(opts, :persist_path)
     }
 
@@ -279,6 +281,15 @@ defmodule Lightning.Adaptors do
   @spec config(name()) :: config()
   def config(name \\ __MODULE__), do: Lightning.Adaptors.Registry.config(name)
 
+  @callback all(name()) :: {:ok, [String.t()]} | {:error, term()}
+  @callback versions_for(name(), String.t()) :: {:ok, map()} | {:error, term()}
+  @callback latest_for(name(), String.t()) :: {:ok, map()} | {:error, term()}
+  @callback fetch_configuration_schema(name(), String.t()) ::
+              {:ok, map()} | {:error, term()}
+  @callback save_cache(name()) :: :ok | {:error, term()}
+  @callback restore_cache(name()) :: :ok | {:error, term()}
+  @callback clear_persisted_cache(name()) :: :ok | {:error, term()}
+
   @doc """
   Returns a list of all adaptor names.
 
@@ -296,7 +307,7 @@ defmodule Lightning.Adaptors do
   def all(name \\ __MODULE__) do
     name
     |> config()
-    |> Lightning.Adaptors.Repository.all()
+    |> Repository.all()
   end
 
   @doc """
@@ -319,14 +330,14 @@ defmodule Lightning.Adaptors do
     # Single argument case - use default instance
     __MODULE__
     |> config()
-    |> Lightning.Adaptors.Repository.versions_for(name)
+    |> Repository.versions_for(name)
   end
 
   def versions_for(name, module_name) do
     # Two argument case - named instance
     name
     |> config()
-    |> Lightning.Adaptors.Repository.versions_for(module_name)
+    |> Repository.versions_for(module_name)
   end
 
   @doc """
@@ -349,14 +360,20 @@ defmodule Lightning.Adaptors do
     # Single argument case - use default instance
     __MODULE__
     |> config()
-    |> Lightning.Adaptors.Repository.latest_for(name)
+    |> Repository.latest_for(name)
   end
 
   def latest_for(name, module_name) do
     # Two argument case - named instance
     name
     |> config()
-    |> Lightning.Adaptors.Repository.latest_for(module_name)
+    |> Repository.latest_for(module_name)
+  end
+
+  def fetch_configuration_schema(name, module_name) do
+    name
+    |> config()
+    |> Repository.fetch_configuration_schema(module_name)
   end
 
   @doc """
@@ -368,7 +385,7 @@ defmodule Lightning.Adaptors do
   def save_cache(name \\ __MODULE__) do
     name
     |> config()
-    |> Lightning.Adaptors.Repository.save_cache()
+    |> Repository.save_cache()
   end
 
   @doc """
@@ -380,7 +397,7 @@ defmodule Lightning.Adaptors do
   def restore_cache(name \\ __MODULE__) do
     name
     |> config()
-    |> Lightning.Adaptors.Repository.restore_cache()
+    |> Repository.restore_cache()
   end
 
   @doc """
@@ -392,14 +409,14 @@ defmodule Lightning.Adaptors do
   def clear_persisted_cache(name \\ __MODULE__) do
     name
     |> config()
-    |> Lightning.Adaptors.Repository.clear_persisted_cache()
+    |> Repository.clear_persisted_cache()
   end
 
   # defp restore_cache_if_needed(config) do
   #   # Only restore if cache appears to be empty (no "adaptors" key)
   #   case Cachex.get(config[:cache], "adaptors") do
   #     {:ok, nil} ->
-  #       Lightning.Adaptors.Repository.restore_cache(config)
+  #       Repository.restore_cache(config)
 
   #     _ ->
   #       :ok

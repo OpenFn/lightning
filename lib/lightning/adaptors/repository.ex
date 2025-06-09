@@ -15,6 +15,8 @@ defmodule Lightning.Adaptors.Repository do
   Caches both the list of names and individual adaptor details for efficient lookup.
   On first access, attempts to restore cache from disk if persist_path is configured.
   """
+  @spec all(config :: Lightning.Adaptors.config()) ::
+          {:ok, [String.t()]} | {:error, term()}
   def all(config) do
     do_fetch(config, "adaptors", fn _key ->
       with {module, strategy_config} <- split_strategy(config.strategy),
@@ -43,6 +45,11 @@ defmodule Lightning.Adaptors.Repository do
   If the adaptor is not cached, will populate the cache by calling all/1 first.
   Returns nil if the adaptor is not found.
   """
+  @spec versions_for(
+          config :: Lightning.Adaptors.config(),
+          module_name :: String.t()
+        ) ::
+          {:ok, map()} | {:error, term()}
   def versions_for(config, module_name) do
     key = "#{module_name}:versions"
 
@@ -63,6 +70,11 @@ defmodule Lightning.Adaptors.Repository do
   If the adaptor is not cached, will populate the cache by calling all/1 first.
   Returns nil if the adaptor is not found.
   """
+  @spec latest_for(
+          config :: Lightning.Adaptors.config(),
+          module_name :: String.t()
+        ) ::
+          {:ok, map()} | {:error, term()}
   def latest_for(config, module_name) do
     key = "#{module_name}@latest"
 
@@ -82,6 +94,11 @@ defmodule Lightning.Adaptors.Repository do
 
   Caches the schema for efficient lookup on subsequent requests.
   """
+  @spec fetch_configuration_schema(
+          config :: Lightning.Adaptors.config(),
+          adaptor_name :: String.t()
+        ) ::
+          {:ok, map()} | {:error, term()}
   def fetch_configuration_schema(config, adaptor_name) do
     key = "#{adaptor_name}:schema"
 
