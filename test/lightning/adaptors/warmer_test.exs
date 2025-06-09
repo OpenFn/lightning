@@ -4,6 +4,32 @@ defmodule Lightning.Adaptors.WarmerTest do
   import Cachex.Spec
   alias Lightning.Adaptors.Warmer
 
+  setup do
+    schemas = %{
+      dhis2: %{
+        "type" => "object",
+        "properties" => %{
+          "username" => %{"type" => "string"},
+          "password" => %{"type" => "string"}
+        }
+      },
+      success: %{
+        "type" => "object",
+        "properties" => %{"api_key" => %{"type" => "string"}}
+      },
+      foo: %{
+        "type" => "object",
+        "properties" => %{"token" => %{"type" => "string"}}
+      },
+      bar: %{
+        "type" => "object",
+        "properties" => %{"api_key" => %{"type" => "string"}}
+      }
+    }
+
+    {:ok, schemas: schemas}
+  end
+
   describe "execute/1" do
     defmodule MockStrategySuccess do
       @behaviour Lightning.Adaptors.Strategy
@@ -23,8 +49,20 @@ defmodule Lightning.Adaptors.WarmerTest do
       end
 
       @impl true
+      def fetch_configuration_schema("@openfn/language-dhis2") do
+        dhis2_schema = %{
+          "type" => "object",
+          "properties" => %{
+            "username" => %{"type" => "string"},
+            "password" => %{"type" => "string"}
+          }
+        }
+
+        {:ok, dhis2_schema}
+      end
+
       def fetch_configuration_schema(_name),
-        do: {:error, :not_implemented}
+        do: {:error, :not_found}
 
       @impl true
       def fetch_icon(_name, _version), do: {:error, :not_implemented}
@@ -72,7 +110,8 @@ defmodule Lightning.Adaptors.WarmerTest do
       def fetch_icon(_name, _version), do: {:error, :not_implemented}
     end
 
-    test "successfully caches adaptors list and individual adaptor versions" do
+    test "successfully caches adaptors list, individual adaptor versions, and configuration schemas",
+         %{schemas: schemas} do
       config = %{
         strategy: {MockStrategySuccess, [config: "test"]},
         cache: :test_cache
@@ -87,9 +126,11 @@ defmodule Lightning.Adaptors.WarmerTest do
                 "3.2.0" => %{"version" => "3.2.0"},
                 "3.2.8" => %{"version" => "3.2.8"}
               }} in pairs
+
+      assert {"@openfn/language-dhis2:schema", schemas.dhis2} in pairs
     end
 
-    test "accepts strategy module without config tuple" do
+    test "accepts strategy module without config tuple", %{schemas: schemas} do
       config = %{
         strategy: MockStrategySuccess,
         cache: :test_cache
@@ -104,6 +145,8 @@ defmodule Lightning.Adaptors.WarmerTest do
                 "3.2.0" => %{"version" => "3.2.0"},
                 "3.2.8" => %{"version" => "3.2.8"}
               }} in pairs
+
+      assert {"@openfn/language-dhis2:schema", schemas.dhis2} in pairs
     end
 
     test "returns :ignore when fetch_packages fails" do
@@ -152,7 +195,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       assert {:ok, [{"adaptors", []}]} = Warmer.execute(config)
     end
 
-    test "includes version fetch failures in cache pairs" do
+    test "includes version and schema fetch failures in cache pairs" do
       config = %{
         strategy: {MockStrategyVersionFailure, []},
         cache: :test_cache
@@ -164,9 +207,13 @@ defmodule Lightning.Adaptors.WarmerTest do
 
       assert {"@openfn/language-dhis2:versions",
               {:ignore, :version_fetch_failed}} in pairs
+
+      assert {"@openfn/language-dhis2:schema", {:ignore, :not_implemented}} in pairs
     end
 
-    test "handles mixed success and failure in version fetching" do
+    test "handles mixed success and failure in version and schema fetching", %{
+      schemas: schemas
+    } do
       defmodule MixedVersionStrategy do
         @behaviour Lightning.Adaptors.Strategy
 
@@ -186,7 +233,20 @@ defmodule Lightning.Adaptors.WarmerTest do
         end
 
         @impl true
-        def fetch_configuration_schema(_name), do: {:error, :not_implemented}
+        def fetch_configuration_schema("@openfn/language-success") do
+          success_schema = %{
+            "type" => "object",
+            "properties" => %{"api_key" => %{"type" => "string"}}
+          }
+
+          {:ok, success_schema}
+        end
+
+        def fetch_configuration_schema("@openfn/language-failure") do
+          {:error, :schema_fetch_failed}
+        end
+
+        def fetch_configuration_schema(_name), do: {:error, :not_found}
 
         @impl true
         def fetch_icon(_name, _version), do: {:error, :not_implemented}
@@ -206,6 +266,10 @@ defmodule Lightning.Adaptors.WarmerTest do
               %{"1.0.0" => %{"version" => "1.0.0"}}} in pairs
 
       assert {"@openfn/language-failure:versions", {:ignore, :fetch_failed}} in pairs
+
+      assert {"@openfn/language-success:schema", schemas.success} in pairs
+
+      assert {"@openfn/language-failure:schema", {:ignore, :schema_fetch_failed}} in pairs
     end
 
     test "returns :ignore when module validation fails" do
@@ -253,8 +317,26 @@ defmodule Lightning.Adaptors.WarmerTest do
       end
 
       @impl true
+      def fetch_configuration_schema("@openfn/language-foo") do
+        foo_schema = %{
+          "type" => "object",
+          "properties" => %{"token" => %{"type" => "string"}}
+        }
+
+        {:ok, foo_schema}
+      end
+
+      def fetch_configuration_schema("@openfn/language-bar") do
+        bar_schema = %{
+          "type" => "object",
+          "properties" => %{"api_key" => %{"type" => "string"}}
+        }
+
+        {:ok, bar_schema}
+      end
+
       def fetch_configuration_schema(_adaptor_name),
-        do: {:error, :not_implemented}
+        do: {:error, :not_found}
 
       @impl true
       def fetch_icon(_adaptor_name, _version),
@@ -285,7 +367,8 @@ defmodule Lightning.Adaptors.WarmerTest do
       end
     end
 
-    test "populates cache with multiple adaptors and their versions" do
+    test "populates cache with multiple adaptors, their versions, and schemas",
+         %{schemas: schemas} do
       config = %{
         strategy: {CachexIntegrationStrategy, [config: "integration_test"]},
         cache: :warmer_integration_test
@@ -323,6 +406,16 @@ defmodule Lightning.Adaptors.WarmerTest do
                "2.0.0" => %{"version" => "2.0.0"},
                "2.1.0" => %{"version" => "2.1.0"}
              }
+
+      {:ok, foo_schema} =
+        Cachex.get(:warmer_integration_test, "@openfn/language-foo:schema")
+
+      assert foo_schema == schemas.foo
+
+      {:ok, bar_schema} =
+        Cachex.get(:warmer_integration_test, "@openfn/language-bar:schema")
+
+      assert bar_schema == schemas.bar
     end
 
     test "gracefully handles strategy failures without crashing cache" do
@@ -351,64 +444,6 @@ defmodule Lightning.Adaptors.WarmerTest do
       # Cache should be empty since warmer returned :ignore
       {:ok, adaptors_list} = Cachex.get(:warmer_error_test, "adaptors")
       assert adaptors_list == nil
-    end
-
-    defmodule Lightning.Adaptors.WarmerHook do
-      use Cachex.Hook
-
-      @type state :: %{
-              cache: Cachex.cache(),
-              config: map()
-            }
-
-      def actions, do: [:put_many]
-
-      @spec init(map()) :: {:ok, state()}
-      def init(config),
-        do: {:ok, %{cache: nil, config: config}}
-
-      # Request the cache state as a provision.
-      def provisions,
-        do: [:cache]
-
-      def handle_provision({:cache, cache}, state) do
-        {:ok, %{state | cache: cache}}
-      end
-
-      # Log the action and result, then store the action.
-      def handle_notify(action, _result, state) do
-        IO.inspect(state)
-        IO.inspect(action, label: "Action")
-        {:ok, state}
-      end
-    end
-
-    test "warmer hook is called after warmer executes" do
-      config = %{
-        strategy: {CachexIntegrationStrategy, [config: "integration_test"]},
-        cache: :warmer_hook_test
-      }
-
-      start_supervised!(
-        {Cachex,
-         [
-           :warmer_hook_test,
-           [
-             warmers: [
-               warmer(
-                 state: config,
-                 module: Warmer,
-                 required: true
-               )
-             ],
-             hooks: [hook(module: Lightning.Adaptors.WarmerHook)]
-           ]
-         ]}
-      )
-
-      Cachex.get(:warmer_hook_test, "adaptors") |> IO.inspect(label: "keys")
-
-      Process.sleep(100)
     end
   end
 end

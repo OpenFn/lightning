@@ -3,6 +3,26 @@ defmodule Lightning.Adaptors.RepositoryTest do
 
   alias Lightning.Adaptors.Repository
 
+  setup do
+    schemas = %{
+      foo: %{
+        "type" => "object",
+        "properties" => %{
+          "username" => %{"type" => "string"},
+          "password" => %{"type" => "string"}
+        }
+      },
+      bar: %{
+        "type" => "object",
+        "properties" => %{
+          "api_key" => %{"type" => "string"}
+        }
+      }
+    }
+
+    {:ok, schemas: schemas}
+  end
+
   defmodule MockAdaptorStrategy do
     @behaviour Lightning.Adaptors.Strategy
 
@@ -39,8 +59,33 @@ defmodule Lightning.Adaptors.RepositoryTest do
     def validate_config(_config), do: {:ok, []}
 
     @impl true
-    def fetch_configuration_schema(_adaptor_name),
-      do: {:error, :not_implemented}
+    def fetch_configuration_schema(adaptor_name) do
+      case adaptor_name do
+        "@openfn/language-foo" ->
+          foo_schema = %{
+            "type" => "object",
+            "properties" => %{
+              "username" => %{"type" => "string"},
+              "password" => %{"type" => "string"}
+            }
+          }
+
+          {:ok, foo_schema}
+
+        "@openfn/language-bar" ->
+          bar_schema = %{
+            "type" => "object",
+            "properties" => %{
+              "api_key" => %{"type" => "string"}
+            }
+          }
+
+          {:ok, bar_schema}
+
+        _ ->
+          {:error, :not_found}
+      end
+    end
 
     @impl true
     def fetch_icon(_adaptor_name, _version), do: {:error, :not_implemented}
@@ -194,6 +239,118 @@ defmodule Lightning.Adaptors.RepositoryTest do
         Cachex.get(config[:cache], "@openfn/language-bar@latest")
 
       assert cached_latest == %{"version" => "2.1.0"}
+    end
+  end
+
+  describe "fetch_configuration_schema/2" do
+    test "returns configuration schema for a known adaptor", %{schemas: schemas} do
+      start_supervised!({Cachex, [:repository_schema_test, []]})
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :repository_schema_test
+      }
+
+      assert {:ok, nil} =
+               Cachex.get(
+                 :repository_schema_test,
+                 "@openfn/language-foo:schema"
+               )
+
+      # Test fetch_configuration_schema
+      {:ok, schema} =
+        Repository.fetch_configuration_schema(config, "@openfn/language-foo")
+
+      assert schema == schemas.foo
+
+      # Verify cache was populated
+      {:ok, cached_schema} =
+        Cachex.get(:repository_schema_test, "@openfn/language-foo:schema")
+
+      assert cached_schema == schemas.foo
+    end
+
+    test "returns different schema for different adaptors", %{schemas: schemas} do
+      start_supervised!({Cachex, [:repository_schema_different_test, []]})
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :repository_schema_different_test
+      }
+
+      # Test different adaptor
+      {:ok, schema} =
+        Repository.fetch_configuration_schema(config, "@openfn/language-bar")
+
+      assert schema == schemas.bar
+
+      # Verify cache was populated with correct key
+      {:ok, cached_schema} =
+        Cachex.get(
+          :repository_schema_different_test,
+          "@openfn/language-bar:schema"
+        )
+
+      assert cached_schema == schemas.bar
+    end
+
+    test "returns error for non-existent adaptor" do
+      start_supervised!({Cachex, [:repository_schema_not_found_test, []]})
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :repository_schema_not_found_test
+      }
+
+      # Test with non-existent adaptor
+      assert {:error, :not_found} =
+               Repository.fetch_configuration_schema(
+                 config,
+                 "@openfn/language-nonexistent"
+               )
+
+      # Verify nothing was cached
+      assert {:ok, nil} =
+               Cachex.get(
+                 :repository_schema_not_found_test,
+                 "@openfn/language-nonexistent:schema"
+               )
+    end
+
+    test "uses cached schema on subsequent calls", %{schemas: schemas} do
+      start_supervised!({Cachex, [:repository_schema_cache_test, []]})
+
+      config = %{
+        strategy: {MockAdaptorStrategy, [config: "foo"]},
+        cache: :repository_schema_cache_test
+      }
+
+      # First call should populate cache
+      {:ok, schema1} =
+        Repository.fetch_configuration_schema(config, "@openfn/language-foo")
+
+      # Second call should use cache
+      {:ok, schema2} =
+        Repository.fetch_configuration_schema(config, "@openfn/language-foo")
+
+      assert schema1 == schema2
+
+      assert schema1 == schemas.foo
+    end
+
+    test "handles strategy module without config tuple", %{schemas: schemas} do
+      start_supervised!({Cachex, [:repository_schema_simple_strategy_test, []]})
+
+      config = %{
+        # Module only, not tuple
+        strategy: MockAdaptorStrategy,
+        cache: :repository_schema_simple_strategy_test
+      }
+
+      {:ok, schema} =
+        Repository.fetch_configuration_schema(config, "@openfn/language-foo")
+
+      assert schema == schemas.foo
     end
   end
 end

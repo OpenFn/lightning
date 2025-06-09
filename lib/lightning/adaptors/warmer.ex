@@ -3,11 +3,8 @@ defmodule Lightning.Adaptors.Warmer do
   Proactive cache warmer for Lightning adaptors.
 
   This warmer fetches adaptors from the configured strategy and populates the cache
-  with both a list of all adaptor names (under the "adaptors" key) and individual
-  adaptor details (under each adaptor's name key).
-
-  This ensures that both Lightning.Adaptors.all/1 and Lightning.Adaptors.versions_for/2
-  functions can operate efficiently without cache misses.
+  with adaptor names, versions, and configuration schemas. This ensures efficient
+  operation without cache misses for adaptor-related functions.
 
   ## Usage Example
 
@@ -34,10 +31,12 @@ defmodule Lightning.Adaptors.Warmer do
 
   After the warmer runs, your cache will contain:
   - `"adaptors"` key with a list of all adaptor names
-  - Individual keys for each adaptor (e.g., `"@openfn/language-common"`)
+  - `"<adaptor_name>:versions"` keys with version information for each adaptor
+  - `"<adaptor_name>:schema"` keys with configuration schemas for each adaptor
 
-  This allows `Lightning.Adaptors.all/1` to return immediately from cache, and
-  `Lightning.Adaptors.versions_for/2` to avoid triggering cache population on every call.
+  This allows `Lightning.Adaptors.all/1`, `Lightning.Adaptors.versions_for/2`, and
+  `Lightning.Adaptors.fetch_configuration_schema/2` to operate efficiently without
+  cache misses.
 
   If `persist_path` is configured, the cache will also be saved to disk after population.
   """
@@ -69,7 +68,7 @@ defmodule Lightning.Adaptors.Warmer do
         adaptors
         |> Task.async_stream(
           fn module_name ->
-            [
+            versions_pair =
               {"#{module_name}:versions",
                module.fetch_versions(strategy_config, module_name)
                |> case do
@@ -79,7 +78,19 @@ defmodule Lightning.Adaptors.Warmer do
                  {:error, reason} ->
                    {:ignore, reason}
                end}
-            ]
+
+            schema_pair =
+              {"#{module_name}:schema",
+               module.fetch_configuration_schema(module_name)
+               |> case do
+                 {:ok, schema} ->
+                   schema
+
+                 {:error, reason} ->
+                   {:ignore, reason}
+               end}
+
+            [versions_pair, schema_pair]
           end,
           max_concurrency: 10
         )

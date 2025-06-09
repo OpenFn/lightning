@@ -78,6 +78,25 @@ defmodule Lightning.Adaptors.Repository do
   end
 
   @doc """
+  Returns the configuration schema for a specific adaptor using the provided config.
+
+  Caches the schema for efficient lookup on subsequent requests.
+  """
+  def fetch_configuration_schema(config, adaptor_name) do
+    key = "#{adaptor_name}:schema"
+
+    do_fetch(config, key, fn _key ->
+      with {module, _strategy_config} <- split_strategy(config.strategy),
+           {:ok, schema} <- module.fetch_configuration_schema(adaptor_name) do
+        {:commit, schema}
+      else
+        {:error, reason} ->
+          {:ignore, reason}
+      end
+    end)
+  end
+
+  @doc """
   Saves the cache to disk if persist_path is configured.
 
   Returns :ok if successful or if no persist_path is configured,
