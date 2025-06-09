@@ -628,6 +628,7 @@ defmodule Lightning.AiAssistant do
   @spec query(ChatSession.t(), String.t()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content) do
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
     pending_user_message = find_pending_user_message(session, content)
 
     ApolloClient.query(
@@ -793,24 +794,20 @@ defmodule Lightning.AiAssistant do
       when status not in 200..299 ->
         error_message = body["message"]
 
-        Logger.error(
-          "AI query failed for session #{session.id}: #{error_message}"
-        )
+        Logger.error("AI query failed for session: #{error_message}")
 
         {:error, error_message}
 
       {:error, :timeout} ->
-        Logger.error("AI query timed out for session #{session.id}")
+        Logger.error("AI query timed out")
         {:error, "Request timed out. Please try again."}
 
       {:error, :econnrefused} ->
-        Logger.error("Connection to AI server refused for session #{session.id}")
+        Logger.error("Connection refused to AI server")
         {:error, "Unable to reach the AI server. Please try again later."}
 
       unexpected_error ->
-        Logger.error(
-          "Unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
-        )
+        Logger.error("Unexpected error: #{inspect(unexpected_error)}")
 
         {:error, "Oops! Something went wrong. Please try again."}
     end

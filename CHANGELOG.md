@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Report AI Assistant errors to Sentry
+  [#3010](https://github.com/OpenFn/lightning/issues/3010)
+
 ### Fixed
 
 - Search input in run history is cleared when you click on the filter buttons
