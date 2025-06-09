@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Search input in run history is cleared when you click on the filter buttons
+  [#1951](https://github.com/OpenFn/lightning/issues/1951)
+
 ## [v2.13.0] - 2025-06-04
 
 ## [v2.13.0-pre2] - 2025-06-04

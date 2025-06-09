@@ -466,9 +466,13 @@
                   >
                     <div class="relative rounded-md shadow-xs flex grow">
                       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
+                        <.icon
+                          name="hero-magnifying-glass"
+                          class="h-5 w-5 text-gray-400"
+                        />
                       </div>
                       <.input
+                        id="run-search-form-search-term"
                         type="text"
                         field={f[:search_term]}
                         placeholder="Search"
@@ -477,6 +481,7 @@
                           JS.show(to: "#clear_search_button")
                           |> JS.show(to: "#search_button_group")
                         }
+                        onchange="document.getElementById('run-toggle-form-search-term').value = this.value"
                       />
 
                       <div class="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -492,7 +497,10 @@
                             |> JS.hide(to: "#clear_search_button")
                           }
                         >
-                          <Heroicons.x_mark class="h-5 w-5 text-gray-400" />
+                          <.icon
+                            name="hero-x-mark"
+                            class="h-5 w-5 text-gray-400"
+                          />
                         </a>
                       </div>
                     </div>
@@ -506,6 +514,11 @@
                       class="isolate inline-flex rounded-md shadow-xs"
                       id="run-toggle-form"
                     >
+                      <.input
+                        id="run-toggle-form-search-term"
+                        type="hidden"
+                        field={f[:search_term]}
+                      />
                       <%= for {search_field, index} <- Enum.with_index(@search_fields) do %>
                         <.checkbox_element
                           id={f[search_field.id].id}
