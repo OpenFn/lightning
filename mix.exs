@@ -122,7 +122,7 @@ defmodule Lightning.MixProject do
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
       {:sentry, "~> 10.9.0"},
-      {:sobelow, "~> 0.13.0", only: [:test, :dev]},
+      {:sobelow, "~> 0.14.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.17"},
       {:gen_smtp, "~> 1.1"},
