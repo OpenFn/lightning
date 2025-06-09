@@ -306,7 +306,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
     ~H"""
     <.form_hidden_inputs form={@form} />
-    <div class="">
+    <div class="space-y-4">
       <.input
         type="select"
         id="triggerType"
@@ -331,9 +331,6 @@ defmodule LightningWeb.WorkflowLive.Components do
       />
       <%= case @type do %>
         <% :cron -> %>
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
           <.live_component
             id="cron-setup-component"
             form={@form}
@@ -342,9 +339,6 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         <% :kafka -> %>
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
           <.live_component
             id="kafka-setup-component"
             form={@form}
@@ -352,7 +346,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         <% :webhook -> %>
-          <div class="my-6">
+          <div>
             <label class="block text-sm font-semibold leading-6 text-slate-800">
               Webhook URL
             </label>

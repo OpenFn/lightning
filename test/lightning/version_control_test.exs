@@ -11,10 +11,13 @@ defmodule Lightning.VersionControlTest do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Workflows.Snapshot
 
+  import ExUnit.CaptureLog
   import Lightning.Factories
 
   import Lightning.GithubHelpers
   import Mox
+
+  :verify_on_exit!
 
   describe "create_github_connection/2" do
     test "user with valid oauth token creates connection successfully" do
@@ -651,6 +654,182 @@ defmodule Lightning.VersionControlTest do
       repo_connection
       |> ProjectRepoConnection.config_path()
       |> Path.relative_to(".")
+    end
+  end
+
+  describe "fetch_installation_repos/1" do
+    test "returns correct result when repos are less than 100" do
+      installation_id = 1234
+
+      repos =
+        Enum.map(1..30, fn n ->
+          %{"full_name" => "account/repo#{n}", "default_branch" => "main"}
+        end)
+
+      expect_create_installation_token(installation_id)
+
+      expected_result = %{
+        "total_count" => Enum.count(repos),
+        "repositories" => repos
+      }
+
+      expect_get_installation_repos(200, expected_result)
+
+      assert {:ok, ^expected_result} =
+               VersionControl.fetch_installation_repos(installation_id)
+    end
+
+    test "returns correct result when repos are more than 100" do
+      installation_id = 1234
+
+      first_100_repos =
+        Enum.map(1..100, fn n ->
+          %{"full_name" => "account/repo#{n}", "default_branch" => "main"}
+        end)
+
+      next_batch =
+        Enum.map(101..183, fn n ->
+          %{"full_name" => "account/repo#{n}", "default_branch" => "main"}
+        end)
+
+      expected_repos = next_batch ++ first_100_repos
+
+      expect_create_installation_token(installation_id)
+
+      Lightning.Tesla.Mock
+      |> expect(
+        :call,
+        fn %{
+             url: "https://api.github.com/installation/repositories",
+             query: [page: 1, per_page: 100]
+           },
+           _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "total_count" => Enum.count(expected_repos),
+               "repositories" => first_100_repos
+             }
+           }}
+        end
+      )
+      |> expect(
+        :call,
+        fn %{
+             url: "https://api.github.com/installation/repositories",
+             query: [page: 2, per_page: 100]
+           },
+           _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "total_count" => Enum.count(expected_repos),
+               "repositories" => next_batch
+             }
+           }}
+        end
+      )
+
+      expected_result = %{
+        "total_count" => Enum.count(expected_repos),
+        "repositories" => expected_repos
+      }
+
+      assert {:ok, ^expected_result} =
+               VersionControl.fetch_installation_repos(installation_id)
+    end
+
+    test "result is returned even when subsequent calls fail" do
+      installation_id = 1234
+
+      first_100_repos =
+        Enum.map(1..100, fn n ->
+          %{"full_name" => "account/repo#{n}", "default_branch" => "main"}
+        end)
+
+      next_100_repos =
+        Enum.map(101..200, fn n ->
+          %{"full_name" => "account/repo#{n}", "default_branch" => "main"}
+        end)
+
+      last_batch =
+        Enum.map(201..230, fn n ->
+          %{"full_name" => "account/repo#{n}", "default_branch" => "main"}
+        end)
+
+      total_repo_count =
+        Enum.count(first_100_repos ++ next_100_repos ++ last_batch)
+
+      expected_repos = last_batch ++ first_100_repos
+
+      expect_create_installation_token(installation_id)
+
+      Lightning.Tesla.Mock
+      |> expect(
+        :call,
+        fn %{
+             url: "https://api.github.com/installation/repositories",
+             query: [page: 1, per_page: 100]
+           },
+           _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "total_count" => total_repo_count,
+               "repositories" => first_100_repos
+             }
+           }}
+        end
+      )
+      |> expect(
+        :call,
+        fn %{
+             url: "https://api.github.com/installation/repositories",
+             query: [page: 2, per_page: 100]
+           },
+           _opts ->
+          # We're failing to return the 2nd batch
+          {:ok,
+           %Tesla.Env{
+             status: 403,
+             body: %{"message" => "some error maybe spike"}
+           }}
+        end
+      )
+      |> expect(
+        :call,
+        fn %{
+             url: "https://api.github.com/installation/repositories",
+             query: [page: 3, per_page: 100]
+           },
+           _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "total_count" => total_repo_count,
+               "repositories" => last_batch
+             }
+           }}
+        end
+      )
+
+      expected_result = %{
+        "total_count" => total_repo_count,
+        "repositories" => expected_repos
+      }
+
+      {result, log} =
+        with_log([level: :error], fn ->
+          VersionControl.fetch_installation_repos(installation_id)
+        end)
+
+      assert {:ok, ^expected_result} = result
+
+      assert log =~ "Failed to fetch a subsequent github repositories page"
     end
   end
 

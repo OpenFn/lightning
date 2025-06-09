@@ -17,8 +17,9 @@ defmodule LightningWeb do
   and import those modules here.
   """
   def static_paths,
-    do: ~w(assets fonts images favicon.ico apple-touch-icon.png favicon-32x32.png
-      favicon-16x16.png safari-pinned-tab.svg robots.txt manifest.json)
+    do:
+      ~w(assets fonts images favicon.ico apple-touch-icon.png favicon-32x32.png
+      favicon-16x16.png safari-pinned-tab.svg robots.txt manifest.json workflow-api.yaml)
 
   def router do
     quote do

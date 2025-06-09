@@ -1,6 +1,8 @@
 defmodule LightningWeb.DashboardLive.Index do
   use LightningWeb, :live_view
 
+  import LightningWeb.DashboardLive.Components
+
   require Logger
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -29,12 +31,13 @@ defmodule LightningWeb.DashboardLive.Index do
       </:header>
 
       <LayoutComponents.centered>
-        <div class="w-full">
-          <.live_component
-            id="projects-dashboard-welcome-section"
-            module={LightningWeb.DashboardLive.WelcomeSection}
-            current_user={@current_user}
-          />
+        <div class="w-full -mt-6">
+          <div>
+            <.welcome_banner
+              id="projects-dashboard-welcome-section"
+              user={@current_user}
+            />
+          </div>
 
           <.live_component
             id="user-projects-section"

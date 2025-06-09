@@ -37,17 +37,18 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert html =~ "Some banner text"
     end
 
-    test "renders error tooltip when limit has been reached", %{
-      conn: conn,
-      project: %{id: project_id}
-    } do
+    test "doesn't render error tooltip when limit is reached; we allow create but block save",
+         %{
+           conn: conn,
+           project: %{id: project_id}
+         } do
       Mox.verify_on_exit!()
       error_message = "some funny error message"
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        2,
+        0,
         fn %{type: :activate_workflow}, %{project_id: ^project_id} ->
           {:error, :too_many_workflows, %{text: error_message}}
         end
@@ -55,7 +56,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       {:ok, _view, html} = live(conn, ~p"/projects/#{project_id}/w")
 
-      assert html =~ error_message
+      refute html =~ error_message
     end
 
     test "only users with MFA enabled can access workflows for a project with MFA requirement",
@@ -310,7 +311,9 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                )
       end)
 
-      assert view |> has_element?("#new-workflow-button[type=button][disabled]")
+      # Make sure the new workflow button is enabled, even though the toggles are disabled.
+      assert view |> has_element?("#new-workflow-button[type=button]")
+      refute view |> has_element?("#new-workflow-button[type=button][disabled]")
     end
   end
 
@@ -350,17 +353,17 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # go directly
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      assert html =~ "Build your workflow from templates"
-      assert html =~ "Browse templates"
+      assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")
 
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+      select_template(view, "base-webhook-template")
+
+      view |> element("button#create_workflow_btn") |> render_click()
 
       # the panel disappears
       html = render(view)
 
-      refute html =~ "Build your workflow from templates"
-      refute html =~ "Browse templates"
+      refute html =~ "Describe your workflow"
       refute has_element?(view, "form#search-templates-form")
     end
 

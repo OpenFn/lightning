@@ -313,17 +313,124 @@ defmodule Lightning.Factories do
   def chat_session_factory do
     %Lightning.AiAssistant.ChatSession{
       id: fn -> Ecto.UUID.generate() end,
-      expression: "fn()",
+      title: sequence(:session_title, &"Chat Session #{&1}"),
+      # Explicit default
+      session_type: "job_code",
+      expression: "fn(state => state)",
       adaptor: "@openfn/language-common@latest",
-      title: "Some session title",
-      messages: []
+      meta: %{},
+      messages: [],
+      user: build(:user)
     }
   end
 
+  def job_chat_session_factory do
+    build(:chat_session, %{
+      session_type: "job_code",
+      job: build(:job),
+      title: sequence(:job_session_title, &"Job Code Session #{&1}")
+    })
+  end
+
+  def workflow_chat_session_factory do
+    build(:chat_session, %{
+      session_type: "workflow_template",
+      project: build(:project),
+      # Workflow sessions don't have jobs
+      job: nil,
+      # Workflow sessions don't have expressions
+      expression: nil,
+      # Workflow sessions don't have adaptors
+      adaptor: nil,
+      title:
+        sequence(:workflow_session_title, &"Workflow Template Session #{&1}")
+    })
+  end
+
+  # Enhanced chat_message_factory with better defaults
   def chat_message_factory do
     %Lightning.AiAssistant.ChatMessage{
-      content: "Hello, world!",
-      role: :user
+      content: sequence(:message_content, &"Message content #{&1}"),
+      role: :user,
+      status: :success,
+      is_deleted: false,
+      is_public: false,
+      workflow_code: nil,
+      user: build(:user),
+      chat_session: build(:chat_session)
+    }
+  end
+
+  def user_chat_message_factory do
+    build(:chat_message, %{
+      role: :user,
+      content: sequence(:user_message, &"User question #{&1}"),
+      user: build(:user)
+    })
+  end
+
+  def assistant_chat_message_factory do
+    build(:chat_message, %{
+      role: :assistant,
+      content: sequence(:assistant_message, &"AI response #{&1}"),
+      # Assistant messages don't have users
+      user: nil,
+      status: :success
+    })
+  end
+
+  def workflow_assistant_message_factory do
+    build(:assistant_chat_message, %{
+      content: "Here's your generated workflow:",
+      workflow_code: """
+      name: Generated Workflow
+      jobs:
+        process_data:
+          name: Process Data
+          adaptor: "@openfn/language-common@latest"
+          body: |
+            // Your job code here
+            fn(state => state)
+      triggers:
+        webhook:
+          type: webhook
+          enabled: true
+      edges:
+        webhook->process_data:
+          source_trigger: webhook
+          target_job: process_data
+          condition_type: always
+          enabled: true
+      """
+    })
+  end
+
+  # Helper to create a complete job session with messages
+  def job_session_with_messages_factory do
+    session = build(:job_chat_session)
+
+    %{
+      session
+      | messages: [
+          build(:user_chat_message, chat_session: session),
+          build(:assistant_chat_message, chat_session: session)
+        ]
+    }
+  end
+
+  # Helper to create a workflow session with a generated template
+  def workflow_session_with_template_factory do
+    session = build(:workflow_chat_session)
+
+    %{
+      session
+      | messages: [
+          build(:user_chat_message,
+            chat_session: session,
+            content: "Create a data processing workflow"
+          ),
+          build(:workflow_assistant_message, chat_session: session)
+        ]
     }
   end
 

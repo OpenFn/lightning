@@ -106,6 +106,12 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
+      timeout:
+        env!(
+          "APOLLO_TIMEOUT",
+          :integer,
+          Utils.get_env([:lightning, :apollo, :timeout])
+        ),
       ai_assistant_api_key: env!("AI_ASSISTANT_API_KEY", :string, nil)
 
     config :lightning, Lightning.Runtime.RuntimeManager,
@@ -585,7 +591,22 @@ defmodule Lightning.Config.Bootstrap do
       run_performance_age_seconds:
         env!("METRICS_RUN_PERFORMANCE_AGE_SECONDS", :integer, 300),
       run_queue_metrics_period_seconds:
-        env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5)
+        env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5),
+      unclaimed_run_threshold_seconds:
+        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 300)
+
+    config :lightning,
+           :per_workflow_claim_limit,
+           env!("PER_WORKFLOW_CLAIM_LIMIT", :integer, 50)
+           |> then(fn limit ->
+             if limit <= 0 do
+               raise """
+               PER_WORKFLOW_CLAIM_LIMIT must be a positive integer.
+               """
+             end
+
+             limit
+           end)
 
     config :lightning, :usage_tracking,
       cleartext_uuids_enabled:

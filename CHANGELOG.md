@@ -19,18 +19,94 @@ and this project adheres to
 
 ### Changed
 
-- Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
-- Standardized table components across the application
-  [#2905](https://github.com/OpenFn/lightning/issues/2905)
-- Make the chunk size for deleting expired activty configurable via ENV
-  [#3181](https://github.com/OpenFn/lightning/pull/3181)
 - Report AI Assistant errors to Sentry
   [#3010](https://github.com/OpenFn/lightning/issues/3010)
 
 ### Fixed
 
+- Search input in run history is cleared when you click on the filter buttons
+  [#1951](https://github.com/OpenFn/lightning/issues/1951)
+
+## [v2.13.0] - 2025-06-04
+
+## [v2.13.0-pre2] - 2025-06-04
+
+### Fixed
+
+- Only show credentials owned by current user in `/credentials` (not those
+  shared with them also) [3273](https://github.com/OpenFn/lightning/issues/3273)
+- Fix texts not getting wrapped in modals that are inside table rows
+  [3274](https://github.com/OpenFn/lightning/issues/3274)
+
+## [v2.13.0-pre1] - 2025-06-03
+
+### Changed
+
+- Removed heavy Arcade videos, replaced with time-aware, friendly greeting.
+  [#3267](https://github.com/OpenFn/lightning/issues/3267)
+
+### Fixed
+
+- Don't display hidden secondary buttons
+  [#3265](https://github.com/OpenFn/lightning/issues/3265)
+
+## [v2.13.0-pre] - 2025-06-02
+
+### Added
+
+- Set timeout for Apollo client requests.
+  [#3009](https://github.com/OpenFn/lightning/issues/3009)
+- Generate workflows using AI
+  [#3174](https://github.com/OpenFn/lightning/issues/3174)
+- Enhance workflows templates UI
+  [#3175](https://github.com/OpenFn/lightning/issues/3175)
+
+### Changed
+
+- Standardize sub-tabs (tabs inside tabs on Inspector)
+  [#3261](https://github.com/OpenFn/lightning/pull/3261)
+- No longer blocking the "Create new workflow" button based on _active_ workflow
+  limits [#3251](https://github.com/OpenFn/lightning/pull/3251)
+
+### Fixed
+
+- Fix magic metadata [#3134](https://github.com/OpenFn/lightning/issues/3134)
+- Padding Changes on Project Setup Page
+  [#3257](https://github.com/OpenFn/lightning/issues/3257)
+
+## [v2.12.3-pre] - 2025-05-29
+
+### Added
+
+- Added a custom metric to track projects that could benefit from additional
+  worker pods. [#3189](https://github.com/OpenFn/lightning/issues/3189)
+- Add a test metric that can be used to test external infrastructure (e.g.
+  alerting) in a deployed Lightning instance.
+  [#3229](https://github.com/OpenFn/lightning/issues/3229)
+- Broadcast work-available to worker when runs are enqueued
+  [#2934](https://github.com/OpenFn/lightning/issues/2934)
+
+### Changed
+
+- Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
+- Standardized table components across the application
+  [#2905](https://github.com/OpenFn/lightning/issues/2905)
+- Standardize buttons [#3093](https://github.com/OpenFn/lightning/issues/3093)
+- Make the chunk size for deleting expired activty configurable via ENV
+  [#3181](https://github.com/OpenFn/lightning/pull/3181)
+- Reduce the cardinality of `lightning_run_lost_count`.
+  [#3226](https://github.com/OpenFn/lightning/issues/3226)
+- Improve manual run component
+  [#3089](https://github.com/OpenFn/lightning/issues/3089)
+
+### Fixed
+
 - Delay purge user having project file(s)
   [#2919](https://github.com/OpenFn/lightning/issues/2919)
+- Display all github repositories even if they're more than 30
+  [#3206](https://github.com/OpenFn/lightning/issues/3206)
+- Github repo names getting truncated
+  [#3037](https://github.com/OpenFn/lightning/issues/3037)
 
 ## [v2.12.2] - 2025-05-01
 
@@ -40,7 +116,6 @@ and this project adheres to
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
 - Re-order nightly cron jobs to reduce acute stress on db
   [#3179](https://github.com/OpenFn/lightning/pull/3179)
-- Standardize buttons [#3093](https://github.com/OpenFn/lightning/issues/3093)
 
 ### Fixed
 

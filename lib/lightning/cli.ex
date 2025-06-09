@@ -65,13 +65,9 @@ defmodule Lightning.CLI do
     @spec get_messages(Result.t()) :: [String.t()]
     def get_messages(%__MODULE__{logs: logs}) do
       logs
-      |> Enum.reduce([], fn l, messages ->
-        if Map.keys(l) == ["message"] do
-          messages ++ l["message"]
-        else
-          messages
-        end
-      end)
+      |> Enum.filter(&Map.has_key?(&1, "message"))
+      |> Enum.map(&Map.get(&1, "message"))
+      |> List.flatten()
     end
 
     defp decode(stdout) do

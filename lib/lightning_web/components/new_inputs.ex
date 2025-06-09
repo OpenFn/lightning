@@ -169,6 +169,11 @@ defmodule LightningWeb.Components.NewInputs do
         [
           # Base classes
           button_base_classes(),
+          # TODO: consider another approach:
+          # https://github.com/OpenFn/lightning/issues/3269
+          # We want a way to style these links as buttons without interfering
+          # with JS.show()—using `inline-block` leads to a Tailwind gotcha.
+          "inline-block",
           # size variants
           button_size_classes(@size),
           # theme variants
@@ -314,7 +319,7 @@ defmodule LightningWeb.Components.NewInputs do
     default: "text",
     values:
       ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tag tel text textarea time url week toggle integer-toggle)
+               range radio search select custom-select tag tel text textarea time url week toggle integer-toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc:
@@ -435,6 +440,119 @@ defmodule LightningWeb.Components.NewInputs do
           {render_slot(@inner_block)}
         </div>
       </div>
+      <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  def input(%{type: "custom-select"} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:hidden_input_selector, fn %{name: name} ->
+        "input[type=hidden][name='#{name}']"
+      end)
+      |> update(:options, fn options, %{prompt: prompt} ->
+        if prompt do
+          [{prompt, ""} | options]
+        else
+          options
+        end
+      end)
+      |> assign_new(:selected_option, fn %{options: options, value: value} ->
+        selected_option =
+          Enum.find(options, fn option ->
+            to_string(select_option_value(option)) == to_string(value)
+          end)
+
+        selected_option || hd(options)
+      end)
+
+    ~H"""
+    <div phx-feedback-for={@name}>
+      <.label :if={@label} class="mb-2" for={@id}>
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+      </.label>
+      <div class="flex w-full items-center">
+        <div
+          class="relative w-full"
+          phx-click={JS.show(to: {:inner, "ul[role='listbox']"})}
+        >
+          <button
+            type="button"
+            class={[
+              "grid grid-cols-1 w-full rounded-lg bg-white border border-secondary-300",
+              "sm:text-sm",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
+              "py-2 pr-2 pl-3 text-left",
+              "disabled:cursor-not-allowed",
+              @button_placement == "right" && "rounded-r-none",
+              @button_placement == "left" && "rounded-l-none",
+              @class
+            ]}
+            aria-haspopup="listbox"
+            aria-expanded="true"
+            {@rest}
+          >
+            <span class="col-start-1 row-start-1 truncate pr-6">
+              {select_option_label(@selected_option)}
+            </span>
+
+            <.icon
+              name="hero-chevron-up-down"
+              class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 sm:size-4"
+            />
+          </button>
+          <ul
+            id={@id}
+            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-hidden sm:text-sm hidden"
+            tabindex="-1"
+            role="listbox"
+            phx-click-away={JS.hide()}
+          >
+            <li
+              :for={option <- @options}
+              class="relative cursor-default py-2 pr-4 pl-8 text-gray-900 select-none group hover:bg-indigo-600 hover:text-white hover:outline-hidden"
+              role="option"
+              phx-click={
+                JS.set_attribute(
+                  {"value", select_option_value(option)},
+                  to: @hidden_input_selector
+                )
+                |> JS.dispatch("input", to: @hidden_input_selector)
+                |> JS.hide(to: {:closest, "ul[role='listbox']"})
+              }
+              aria-selected={
+                to_string(
+                  select_option_label(option) != @prompt &&
+                    option == @selected_option
+                )
+              }
+            >
+              <span class={[
+                "block truncate",
+                if(option == @selected_option,
+                  do: "font-semibold",
+                  else: "font-normal"
+                )
+              ]}>
+                {select_option_label(option)}
+              </span>
+
+              <span
+                :if={option == @selected_option}
+                class="absolute inset-y-0 left-0 flex items-center pl-1.5 text-indigo-600 group-hover:text-white"
+              >
+                <.icon name="hero-check" class="size-5" />
+              </span>
+            </li>
+          </ul>
+        </div>
+        <div class="relative ronded-l-none">
+          {render_slot(@inner_block)}
+        </div>
+      </div>
+      <input type="hidden" name={@name} value={@value} />
+
       <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
     </div>
     """
@@ -804,6 +922,12 @@ defmodule LightningWeb.Components.NewInputs do
     </div>
     """
   end
+
+  defp select_option_label({label, _value}), do: label
+  defp select_option_label(value), do: value
+
+  defp select_option_value({_label, value}), do: value
+  defp select_option_value(value), do: value
 
   @doc """
   Renders an input element.
