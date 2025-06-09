@@ -14,6 +14,8 @@ defmodule Lightning.AiAssistantTest do
     [user: user, project: project, workflow: workflow]
   end
 
+  @moduletag :capture_log
+
   describe "endpoint_available?" do
     test "availability" do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
