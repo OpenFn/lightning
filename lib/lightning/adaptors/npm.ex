@@ -129,7 +129,7 @@ defmodule Lightning.Adaptors.NPM do
   end
 
   @impl true
-  def fetch_credential_schema(adaptor_name) do
+  def fetch_configuration_schema(adaptor_name) do
     Logger.debug("Fetching credential schema for: #{adaptor_name}")
 
     Tesla.get(

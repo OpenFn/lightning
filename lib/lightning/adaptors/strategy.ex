@@ -8,7 +8,7 @@ defmodule Lightning.Adaptors.Strategy do
               {:ok, [String.t()]} | {:error, term()}
   @callback validate_config(config :: term()) ::
               {:ok, keyword()} | {:error, term()}
-  @callback fetch_credential_schema(adaptor_name :: String.t()) ::
+  @callback fetch_configuration_schema(adaptor_name :: String.t()) ::
               {:ok, map()} | {:error, term()}
   @callback fetch_icon(adaptor_name :: String.t(), version :: String.t()) ::
               {:ok, binary()} | {:error, term()}

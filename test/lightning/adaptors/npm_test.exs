@@ -217,7 +217,7 @@ defmodule Lightning.Adaptors.NPMTest do
     end
   end
 
-  describe "fetch_credential_schema/1" do
+  describe "fetch_configuration_schema/1" do
     test "successfully fetches credential schema" do
       expect_tesla_call(
         times: 1,
@@ -232,7 +232,7 @@ defmodule Lightning.Adaptors.NPMTest do
       )
 
       assert {:ok, schema} =
-               NPM.fetch_credential_schema("@openfn/language-http")
+               NPM.fetch_configuration_schema("@openfn/language-http")
 
       # Verify the schema structure - schema is a Jason.OrderedObject
       assert %Jason.OrderedObject{} = schema
@@ -255,7 +255,7 @@ defmodule Lightning.Adaptors.NPMTest do
       )
 
       assert {:error, :not_found} =
-               NPM.fetch_credential_schema("@openfn/language-common")
+               NPM.fetch_configuration_schema("@openfn/language-common")
     end
 
     test "handles unexpected HTTP status codes" do
@@ -271,7 +271,7 @@ defmodule Lightning.Adaptors.NPMTest do
 
       assert capture_log(fn ->
                assert {:error, {:unexpected_status, 500}} =
-                        NPM.fetch_credential_schema("@openfn/language-dhis2")
+                        NPM.fetch_configuration_schema("@openfn/language-dhis2")
              end) =~
                "Unexpected status 500 when fetching schema for @openfn/language-dhis2"
     end
@@ -286,7 +286,7 @@ defmodule Lightning.Adaptors.NPMTest do
 
       assert capture_log(fn ->
                assert {:error, :nxdomain} =
-                        NPM.fetch_credential_schema("@openfn/language-http")
+                        NPM.fetch_configuration_schema("@openfn/language-http")
              end) =~
                "Failed to fetch credential schema for @openfn/language-http: "
     end
@@ -301,7 +301,7 @@ defmodule Lightning.Adaptors.NPMTest do
 
       assert capture_log(fn ->
                assert {:error, :timeout} =
-                        NPM.fetch_credential_schema("@openfn/language-http")
+                        NPM.fetch_configuration_schema("@openfn/language-http")
              end) =~
                "Failed to fetch credential schema for @openfn/language-http: "
     end
@@ -317,7 +317,7 @@ defmodule Lightning.Adaptors.NPMTest do
       )
 
       assert {:ok, schema} =
-               NPM.fetch_credential_schema("@openfn/language-http")
+               NPM.fetch_configuration_schema("@openfn/language-http")
 
       # Verify that the schema is decoded as OrderedObject (which preserves order)
       assert %Jason.OrderedObject{} = schema
@@ -341,7 +341,7 @@ defmodule Lightning.Adaptors.NPMTest do
 
       assert capture_log(fn ->
                assert {:error, {:invalid_json, %Jason.DecodeError{}}} =
-                        NPM.fetch_credential_schema("@openfn/language-http")
+                        NPM.fetch_configuration_schema("@openfn/language-http")
              end) =~
                "Failed to decode JSON schema for @openfn/language-http: "
     end
@@ -365,7 +365,7 @@ defmodule Lightning.Adaptors.NPMTest do
           end
         )
 
-        NPM.fetch_credential_schema(package_name)
+        NPM.fetch_configuration_schema(package_name)
       end)
     end
   end

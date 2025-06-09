@@ -23,7 +23,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       end
 
       @impl true
-      def fetch_credential_schema(_name),
+      def fetch_configuration_schema(_name),
         do: {:error, :not_implemented}
 
       @impl true
@@ -44,7 +44,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       end
 
       @impl true
-      def fetch_credential_schema(_name),
+      def fetch_configuration_schema(_name),
         do: {:error, :not_implemented}
 
       @impl true
@@ -65,7 +65,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       end
 
       @impl true
-      def fetch_credential_schema(_name),
+      def fetch_configuration_schema(_name),
         do: {:error, :not_implemented}
 
       @impl true
@@ -134,7 +134,7 @@ defmodule Lightning.Adaptors.WarmerTest do
         end
 
         @impl true
-        def fetch_credential_schema(_adaptor_name) do
+        def fetch_configuration_schema(_adaptor_name) do
           {:error, :not_implemented}
         end
 
@@ -186,7 +186,7 @@ defmodule Lightning.Adaptors.WarmerTest do
         end
 
         @impl true
-        def fetch_credential_schema(_name), do: {:error, :not_implemented}
+        def fetch_configuration_schema(_name), do: {:error, :not_implemented}
 
         @impl true
         def fetch_icon(_name, _version), do: {:error, :not_implemented}
@@ -253,7 +253,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       end
 
       @impl true
-      def fetch_credential_schema(_adaptor_name),
+      def fetch_configuration_schema(_adaptor_name),
         do: {:error, :not_implemented}
 
       @impl true
@@ -275,7 +275,7 @@ defmodule Lightning.Adaptors.WarmerTest do
       end
 
       @impl true
-      def fetch_credential_schema(_adaptor_name) do
+      def fetch_configuration_schema(_adaptor_name) do
         {:error, :not_implemented}
       end
 
@@ -351,6 +351,64 @@ defmodule Lightning.Adaptors.WarmerTest do
       # Cache should be empty since warmer returned :ignore
       {:ok, adaptors_list} = Cachex.get(:warmer_error_test, "adaptors")
       assert adaptors_list == nil
+    end
+
+    defmodule Lightning.Adaptors.WarmerHook do
+      use Cachex.Hook
+
+      @type state :: %{
+              cache: Cachex.cache(),
+              config: map()
+            }
+
+      def actions, do: [:put_many]
+
+      @spec init(map()) :: {:ok, state()}
+      def init(config),
+        do: {:ok, %{cache: nil, config: config}}
+
+      # Request the cache state as a provision.
+      def provisions,
+        do: [:cache]
+
+      def handle_provision({:cache, cache}, state) do
+        {:ok, %{state | cache: cache}}
+      end
+
+      # Log the action and result, then store the action.
+      def handle_notify(action, _result, state) do
+        IO.inspect(state)
+        IO.inspect(action, label: "Action")
+        {:ok, state}
+      end
+    end
+
+    test "warmer hook is called after warmer executes" do
+      config = %{
+        strategy: {CachexIntegrationStrategy, [config: "integration_test"]},
+        cache: :warmer_hook_test
+      }
+
+      start_supervised!(
+        {Cachex,
+         [
+           :warmer_hook_test,
+           [
+             warmers: [
+               warmer(
+                 state: config,
+                 module: Warmer,
+                 required: true
+               )
+             ],
+             hooks: [hook(module: Lightning.Adaptors.WarmerHook)]
+           ]
+         ]}
+      )
+
+      Cachex.get(:warmer_hook_test, "adaptors") |> IO.inspect(label: "keys")
+
+      Process.sleep(100)
     end
   end
 end

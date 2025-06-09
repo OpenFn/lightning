@@ -34,7 +34,7 @@ defmodule MockAdaptorStrategy do
   def validate_config(_config), do: {:ok, []}
 
   @impl true
-  def fetch_credential_schema(_adaptor_name) do
+  def fetch_configuration_schema(_adaptor_name) do
     {:error, :not_implemented}
   end
 
