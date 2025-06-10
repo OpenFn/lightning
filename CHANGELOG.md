@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Dont send run channel errors to Sentry
+  [#3155](https://github.com/OpenFn/lightning/issues/3155)
+
 ### Fixed
 
 ## [2.13.3-pre]
