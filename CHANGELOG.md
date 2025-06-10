@@ -21,6 +21,8 @@ and this project adheres to
 
 - Report AI Assistant errors to Sentry
   [#3010](https://github.com/OpenFn/lightning/issues/3010)
+- Do not validate edge js condition expression
+  [#3028](https://github.com/OpenFn/lightning/issues/3028)
 
 ### Fixed
 
