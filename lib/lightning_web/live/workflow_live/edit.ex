@@ -1475,6 +1475,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  def handle_event(
+        "get-run-input-dataclip",
+        %{"run_id" => run_id, "job_id" => job_id},
+        socket
+      ) do
+    Invocation.get_first_dataclip_for_run_and_job(run_id, job_id)
+    |> case do
+      nil -> {:reply, %{dataclip: nil}, socket}
+      dataclip -> {:reply, %{dataclip: dataclip}, socket}
+    end
+  end
+
   def handle_event("switch-version", %{"type" => type}, socket) do
     updated_socket =
       case type do

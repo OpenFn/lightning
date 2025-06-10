@@ -27,14 +27,16 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     before,
     after,
     query: urlQuery,
-  } = useQuery(['active_panel', 'type', 'before', 'after', 'query']);
-  const { pushEvent, job_id, selected_dataclip_id, navigate } = props;
+    a: runId,
+  } = useQuery(['active_panel', 'type', 'before', 'after', 'query', 'a']);
+  const { pushEvent, pushEventTo, job_id, selected_dataclip_id, navigate } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
     active_panel
       ? (Number(active_panel) as unknown as SeletableOptions)
       : SeletableOptions.EMPTY
   );
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
+  const [currentRunDataclip, setCurrentRunDataclip] = React.useState<Dataclip | null>(null);
   const [query, setQuery] = React.useState(urlQuery ? urlQuery : '');
   const [selectedDataclip, setSelectedDataclip] =
     React.useState<Dataclip | null>();
@@ -104,17 +106,17 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   }, [pushEvent]);
 
   const parsedQuery = React.useMemo(() => {
-    const a = { query, filters: {} as Record<string, string | undefined> };
-    if (typeof selectedClipType === 'string' && selectedClipType)
-      a.filters['type'] = selectedClipType;
-    else a.filters['type'] = undefined;
-    if (typeof selectedDates.before === 'string' && selectedDates.before)
-      a.filters['before'] = selectedDates.before;
-    else a.filters['before'] = undefined;
-    if (typeof selectedDates.after === 'string' && selectedDates.after)
-      a.filters['after'] = selectedDates.after;
-    else a.filters['after'] = undefined;
-    return a;
+    const filters = {
+      type: selectedClipType || undefined,
+      before: selectedDates.before || undefined,
+      after: selectedDates.after || undefined,
+    };
+
+    const cleanFilters = Object.fromEntries(
+      Object.entries(filters).filter(([_, value]) => value !== undefined)
+    ) as Record<string, string>;
+
+    return { query, filters: cleanFilters };
   }, [query, selectedClipType, selectedDates.before, selectedDates.after]);
 
   const clearFilter = React.useCallback((type: FilterTypes) => {
@@ -131,22 +133,45 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     }
   }, []);
 
+  // Fetch current run's dataclip if viewing a specific run
   React.useEffect(() => {
-    pushEvent(
+    if (runId && job_id) {
+      pushEventTo(
+        'get-run-input-dataclip',
+        { run_id: runId, job_id: job_id },
+        (response: any) => {
+          if (response.dataclip) {
+            setCurrentRunDataclip(response.dataclip);
+          } else {
+            setCurrentRunDataclip(null);
+          }
+        }
+      );
+    } else {
+      setCurrentRunDataclip(null);
+    }
+  }, [runId, job_id, pushEvent]);
+
+  React.useEffect(() => {
+    pushEventTo(
       'search-selectable-dataclips',
       { job_id: job_id, search_text: '', limit: 10 },
-      response => {
+      (response: any) => {
         const dataclips = response.dataclips as Dataclip[];
         setRecentClips(dataclips);
         if (selected_dataclip_id) {
+          // First check if it's in the recent clips
           const activeClip = dataclips.find(d => d.id === selected_dataclip_id);
           if (activeClip) {
             setSelectedDataclipHelper(activeClip);
+          } else if (currentRunDataclip && currentRunDataclip.id === selected_dataclip_id) {
+            // If not in recent clips but matches current run dataclip, select it
+            setSelectedDataclipHelper(currentRunDataclip);
           }
         }
       }
     );
-  }, [pushEvent, job_id, selected_dataclip_id]);
+  }, [pushEvent, job_id, selected_dataclip_id, currentRunDataclip, setSelectedDataclipHelper]);
 
   const handleSearchSumbit = React.useCallback(() => {
     const queryData = {
@@ -159,10 +184,10 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     navigate(alterURLParams(queryData).toString());
     pushManualChange(selectedOption)
 
-    pushEvent(
+    pushEventTo(
       'search-selectable-dataclips',
       { job_id: job_id, search_text: q, limit: 10 },
-      response => {
+      (response: any) => {
         const dataclips = (response.dataclips || []) as Dataclip[];
         setRecentClips(dataclips);
       }
@@ -184,6 +209,25 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     setSelectedOption(option);
   }, [navigate, pushManualChange]);
 
+  const allDataclips = React.useMemo(() => {
+    const hasSearchCriteria = query.trim() || selectedClipType || selectedDates.before || selectedDates.after;
+    if (hasSearchCriteria) {
+      return recentclips;
+    }
+    
+    // If not searching and we have a current run dataclip, put it at the top
+    if (currentRunDataclip) {
+      // Filter out current run dataclip from recent clips to avoid duplication
+      const filteredRecentClips = recentclips.filter(clip => clip.id !== currentRunDataclip.id);
+      
+      // Put current dataclip first, then the filtered recent clips
+      return [currentRunDataclip, ...filteredRecentClips];
+    }
+    
+    // Default: just show recent clips
+    return recentclips;
+  }, [recentclips, currentRunDataclip, query]);
+
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
       case SeletableOptions.EXISTING:
@@ -192,7 +236,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             onSubmit={handleSearchSumbit}
             query={query}
             filters={parsedQuery.filters}
-            dataclips={recentclips}
+            dataclips={allDataclips}
             setQuery={setQuery}
             setSelected={setSelectedDataclipHelper}
             selectedClipType={selectedClipType}
@@ -200,6 +244,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             clearFilter={clearFilter}
             selectedDates={selectedDates}
             setSelectedDates={setSelectedDates}
+            currentRunDataclip={currentRunDataclip}
           />
         );
       case SeletableOptions.CUSTOM:
@@ -212,7 +257,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   }, [
     selectedOption,
     query,
-    recentclips,
+    allDataclips,
     parsedQuery.filters,
     selectedClipType,
     selectedDates,
@@ -222,6 +267,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     clearFilter,
     pushEvent,
     handleSearchSumbit,
+    currentRunDataclip,
   ]);
 
   return (
