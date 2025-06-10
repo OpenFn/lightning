@@ -59,6 +59,8 @@ defmodule Lightning.Adaptors.Warmer do
     - {:ok, pairs} where pairs is a list of {key, value} tuples for caching
     - :ignore if an error occurs during fetching
   """
+  @spec execute(config :: Lightning.Adaptors.config()) ::
+          {:ok, list({String.t(), any()})} | :ignore
   def execute(config) do
     {module, strategy_config} = split_strategy(config.strategy)
 
@@ -71,19 +73,13 @@ defmodule Lightning.Adaptors.Warmer do
             versions_pair =
               Task.async(fn ->
                 {"#{module_name}:versions",
-                 case module.fetch_versions(strategy_config, module_name) do
-                   {:ok, versions} -> versions
-                   {:error, reason} -> {:ignore, reason}
-                 end}
+                 fetch({module, :fetch_versions}, [strategy_config, module_name])}
               end)
 
             schema_pair =
               Task.async(fn ->
                 {"#{module_name}:schema",
-                 case module.fetch_configuration_schema(module_name) do
-                   {:ok, schema} -> schema
-                   {:error, reason} -> {:ignore, reason}
-                 end}
+                 fetch({module, :fetch_configuration_schema}, [module_name])}
               end)
 
             [versions_pair, schema_pair]
@@ -92,9 +88,7 @@ defmodule Lightning.Adaptors.Warmer do
           max_concurrency: 10,
           timeout: :timer.seconds(60)
         )
-        |> Stream.filter(fn {status, _result} ->
-          status == :ok
-        end)
+        |> Stream.filter(&match?({:ok, _}, &1))
         |> Stream.flat_map(fn {_, result} ->
           result
         end)
@@ -124,6 +118,13 @@ defmodule Lightning.Adaptors.Warmer do
     case strategy do
       {module, config} -> {module, config}
       module -> {module, []}
+    end
+  end
+
+  defp fetch({mod, func}, args) do
+    case apply(mod, func, args) do
+      {:ok, result} -> result
+      {:error, reason} -> {:ignore, reason}
     end
   end
 
