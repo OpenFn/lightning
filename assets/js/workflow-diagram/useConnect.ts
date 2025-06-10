@@ -161,7 +161,10 @@ export default (
         });
 
         console.log('adding node with link button');
-        addPlaceholder(connectionState.fromNode, position);
+        // Hack: give time for any deselection to take place
+        setTimeout(() => {
+          addPlaceholder(connectionState.fromNode, position);
+        }, 0);
       }
       setDragActive(false);
       setModel(resetModel(model));
