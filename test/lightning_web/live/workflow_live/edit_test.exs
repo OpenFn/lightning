@@ -1655,7 +1655,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       warning_text =
-        "Your expression contains potentially unsafe functions (eval, require, import, process, await) that may cause your workflow to fail"
+        "Warning: this expression appears to contain unsafe functions (eval, require, import, process, await) that may cause your workflow to fail"
 
       edge_to_edit = Enum.at(workflow.edges, 1)
       view |> select_node(edge_to_edit)

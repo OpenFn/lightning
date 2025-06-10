@@ -554,7 +554,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               name="hero-exclamation-circle-solid"
               class="size-5 text-yellow-600"
               phx-hook="Tooltip"
-              aria-label="Warning: Your expression contains potentially unsafe functions (eval, require, import, process, await) that may cause your workflow to fail"
+              aria-label="Warning: this expression appears to contain unsafe functions (eval, require, import, process, await) that may cause your workflow to fail"
             />
           </.label>
           <.input
@@ -598,7 +598,10 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   defp js_expression_safe?(js_expr) do
-    !String.match?(js_expr, ~r/(import\b|require\b|process\b|await\b|eval\b)/)
+    !String.match?(
+      js_expr,
+      ~r/(\bimport\b|\brequire\b|\bprocess\b|\bawait\b|\beval\b)/
+    )
   end
 
   slot :inner_block, required: true
