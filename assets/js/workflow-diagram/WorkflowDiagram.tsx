@@ -106,7 +106,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    console.log('placeholders', placeholders);
     const { positions } = chartCache.current;
     const newModel = fromWorkflow(
       workflow,
@@ -187,15 +186,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   );
 
   const handleNodeClick = useCallback(
-    (event: React.MouseEvent, node: Flow.Node) => {
-      if ((event.target as HTMLElement).closest('[name=add-node]')) {
-        console.log('adding node with plus button');
-        addPlaceholder(node);
-      } else {
-        if (node.type != 'placeholder') cancelPlaceholder();
-        console.log('cancelled placeholder on node click');
-        updateSelection(node.id);
-      }
+    (_event: React.MouseEvent, node: Flow.Node) => {
+      if (node.type != 'placeholder') cancelPlaceholder();
+      updateSelection(node.id);
     },
     [updateSelection]
   );
@@ -214,7 +207,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         event.target instanceof HTMLElement &&
         event.target.classList?.contains('react-flow__pane')
       ) {
-        // cancelPlaceholder();
+        cancelPlaceholder();
         updateSelection(null);
       }
     },

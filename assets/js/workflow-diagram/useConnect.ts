@@ -135,7 +135,6 @@ export default (
   const onConnect: F.OnConnect = useCallback(args => {
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
-    console.log('on connect to node');
     addTo(wf);
   }, []);
 
@@ -160,7 +159,6 @@ export default (
           y: clientY,
         });
 
-        console.log('adding node with link button');
         // Hack: give time for any deselection to take place
         setTimeout(() => {
           addPlaceholder(connectionState.fromNode, position);

@@ -1,7 +1,6 @@
 import { memo } from 'react';
 import { Position, type NodeProps } from '@xyflow/react';
 import Node from './Node';
-import PlusButton from '../components/PlusButton';
 import PathButton from '../components/PathButton';
 import getAdaptorName from '../util/get-adaptor-name';
 import useAdaptorIcons, { type AdaptorIconData } from '../useAdaptorIcons';
@@ -14,10 +13,7 @@ const JobNode = ({
   ...props
 }: NodeProps<NodeData>) => {
   const toolbar = () => [
-    props.data?.allowPlaceholder && [
-      <PlusButton key="+step" />,
-      <PathButton key="+path" />,
-    ],
+    props.data?.allowPlaceholder && [<PathButton key="+path" />],
   ];
 
   const adaptorIconsData = useAdaptorIcons();
