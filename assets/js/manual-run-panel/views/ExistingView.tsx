@@ -11,7 +11,6 @@ import Pill from '../Pill';
 import DataclipTypePill from '../DataclipTypePill';
 import {
   CalendarDaysIcon,
-  CheckIcon,
   MagnifyingGlassIcon,
   RectangleGroupIcon,
   XMarkIcon,

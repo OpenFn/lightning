@@ -17,7 +17,6 @@ import useQuery from '../hooks/useQuery';
 
 interface ManualRunPanelProps {
   job_id: string;
-  selected_dataclip_id: string | null;
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
@@ -29,14 +28,16 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     query: urlQuery,
     a: runId,
   } = useQuery(['active_panel', 'type', 'before', 'after', 'query', 'a']);
-  const { pushEvent, pushEventTo, job_id, selected_dataclip_id, navigate } = props;
+  const { pushEvent, pushEventTo, job_id, navigate } = props;
+
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
     active_panel
       ? (Number(active_panel) as unknown as SeletableOptions)
       : SeletableOptions.EMPTY
   );
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
-  const [currentRunDataclip, setCurrentRunDataclip] = React.useState<Dataclip | null>(null);
+  const [currentRunDataclip, setCurrentRunDataclip] =
+    React.useState<Dataclip | null>(null);
   const [query, setQuery] = React.useState(urlQuery ? urlQuery : '');
   const [selectedDataclip, setSelectedDataclip] =
     React.useState<Dataclip | null>();
@@ -49,60 +50,71 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   });
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const pushManualChange = React.useCallback((option: SeletableOptions) => {
-    switch (option) {
-      case SeletableOptions.EMPTY:
-        pushEvent('manual_run_change', {
-          manual: {
-            body: '{}',
-            dataclip_id: null,
-          },
-        });
-        break;
-      case SeletableOptions.CUSTOM:
-      case SeletableOptions.EXISTING:
-        pushEvent('manual_run_change', {
-          manual: {
-            body: null,
-            dataclip_id: null,
-          },
-        });
-        break;
-    }
-  }, [pushEvent])
+  const pushManualChange = React.useCallback(
+    (option: SeletableOptions) => {
+      switch (option) {
+        case SeletableOptions.EMPTY:
+          pushEvent('manual_run_change', {
+            manual: {
+              body: '{}',
+              dataclip_id: null,
+            },
+          });
+          break;
+        case SeletableOptions.CUSTOM:
+        case SeletableOptions.EXISTING:
+          pushEvent('manual_run_change', {
+            manual: {
+              body: null,
+              dataclip_id: null,
+            },
+          });
+          break;
+      }
+    },
+    [pushEvent]
+  );
 
-  const setSelectedDataclipHelper = React.useCallback((v: Dataclip | null) => {
-    if (v) {
-      pushEvent('manual_run_change', {
-        manual: { dataclip_id: v.id },
-      });
-    } else {
-      setSelectedOption(SeletableOptions.EXISTING);
-      pushManualChange(SeletableOptions.EXISTING);
-    }
-    setSelectedDataclip(v);
-  }, [pushEvent, pushManualChange])
+  const selectDataclipForManualRun = React.useCallback(
+    (dataclip: Dataclip | null) => {
+      if (dataclip) {
+        pushEvent('manual_run_change', {
+          manual: { dataclip_id: dataclip.id },
+        });
+      } else {
+        setSelectedOption(SeletableOptions.EXISTING);
+        pushManualChange(SeletableOptions.EXISTING);
+      }
+      setSelectedDataclip(dataclip);
+    },
+    [pushEvent, setSelectedOption, pushManualChange, setSelectedDataclip]
+  );
 
   React.useEffect(() => {
-    props.handleEvent('manual_run_created', payload => {
-      if (payload.dataclip) {
-        setSelectedDataclipHelper(payload.dataclip);
+    props.handleEvent('manual_run_created', (payload: unknown) => {
+      const typedPayload = payload as { dataclip?: Dataclip };
+      if (typedPayload.dataclip) {
+        // Update currentRunDataclip since this is now the active run's dataclip
+        setCurrentRunDataclip(typedPayload.dataclip);
+        selectDataclipForManualRun(typedPayload.dataclip);
       }
     });
-  }, [props, pushEvent]);
+  }, [props.handleEvent, selectDataclipForManualRun, setCurrentRunDataclip]);
+
   // handling of form submit
   React.useEffect(() => {
+    const form = formRef.current;
+    if (!form) return; // Early return
+
     function handleSubmit(e: Event) {
       e.preventDefault();
       pushEvent('manual_run_submit', {});
     }
-    const form = formRef.current;
-    if (form) {
-      form.addEventListener('submit', handleSubmit);
-      return () => {
-        form.removeEventListener('submit', handleSubmit);
-      };
-    }
+
+    form.addEventListener('submit', handleSubmit);
+    return () => {
+      form.removeEventListener('submit', handleSubmit);
+    };
   }, [pushEvent]);
 
   const parsedQuery = React.useMemo(() => {
@@ -142,15 +154,15 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         (response: any) => {
           if (response.dataclip) {
             setCurrentRunDataclip(response.dataclip);
-          } else {
-            setCurrentRunDataclip(null);
+            // Auto-select the current run's dataclip when viewing a specific run
+            selectDataclipForManualRun(response.dataclip);
           }
         }
       );
     } else {
       setCurrentRunDataclip(null);
     }
-  }, [runId, job_id, pushEvent]);
+  }, [runId, job_id, pushEventTo, selectDataclipForManualRun]);
 
   React.useEffect(() => {
     pushEventTo(
@@ -159,19 +171,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       (response: any) => {
         const dataclips = response.dataclips as Dataclip[];
         setRecentClips(dataclips);
-        if (selected_dataclip_id) {
-          // First check if it's in the recent clips
-          const activeClip = dataclips.find(d => d.id === selected_dataclip_id);
-          if (activeClip) {
-            setSelectedDataclipHelper(activeClip);
-          } else if (currentRunDataclip && currentRunDataclip.id === selected_dataclip_id) {
-            // If not in recent clips but matches current run dataclip, select it
-            setSelectedDataclipHelper(currentRunDataclip);
-          }
-        }
       }
     );
-  }, [pushEvent, job_id, selected_dataclip_id, currentRunDataclip, setSelectedDataclipHelper]);
+  }, [pushEvent, job_id]);
 
   const handleSearchSumbit = React.useCallback(() => {
     const queryData = {
@@ -182,7 +184,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     };
     const q = constructQuery(queryData);
     navigate(alterURLParams(queryData).toString());
-    pushManualChange(selectedOption)
+    pushManualChange(selectedOption);
 
     pushEventTo(
       'search-selectable-dataclips',
@@ -202,28 +204,37 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     handleSearchSumbit();
   }, [selectedClipType, selectedDates]);
 
-  const handleTabSelectionChange = React.useCallback((newSelection: string) => {
-    const option = Number(newSelection) as SeletableOptions;
-    navigate(alterURLParams({ active_panel: option.toString() }).toString());
-    pushManualChange(option);
-    setSelectedOption(option);
-  }, [navigate, pushManualChange]);
+  const handleTabSelectionChange = React.useCallback(
+    (newSelection: string) => {
+      const option = Number(newSelection) as SeletableOptions;
+      navigate(alterURLParams({ active_panel: option.toString() }).toString());
+      pushManualChange(option);
+      setSelectedOption(option);
+    },
+    [navigate, pushManualChange]
+  );
 
   const allDataclips = React.useMemo(() => {
-    const hasSearchCriteria = query.trim() || selectedClipType || selectedDates.before || selectedDates.after;
+    const hasSearchCriteria =
+      query.trim() ||
+      selectedClipType ||
+      selectedDates.before ||
+      selectedDates.after;
     if (hasSearchCriteria) {
       return recentclips;
     }
-    
+
     // If not searching and we have a current run dataclip, put it at the top
     if (currentRunDataclip) {
       // Filter out current run dataclip from recent clips to avoid duplication
-      const filteredRecentClips = recentclips.filter(clip => clip.id !== currentRunDataclip.id);
-      
+      const filteredRecentClips = recentclips.filter(
+        clip => clip.id !== currentRunDataclip.id
+      );
+
       // Put current dataclip first, then the filtered recent clips
       return [currentRunDataclip, ...filteredRecentClips];
     }
-    
+
     // Default: just show recent clips
     return recentclips;
   }, [recentclips, currentRunDataclip, query]);
@@ -238,7 +249,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             filters={parsedQuery.filters}
             dataclips={allDataclips}
             setQuery={setQuery}
-            setSelected={setSelectedDataclipHelper}
+            setSelected={selectDataclipForManualRun}
             selectedClipType={selectedClipType}
             setSelectedClipType={setSelectedClipType}
             clearFilter={clearFilter}
@@ -261,7 +272,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     parsedQuery.filters,
     selectedClipType,
     selectedDates,
-    setSelectedDataclipHelper,
+    selectDataclipForManualRun,
     setSelectedDates,
     setSelectedClipType,
     clearFilter,
@@ -277,7 +288,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         <SelectedClipView
           dataclip={selectedDataclip}
           onUnselect={() => {
-            setSelectedDataclipHelper(null);
+            selectDataclipForManualRun(null);
           }}
         />
       ) : (
@@ -286,13 +297,25 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             <div className="flex justify-center flex-wrap mb-1">
               <Tabs
                 options={[
-                  { label: 'Empty', id: SeletableOptions.EMPTY.toString(), icon: DocumentIcon },
-                  { label: 'Custom', id: SeletableOptions.CUSTOM.toString(), icon: PencilSquareIcon },
-                  { label: 'Existing', id: SeletableOptions.EXISTING.toString(), icon: QueueListIcon },
+                  {
+                    label: 'Empty',
+                    id: SeletableOptions.EMPTY.toString(),
+                    icon: DocumentIcon,
+                  },
+                  {
+                    label: 'Custom',
+                    id: SeletableOptions.CUSTOM.toString(),
+                    icon: PencilSquareIcon,
+                  },
+                  {
+                    label: 'Existing',
+                    id: SeletableOptions.EXISTING.toString(),
+                    icon: QueueListIcon,
+                  },
                 ]}
                 initialSelection={selectedOption.toString()}
                 onSelectionChange={handleTabSelectionChange}
-                verticalCollapse={false}
+                collapsedVertical={false}
               />
             </div>
             {innerView}

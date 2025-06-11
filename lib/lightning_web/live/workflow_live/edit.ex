@@ -45,7 +45,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
   attr :job_id, :string
-  attr :selected_dataclip_id, :string, required: false
   jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
   attr :changeset, :map, required: true
@@ -257,7 +256,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         <.ManualRunPanel
                           :if={@selection_mode === "expand"}
                           job_id={@selected_job.id}
-                          selected_dataclip_id={@step && @step.input_dataclip_id}
                         />
                       </div>
                     </:panel>
