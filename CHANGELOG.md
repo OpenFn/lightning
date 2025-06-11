@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Allow scrolling in the template grid
+  [#3284](https://github.com/OpenFn/lightning/issues/3284)
 - Search input in run history is cleared when you click on the filter buttons
   [#1951](https://github.com/OpenFn/lightning/issues/1951)
 
