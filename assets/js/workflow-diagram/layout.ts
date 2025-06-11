@@ -126,6 +126,7 @@ const calculateLayout = async (
     autofit = fitTargets;
   }
 
+  console.log({ newModel });
   // If the old model had no positions, this is a first load and we should not animate
   if (hasOldPositions && duration) {
     await animate(model, newModel, update, flow, { duration, autofit });
