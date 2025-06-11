@@ -80,3 +80,5 @@ priv/openfn
 
 worktrees
 .docker-cache
+
+.idea
