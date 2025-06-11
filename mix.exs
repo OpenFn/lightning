@@ -186,6 +186,9 @@ defmodule Lightning.MixProject do
         "dialyzer",
         "credo --strict --all",
         "sobelow"
+      ],
+      compile: [
+        "compile --warnings-as-errors"
       ]
     ]
   end

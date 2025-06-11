@@ -29,9 +29,17 @@ defmodule Lightning.Application do
     Hammer.Backend.Mnesia.create_mnesia_table(disc_copies: [node()])
     :mnesia.wait_for_tables([:__hammer_backend_mnesia], 60_000)
 
-    # Only add the Sentry backend if a dsn is provided.
-    if Application.get_env(:sentry, :dsn),
-      do: Logger.add_backend(Sentry.LoggerBackend)
+    # Only add the Sentry logger handler if a dsn is provided.
+    if Application.get_env(:sentry, :dsn) do
+      :logger.add_handler(:sentry_error_handler, Sentry.LoggerHandler, %{
+        config: %{
+          metadata: [:file, :line, :prompt_size, :session_id],
+          rate_limiting: [max_events: 10, interval: _1_second = 1_000],
+          capture_log_messages: true,
+          level: :error
+        }
+      })
+    end
 
     adaptor_registry_childspec =
       {Lightning.AdaptorRegistry,
