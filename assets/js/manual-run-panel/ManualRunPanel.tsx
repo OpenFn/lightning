@@ -246,7 +246,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
                 ]}
                 initialSelection={selectedOption.toString()}
                 onSelectionChange={handleTabSelectionChange}
-                verticalCollapse={false}
+                collapsedVertical={false}
               />
             </div>
             {innerView}
