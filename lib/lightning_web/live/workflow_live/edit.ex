@@ -45,7 +45,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
   attr :job_id, :string
-  attr :selected_dataclip_id, :string, required: false
   jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
   attr :changeset, :map, required: true
@@ -257,7 +256,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         <.ManualRunPanel
                           :if={@selection_mode === "expand"}
                           job_id={@selected_job.id}
-                          selected_dataclip_id={@step && @step.input_dataclip_id}
                         />
                       </div>
                     </:panel>
@@ -1472,6 +1470,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       {:error, changeset} ->
         {:reply, %{errors: LightningWeb.ChangesetJSON.errors(changeset)}, socket}
+    end
+  end
+
+  def handle_event(
+        "get-run-input-dataclip",
+        %{"run_id" => run_id, "job_id" => job_id},
+        socket
+      ) do
+    Invocation.get_first_dataclip_for_run_and_job(run_id, job_id)
+    |> case do
+      nil -> {:reply, %{dataclip: nil}, socket}
+      dataclip -> {:reply, %{dataclip: dataclip}, socket}
     end
   end
 

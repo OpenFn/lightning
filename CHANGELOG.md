@@ -28,6 +28,8 @@ and this project adheres to
   [#3284](https://github.com/OpenFn/lightning/issues/3284)
 - Search input in run history is cleared when you click on the filter buttons
   [#1951](https://github.com/OpenFn/lightning/issues/1951)
+- Fix Inspector Input panel not showing current run's dataclip for older
+  workflow runs [#3288](https://github.com/OpenFn/lightning/issues/3288)
 
 ## [v2.13.0] - 2025-06-04
 

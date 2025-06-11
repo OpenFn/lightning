@@ -3376,6 +3376,96 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_reply(view, %{dataclips: ^dataclips})
     end
+
+    test "gets run input dataclip",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create a dataclip
+      dataclip =
+        insert(:dataclip,
+          body: %{"input-field" => "input-value"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+
+      work_order = insert(:workorder, workflow: workflow, dataclip: dataclip)
+
+      # Create run with step in one go using the factory pattern
+      run =
+        insert(:run,
+          workflow: workflow,
+          starting_job: job,
+          dataclip: dataclip,
+          work_order: work_order,
+          steps: [
+            build(:step, job: job, input_dataclip: dataclip)
+          ]
+        )
+
+      expected_dataclip =
+        dataclip
+        |> Repo.reload!()
+        |> restore_listed(%{"input-field" => "input-value"}, %{
+          "headers" => "list"
+        })
+        |> then(&%{&1 | body: nil})
+
+      render_hook(view, "get-run-input-dataclip", %{
+        "run_id" => run.id,
+        "job_id" => job.id
+      })
+
+      assert_reply(view, %{dataclip: ^expected_dataclip})
+    end
+
+    test "returns nil when no dataclip found for run and job",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create a dataclip for the run (required by schema)
+      dataclip = insert(:dataclip, body: %{"some" => "data"})
+
+      # Create a run with a dataclip but no step for the specific job
+      work_order = insert(:workorder, workflow: workflow, dataclip: dataclip)
+
+      run =
+        insert(:run,
+          workflow: workflow,
+          starting_job: job,
+          dataclip: dataclip,
+          work_order: work_order
+        )
+
+      # Intentionally not creating any step for this job to test the nil case
+
+      render_hook(view, "get-run-input-dataclip", %{
+        "run_id" => run.id,
+        "job_id" => job.id
+      })
+
+      assert_reply(view, %{dataclip: nil})
+    end
   end
 
   defp log_viewer_selected_level(log_viewer) do
