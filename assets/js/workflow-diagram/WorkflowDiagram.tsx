@@ -23,7 +23,6 @@ import usePlaceholders from './usePlaceholders';
 import fromWorkflow from './util/from-workflow';
 import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
-import updateSelectionStyles from './util/update-selection';
 
 import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
@@ -37,9 +36,8 @@ type WorkflowDiagramProps = {
   forceFit?: boolean;
 };
 
-type ChartCache = {
+export type ChartCache = {
   positions: Positions;
-  placeholderIds: string[];
   lastSelection: string | null;
   lastLayout?: string;
   layoutDuration?: number;
@@ -104,10 +102,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const chartCache = useRef<ChartCache>({
     positions: {},
-    placeholders: [],
     // This will set the initial selection into the cache
     lastSelection: selection,
-    lastLayout: undefined,
   });
 
   const [flow, setFlow] = useState<ReactFlowInstance>();
@@ -127,56 +123,22 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     );
     console.log(' >> maybe layout', newModel);
 
+    // Look at the new model structure through the edges
+    // This will tell us if there's been a structural change
+    // in the model and force an updaet
+    const layoutId = shouldLayout(
+      newModel.edges,
+      chartCache.current.lastLayout
+    );
     if (fixedPositions) {
-      console.log(' >> layout manual');
-      // Manual layout
-      let hasDiff = false;
-
-      // Check if placeholders have  changed
-      let placeholderIds = placeholders.nodes.map(p => p.id);
-      for (const id of placeholderIds) {
-        if (!chartCache.current.placeholderIds.includes(id)) {
-          hasDiff = true;
-          break;
-        }
-      }
-
-      // Check if anything in the model has changed
-      if (!hasDiff) {
-        const prev = chartCache.current?.positions ?? {};
-
-        for (const id in fixedPositions) {
-          if (!(id in prev)) {
-            hasDiff = true;
-            break;
-          }
-          if (id in fixedPositions[id]) {
-            if (
-              prev[id].x !== fixedPositions[id].x ||
-              prev[id].y !== fixedPositions[id].y
-            ) {
-              hasDiff = true;
-              break;
-            }
-          }
-        }
-      }
-
-      if (hasDiff) {
+      if (layoutId) {
         updatePositions(fixedPositions);
-        console.log('>> set  model');
         setModel(newModel);
 
+        chartCache.current.lastLayout = layoutId;
         chartCache.current.positions = fixedPositions;
-        chartCache.current.placeholderIds = placeholderIds;
       }
     } else if (flow && newModel.nodes.length) {
-      // auto layout
-      const layoutId = shouldLayout(
-        newModel.edges,
-        chartCache.current.lastLayout
-      );
-
       if (layoutId) {
         chartCache.current.lastLayout = layoutId;
         const viewBounds = {
