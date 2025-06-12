@@ -149,7 +149,6 @@ export default (
   const onConnectEnd: F.OnConnectEnd = useCallback(
     (evt, connectionState) => {
       setDragActive(false);
-      console.log(' >> connect end');
 
       // Clear hover states
       setModel(resetModel(model));

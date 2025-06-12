@@ -46,7 +46,6 @@ export type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  console.log(' >> diagram render');
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const {
@@ -121,7 +120,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // This handles first load and new node safely
       chartCache.current.lastSelection
     );
-    console.log(' >> maybe layout', newModel);
 
     // Look at the new model structure through the edges
     // This will tell us if there's been a structural change
@@ -133,11 +131,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (fixedPositions) {
       if (layoutId) {
         updatePositions(fixedPositions);
-        setModel(newModel);
 
         chartCache.current.lastLayout = layoutId;
         chartCache.current.positions = fixedPositions;
       }
+      setModel(newModel);
     } else if (flow && newModel.nodes.length) {
       if (layoutId) {
         chartCache.current.lastLayout = layoutId;
@@ -166,7 +164,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // reset chart cache
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, fixedPositions, updatePositions]);
+  }, [workflow, flow, placeholders, el, updatePositions]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
