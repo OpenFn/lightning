@@ -11,16 +11,12 @@ import Pill from '../Pill';
 import DataclipTypePill from '../DataclipTypePill';
 import {
   CalendarDaysIcon,
-  CheckIcon,
-  DocumentTextIcon,
   MagnifyingGlassIcon,
   RectangleGroupIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import formatDate from '#/utils/formatDate';
 import truncateUid from '#/utils/truncateUID';
-
-const iconStyle = 'h-4 w-4 text-grey-400';
 
 interface ExistingViewProps {
   dataclips: Dataclip[];
@@ -34,6 +30,7 @@ interface ExistingViewProps {
   selectedDates: { before: string; after: string };
   setSelectedDates: SetDates;
   onSubmit: () => void;
+  currentRunDataclip?: Dataclip | null;
 }
 
 const ExistingView: React.FC<ExistingViewProps> = ({
@@ -48,6 +45,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   selectedDates,
   setSelectedDates,
   onSubmit,
+  currentRunDataclip,
 }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
@@ -68,7 +66,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
       >
         {key}:{' '}
         {(key as FilterTypes) === FilterTypes.DATACLIP_TYPE
-          ? DataclipTypeNames[value]
+          ? DataclipTypeNames[value!]
           : value}{' '}
       </Pill>
     ));
@@ -183,20 +181,18 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                           type === selectedClipType ? '' : type
                         );
                       }}
-                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${
+                      className={`px-3 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-slate-700 ${
                         type === selectedClipType
                           ? 'bg-blue-200 text-blue-700'
                           : ''
                       }`}
                     >
-                      {' '}
-                      {DataclipTypeNames[type]}{' '}
-                      <CheckIcon
-                        strokeWidth={3}
-                        className={`${iconStyle} ${
+                      <span
+                        className={`hero-check size-4 text-gray-400 ${
                           type !== selectedClipType ? 'invisible' : ''
                         }`}
-                      />{' '}
+                      />
+                      <span className="text-sm">{DataclipTypeNames[type]}</span>
                     </li>
                   );
                 })}
@@ -218,19 +214,31 @@ const ExistingView: React.FC<ExistingViewProps> = ({
         </div>
         {dataclips.length ? (
           dataclips.map(clip => {
+            const isCurrent =
+              currentRunDataclip && clip.id === currentRunDataclip.id;
             return (
               <div
+                key={clip.id}
                 onClick={() => {
                   setSelected(clip);
                 }}
                 className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
               >
                 <div className="flex gap-2 items-center text-sm">
-                  <DocumentTextIcon
-                    className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600 align-middle h-5 w-5`}
-                  />
-                  <span className="font-mono leading-none align-middle relative top-[1px]">{truncateUid(clip.id)}</span>
-                  <span className="align-middle"><DataclipTypePill type={clip.type} size="small" /></span>
+                  {isCurrent ? (
+                    <span
+                      className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
+                      title="Current dataclip for this step"
+                    />
+                  ) : (
+                    <span className="hero-document-text align-middle size-4 group-hover:text-primary-600" />
+                  )}
+                  <span className="font-mono leading-none align-middle relative top-[1px]">
+                    {truncateUid(clip.id)}
+                  </span>
+                  <span className="align-middle">
+                    <DataclipTypePill type={clip.type} size="small" />
+                  </span>
                 </div>
                 <div className="text-xs truncate ml-2">
                   {formatDate(new Date(clip.updated_at))}
@@ -244,7 +252,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
           </div>
         )}
         {dataclips.length ? (
-          <div className="text-center text-sm">
+          <div className="text-center text-sm text-gray-600">
             Search results are limited to the 10 most recent matches for this
             step.
           </div>
