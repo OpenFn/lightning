@@ -12,6 +12,7 @@ import {
   type ReactFlowInstance,
   type Rect,
 } from '@xyflow/react';
+import tippy, { type Instance as TippyInstance } from 'tippy.js';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import MiniMapNode from './components/MiniMapNode';
@@ -44,6 +45,35 @@ export type ChartCache = {
 };
 
 const LAYOUT_DURATION = 300;
+
+// Simple React hook for Tippy tooltips that finds buttons by their content
+const useTippyForControls = () => {
+  useEffect(() => {
+    // Find the control buttons and initialize tooltips based on their dataset attributes
+    const buttons = document.querySelectorAll('.react-flow__controls button');
+
+    buttons.forEach(button => {
+      if (button instanceof HTMLElement && button.dataset.tooltip) {
+        tippy(button, {
+          content: button.dataset.tooltip,
+          placement: 'right',
+          animation: false,
+          allowHTML: false,
+        });
+      }
+    });
+
+    return () => {
+      // Destroy all tooltips when the component unmounts
+      buttons.forEach(button => {
+        const instance = tippy(button);
+        if (instance) {
+          instance.destroy();
+        }
+      });
+    };
+  }, []); // Only run once on mount
+};
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { selection, onSelectionChange, containerEl: el } = props;
@@ -276,6 +306,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   }, [flow, model, el]);
 
   const connectHandlers = useConnect(model, setModel, addPlaceholder, flow);
+
+  // Set up tooltips for control buttons
+  useTippyForControls();
+
   return (
     <ReactFlowProvider>
       <ReactFlow
@@ -299,10 +333,26 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         {...connectHandlers}
       >
         <Controls position="bottom-left" showInteractive={false}>
-          <ControlButton onClick={toggleAutoLayout}>
-            {fixedPositions ? 'Man' : 'Auto'}
+          <ControlButton
+            onClick={toggleAutoLayout}
+            data-tooltip={
+              fixedPositions
+                ? 'Switch to auto layout'
+                : 'Switch to manual layout'
+            }
+          >
+            {fixedPositions ? (
+              <span className="text-black hero-sparkles w-4 h-4" />
+            ) : (
+              <span className="text-primary-600 hero-sparkles-solid w-4 h-4" />
+            )}
           </ControlButton>
-          <ControlButton onClick={() => forceLayout()}>FrcL</ControlButton>
+          <ControlButton
+            onClick={() => forceLayout()}
+            data-tooltip="Force auto-layout (override all manual positions)"
+          >
+            <span className="text-black hero-squares-2x2 w-4 h-4" />
+          </ControlButton>
         </Controls>
         <Background />
         <MiniMap

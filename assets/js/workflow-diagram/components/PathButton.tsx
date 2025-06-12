@@ -1,5 +1,4 @@
 import { Handle } from '@xyflow/react';
-import { LinkIcon } from '@heroicons/react/24/outline';
 
 function PathButton() {
   return (
@@ -23,8 +22,8 @@ function PathButton() {
       className="transition duration-150 ease-in-out pointer-events-auto rounded-lg
       !bg-indigo-600 hover:!bg-indigo-500 py-1 px-2 text-[0.8125rem] font-semibold leading-5 text-white"
     >
-      <LinkIcon
-        className="inline h-4 w-4"
+      <span
+        className="h-4 w-4 hero-plus"
         style={{ marginTop: '-6px', pointerEvents: 'none' }}
       />
     </Handle>
