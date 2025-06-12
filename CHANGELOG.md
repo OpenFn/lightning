@@ -17,10 +17,15 @@ and this project adheres to
 
 ### Added
 
+- Allow users to edit position of nodes in the workflow
+  [#3123](https://github.com/OpenFn/lightning/issues/3123)
 - Minimap for easier workflow navigation
   [#3125](https://github.com/OpenFn/lightning/issues/3125)
 
 ### Changed
+
+- Create nodes and edges with the same button in the workflow
+  [#2175](https://github.com/OpenFn/lightning/issues/2175)
 
 ### Fixed
 
