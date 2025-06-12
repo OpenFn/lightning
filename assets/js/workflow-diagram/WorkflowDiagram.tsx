@@ -47,23 +47,30 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const { jobs, triggers, edges, disabled, positions, updatePositions } =
-    useWorkflowStore();
   const { selection, onSelectionChange, containerEl: el } = props;
 
+  const {
+    jobs,
+    triggers,
+    edges,
+    disabled,
+    positions: fixedPositions,
+    updatePositions,
+  } = useWorkflowStore();
+
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
-  const [autoLayout, setAutoLayout] = useState(
-    positions === null ? true : false
-  );
+
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
-  const toggleAutoLayout = () => {
-    if (!autoLayout) {
+  const toggleAutoLayout = useCallback(() => {
+    if (fixedPositions) {
+      // set positions to null to enable auto layout
       updatePositions(null);
+    } else {
+      // fix positions to enable manual layout
+      updatePositions(chartCache.current.positions);
     }
-
-    setAutoLayout(!autoLayout);
-  };
+  }, [fixedPositions]);
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -94,7 +101,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
 
   const chartCache = useRef<ChartCache>({
-    positions: positions || {},
+    positions: {},
     // This will set the initial selection into the cache
     lastSelection: selection,
     lastLayout: undefined,
@@ -106,30 +113,42 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    const { positions } = chartCache.current;
+    const { positions: prevPositions } = chartCache.current;
     const newModel = fromWorkflow(
       workflow,
-      positions,
+      fixedPositions || prevPositions,
       placeholders,
       // Re-render the model based on whatever was last selected
       // This handles first load and new node safely
       chartCache.current.lastSelection
     );
 
-    if (!autoLayout) {
-      setModel(newModel);
+    if (fixedPositions) {
+      // Manual layout
+      let hasDiff = false;
+      const prev = chartCache.current?.positions ?? {};
+      for (const id in fixedPositions) {
+        if (!(id in prev)) {
+          hasDiff = true;
+          break;
+        }
+        if (
+          prev[id].x !== fixedPositions[id].x ||
+          prev[id].y !== fixedPositions[id].y
+        ) {
+          hasDiff = true;
+          break;
+        }
+      }
 
-      const newPositions = newModel.nodes.reduce((obj, next) => {
-        obj[next.id] = next.position;
-        return obj;
-      }, {} as Positions);
+      if (hasDiff) {
+        updatePositions(fixedPositions);
+        setModel(newModel);
 
-      chartCache.current.positions = newPositions;
-      updatePositions(newPositions);
-      return;
-    }
-
-    if (flow && newModel.nodes.length) {
+        chartCache.current.positions = fixedPositions;
+      }
+    } else if (flow && newModel.nodes.length) {
+      // auto layout
       const layoutId = shouldLayout(
         newModel.edges,
         chartCache.current.lastLayout
@@ -159,21 +178,17 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         setModel(newModel);
       }
     } else {
+      // reset chart cache
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, autoLayout, updatePositions]);
-
-  useEffect(() => {
-    const updatedModel = updateSelectionStyles(model, selection);
-    setModel(updatedModel);
-  }, [selection]);
+  }, [workflow, flow, placeholders, el, fixedPositions, updatePositions]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const newNodes = applyNodeChanges(changes, model.nodes);
       setModel({ nodes: newNodes, edges: model.edges });
 
-      if (!autoLayout) {
+      if (fixedPositions) {
         const newPositions = newNodes.reduce((obj, next) => {
           obj[next.id] = next.position;
           return obj;
@@ -182,7 +197,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         updatePositions(newPositions);
       }
     },
-    [setModel, model, autoLayout, updatePositions]
+    [setModel, model, fixedPositions, updatePositions]
   );
 
   const handleNodeClick = useCallback(
@@ -279,7 +294,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         nodes={model.nodes}
         edges={model.edges}
         onNodesChange={onNodesChange}
-        nodesDraggable={!autoLayout}
+        nodesDraggable={fixedPositions}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onClick={handleBackgroundClick}
@@ -294,7 +309,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       >
         <Controls position="bottom-left" showInteractive={false}>
           <ControlButton onClick={toggleAutoLayout}>
-            {autoLayout ? 'MnL' : 'AtL'}
+            {fixedPositions ? 'Man' : 'Auto'}
           </ControlButton>
           <ControlButton
             onClick={() =>
