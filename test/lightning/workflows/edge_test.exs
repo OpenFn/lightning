@@ -307,9 +307,11 @@ defmodule Lightning.Workflows.EdgeTest do
           )
         )
 
-      assert changeset.errors == [
+      refute changeset.errors == [
                condition_expression: {"contains unacceptable words", []}
              ]
+
+      assert Enum.empty?(changeset.errors)
 
       changeset =
         Edge.changeset(
@@ -333,9 +335,11 @@ defmodule Lightning.Workflows.EdgeTest do
           )
         )
 
-      assert changeset.errors == [
+      refute changeset.errors == [
                condition_expression: {"contains unacceptable words", []}
              ]
+
+      assert Enum.empty?(changeset.errors)
 
       changeset =
         Edge.changeset(
@@ -347,9 +351,11 @@ defmodule Lightning.Workflows.EdgeTest do
           )
         )
 
-      assert changeset.errors == [
+      refute changeset.errors == [
                condition_expression: {"contains unacceptable words", []}
              ]
+
+      assert Enum.empty?(changeset.errors)
 
       changeset =
         Edge.changeset(
@@ -364,7 +370,7 @@ defmodule Lightning.Workflows.EdgeTest do
       assert Enum.empty?(changeset.errors)
     end
 
-    test "requires JS expression to have neither import or require statements" do
+    test "allows JS expression to have import or require statements" do
       edge = %Edge{
         id: Ecto.UUID.generate(),
         workflow_id: Ecto.UUID.generate(),
@@ -387,9 +393,11 @@ defmodule Lightning.Workflows.EdgeTest do
           )
         )
 
-      assert changeset.errors == [
+      refute changeset.errors == [
                condition_expression: {"contains unacceptable words", []}
              ]
+
+      assert Enum.empty?(changeset.errors)
 
       changeset =
         Edge.changeset(
@@ -401,9 +409,11 @@ defmodule Lightning.Workflows.EdgeTest do
           )
         )
 
-      assert changeset.errors == [
+      refute changeset.errors == [
                condition_expression: {"contains unacceptable words", []}
              ]
+
+      assert Enum.empty?(changeset.errors)
     end
   end
 end

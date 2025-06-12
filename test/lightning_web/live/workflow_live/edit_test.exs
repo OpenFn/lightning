@@ -1642,6 +1642,54 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                )
     end
 
+    test "displays warning when js expression contains unwanted words", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
+
+      warning_text =
+        "Warning: this expression appears to contain unsafe functions (eval, require, import, process, await) that may cause your workflow to fail"
+
+      edge_to_edit = Enum.at(workflow.edges, 1)
+      view |> select_node(edge_to_edit)
+
+      # change to js_expression
+      html =
+        view
+        |> form("#workflow-form", %{
+          "workflow" => %{
+            "edges" => %{"1" => %{"condition_type" => "js_expression"}}
+          }
+        })
+        |> render_change()
+
+      assert html =~ "Matches a Javascript Expression"
+      refute html =~ warning_text
+
+      html =
+        view
+        |> form("#workflow-form", %{
+          "workflow" => %{
+            "edges" => %{
+              "1" => %{
+                "condition_label" => "My JS Expression",
+                "condition_expression" => "eval"
+              }
+            }
+          }
+        })
+        |> render_change()
+
+      assert html =~ warning_text
+    end
+
     @tag role: :editor
     test "can delete a job", %{conn: conn, project: project, workflow: workflow} do
       {:ok, view, _html} =
