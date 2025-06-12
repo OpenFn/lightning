@@ -55,14 +55,18 @@ const useTippyForControls = (fixedPositions: boolean) => {
   useEffect(() => {
     // Find the control buttons by their content
     const buttons = document.querySelectorAll('.react-flow__controls button');
-    
-    buttons.forEach((button) => {
-      const sparklesIcon = button.querySelector('.hero-sparkles, .hero-sparkles-solid');
+
+    buttons.forEach(button => {
+      const sparklesIcon = button.querySelector(
+        '.hero-sparkles, .hero-sparkles-solid'
+      );
       const squaresIcon = button.querySelector('.hero-squares-2x2');
-      
+
       if (sparklesIcon && button instanceof HTMLElement) {
         // This is the auto/manual layout toggle button
-        const initialContent = fixedPositions ? 'Switch to auto layout' : 'Switch to manual layout';
+        const initialContent = fixedPositions
+          ? 'Switch to auto layout'
+          : 'Switch to manual layout';
         autoLayoutTooltipRef.current = tippy(button, {
           content: initialContent,
           placement: 'right',
@@ -93,7 +97,9 @@ const useTippyForControls = (fixedPositions: boolean) => {
   // Update the auto layout tooltip content when fixedPositions changes
   useEffect(() => {
     if (autoLayoutTooltipRef.current) {
-      const content = fixedPositions ? 'Switch to auto layout' : 'Switch to manual layout';
+      const content = fixedPositions
+        ? 'Switch to auto layout'
+        : 'Switch to manual layout';
       autoLayoutTooltipRef.current.setContent(content);
     }
   }, [fixedPositions]);
@@ -337,16 +343,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }
   }, [flow, model, el]);
 
-  // TODO:
-  // Just an observation: in auto layout mode, the behaviour of dragging out a new node onto the canvas doesn't make any sense. No matter where I drop it, the new node will be created wherever the layout wants.
-  // Possible solutions:
-
-  // In autolayout mode, show the existing Plus and Link icons. No drag and drop. But in manual layout, only show the drag icon.
-  // Err, that's all I can think of right now?
-  // The only other thing you can do is manual layout by default, and force users to hit the Layout button to tidy up
-
   const connectHandlers = useConnect(model, setModel, addPlaceholder, flow);
-  
+
   // Set up tooltips for control buttons
   useTippyForControls(!!fixedPositions);
 
