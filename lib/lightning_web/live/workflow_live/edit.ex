@@ -1665,7 +1665,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       Map.merge(template_params, %{
         "code" => code,
         "workflow_id" => workflow.id,
-        "tags" => tags
+        "tags" => tags,
+        "positions" => workflow.positions
       })
 
     case WorkflowTemplates.create_template(params) do
