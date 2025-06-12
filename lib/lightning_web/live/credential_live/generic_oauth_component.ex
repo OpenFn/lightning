@@ -646,7 +646,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             />
           </div>
         </div>
-        <.modal_footer class="mt-6 mx-4">
+        <div class="flex-grow bg-gray-100 h-0.5 mt-[16px]"></div>
+        <div class="pt-[24px]">
           <div class="flex justify-between items-center">
             <div class="flex-1 w-1/2">
               <div class="sm:flex sm:flex-row-reverse gap-3">
@@ -657,6 +658,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                   type="submit"
                   theme="primary"
                   disabled={!@changeset.valid? || @scopes_changed}
+                  form={"generic-oauth-form-#{@credential.id || "new"}"}
                 >
                   Save
                 </.button>
@@ -670,7 +672,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               </div>
             </div>
           </div>
-        </.modal_footer>
+        </div>
       </.form>
     </div>
     """

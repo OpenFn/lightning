@@ -11,7 +11,6 @@ defmodule LightningWeb.Components.Modal do
 
   attr :id, :string, required: true
   attr :show, :boolean, default: false
-  attr :with_frame, :boolean, default: true
   attr :position, :string, default: "fixed inset-0"
   attr :width, :string, default: "max-w-3xl"
   attr :close_on_click_away, :boolean, default: true
@@ -72,11 +71,10 @@ defmodule LightningWeb.Components.Modal do
               }
               class={[
                 "hidden relative rounded-xl transition",
-                @with_frame &&
-                  "bg-white py-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10"
+                "bg-white shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10"
               ]}
             >
-              <header :if={@title != [] && @with_frame} class="pl-[24px] pr-[24px]">
+              <header :if={@title != []} class="p-4">
                 <h1
                   id={"#{@id}-title"}
                   class="text-lg font-semibold leading-5 text-zinc-800"
@@ -90,15 +88,15 @@ defmodule LightningWeb.Components.Modal do
                 <% end %>
               </header>
               <div
-                :if={@title != [] && @with_frame}
-                class="flex-grow bg-gray-100 h-0.5 my-[16px]"
+                :if={@title != []}
+                class="flex-grow bg-gray-100 h-0.5"
               >
               </div>
-              <section class={if(@with_frame, do: "pl-[24px] pr-[24px]", else: "")}>
+              <section class="py-4">
                 {render_slot(@inner_block)}
               </section>
               <%= for footer <- @footer do %>
-                <.modal_footer :if={@with_frame} class={footer |> Map.get(:class)}>
+                <.modal_footer class="p-4">
                   {render_slot(footer)}
                 </.modal_footer>
               <% end %>
@@ -115,7 +113,7 @@ defmodule LightningWeb.Components.Modal do
 
   def modal_footer(assigns) do
     ~H"""
-    <div class="flex-grow bg-gray-100 h-0.5 mt-[16px]"></div>
+    <div class="flex-grow bg-gray-100 h-0.5"></div>
     <footer class={@class}>
       {render_slot(@inner_block)}
     </footer>
