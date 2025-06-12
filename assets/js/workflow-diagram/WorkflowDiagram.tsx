@@ -39,6 +39,7 @@ type WorkflowDiagramProps = {
 
 type ChartCache = {
   positions: Positions;
+  placeholderIds: string[];
   lastSelection: string | null;
   lastLayout?: string;
   layoutDuration?: number;
@@ -47,6 +48,7 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
+  console.log(' >> diagram render');
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const {
@@ -102,6 +104,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const chartCache = useRef<ChartCache>({
     positions: {},
+    placeholders: [],
     // This will set the initial selection into the cache
     lastSelection: selection,
     lastLayout: undefined,
@@ -122,30 +125,50 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // This handles first load and new node safely
       chartCache.current.lastSelection
     );
+    console.log(' >> maybe layout', newModel);
 
     if (fixedPositions) {
+      console.log(' >> layout manual');
       // Manual layout
       let hasDiff = false;
-      const prev = chartCache.current?.positions ?? {};
-      for (const id in fixedPositions) {
-        if (!(id in prev)) {
-          hasDiff = true;
-          break;
-        }
-        if (
-          prev[id].x !== fixedPositions[id].x ||
-          prev[id].y !== fixedPositions[id].y
-        ) {
+
+      // Check if placeholders have  changed
+      let placeholderIds = placeholders.nodes.map(p => p.id);
+      for (const id of placeholderIds) {
+        if (!chartCache.current.placeholderIds.includes(id)) {
           hasDiff = true;
           break;
         }
       }
 
+      // Check if anything in the model has changed
+      if (!hasDiff) {
+        const prev = chartCache.current?.positions ?? {};
+
+        for (const id in fixedPositions) {
+          if (!(id in prev)) {
+            hasDiff = true;
+            break;
+          }
+          if (id in fixedPositions[id]) {
+            if (
+              prev[id].x !== fixedPositions[id].x ||
+              prev[id].y !== fixedPositions[id].y
+            ) {
+              hasDiff = true;
+              break;
+            }
+          }
+        }
+      }
+
       if (hasDiff) {
         updatePositions(fixedPositions);
+        console.log('>> set  model');
         setModel(newModel);
 
         chartCache.current.positions = fixedPositions;
+        chartCache.current.placeholderIds = placeholderIds;
       }
     } else if (flow && newModel.nodes.length) {
       // auto layout
