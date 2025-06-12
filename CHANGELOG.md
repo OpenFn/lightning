@@ -29,6 +29,8 @@ and this project adheres to
 
 - Report AI Assistant errors to Sentry
   [#3010](https://github.com/OpenFn/lightning/issues/3010)
+- Dont send run channel errors to Sentry
+  [#3155](https://github.com/OpenFn/lightning/issues/3155)
 
 ### Fixed
 
