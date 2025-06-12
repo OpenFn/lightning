@@ -48,35 +48,15 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 // Simple React hook for Tippy tooltips that finds buttons by their content
-const useTippyForControls = (fixedPositions: boolean) => {
-  const autoLayoutTooltipRef = useRef<TippyInstance>();
-  const manualLayoutTooltipRef = useRef<TippyInstance>();
-
+const useTippyForControls = () => {
   useEffect(() => {
-    // Find the control buttons by their content
+    // Find the control buttons and initialize tooltips based on their dataset attributes
     const buttons = document.querySelectorAll('.react-flow__controls button');
 
     buttons.forEach(button => {
-      const sparklesIcon = button.querySelector(
-        '.hero-sparkles, .hero-sparkles-solid'
-      );
-      const squaresIcon = button.querySelector('.hero-squares-2x2');
-
-      if (sparklesIcon && button instanceof HTMLElement) {
-        // This is the auto/manual layout toggle button
-        const initialContent = fixedPositions
-          ? 'Switch to auto layout'
-          : 'Switch to manual layout';
-        autoLayoutTooltipRef.current = tippy(button, {
-          content: initialContent,
-          placement: 'right',
-          animation: false,
-          allowHTML: false,
-        });
-      } else if (squaresIcon && button instanceof HTMLElement) {
-        // This is the auto-arrange button
-        manualLayoutTooltipRef.current = tippy(button, {
-          content: 'Force auto-layout (override all manual positions)',
+      if (button instanceof HTMLElement && button.dataset.tooltip) {
+        tippy(button, {
+          content: button.dataset.tooltip,
           placement: 'right',
           animation: false,
           allowHTML: false,
@@ -85,24 +65,15 @@ const useTippyForControls = (fixedPositions: boolean) => {
     });
 
     return () => {
-      if (autoLayoutTooltipRef.current) {
-        autoLayoutTooltipRef.current.unmount();
-      }
-      if (manualLayoutTooltipRef.current) {
-        manualLayoutTooltipRef.current.unmount();
-      }
+      // Destroy all tooltips when the component unmounts
+      buttons.forEach(button => {
+        const instance = tippy(button);
+        if (instance) {
+          instance.destroy();
+        }
+      });
     };
   }, []); // Only run once on mount
-
-  // Update the auto layout tooltip content when fixedPositions changes
-  useEffect(() => {
-    if (autoLayoutTooltipRef.current) {
-      const content = fixedPositions
-        ? 'Switch to auto layout'
-        : 'Switch to manual layout';
-      autoLayoutTooltipRef.current.setContent(content);
-    }
-  }, [fixedPositions]);
 };
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
@@ -346,7 +317,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const connectHandlers = useConnect(model, setModel, addPlaceholder, flow);
 
   // Set up tooltips for control buttons
-  useTippyForControls(!!fixedPositions);
+  useTippyForControls();
 
   return (
     <ReactFlowProvider>
@@ -371,7 +342,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         {...connectHandlers}
       >
         <Controls position="bottom-left" showInteractive={false}>
-          <ControlButton onClick={toggleAutoLayout}>
+          <ControlButton
+            onClick={toggleAutoLayout}
+            data-tooltip={
+              fixedPositions
+                ? 'Switch to auto layout'
+                : 'Switch to manual layout'
+            }
+          >
             {fixedPositions ? (
               <span className="text-black hero-sparkles w-4 h-4" />
             ) : (
@@ -391,6 +369,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
                 { duration: LAYOUT_DURATION, forceFit: true }
               )
             }
+            data-tooltip="Force auto-layout (override all manual positions)"
           >
             <span className="text-black hero-squares-2x2 w-4 h-4" />
           </ControlButton>
