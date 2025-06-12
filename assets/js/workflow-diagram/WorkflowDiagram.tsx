@@ -65,6 +65,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (fixedPositions) {
       // set positions to null to enable auto layout
       updatePositions(null);
+      forceLayout();
     } else {
       // fix positions to enable manual layout
       updatePositions(chartCache.current.positions);
@@ -107,6 +108,23 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const [flow, setFlow] = useState<ReactFlowInstance>();
 
+  const forceLayout = useCallback(
+    (newModel?: Flow.Model) => {
+      const viewBounds = {
+        width: workflowDiagramRef.current?.clientWidth ?? 0,
+        height: workflowDiagramRef.current?.clientHeight ?? 0,
+      };
+      layout(newModel ?? model, setModel, flow, viewBounds, {
+        duration: props.layoutDuration ?? LAYOUT_DURATION,
+        forceFit: props.forceFit,
+      }).then(positions => {
+        // Note we don't update positions until the animation has finished
+        chartCache.current.positions = positions;
+      });
+    },
+    [flow, model]
+  );
+
   // Respond to changes pushed into the component from outside
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
@@ -137,19 +155,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       }
       setModel(newModel);
     } else if (flow && newModel.nodes.length) {
-      if (layoutId) {
+      if (layoutId || fixedPositions === null) {
         chartCache.current.lastLayout = layoutId;
-        const viewBounds = {
-          width: workflowDiagramRef.current?.clientWidth ?? 0,
-          height: workflowDiagramRef.current?.clientHeight ?? 0,
-        };
-        layout(newModel, setModel, flow, viewBounds, {
-          duration: props.layoutDuration ?? LAYOUT_DURATION,
-          forceFit: props.forceFit,
-        }).then(positions => {
-          // Note we don't update positions until the animation has finished
-          chartCache.current.positions = positions;
-        });
+        forceLayout(newModel);
       } else {
         // If layout is id, ensure nodes have positions
         // This is really only needed when there's a single trigger node
@@ -294,22 +302,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           <ControlButton onClick={toggleAutoLayout}>
             {fixedPositions ? 'Man' : 'Auto'}
           </ControlButton>
-          <ControlButton
-            onClick={() =>
-              layout(
-                model,
-                setModel,
-                flow,
-                {
-                  width: workflowDiagramRef.current?.clientWidth ?? 0,
-                  height: workflowDiagramRef.current?.clientHeight ?? 0,
-                },
-                { duration: LAYOUT_DURATION, forceFit: true }
-              )
-            }
-          >
-            FrcL
-          </ControlButton>
+          <ControlButton onClick={() => forceLayout()}>FrcL</ControlButton>
         </Controls>
         <Background />
         <MiniMap
