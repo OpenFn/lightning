@@ -74,7 +74,11 @@ const ExistingView: React.FC<ExistingViewProps> = ({
     ));
 
   const keyDownHandler = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') onSubmit();
+    if (e.key === 'Enter') {
+      e.stopPropagation();
+      e.preventDefault();
+      onSubmit();
+    }
   };
 
   return (
