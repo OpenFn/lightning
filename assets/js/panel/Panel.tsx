@@ -1,13 +1,12 @@
 import type { WithActionProps } from '#/react/lib/with-props';
-import React from 'react';
-import type { ReactNode, HTMLAttributes } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 
 interface PanelProps extends HTMLAttributes<HTMLDivElement> {
   heading: ReactNode;
   cancelUrl: string;
   className?: string;
   children?: ReactNode;
-  footer?: ReactNode[];
+  footer?: ReactNode;
 }
 
 export const Panel: WithActionProps<PanelProps> = ({
@@ -15,7 +14,7 @@ export const Panel: WithActionProps<PanelProps> = ({
   cancelUrl,
   className = '',
   children,
-  footer = [],
+  footer,
   navigate
 }) => {
   return (
@@ -38,13 +37,11 @@ export const Panel: WithActionProps<PanelProps> = ({
         <div className="px-4 py-5 sm:p-6 grow flex flex-col">
           <div className="md:gap-4 grow flex flex-col">{children}</div>
         </div>
-        {footer.length > 0 && (
+        {footer && (
           <div className="p-3">
             <div className="md:grid md:grid-cols-6 md:gap-4 @container">
               <div className="col-span-6">
-                {footer.map((item, idx) => (
-                  <React.Fragment key={idx}>{item}</React.Fragment>
-                ))}
+                {footer}
               </div>
             </div>
           </div>
