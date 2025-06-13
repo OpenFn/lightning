@@ -47,6 +47,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :job_id, :string
   jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
+  attr :job_id, :string
+  attr :cancel_url, :string
+  jsx("assets/js/panel/panels/WorkflowRunPanel.tsx")
+
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
 
@@ -165,6 +169,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </div>
                 <.offline_indicator />
               </div>
+              <.run_workflow_button base_url={@base_url} />
               <.save_workflow_button
                 id="top-bar-save-workflow-btn"
                 changeset={@changeset}
@@ -484,9 +489,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           phx-value-id={@selected_job.id}
                           theme="danger"
                           disabled={
-                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                               @has_child_edges or @is_first_job or
-                               @snapshot_version_tag != "latest") ||
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @has_child_edges or @is_first_job or
+                              @snapshot_version_tag != "latest" ||
                               !@has_presence_edit_priority
                           }
                           tooltip={
@@ -530,8 +535,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={tf}
                   on_change={&send_form_changed/1}
                   disabled={
-                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                       @snapshot_version_tag != "latest") ||
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                      @snapshot_version_tag != "latest" ||
                       !@has_presence_edit_priority
                   }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
@@ -546,8 +551,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         type="toggle"
                         field={tf[:enabled]}
                         disabled={
-                          (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                             @snapshot_version_tag != "latest") ||
+                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                            @snapshot_version_tag != "latest" ||
                             !@has_presence_edit_priority
                         }
                         label="Enabled"
@@ -575,8 +580,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.edge_form
                   form={ef}
                   disabled={
-                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                       @snapshot_version_tag != "latest") ||
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                      @snapshot_version_tag != "latest" ||
                       !@has_presence_edit_priority
                   }
                   cancel_url={close_url(assigns, :selected_edge, :unselect)}
@@ -593,8 +598,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           type="toggle"
                           field={ef[:enabled]}
                           disabled={
-                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                               @snapshot_version_tag != "latest") ||
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @snapshot_version_tag != "latest" ||
                               !@has_presence_edit_priority
                           }
                           label="Enabled"
@@ -611,9 +616,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             phx-click="delete_edge"
                             phx-value-id={ef[:id].value}
                             disabled={
-                              ((!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                                  @snapshot_version_tag != "latest") ||
-                                 !@has_presence_edit_priority) or
+                              !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                                @snapshot_version_tag != "latest" ||
+                                !@has_presence_edit_priority or
                                 ef[:source_trigger_id].value
                             }
                           >
@@ -626,6 +631,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </:footer>
               </.panel>
             </.single_inputs_for>
+            <div
+              :if={@selection_mode == "workflow_input"}
+              class="flex flex-col h-120"
+              phx-mounted={fade_in()}
+              phx-remove={fade_out()}
+            >
+              <.WorkflowRunPanel
+                job_id={hd(@workflow_params["jobs"])["id"]}
+                cancel_url={@base_url}
+              />
+            </div>
           </.form>
 
           <.panel
@@ -2597,6 +2613,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"m" => "settings", "s" => nil, "a" => nil} ->
         handle_settings_mode(socket)
 
+      %{"m" => "workflow_input", "s" => nil, "a" => nil} ->
+        handle_workflow_input_mode(socket)
+
       %{"m" => "code", "s" => nil, "a" => nil} ->
         handle_code_mode(socket)
 
@@ -2613,6 +2632,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp handle_settings_mode(socket) do
     socket |> unselect_all() |> set_mode("settings")
+  end
+
+  defp handle_workflow_input_mode(socket) do
+    socket |> unselect_all() |> set_mode("workflow_input")
   end
 
   defp handle_code_mode(socket) do
@@ -2741,7 +2764,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp set_mode(socket, mode) do
-    if mode in [nil, "expand", "settings", "code"] do
+    if mode in [nil, "expand", "settings", "code", "workflow_input"] do
       socket
       |> assign(selection_mode: mode)
     else
@@ -2982,6 +3005,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </div>
       </div>
     </div>
+    """
+  end
+
+  defp run_workflow_button(assigns) do
+    ~H"""
+    <.button_link
+      patch={"#{@base_url}?m=workflow_input"}
+      type="button"
+      theme="primary"
+    >
+      Run Workflow
+    </.button_link>
     """
   end
 
