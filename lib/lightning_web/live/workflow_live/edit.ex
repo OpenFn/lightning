@@ -3005,7 +3005,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       type="button"
       theme="primary"
     >
-      Run Workflow
+    Run
     </.button_link>
     """
   end
