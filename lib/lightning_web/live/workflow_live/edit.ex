@@ -48,6 +48,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :selected_dataclip_id, :string, required: false
   jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
+  attr :job_id, :string
+  attr :cancel_url, :string
+  jsx("assets/js/panel/panels/WorkflowRunPanel.tsx")
+
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
 
@@ -629,25 +633,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </:footer>
               </.panel>
             </.single_inputs_for>
-            <.panel
+            <div
               :if={@selection_mode == "workflow_input"}
-              title="Select Input to start run"
-              id={"workflow-input-#{@workflow.id}"}
-              class="hidden"
+              class="flex flex-col h-120"
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
-              cancel_url={@base_url}
             >
-              <div class="flex flex-col h-120">
-                <.ManualRunPanel
-                  job_id={hd(@workflow_params["jobs"])["id"]}
-                  selected_dataclip_id={@step && @step.input_dataclip_id}
-                />
-              </div>
-              <:footer>
-                <.save_and_run_button {assigns} manual_run_form={%{id: nil}} />
-              </:footer>
-            </.panel>
+              <.WorkflowRunPanel
+                job_id={hd(@workflow_params["jobs"])["id"]}
+                cancel_url={@base_url}
+              />
+            </div>
           </.form>
 
           <.panel
