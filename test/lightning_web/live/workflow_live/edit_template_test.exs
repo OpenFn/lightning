@@ -44,6 +44,47 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       assert template.name == "My Template"
       assert template.description == "A template description"
       assert template.tags == ["tag1", "tag2"]
+      assert is_nil(template.positions)
+    end
+
+    test "saves node positions to templates", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      workflow_positions = %{"some-uuid" => %{"x" => 100, "y" => 100}}
+
+      workflow
+      |> Ecto.Changeset.change(%{positions: workflow_positions})
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+
+      render_hook(view, "workflow_code_generated", %{
+        "code" => "test workflow code"
+      })
+
+      view |> element("#publish-template-btn") |> render_click()
+
+      assert view
+             |> form("#workflow-template-form")
+             |> render_submit(%{
+               "workflow_template" => %{
+                 "name" => "My Template",
+                 "description" => "A template description",
+                 "tags" => "tag1,tag2"
+               }
+             }) =~
+               "Workflow published as template"
+
+      template =
+        Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
+
+      assert template.name == "My Template"
+      assert template.description == "A template description"
+      assert template.tags == ["tag1", "tag2"]
+      assert template.positions == workflow_positions
     end
 
     test "updates an existing template", %{

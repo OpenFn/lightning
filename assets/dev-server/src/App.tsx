@@ -12,7 +12,7 @@ import { createWorkflowStore } from '../../js/workflow-store/store';
 import { randomUUID } from '../../js/common';
 import workflows from './workflows';
 import './main.css';
-import 'reactflow/dist/style.css';
+import '@xyflow/react/dist/style.css';
 
 const Form = ({ nodeId, store, onChange }) => {
   if (!nodeId) {

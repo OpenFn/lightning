@@ -1,4 +1,4 @@
-import type { Rect, XYPosition, Viewport } from 'reactflow';
+import type { Rect, XYPosition, Viewport } from '@xyflow/react';
 
 type ViewBounds = {
   width: number;

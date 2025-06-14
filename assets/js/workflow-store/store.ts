@@ -2,7 +2,7 @@ import type { Patch as ImmerPatch } from 'immer';
 
 import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore, useStore, type StoreApi } from 'zustand';
-import type { Lightning } from '../workflow-diagram/types';
+import type { Lightning, Positions } from '../workflow-diagram/types';
 import { randomUUID } from '../common';
 
 enablePatches();
@@ -27,6 +27,7 @@ export type WorkflowProps = {
   edges: Lightning.Edge[];
   disabled: boolean;
   selection: string | null;
+  positions: Positions | null;
 };
 
 export interface WorkflowState extends WorkflowProps {
@@ -42,6 +43,7 @@ export interface WorkflowState extends WorkflowProps {
   observer: null | ((v: unknown) => void);
   subscribe: (cb: (v: unknown) => void) => void;
   add: (data: AddArgs) => void;
+  updatePositions: (data: Positions | null) => void;
   change: (data: ChangeArgs) => void;
   remove: (data: RemoveArgs) => void;
   rebase: (data: Partial<WorkflowProps>) => void;
@@ -116,6 +118,7 @@ const DEFAULT_PROPS: WorkflowProps = {
   edges: [],
   disabled: false,
   selection: null,
+  positions: null,
 };
 
 export type WorkflowStore = StoreApi<WorkflowState>;
@@ -177,6 +180,17 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
                 }
               }
             );
+          },
+          get().observer
+        )
+      );
+    },
+    updatePositions: data => {
+      set(state =>
+        proposeChanges(
+          state,
+          draft => {
+            draft.positions = data;
           },
           get().observer
         )

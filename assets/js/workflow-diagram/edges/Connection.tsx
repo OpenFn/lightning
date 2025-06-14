@@ -1,5 +1,5 @@
 import { EDGE_COLOR_SELECTED } from '../styles';
-import { BezierEdge } from 'reactflow';
+import { BezierEdge } from '@xyflow/react';
 
 export default (props: {
   fromX: number;
