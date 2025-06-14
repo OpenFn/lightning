@@ -148,6 +148,11 @@ export default (
 
   const onConnectEnd: F.OnConnectEnd = useCallback(
     (evt, connectionState) => {
+      setDragActive(false);
+
+      // Clear hover states
+      setModel(resetModel(model));
+
       // when a connection is dropped on the pane it's not valid
       if (!connectionState.isValid) {
         const { clientX, clientY } =
@@ -159,13 +164,12 @@ export default (
           y: clientY,
         });
 
-        // Hack: give time for any deselection to take place
+        // Give time for any deselection to take place
+        // when in auto-layout mode
         setTimeout(() => {
           addPlaceholder(connectionState.fromNode, position);
         }, 0);
       }
-      setDragActive(false);
-      setModel(resetModel(model));
     },
     [model, dragActive]
   );
