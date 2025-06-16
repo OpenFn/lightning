@@ -491,9 +491,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           phx-value-id={@selected_job.id}
                           theme="danger"
                           disabled={
-                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                              @has_child_edges or @is_first_job or
-                              @snapshot_version_tag != "latest" ||
+                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                               @has_child_edges or @is_first_job or
+                               @snapshot_version_tag != "latest") ||
                               !@has_presence_edit_priority
                           }
                           tooltip={
@@ -537,8 +537,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={tf}
                   on_change={&send_form_changed/1}
                   disabled={
-                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                      @snapshot_version_tag != "latest" ||
+                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                       @snapshot_version_tag != "latest") ||
                       !@has_presence_edit_priority
                   }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
@@ -553,8 +553,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         type="toggle"
                         field={tf[:enabled]}
                         disabled={
-                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                            @snapshot_version_tag != "latest" ||
+                          (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                             @snapshot_version_tag != "latest") ||
                             !@has_presence_edit_priority
                         }
                         label="Enabled"
@@ -582,8 +582,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.edge_form
                   form={ef}
                   disabled={
-                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                      @snapshot_version_tag != "latest" ||
+                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                       @snapshot_version_tag != "latest") ||
                       !@has_presence_edit_priority
                   }
                   cancel_url={close_url(assigns, :selected_edge, :unselect)}
@@ -600,8 +600,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           type="toggle"
                           field={ef[:enabled]}
                           disabled={
-                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                              @snapshot_version_tag != "latest" ||
+                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                               @snapshot_version_tag != "latest") ||
                               !@has_presence_edit_priority
                           }
                           label="Enabled"
@@ -618,9 +618,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             phx-click="delete_edge"
                             phx-value-id={ef[:id].value}
                             disabled={
-                              !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                                @snapshot_version_tag != "latest" ||
-                                !@has_presence_edit_priority or
+                              ((!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                                  @snapshot_version_tag != "latest") ||
+                                 !@has_presence_edit_priority) or
                                 ef[:source_trigger_id].value
                             }
                           >
@@ -1922,6 +1922,68 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  def handle_event("manual_run_from_start", params, socket) do
+    %{
+      project: project,
+      current_user: current_user,
+      workflow_params: workflow_params,
+      has_presence_edit_priority: has_presence_edit_priority,
+      workflow: workflow
+    } = socket.assigns
+
+    manual_params = Map.get(params, "manual", %{})
+
+    socket = socket |> apply_params(workflow_params, :workflow)
+
+    workflow_or_changeset =
+      if has_presence_edit_priority do
+        socket.assigns.changeset
+      else
+        get_workflow_by_id(workflow.id)
+      end
+
+    starting_job = get_starting_job(workflow_or_changeset)
+
+    with :ok <- check_user_can_manual_run_workflow(socket) do
+      case Helpers.run_workflow(
+             workflow_or_changeset,
+             manual_params,
+             project: project,
+             selected_job: starting_job,
+             created_by: current_user
+           ) do
+        {:ok, %{workorder: %{runs: [run]}}} ->
+          {:noreply,
+           socket
+           |> push_patch(to: ~p"/projects/#{project}/runs/#{run}")}
+
+        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}}} ->
+          # note(frank): which kind of errors?
+          {:noreply, put_flash(socket, :error, "Oops! Could not create run")}
+
+        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
+          {
+            :noreply,
+            socket
+            |> assign_changeset(changeset)
+            |> mark_validated()
+            |> put_flash(:error, "Workflow could not be saved")
+          }
+
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
+
+        {:error, :workflow_deleted} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "Oops! You cannot modify a deleted workflow"
+           )}
+      end
+    end
+  end
+
   def handle_event("toggle_workflow_state", %{"workflow_state" => state}, socket) do
     changeset =
       Workflows.update_triggers_enabled_state(
@@ -2212,6 +2274,35 @@ defmodule LightningWeb.WorkflowLive.Edit do
            "Cannot save in snapshot mode, switch to the latest version."
          )}
     end
+  end
+
+  defp get_starting_job(%Workflow{} = workflow) do
+    trigger = hd(workflow.triggers)
+
+    edge =
+      Enum.find(workflow.edges, fn edge ->
+        edge.source_trigger_id == trigger.id
+      end)
+
+    Enum.find(workflow.jobs, fn job -> job.id == edge.target_job_id end)
+  end
+
+  defp get_starting_job(%Ecto.Changeset{} = workflow_changeset) do
+    trigger =
+      workflow_changeset
+      |> Ecto.Changeset.get_assoc(:triggers, :struct)
+      |> hd()
+
+    edge =
+      workflow_changeset
+      |> Ecto.Changeset.get_assoc(:edges, :struct)
+      |> Enum.find(fn edge ->
+        edge.source_trigger_id == trigger.id
+      end)
+
+    workflow_changeset
+    |> Ecto.Changeset.get_assoc(:jobs, :struct)
+    |> Enum.find(fn job -> job.id == edge.target_job_id end)
   end
 
   defp sync_to_github(socket, %{
@@ -3005,7 +3096,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       type="button"
       theme="primary"
     >
-    Run
+      Run
     </.button_link>
     """
   end
