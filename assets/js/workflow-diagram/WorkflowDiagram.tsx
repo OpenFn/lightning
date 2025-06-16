@@ -84,6 +84,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     edges,
     disabled,
     positions: fixedPositions,
+    options = { autolayout: true },
     updatePositions,
   } = useWorkflowStore();
 
@@ -159,8 +160,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
+    // const newModel = fromWorkflow(
+    //   workflow,
+    //   fixedPositions,
+    //   placeholders,
+    //   // Re-render the model based on whatever was last selected
+    //   // This handles first load and new node safely
+    //   chartCache.current.lastSelection
+    // );
+
+    // setModel(newModel);
+
     const { positions: prevPositions } = chartCache.current;
     const newModel = fromWorkflow(
+      // { jobs, triggers, edges },
       workflow,
       fixedPositions || prevPositions,
       placeholders,
@@ -169,39 +182,55 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       chartCache.current.lastSelection
     );
 
-    // Look at the new model structure through the edges
-    // This will tell us if there's been a structural change
-    // in the model and force an updaet
     const layoutId = shouldLayout(
       newModel.edges,
       chartCache.current.lastLayout
     );
-    if (fixedPositions) {
-      if (layoutId) {
-        updatePositions(fixedPositions);
 
-        chartCache.current.lastLayout = layoutId;
-        chartCache.current.positions = fixedPositions;
-      }
-      setModel(newModel);
-    } else if (flow && newModel.nodes.length) {
-      if (layoutId || fixedPositions === null) {
-        chartCache.current.lastLayout = layoutId;
-        forceLayout(newModel);
-      } else {
-        // If layout is id, ensure nodes have positions
-        // This is really only needed when there's a single trigger node
-        newModel.nodes.forEach(n => {
-          if (!n.position) {
-            n.position = { x: 0, y: 0 };
-          }
-        });
-        setModel(newModel);
-      }
+    if (options.autolayout) {
+      forceLayout(newModel);
     } else {
-      // reset chart cache
-      chartCache.current.positions = {};
+      // do nothing I guess
     }
+    // when do I setModel?
+    // need to use shallow diffing or call selectively
+    if (layoutId) {
+      setModel(newModel);
+    }
+
+    // // Look at the new model structure through the edges
+    // // This will tell us if there's been a structural change
+    // // in the model and force an update
+    // const layoutId = shouldLayout(
+    //   newModel.edges,
+    //   chartCache.current.lastLayout
+    // );
+    // if (fixedPositions) {
+    //   if (layoutId) {
+    //     updatePositions(fixedPositions);
+
+    //     chartCache.current.lastLayout = layoutId;
+    //     chartCache.current.positions = fixedPositions;
+    //   }
+    //   setModel(newModel);
+    // } else if (flow && newModel.nodes.length) {
+    //   if (layoutId || fixedPositions === null) {
+    //     chartCache.current.lastLayout = layoutId;
+    //     forceLayout(newModel);
+    //   } else {
+    //     // If layout is id, ensure nodes have positions
+    //     // This is really only needed when there's a single trigger node
+    //     newModel.nodes.forEach(n => {
+    //       if (!n.position) {
+    //         n.position = { x: 0, y: 0 };
+    //       }
+    //     });
+    //     setModel(newModel);
+    //   }
+    // } else {
+    //   // reset chart cache
+    //   chartCache.current.positions = {};
+    // }
   }, [workflow, flow, placeholders, el, updatePositions]);
 
   const onNodesChange = useCallback(
