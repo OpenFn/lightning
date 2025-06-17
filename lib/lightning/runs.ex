@@ -243,7 +243,9 @@ defmodule Lightning.Runs do
         # TODO: remove the requirement for events to be hydrated with a specific
         # set of preloads.
         runs
-        |> Enum.map(fn run -> Repo.preload(run, [:snapshot, :created_by, :starting_trigger]) end)
+        |> Enum.map(fn run ->
+          Repo.preload(run, [:snapshot, :created_by, :starting_trigger])
+        end)
         |> Enum.each(&Events.run_updated/1)
       end
     end)
