@@ -1,13 +1,13 @@
 import type { WithActionProps } from '#/react/lib/with-props';
 import React from 'react';
+import { randomUUID } from '../common';
+import { DEFAULT_TEXT } from '../editor/Editor';
 import {
   useWorkflowStore,
   type ChangeArgs,
   type PendingAction,
-  type WorkflowProps,
+  type WorkflowProps
 } from './store';
-import { randomUUID } from '../common';
-import { DEFAULT_TEXT } from '../editor/Editor';
 
 const createNewWorkflow = (): Required<ChangeArgs> => {
   const triggers = [
@@ -38,6 +38,7 @@ const createNewWorkflow = (): Required<ChangeArgs> => {
 
 // This component renders nothing. it just serves as a store sync to the backend
 export const WorkflowStore: WithActionProps = props => {
+  const { pushEventTo, handleEvent, children } = props;
   const pendingChanges = React.useRef<PendingAction[]>([]);
   const {
     applyPatches,
@@ -47,6 +48,7 @@ export const WorkflowStore: WithActionProps = props => {
     subscribe,
     setDisabled,
     setForceFit,
+    reset
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -54,7 +56,7 @@ export const WorkflowStore: WithActionProps = props => {
       return new Promise((resolve, reject) => {
         console.debug('pushing change', pendingChange);
         // How do we _undo_ the change if it fails?
-        props.pushEventTo('push-change', pendingChange, response => {
+        pushEventTo('push-change', pendingChange, response => {
           console.debug('push-change response', response);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           if (response && response.patches) applyPatches(response.patches);
@@ -62,7 +64,7 @@ export const WorkflowStore: WithActionProps = props => {
         });
       });
     },
-    [props, applyPatches]
+    [pushEventTo, applyPatches]
   );
 
   const processPendingChanges = React.useCallback(async () => {
@@ -81,33 +83,33 @@ export const WorkflowStore: WithActionProps = props => {
   }, [processPendingChanges, subscribe]);
 
   React.useEffect(() => {
-    props.handleEvent('patches-applied', (response: { patches: Patch[] }) => {
+    handleEvent('patches-applied', (response: { patches: Patch[] }) => {
       console.debug('patches-applied', response.patches);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
       if (response.patches) applyPatches(response.patches);
     });
-  }, [applyPatches, props]);
+  }, [applyPatches, handleEvent]);
 
   React.useEffect(() => {
-    props.handleEvent('state-applied', (response: { state: WorkflowProps }) => {
+    handleEvent('state-applied', (response: { state: WorkflowProps }) => {
       console.log('state-applied', response.state);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
       if (response.state) setState(response.state);
     });
-  }, [setState, props]);
+  }, [setState, handleEvent]);
 
   React.useEffect(() => {
-    props.handleEvent('navigate', (e: any) => {
+    handleEvent('navigate', (e: any) => {
       const id = new URL(window.location.href).searchParams.get('s');
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (e.patch) setSelection(id);
     });
     // force fitting
-    props.handleEvent('force-fit', () => {
+    handleEvent('force-fit', () => {
       setForceFit(true);
     });
-  }, [add, props.handleEvent, setSelection, setForceFit]);
+  }, [add, handleEvent, setSelection, setForceFit]);
 
   // Fetch initial state once on mount
   React.useEffect(() => {
@@ -119,7 +121,7 @@ export const WorkflowStore: WithActionProps = props => {
     );
     console.time(eventName);
 
-    props.pushEventTo(
+    pushEventTo(
       'get-current-state',
       {},
       (response: { workflow_params: WorkflowProps }) => {
@@ -134,7 +136,7 @@ export const WorkflowStore: WithActionProps = props => {
         console.debug('current-worflow-params processed', end.toISOString());
         console.timeEnd(eventName);
 
-        props.pushEventTo('workflow_editor_metrics_report', {
+        pushEventTo('workflow_editor_metrics_report', {
           metrics: [
             {
               event: eventName,
@@ -145,13 +147,19 @@ export const WorkflowStore: WithActionProps = props => {
         });
       }
     );
-  }, [props.pushEventTo, setState, add]);
+  }, [pushEventTo, setState, add]);
 
   React.useEffect(() => {
-    props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
+    handleEvent('set-disabled', (response: { disabled: boolean }) => {
       setDisabled(response.disabled);
     });
-  }, [props, setDisabled]);
+  }, [handleEvent, setDisabled]);
 
-  return <>{props.children}</>;
+  // clear store when store-component unmounted
+  React.useEffect(() => {
+    return () => {
+      reset();
+    }
+  }, [reset])
+  return <>{children}</>;
 };

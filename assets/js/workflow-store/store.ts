@@ -40,6 +40,7 @@ export interface WorkflowState extends WorkflowProps {
       | ((state: WorkflowState) => WorkflowState | Partial<WorkflowState>),
     replace?: boolean
   ) => void;
+  reset: () => void;
   observer: null | ((v: unknown) => void);
   subscribe: (cb: (v: unknown) => void) => void;
   add: (data: AddArgs) => void;
@@ -294,6 +295,9 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       }));
     },
     setState: set.bind(this),
+    reset: () => {
+      set(DEFAULT_PROPS);
+    },
     setSelection(value) {
       set(state => ({
         ...state,
