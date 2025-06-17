@@ -1955,7 +1955,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:ok, %{workorder: %{runs: [run]}}} ->
           {:noreply,
            socket
-           |> push_patch(to: ~p"/projects/#{project}/runs/#{run}")}
+           |> push_navigate(to: ~p"/projects/#{project}/runs/#{run}")}
 
         {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}}} ->
           # note(frank): which kind of errors?
