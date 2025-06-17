@@ -18,6 +18,7 @@ defmodule LightningWeb.RunLive.Streaming do
       Runs.get(run_id,
         include: [
           :created_by,
+          :starting_trigger,
           steps: [:job, snapshot: [triggers: :webhook_auth_methods]],
           workflow: [:project],
           snapshot: [triggers: :webhook_auth_methods]

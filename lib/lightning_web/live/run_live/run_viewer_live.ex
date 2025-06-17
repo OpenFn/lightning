@@ -60,10 +60,20 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                       </.link>
                     </:value>
                   </.list_item>
-                  <%= if run.created_by do %>
+                  <%= if run.created_by || run.starting_trigger do %>
                     <.list_item>
-                      <:label>Created by</:label>
-                      <:value>{run.created_by.email}</:value>
+                      <:label>Started by</:label>
+                      <:value>
+                        <%= cond do %>
+                          <% run.created_by -> %>
+                            {run.created_by.email}
+                          <% run.starting_trigger -> %>
+                            {String.capitalize(
+                              Atom.to_string(run.starting_trigger.type)
+                            )} trigger
+                          <% true -> %>
+                        <% end %>
+                      </:value>
                     </.list_item>
                   <% end %>
                   <.list_item>
