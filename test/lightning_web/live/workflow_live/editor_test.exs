@@ -343,7 +343,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       render_async(run_viewer)
 
       assert run_viewer
-             |> element("li:nth-child(5) dd", "Enqueued")
+             |> element("li:nth-child(6) dd", "Enqueued")
              |> has_element?()
     end
 
