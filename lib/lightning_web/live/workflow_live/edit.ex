@@ -1845,7 +1845,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       project: project,
       selected_job: selected_job,
-      current_user: current_user,
       workflow_params: workflow_params,
       has_presence_edit_priority: has_presence_edit_priority,
       workflow: workflow,
@@ -1853,6 +1852,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     } = socket.assigns
 
     manual_params = Map.get(params, "manual", %{})
+    from_start? = Map.get(params, "from_start", false)
 
     params =
       case form do
@@ -1869,117 +1869,38 @@ defmodule LightningWeb.WorkflowLive.Edit do
         get_workflow_by_id(workflow.id)
       end
 
-    with :ok <- check_user_can_manual_run_workflow(socket) do
-      case Helpers.run_workflow(
+    selected_job =
+      if from_start? do
+        get_starting_job(workflow_or_changeset)
+      else
+        selected_job
+      end
+
+    with {:ok, %{workorder: %{runs: [run]}, workflow: workflow}} <-
+           manual_run_workflow(
+             socket,
              workflow_or_changeset,
              params,
-             project: project,
-             selected_job: selected_job,
-             created_by: current_user
+             selected_job
            ) do
-        {:ok, %{workorder: workorder, workflow: workflow}} ->
-          %{runs: [run]} = workorder
-
-          Runs.subscribe(run)
-
-          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
-
-          # Get the dataclip for the run
-          dataclip = Invocation.get_dataclip_for_run(run.id)
-
-          {:noreply,
-           socket
-           |> assign_workflow(workflow, snapshot)
-           |> follow_run(run)
-           |> push_event("push-hash", %{"hash" => "log"})
-           |> push_event("manual_run_created", %{dataclip: dataclip})}
-
-        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
-          {:noreply,
-           socket
-           |> assign_manual_run_form(changeset)}
-
-        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
-          {
-            :noreply,
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-          }
-
-        {:error, %{text: message}} ->
-          {:noreply, put_flash(socket, :error, message)}
-
-        {:error, :workflow_deleted} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "Oops! You cannot modify a deleted workflow"
-           )}
-      end
-    end
-  end
-
-  def handle_event("manual_run_from_start", params, socket) do
-    %{
-      project: project,
-      current_user: current_user,
-      workflow_params: workflow_params,
-      has_presence_edit_priority: has_presence_edit_priority,
-      workflow: workflow
-    } = socket.assigns
-
-    manual_params = Map.get(params, "manual", %{})
-
-    socket = socket |> apply_params(workflow_params, :workflow)
-
-    workflow_or_changeset =
-      if has_presence_edit_priority do
-        socket.assigns.changeset
+      if from_start? do
+        {:noreply,
+         socket
+         |> push_navigate(to: ~p"/projects/#{project}/runs/#{run}")}
       else
-        get_workflow_by_id(workflow.id)
-      end
+        Runs.subscribe(run)
 
-    starting_job = get_starting_job(workflow_or_changeset)
+        snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
-    with :ok <- check_user_can_manual_run_workflow(socket) do
-      case Helpers.run_workflow(
-             workflow_or_changeset,
-             manual_params,
-             project: project,
-             selected_job: starting_job,
-             created_by: current_user
-           ) do
-        {:ok, %{workorder: %{runs: [run]}}} ->
-          {:noreply,
-           socket
-           |> push_navigate(to: ~p"/projects/#{project}/runs/#{run}")}
+        # Get the dataclip for the run
+        dataclip = Invocation.get_dataclip_for_run(run.id)
 
-        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}}} ->
-          # note(frank): which kind of errors?
-          {:noreply, put_flash(socket, :error, "Oops! Could not create run")}
-
-        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
-          {
-            :noreply,
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-          }
-
-        {:error, %{text: message}} ->
-          {:noreply, put_flash(socket, :error, message)}
-
-        {:error, :workflow_deleted} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "Oops! You cannot modify a deleted workflow"
-           )}
+        {:noreply,
+         socket
+         |> assign_workflow(workflow, snapshot)
+         |> follow_run(run)
+         |> push_event("push-hash", %{"hash" => "log"})
+         |> push_event("manual_run_created", %{dataclip: dataclip})}
       end
     end
   end
@@ -2214,6 +2135,53 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> mark_validated()
            |> put_flash(:error, "Workflow could not be saved")
            |> push_patches_applied(initial_params)}
+      end
+    end
+  end
+
+  defp manual_run_workflow(
+         socket,
+         workflow_or_changeset,
+         manual_params,
+         selected_job
+       ) do
+    %{project: project, current_user: current_user} = socket.assigns
+
+    with :ok <- check_user_can_manual_run_workflow(socket) do
+      case Helpers.run_workflow(
+             workflow_or_changeset,
+             manual_params,
+             project: project,
+             selected_job: selected_job,
+             created_by: current_user
+           ) do
+        {:ok, result} ->
+          {:ok, result}
+
+        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
+          {:noreply,
+           socket
+           |> assign_manual_run_form(changeset)}
+
+        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
+          {
+            :noreply,
+            socket
+            |> assign_changeset(changeset)
+            |> mark_validated()
+            |> put_flash(:error, "Workflow could not be saved")
+          }
+
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
+
+        {:error, :workflow_deleted} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "Oops! You cannot modify a deleted workflow"
+           )}
       end
     end
   end
