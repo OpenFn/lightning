@@ -60,6 +60,12 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                       </.link>
                     </:value>
                   </.list_item>
+                  <%= if run.created_by do %>
+                    <.list_item>
+                      <:label>Created by</:label>
+                      <:value>{run.created_by.email}</:value>
+                    </.list_item>
+                  <% end %>
                   <.list_item>
                     <:label>Started</:label>
                     <:value>
