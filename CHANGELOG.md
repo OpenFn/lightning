@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Show who started each run
+  [#3309](https://github.com/OpenFn/lightning/issues/3309)
+
 ### Changed
 
 ### Fixed
