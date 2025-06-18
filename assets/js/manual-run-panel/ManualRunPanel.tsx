@@ -18,6 +18,7 @@ import useQuery from '../hooks/useQuery';
 interface ManualRunPanelProps {
   job_id: string;
   selected_dataclip_id: string | null;
+  fixedHeight: boolean
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
@@ -28,7 +29,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     after,
     query: urlQuery,
   } = useQuery(['active_panel', 'type', 'before', 'after', 'query']);
-  const { pushEvent, job_id, selected_dataclip_id, navigate } = props;
+  const { pushEvent, job_id, selected_dataclip_id, navigate, fixedHeight = false } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
     active_panel
       ? (Number(active_panel) as unknown as SeletableOptions)
@@ -200,6 +201,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             clearFilter={clearFilter}
             selectedDates={selectedDates}
             setSelectedDates={setSelectedDates}
+            fixedHeight={fixedHeight}
           />
         );
       case SeletableOptions.CUSTOM:

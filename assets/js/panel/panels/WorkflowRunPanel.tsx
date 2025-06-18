@@ -45,14 +45,14 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
   }, [pushEvent])
 
   const startRun = React.useCallback(() => {
-    pushEvent("manual_run_submit", {...manualContent, from_start: true});
+    pushEvent("manual_run_submit", { ...manualContent, from_start: true });
   }, [pushEvent, manualContent])
 
-  return <div className="">
+  return <>
     <Panel
       heading="Select Input to start run"
       cancelUrl={cancel_url}
-      className="flex flex-col h-145 bg-red"
+      className="flex flex-col h-150 bg-red"
       {...actionProps}
       pushEvent={props.pushEvent}
       footer={
@@ -71,10 +71,10 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
       <ManualRunPanel
         {...actionProps}
         pushEvent={pushEventProxy}
-        pushEventTo={(title, payload) => { console.log("ev:to", title, payload) }}
         job_id={job_id}
         selected_dataclip_id={null}
+        fixedHeight
       />
     </Panel>
-  </div>
+  </>
 }

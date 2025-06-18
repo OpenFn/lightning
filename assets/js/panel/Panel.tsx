@@ -34,8 +34,8 @@ export const Panel: WithActionProps<PanelProps> = ({
             </div>
           </div>
         </div>
-        <div className="px-4 py-5 sm:p-6 grow flex flex-col">
-          <div className="md:gap-4 grow flex flex-col">{children}</div>
+        <div className="px-4 py-5 sm:p-6 grow flex flex-col overflow-visible">
+          <div className="md:gap-4 grow flex flex-col overflow-visible">{children}</div>
         </div>
         {footer && (
           <div className="p-3">
