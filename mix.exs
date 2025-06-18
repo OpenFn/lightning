@@ -211,7 +211,7 @@ defmodule Lightning.MixProject do
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",
-      homepage_url: "https://openfn.github.io/Lightning",
+      homepage_url: "https://openfn.github.io/lightning",
       groups_for_modules: [
         Accounts: [
           ~r/Lightning.Accounts/
