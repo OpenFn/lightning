@@ -24,6 +24,7 @@ and this project adheres to
 
 ### Fixed
 
+- Stop cleanup of snapshots (was causing data loss)
 - The application env `queue_result_retention_period` was previously pulling
   from a wrongly named `QUEUE_RESULT_RETENTION_PERIOD_SECONDS`; the calculation
   is actually done in minutes; we now set this env from
