@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- The ENV `QUEUE_RESULT_RETENTION_PERIOD_SECONDS` was improperly named and it now called `QUEUE_RESULT_RETENTION_PERIOD_MINUTES`
+
 ## [v2.13.1] - 2025-06-12
 
 ## [v2.13.1-pre] - 2025-06-11

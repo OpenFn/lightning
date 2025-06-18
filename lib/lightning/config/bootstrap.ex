@@ -289,7 +289,7 @@ defmodule Lightning.Config.Bootstrap do
 
     config :lightning,
            :queue_result_retention_period,
-           env!("QUEUE_RESULT_RETENTION_PERIOD_SECONDS", :integer, 60)
+           env!("QUEUE_RESULT_RETENTION_PERIOD_MINUTES", :integer, 60)
 
     config :lightning,
            :allow_signup,
