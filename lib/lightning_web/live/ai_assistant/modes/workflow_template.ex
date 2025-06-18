@@ -10,6 +10,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
+  require Logger
+
   alias Lightning.AiAssistant
   alias LightningWeb.Live.AiAssistant.ErrorHandler
 
@@ -158,6 +160,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   @impl true
   @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
   def query(session, content) do
+    Logger.info("Querying workflow template with content: #{inspect(content)}")
     AiAssistant.query_workflow(session, content)
   end
 

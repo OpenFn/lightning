@@ -47,6 +47,7 @@ defmodule LightningWeb.AiAssistant.Component do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:parent_id, assigns[:parent_id] || nil)
      |> assign(
        has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
      )
@@ -220,7 +221,7 @@ defmodule LightningWeb.AiAssistant.Component do
         :clear_template ->
           send_update(
             LightningWeb.WorkflowLive.NewWorkflowComponent,
-            id: socket.assigns.parent_component_id,
+            id: socket.assigns.parent_id,
             action: :template_selected,
             template: nil
           )
@@ -362,12 +363,20 @@ defmodule LightningWeb.AiAssistant.Component do
     ui_callback = fn event, data ->
       case event do
         :workflow_code_generated ->
-          send_update(
-            LightningWeb.WorkflowLive.NewWorkflowComponent,
-            id: socket.assigns.parent_component_id,
-            action: :template_selected,
-            template: %{code: data}
-          )
+          parent_id = socket.assigns.parent_id
+
+          # If parent_id is nil, send message to parent LiveView
+          # Otherwise, send_update to the component
+          if is_nil(parent_id) do
+            send(self(), {:workflow_code_generated, data})
+          else
+            send_update(
+              LightningWeb.WorkflowLive.NewWorkflowComponent,
+              id: parent_id,
+              action: :template_selected,
+              template: %{code: data}
+            )
+          end
 
         _ ->
           :ok
