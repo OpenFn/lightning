@@ -39,14 +39,13 @@ fi
 # Only retry if exit code is exactly 2
 if [ $EXIT_CODE -eq 2 ]; then
   set +e
-  # Retry failed tests, import coverage to know which tests failed, but output to separate directory
-  mkdir -p test/reports/failed
-  mix coveralls.json --import-cover coverage --export-coverage failed_coverage --failed -o test/reports/failed
+  # Retry failed tests but export with new name to preserve coverage report
+  mix coveralls.json --import-cover coverage --export-coverage failed_coverage --failed -o test/reports
   EXIT_CODE=$? # Overwrite with the second run's exit code
   set -e
   # Rename the failed test report if it exists
-  if [ -f "test/reports/failed/lightning-elixir_test_report.xml" ]; then
-    mv "test/reports/failed/lightning-elixir_test_report.xml" "test/reports/lightning-elixir_test_report-failed.xml"
+  if [ -f "test/reports/lightning-elixir_test_report.xml" ]; then
+    mv "test/reports/lightning-elixir_test_report.xml" "test/reports/lightning-elixir_test_report-failed.xml"
     echo "Renamed failed test report to lightning-elixir_test_report-failed.xml"
   fi
 fi
