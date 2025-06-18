@@ -1,6 +1,10 @@
 import Dagre from '../../vendor/dagre.cjs';
 import { timer } from 'd3-timer';
-import { getNodesBounds, type ReactFlowInstance } from '@xyflow/react';
+import {
+  getNodesBounds,
+  type ReactFlowInstance,
+  type XYPosition,
+} from '@xyflow/react';
 
 import { FIT_PADDING } from './constants';
 import type { Flow, Positions } from './types';
@@ -160,14 +164,23 @@ export const animate = (
     const transitions = to.nodes.map(node => {
       // We usually animate a node from its previous position
       let animateFrom = from.nodes.find(({ id }) => id === node.id);
-      if (!animateFrom || !animateFrom.position) {
-        // But if this a new node, animate from its parent (source)
+
+      // variable to store animation from
+      let fromPos: XYPosition | undefined;
+
+      // if it's a placeholder node. animate from parent
+      if (node.type === 'placeholder') {
         const edge = from.edges.find(({ target }) => target === node.id);
         animateFrom = from.nodes.find(({ id }) => id === edge!.source);
       }
+      // from node has position, animate from it
+      // else animate from my same position. - no movement
+      if (animateFrom && animateFrom.position) fromPos = animateFrom.position;
+      else fromPos = node.position;
+
       return {
         id: node.id,
-        from: animateFrom!.position || { x: 0, y: 0 },
+        from: fromPos,
         to: node.position,
         node,
       };
