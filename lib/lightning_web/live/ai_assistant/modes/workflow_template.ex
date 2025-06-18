@@ -279,37 +279,37 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   end
 
   @doc """
-  Handles post-processing after workflow template generation.
+  Extracts workflow YAML code from AI-generated responses.
 
-  Detects when the AI has generated workflow YAML code and triggers
-  appropriate UI updates to enable template application and preview.
+  Searches through the session or message to find any generated workflow
+  YAML code that can be applied as a template.
 
   ## Parameters
 
-  - `assigns` - Current LiveView assigns
   - `session_or_message` - Updated session or new message with potential YAML
-  - `ui_callback` - Function for triggering UI updates
+
+  ## Returns
+
+  - `%{yaml: String.t()}` - If workflow YAML was found
+  - `nil` - If no workflow code was generated
 
   ## Examples
 
       # When YAML is generated
-      handle_response_generated(assigns, session_with_yaml, ui_callback)
-      # Triggers :workflow_code_generated event with the YAML content
+      extract_generated_code(session_with_yaml)
+      # => %{yaml: "name: My Workflow\njobs:\n  ..."}
 
       # When no YAML is present
-      handle_response_generated(assigns, session_without_yaml, ui_callback)
-      # No UI update triggered, returns assigns unchanged
+      extract_generated_code(session_without_yaml)
+      # => nil
   """
   @impl true
-  @spec handle_response_generated(map(), map(), function()) :: map()
-  def handle_response_generated(assigns, session_or_message, ui_callback) do
-    case extract_workflow_code(session_or_message) do
-      nil ->
-        assigns
-
-      code ->
-        ui_callback.(:workflow_code_generated, code)
-        assigns
+  @spec extract_generated_code(ChatSession.t() | ChatMessage.t()) ::
+          %{yaml: String.t()} | nil
+  def extract_generated_code(session_or_message) do
+    case extract_workflow_yaml(session_or_message) do
+      nil -> nil
+      yaml -> %{yaml: yaml}
     end
   end
 
@@ -410,7 +410,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     ai_limit_result != :ok
   end
 
-  defp extract_workflow_code(%Lightning.AiAssistant.ChatSession{
+  defp extract_workflow_yaml(%Lightning.AiAssistant.ChatSession{
          messages: messages
        }) do
     messages
@@ -420,13 +420,13 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     end)
   end
 
-  defp extract_workflow_code(%Lightning.AiAssistant.ChatMessage{
+  defp extract_workflow_yaml(%Lightning.AiAssistant.ChatMessage{
          workflow_code: code
        }) do
     if has_workflow_code?(code), do: code
   end
 
-  defp extract_workflow_code(_), do: nil
+  defp extract_workflow_yaml(_), do: nil
 
   defp has_workflow_code?(code) when is_binary(code), do: code != ""
   defp has_workflow_code?(_), do: false

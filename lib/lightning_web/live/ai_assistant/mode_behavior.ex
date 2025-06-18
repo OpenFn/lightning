@@ -7,6 +7,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   callbacks to handle different types of AI assistance workflows.
   """
 
+  alias Lightning.AiAssistant.ChatMessage
+  alias Lightning.AiAssistant.ChatSession
   alias LightningWeb.Live.AiAssistant.PaginationMeta
 
   @doc """
@@ -432,47 +434,41 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   @callback metadata() :: map()
 
   @doc """
-  Handles post-processing after the AI generates a response.
+  Extracts generated code or templates from AI responses.
 
-  Called after successful AI response generation to allow mode-specific
-  handling, UI updates, or additional processing. The ui_callback parameter
-  enables triggering LiveView updates.
+  Called after successful AI response generation to extract any generated
+  code, templates, or other artifacts that should be made available to the UI.
 
   ## Parameters
 
-  - `assigns` - Current LiveView assigns
   - `session_or_message` - The updated session or generated message
-  - `ui_callback` - Function to call for triggering UI updates
 
   ## Returns
 
-  Updated assigns map with any mode-specific changes.
+  - `%{yaml: String.t()}` - If code/template was generated
+  - `nil` - If no extractable code was found
 
   ## Examples
 
-      # Workflow mode processes generated YAML
-      def handle_response_generated(assigns, session, ui_callback) do
-        if generated_workflow_yaml?(session) do
-          ui_callback.(:show_apply_template_button)
+      # Workflow mode extracts generated YAML
+      def extract_generated_code(session) do
+        case find_workflow_yaml(session) do
+          nil -> nil
+          yaml -> %{yaml: yaml}
         end
-        assigns
       end
 
-      # Job mode tracks successful assistance
-      def handle_response_generated(assigns, session, ui_callback) do
-        track_successful_assistance(session)
-        assigns
-      end
+      # Job mode doesn't generate extractable code
+      def extract_generated_code(_session_or_message), do: nil
 
   ## Default Implementation
 
-  Returns assigns unchanged - no additional processing.
+  Returns nil - no code extraction by default.
   """
-  @callback handle_response_generated(
-              assigns :: map(),
-              session_or_message :: map(),
-              ui_callback :: function()
-            ) :: map()
+  @callback extract_generated_code(
+              session_or_message :: ChatSession.t() | ChatMessage.t()
+            ) ::
+              %{yaml: String.t()} | nil
 
   @doc """
   Called when a new session starts, allows mode-specific initialization.
@@ -517,7 +513,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
     chat_title: 1,
     supports_template_generation?: 0,
     metadata: 0,
-    handle_response_generated: 3,
+    extract_generated_code: 1,
     on_session_start: 2
   ]
 
@@ -581,11 +577,9 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
       end
 
       @doc """
-      Default: no special response handling needed.
+      Default: no code extraction needed.
       """
-      def handle_response_generated(assigns, _session_or_message, _ui_callback) do
-        assigns
-      end
+      def extract_generated_code(_session_or_message), do: nil
 
       @doc """
       Default: no special session start handling needed.
@@ -596,7 +590,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
                      chat_title: 1,
                      supports_template_generation?: 0,
                      metadata: 0,
-                     handle_response_generated: 3,
+                     extract_generated_code: 1,
                      on_session_start: 2,
                      error_message: 1
     end

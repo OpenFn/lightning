@@ -360,36 +360,28 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp maybe_push_workflow_code(socket, session_or_message) do
-    ui_callback = fn event, data ->
-      case event do
-        :workflow_code_generated ->
-          parent_id = socket.assigns.parent_id
+    case socket.assigns.handler.extract_generated_code(session_or_message) do
+      nil ->
+        socket
 
-          # If parent_id is nil, send message to parent LiveView
-          # Otherwise, send_update to the component
-          if is_nil(parent_id) do
-            send(self(), {:workflow_code_generated, data})
-          else
-            send_update(
-              LightningWeb.WorkflowLive.NewWorkflowComponent,
-              id: parent_id,
-              action: :template_selected,
-              template: %{code: data}
-            )
-          end
+      %{yaml: yaml} ->
+        parent_id = socket.assigns.parent_id
 
-        _ ->
-          :ok
-      end
+        # If parent_id is nil, send message to parent LiveView
+        # Otherwise, send_update to the component
+        if is_nil(parent_id) do
+          send(self(), {:workflow_code_generated, yaml})
+        else
+          send_update(
+            LightningWeb.WorkflowLive.NewWorkflowComponent,
+            id: parent_id,
+            action: :template_selected,
+            template: %{code: yaml}
+          )
+        end
+
+        socket
     end
-
-    socket.assigns.handler.handle_response_generated(
-      socket.assigns,
-      session_or_message,
-      ui_callback
-    )
-
-    socket
   end
 
   defp render_ai_not_configured(assigns) do
