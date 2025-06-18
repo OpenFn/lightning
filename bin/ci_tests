@@ -5,22 +5,20 @@
 #
 # Rationale:
 #
-# This script runs the main test suite with coverage and generates a JUnit XML 
-# report for CI systems to consume.
+# This script runs the main test suite and generates a JUnit XML report for
+# CI systems to consume.
 # If the test run fails with exit code 2 (indicating some tests failed), it
-# reruns only the failed tests (without coverage) and generates a separate 
-# JUnit XML report for those.
+# reruns only the failed tests and generates a separate JUnit XML report for
+# those.
 # The script renames the reports to -all.xml (for the main run) and -failed.xml
 # (for the failed tests rerun) to avoid overwriting and to make CI artifacts
 # clear.
 # We use 'set +e' and 'set -e' around the test command to capture its exit
 # code without the script exiting immediately, so we can handle retries and
 # reporting logic robustly.
-# Coverage from the first run is exported to 'coverage' file. On retry, we import
-# this coverage (so --failed knows which tests failed) but export the retry 
-# coverage to a separate 'failed_coverage' file. The original 'coverage' file
-# remains intact for codecov, ensuring it receives full test suite coverage,
-# not just coverage from the small subset of failed tests that were retried.
+# Coverage from the first coveralls run is merged into the second (using
+# --import-cover), so that the final coverage report reflects both the main
+# and failed test runs.
 # This approach ensures that CI systems get both a full and a failed-only
 # test report, and that the script exits with the correct status for
 # downstream steps.
