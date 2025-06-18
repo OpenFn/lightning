@@ -24,6 +24,12 @@ and this project adheres to
 
 ### Fixed
 
+- The application env `queue_result_retention_period` was previously pulling
+  from a wrongly named `QUEUE_RESULT_RETENTION_PERIOD_SECONDS`; the calculation
+  is actually done in minutes; we now set this env from
+  `QUEUE_RESULT_RETENTION_PERIOD_MINUTES`
+  [#3316](https://github.com/OpenFn/lightning/issues/3316)
+
 ## [v2.13.1] - 2025-06-12
 
 ## [v2.13.1-pre] - 2025-06-11
