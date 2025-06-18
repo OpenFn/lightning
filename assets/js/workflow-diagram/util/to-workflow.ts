@@ -11,6 +11,7 @@ const model = (model: Flow.Model) => {
     triggers: [],
     jobs: [],
     edges: [],
+    positions: {},
   };
 
   model.nodes.forEach(node => {
@@ -27,6 +28,7 @@ const model = (model: Flow.Model) => {
       workflow.triggers.push(wfNode as Lightning.TriggerNode);
     } else {
       workflow.jobs.push(wfNode as Lightning.JobNode);
+      workflow.positions[node.id] = { x: node.position.x, y: node.position.y };
     }
   });
 

@@ -53,9 +53,12 @@ export const create = (
   return newModel;
 };
 
+const reset_data = { nodes: [], edges: [] };
+
 export default (
   el: HTMLElement | null | undefined,
-  requestSelectionChange: (id: string | null) => void // TODO more like changeSelection
+  requestSelectionChange: (id: string | null) => void, // TODO more like changeSelection
+  renderWithPlaceHolder: (placeholders: Flow.Model) => void
 ) => {
   const { add: addTo } = useWorkflowStore();
   // TODO in new-workflow, we need to take a placeholder as a prop
@@ -69,7 +72,10 @@ export default (
       // Generate a placeholder node and edge
       const updated = create(parentNode, position);
       setPlaceholders(updated);
+      // call for a render with this placeholder
+      renderWithPlaceHolder(updated);
 
+      // request the placeholder is selected
       requestSelectionChange(updated.nodes[0].id);
     },
     []
@@ -79,20 +85,26 @@ export default (
     (evt: CustomEvent<any>) => {
       const { id, name } = evt.detail;
 
-      // reset the chart
-      setPlaceholders({ nodes: [], edges: [] });
-
-      // Update the store
+      // update the single placeholder in state with a name
       placeholders.nodes[0].data.name = name;
-      addTo(toWorkflow(placeholders));
+      placeholders.nodes[0].id = id; // hmmm
 
+      // commit this placeholder to the store
+      const modelWithPlaceholder = toWorkflow(placeholders);
+      addTo(modelWithPlaceholder);
+
+      // clear placeholder state after it's been commited to the store.
+      setPlaceholders(reset_data);
+
+      // request that this newly created node is selected
       requestSelectionChange(id);
     },
     [placeholders]
   );
 
   const cancel = useCallback((_evt?: CustomEvent<any>) => {
-    setPlaceholders({ nodes: [], edges: [] });
+    setPlaceholders(reset_data);
+    renderWithPlaceHolder(reset_data);
   }, []);
 
   useEffect(() => {

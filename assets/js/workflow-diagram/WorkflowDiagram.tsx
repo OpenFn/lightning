@@ -85,38 +85,51 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     disabled,
     positions: fixedPositions,
     updatePositions,
+    init,
   } = useWorkflowStore();
 
+  // state to keep model & flow instance
+  // model - contains edges & nodes for the diagrammer
+  // flow - instance of the diagrammer
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+  const [flow, setFlow] = useState<ReactFlowInstance>();
 
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
+
+  const forceLayout = useCallback(
+    (_model: Flow.Model, _flow: ReactFlowInstance) => {
+      const viewBounds = {
+        width: workflowDiagramRef.current?.clientWidth ?? 0,
+        height: workflowDiagramRef.current?.clientHeight ?? 0,
+      };
+      layout(_model, setModel, _flow, viewBounds, {
+        duration: props.layoutDuration ?? LAYOUT_DURATION,
+        forceFit: props.forceFit,
+      }).then(positions => {
+        // Note we don't update positions until the animation has finished
+        chartCache.current.positions = positions;
+      });
+    },
+    [flow, model]
+  );
 
   const toggleAutoLayout = useCallback(() => {
     if (fixedPositions) {
       // set positions to null to enable auto layout
       updatePositions(null);
-      forceLayout();
+      forceLayout(model, flow);
     } else {
       // fix positions to enable manual layout
       updatePositions(chartCache.current.positions);
     }
-  }, [fixedPositions]);
+  }, [fixedPositions, model, flow, updatePositions, forceLayout]);
 
   const updateSelection = useCallback(
     (id?: string | null) => {
-      id = id || null;
-
-      chartCache.current.lastSelection = id;
-      onSelectionChange(id);
+      onSelectionChange(id ?? null);
     },
-    [onSelectionChange, selection]
+    [onSelectionChange]
   );
-
-  const {
-    placeholders,
-    add: addPlaceholder,
-    cancel: cancelPlaceholder,
-  } = usePlaceholders(el, updateSelection);
 
   const workflow = React.useMemo(
     () => ({
@@ -136,85 +149,41 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     lastSelection: selection,
   });
 
-  const [flow, setFlow] = useState<ReactFlowInstance>();
+  const modelFromWorkflow = useCallback((placeholders: Flow.Model) => {
+    const _model = fromWorkflow(workflow, fixedPositions, placeholders, selection);
+    if (!fixedPositions) forceLayout(_model, flow);
+    else setModel(_model)
+  }, [fixedPositions, workflow, flow, forceLayout, selection])
 
-  const forceLayout = useCallback(
-    (newModel?: Flow.Model) => {
-      const viewBounds = {
-        width: workflowDiagramRef.current?.clientWidth ?? 0,
-        height: workflowDiagramRef.current?.clientHeight ?? 0,
-      };
-      layout(newModel ?? model, setModel, flow, viewBounds, {
-        duration: props.layoutDuration ?? LAYOUT_DURATION,
-        forceFit: props.forceFit,
-      }).then(positions => {
-        // Note we don't update positions until the animation has finished
-        chartCache.current.positions = positions;
-      });
-    },
-    [flow, model]
-  );
-
-  // Respond to changes pushed into the component from outside
-  // This usually means the workflow has changed or its the first load, so we don't want to animate
-  // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    const { positions: prevPositions } = chartCache.current;
-    const newModel = fromWorkflow(
-      workflow,
-      fixedPositions || prevPositions,
-      placeholders,
-      // Re-render the model based on whatever was last selected
-      // This handles first load and new node safely
-      chartCache.current.lastSelection
-    );
+    // when store is not initialized. don't create a model yet.
+    if (!init) return;
+    modelFromWorkflow()
+  }, [init, workflow, selection])
 
-    // Look at the new model structure through the edges
-    // This will tell us if there's been a structural change
-    // in the model and force an updaet
-    const layoutId = shouldLayout(
-      newModel.edges,
-      chartCache.current.lastLayout
-    );
-    if (fixedPositions) {
-      if (layoutId) {
-        updatePositions(fixedPositions);
+  // function being passed to `usePlaceholders` can be stale because it's a useCallback. 
+  // we use a ref to keep updating this function.
+  const modelFromWorkflowRef = useRef(modelFromWorkflow);
+  useEffect(() => {
+    modelFromWorkflowRef.current = modelFromWorkflow;
+  }, [modelFromWorkflow]);
 
-        chartCache.current.lastLayout = layoutId;
-        chartCache.current.positions = fixedPositions;
-      }
-      setModel(newModel);
-    } else if (flow && newModel.nodes.length) {
-      if (layoutId || fixedPositions === null) {
-        chartCache.current.lastLayout = layoutId;
-        forceLayout(newModel);
-      } else {
-        // If layout is id, ensure nodes have positions
-        // This is really only needed when there's a single trigger node
-        newModel.nodes.forEach(n => {
-          if (!n.position) {
-            n.position = { x: 0, y: 0 };
-          }
-        });
-        setModel(newModel);
-      }
-    } else {
-      // reset chart cache
-      chartCache.current.positions = {};
-    }
-  }, [workflow, flow, placeholders, el, updatePositions]);
+  const {
+    add: addPlaceholder,
+    cancel: cancelPlaceholder,
+  } = usePlaceholders(el, updateSelection, (place) => modelFromWorkflowRef.current(place));
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const newNodes = applyNodeChanges(changes, model.nodes);
       setModel({ nodes: newNodes, edges: model.edges });
 
+      // FIXME: likely to be removed
       if (fixedPositions) {
         const newPositions = newNodes.reduce((obj, next) => {
           obj[next.id] = next.position;
           return obj;
         }, {} as Positions);
-        chartCache.current.positions = newPositions;
         updatePositions(newPositions);
       }
     },
@@ -226,7 +195,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       if (node.type != 'placeholder') cancelPlaceholder();
       updateSelection(node.id);
     },
-    [updateSelection]
+    [updateSelection, cancelPlaceholder]
   );
 
   const handleEdgeClick = useCallback(
@@ -234,7 +203,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       cancelPlaceholder();
       updateSelection(edge.id);
     },
-    [updateSelection]
+    [updateSelection, cancelPlaceholder]
   );
 
   const handleBackgroundClick = useCallback(
@@ -247,7 +216,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         updateSelection(null);
       }
     },
-    [updateSelection]
+    [updateSelection, cancelPlaceholder]
   );
 
   // Trigger a fit to bounds when the parent div changes size
@@ -348,7 +317,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             )}
           </ControlButton>
           <ControlButton
-            onClick={() => forceLayout()}
+            onClick={() => forceLayout(model, flow)}
             data-tooltip="Force auto-layout (override all manual positions)"
           >
             <span className="text-black hero-squares-2x2 w-4 h-4" />

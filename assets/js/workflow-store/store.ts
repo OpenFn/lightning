@@ -32,6 +32,7 @@ export type WorkflowProps = {
 
 export interface WorkflowState extends WorkflowProps {
   forceFit: boolean;
+  init: boolean;
   setForceFit: (v: boolean) => void;
   setState: (
     partial:
@@ -40,6 +41,7 @@ export interface WorkflowState extends WorkflowProps {
       | ((state: WorkflowState) => WorkflowState | Partial<WorkflowState>),
     replace?: boolean
   ) => void;
+  reset: () => void;
   observer: null | ((v: unknown) => void);
   subscribe: (cb: (v: unknown) => void) => void;
   add: (data: AddArgs) => void;
@@ -130,6 +132,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
     setForceFit(v) {
       set({ forceFit: v });
     },
+    init: false,
     observer: null,
     subscribe: cb => {
       if (get().observer) return;
@@ -142,16 +145,28 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
         proposeChanges(
           state,
           draft => {
-            (['jobs', 'triggers', 'edges'] as const).forEach(
-              <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
+            (['jobs', 'triggers', 'edges', 'positions'] as const).forEach(
+              <K extends 'jobs' | 'triggers' | 'edges' | 'positions'>(
+                key: K
+              ) => {
                 const change = data[key];
-                if (change) {
-                  change.forEach((item: NonNullable<ChangeArgs[K]>[number]) => {
-                    if (!item.id) {
-                      item.id = randomUUID();
-                    }
-                    draft[key].push(item);
-                  });
+                if (change && typeof change === 'object') {
+                  if (Array.isArray(change)) {
+                    // update an array
+                    change.forEach(
+                      (item: NonNullable<ChangeArgs[K]>[number]) => {
+                        if (!item.id) {
+                          item.id = randomUUID();
+                        }
+                        draft[key].push(item);
+                      }
+                    );
+                  } else {
+                    // update a plain object literal
+                    Object.entries(change).forEach(([ckey, cvalue]) => {
+                      if (draft[key]) draft[key][ckey] = cvalue;
+                    });
+                  }
                 }
               }
             );
@@ -294,6 +309,9 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       }));
     },
     setState: set.bind(this),
+    reset: () => {
+      set({ ...DEFAULT_PROPS, init: false });
+    },
     setSelection(value) {
       set(state => ({
         ...state,
