@@ -21,11 +21,15 @@ and this project adheres to
 
 ### Fixed
 
-## [v2.13.2-pre] - 2025-06-18
+## [v2.13.2] - 2025-06-18
 
-⚠️️ Please note that this version fixes an issue that caused data loss when
-snapshots were cleaned. Additional runs related to pre-existing work orders were
-being deleted before their retention period.
+⚠️️ Please note that **this version fixes an issue that caused premature run
+history deletion** when snapshots were cleaned. Certain additional runs related
+to pre-existing work orders were being deleted before their retention period.
+This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
+`latest` you'd see this bug come out in `v2.13.0` on June 4th.
+
+## [v2.13.2-pre] - 2025-06-18
 
 ### Added
 
