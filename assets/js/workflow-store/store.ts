@@ -32,6 +32,7 @@ export type WorkflowProps = {
 
 export interface WorkflowState extends WorkflowProps {
   forceFit: boolean;
+  init: boolean;
   setForceFit: (v: boolean) => void;
   setState: (
     partial:
@@ -131,6 +132,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
     setForceFit(v) {
       set({ forceFit: v });
     },
+    init: false,
     observer: null,
     subscribe: cb => {
       if (get().observer) return;
@@ -308,7 +310,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
     },
     setState: set.bind(this),
     reset: () => {
-      set(DEFAULT_PROPS);
+      set({ ...DEFAULT_PROPS, init: false });
     },
     setSelection(value) {
       set(state => ({

@@ -94,9 +94,12 @@ export const WorkflowStore: WithActionProps = props => {
     handleEvent('state-applied', (response: { state: WorkflowProps }) => {
       console.log('state-applied', response.state);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response.state) setState(response.state);
+      if (response.state) {
+        reset();
+        setTimeout(() => setState({ ...response.state, init: true }), 0)
+      }
     });
-  }, [setState, handleEvent]);
+  }, [setState, handleEvent, reset]);
 
   React.useEffect(() => {
     handleEvent('navigate', (e: any) => {
@@ -126,7 +129,7 @@ export const WorkflowStore: WithActionProps = props => {
       {},
       (response: { workflow_params: WorkflowProps }) => {
         const { workflow_params } = response;
-        setState(workflow_params);
+        setState({ ...workflow_params, init: true });
         if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
           const diff = createNewWorkflow();
           add(diff);
