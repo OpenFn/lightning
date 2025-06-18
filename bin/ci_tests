@@ -16,9 +16,11 @@
 # We use 'set +e' and 'set -e' around the test command to capture its exit
 # code without the script exiting immediately, so we can handle retries and
 # reporting logic robustly.
-# Coverage is only generated from the first (complete) test run to ensure
-# codecov receives the full test suite coverage, not just the coverage from
-# the small subset of failed tests that were retried.
+# Coverage from the first run is exported to 'coverage' file. On retry, we import
+# this coverage (so --failed knows which tests failed) but export the retry 
+# coverage to a separate 'failed_coverage' file. The original 'coverage' file
+# remains intact for codecov, ensuring it receives full test suite coverage,
+# not just coverage from the small subset of failed tests that were retried.
 # This approach ensures that CI systems get both a full and a failed-only
 # test report, and that the script exits with the correct status for
 # downstream steps.
@@ -39,11 +41,16 @@ fi
 # Only retry if exit code is exactly 2
 if [ $EXIT_CODE -eq 2 ]; then
   set +e
-  # Retry failed tests without generating coverage (we already have full coverage from first run)
-  mix test --failed --junit-report-dir test/reports --junit-report-file lightning-elixir_test_report-failed.xml
+  # Retry failed tests, import coverage to know which tests failed, but output to separate directory
+  mkdir -p test/reports/failed
+  mix coveralls.json --import-cover coverage --export-coverage failed_coverage --failed -o test/reports/failed
   EXIT_CODE=$? # Overwrite with the second run's exit code
   set -e
-  echo "Re-ran failed tests and generated lightning-elixir_test_report-failed.xml"
+  # Rename the failed test report if it exists
+  if [ -f "test/reports/failed/lightning-elixir_test_report.xml" ]; then
+    mv "test/reports/failed/lightning-elixir_test_report.xml" "test/reports/lightning-elixir_test_report-failed.xml"
+    echo "Renamed failed test report to lightning-elixir_test_report-failed.xml"
+  fi
 fi
 
 exit $EXIT_CODE
