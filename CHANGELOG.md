@@ -17,6 +17,18 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.13.2-pre] - 2025-06-18
+
+⚠️️ Please note that this version fixes an issue that caused data loss when
+snapshots were cleaned. Additional runs related to pre-existing work orders were
+being deleted before their retention period.
+
+### Added
+
 - Show who started each run
   [#3309](https://github.com/OpenFn/lightning/issues/3309)
 
