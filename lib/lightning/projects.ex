@@ -1015,52 +1015,52 @@ defmodule Lightning.Projects do
     :ok
   end
 
-  defp delete_unused_snapshots(workorders_query) do
-    batch_size = 100
+  # defp delete_unused_snapshots(workorders_query) do
+  #   batch_size = 100
 
-    unused_snapshots_query =
-      from(ws in Snapshot,
-        as: :snapshot,
-        join: w in assoc(ws, :workflow),
-        join: wo in subquery(workorders_query),
-        on: wo.workflow_id == w.id,
-        where:
-          not exists(
-            from(w2 in Workflow,
-              where:
-                w2.id == parent_as(:snapshot).workflow_id and
-                  parent_as(:snapshot).lock_version == w2.lock_version,
-              select: 1
-            )
-          ),
-        where:
-          not exists(
-            from(wo2 in WorkOrder,
-              where: wo2.snapshot_id == parent_as(:snapshot).id,
-              select: 1
-            )
-          ),
-        select: ws.id
-      )
+  #   unused_snapshots_query =
+  #     from(ws in Snapshot,
+  #       as: :snapshot,
+  #       join: w in assoc(ws, :workflow),
+  #       join: wo in subquery(workorders_query),
+  #       on: wo.workflow_id == w.id,
+  #       where:
+  #         not exists(
+  #           from(w2 in Workflow,
+  #             where:
+  #               w2.id == parent_as(:snapshot).workflow_id and
+  #                 parent_as(:snapshot).lock_version == w2.lock_version,
+  #             select: 1
+  #           )
+  #         ),
+  #       where:
+  #         not exists(
+  #           from(wo2 in WorkOrder,
+  #             where: wo2.snapshot_id == parent_as(:snapshot).id,
+  #             select: 1
+  #           )
+  #         ),
+  #       select: ws.id
+  #     )
 
-    total_deleted =
-      Stream.repeatedly(fn ->
-        unused_ids =
-          unused_snapshots_query |> limit(^batch_size) |> Repo.all()
+  #   total_deleted =
+  #     Stream.repeatedly(fn ->
+  #       unused_ids =
+  #         unused_snapshots_query |> limit(^batch_size) |> Repo.all()
 
-        if unused_ids == [], do: nil, else: unused_ids
-      end)
-      |> Stream.take_while(& &1)
-      |> Enum.reduce(0, fn ids, acc ->
-        {count, _} =
-          from(s in Snapshot, where: s.id in ^ids)
-          |> Repo.delete_all(returning: false)
+  #       if unused_ids == [], do: nil, else: unused_ids
+  #     end)
+  #     |> Stream.take_while(& &1)
+  #     |> Enum.reduce(0, fn ids, acc ->
+  #       {count, _} =
+  #         from(s in Snapshot, where: s.id in ^ids)
+  #         |> Repo.delete_all(returning: false)
 
-        acc + count
-      end)
+  #       acc + count
+  #     end)
 
-    {total_deleted, nil}
-  end
+  #   {total_deleted, nil}
+  # end
 
   defp delete_dataclips(dataclips_query, batch_size) do
     dataclips_count = Repo.aggregate(dataclips_query, :count)
