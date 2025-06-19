@@ -3498,6 +3498,38 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_redirected(view, ~p"/projects/#{project}/runs/#{created_run}")
     end
+
+    test "creates run from specific job", %{
+      conn: conn,
+      project: project,
+      test: test
+    } do
+      %{jobs: [job_1, _job_2 | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}",
+          on_error: :raise
+        )
+
+      body = Jason.encode!(%{test: test})
+
+      refute Lightning.Repo.get_by(Lightning.Run, starting_job_id: job_2.id)
+
+      render_click(view, "manual_run_submit", %{
+        manual: %{body: body},
+        from_job: job_2.id
+      })
+
+      assert created_run =
+               Lightning.Repo.get_by(Lightning.Run, starting_job_id: job_2.id)
+
+      assert_redirected(view, ~p"/projects/#{project}/runs/#{created_run}")
+    end
   end
 
   defp log_viewer_selected_level(log_viewer) do
