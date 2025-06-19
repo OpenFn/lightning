@@ -55,6 +55,8 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 
 - Report AI Assistant errors to Sentry
   [#3010](https://github.com/OpenFn/lightning/issues/3010)
+- Do not validate edge js condition expression
+  [#3028](https://github.com/OpenFn/lightning/issues/3028)
 
 ### Fixed
 
