@@ -3504,7 +3504,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project: project,
       test: test
     } do
-      %{jobs: [job_1, _job_2 | _rest]} =
+      %{jobs: [_job_1, job_2 | _rest]} =
         workflow = insert(:complex_workflow, project: project)
 
       Lightning.Workflows.Snapshot.create(workflow)
