@@ -1275,350 +1275,39 @@ defmodule Lightning.Credentials do
     * `user_id` - User ID associated with the token
     * `oauth_client_id` - OAuth client ID
     * `scopes` - List of scopes for the token
-    * `is_update` - Whether this is an update to an existing token
 
   ## Returns
     * `{:ok, token_data}` - Token data is valid
     * `{:error, reason}` - Token data is invalid with reason
+
+  ## Refresh Token Logic
+  A refresh token is only required for completely new OAuth connections.
+  It's NOT required if:
+  - An existing token already exists for this user/client/scope combination
+  - The new token data includes a refresh token
   """
-  def validate_oauth_token_data(
-        token_data,
-        user_id,
-        oauth_client_id,
-        scopes,
-        is_update \\ false
-      )
 
-  def validate_oauth_token_data(
-        token_data,
-        _user_id,
-        _oauth_client_id,
-        _scopes,
-        _is_update
-      )
-      when not is_map(token_data) do
-    {:error, "Invalid OAuth token body"}
-  end
+  defdelegate validate_oauth_token_data(
+                token_data,
+                user_id,
+                oauth_client_id,
+                scopes
+              ),
+              to: Lightning.Credentials.OAuthValidation,
+              as: :validate_token_data
 
-  def validate_oauth_token_data(
-        _token_data,
-        _user_id,
-        _oauth_client_id,
-        scopes,
-        _is_update
-      )
-      when is_nil(scopes) do
-    {:error, "Missing required OAuth field: scope"}
-  end
+  defdelegate validate_scope_grant(token_data, expected_scopes),
+    to: Lightning.Credentials.OAuthValidation
 
-  def validate_oauth_token_data(
-        token_data,
-        user_id,
-        oauth_client_id,
-        scopes,
-        is_update
-      ) do
-    normalized_data = normalize_keys(token_data)
+  defdelegate find_best_matching_token_for_scopes(
+                user_id,
+                oauth_client_id,
+                requested_scopes
+              ),
+              to: Lightning.Credentials.OAuthValidation
 
-    validate_with_access_token(
-      normalized_data,
-      user_id,
-      oauth_client_id,
-      scopes,
-      is_update
-    )
-  end
-
-  defp validate_with_access_token(
-         %{"access_token" => _} = normalized_data,
-         user_id,
-         oauth_client_id,
-         scopes,
-         is_update
-       ) do
-    validate_refresh_token_and_expiration(
-      normalized_data,
-      user_id,
-      oauth_client_id,
-      scopes,
-      is_update
-    )
-  end
-
-  defp validate_with_access_token(
-         _,
-         _user_id,
-         _oauth_client_id,
-         _scopes,
-         _is_update
-       ) do
-    {:error, "Missing required OAuth field: access_token"}
-  end
-
-  defp validate_refresh_token_and_expiration(
-         normalized_data,
-         user_id,
-         oauth_client_id,
-         scopes,
-         is_update
-       ) do
-    has_refresh_token? = Map.has_key?(normalized_data, "refresh_token")
-
-    existing_token_exists? =
-      token_exists?(user_id, oauth_client_id, scopes)
-
-    cond do
-      is_update ->
-        validate_expiration_fields(normalized_data)
-
-      existing_token_exists? ->
-        validate_expiration_fields(normalized_data)
-
-      has_refresh_token? ->
-        validate_expiration_fields(normalized_data)
-
-      true ->
-        {:error, "Missing refresh_token for new OAuth connection"}
-    end
-  end
-
-  defp token_exists?(nil, _, _), do: false
-  defp token_exists?(_, nil, _), do: false
-  defp token_exists?(_, _, nil), do: false
-
-  defp token_exists?(user_id, oauth_client_id, scopes) do
-    find_best_matching_token_for_scopes(
-      user_id,
-      oauth_client_id,
-      scopes
-    ) != nil
-  end
-
-  defp validate_expiration_fields(token_data) do
-    if has_expiration_field?(token_data) do
-      {:ok, token_data}
-    else
-      {:error,
-       "Missing expiration field: either expires_in or expires_at is required"}
-    end
-  end
-
-  defp has_expiration_field?(token_data) do
-    expires_fields = ["expires_in", "expires_at"]
-    Enum.any?(expires_fields, &Map.has_key?(token_data, &1))
-  end
-
-  @doc """
-    Finds the most appropriate OAuth token for a user that matches the requested scopes.
-
-    This function implements a sophisticated token matching algorithm that considers:
-    1. Mandatory scopes (required by the OAuth client but not unique to specific services)
-    2. Service-specific scopes (like drive, calendar, mail, etc.)
-
-    ## Matching Algorithm
-
-    The function first fetches all OAuth tokens that belong to the user and match the
-    client's credentials. Then it selects the best matching token based on these rules:
-
-    For requests with only mandatory scopes:
-    - Returns the token with the fewest additional non-mandatory scopes
-    - If tied, selects the most recently updated token
-
-    For requests with service-specific scopes:
-    - Filters to tokens with at least one matching service-specific scope
-    - Ranks by: exact match, most matching scopes, fewest extra scopes, most recent update
-
-    ## Complexity Analysis
-
-    Time Complexity:
-    - Best case (when oauth_client_id is nil): O(1)
-    - Worst case: O(log N + k × s) where:
-      - N = database table size
-      - k = number of tokens for the user with matching client credentials
-      - s = number of scopes being evaluated
-
-    Space Complexity:
-    - O(k + s) for storing retrieved tokens and scope sets
-
-    In practice, performance is excellent as k and s are typically small values.
-
-    ## Parameters
-      - `user_id`: The ID of the user who owns the tokens
-      - `oauth_client_id`: The ID of the OAuth client to match tokens for
-      - `requested_scopes`: List of OAuth scopes being requested
-
-    ## Returns
-      - The best matching `OauthToken` struct
-      - `nil` if:
-        - `oauth_client_id` is nil
-        - No client exists with the given ID
-        - No tokens match the requested criteria
-  """
-  @spec find_best_matching_token_for_scopes(
-          user_id :: Ecto.UUID.t(),
-          oauth_client_id :: Ecto.UUID.t() | nil,
-          requested_scopes :: [String.t()]
-        ) :: OauthToken.t() | nil
-
-  def find_best_matching_token_for_scopes(_user_id, nil, _requested_scopes) do
-    nil
-  end
-
-  def find_best_matching_token_for_scopes(
-        user_id,
-        oauth_client_id,
-        requested_scopes
-      )
-      when is_list(requested_scopes) do
-    case Repo.get(OauthClient, oauth_client_id) do
-      nil ->
-        nil
-
-      %OauthClient{mandatory_scopes: mandatory_scopes} ->
-        fetch_tokens_with_matching_client_credentials(user_id, oauth_client_id)
-        |> select_best_matching_token(
-          requested_scopes,
-          mandatory_scopes
-        )
-    end
-  end
-
-  defp fetch_tokens_with_matching_client_credentials(user_id, oauth_client_id) do
-    Ecto.Query.from(token in OauthToken,
-      join: token_client in OauthClient,
-      on: token.oauth_client_id == token_client.id,
-      join: requested_client in OauthClient,
-      on: requested_client.id == ^oauth_client_id,
-      where:
-        token.user_id == ^user_id and
-          token_client.client_id == requested_client.client_id and
-          token_client.client_secret == requested_client.client_secret
-    )
-    |> Lightning.Repo.all()
-  end
-
-  defp select_best_matching_token(
-         available_tokens,
-         requested_scopes,
-         mandatory_scopes_string
-       ) do
-    mandatory_scopes = normalize_scopes(mandatory_scopes_string, ",")
-
-    requested_scope_set = MapSet.new(requested_scopes)
-    mandatory_scope_set = MapSet.new(mandatory_scopes)
-
-    effective_requested_scopes =
-      MapSet.difference(requested_scope_set, mandatory_scope_set)
-
-    if MapSet.size(effective_requested_scopes) == 0 do
-      available_tokens
-      |> Enum.min_by(
-        fn token ->
-          token_scope_set = MapSet.new(token.scopes)
-
-          effective_token_scopes =
-            MapSet.difference(token_scope_set, mandatory_scope_set)
-
-          {MapSet.size(effective_token_scopes),
-           -DateTime.to_unix(token.updated_at)}
-        end,
-        fn -> nil end
-      )
-    else
-      available_tokens
-      |> Enum.filter(fn token ->
-        token_scope_set = MapSet.new(token.scopes)
-
-        effective_token_scopes =
-          MapSet.difference(token_scope_set, mandatory_scope_set)
-
-        non_mandatory_overlap =
-          MapSet.intersection(effective_token_scopes, effective_requested_scopes)
-          |> MapSet.size()
-
-        non_mandatory_overlap > 0
-      end)
-      |> Enum.max_by(
-        fn token ->
-          token_scope_set = MapSet.new(token.scopes)
-
-          effective_token_scopes =
-            MapSet.difference(token_scope_set, mandatory_scope_set)
-
-          matching_scope_count =
-            MapSet.intersection(
-              effective_token_scopes,
-              effective_requested_scopes
-            )
-            |> MapSet.size()
-
-          unrequested_scope_count =
-            MapSet.difference(effective_token_scopes, effective_requested_scopes)
-            |> MapSet.size()
-
-          effective_requested_count = MapSet.size(effective_requested_scopes)
-
-          exact_match? =
-            matching_scope_count == effective_requested_count &&
-              unrequested_scope_count == 0
-
-          last_updated = DateTime.to_unix(token.updated_at)
-
-          {if(exact_match?, do: 1, else: 0), matching_scope_count,
-           -unrequested_scope_count, last_updated}
-        end,
-        fn -> nil end
-      )
-    end
-  end
-
-  @doc """
-  Normalizes OAuth scopes with a default space delimiter.
-
-  Convenience function that calls `normalize_scopes/2` with a space delimiter.
-
-  ## Parameters
-    - `input`: OAuth scope string or token to extract scopes from
-
-  ## Returns
-    - List of normalized scope strings
-  """
-  def normalize_scopes(input) do
-    normalize_scopes(input, " ")
-  end
-
-  @doc """
-  Normalizes OAuth scopes from various input formats into a consistent list.
-
-  This function handles different inputs:
-  - `nil`: Returns an empty list
-  - `OauthToken`: Extracts the scope from the token's body
-  - String: Splits by the specified delimiter, downcases, and removes empty entries
-
-  ## Parameters
-    - `scopes`: OAuth scope string, token, or nil
-    - `delimiter`: Character or string to split the scope string by
-
-  ## Returns
-    - List of normalized scope strings
-  """
-  def normalize_scopes(nil, _delimiter) do
-    []
-  end
-
-  def normalize_scopes(%OauthToken{body: body}, delimiter) do
-    body
-    |> Map.get("scope", "")
-    |> normalize_scopes(delimiter)
-  end
-
-  def normalize_scopes(scopes, delimiter) when is_binary(scopes) do
-    scopes
-    |> String.downcase()
-    |> String.split(delimiter)
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-  end
+  defdelegate normalize_scopes(input, delimiter \\ " "),
+    to: Lightning.Credentials.OAuthValidation
 
   @doc """
   Returns all credentials owned by a specific user that are also being used in a specific project.

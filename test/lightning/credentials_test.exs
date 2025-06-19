@@ -1459,7 +1459,12 @@ defmodule Lightning.CredentialsTest do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
 
-      assert {:error, "Invalid OAuth token body"} =
+      assert {:error,
+              %Lightning.Credentials.OAuthValidation.Error{
+                message: "OAuth token must be a valid map",
+                type: :invalid_token_format,
+                details: nil
+              }} =
                Credentials.validate_oauth_token_data(
                  "not_a_map",
                  user.id,
@@ -1477,7 +1482,12 @@ defmodule Lightning.CredentialsTest do
         "expires_in" => 3600
       }
 
-      assert {:error, "Missing required OAuth field: access_token"} =
+      assert {:error,
+              %Lightning.Credentials.OAuthValidation.Error{
+                message: "Missing required OAuth field: access_token",
+                type: :missing_access_token,
+                details: nil
+              }} =
                Credentials.validate_oauth_token_data(
                  token_data,
                  user.id,
@@ -1495,7 +1505,12 @@ defmodule Lightning.CredentialsTest do
         "expires_in" => 3600
       }
 
-      assert {:error, "Missing refresh_token for new OAuth connection"} =
+      assert {:error,
+              %Lightning.Credentials.OAuthValidation.Error{
+                message: "Missing refresh_token for new OAuth connection",
+                type: :missing_refresh_token,
+                details: %{existing_token_available: false}
+              }} =
                Credentials.validate_oauth_token_data(
                  token_data,
                  user.id,
@@ -1514,7 +1529,12 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              "Missing expiration field: either expires_in or expires_at is required"} =
+              %Lightning.Credentials.OAuthValidation.Error{
+                message:
+                  "Missing expiration field: either expires_in or expires_at is required",
+                type: :missing_expiration,
+                details: nil
+              }} =
                Credentials.validate_oauth_token_data(
                  token_data,
                  user.id,
@@ -1565,7 +1585,12 @@ defmodule Lightning.CredentialsTest do
                  ["read"]
                )
 
-      assert {:error, "Missing required OAuth field: scope"} =
+      assert {:error,
+              %Lightning.Credentials.OAuthValidation.Error{
+                message: "OAuth token missing scope information",
+                type: :invalid_oauth_response,
+                details: nil
+              }} =
                Credentials.validate_oauth_token_data(
                  token_data,
                  "user_id",

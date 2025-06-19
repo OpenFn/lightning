@@ -13,7 +13,10 @@ defmodule Lightning.Credentials.CredentialTest do
     end
 
     test "oauth credentials require access_token, refresh_token, and expires_in or expires_at to be valid" do
-      assert_invalid_oauth_credential(%{}, "Missing required OAuth field: scope")
+      assert_invalid_oauth_credential(
+        %{},
+        "Invalid token format. Unable to extract scope information"
+      )
 
       assert_invalid_oauth_credential(
         %{"access_token" => "access_token_123", "scope" => "read write"},

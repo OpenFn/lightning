@@ -5,7 +5,7 @@ defmodule Lightning.Credentials.Credential do
   use Lightning.Schema
 
   alias Lightning.Accounts.User
-  alias Lightning.Credentials
+  alias Lightning.Credentials.OAuthValidation
   alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthToken
   alias Lightning.Projects.ProjectCredential
@@ -23,6 +23,9 @@ defmodule Lightning.Credentials.Credential do
     field :schema, :string
     field :scheduled_deletion, :utc_datetime
     field :transfer_status, Ecto.Enum, values: [:pending, :completed]
+
+    field :oauth_error_type, :string, virtual: true
+    field :oauth_error_details, :map, virtual: true
 
     belongs_to :user, User
     belongs_to :oauth_token, OauthToken
@@ -60,41 +63,106 @@ defmodule Lightning.Credentials.Credential do
   end
 
   defp maybe_validate_oauth_fields(changeset, attrs) do
-    is_oauth = get_field(changeset, :schema) == "oauth"
-    reusing_token? = !get_field(changeset, :oauth_token_id)
+    if oauth_credential?(changeset) do
+      validate_oauth_fields(changeset, attrs)
+    else
+      changeset
+    end
+  end
 
-    if is_oauth && reusing_token? do
-      user_id = get_field(changeset, :user_id)
+  defp oauth_credential?(changeset) do
+    get_field(changeset, :schema) == "oauth"
+  end
 
-      oauth_client_id = Map.get(attrs, "oauth_client_id")
+  defp validate_oauth_fields(changeset, attrs) do
+    creating_new_token? = is_nil(get_field(changeset, :oauth_token_id))
+    token_data = Map.get(attrs, "oauth_token")
 
-      token_data = Map.get(attrs, "oauth_token")
-
-      if is_nil(token_data) do
+    case {creating_new_token?, token_data} do
+      {true, nil} ->
         add_error(
           changeset,
           :oauth_token,
           "OAuth credentials require token data"
         )
-      else
-        scopes =
-          case OauthToken.extract_scopes(token_data) do
-            {:ok, extracted_scopes} -> extracted_scopes
-            :error -> nil
-          end
 
-        case Credentials.validate_oauth_token_data(
-               token_data,
-               user_id,
-               oauth_client_id,
-               scopes
-             ) do
-          {:ok, _} -> changeset
-          {:error, reason} -> add_error(changeset, :oauth_token, reason)
-        end
-      end
-    else
-      changeset
+      {_, token_data} when not is_nil(token_data) ->
+        validate_oauth_token_and_scopes(
+          changeset,
+          token_data,
+          attrs
+        )
+
+      {false, nil} ->
+        changeset
     end
+  end
+
+  defp validate_oauth_token_and_scopes(
+         changeset,
+         token_data,
+         attrs
+       ) do
+    user_id = get_field(changeset, :user_id)
+    oauth_client_id = Map.get(attrs, "oauth_client_id")
+
+    changeset
+    |> validate_oauth_token_data(
+      token_data,
+      user_id,
+      oauth_client_id
+    )
+    |> validate_oauth_scope_grant(token_data, attrs)
+  end
+
+  defp validate_oauth_token_data(changeset, token_data, user_id, oauth_client_id) do
+    with {:ok, extracted_scopes} <- OAuthValidation.extract_scopes(token_data),
+         {:ok, _} <-
+           OAuthValidation.validate_token_data(
+             token_data,
+             user_id,
+             oauth_client_id,
+             extracted_scopes
+           ) do
+      changeset
+    else
+      :error ->
+        error =
+          OAuthValidation.Error.new(
+            :invalid_token_format,
+            "Invalid token format. Unable to extract scope information"
+          )
+
+        add_oauth_error(changeset, error)
+
+      {:error, %OAuthValidation.Error{} = error} ->
+        add_oauth_error(changeset, error)
+    end
+  end
+
+  defp validate_oauth_scope_grant(changeset, token_data, attrs) do
+    expected_scopes = Map.get(attrs, "expected_scopes", [])
+
+    if Enum.empty?(expected_scopes) do
+      changeset
+    else
+      case OAuthValidation.validate_scope_grant(token_data, expected_scopes) do
+        :ok ->
+          changeset
+
+        {:error, %OAuthValidation.Error{} = error} ->
+          add_oauth_error(changeset, error)
+      end
+    end
+  end
+
+  defp add_oauth_error(
+         changeset,
+         %Lightning.Credentials.OAuthValidation.Error{} = error
+       ) do
+    changeset
+    |> add_error(:oauth_token, error.message)
+    |> put_change(:oauth_error_type, error.type)
+    |> put_change(:oauth_error_details, error.details)
   end
 end

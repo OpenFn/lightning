@@ -1078,7 +1078,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view
              |> element("#credential-form-#{credential.id}")
              |> render() =~
-               "Failed retrieving the token from the provider. Please try again"
+               "Failed retrieving the token from the provider."
 
       assert view
              |> element("#credential-form-#{credential.id} #re-authorize-button")
@@ -1135,7 +1135,12 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       insert(:project, project_users: [%{user: user, role: :owner}])
 
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "",
+          optional_scopes: ""
+        )
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -1189,7 +1194,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view |> submit_disabled("#save-credential-button-new")
 
       assert view |> render() =~
-               "We didn&#39;t receive a refresh token from this provider."
+               "Missing refresh_token for new OAuth connection"
 
       credential =
         Lightning.Credentials.list_credentials(user) |> List.first()
@@ -1221,7 +1226,7 @@ defmodule LightningWeb.CredentialLiveTest do
                    "expires_at" => 3600,
                    "token_type" => "Bearer",
                    "id_token" => "eyJhbGciO",
-                   "scope" => "scope1 scope2"
+                   "scope" => "scope_1 scope_2"
                  })
              }}
 
@@ -1248,7 +1253,13 @@ defmodule LightningWeb.CredentialLiveTest do
       [project_1, project_2, project_3] =
         insert_list(3, :project, project_users: [%{user: user, role: :owner}])
 
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "",
+          optional_scopes: ""
+        )
+        |> dbg()
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -1344,7 +1355,7 @@ defmodule LightningWeb.CredentialLiveTest do
                access_token: "ya29.a0AVvZ",
                refresh_token: "1//03vpp6Li",
                expires_at: 3600,
-               scope: "scope1 scope2"
+               scope: "scope_1 scope_2"
              } = token
     end
 
@@ -1554,7 +1565,12 @@ defmodule LightningWeb.CredentialLiveTest do
       user: user,
       conn: conn
     } do
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
 
@@ -1725,7 +1741,13 @@ defmodule LightningWeb.CredentialLiveTest do
            user: user,
            conn: conn
          } do
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
+
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       index_live |> select_credential_type(oauth_client.id)
@@ -1797,7 +1819,7 @@ defmodule LightningWeb.CredentialLiveTest do
                access_token: "ya29.a0AVvZ",
                refresh_token: "1//03vpp6Li",
                expires_at: 3600,
-               scope: "scope1 scope2"
+               scope: "scope_1 scope_2"
              } =
                credential.oauth_token.body
                |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
@@ -1974,7 +1996,7 @@ defmodule LightningWeb.CredentialLiveTest do
                    "expires_at" => 3600,
                    "token_type" => "Bearer",
                    "id_token" => "eyJhbGciO",
-                   "scope" => "scope1 scope2"
+                   "scope" => "scope_1 scope_2"
                  })
              }}
 
@@ -1987,7 +2009,12 @@ defmodule LightningWeb.CredentialLiveTest do
         end
       end)
 
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
@@ -2288,7 +2315,7 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            scope: "scope1 scope2",
+            scope: "scope_1 scope_2",
             instance_url: "http://localhost:#{bypass.port}/salesforce/instance"
           }
         )
@@ -2354,7 +2381,7 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            scope: "scope1 scope2",
+            scope: "scope_1 scope_2",
             instance_url: "http://localhost:#{bypass.port}/salesforce/instance"
           }
         )
@@ -2714,7 +2741,7 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            scope: "scope1 scope2"
+            scope: "scope_1 scope_2"
           }
         )
 

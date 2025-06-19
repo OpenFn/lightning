@@ -18,7 +18,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       :token_failed,
       :userinfo_failed,
       :code_failed,
-      :refresh_failed,
       :missing_required,
       :revoke_failed
     ]
@@ -150,20 +149,24 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def handle_async(:token, {:ok, {:ok, token}}, socket) do
-    params = Map.put(socket.assigns.changeset.params, "oauth_token", token)
+    params =
+      socket.assigns.changeset.params
+      |> Map.put("oauth_token", token)
+      |> Map.put(
+        "expected_scopes",
+        socket.assigns.selected_scopes
+      )
 
-    changeset = Credentials.change_credential(socket.assigns.credential, params)
-
-    errors = changeset_errors(changeset)
+    changeset =
+      Credentials.change_credential(socket.assigns.credential, params) |> dbg()
 
     updated_socket =
       socket
-      |> assign(:oauth_progress, :token_received)
       |> assign(:scopes_changed, false)
       |> assign(:changeset, changeset)
 
     cond do
-      errors[:oauth_token] ->
+      !changeset.valid? ->
         {:noreply, updated_socket |> assign(:oauth_progress, :missing_required)}
 
       socket.assigns.selected_client.userinfo_endpoint ->
@@ -176,7 +179,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
          end)}
 
       true ->
-        {:noreply, updated_socket}
+        {:noreply, updated_socket |> assign(:oauth_progress, :token_received)}
     end
   end
 
@@ -400,12 +403,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     end
   end
 
-  defp changeset_errors(changeset) do
-    changeset.errors
-    |> Enum.map(fn {field, {message, _opts}} -> {field, message} end)
-    |> Enum.into(%{})
-  end
-
   defp build_assigns(socket, assigns, additional_assigns) do
     selected_projects =
       assigns.changeset
@@ -605,6 +602,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             <.alert_block
               :if={@display_error}
               type={@oauth_progress}
+              changeset={@changeset}
               myself={@myself}
               revocation_endpoint={@selected_client.revocation_endpoint}
               provider={@selected_client.name}

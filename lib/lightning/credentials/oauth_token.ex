@@ -7,9 +7,9 @@ defmodule Lightning.Credentials.OauthToken do
   use Lightning.Schema
 
   alias Lightning.Accounts.User
-  alias Lightning.Credentials
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthClient
+  alias Lightning.Credentials.OAuthValidation
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
@@ -73,6 +73,9 @@ defmodule Lightning.Credentials.OauthToken do
     |> validate_oauth_body()
   end
 
+  defdelegate extract_scopes(token_data),
+    to: Lightning.Credentials.OAuthValidation
+
   @doc """
   Creates a changeset for updating token data.
   Only merges with existing token body if new_token is a map, otherwise uses new_token directly.
@@ -80,7 +83,7 @@ defmodule Lightning.Credentials.OauthToken do
   """
   def update_token_changeset(oauth_token, new_token) do
     scopes =
-      case extract_scopes(new_token) do
+      case OAuthValidation.extract_scopes(new_token) do
         {:ok, scopes} -> scopes
         :error -> nil
       end
@@ -104,77 +107,43 @@ defmodule Lightning.Credentials.OauthToken do
     new_token
   end
 
-  @doc """
-  Extracts scopes from OAuth token data in various formats.
-
-  Handles four common OAuth scope formats:
-  - Maps with string "scope" key containing space-delimited scope strings
-  - Maps with atom :scope key containing space-delimited scope strings
-  - Maps with string "scopes" key containing a list of scope strings
-  - Maps with atom :scopes key containing a list of scope strings
-
-  ## Return values
-
-  - `{:ok, scopes}` - List of scope strings if extraction succeeds
-  - `:error` - If scopes cannot be determined from the input
-
-  ## Examples
-
-      iex> extract_scopes(%{"scope" => "read write delete"})
-      {:ok, ["read", "write", "delete"]}
-
-      iex> extract_scopes(%{scope: "profile email"})
-      {:ok, ["profile", "email"]}
-
-      iex> extract_scopes(%{"scopes" => ["admin", "user"]})
-      {:ok, ["admin", "user"]}
-
-      iex> extract_scopes(%{scopes: ["read", "write"]})
-      {:ok, ["read", "write"]}
-
-      iex> extract_scopes(%{other_key: "value"})
-      :error
-  """
-  def extract_scopes(%{"scope" => scope}) when is_binary(scope) do
-    {:ok, String.split(scope, " ")}
-  end
-
-  def extract_scopes(%{scope: scope}) when is_binary(scope) do
-    {:ok, String.split(scope, " ")}
-  end
-
-  def extract_scopes(%{"scopes" => scopes}) when is_list(scopes) do
-    {:ok, scopes}
-  end
-
-  def extract_scopes(%{scopes: scopes}) when is_list(scopes) do
-    {:ok, scopes}
-  end
-
-  def extract_scopes(_), do: :error
-
   defp validate_oauth_body(changeset) do
     with {_, body} <- fetch_field(changeset, :body), true <- is_map(body) do
-      %{
-        id: oauth_token_id,
-        user_id: user_id,
-        oauth_client_id: oauth_client_id,
-        scopes: scopes
-      } = get_fields(changeset, [:id, :user_id, :oauth_client_id, :scopes])
+      %{user_id: user_id, oauth_client_id: oauth_client_id, scopes: scopes} =
+        get_fields(changeset, [:user_id, :oauth_client_id, :scopes])
 
-      case Credentials.validate_oauth_token_data(
+      case OAuthValidation.validate_token_data(
              body,
              user_id,
              oauth_client_id,
-             scopes,
-             not is_nil(oauth_token_id)
+             scopes
            ) do
-        {:ok, _} -> changeset
-        {:error, reason} -> add_error(changeset, :body, reason)
+        {:ok, _} ->
+          changeset
+
+        {:error, %OAuthValidation.Error{} = error} ->
+          add_oauth_error(changeset, error)
       end
     else
-      _ -> add_error(changeset, :body, "Invalid OAuth token body")
+      _ ->
+        error =
+          OAuthValidation.Error.new(
+            :invalid_token_format,
+            "Invalid OAuth token body"
+          )
+
+        add_oauth_error(changeset, error)
     end
+  end
+
+  defp add_oauth_error(
+         changeset,
+         %Lightning.Credentials.OAuthValidation.Error{} = error
+       ) do
+    changeset
+    |> add_error(:body, error.message)
+    |> put_change(:oauth_error_type, error.type)
+    |> put_change(:oauth_error_details, error.details)
   end
 
   defp get_fields(changeset, fields) when is_list(fields) do

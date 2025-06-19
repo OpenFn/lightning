@@ -143,7 +143,6 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       <.authorize_button
         :if={@display_authorize_button}
         authorize_url={@authorize_url}
-        socket={@socket}
         myself={@myself}
         provider={@provider}
       />
