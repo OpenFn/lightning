@@ -310,7 +310,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              |> has_element?("[data-flash-kind='error']", "Runs limit exceeded")
     end
 
-    test "can run a job", %{conn: conn, project: p, workflow: w} do
+    test "can run a job", %{conn: conn, project: p, workflow: w, user: user} do
       job = w.jobs |> hd
 
       {:ok, view, _html} =
@@ -343,8 +343,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       render_async(run_viewer)
 
       assert run_viewer
-             |> element("li:nth-child(5) dd", "Enqueued")
+             |> element("li:nth-child(6) dd", "Enqueued")
              |> has_element?()
+
+      # Check that manually triggered run shows the user's email as the starter
+      assert render(run_viewer) =~ user.email,
+             "shows user email as starter for manually triggered run"
     end
 
     @tag skip: "component moved to react"

@@ -55,6 +55,12 @@ defmodule LightningWeb.RunLive.ShowTest do
              |> render_async() =~ "Enqueued",
              "has enqueued state"
 
+      # Check that webhook-triggered run shows "Webhook trigger" as the starter
+      assert view
+             |> element("#run-detail-#{run_id}")
+             |> render_async() =~ "Webhook trigger",
+             "shows webhook trigger as starter"
+
       assert has_element?(
                view,
                "div#log-panel [phx-hook='LogViewer'][data-run-id='#{run_id}']"

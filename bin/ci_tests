@@ -39,7 +39,8 @@ fi
 # Only retry if exit code is exactly 2
 if [ $EXIT_CODE -eq 2 ]; then
   set +e
-  mix coveralls.json --import-cover coverage --failed -o test/reports
+  # Retry failed tests but export with new name to preserve coverage report
+  mix coveralls.json --import-cover coverage --export-coverage failed_coverage --failed -o test/reports
   EXIT_CODE=$? # Overwrite with the second run's exit code
   set -e
   # Rename the failed test report if it exists

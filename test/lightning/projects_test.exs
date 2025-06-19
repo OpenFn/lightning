@@ -857,7 +857,8 @@ defmodule Lightning.ProjectsTest do
                Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
 
       # deleted history
-      refute Repo.get(Snapshot, snapshot_to_delete.id)
+      # TODO - change to `refute` when snapshot cleanup is added back
+      assert Repo.get(Snapshot, snapshot_to_delete.id)
 
       Enum.each(workorders_to_delete, fn workorder ->
         refute Repo.get(WorkOrder, workorder.id)

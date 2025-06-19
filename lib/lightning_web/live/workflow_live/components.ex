@@ -548,6 +548,14 @@ defmodule LightningWeb.WorkflowLive.Components do
         <div>
           <.label>
             JS Expression
+            <.icon
+              :if={!js_expression_safe?(@form[:condition_expression].value)}
+              id="edge-js-expression-unsafe-warning"
+              name="hero-exclamation-circle-solid"
+              class="size-5 text-yellow-600"
+              phx-hook="Tooltip"
+              aria-label="Warning: this expression appears to contain unsafe functions (eval, require, import, process, await) that may cause your workflow to fail"
+            />
           </.label>
           <.input
             type="textarea"
@@ -587,6 +595,13 @@ defmodule LightningWeb.WorkflowLive.Components do
       <% end %>
     </div>
     """
+  end
+
+  defp js_expression_safe?(js_expr) do
+    !String.match?(
+      js_expr,
+      ~r/(\bimport\b|\brequire\b|\bprocess\b|\bawait\b|\beval\b)/
+    )
   end
 
   slot :inner_block, required: true
