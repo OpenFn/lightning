@@ -73,7 +73,6 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
         {...actionProps}
         pushEvent={pushEventProxy}
         job_id={job_id}
-        selected_dataclip_id={null}
         fixedHeight
       />
     </Panel>
