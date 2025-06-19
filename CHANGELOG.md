@@ -19,13 +19,51 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.13.2] - 2025-06-18
+
+⚠️️ Please note that **this version fixes an issue that caused premature run
+history deletion** when snapshots were cleaned. Certain additional runs related
+to pre-existing work orders were being deleted before their retention period.
+This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
+`latest` you'd see this bug come out in `v2.13.0` on June 4th.
+
+## [v2.13.2-pre] - 2025-06-18
+
+### Added
+
+- Show who started each run
+  [#3309](https://github.com/OpenFn/lightning/issues/3309)
+
+### Changed
+
+### Fixed
+
+- Stop cleanup of snapshots (was causing data loss)
+- The application env `queue_result_retention_period` was previously pulling
+  from a wrongly named `QUEUE_RESULT_RETENTION_PERIOD_SECONDS`; the calculation
+  is actually done in minutes; we now set this env from
+  `QUEUE_RESULT_RETENTION_PERIOD_MINUTES`
+  [#3316](https://github.com/OpenFn/lightning/issues/3316)
+
+## [v2.13.1] - 2025-06-12
+
+## [v2.13.1-pre] - 2025-06-11
+
+### Changed
+
 - Report AI Assistant errors to Sentry
   [#3010](https://github.com/OpenFn/lightning/issues/3010)
 
 ### Fixed
 
+- Allow scrolling in the template grid
+  [#3284](https://github.com/OpenFn/lightning/issues/3284)
 - Search input in run history is cleared when you click on the filter buttons
   [#1951](https://github.com/OpenFn/lightning/issues/1951)
+- Fix Inspector Input panel not showing current run's dataclip for older
+  workflow runs [#3288](https://github.com/OpenFn/lightning/issues/3288)
 
 ## [v2.13.0] - 2025-06-04
 
