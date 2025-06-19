@@ -7,7 +7,10 @@ import {
   getNodesBounds,
   type NodeChange,
   type ReactFlowInstance,
-  type Rect
+  type Rect,
+  ControlButton,
+  Background,
+  MiniMap
 } from '@xyflow/react';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
@@ -24,6 +27,7 @@ import updateSelectionStyles from './util/update-selection';
 import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
+import MiniMapNode from './components/MiniMapNode';
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -43,7 +47,8 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const { jobs, triggers, edges, disabled } = useWorkflowStore();
+  const { jobs, triggers, edges, disabled, positions: fixedPositions, updatePositions } = useWorkflowStore();
+  const isManualLayout = !!fixedPositions;
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
@@ -108,13 +113,23 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           width: workflowDiagramRef.current?.clientWidth ?? 0,
           height: workflowDiagramRef.current?.clientHeight ?? 0,
         };
-        layout(newModel, setModel, flow, viewBounds, {
-          duration: props.layoutDuration ?? LAYOUT_DURATION,
-          forceFit: props.forceFit,
-        }).then(positions => {
-          // Note we don't update positions until the animation has finished
-          chartCache.current.positions = positions;
-        });
+        if (isManualLayout) {
+          // give nodes positions
+          const nodesWPos = newModel.nodes.map(node => {
+            // const pos = fixedPositions[node.id]
+            return { ...node, position: fixedPositions[node.id] }
+          })
+          setModel({ ...newModel, nodes: nodesWPos })
+          chartCache.current.positions = fixedPositions;
+        } else {
+          layout(newModel, setModel, flow, viewBounds, {
+            duration: props.layoutDuration ?? LAYOUT_DURATION,
+            forceFit: props.forceFit,
+          }).then(positions => {
+            // Note we don't update positions until the animation has finished
+            chartCache.current.positions = positions;
+          });
+        }
       } else {
         // If layout is id, ensure nodes have positions
         // This is really only needed when there's a single trigger node
@@ -242,7 +257,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         nodes={model.nodes}
         edges={model.edges}
         onNodesChange={onNodesChange}
-        nodesDraggable={false}
+        nodesDraggable={isManualLayout}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onClick={handleBackgroundClick}
@@ -255,7 +270,35 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         minZoom={0.2}
         {...connectHandlers}
       >
-        <Controls showInteractive={false} position="bottom-left" />
+        <Controls position="bottom-left" showInteractive={false}>
+          <ControlButton
+            onClick={() => isManualLayout ? updatePositions(null) : updatePositions(chartCache.current.positions)}
+            data-tooltip={
+              isManualLayout
+                ? 'Switch to auto layout'
+                : 'Switch to manual layout'
+            }
+          >
+            {isManualLayout ? (
+              <span className="text-black hero-sparkles w-4 h-4" />
+            ) : (
+              <span className="text-primary-600 hero-sparkles-solid w-4 h-4" />
+            )}
+          </ControlButton>
+          <ControlButton
+            onClick={() => { console.log("force autolayout!") }}
+            data-tooltip="Force auto-layout (override all manual positions)"
+          >
+            <span className="text-black hero-squares-2x2 w-4 h-4" />
+          </ControlButton>
+        </Controls>
+        <Background />
+        <MiniMap
+          zoomable
+          pannable
+          className="border-2 border-gray-200"
+          nodeComponent={MiniMapNode}
+        />
       </ReactFlow>
     </ReactFlowProvider>
   );
