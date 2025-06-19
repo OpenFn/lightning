@@ -50,6 +50,7 @@ export const create = (parentNode: Flow.Node) => {
 
 export default (
   el: HTMLElement | null | undefined,
+  isManualLayout: boolean = false,
   requestSelectionChange: (id: string | null) => void // TODO more like changeSelection
 ) => {
   const { add: addTo } = useWorkflowStore();
@@ -76,7 +77,8 @@ export default (
 
       // Update the store
       placeholders.nodes[0].data.name = name;
-      addTo(toWorkflow(placeholders));
+      // we need to pass isManualLayout to tell toWorkflow to process position information
+      addTo(toWorkflow(placeholders, isManualLayout));
 
       requestSelectionChange(id);
     },

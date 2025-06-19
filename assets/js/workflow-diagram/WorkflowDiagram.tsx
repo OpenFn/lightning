@@ -68,7 +68,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     placeholders,
     add: addPlaceholder,
     cancel: cancelPlaceholder,
-  } = usePlaceholders(el, updateSelection);
+  } = usePlaceholders(el, isManualLayout, updateSelection);
 
 
   const workflow = React.useMemo(() => ({
@@ -104,6 +104,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
         newModel.edges,
+        newModel.nodes,
         chartCache.current.lastLayout
       );
 
@@ -116,8 +117,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         if (isManualLayout) {
           // give nodes positions
           const nodesWPos = newModel.nodes.map(node => {
-            // const pos = fixedPositions[node.id]
-            return { ...node, position: fixedPositions[node.id] }
+            // during manualLayout. a placeholder wouldn't have position in positions in store
+            // hence use the position on the placeholder node
+            const isPlaceholder = node.type === "placeholder";
+            return { ...node, position: isPlaceholder ? node.position : fixedPositions[node.id] }
           })
           setModel({ ...newModel, nodes: nodesWPos })
           chartCache.current.positions = fixedPositions;

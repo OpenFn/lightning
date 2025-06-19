@@ -142,16 +142,28 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
         proposeChanges(
           state,
           draft => {
-            (['jobs', 'triggers', 'edges'] as const).forEach(
-              <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
+            (['jobs', 'triggers', 'edges', 'positions'] as const).forEach(
+              <K extends 'jobs' | 'triggers' | 'edges' | 'positions'>(
+                key: K
+              ) => {
                 const change = data[key];
-                if (change) {
-                  change.forEach((item: NonNullable<ChangeArgs[K]>[number]) => {
-                    if (!item.id) {
-                      item.id = randomUUID();
-                    }
-                    draft[key].push(item);
-                  });
+                if (change && typeof change === 'object') {
+                  if (Array.isArray(change)) {
+                    // update an array
+                    change.forEach(
+                      (item: NonNullable<ChangeArgs[K]>[number]) => {
+                        if (!item.id) {
+                          item.id = randomUUID();
+                        }
+                        draft[key].push(item);
+                      }
+                    );
+                  } else {
+                    // update a plain object literal
+                    Object.entries(change).forEach(([ckey, cvalue]) => {
+                      if (draft[key]) draft[key][ckey] = cvalue;
+                    });
+                  }
                 }
               }
             );
