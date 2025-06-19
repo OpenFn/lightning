@@ -11,10 +11,7 @@ import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';
 
 // generates a placeholder node and edge as child of the parent
-export const create = (
-  parentNode: Flow.Node,
-  position?: { x: number; y: number }
-) => {
+export const create = (parentNode: Flow.Node) => {
   const newModel: Flow.Model = {
     nodes: [],
     edges: [],
@@ -24,15 +21,13 @@ export const create = (
   newModel.nodes.push({
     id: targetId,
     type: 'placeholder',
-    width: 350, // Set initial dimensions to prevent flicker
-    height: 200, // Set initial dimensions to prevent flicker
     position: {
       // mark this as as default position
       // @ts-ignore _default is a temporary flag added by us
       _default: true,
       // Offset the position of the placeholder to be more pleasing during animation
-      x: position?.x ?? parentNode.position.x,
-      y: position?.y ?? parentNode.position.y + 100,
+      x: parentNode.position.x,
+      y: parentNode.position.y + 100,
     },
     data: {
       body: DEFAULT_TEXT,
@@ -64,16 +59,13 @@ export default (
     edges: [],
   });
 
-  const add = useCallback(
-    (parentNode: Flow.Node, position?: { x: number; y: number }) => {
-      // Generate a placeholder node and edge
-      const updated = create(parentNode, position);
-      setPlaceholders(updated);
+  const add = useCallback((parentNode: Flow.Node) => {
+    // Generate a placeholder node and edge
+    const updated = create(parentNode);
+    setPlaceholders(updated);
 
-      requestSelectionChange(updated.nodes[0].id);
-    },
-    []
-  );
+    requestSelectionChange(updated.nodes[0].id);
+  }, []);
 
   const commit = useCallback(
     (evt: CustomEvent<any>) => {

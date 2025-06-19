@@ -4,6 +4,7 @@ import Node from './Node';
 import PathButton from '../components/PathButton';
 import getAdaptorName from '../util/get-adaptor-name';
 import useAdaptorIcons, { type AdaptorIconData } from '../useAdaptorIcons';
+import PlusButton from '../components/PlusButton';
 
 type NodeData = any;
 
@@ -13,7 +14,10 @@ const JobNode = ({
   ...props
 }: NodeProps<NodeData>) => {
   const toolbar = () => [
-    props.data?.allowPlaceholder && [<PathButton key="+path" />],
+    props.data?.allowPlaceholder && [
+      <PlusButton key="+step" />,
+      <PathButton key="+path" />,
+    ],
   ];
 
   const adaptorIconsData = useAdaptorIcons();
