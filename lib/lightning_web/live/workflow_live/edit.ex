@@ -412,7 +412,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             project_repo_connection={@project_repo_connection}
           />
           <.form
-            :if={@selection_mode !== "expand"}
+            :if={@selection_mode != "expand"}
             id="workflow-form"
             for={@workflow_form}
             phx-submit="save"
@@ -441,7 +441,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
             <.single_inputs_for
               :let={{jf}}
-              :if={@selected_job}
+              :if={@selection_mode != "workflow_input" && @selected_job}
               form={@workflow_form}
               field={:jobs}
               id={@selected_job.id}
@@ -473,7 +473,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 />
                 <:footer>
                   <div class="flex flex-row">
-                    <div class="flex items-center">
+                    <div class="flex items-center gap-3">
                       <.expand_job_editor
                         base_url={@base_url}
                         snapshot_lock_version={@snapshot && @snapshot.lock_version}
@@ -482,6 +482,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         selected_run={@selected_run}
                         form={@workflow_form}
                       />
+                      <.button_link
+                        patch={"#{@base_url}?s=#{@selected_job.id}&m=workflow_input"}
+                        type="button"
+                        theme="primary"
+                      >
+                        <.icon name="hero-play-solid" class="w-4 h-4" />
+                      </.button_link>
                     </div>
                     <div class="grow flex justify-end">
                       <label>
@@ -491,9 +498,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           phx-value-id={@selected_job.id}
                           theme="danger"
                           disabled={
-                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                               @has_child_edges or @is_first_job or
-                               @snapshot_version_tag != "latest") ||
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @has_child_edges or @is_first_job or
+                              @snapshot_version_tag != "latest" ||
                               !@has_presence_edit_priority
                           }
                           tooltip={
@@ -537,8 +544,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={tf}
                   on_change={&send_form_changed/1}
                   disabled={
-                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                       @snapshot_version_tag != "latest") ||
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                      @snapshot_version_tag != "latest" ||
                       !@has_presence_edit_priority
                   }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
@@ -547,19 +554,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   cancel_url={close_url(assigns, :selected_trigger, :unselect)}
                 />
                 <:footer>
-                  <div class="flex flex-row">
+                  <div class="flex flex-row justify-between">
                     <div class="flex items-center">
                       <.input
                         type="toggle"
                         field={tf[:enabled]}
                         disabled={
-                          (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                             @snapshot_version_tag != "latest") ||
+                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                            @snapshot_version_tag != "latest" ||
                             !@has_presence_edit_priority
                         }
                         label="Enabled"
                       />
                     </div>
+                    <.button_link
+                      patch={"#{@base_url}?s=#{@selected_trigger.id}&m=workflow_input"}
+                      type="button"
+                      theme="primary"
+                    >
+                      <.icon name="hero-play-solid" class="w-4 h-4" />
+                    </.button_link>
                   </div>
                 </:footer>
               </.panel>
@@ -582,8 +596,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.edge_form
                   form={ef}
                   disabled={
-                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                       @snapshot_version_tag != "latest") ||
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                      @snapshot_version_tag != "latest" ||
                       !@has_presence_edit_priority
                   }
                   cancel_url={close_url(assigns, :selected_edge, :unselect)}
@@ -600,8 +614,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           type="toggle"
                           field={ef[:enabled]}
                           disabled={
-                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                               @snapshot_version_tag != "latest") ||
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @snapshot_version_tag != "latest" ||
                               !@has_presence_edit_priority
                           }
                           label="Enabled"
@@ -618,9 +632,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             phx-click="delete_edge"
                             phx-value-id={ef[:id].value}
                             disabled={
-                              ((!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                                  @snapshot_version_tag != "latest") ||
-                                 !@has_presence_edit_priority) or
+                              !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                                @snapshot_version_tag != "latest" ||
+                                !@has_presence_edit_priority or
                                 ef[:source_trigger_id].value
                             }
                           >
@@ -640,7 +654,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
               phx-remove={fade_out()}
             >
               <.WorkflowRunPanel
-                job_id={hd(@workflow_params["jobs"])["id"]}
+                job_id={
+                  if @selected_job do
+                    @selected_job.id
+                  else
+                    hd(@workflow_params["jobs"])["id"]
+                  end
+                }
                 cancel_url={@base_url}
               />
             </div>
@@ -1853,6 +1873,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     manual_params = Map.get(params, "manual", %{})
     from_start? = Map.get(params, "from_start", false)
+    from_job = Map.get(params, "from_job", nil)
 
     params =
       case form do
@@ -1870,10 +1891,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
       end
 
     selected_job =
-      if from_start? do
-        get_starting_job(workflow_or_changeset)
-      else
-        selected_job
+      cond do
+        from_start? ->
+          get_starting_job(workflow_or_changeset)
+
+        from_job != nil ->
+          get_job_by_id(workflow_or_changeset, from_job)
+
+        true ->
+          selected_job
       end
 
     with {:ok, %{workorder: %{runs: [run]}, workflow: workflow}} <-
@@ -1883,7 +1909,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
              params,
              selected_job
            ) do
-      if from_start? do
+      if from_start? || from_job != nil do
         {:noreply,
          socket
          |> push_navigate(to: ~p"/projects/#{project}/runs/#{run}")}
@@ -2244,6 +2270,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  defp get_job_by_id(%Workflow{} = workflow, job_id) do
+    Enum.find(workflow.jobs, fn job -> job.id == job_id end)
+  end
+
+  defp get_job_by_id(%Ecto.Changeset{} = workflow_changeset, job_id) do
+    workflow_changeset
+    |> Ecto.Changeset.get_assoc(:jobs, :struct)
+    |> Enum.find(fn job -> job.id == job_id end)
+  end
+
   defp get_starting_job(%Workflow{} = workflow) do
     trigger = hd(workflow.triggers)
 
@@ -2252,7 +2288,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         edge.source_trigger_id == trigger.id
       end)
 
-    Enum.find(workflow.jobs, fn job -> job.id == edge.target_job_id end)
+    get_job_by_id(workflow, edge.target_job_id)
   end
 
   defp get_starting_job(%Ecto.Changeset{} = workflow_changeset) do
@@ -2268,9 +2304,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         edge.source_trigger_id == trigger.id
       end)
 
-    workflow_changeset
-    |> Ecto.Changeset.get_assoc(:jobs, :struct)
-    |> Enum.find(fn job -> job.id == edge.target_job_id end)
+    get_job_by_id(workflow_changeset, edge.target_job_id)
   end
 
   defp sync_to_github(socket, %{
@@ -2662,8 +2696,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"m" => "settings", "s" => nil, "a" => nil} ->
         handle_settings_mode(socket)
 
-      %{"m" => "workflow_input", "s" => nil, "a" => nil} ->
-        handle_workflow_input_mode(socket)
+      %{"m" => "workflow_input", "s" => selected_id, "a" => nil} ->
+        handle_selection_with_mode(socket, selected_id, "workflow_input")
 
       %{"m" => "code", "s" => nil, "a" => nil} ->
         handle_code_mode(socket)
@@ -2683,10 +2717,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket |> unselect_all() |> set_mode("settings")
   end
 
-  defp handle_workflow_input_mode(socket) do
-    socket |> unselect_all() |> set_mode("workflow_input")
-  end
-
   defp handle_code_mode(socket) do
     socket
     |> unselect_all()
@@ -2702,12 +2732,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket |> unselect_all() |> set_mode(nil)
   end
 
+  defp handle_selection_with_mode(socket, nil, mode) do
+    socket
+    |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
+  end
+
   defp handle_selection_with_mode(socket, selected_id, mode) do
     case find_item(socket.assigns.changeset, selected_id) do
       [type, selected] ->
         socket
         |> set_selected_node(type, selected)
-        |> set_mode(if mode in ["expand"], do: mode, else: nil)
+        |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
 
       nil ->
         socket |> unselect_all()

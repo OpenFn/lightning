@@ -45,8 +45,9 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
   }, [pushEvent])
 
   const startRun = React.useCallback(() => {
-    pushEvent("manual_run_submit", { ...manualContent, from_start: true });
-  }, [pushEvent, manualContent])
+    const from = job_id ? { from_job: job_id } : { from_start: true };
+    pushEvent("manual_run_submit", { ...manualContent, ...from });
+  }, [pushEvent, manualContent, job_id])
 
   return <>
     <Panel
