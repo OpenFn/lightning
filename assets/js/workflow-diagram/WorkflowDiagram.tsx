@@ -10,7 +10,8 @@ import {
   type Rect,
   ControlButton,
   Background,
-  MiniMap
+  MiniMap,
+  type XYPosition
 } from '@xyflow/react';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
@@ -28,6 +29,7 @@ import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 import MiniMapNode from './components/MiniMapNode';
+import toWorkflow from "./util/to-workflow"
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -47,7 +49,7 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const { jobs, triggers, edges, disabled, positions: fixedPositions, updatePositions } = useWorkflowStore();
+  const { jobs, triggers, edges, disabled, positions: fixedPositions, updatePositions, updatePosition } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   const { selection, onSelectionChange, containerEl: el } = props;
 
@@ -68,6 +70,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     placeholders,
     add: addPlaceholder,
     cancel: cancelPlaceholder,
+    updatePlaceholderPosition,
   } = usePlaceholders(el, isManualLayout, updateSelection);
 
 
@@ -105,6 +108,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       const layoutId = shouldLayout(
         newModel.edges,
         newModel.nodes,
+        isManualLayout,
         chartCache.current.lastLayout
       );
 
@@ -137,6 +141,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         // If layout is id, ensure nodes have positions
         // This is really only needed when there's a single trigger node
         newModel.nodes.forEach(n => {
+          // if isManualLayout, then we use values from store instead
+          if (isManualLayout && n.type !== "placeholder") n.position = fixedPositions[n.id];
           if (!n.position) {
             n.position = { x: 0, y: 0 };
           }
@@ -146,7 +152,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el]);
+  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions]);
 
   useEffect(() => {
     const updatedModel = updateSelectionStyles(model, selection);
@@ -158,8 +164,16 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       const newNodes = applyNodeChanges(changes, model.nodes);
       setModel({ nodes: newNodes, edges: model.edges });
     },
-    [setModel, model]
-  );
+    [setModel, model]);
+
+  // update node position data only on dragstop.
+  const onNodeDragStop = useCallback((e: React.MouseEvent, node: Flow.Node) => {
+    if (node.type === "placeholder") {
+      updatePlaceholderPosition(node.id, node.position);
+    } else {
+      updatePosition(node.id, node.position);
+    }
+  }, [updatePosition, updatePlaceholderPosition])
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
@@ -260,6 +274,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         nodes={model.nodes}
         edges={model.edges}
         onNodesChange={onNodesChange}
+        onNodeDragStop={onNodeDragStop}
         nodesDraggable={isManualLayout}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

@@ -9,6 +9,7 @@ import { useWorkflowStore } from '../workflow-store/store';
 import { styleEdge } from './styles';
 import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';
+import type { XYPosition } from '@xyflow/react';
 
 // generates a placeholder node and edge as child of the parent
 export const create = (parentNode: Flow.Node) => {
@@ -60,6 +61,20 @@ export default (
     edges: [],
   });
 
+  // for updating placeholder position
+  const updatePlaceholderPosition = useCallback(
+    (nodeId: string, position: XYPosition) => {
+      setPlaceholders(prev => ({
+        ...prev,
+        nodes: prev.nodes.map(n => {
+          if (n.id === nodeId) return { ...n, position };
+          else return n;
+        }),
+      }));
+    },
+    []
+  );
+
   const add = useCallback((parentNode: Flow.Node) => {
     // Generate a placeholder node and edge
     const updated = create(parentNode);
@@ -103,5 +118,5 @@ export default (
     }
   }, [commit, cancel, el]);
 
-  return { placeholders, add, cancel };
+  return { placeholders, add, cancel, updatePlaceholderPosition };
 };

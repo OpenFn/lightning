@@ -4,6 +4,7 @@ import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore, useStore, type StoreApi } from 'zustand';
 import type { Lightning, Positions } from '../workflow-diagram/types';
 import { randomUUID } from '../common';
+import type { XYPosition } from '@xyflow/react';
 
 enablePatches();
 
@@ -44,6 +45,7 @@ export interface WorkflowState extends WorkflowProps {
   subscribe: (cb: (v: unknown) => void) => void;
   add: (data: AddArgs) => void;
   updatePositions: (data: Positions | null) => void;
+  updatePosition: (nodeId: string, pos: XYPosition) => void;
   change: (data: ChangeArgs) => void;
   remove: (data: RemoveArgs) => void;
   rebase: (data: Partial<WorkflowProps>) => void;
@@ -203,6 +205,19 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
           state,
           draft => {
             draft.positions = data;
+          },
+          get().observer
+        )
+      );
+    },
+    updatePosition(nodeId, pos) {
+      set(state =>
+        proposeChanges(
+          state,
+          draft => {
+            if (draft.positions) {
+              draft.positions = { ...draft.positions, [nodeId]: pos };
+            }
           },
           get().observer
         )

@@ -6,7 +6,13 @@ import type { Flow } from '../types';
 // with just edges. it misses the case where a node goes from placeholder to node.
 // we need that to be tracked so that new position data for the placeholder component stored in the store will be used for rendering.
 // without it. an actual new render wouldn't happen. and [0, 0] would be used for this new node in the model
-export default (edges: Flow.Edge[], nodes: Flow.Node[], lastHash?: string) => {
+// we also need to hash whether we're manual or auto to allow renders.
+export default (
+  edges: Flow.Edge[],
+  nodes: Flow.Node[],
+  isManualLayout: boolean,
+  lastHash?: string
+) => {
   const nodesId = nodes
     .map(n => n.type || '')
     .sort()
@@ -16,7 +22,7 @@ export default (edges: Flow.Edge[], nodes: Flow.Node[], lastHash?: string) => {
     .sort()
     .join('--');
 
-  const id = nodesId + edgesId;
+  const id = nodesId + edgesId + (isManualLayout ? '1' : '0');
 
   if (id !== lastHash) {
     return id;

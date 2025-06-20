@@ -28,13 +28,13 @@ const model = (model: Flow.Model, isManualLayout = false) => {
       workflow.triggers.push(wfNode as Lightning.TriggerNode);
     } else {
       workflow.jobs.push(wfNode as Lightning.JobNode);
-      // if is manualLayout, we need to prepare position data for the commited node to be processed into the store
-      if (isManualLayout) {
-        workflow.positions[node.id] = {
-          x: node.position.x,
-          y: node.position.y,
-        };
-      }
+    }
+    // if is manualLayout, we need to prepare position data for the commited node to be processed into the store
+    if (isManualLayout) {
+      workflow.positions[node.id] = {
+        x: node.position.x,
+        y: node.position.y,
+      };
     }
   });
 
