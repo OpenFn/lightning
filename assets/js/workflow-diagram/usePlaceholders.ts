@@ -26,9 +26,12 @@ export const create = (parentNode: Flow.Node, where?: XYPosition) => {
       // mark this as as default position
       // @ts-ignore _default is a temporary flag added by us
       _default: true,
+
       // Offset the position of the placeholder to be more pleasing during animation
-      x: where?.x || parentNode.position.x,
-      y: where?.y || parentNode.position.y + 120,
+      // subtract 55 because there's a magic number at PlaceholderJob.tsx:137 which is 35px. it takes us 35px to the right of. so we calculate the rest of the half
+      x: where?.x ? where.x - 55 : parentNode.position.x,
+      // subtract 20 because that's the half of placeholder height
+      y: where?.y ? where.y - 20 : parentNode.position.y + 120,
     },
     data: {
       body: DEFAULT_TEXT,
