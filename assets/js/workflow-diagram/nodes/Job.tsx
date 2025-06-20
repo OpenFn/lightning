@@ -4,7 +4,6 @@ import Node from './Node';
 import PathButton from '../components/PathButton';
 import getAdaptorName from '../util/get-adaptor-name';
 import useAdaptorIcons, { type AdaptorIconData } from '../useAdaptorIcons';
-import PlusButton from '../components/PlusButton';
 
 type NodeData = any;
 
@@ -15,11 +14,6 @@ const JobNode = ({
 }: NodeProps<NodeData>) => {
   const toolbar = () => [
     props.data?.allowPlaceholder && [
-      props.data.isManualLayout ?
-        <PathButton key="+step-path" id='node-creator' >
-          <span className='hero-plus h-4 w-4 pointer-events-none'></span>
-        </PathButton> :
-        <PlusButton key="+step" />,
       <PathButton key="+path" id='node-connector' >
         <span className='hero-link h-4 w-4 pointer-events-none'></span>
       </PathButton>,

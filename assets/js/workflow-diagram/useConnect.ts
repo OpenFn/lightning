@@ -169,14 +169,7 @@ export default (
 
   const onConnectEnd: F.OnConnectEnd = useCallback(
     (evt, connectionState) => {
-      const isNodeCreator = connectionState.fromHandle?.id === 'node-creator';
-      if (!isNodeCreator) {
-        setDragActive(false);
-        setModel(resetModel(model));
-      } else if (
-        connectionState.fromHandle?.id === 'node-creator' &&
-        !connectionState.isValid
-      ) {
+      if (!connectionState.isValid) {
         evt.stopPropagation();
         evt.preventDefault();
         const { clientX, clientY } =
@@ -203,6 +196,8 @@ export default (
           addPlaceholder(node, position);
         }, 0);
       }
+      setDragActive(false);
+      setModel(resetModel(model));
     },
     [model, addPlaceholder]
   );

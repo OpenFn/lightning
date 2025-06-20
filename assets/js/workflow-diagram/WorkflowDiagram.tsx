@@ -146,7 +146,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // Re-render the model based on whatever was last selected
       // This handles first load and new node safely
       chartCache.current.lastSelection,
-      isManualLayout
     );
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
@@ -228,16 +227,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
-      const handleid = (event.target as HTMLElement).getAttribute("data-handleid")
-      const isNodeCreator = handleid === "node-creator" || (event.target as HTMLElement).closest('[name=add-node]');
-      if (isNodeCreator) {
-        addPlaceholder(node);
-      } else {
-        if (node.type !== 'placeholder') cancelPlaceholder();
-        updateSelection(node.id);
-      }
+      if (node.type !== 'placeholder') cancelPlaceholder();
+      updateSelection(node.id);
     },
-    [updateSelection, addPlaceholder, cancelPlaceholder]
+    [updateSelection, cancelPlaceholder]
   );
 
   const handleEdgeClick = useCallback(

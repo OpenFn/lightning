@@ -4,7 +4,6 @@ import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { kafkaIcon, lockClosedIcon } from '../components/trigger-icons';
 import cronstrue from 'cronstrue';
 
-import PlusButton from '../components/PlusButton';
 import Node from './Node';
 import type { Lightning } from '../types';
 
@@ -23,7 +22,6 @@ const TriggerNode = ({
   data: Lightning.TriggerNode;
 }): JSX.Element => {
   // Do not remove yet, we might need this snippet of code when implementing issue #1121
-  // const toolbar = () => props.data?.allowPlaceholder && <PlusButton />;
   const { label, sublabel, tooltip, primaryIcon, secondaryIcon } =
     getTriggerMeta(props.data);
   return (

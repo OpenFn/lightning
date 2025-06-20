@@ -1,15 +1,13 @@
-import { BezierEdge, type Handle } from '@xyflow/react';
-import { EDGE_COLOR, EDGE_COLOR_SELECTED } from '../styles';
+import { BezierEdge } from '@xyflow/react';
+import { EDGE_COLOR_SELECTED } from '../styles';
 
 export default (props: {
   fromX: number;
   fromY: number;
   toX: number;
   toY: number;
-  fromHandle?: Handle;
 }) => {
-  const { fromX, fromY, toX, toY, fromHandle } = props;
-  const isNodeCreator = fromHandle?.id === "node-creator";
+  const { fromX, fromY, toX, toY } = props;
   return (
     <BezierEdge
       sourceX={fromX}
@@ -19,9 +17,9 @@ export default (props: {
       animated={true}
       zIndex={-1}
       style={{
-        stroke: isNodeCreator ? EDGE_COLOR : EDGE_COLOR_SELECTED,
-        strokeWidth: isNodeCreator ? 2 : 4,
-        ...(isNodeCreator ? {} : { strokeDasharray: '4, 4' }),
+        stroke: EDGE_COLOR_SELECTED,
+        strokeWidth: 4,
+        strokeDasharray: '4, 4',
         opacity: 0.7,
       }}
     />
