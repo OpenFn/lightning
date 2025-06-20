@@ -157,8 +157,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         socket.assigns.selected_scopes
       )
 
-    changeset =
-      Credentials.change_credential(socket.assigns.credential, params) |> dbg()
+    changeset = Credentials.change_credential(socket.assigns.credential, params)
 
     updated_socket =
       socket

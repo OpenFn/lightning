@@ -41,6 +41,15 @@ defmodule LightningWeb.OauthComponentsTest do
   end
 
   test "rendering error component for various error type" do
+    changeset =
+      %Lightning.Credentials.Credential{}
+      |> Ecto.Changeset.cast(%{}, [])
+      |> Ecto.Changeset.put_change(:oauth_error_type, :missing_refresh_token)
+      |> Ecto.Changeset.put_change(:oauth_error_details, %{
+        existing_token_available: false
+      })
+      |> Ecto.Changeset.add_error(:oauth_token, "Missing refresh token")
+
     assert render_component(&LightningWeb.Components.Oauth.success_message/1,
              revocation: :unavailable
            ) =~
@@ -75,7 +84,7 @@ defmodule LightningWeb.OauthComponentsTest do
              myself: nil,
              provider: "Salesforce"
            ) =~
-             "That worked, but we couldn't fetch your user information. You can save your credential now or"
+             "That worked, but we couldn't fetch your user information.\n      You can save your credential now or try again.\n"
 
     assert render_component(&LightningWeb.Components.Oauth.alert_block/1,
              type: :code_failed,
@@ -89,16 +98,17 @@ defmodule LightningWeb.OauthComponentsTest do
              type: :revoke_failed,
              myself: nil
            ) =~
-             "Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one."
+             "Token revocation failed. The token associated with this credential may\n    have already been revoked or expired. You may try to authorize again,\n    or delete this credential and create a new one."
 
     assert render_component(
              &LightningWeb.Components.Oauth.alert_block/1,
              type: :missing_required,
              authorize_url: "https://www",
              myself: nil,
-             provider: "Salesforce"
+             provider: "Salesforce",
+             changeset: changeset
            ) =~
-             "We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential."
+             "Please reauthorize to provide OpenFn with the necessary refresh token for Salesforce."
 
     assert render_component(
              &LightningWeb.Components.Oauth.alert_block/1,
@@ -106,7 +116,8 @@ defmodule LightningWeb.OauthComponentsTest do
              authorize_url: "https://www",
              revocation_endpoint: "https://www",
              myself: nil,
-             provider: "Salesforce"
+             provider: "Salesforce",
+             changeset: changeset
            ) =~
              "re_authorize_click"
 
@@ -115,7 +126,8 @@ defmodule LightningWeb.OauthComponentsTest do
              type: :missing_required,
              authorize_url: "https://www",
              myself: nil,
-             provider: "Salesforce"
+             provider: "Salesforce",
+             changeset: changeset
            ) =~
              "authorize_click"
   end

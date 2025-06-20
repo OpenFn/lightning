@@ -71,12 +71,6 @@ defmodule Lightning.Credentials.OAuthValidation do
            ),
          :ok <- validate_expiration_fields(normalized_data) do
       {:ok, token_data}
-    else
-      {:error, %Error{} = error} ->
-        {:error, error}
-
-      {:error, message} when is_binary(message) ->
-        {:error, Error.new(:generic_oauth_error, message)}
     end
   end
 

@@ -1080,10 +1080,15 @@ defmodule LightningWeb.CredentialLiveTest do
              |> render() =~
                "Failed retrieving the token from the provider."
 
+      expected_message = """
+      Token revocation failed. The token associated with this credential may
+          have already been revoked or expired. You may try to authorize again,
+          or delete this credential and create a new one.
+      """
+
       assert view
              |> element("#credential-form-#{credential.id} #re-authorize-button")
-             |> render_click() =~
-               "Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one"
+             |> render_click() =~ String.trim(expected_message)
     end
   end
 
@@ -1259,7 +1264,6 @@ defmodule LightningWeb.CredentialLiveTest do
           mandatory_scopes: "",
           optional_scopes: ""
         )
-        |> dbg()
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -2063,13 +2067,10 @@ defmodule LightningWeb.CredentialLiveTest do
         :userinfo_failed === assigns[:oauth_progress]
       end)
 
-      assert view
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
+      assert view |> render() =~
+               "That worked, but we couldn&#39;t fetch your user information."
 
-      assert has_element?(view, "button", "try again")
+      assert has_element?(view, "button", "Try again")
     end
   end
 
@@ -2324,17 +2325,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert wait_for_assigns(edit_live, :userinfo_failed, credential.id)
 
-      edit_live |> render()
+      html = edit_live |> render()
 
-      assert edit_live
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
+      assert html =~
+               "That worked, but we couldn&#39;t fetch your user information."
 
-      assert has_element?(edit_live, "button", "try again")
+      assert has_element?(edit_live, "button", "Try again")
 
-      # Now respond with success
       expect_userinfo(
         bypass,
         Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
@@ -2343,7 +2340,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      edit_live |> element("button", "try again") |> render_click()
+      edit_live |> element("button", "Try again") |> render_click()
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 
@@ -2393,7 +2390,7 @@ defmodule LightningWeb.CredentialLiveTest do
       edit_live |> render()
 
       assert edit_live
-             |> has_element?("p", " Failed renewing your access token.")
+             |> has_element?("p", "Failed renewing your access token.")
     end
 
     # TODO - remove entirely once `salesforce_oauth` is removed.
@@ -2749,17 +2746,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert wait_for_assigns(edit_live, :userinfo_failed, credential.id)
 
-      edit_live |> render()
+      html = edit_live |> render()
 
-      assert edit_live
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
+      assert html =~
+               "That worked, but we couldn&#39;t fetch your user information."
 
-      assert has_element?(edit_live, "button", "try again")
+      assert has_element?(edit_live, "button", "Try again")
 
-      # Now respond with success
       expect_userinfo(
         bypass,
         Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
@@ -2768,7 +2761,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      edit_live |> element("button", "try again") |> render_click()
+      edit_live |> element("button", "Try again") |> render_click()
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 

@@ -28,6 +28,9 @@ defmodule Lightning.Credentials.OauthToken do
     field :body, Lightning.Encrypted.Map, redact: true
     field :scopes, {:array, :string}
 
+    field :oauth_error_type, :string, virtual: true
+    field :oauth_error_details, :map, virtual: true
+
     belongs_to :oauth_client, OauthClient
     belongs_to :user, User
     has_many :credentials, Credential
