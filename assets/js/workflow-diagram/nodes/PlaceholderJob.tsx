@@ -40,7 +40,7 @@ const dispatch = (
 };
 
 const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
-  const textRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLInputElement | null>(null);
 
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: true,
@@ -175,7 +175,11 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
           />
           <input
             type="text"
-            ref={textRef}
+            ref={(inputRef) => {
+              // assign ref and force focus
+              textRef.current = inputRef;
+              inputRef?.focus()
+            }}
             autoFocus
             data-placeholder={id}
             className={[

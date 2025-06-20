@@ -1,9 +1,16 @@
-import { Handle } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import { LinkIcon } from '@heroicons/react/24/outline';
+import type { PropsWithChildren } from 'react';
 
-function PathButton() {
+interface PathButtonProps {
+  id: string
+}
+
+const PathButton: React.FC<PropsWithChildren<PathButtonProps>> = (props) => {
   return (
     <Handle
+      id={props.id}
+      position={Position.Bottom}
       type="source"
       style={{
         position: 'relative',
@@ -21,12 +28,10 @@ function PathButton() {
         cursor: 'pointer',
       }}
       className="transition duration-150 ease-in-out pointer-events-auto rounded-lg
-      !bg-indigo-600 hover:!bg-indigo-500 py-1 px-2 text-[0.8125rem] font-semibold leading-5 text-white"
+      !bg-indigo-600 hover:!bg-indigo-500 py-1 px-2 text-[0.8125rem] font-semibold leading-5 text-white
+      flex items-center justify-center ml-1"
     >
-      <LinkIcon
-        className="inline h-4 w-4"
-        style={{ marginTop: '-6px', pointerEvents: 'none' }}
-      />
+      {props.children}
     </Handle>
   );
 }

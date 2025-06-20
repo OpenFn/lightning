@@ -12,7 +12,7 @@ import toWorkflow from './util/to-workflow';
 import type { XYPosition } from '@xyflow/react';
 
 // generates a placeholder node and edge as child of the parent
-export const create = (parentNode: Flow.Node) => {
+export const create = (parentNode: Flow.Node, where?: XYPosition) => {
   const newModel: Flow.Model = {
     nodes: [],
     edges: [],
@@ -27,8 +27,8 @@ export const create = (parentNode: Flow.Node) => {
       // @ts-ignore _default is a temporary flag added by us
       _default: true,
       // Offset the position of the placeholder to be more pleasing during animation
-      x: parentNode.position.x,
-      y: parentNode.position.y + 100,
+      x: where?.x || parentNode.position.x,
+      y: where?.y || parentNode.position.y + 100,
     },
     data: {
       body: DEFAULT_TEXT,
@@ -75,9 +75,9 @@ export default (
     []
   );
 
-  const add = useCallback((parentNode: Flow.Node) => {
+  const add = useCallback((parentNode: Flow.Node, where?: XYPosition) => {
     // Generate a placeholder node and edge
-    const updated = create(parentNode);
+    const updated = create(parentNode, where);
     setPlaceholders(updated);
 
     requestSelectionChange(updated.nodes[0].id);
