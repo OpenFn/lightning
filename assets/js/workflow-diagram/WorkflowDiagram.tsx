@@ -10,8 +10,7 @@ import {
   type Rect,
   ControlButton,
   Background,
-  MiniMap,
-  type XYPosition
+  MiniMap
 } from '@xyflow/react';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
@@ -24,7 +23,7 @@ import fromWorkflow from './util/from-workflow';
 import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
-
+import tippy from 'tippy.js';
 import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
@@ -47,6 +46,35 @@ type ChartCache = {
 
 const LAYOUT_DURATION = 300;
 
+// Simple React hook for Tippy tooltips that finds buttons by their content
+const useTippyForControls = fixedPositions => {
+  useEffect(() => {
+    // Find the control buttons and initialize tooltips based on their dataset attributes
+    const buttons = document.querySelectorAll('.react-flow__controls button');
+
+    buttons.forEach(button => {
+      if (button instanceof HTMLElement && button.dataset.tooltip) {
+        tippy(button, {
+          content: button.dataset.tooltip,
+          placement: 'right',
+          animation: false,
+          allowHTML: false,
+        });
+      }
+    });
+
+    return () => {
+      // Destroy all tooltips when the component unmounts
+      buttons.forEach(button => {
+        const instance = tippy(button);
+        if (instance) {
+          instance.destroy();
+        }
+      });
+    };
+  }, [fixedPositions]); // Only run once on mount
+};
+
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { jobs, triggers, edges, disabled, positions: fixedPositions, updatePositions, updatePosition } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
@@ -62,7 +90,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       chartCache.current.lastSelection = id;
       onSelectionChange(id);
     },
-    [onSelectionChange, selection]
+    [onSelectionChange]
   );
 
   const {
@@ -101,7 +129,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }).then(positions => {
       // Note we don't update positions until the animation has finished
       chartCache.current.positions = positions;
-      if(isManualLayout) updatePositions(positions);
+      if (isManualLayout) updatePositions(positions);
     });
   },
     [flow, model, isManualLayout]
@@ -288,6 +316,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   }, [flow, model, el]);
 
   const connectHandlers = useConnect(model, setModel);
+  // Set up tooltips for control buttons
+  useTippyForControls(fixedPositions);
+
   return (
     <ReactFlowProvider>
       <ReactFlow
