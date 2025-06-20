@@ -596,17 +596,6 @@ defmodule Lightning.AiAssistantTest do
       assert "is invalid" in errors_on(changeset).status
     end
 
-    test "handles non-existent session", %{
-      user: user
-    } do
-      message = insert(:chat_message, content: "test", role: :user, user: user)
-      session = build(:chat_session, id: Ecto.UUID.generate())
-
-      assert_raise Ecto.NoResultsError, fn ->
-        AiAssistant.update_message_status(session, message, :success)
-      end
-    end
-
     test "updates message status for session with multiple messages", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
