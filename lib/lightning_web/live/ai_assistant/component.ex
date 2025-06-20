@@ -166,13 +166,14 @@ defmodule LightningWeb.AiAssistant.Component do
       )
 
     handler = socket.assigns.handler
+    options = handler.query_options(socket.assigns.changeset)
 
     {:noreply,
      socket
      |> assign(:session, session)
      |> assign(:pending_message, AsyncResult.loading())
      |> start_async(:process_message, fn ->
-       handler.query(session, message.content)
+       handler.query(session, message.content, options)
      end)}
   end
 
