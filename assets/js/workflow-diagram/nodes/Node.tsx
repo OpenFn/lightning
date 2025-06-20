@@ -225,7 +225,7 @@ const Node = ({
             }}
           />
         )}
-        <div className="flex flex-col mt-8 ml-2 absolute left-full top-0 pointer-events-none min-w-[275px]">
+        <div className="flex flex-col mt-8 ml-2 absolute left-[108px] top-0 pointer-events-none min-w-[275px]">
           <Label hasErrors={hasErrors(errors)}>{label}</Label>
           <SubLabel>{sublabel}</SubLabel>
           {data.isActiveDropTarget &&
