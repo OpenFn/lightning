@@ -255,7 +255,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         html =
           view
           |> form("#ai-assistant-form")
-          |> render_submit(%{content: "Hello"})
+          |> render_submit(assistant: %{content: "Hello"})
 
         refute html =~ "You are not authorized to use the Ai Assistant"
 
@@ -302,7 +302,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         html =
           view
           |> form("#ai-assistant-form")
-          |> render_submit(%{content: "Hello"})
+          |> render_submit(assistant: %{content: "Hello"})
 
         assert html =~ "You are not authorized to use the AI Assistant"
       end)
@@ -397,7 +397,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       html =
         view
         |> form("#ai-assistant-form")
-        |> render_change(%{content: random_text})
+        |> render_change(assistant: %{content: random_text})
 
       assert html =~ random_text
     end
@@ -454,7 +454,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Ping"})
+      |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
 
@@ -537,7 +537,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       html =
         view
         |> form("#ai-assistant-form")
-        |> render_submit(%{content: expected_question})
+        |> render_submit(assistant: %{content: expected_question})
 
       refute html =~ expected_answer
 
@@ -583,7 +583,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Ping"})
+      |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
 
@@ -632,7 +632,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Ping"})
+      |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
 
@@ -688,7 +688,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Ping"})
+      |> render_submit(assistant: %{content: "Ping"})
 
       assert has_element?(view, "#ai-assistant-error", error_message)
     end
@@ -738,7 +738,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Ping"})
+      |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
       render_async(view)
@@ -784,7 +784,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Ping"})
+      |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
       render_async(view)
@@ -829,7 +829,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Ping"})
+      |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
       render_async(view)
@@ -874,7 +874,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Ping"})
+      |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
       render_async(view)
@@ -1059,7 +1059,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: message})
+      |> render_submit(assistant: %{content: message})
 
       render_async(view)
 
@@ -1341,6 +1341,156 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       assert render(feedback_el) =~ "Hello from AI Feedback"
     end
+
+    test "job code attachment is selected by default", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      job_expression = "fn(state => state);\n"
+      adaptor = "@openfn/language-http@7.0.6"
+
+      job_1
+      |> Ecto.Changeset.change(%{adaptor: adaptor, body: job_expression})
+      |> Lightning.Repo.update!()
+
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post, body: json_body}, _opts ->
+            body = Jason.decode!(json_body)
+            assert body["context"]["expression"] == job_expression
+            assert body["context"]["adaptor"] == adaptor
+
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "user", "content" => "Ping"},
+                   %{"role" => "assistant", "content" => "Pong"}
+                 ]
+               }
+             }}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      # checkbox is checked
+      assert has_element?(
+               view,
+               "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
+             )
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(assistant: %{content: "Ping"})
+
+      assert_patch(view)
+
+      render_async(view)
+
+      # checkbox is still checked even after patching
+      assert has_element?(
+               view,
+               "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
+             )
+    end
+
+    test "job code attachment can be turned off", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      job_expression = "fn(state => state);\n"
+      adaptor = "@openfn/language-http@7.0.6"
+
+      job_1
+      |> Ecto.Changeset.change(%{adaptor: adaptor, body: job_expression})
+      |> Lightning.Repo.update!()
+
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post, body: json_body}, _opts ->
+            body = Jason.decode!(json_body)
+            refute Map.has_key?(body["context"], "expression")
+            assert body["context"]["adaptor"] == adaptor
+
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "user", "content" => "Ping"},
+                   %{"role" => "assistant", "content" => "Pong"}
+                 ]
+               }
+             }}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      # checkbox is checked
+      assert has_element?(
+               view,
+               "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
+             )
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(assistant: %{content: "Ping", options: %{code: "false"}})
+
+      assert_patch(view)
+
+      render_async(view)
+
+      # checkbox is not checked
+      assert has_element?(
+               view,
+               "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:not(:checked)"
+             )
+    end
   end
 
   describe "AI Assistant - Workflow Template Mode" do
@@ -1420,7 +1570,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Create a Salesforce sync workflow"})
+      |> render_submit(
+        assistant: %{content: "Create a Salesforce sync workflow"}
+      )
 
       assert_patch(view)
 
@@ -1490,7 +1642,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Create a Salesforce sync workflow"})
+      |> render_submit(
+        assistant: %{content: "Create a Salesforce sync workflow"}
+      )
 
       assert_patch(view)
       render_async(view)
@@ -1579,7 +1733,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Create a workflow"})
+      |> render_submit(assistant: %{content: "Create a workflow"})
 
       assert_patch(view)
       render_async(view)
@@ -1716,7 +1870,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Create workflow"})
+      |> render_submit(assistant: %{content: "Create workflow"})
 
       assert has_element?(view, "#ai-assistant-error", error_message)
     end
@@ -1986,7 +2140,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       job_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Help with code"})
+      |> render_submit(assistant: %{content: "Help with code"})
 
       render_async(job_view)
 
@@ -2000,7 +2154,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       workflow_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Create workflow"})
+      |> render_submit(assistant: %{content: "Create workflow"})
 
       render_async(workflow_view)
 
@@ -2277,7 +2431,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       job_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Help me"})
+      |> render_submit(assistant: %{content: "Help me"})
 
       render_async(job_view)
 
@@ -2293,7 +2447,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       workflow_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Create workflow"})
+      |> render_submit(assistant: %{content: "Create workflow"})
 
       render_async(workflow_view)
 
@@ -2349,7 +2503,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       job_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Help"})
+      |> render_submit(assistant: %{content: "Help"})
 
       assert_patch(job_view)
       render_async(job_view)
@@ -2374,7 +2528,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       workflow_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Create"})
+      |> render_submit(assistant: %{content: "Create"})
 
       assert_patch(workflow_view)
       render_async(workflow_view)
@@ -2435,7 +2589,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       job_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Test"})
+      |> render_submit(assistant: %{content: "Test"})
 
       render_async(job_view)
 
@@ -2453,7 +2607,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       workflow_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Test"})
+      |> render_submit(assistant: %{content: "Test"})
 
       render_async(workflow_view)
 
@@ -2692,7 +2846,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       job_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Help with debugging"})
+      |> render_submit(assistant: %{content: "Help with debugging"})
 
       assert_patch(job_view)
       render_async(job_view)
@@ -2707,7 +2861,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       workflow_view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Create new workflow"})
+      |> render_submit(assistant: %{content: "Create new workflow"})
 
       assert_patch(workflow_view)
       render_async(workflow_view)
@@ -2771,7 +2925,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       assert view
              |> form("#ai-assistant-form")
-             |> render_submit(%{content: "Test async"}) =~ "Processing..."
+             |> render_submit(assistant: %{content: "Test async"}) =~
+               "Processing..."
 
       html = render_async(view)
       assert html =~ "Delayed response"
@@ -2811,7 +2966,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view
       |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Trigger crash"})
+      |> render_submit(assistant: %{content: "Trigger crash"})
 
       _html = render_async(view)
       assert has_element?(view, "#assistant-failed-message")
