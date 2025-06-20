@@ -47,32 +47,28 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 // Simple React hook for Tippy tooltips that finds buttons by their content
-const useTippyForControls = fixedPositions => {
+const useTippyForControls = (isManualLayout: boolean) => {
   useEffect(() => {
     // Find the control buttons and initialize tooltips based on their dataset attributes
     const buttons = document.querySelectorAll('.react-flow__controls button');
 
+    const cleaner: (() => void)[] = [];
     buttons.forEach(button => {
       if (button instanceof HTMLElement && button.dataset.tooltip) {
-        tippy(button, {
+        const tp = tippy(button, {
           content: button.dataset.tooltip,
           placement: 'right',
           animation: false,
           allowHTML: false,
         });
+        cleaner.push(tp.destroy.bind(tp));
       }
     });
 
     return () => {
-      // Destroy all tooltips when the component unmounts
-      buttons.forEach(button => {
-        const instance = tippy(button);
-        if (instance) {
-          instance.destroy();
-        }
-      });
+      cleaner.forEach(f => { f() });
     };
-  }, [fixedPositions]); // Only run once on mount
+  }, [isManualLayout]); // Only run once on mount
 };
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
@@ -311,7 +307,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const connectHandlers = useConnect(model, setModel, addPlaceholder, () => { cancelPlaceholder(); updateSelection(null) }, flow);
   // Set up tooltips for control buttons
-  useTippyForControls(fixedPositions);
+  useTippyForControls(isManualLayout);
   return (
     <ReactFlowProvider>
       <ReactFlow
