@@ -227,10 +227,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
+      if ((event.target as HTMLElement).getAttribute("data-handleid") === "node-connector") {
+        addPlaceholder(node);
+        return;
+      }
       if (node.type !== 'placeholder') cancelPlaceholder();
       updateSelection(node.id);
     },
-    [updateSelection, cancelPlaceholder]
+    [updateSelection, cancelPlaceholder, addPlaceholder]
   );
 
   const handleEdgeClick = useCallback(

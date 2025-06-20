@@ -28,7 +28,7 @@ export const create = (parentNode: Flow.Node, where?: XYPosition) => {
       _default: true,
       // Offset the position of the placeholder to be more pleasing during animation
       x: where?.x || parentNode.position.x,
-      y: where?.y || parentNode.position.y + 100,
+      y: where?.y || parentNode.position.y + 120,
     },
     data: {
       body: DEFAULT_TEXT,
