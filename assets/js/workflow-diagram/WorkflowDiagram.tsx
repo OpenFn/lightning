@@ -29,7 +29,6 @@ import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 import MiniMapNode from './components/MiniMapNode';
-import toWorkflow from "./util/to-workflow"
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -90,6 +89,23 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   });
 
   const [flow, setFlow] = useState<ReactFlowInstance>();
+
+  const forceLayout = useCallback(() => {
+    const viewBounds = {
+      width: workflowDiagramRef.current?.clientWidth ?? 0,
+      height: workflowDiagramRef.current?.clientHeight ?? 0,
+    };
+    layout(model, setModel, flow, viewBounds, {
+      duration: props.layoutDuration ?? LAYOUT_DURATION,
+      forceFit: props.forceFit,
+    }).then(positions => {
+      // Note we don't update positions until the animation has finished
+      chartCache.current.positions = positions;
+      if(isManualLayout) updatePositions(positions);
+    });
+  },
+    [flow, model, isManualLayout]
+  );
 
   // Respond to changes pushed into the component from outside
   // This usually means the workflow has changed or its the first load, so we don't want to animate
@@ -311,7 +327,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             )}
           </ControlButton>
           <ControlButton
-            onClick={() => { console.log("force autolayout!") }}
+            onClick={forceLayout}
             data-tooltip="Force auto-layout (override all manual positions)"
           >
             <span className="text-black hero-squares-2x2 w-4 h-4" />
