@@ -109,7 +109,6 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       {:ok, updated_session} = AiAssistant.query(session, message_content)
-      dbg(updated_session)
       assert updated_session.expression == job_expression
       assert updated_session.adaptor == adaptor
 
