@@ -1078,12 +1078,17 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view
              |> element("#credential-form-#{credential.id}")
              |> render() =~
-               "Failed retrieving the token from the provider. Please try again"
+               "Failed retrieving the token from the provider."
+
+      expected_message = """
+      Token revocation failed. The token associated with this credential may
+          have already been revoked or expired. You may try to authorize again,
+          or delete this credential and create a new one.
+      """
 
       assert view
              |> element("#credential-form-#{credential.id} #re-authorize-button")
-             |> render_click() =~
-               "Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one"
+             |> render_click() =~ String.trim(expected_message)
     end
   end
 
@@ -1135,7 +1140,12 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       insert(:project, project_users: [%{user: user, role: :owner}])
 
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "",
+          optional_scopes: ""
+        )
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -1189,7 +1199,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view |> submit_disabled("#save-credential-button-new")
 
       assert view |> render() =~
-               "We didn&#39;t receive a refresh token from this provider."
+               "Missing refresh_token for new OAuth connection"
 
       credential =
         Lightning.Credentials.list_credentials(user) |> List.first()
@@ -1221,7 +1231,7 @@ defmodule LightningWeb.CredentialLiveTest do
                    "expires_at" => 3600,
                    "token_type" => "Bearer",
                    "id_token" => "eyJhbGciO",
-                   "scope" => "scope1 scope2"
+                   "scope" => "scope_1 scope_2"
                  })
              }}
 
@@ -1248,7 +1258,12 @@ defmodule LightningWeb.CredentialLiveTest do
       [project_1, project_2, project_3] =
         insert_list(3, :project, project_users: [%{user: user, role: :owner}])
 
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "",
+          optional_scopes: ""
+        )
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -1344,7 +1359,7 @@ defmodule LightningWeb.CredentialLiveTest do
                access_token: "ya29.a0AVvZ",
                refresh_token: "1//03vpp6Li",
                expires_at: 3600,
-               scope: "scope1 scope2"
+               scope: "scope_1 scope_2"
              } = token
     end
 
@@ -1554,7 +1569,12 @@ defmodule LightningWeb.CredentialLiveTest do
       user: user,
       conn: conn
     } do
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
 
@@ -1725,7 +1745,13 @@ defmodule LightningWeb.CredentialLiveTest do
            user: user,
            conn: conn
          } do
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
+
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       index_live |> select_credential_type(oauth_client.id)
@@ -1797,7 +1823,7 @@ defmodule LightningWeb.CredentialLiveTest do
                access_token: "ya29.a0AVvZ",
                refresh_token: "1//03vpp6Li",
                expires_at: 3600,
-               scope: "scope1 scope2"
+               scope: "scope_1 scope_2"
              } =
                credential.oauth_token.body
                |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
@@ -1974,7 +2000,7 @@ defmodule LightningWeb.CredentialLiveTest do
                    "expires_at" => 3600,
                    "token_type" => "Bearer",
                    "id_token" => "eyJhbGciO",
-                   "scope" => "scope1 scope2"
+                   "scope" => "scope_1 scope_2"
                  })
              }}
 
@@ -1987,7 +2013,12 @@ defmodule LightningWeb.CredentialLiveTest do
         end
       end)
 
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
@@ -2036,13 +2067,10 @@ defmodule LightningWeb.CredentialLiveTest do
         :userinfo_failed === assigns[:oauth_progress]
       end)
 
-      assert view
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
+      assert view |> render() =~
+               "That worked, but we couldn&#39;t fetch your user information."
 
-      assert has_element?(view, "button", "try again")
+      assert has_element?(view, "button", "Try again")
     end
   end
 
@@ -2288,7 +2316,7 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            scope: "scope1 scope2",
+            scope: "scope_1 scope_2",
             instance_url: "http://localhost:#{bypass.port}/salesforce/instance"
           }
         )
@@ -2297,17 +2325,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert wait_for_assigns(edit_live, :userinfo_failed, credential.id)
 
-      edit_live |> render()
+      html = edit_live |> render()
 
-      assert edit_live
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
+      assert html =~
+               "That worked, but we couldn&#39;t fetch your user information."
 
-      assert has_element?(edit_live, "button", "try again")
+      assert has_element?(edit_live, "button", "Try again")
 
-      # Now respond with success
       expect_userinfo(
         bypass,
         Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
@@ -2316,7 +2340,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      edit_live |> element("button", "try again") |> render_click()
+      edit_live |> element("button", "Try again") |> render_click()
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 
@@ -2354,7 +2378,7 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            scope: "scope1 scope2",
+            scope: "scope_1 scope_2",
             instance_url: "http://localhost:#{bypass.port}/salesforce/instance"
           }
         )
@@ -2366,7 +2390,7 @@ defmodule LightningWeb.CredentialLiveTest do
       edit_live |> render()
 
       assert edit_live
-             |> has_element?("p", " Failed renewing your access token.")
+             |> has_element?("p", "Failed renewing your access token.")
     end
 
     # TODO - remove entirely once `salesforce_oauth` is removed.
@@ -2714,7 +2738,7 @@ defmodule LightningWeb.CredentialLiveTest do
             access_token: "ya29.a0AVvZ...",
             refresh_token: "1//03vpp6Li...",
             expires_at: expires_at,
-            scope: "scope1 scope2"
+            scope: "scope_1 scope_2"
           }
         )
 
@@ -2722,17 +2746,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert wait_for_assigns(edit_live, :userinfo_failed, credential.id)
 
-      edit_live |> render()
+      html = edit_live |> render()
 
-      assert edit_live
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
+      assert html =~
+               "That worked, but we couldn&#39;t fetch your user information."
 
-      assert has_element?(edit_live, "button", "try again")
+      assert has_element?(edit_live, "button", "Try again")
 
-      # Now respond with success
       expect_userinfo(
         bypass,
         Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
@@ -2741,7 +2761,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      edit_live |> element("button", "try again") |> render_click()
+      edit_live |> element("button", "Try again") |> render_click()
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 

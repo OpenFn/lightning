@@ -49,14 +49,14 @@ defmodule LightningWeb.Components.Common do
       )
 
     ~H"""
-    <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 #{@class}"}>
+    <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 text-wrap #{@class}"}>
       <div class="flex">
         <div class="flex-shrink-0">
           <.icon name={@icon} class={"align-top h-5 w-5 text-#{@color}-400"} />
         </div>
         <div class={[
-          "ml-3",
-          assigns[:link_right] && "flex-1 md:flex md:justify-between"
+          "ml-3 min-w-0 flex-1",
+          assigns[:link_right] && "md:flex md:justify-between"
         ]}>
           <%= if @header do %>
             <h3 class={"text-sm font-medium text-#{@color}-800"}>{@header}</h3>
