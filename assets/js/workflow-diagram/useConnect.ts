@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type * as F from '@xyflow/react';
 import { randomUUID } from '../common';
 import { useWorkflowStore } from '../workflow-store/store';
@@ -131,11 +131,9 @@ export default (
   flow: F.ReactFlowInstance
 ) => {
   const [dragActive, setDragActive] = useState<string | false>(false);
-  const [creatorDrag, setCreatorDrag] = useState(false);
   const { add: addTo } = useWorkflowStore();
 
   const onConnect: F.OnConnect = useCallback(args => {
-    if (args.sourceHandle !== 'node-connector') return;
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
 
@@ -144,10 +142,6 @@ export default (
 
   const onConnectStart: F.OnConnectStart = useCallback(
     (_evt, args) => {
-      if (args.handleId !== 'node-connector') {
-        setCreatorDrag(true);
-        return;
-      }
       setDragActive(args.nodeId);
       setModel(setValidDropTargets(model, args.nodeId));
     },
@@ -159,12 +153,12 @@ export default (
       if (
         event.target instanceof HTMLElement &&
         event.target.classList?.contains('react-flow__pane') &&
-        !creatorDrag
+        !dragActive
       ) {
         bgClick();
       }
     },
-    [creatorDrag]
+    [dragActive]
   );
 
   const onConnectEnd: F.OnConnectEnd = useCallback(
@@ -186,11 +180,6 @@ export default (
         const node = connectionState.fromNode;
         if (!node) return;
 
-        // set creator drag to false
-        setTimeout(() => {
-          setCreatorDrag(false);
-        }, 1000);
-
         // wait for any deselection to be done!
         setTimeout(() => {
           const isOnNode = (evt.target as HTMLElement).closest('[data-a-node]');
@@ -198,8 +187,9 @@ export default (
           addPlaceholder(node, position);
         }, 0);
       }
-      setDragActive(false);
-      setModel(resetModel(model));
+      setTimeout(() => {
+        setDragActive(false);
+      }, 500);
     },
     [model, addPlaceholder]
   );
@@ -245,6 +235,5 @@ export default (
     onNodeMouseLeave,
     isValidConnection,
     onClick,
-    creatorDrag,
   };
 };
