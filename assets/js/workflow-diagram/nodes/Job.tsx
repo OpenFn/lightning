@@ -15,7 +15,7 @@ const JobNode = ({
   const toolbar = () => [
     props.data?.allowPlaceholder && [
       <PathButton key="+path" id='node-connector' >
-        <span className='hero-link h-4 w-4 pointer-events-none'></span>
+        <span className='hero-plus h-4 w-4 pointer-events-none'></span>
       </PathButton>,
     ],
   ];
