@@ -156,8 +156,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
       )
   """
   @impl true
-  @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def query(session, content) do
+  @spec query(map(), String.t(), map()) :: {:ok, map()} | {:error, any()}
+  def query(session, content, _opts) do
     AiAssistant.query_workflow(session, content)
   end
 
