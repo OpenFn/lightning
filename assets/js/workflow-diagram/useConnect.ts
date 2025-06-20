@@ -125,12 +125,17 @@ const resetModel = (model: Flow.Model) => ({
 
 export default (
   model: Flow.Model,
-  setModel: React.Dispatch<React.SetStateAction<Flow.Model>>
+  setModel: React.Dispatch<React.SetStateAction<Flow.Model>>,
+  addPlaceholder: (node: Flow.Node, where?: F.XYPosition) => void,
+  bgClick: () => void,
+  flow: F.ReactFlowInstance
 ) => {
   const [dragActive, setDragActive] = useState<string | false>(false);
+  const [creatorDrag, setCreatorDrag] = useState(false);
   const { add: addTo } = useWorkflowStore();
 
   const onConnect: F.OnConnect = useCallback(args => {
+    if (args.sourceHandle !== 'node-connector') return;
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
 
@@ -139,18 +144,67 @@ export default (
 
   const onConnectStart: F.OnConnectStart = useCallback(
     (_evt, args) => {
+      if (args.handleId !== 'node-connector') {
+        setCreatorDrag(true);
+        return;
+      }
       setDragActive(args.nodeId);
       setModel(setValidDropTargets(model, args.nodeId));
     },
     [model]
   );
 
-  const onConnectEnd: F.OnConnectEnd = useCallback(
-    evt => {
-      setDragActive(false);
-      setModel(resetModel(model));
+  const onClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.classList?.contains('react-flow__pane') &&
+        !creatorDrag
+      ) {
+        bgClick();
+      }
     },
-    [model]
+    [creatorDrag]
+  );
+
+  const onConnectEnd: F.OnConnectEnd = useCallback(
+    (evt, connectionState) => {
+      const isNodeCreator = connectionState.fromHandle?.id === 'node-creator';
+      if (!isNodeCreator) {
+        setDragActive(false);
+        setModel(resetModel(model));
+      } else if (
+        connectionState.fromHandle?.id === 'node-creator' &&
+        !connectionState.isValid
+      ) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        const { clientX, clientY } =
+          'changedTouches' in evt ? evt.changedTouches[0] : evt;
+
+        // Use screenToFlowPosition to calculate flow coordinates
+        const position = flow.screenToFlowPosition({
+          x: clientX,
+          y: clientY,
+        });
+
+        // Give time for any deselection to take place
+        // when in auto-layout mode
+        const node = connectionState.fromNode;
+        if (!node) return;
+
+        // set creator drag to false
+        setTimeout(() => {
+          setCreatorDrag(false);
+        }, 1000);
+
+        // wait for any deselection to be done!
+        setTimeout(() => {
+          addPlaceholder(node, position);
+        }, 0);
+      }
+    },
+    [model, addPlaceholder]
   );
 
   const onNodeMouseEnter: F.NodeMouseHandler = useCallback(
@@ -193,5 +247,7 @@ export default (
     onNodeMouseEnter,
     onNodeMouseLeave,
     isValidConnection,
+    onClick,
+    creatorDrag,
   };
 };

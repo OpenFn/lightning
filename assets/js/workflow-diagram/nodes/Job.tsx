@@ -15,8 +15,14 @@ const JobNode = ({
 }: NodeProps<NodeData>) => {
   const toolbar = () => [
     props.data?.allowPlaceholder && [
-      <PlusButton key="+step" />,
-      <PathButton key="+path" />,
+      props.data.isManualLayout ?
+        <PathButton key="+step-path" id='node-creator' >
+          <span className='hero-plus h-4 w-4 pointer-events-none'></span>
+        </PathButton> :
+        <PlusButton key="+step" />,
+      <PathButton key="+path" id='node-connector' >
+        <span className='hero-link h-4 w-4 pointer-events-none'></span>
+      </PathButton>,
     ],
   ];
 

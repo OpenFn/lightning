@@ -51,7 +51,8 @@ const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
   placeholders: Flow.Model = { nodes: [], edges: [] },
-  selectedId: string | null
+  selectedId: string | null,
+  isManualLayout: boolean = false
 ): Flow.Model => {
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
@@ -88,6 +89,7 @@ const fromWorkflow = (
         model.height = 200;
 
         model.data.allowPlaceholder = allowPlaceholder;
+        model.data.isManualLayout = isManualLayout;
 
         if (type === 'trigger') {
           model.data.trigger = {

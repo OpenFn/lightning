@@ -100,7 +100,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updatePlaceholderPosition,
   } = usePlaceholders(el, isManualLayout, updateSelection);
 
-
   const workflow = React.useMemo(() => ({
     jobs,
     triggers,
@@ -123,7 +122,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       width: workflowDiagramRef.current?.clientWidth ?? 0,
       height: workflowDiagramRef.current?.clientHeight ?? 0,
     };
-    layout(model, setModel, flow, viewBounds, {
+    return layout(model, setModel, flow, viewBounds, {
       duration: props.layoutDuration ?? LAYOUT_DURATION,
       forceFit: props.forceFit,
     }).then(positions => {
@@ -132,7 +131,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       if (isManualLayout) updatePositions(positions);
     });
   },
-    [flow, model, isManualLayout]
+    [flow, model, isManualLayout, updatePositions]
   );
 
   // Respond to changes pushed into the component from outside
@@ -146,7 +145,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       placeholders,
       // Re-render the model based on whatever was last selected
       // This handles first load and new node safely
-      chartCache.current.lastSelection
+      chartCache.current.lastSelection,
+      isManualLayout
     );
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
@@ -228,15 +228,16 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
-      if ((event.target as HTMLElement).closest('[name=add-node]')) {
+      const handleid = (event.target as HTMLElement).getAttribute("data-handleid")
+      const isNodeCreator = handleid === "node-creator" || (event.target as HTMLElement).closest('[name=add-node]');
+      if (isNodeCreator) {
         addPlaceholder(node);
       } else {
-        if (node.type != 'placeholder') cancelPlaceholder();
-
+        if (node.type !== 'placeholder') cancelPlaceholder();
         updateSelection(node.id);
       }
     },
-    [updateSelection]
+    [updateSelection, addPlaceholder, cancelPlaceholder]
   );
 
   const handleEdgeClick = useCallback(
@@ -244,21 +245,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       cancelPlaceholder();
       updateSelection(edge.id);
     },
-    [updateSelection]
+    [updateSelection, cancelPlaceholder]
   );
 
-  const handleBackgroundClick = useCallback(
-    (event: React.MouseEvent) => {
-      if (
-        event.target instanceof HTMLElement &&
-        event.target.classList?.contains('react-flow__pane')
-      ) {
-        cancelPlaceholder();
-        updateSelection(null);
-      }
-    },
-    [updateSelection]
-  );
 
   // Trigger a fit to bounds when the parent div changes size
   // To keep the chart more stable, try and take a snapshot of the target bounds
@@ -315,10 +304,17 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }
   }, [flow, model, el]);
 
-  const connectHandlers = useConnect(model, setModel);
+  const switchLayout = async () => {
+    if (isManualLayout) {
+      await forceLayout();
+      updatePositions(null);
+    } else updatePositions(chartCache.current.positions)
+  }
+
+
+  const connectHandlers = useConnect(model, setModel, addPlaceholder, () => { cancelPlaceholder(); updateSelection(null) }, flow);
   // Set up tooltips for control buttons
   useTippyForControls(fixedPositions);
-
   return (
     <ReactFlowProvider>
       <ReactFlow
@@ -332,7 +328,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         nodesDraggable={isManualLayout}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onClick={handleBackgroundClick}
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         onInit={setFlow}
@@ -344,7 +339,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       >
         <Controls position="bottom-left" showInteractive={false}>
           <ControlButton
-            onClick={() => isManualLayout ? updatePositions(null) : updatePositions(chartCache.current.positions)}
+            onClick={switchLayout}
             data-tooltip={
               isManualLayout
                 ? 'Switch to auto layout'
@@ -372,6 +367,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           nodeComponent={MiniMapNode}
         />
       </ReactFlow>
-    </ReactFlowProvider>
+    </ReactFlowProvider >
   );
 };
