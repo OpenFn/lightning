@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import React, { memo } from 'react';
 import { Handle, type NodeProps } from '@xyflow/react';
 
 import Shape from '../components/Shape';
@@ -93,7 +93,7 @@ const Node = ({
   return (
     <div className="group" data-a-node>
       <div className="flex flex-row cursor-pointer">
-        <div>
+        <div className='relative'>
           {targetPosition && (
             <>
               {/*
@@ -225,7 +225,7 @@ const Node = ({
             }}
           />
         )}
-        <div className="flex flex-col flex-1 ml-2 mt-8">
+        <div className="flex flex-col justify-center ml-2 absolute left-full top-0 bottom-2 pointer-events-none min-w-[275px]">
           <Label hasErrors={hasErrors(errors)}>{label}</Label>
           <SubLabel>{sublabel}</SubLabel>
           {data.isActiveDropTarget &&
