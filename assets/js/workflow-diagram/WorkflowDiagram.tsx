@@ -163,6 +163,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     (changes: NodeChange[]) => {
       const newNodes = applyNodeChanges(changes, model.nodes);
       setModel({ nodes: newNodes, edges: model.edges });
+
+      // we just need to recalculate this to update the cache.
+      const newPositions = newNodes.reduce((obj, next) => {
+        obj[next.id] = next.position;
+        return obj;
+      }, {} as Positions);
+      chartCache.current.positions = newPositions;
     },
     [setModel, model]);
 
