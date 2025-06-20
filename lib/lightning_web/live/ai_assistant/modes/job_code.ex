@@ -41,7 +41,11 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     def get_options(changeset) do
       data = apply_changes(changeset)
 
-      Map.from_struct(data.options)
+      if data.options do
+        Map.from_struct(data.options)
+      else
+        %{}
+      end
     end
   end
 
