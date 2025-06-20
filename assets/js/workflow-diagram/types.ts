@@ -72,14 +72,13 @@ export type EdgeData = {
   placeholder?: boolean;
   condition_type?: string;
   errors?: object;
+  neighbour?: boolean;
 };
 
 export namespace Flow {
   export type Node = ReactFlow.Node<NodeData>;
 
-  export type Edge = ReactFlow.Edge<EdgeData> & {
-    neighbour?: boolean; // temporary flag for styling
-  };
+  export type Edge = ReactFlow.Edge<EdgeData>;
 
   export type Model = {
     nodes: Node[];

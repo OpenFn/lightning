@@ -42,8 +42,8 @@ export default (model: Flow.Model, newSelection: string | null) => {
   function updateItem(item: Flow.Edge | Flow.Node) {
     return styleItem({
       ...item,
-
-      selected: item.id === newSelection || item.id in neighbours,
+      data: { ...item.data, neighbour: item.id in neighbours },
+      selected: item.id === newSelection,
     });
   }
 

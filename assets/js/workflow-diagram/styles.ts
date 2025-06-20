@@ -10,6 +10,7 @@ import type { Flow } from './types';
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_DISABLED = '#E1E1E1';
 export const EDGE_COLOR_SELECTED = '#4f46e5';
+export const EDGE_COLOR_NEIGHBOUR = '#807CCE';
 export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 
 export const ERROR_COLOR = '#ef4444';
@@ -46,11 +47,19 @@ export const edgeLabelTextStyles = {
 
 export const edgeLabelStyles = (
   selected: boolean | undefined,
+  neighbour: boolean | undefined,
   data?: { enabled?: boolean; errors?: object }
 ) => {
   const { enabled, errors } = data ?? {};
-  const primaryColor = (selected?: boolean, enabled?: boolean) => {
-    if (enabled) return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+  const primaryColor = (
+    selected?: boolean,
+    neighbour?: boolean,
+    enabled?: boolean
+  ) => {
+    if (enabled) {
+      if (neighbour) return EDGE_COLOR_NEIGHBOUR;
+      return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+    }
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
   };
 
@@ -65,8 +74,10 @@ export const edgeLabelStyles = (
   return {
     borderColor: hasErrors(errors)
       ? ERROR_COLOR
-      : primaryColor(selected, enabled),
-    color: hasErrors(errors) ? ERROR_COLOR : primaryColor(selected, enabled),
+      : primaryColor(selected, neighbour, enabled),
+    color: hasErrors(errors)
+      ? ERROR_COLOR
+      : primaryColor(selected, neighbour, enabled),
     backgroundColor: 'transparent',
     display: 'flex',
     alignItems: 'center',
@@ -95,7 +106,11 @@ export const styleNode = (node: Flow.Node) => {
 };
 
 export const styleEdge = (edge: Flow.Edge) => {
-  const primaryColor = edge.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+  const primaryColor = edge.selected
+    ? EDGE_COLOR_SELECTED
+    : edge.data?.neighbour
+    ? EDGE_COLOR_NEIGHBOUR
+    : EDGE_COLOR;
   const hasErrors =
     typeof edge.data?.errors === 'object' &&
     Object.values(edge.data.errors).some(errorArray => errorArray.length > 0);
