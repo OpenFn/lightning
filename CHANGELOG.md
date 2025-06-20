@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- AI Assistant fails to send job context in subsequent messages
+[#3329](https://github.com/OpenFn/lightning/issues/3329)
+
 ## [v2.13.2] - 2025-06-18
 
 ⚠️️ Please note that **this version fixes an issue that caused premature run
