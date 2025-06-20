@@ -193,6 +193,8 @@ export default (
 
         // wait for any deselection to be done!
         setTimeout(() => {
+          const isOnNode = (evt.target as HTMLElement).closest('[data-a-node]');
+          if (isOnNode) return;
           addPlaceholder(node, position);
         }, 0);
       }

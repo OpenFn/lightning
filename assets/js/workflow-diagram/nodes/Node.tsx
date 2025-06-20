@@ -91,7 +91,7 @@ const Node = ({
 
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
   return (
-    <div className="group">
+    <div className="group" data-a-node>
       <div className="flex flex-row cursor-pointer">
         <div>
           {targetPosition && (
@@ -246,10 +246,9 @@ const Node = ({
             justifyContent: 'center',
           }}
           className={`flex flex-row items-center
-                    opacity-0  ${
-                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-                      ''
-                    }
+                    opacity-0  ${(!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+            ''
+            }
                     transition duration-150 ease-in-out`}
         >
           {toolbar()}
