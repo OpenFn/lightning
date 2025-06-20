@@ -1,4 +1,4 @@
-defmodule Lightning.Credentials.OAuthValidation do
+defmodule Lightning.Credentials.OauthValidation do
   @moduledoc """
   Centralized OAuth token validation with structured error handling.
 
@@ -6,13 +6,30 @@ defmodule Lightning.Credentials.OAuthValidation do
   OauthToken and Credential modules to ensure consistent validation logic.
   """
 
+  import Ecto.Query
+
   alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthToken
   alias Lightning.Repo
-  import Ecto.Query
 
-  # Structured error types for better UI handling
   defmodule Error do
+    @moduledoc """
+    Represents OAuth-related errors with structured error information.
+
+    This module provides a standardized way to handle and categorize OAuth errors
+    that can occur during authentication flows, token validation, and scope verification.
+    Each error includes a type for programmatic handling, a human-readable message,
+    and optional details for additional context.
+
+    ## Examples
+
+        iex> Error.new(:missing_scopes, "Required scopes not granted")
+        %Error{type: :missing_scopes, message: "Required scopes not granted", details: nil}
+
+        iex> Error.new(:missing_refresh_token, "No refresh token", %{existing_token_available: true})
+        %Error{type: :missing_refresh_token, message: "No refresh token", details: %{existing_token_available: true}}
+    """
+
     @type error_type ::
             :missing_scopes
             | :missing_refresh_token
@@ -31,6 +48,7 @@ defmodule Lightning.Credentials.OAuthValidation do
 
     defstruct [:type, :message, :details]
 
+    @spec new(error_type(), String.t(), map() | nil) :: t()
     def new(type, message, details \\ nil) do
       %__MODULE__{type: type, message: message, details: details}
     end
@@ -87,9 +105,10 @@ defmodule Lightning.Credentials.OAuthValidation do
   """
   @spec validate_scope_grant(map(), [String.t()]) :: :ok | {:error, Error.t()}
   def validate_scope_grant(token_data, expected_scopes) do
-    with {:ok, granted_scopes} <- extract_granted_scopes(token_data) do
-      check_scope_match(granted_scopes, expected_scopes)
-    else
+    case extract_granted_scopes(token_data) do
+      {:ok, granted_scopes} ->
+        check_scope_match(granted_scopes, expected_scopes)
+
       {:error, :no_scope_data} ->
         {:error,
          Error.new(

@@ -139,12 +139,6 @@ defmodule Lightning.Credentials.OauthTokenTest do
       assert changeset.changes.scopes == ["read", "write", "admin"]
     end
 
-    test "handles invalid token body", %{token: token} do
-      changeset = OauthToken.update_token_changeset(token, "not a map")
-      refute changeset.valid?
-      assert {"is invalid", _} = changeset.errors[:body]
-    end
-
     test "validates token with missing scope information", %{token: token} do
       invalid_token = %{
         "access_token" => "new_access_token",

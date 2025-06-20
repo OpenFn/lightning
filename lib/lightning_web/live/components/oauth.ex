@@ -6,12 +6,62 @@ defmodule LightningWeb.Components.Oauth do
   scope selection, user information display, and error handling with
   structured error messages based on validation results.
   """
-
   use LightningWeb, :component
+
+  import Ecto.Changeset, only: [get_field: 2]
 
   alias LightningWeb.Components.Common
 
-  import Ecto.Changeset, only: [get_field: 2]
+  @type provider :: String.t() | nil
+
+  defmodule ActionButton do
+    @moduledoc """
+    Represents an action button configuration for OAuth alerts.
+    """
+
+    @type t :: %__MODULE__{
+            id: String.t(),
+            text: String.t(),
+            target: any(),
+            click: String.t()
+          }
+
+    defstruct [:id, :text, :target, :click]
+
+    @spec new(String.t(), String.t(), any(), String.t()) :: t()
+    def new(id, text, target, click)
+        when is_binary(id) and is_binary(text) and is_binary(click) do
+      %__MODULE__{
+        id: id,
+        text: text,
+        target: target,
+        click: click
+      }
+    end
+  end
+
+  defmodule ErrorResponse do
+    @moduledoc """
+    Represents the categorized error response with header, action type, and message.
+    """
+
+    @type t :: %__MODULE__{
+            header: String.t(),
+            action: atom(),
+            message: String.t()
+          }
+
+    defstruct [:header, :action, :message]
+
+    @spec new(String.t(), atom(), String.t()) :: t()
+    def new(header, action, message) do
+      %__MODULE__{
+        header: header,
+        action: action,
+        message: message
+      }
+    end
+  end
 
   @doc """
   Renders a scope selection interface for OAuth permissions.
@@ -166,19 +216,20 @@ defmodule LightningWeb.Components.Oauth do
   attr :myself, :any, required: true
 
   def reauthorize_banner(assigns) do
+    action =
+      create_auth_action(
+        assigns.myself,
+        "Reauthenticate with #{assigns.provider}"
+      )
+
+    assigns = assign(assigns, :action, Map.from_struct(action))
+
     ~H"""
     <Common.alert
       id="re-authorize-banner"
       type="warning"
       header="Reauthentication required"
-      actions={[
-        %{
-          id: "authorize-button",
-          text: "Reauthenticate with #{@provider}",
-          click: "authorize_click",
-          target: @myself
-        }
-      ]}
+      actions={[@action]}
     >
       <:message>
         <p>
@@ -205,8 +256,6 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  # Alert blocks for different OAuth states and errors
-
   @doc """
   Renders structured error alerts based on OAuth validation results.
 
@@ -227,7 +276,11 @@ defmodule LightningWeb.Components.Oauth do
 
     error_message = get_oauth_error_message(assigns.changeset)
 
-    {header, suggested_action, user_message} =
+    %ErrorResponse{
+      header: header,
+      action: suggested_action,
+      message: user_message
+    } =
       categorize_oauth_error_by_type(
         oauth_error_type,
         oauth_error_details,
@@ -238,7 +291,7 @@ defmodule LightningWeb.Components.Oauth do
 
     assigns =
       assigns
-      |> assign(:action, action)
+      |> assign(:action, Map.from_struct(action))
       |> assign(:header, header)
       |> assign(:error_message, error_message)
       |> assign(:user_message, user_message)
@@ -254,19 +307,11 @@ defmodule LightningWeb.Components.Oauth do
   end
 
   def alert_block(%{type: :token_failed} = assigns) do
+    action = create_reauth_action(assigns.myself, "Try again")
+    assigns = assign(assigns, :action, Map.from_struct(action))
+
     ~H"""
-    <Common.alert
-      type="warning"
-      header="Something went wrong."
-      actions={[
-        %{
-          id: "re-authorize-button",
-          text: "Try again",
-          target: @myself,
-          click: "re_authorize_click"
-        }
-      ]}
-    >
+    <Common.alert type="warning" header="Something went wrong." actions={[@action]}>
       <:message>
         <p>Failed retrieving the token from the provider.</p>
       </:message>
@@ -275,19 +320,11 @@ defmodule LightningWeb.Components.Oauth do
   end
 
   def alert_block(%{type: :refresh_failed} = assigns) do
+    action = create_reauth_action(assigns.myself, "Request new token")
+    assigns = assign(assigns, :action, Map.from_struct(action))
+
     ~H"""
-    <Common.alert
-      type="warning"
-      header="Something went wrong."
-      actions={[
-        %{
-          id: "re-authorize-button",
-          text: "Request new token",
-          target: @myself,
-          click: "re_authorize_click"
-        }
-      ]}
-    >
+    <Common.alert type="warning" header="Something went wrong." actions={[@action]}>
       <:message>
         <p>Failed renewing your access token.</p>
       </:message>
@@ -296,18 +333,11 @@ defmodule LightningWeb.Components.Oauth do
   end
 
   def alert_block(%{type: :userinfo_failed} = assigns) do
+    action = create_userinfo_retry_action(assigns.myself)
+    assigns = assign(assigns, :action, Map.from_struct(action))
+
     ~H"""
-    <Common.alert
-      type="info"
-      actions={[
-        %{
-          id: "try-userinfo-button",
-          text: "Try again",
-          target: @myself,
-          click: "try_userinfo_again"
-        }
-      ]}
-    >
+    <Common.alert type="info" actions={[@action]}>
       <:message>
         <p>
           That worked, but we couldn't fetch your user information.
@@ -319,19 +349,11 @@ defmodule LightningWeb.Components.Oauth do
   end
 
   def alert_block(%{type: :code_failed} = assigns) do
+    action = create_reauth_action(assigns.myself, "Reauthorize")
+    assigns = assign(assigns, :action, Map.from_struct(action))
+
     ~H"""
-    <Common.alert
-      type="danger"
-      header="Something went wrong."
-      actions={[
-        %{
-          id: "re-authorize-button",
-          text: "Reauthorize",
-          target: @myself,
-          click: "re_authorize_click"
-        }
-      ]}
-    >
+    <Common.alert type="danger" header="Something went wrong." actions={[@action]}>
       <:message>
         <p>Failed retrieving authentication code.</p>
       </:message>
@@ -340,19 +362,11 @@ defmodule LightningWeb.Components.Oauth do
   end
 
   def alert_block(%{type: :revoke_failed} = assigns) do
+    action = create_auth_action(assigns.myself, "Authorize again")
+    assigns = assign(assigns, :action, Map.from_struct(action))
+
     ~H"""
-    <Common.alert
-      type="danger"
-      header="Something went wrong."
-      actions={[
-        %{
-          id: "authorize-button",
-          text: "Authorize again",
-          target: @myself,
-          click: "authorize_click"
-        }
-      ]}
-    >
+    <Common.alert type="danger" header="Something went wrong." actions={[@action]}>
       <:message>
         Token revocation failed. The token associated with this credential may
         have already been revoked or expired. You may try to authorize again,
@@ -368,6 +382,23 @@ defmodule LightningWeb.Components.Oauth do
       Attempting to fetch user information from your OAuth provider
     </.text_ping_loader>
     """
+  end
+
+  defp create_reauth_action(target, text) do
+    ActionButton.new("re-authorize-button", text, target, "re_authorize_click")
+  end
+
+  defp create_auth_action(target, text) do
+    ActionButton.new("authorize-button", text, target, "authorize_click")
+  end
+
+  defp create_userinfo_retry_action(target) do
+    ActionButton.new(
+      "try-userinfo-button",
+      "Try again",
+      target,
+      "try_userinfo_again"
+    )
   end
 
   defp reauthorize_button(assigns) do
@@ -403,14 +434,14 @@ defmodule LightningWeb.Components.Oauth do
   @spec categorize_oauth_error_by_type(
           atom() | nil,
           map() | nil,
-          String.t() | nil
-        ) :: {String.t(), atom(), String.t()}
+          provider()
+        ) :: ErrorResponse.t()
   defp categorize_oauth_error_by_type(nil, _error_details, provider) do
-    {
+    ErrorResponse.new(
       "OAuth Error",
       :generic,
       build_generic_message(provider)
-    }
+    )
   end
 
   defp categorize_oauth_error_by_type(error_type, error_details, provider) do
@@ -422,153 +453,149 @@ defmodule LightningWeb.Components.Oauth do
         handle_missing_refresh_token_error(error_details, provider)
 
       :invalid_oauth_response ->
-        {
-          "Invalid OAuth Response",
-          :reauthorize,
-          "The authorization response from #{provider || "the provider"} is invalid. This may be a temporary provider issue."
-        }
+        handle_invalid_oauth_response_error(provider)
 
       :invalid_token_format ->
-        {
-          "Invalid Token Format",
-          :reauthorize,
-          "The OAuth token received from #{provider || "the provider"} is in an invalid format. Please try authorizing again."
-        }
+        handle_invalid_token_format_error(provider)
 
       :missing_token_data ->
-        {
-          "Authorization Required",
-          :reauthorize,
-          "Please complete the OAuth authorization process with #{provider || "your provider"}."
-        }
+        handle_missing_token_data_error(provider)
 
       :missing_access_token ->
-        {
-          "Missing Access Token",
-          :reauthorize,
-          "The authorization response from #{provider || "the provider"} is missing the required access token."
-        }
+        handle_missing_access_token_error(provider)
 
       :missing_expiration ->
-        {
-          "Invalid Token Response",
-          :reauthorize,
-          "The OAuth token from #{provider || "the provider"} is missing expiration information."
-        }
+        handle_missing_expiration_error(provider)
 
       _ ->
-        {
-          "OAuth Error",
-          :generic,
-          build_generic_message(provider)
-        }
+        handle_generic_oauth_error(provider)
     end
   end
 
-  @spec handle_missing_scopes_error(map() | nil, String.t() | nil) ::
-          {String.t(), atom(), String.t()}
+  defp handle_invalid_oauth_response_error(provider) do
+    ErrorResponse.new(
+      "Invalid OAuth Response",
+      :reauthorize,
+      "The authorization response from #{provider || "the provider"} is invalid. This may be a temporary provider issue."
+    )
+  end
+
+  defp handle_invalid_token_format_error(provider) do
+    ErrorResponse.new(
+      "Invalid Token Format",
+      :reauthorize,
+      "The OAuth token received from #{provider || "the provider"} is in an invalid format. Please try authorizing again."
+    )
+  end
+
+  defp handle_missing_token_data_error(provider) do
+    ErrorResponse.new(
+      "Authorization Required",
+      :reauthorize,
+      "Please complete the OAuth authorization process with #{provider || "your provider"}."
+    )
+  end
+
+  defp handle_missing_access_token_error(provider) do
+    ErrorResponse.new(
+      "Missing Access Token",
+      :reauthorize,
+      "The authorization response from #{provider || "the provider"} is missing the required access token."
+    )
+  end
+
+  defp handle_missing_expiration_error(provider) do
+    ErrorResponse.new(
+      "Invalid Token Response",
+      :reauthorize,
+      "The OAuth token from #{provider || "the provider"} is missing expiration information."
+    )
+  end
+
+  defp handle_generic_oauth_error(provider) do
+    ErrorResponse.new(
+      "OAuth Error",
+      :generic,
+      build_generic_message(provider)
+    )
+  end
+
+  @spec handle_missing_scopes_error(map() | nil, provider()) :: ErrorResponse.t()
   defp handle_missing_scopes_error(error_details, provider) do
     missing_scopes = get_in(error_details, [:missing_scopes]) || []
     missing_count = length(missing_scopes)
 
     case missing_count do
       0 ->
-        {
+        ErrorResponse.new(
           "Missing Required Permissions",
           :reauthorize,
           "Some required permissions were not granted. Please ensure you grant all selected permissions when authorizing with #{provider || "your provider"}."
-        }
+        )
 
       1 ->
         scope = List.first(missing_scopes)
 
-        {
+        ErrorResponse.new(
           "Missing Required Permission",
           :reauthorize,
           "The '#{scope}' permission was not granted. Please ensure you select this permission when authorizing with #{provider || "your provider"}."
-        }
+        )
 
       _ ->
         scope_list = Enum.join(missing_scopes, "', '")
 
-        {
+        ErrorResponse.new(
           "Missing Required Permissions",
           :reauthorize,
           "The following permissions were not granted: '#{scope_list}'. Please ensure you select all required permissions when authorizing with #{provider || "your provider"}."
-        }
+        )
     end
   end
 
-  @spec handle_missing_refresh_token_error(map() | nil, String.t() | nil) ::
-          {String.t(), atom(), String.t()}
+  @spec handle_missing_refresh_token_error(map() | nil, provider()) ::
+          ErrorResponse.t()
   defp handle_missing_refresh_token_error(error_details, provider) do
     existing_available =
       get_in(error_details, [:existing_token_available]) || false
 
     if existing_available do
-      {
+      ErrorResponse.new(
         "Missing Refresh Token",
         :use_existing,
         "We didn't receive a refresh token from #{provider || "this provider"}. You may have already granted access to OpenFn via another credential. If you have another credential, please use that one."
-      }
+      )
     else
-      {
+      ErrorResponse.new(
         "Missing Refresh Token",
         :reauthorize,
         "Please reauthorize to provide OpenFn with the necessary refresh token for #{provider || "your provider"}."
-      }
+      )
     end
   end
 
-  @spec build_generic_message(String.t() | nil) :: String.t()
+  @spec build_generic_message(provider()) :: String.t()
   defp build_generic_message(provider) do
     "Please try authorizing with #{provider || "your provider"} again. If the problem persists, contact support."
   end
 
-  @spec determine_action_button(map(), atom()) :: map()
+  @spec determine_action_button(map(), atom()) :: ActionButton.t()
   defp determine_action_button(assigns, suggested_action) do
     case suggested_action do
       action when action in [:reauthorize, :generic] ->
         if assigns[:revocation_endpoint] do
-          %{
-            id: "re-authorize-button",
-            text: "Reauthorize",
-            target: assigns.myself,
-            click: "re_authorize_click"
-          }
+          create_reauth_action(assigns.myself, "Reauthorize")
         else
-          %{
-            id: "authorize-button",
-            text: "Authorize",
-            target: assigns.myself,
-            click: "authorize_click"
-          }
+          create_auth_action(assigns.myself, "Authorize")
         end
 
       :use_existing ->
-        %{
-          id: "cancel-button",
-          text: "Use Existing Credential",
-          target: assigns.myself,
-          click: "cancel_click"
-        }
-
-      :retry ->
-        %{
-          id: "retry-button",
-          text: "Try Again",
-          target: assigns.myself,
-          click: "retry_click"
-        }
-
-      _ ->
-        # Fallback for unknown action types
-        %{
-          id: "help-button",
-          text: "Get Help",
-          target: assigns.myself,
-          click: "help_click"
-        }
+        ActionButton.new(
+          "cancel-button",
+          "Use Existing Credential",
+          assigns.myself,
+          "cancel_click"
+        )
     end
   end
 end

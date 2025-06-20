@@ -1460,7 +1460,7 @@ defmodule Lightning.CredentialsTest do
       oauth_client = insert(:oauth_client)
 
       assert {:error,
-              %Lightning.Credentials.OAuthValidation.Error{
+              %Lightning.Credentials.OauthValidation.Error{
                 message: "OAuth token must be a valid map",
                 type: :invalid_token_format,
                 details: nil
@@ -1483,7 +1483,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OAuthValidation.Error{
+              %Lightning.Credentials.OauthValidation.Error{
                 message: "Missing required OAuth field: access_token",
                 type: :missing_access_token,
                 details: nil
@@ -1506,7 +1506,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OAuthValidation.Error{
+              %Lightning.Credentials.OauthValidation.Error{
                 message: "Missing refresh_token for new OAuth connection",
                 type: :missing_refresh_token,
                 details: %{existing_token_available: false}
@@ -1529,7 +1529,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OAuthValidation.Error{
+              %Lightning.Credentials.OauthValidation.Error{
                 message:
                   "Missing expiration field: either expires_in or expires_at is required",
                 type: :missing_expiration,
@@ -1586,7 +1586,7 @@ defmodule Lightning.CredentialsTest do
                )
 
       assert {:error,
-              %Lightning.Credentials.OAuthValidation.Error{
+              %Lightning.Credentials.OauthValidation.Error{
                 message: "OAuth token missing scope information",
                 type: :invalid_oauth_response,
                 details: nil

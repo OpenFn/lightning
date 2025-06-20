@@ -9,7 +9,7 @@ defmodule Lightning.Credentials.OauthToken do
   alias Lightning.Accounts.User
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthClient
-  alias Lightning.Credentials.OAuthValidation
+  alias Lightning.Credentials.OauthValidation
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
@@ -77,7 +77,7 @@ defmodule Lightning.Credentials.OauthToken do
   end
 
   defdelegate extract_scopes(token_data),
-    to: Lightning.Credentials.OAuthValidation
+    to: Lightning.Credentials.OauthValidation
 
   @doc """
   Creates a changeset for updating token data.
@@ -86,7 +86,7 @@ defmodule Lightning.Credentials.OauthToken do
   """
   def update_token_changeset(oauth_token, new_token) do
     scopes =
-      case OAuthValidation.extract_scopes(new_token) do
+      case OauthValidation.extract_scopes(new_token) do
         {:ok, scopes} -> scopes
         :error -> nil
       end
@@ -99,15 +99,12 @@ defmodule Lightning.Credentials.OauthToken do
     |> validate_oauth_body()
   end
 
-  defp ensure_refresh_token(oauth_token, new_token) when is_map(new_token) do
-    Map.merge(
-      %{"refresh_token" => oauth_token.body["refresh_token"]},
-      new_token
-    )
-  end
-
-  defp ensure_refresh_token(_oauth_token, new_token) do
-    new_token
+  defp ensure_refresh_token(
+         %__MODULE__{body: %{"refresh_token" => refresh_token}},
+         new_token
+       )
+       when is_map(new_token) do
+    Map.merge(%{"refresh_token" => refresh_token}, new_token)
   end
 
   defp validate_oauth_body(changeset) do
@@ -115,7 +112,7 @@ defmodule Lightning.Credentials.OauthToken do
       %{user_id: user_id, oauth_client_id: oauth_client_id, scopes: scopes} =
         get_fields(changeset, [:user_id, :oauth_client_id, :scopes])
 
-      case OAuthValidation.validate_token_data(
+      case OauthValidation.validate_token_data(
              body,
              user_id,
              oauth_client_id,
@@ -124,13 +121,13 @@ defmodule Lightning.Credentials.OauthToken do
         {:ok, _} ->
           changeset
 
-        {:error, %OAuthValidation.Error{} = error} ->
+        {:error, %OauthValidation.Error{} = error} ->
           add_oauth_error(changeset, error)
       end
     else
       _ ->
         error =
-          OAuthValidation.Error.new(
+          OauthValidation.Error.new(
             :invalid_token_format,
             "Invalid OAuth token body"
           )
@@ -141,7 +138,7 @@ defmodule Lightning.Credentials.OauthToken do
 
   defp add_oauth_error(
          changeset,
-         %Lightning.Credentials.OAuthValidation.Error{} = error
+         %Lightning.Credentials.OauthValidation.Error{} = error
        ) do
     changeset
     |> add_error(:body, error.message)

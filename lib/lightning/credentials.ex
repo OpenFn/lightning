@@ -1293,21 +1293,21 @@ defmodule Lightning.Credentials do
                 oauth_client_id,
                 scopes
               ),
-              to: Lightning.Credentials.OAuthValidation,
+              to: Lightning.Credentials.OauthValidation,
               as: :validate_token_data
 
   defdelegate validate_scope_grant(token_data, expected_scopes),
-    to: Lightning.Credentials.OAuthValidation
+    to: Lightning.Credentials.OauthValidation
 
   defdelegate find_best_matching_token_for_scopes(
                 user_id,
                 oauth_client_id,
                 requested_scopes
               ),
-              to: Lightning.Credentials.OAuthValidation
+              to: Lightning.Credentials.OauthValidation
 
   defdelegate normalize_scopes(input, delimiter \\ " "),
-    to: Lightning.Credentials.OAuthValidation
+    to: Lightning.Credentials.OauthValidation
 
   @doc """
   Returns all credentials owned by a specific user that are also being used in a specific project.

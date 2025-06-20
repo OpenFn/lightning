@@ -5,9 +5,9 @@ defmodule Lightning.Credentials.Credential do
   use Lightning.Schema
 
   alias Lightning.Accounts.User
-  alias Lightning.Credentials.OAuthValidation
   alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthToken
+  alias Lightning.Credentials.OauthValidation
   alias Lightning.Projects.ProjectCredential
 
   @type t :: %__MODULE__{
@@ -116,9 +116,9 @@ defmodule Lightning.Credentials.Credential do
   end
 
   defp validate_oauth_token_data(changeset, token_data, user_id, oauth_client_id) do
-    with {:ok, extracted_scopes} <- OAuthValidation.extract_scopes(token_data),
+    with {:ok, extracted_scopes} <- OauthValidation.extract_scopes(token_data),
          {:ok, _} <-
-           OAuthValidation.validate_token_data(
+           OauthValidation.validate_token_data(
              token_data,
              user_id,
              oauth_client_id,
@@ -128,14 +128,14 @@ defmodule Lightning.Credentials.Credential do
     else
       :error ->
         error =
-          OAuthValidation.Error.new(
+          OauthValidation.Error.new(
             :invalid_token_format,
             "Invalid token format. Unable to extract scope information"
           )
 
         add_oauth_error(changeset, error)
 
-      {:error, %OAuthValidation.Error{} = error} ->
+      {:error, %OauthValidation.Error{} = error} ->
         add_oauth_error(changeset, error)
     end
   end
@@ -146,11 +146,11 @@ defmodule Lightning.Credentials.Credential do
     if Enum.empty?(expected_scopes) do
       changeset
     else
-      case OAuthValidation.validate_scope_grant(token_data, expected_scopes) do
+      case OauthValidation.validate_scope_grant(token_data, expected_scopes) do
         :ok ->
           changeset
 
-        {:error, %OAuthValidation.Error{} = error} ->
+        {:error, %OauthValidation.Error{} = error} ->
           add_oauth_error(changeset, error)
       end
     end
@@ -158,7 +158,7 @@ defmodule Lightning.Credentials.Credential do
 
   defp add_oauth_error(
          changeset,
-         %Lightning.Credentials.OAuthValidation.Error{} = error
+         %Lightning.Credentials.OauthValidation.Error{} = error
        ) do
     changeset
     |> add_error(:oauth_token, error.message)
