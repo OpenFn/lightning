@@ -17,11 +17,12 @@ defmodule Lightning.Credentials.CredentialTest do
     test "validates required fields with valid data" do
       user = insert(:user)
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test Credential",
-        body: %{"key" => "value"},
-        user_id: user.id
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test Credential",
+          body: %{"key" => "value"},
+          user_id: user.id
+        })
 
       assert changeset.valid?
     end
@@ -34,14 +35,18 @@ defmodule Lightning.Credentials.CredentialTest do
         user: user
       })
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Unique Name",
-        body: %{"key" => "value"},
-        user_id: user.id
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Unique Name",
+          body: %{"key" => "value"},
+          user_id: user.id
+        })
 
       assert {:error, changeset} = Repo.insert(changeset)
-      assert errors_on(changeset)[:name] == ["you have another credential with the same name"]
+
+      assert errors_on(changeset)[:name] == [
+               "you have another credential with the same name"
+             ]
     end
 
     test "allows same name for different users" do
@@ -53,11 +58,12 @@ defmodule Lightning.Credentials.CredentialTest do
         user: user1
       })
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Same Name",
-        body: %{"key" => "value"},
-        user_id: user2.id
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Same Name",
+          body: %{"key" => "value"},
+          user_id: user2.id
+        })
 
       assert changeset.valid?
     end
@@ -65,14 +71,18 @@ defmodule Lightning.Credentials.CredentialTest do
     test "validates name format" do
       user = insert(:user)
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Invalid@Name#",
-        body: %{"key" => "value"},
-        user_id: user.id
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Invalid@Name#",
+          body: %{"key" => "value"},
+          user_id: user.id
+        })
 
       refute changeset.valid?
-      assert errors_on(changeset)[:name] == ["credential name has invalid format"]
+
+      assert errors_on(changeset)[:name] == [
+               "credential name has invalid format"
+             ]
     end
 
     test "allows valid name formats" do
@@ -88,22 +98,24 @@ defmodule Lightning.Credentials.CredentialTest do
       ]
 
       for name <- valid_names do
-        changeset = Credential.changeset(%Credential{}, %{
-          name: name,
-          body: %{"key" => "value"},
-          user_id: user.id
-        })
+        changeset =
+          Credential.changeset(%Credential{}, %{
+            name: name,
+            body: %{"key" => "value"},
+            user_id: user.id
+          })
 
         assert changeset.valid?, "Name '#{name}' should be valid"
       end
     end
 
     test "validates assoc constraint for user" do
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{"key" => "value"},
-        user_id: Ecto.UUID.generate()
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{"key" => "value"},
+          user_id: Ecto.UUID.generate()
+        })
 
       assert {:error, changeset} = Repo.insert(changeset)
       assert errors_on(changeset)[:user] == ["does not exist"]
@@ -112,12 +124,13 @@ defmodule Lightning.Credentials.CredentialTest do
     test "casts production field" do
       user = insert(:user)
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{"key" => "value"},
-        user_id: user.id,
-        production: true
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{"key" => "value"},
+          user_id: user.id,
+          production: true
+        })
 
       assert get_change(changeset, :production) == true
     end
@@ -125,12 +138,13 @@ defmodule Lightning.Credentials.CredentialTest do
     test "casts schema field" do
       user = insert(:user)
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{"key" => "value"},
-        user_id: user.id,
-        schema: "oauth"
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{"key" => "value"},
+          user_id: user.id,
+          schema: "oauth"
+        })
 
       assert get_change(changeset, :schema) == "oauth"
     end
@@ -139,12 +153,13 @@ defmodule Lightning.Credentials.CredentialTest do
       user = insert(:user)
       oauth_token = insert(:oauth_token, user: user)
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{"key" => "value"},
-        user_id: user.id,
-        oauth_token_id: oauth_token.id
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{"key" => "value"},
+          user_id: user.id,
+          oauth_token_id: oauth_token.id
+        })
 
       assert get_change(changeset, :oauth_token_id) == oauth_token.id
     end
@@ -153,12 +168,13 @@ defmodule Lightning.Credentials.CredentialTest do
       user = insert(:user)
       deletion_time = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{"key" => "value"},
-        user_id: user.id,
-        scheduled_deletion: deletion_time
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{"key" => "value"},
+          user_id: user.id,
+          scheduled_deletion: deletion_time
+        })
 
       assert get_change(changeset, :scheduled_deletion) == deletion_time
     end
@@ -166,12 +182,13 @@ defmodule Lightning.Credentials.CredentialTest do
     test "casts transfer_status field" do
       user = insert(:user)
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{"key" => "value"},
-        user_id: user.id,
-        transfer_status: :pending
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{"key" => "value"},
+          user_id: user.id,
+          transfer_status: :pending
+        })
 
       assert get_change(changeset, :transfer_status) == :pending
     end
@@ -180,12 +197,13 @@ defmodule Lightning.Credentials.CredentialTest do
       user = insert(:user)
       project = insert(:project)
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{"key" => "value"},
-        user_id: user.id,
-        project_credentials: [%{project_id: project.id}]
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{"key" => "value"},
+          user_id: user.id,
+          project_credentials: [%{project_id: project.id}]
+        })
 
       assert changeset.valid?
       assert length(get_change(changeset, :project_credentials, [])) == 1
@@ -234,10 +252,11 @@ defmodule Lightning.Credentials.CredentialTest do
       })
     end
 
-    test "validates OAuth token data with existing token allows missing refresh_token", %{
-      user: user,
-      oauth_client: oauth_client
-    } do
+    test "validates OAuth token data with existing token allows missing refresh_token",
+         %{
+           user: user,
+           oauth_client: oauth_client
+         } do
       insert(:oauth_token, %{
         user: user,
         oauth_client: oauth_client,
@@ -250,14 +269,15 @@ defmodule Lightning.Credentials.CredentialTest do
         "scope" => "read write"
       }
 
-      changeset = Credentials.change_credential(%Credential{}, %{
-        name: "oauth credential",
-        schema: "oauth",
-        body: %{},
-        oauth_token: token_data,
-        oauth_client_id: oauth_client.id,
-        user_id: user.id
-      })
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: token_data,
+          oauth_client_id: oauth_client.id,
+          user_id: user.id
+        })
 
       assert changeset.valid?
     end
@@ -273,19 +293,23 @@ defmodule Lightning.Credentials.CredentialTest do
         "scope" => "read"
       }
 
-      changeset = Credentials.change_credential(%Credential{}, %{
-        name: "oauth credential",
-        schema: "oauth",
-        body: %{},
-        oauth_token: token_data,
-        oauth_client_id: oauth_client.id,
-        expected_scopes: ["read", "write"],
-        user_id: user.id
-      })
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: token_data,
+          oauth_client_id: oauth_client.id,
+          expected_scopes: ["read", "write"],
+          user_id: user.id
+        })
 
       refute changeset.valid?
       errors = errors_on(changeset)
-      assert errors[:oauth_token] == ["Missing required scopes: write. Please reauthorize and grant all selected permissions."]
+
+      assert errors[:oauth_token] == [
+               "Missing required scopes: write. Please reauthorize and grant all selected permissions."
+             ]
     end
 
     test "skips scope validation when no expected_scopes provided", %{
@@ -299,45 +323,50 @@ defmodule Lightning.Credentials.CredentialTest do
         "scope" => "read"
       }
 
-      changeset = Credentials.change_credential(%Credential{}, %{
-        name: "oauth credential",
-        schema: "oauth",
-        body: %{},
-        oauth_token: token_data,
-        oauth_client_id: oauth_client.id,
-        user_id: user.id
-      })
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: token_data,
+          oauth_client_id: oauth_client.id,
+          user_id: user.id
+        })
 
       assert changeset.valid?
     end
 
     test "non-OAuth credentials skip OAuth validation", %{user: user} do
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "regular credential",
-        schema: "raw",
-        body: %{"key" => "value"},
-        user_id: user.id
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "regular credential",
+          schema: "raw",
+          body: %{"key" => "value"},
+          user_id: user.id
+        })
 
       assert changeset.valid?
     end
 
-    test "updating existing OAuth credential with oauth_token_id skips token validation", %{
-      user: user,
-      oauth_client: oauth_client
-    } do
-      oauth_token = insert(:oauth_token, %{
-        user: user,
-        oauth_client: oauth_client
-      })
+    test "updating existing OAuth credential with oauth_token_id skips token validation",
+         %{
+           user: user,
+           oauth_client: oauth_client
+         } do
+      oauth_token =
+        insert(:oauth_token, %{
+          user: user,
+          oauth_client: oauth_client
+        })
 
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "existing oauth credential",
-        schema: "oauth",
-        body: %{},
-        oauth_token_id: oauth_token.id,
-        user_id: user.id
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "existing oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token_id: oauth_token.id,
+          user_id: user.id
+        })
 
       assert changeset.valid?
     end
@@ -368,15 +397,16 @@ defmodule Lightning.Credentials.CredentialTest do
         "scope" => "read"
       }
 
-      changeset = Credentials.change_credential(%Credential{}, %{
-        name: "oauth credential",
-        schema: "oauth",
-        body: %{},
-        oauth_token: token_data,
-        oauth_client_id: oauth_client.id,
-        expected_scopes: ["read", "write", "admin"],
-        user_id: user.id
-      })
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: token_data,
+          oauth_client_id: oauth_client.id,
+          expected_scopes: ["read", "write", "admin"],
+          user_id: user.id
+        })
 
       refute changeset.valid?
 
@@ -388,17 +418,21 @@ defmodule Lightning.Credentials.CredentialTest do
     end
 
     test "handles invalid token format errors", %{user: user} do
-      changeset = Credentials.change_credential(%Credential{}, %{
-        name: "oauth credential",
-        schema: "oauth",
-        body: %{},
-        oauth_token: "invalid_token_format",
-        user_id: user.id
-      })
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: "invalid_token_format",
+          user_id: user.id
+        })
 
       refute changeset.valid?
       errors = errors_on(changeset)
-      assert errors[:oauth_token] == ["Invalid token format. Unable to extract scope information"]
+
+      assert errors[:oauth_token] == [
+               "Invalid token format. Unable to extract scope information"
+             ]
 
       assert get_change(changeset, :oauth_error_type) == :invalid_token_format
     end
@@ -480,10 +514,11 @@ defmodule Lightning.Credentials.CredentialTest do
       user = insert(:user)
       oauth_token = insert(:oauth_token, user: user)
 
-      credential = insert(:credential, %{
-        user: user,
-        oauth_token: oauth_token
-      })
+      credential =
+        insert(:credential, %{
+          user: user,
+          oauth_token: oauth_token
+        })
 
       loaded_credential =
         Credential
@@ -497,10 +532,11 @@ defmodule Lightning.Credentials.CredentialTest do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
 
-      credential = insert(:credential, %{
-        user: user,
-        oauth_client: oauth_client
-      })
+      credential =
+        insert(:credential, %{
+          user: user,
+          oauth_client: oauth_client
+        })
 
       loaded_credential =
         Credential
@@ -515,10 +551,11 @@ defmodule Lightning.Credentials.CredentialTest do
       credential = insert(:credential, user: user)
       project = insert(:project)
 
-      project_credential = insert(:project_credential, %{
-        credential: credential,
-        project: project
-      })
+      project_credential =
+        insert(:project_credential, %{
+          credential: credential,
+          project: project
+        })
 
       loaded_credential =
         Credential
@@ -526,7 +563,9 @@ defmodule Lightning.Credentials.CredentialTest do
         |> Repo.get!(credential.id)
 
       assert length(loaded_credential.project_credentials) == 1
-      assert hd(loaded_credential.project_credentials).id == project_credential.id
+
+      assert hd(loaded_credential.project_credentials).id ==
+               project_credential.id
     end
 
     test "has_many projects through project_credentials" do
@@ -568,23 +607,25 @@ defmodule Lightning.Credentials.CredentialTest do
 
   describe "default values" do
     test "production defaults to false" do
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{},
-        user_id: insert(:user).id
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{},
+          user_id: insert(:user).id
+        })
 
       credential = apply_changes(changeset)
       assert credential.production == false
     end
 
     test "can override production default" do
-      changeset = Credential.changeset(%Credential{}, %{
-        name: "Test",
-        body: %{},
-        user_id: insert(:user).id,
-        production: true
-      })
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "Test",
+          body: %{},
+          user_id: insert(:user).id,
+          production: true
+        })
 
       credential = apply_changes(changeset)
       assert credential.production == true
