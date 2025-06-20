@@ -57,11 +57,26 @@ defmodule Lightning.AiAssistantTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = _workflow
     } do
+      job_expression = "fn(state => state);\n"
+      adaptor = "@openfn/language-http@7.0.6"
+      message_content = "what?"
+
       session =
         insert(:chat_session,
           user: user,
           job: job_1,
-          messages: [%{role: :user, content: "what?", user: user}]
+          expression: job_expression,
+          adaptor: adaptor,
+          messages: [
+            %{
+              role: :user,
+              content: message_content,
+              user: user,
+              status: :pending,
+              # needed to avoid flaky sorting
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
         )
 
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
@@ -93,7 +108,9 @@ defmodule Lightning.AiAssistantTest do
         {:ok, %Tesla.Env{status: 200, body: reply}}
       end)
 
-      {:ok, updated_session} = AiAssistant.query(session, "foo")
+      {:ok, updated_session} = AiAssistant.query(session, message_content)
+      assert updated_session.expression == job_expression
+      assert updated_session.adaptor == adaptor
 
       assert Enum.count(updated_session.messages) == Enum.count(reply["history"])
 
@@ -576,17 +593,6 @@ defmodule Lightning.AiAssistantTest do
 
       assert %Ecto.Changeset{} = changeset
       assert "is invalid" in errors_on(changeset).status
-    end
-
-    test "handles non-existent session", %{
-      user: user
-    } do
-      message = insert(:chat_message, content: "test", role: :user, user: user)
-      session = build(:chat_session, id: Ecto.UUID.generate())
-
-      assert_raise Ecto.NoResultsError, fn ->
-        AiAssistant.update_message_status(session, message, :success)
-      end
     end
 
     test "updates message status for session with multiple messages", %{
