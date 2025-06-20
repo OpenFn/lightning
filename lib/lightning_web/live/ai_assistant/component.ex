@@ -600,7 +600,7 @@ defmodule LightningWeb.AiAssistant.Component do
         :if={@handler.enable_attachment_options_component?}
         class="mt-2 flex gap-2"
       >
-        <span>Attach:</span>
+        <span><.icon name="hero-paper-clip" class="size-4" /> Attach:</span>
         <.inputs_for :let={options} field={@form[:options]}>
           <.input type="checkbox" label="Code" field={options[:code]} />
         </.inputs_for>

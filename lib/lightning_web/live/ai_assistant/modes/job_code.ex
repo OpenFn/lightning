@@ -22,7 +22,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     embedded_schema do
       field :content, :string
 
-      embeds_one :options, Options do
+      embeds_one :options, Options, primary_key: false do
         field :code, :boolean, default: true
       end
     end
