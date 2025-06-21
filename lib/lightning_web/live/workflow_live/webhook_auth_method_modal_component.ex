@@ -334,7 +334,65 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
               current_user={@current_user}
               webhook_auth_method={@webhook_auth_method}
             />
-        <% end %>
+                <% end %>
+
+        <:footer>
+          <%= case assigns do %>
+            <% %{action: :index} -> %>
+              <div class="flex justify-between content-center ">
+                <div class="flex flex-wrap items-center">
+                  <.link
+                    href="#"
+                    class="link inline-flex content-center text-md font-semibold"
+                    phx-click="new_auth_method"
+                    phx-target={@myself}
+                  >
+                    Create a new webhook auth method
+                  </.link>
+                </div>
+                <div class="sm:flex sm:flex-row-reverse gap-3">
+                  <.button
+                    id="update_trigger_auth_methods_button"
+                    type="button"
+                    theme="primary"
+                    phx-click="save"
+                    phx-target={@myself}
+                  >
+                    Save
+                  </.button>
+                  <.button
+                    type="button"
+                    phx-click="close_webhook_modal"
+                    phx-target={@myself}
+                    theme="secondary"
+                  >
+                    Cancel
+                  </.button>
+                </div>
+              </div>
+            <% %{action: :new, webhook_auth_method: %{auth_type: nil}} -> %>
+              <.button
+                theme="primary"
+                type="submit"
+                disabled={@auth_type_changeset && (@auth_type_changeset.data.auth_type != :api and @auth_type_changeset.data.auth_type != :basic)}
+                form={"choose_auth_type_form_#{@id}"}
+              >
+                Next
+              </.button>
+            <% %{action: :display_triggers} -> %>
+              <div class="sm:flex sm:flex-row-reverse">
+                <.button
+                  type="button"
+                  phx-click="close_webhook_modal"
+                  phx-target={@myself}
+                  theme="primary"
+                >
+                  Close
+                </.button>
+              </div>
+            <% _other -> %>
+          <% end %>
+        </:footer>
       </.modal>
     </div>
     """
@@ -373,18 +431,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <% end %>
       </ul>
     </div>
-    <.modal_footer class="mt-6 mx-6">
-      <div class="sm:flex sm:flex-row-reverse">
-        <.button
-          type="button"
-          phx-click="close_webhook_modal"
-          phx-target={@myself}
-          theme="primary"
-        >
-          Close
-        </.button>
-      </div>
-    </.modal_footer>
     """
   end
 
@@ -452,39 +498,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         </:action>
       </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
     </div>
-    <.modal_footer class="mt-6 mx-6">
-      <div class="flex justify-between content-center ">
-        <div class="flex flex-wrap items-center">
-          <.link
-            href="#"
-            class="link inline-flex content-center text-md font-semibold"
-            phx-click="new_auth_method"
-            phx-target={@myself}
-          >
-            Create a new webhook auth method
-          </.link>
-        </div>
-        <div class="sm:flex sm:flex-row-reverse gap-3">
-          <.button
-            id="update_trigger_auth_methods_button"
-            type="button"
-            theme="primary"
-            phx-click="save"
-            phx-target={@myself}
-          >
-            Save
-          </.button>
-          <.button
-            type="button"
-            phx-click="close_webhook_modal"
-            phx-target={@myself}
-            theme="secondary"
-          >
-            Cancel
-          </.button>
-        </div>
-      </div>
-    </.modal_footer>
     """
   end
 
@@ -549,15 +562,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           </span>
         </label>
       </div>
-      <.modal_footer class="mx-6 mt-6">
-        <.button
-          theme="primary"
-          type="submit"
-          disabled={f[:auth_type].value != :api and f[:auth_type].value != :basic}
-        >
-          Next
-        </.button>
-      </.modal_footer>
     </.form>
     """
   end
