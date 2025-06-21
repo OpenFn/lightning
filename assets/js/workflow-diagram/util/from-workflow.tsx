@@ -51,7 +51,7 @@ const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
   placeholders: Flow.Model = { nodes: [], edges: [] },
-  selectedId: string | null
+  selectedId: string | null,
 ): Flow.Model => {
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;

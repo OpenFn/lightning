@@ -9,9 +9,10 @@ import { useWorkflowStore } from '../workflow-store/store';
 import { styleEdge } from './styles';
 import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';
+import type { XYPosition } from '@xyflow/react';
 
 // generates a placeholder node and edge as child of the parent
-export const create = (parentNode: Flow.Node) => {
+export const create = (parentNode: Flow.Node, where?: XYPosition) => {
   const newModel: Flow.Model = {
     nodes: [],
     edges: [],
@@ -25,9 +26,12 @@ export const create = (parentNode: Flow.Node) => {
       // mark this as as default position
       // @ts-ignore _default is a temporary flag added by us
       _default: true,
+
       // Offset the position of the placeholder to be more pleasing during animation
-      x: parentNode.position.x,
-      y: parentNode.position.y + 100,
+      // subtract 55 because there's a magic number at PlaceholderJob.tsx:137 which is 35px. it takes us 35px to the right of. so we calculate the rest of the half
+      x: where?.x ? where.x - 55 : parentNode.position.x,
+      // subtract 20 because that's the half of placeholder height
+      y: where?.y ? where.y - 20 : parentNode.position.y + 120,
     },
     data: {
       body: DEFAULT_TEXT,
@@ -50,6 +54,7 @@ export const create = (parentNode: Flow.Node) => {
 
 export default (
   el: HTMLElement | null | undefined,
+  isManualLayout: boolean = false,
   requestSelectionChange: (id: string | null) => void // TODO more like changeSelection
 ) => {
   const { add: addTo } = useWorkflowStore();
@@ -59,9 +64,23 @@ export default (
     edges: [],
   });
 
-  const add = useCallback((parentNode: Flow.Node) => {
+  // for updating placeholder position
+  const updatePlaceholderPosition = useCallback(
+    (nodeId: string, position: XYPosition) => {
+      setPlaceholders(prev => ({
+        ...prev,
+        nodes: prev.nodes.map(n => {
+          if (n.id === nodeId) return { ...n, position };
+          else return n;
+        }),
+      }));
+    },
+    []
+  );
+
+  const add = useCallback((parentNode: Flow.Node, where?: XYPosition) => {
     // Generate a placeholder node and edge
-    const updated = create(parentNode);
+    const updated = create(parentNode, where);
     setPlaceholders(updated);
 
     requestSelectionChange(updated.nodes[0].id);
@@ -76,7 +95,8 @@ export default (
 
       // Update the store
       placeholders.nodes[0].data.name = name;
-      addTo(toWorkflow(placeholders));
+      // we need to pass isManualLayout to tell toWorkflow to process position information
+      addTo(toWorkflow(placeholders, isManualLayout));
 
       requestSelectionChange(id);
     },
@@ -101,5 +121,5 @@ export default (
     }
   }, [commit, cancel, el]);
 
-  return { placeholders, add, cancel };
+  return { placeholders, add, cancel, updatePlaceholderPosition };
 };

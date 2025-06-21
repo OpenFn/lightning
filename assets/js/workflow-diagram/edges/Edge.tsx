@@ -1,8 +1,8 @@
-import { BezierEdge, type EdgeProps, EdgeLabelRenderer } from 'reactflow';
+import { BezierEdge, type EdgeProps, EdgeLabelRenderer } from '@xyflow/react';
 import { edgeLabelStyles } from '../styles';
 
 const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
-  const { sourceX, sourceY, targetX, targetY, selected } = props;
+  const { sourceX, sourceY, targetX, targetY, selected, data } = props;
   const { label, ...stepEdgeProps } = props;
 
   // Simply label position calculation
@@ -12,8 +12,7 @@ const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
   return (
     <>
       {/* Curvature does nothing?? */}
-      <BezierEdge {...stepEdgeProps} pathOptions={{ curvature: 0 }} />
-      {/* <SmoothStepEdge {...stepEdgeProps} pathOptions={{ borderRadius: 500 }} /> */}
+      <BezierEdge {...stepEdgeProps} pathOptions={{ curvature: .4 }} />
       {label && (
         <EdgeLabelRenderer>
           <div
@@ -22,7 +21,7 @@ const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               background: 'white',
               pointerEvents: 'all',
-              ...edgeLabelStyles(selected, stepEdgeProps.data),
+              ...edgeLabelStyles(selected, data?.neighbour, stepEdgeProps.data),
             }}
             className="nodrag nopan cursor-pointer"
           >

@@ -92,7 +92,7 @@ export const WorkflowStore: WithActionProps = props => {
     props.handleEvent('state-applied', (response: { state: WorkflowProps }) => {
       console.log('state-applied', response.state);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response.state) setState(response.state);
+      if (response.state) setState({ ...response.state, positions: response.state.positions ?? null });
     });
   }, [setState, props]);
 
