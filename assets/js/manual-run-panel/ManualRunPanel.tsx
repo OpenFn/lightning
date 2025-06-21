@@ -17,6 +17,7 @@ import useQuery from '../hooks/useQuery';
 
 interface ManualRunPanelProps {
   job_id: string;
+  fixedHeight: boolean
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
@@ -28,7 +29,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     query: urlQuery,
     a: runId,
   } = useQuery(['active_panel', 'type', 'before', 'after', 'query', 'a']);
-  const { pushEvent, pushEventTo, job_id, navigate } = props;
+  const { pushEvent, pushEventTo, job_id, navigate, fixedHeight = false } = props;
 
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
     active_panel
@@ -255,6 +256,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             clearFilter={clearFilter}
             selectedDates={selectedDates}
             setSelectedDates={setSelectedDates}
+            fixedHeight={fixedHeight}
             currentRunDataclip={currentRunDataclip}
           />
         );
@@ -279,6 +281,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     pushEvent,
     handleSearchSumbit,
     currentRunDataclip,
+    fixedHeight
   ]);
 
   return (
@@ -292,7 +295,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
           }}
         />
       ) : (
-        <div className="grow overflow-auto no-scrollbar">
+        <div className="grow overflow-visible no-scrollbar">
           <div className="flex flex-col h-full">
             <div className="flex justify-center flex-wrap mb-1">
               <Tabs
