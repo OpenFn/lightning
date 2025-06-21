@@ -340,9 +340,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             }
           >
             {isManualLayout ? (
-              <span className="text-black hero-sparkles w-4 h-4" />
+              <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
             ) : (
-              <span className="text-primary-600 hero-sparkles-solid w-4 h-4" />
+              <span className="text-primary-600 hero-cursor-arrow-ripple w-4 h-4" />
             )}
           </ControlButton>
           <ControlButton

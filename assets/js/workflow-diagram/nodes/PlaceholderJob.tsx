@@ -120,7 +120,6 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         'shadow-xs',
         'text-center',
         'text-xs',
-        'border-dashed',
         'border-2',
         validationResult.isValid
           ? 'border-indigo-500'

@@ -121,13 +121,18 @@ export const styleEdge = (edge: Flow.Edge) => {
   };
 
   if (edge.data?.placeholder) {
-    edge.style.strokeDasharray = '4, 4';
-    edge.style.strokeWidth = '1.5px';
+    edge.style.strokeDasharray = '6, 6';
+    edge.style.strokeWidth = '2px';
+    edge.markerEnd = {
+      type: 'arrowclosed',
+      width: 32,
+      height: 32,
+    };
   }
 
   if (!edge.data?.enabled) {
-    edge.style.strokeDasharray = '4, 4';
-    edge.style.strokeWidth = '1.5px';
+    edge.style.strokeDasharray = '6, 6';
+    edge.style.strokeWidth = '2px';
     edge.style.opacity = 0.5;
   }
 
