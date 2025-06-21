@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+- Do not validate edge js condition expression
+  [#3028](https://github.com/OpenFn/lightning/issues/3028)
+- Dont send run channel errors to Sentry
+  [#3155](https://github.com/OpenFn/lightning/issues/3155)
+
 ### Fixed
 
 - AI Assistant fails to send job context in subsequent messages
@@ -58,8 +63,6 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 
 - Report AI Assistant errors to Sentry
   [#3010](https://github.com/OpenFn/lightning/issues/3010)
-- Do not validate edge js condition expression
-  [#3028](https://github.com/OpenFn/lightning/issues/3028)
 
 ### Fixed
 
