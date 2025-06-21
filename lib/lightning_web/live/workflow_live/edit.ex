@@ -135,36 +135,44 @@ defmodule LightningWeb.WorkflowLive.Edit do
             Switch to latest version
           </.button>
 
-          <.with_changes_indicator
-            :if={@snapshot_version_tag == "latest" && !@show_new_workflow_panel}
-            changeset={@changeset}
-          >
-            <div class="flex flex-row gap-2">
-              <.icon
-                :if={!@can_edit_workflow}
-                name="hero-lock-closed"
-                class="w-5 h-5 place-self-center text-gray-300"
+          <div class="flex flex-row gap-2">
+            <.icon
+              :if={!@can_edit_workflow}
+              name="hero-lock-closed"
+              class="w-5 h-5 place-self-center text-gray-300"
+            />
+            <.icon
+              :if={
+                @snapshot_version_tag == "latest" && @can_edit_workflow &&
+                  @ai_assistant_enabled && @live_action == :edit
+              }
+              name="hero-chat-bubble-left-ellipsis"
+              phx-click="toggle-workflow-ai-chat"
+              id="workflow-ai-chat-toggle"
+              class="w-5 h-5 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
+            />
+            <div class="flex flex-row m-auto gap-2">
+              <.input
+                id="workflow"
+                type="toggle"
+                name="workflow_state"
+                value={Helpers.workflow_enabled?(@changeset)}
+                tooltip={Helpers.workflow_state_tooltip(@changeset)}
+                on_click="toggle_workflow_state"
               />
-              <div class="flex flex-row m-auto gap-2">
-                <.input
-                  id="workflow"
-                  type="toggle"
-                  name="workflow_state"
-                  value={Helpers.workflow_enabled?(@changeset)}
-                  tooltip={Helpers.workflow_state_tooltip(@changeset)}
-                  on_click="toggle_workflow_state"
+              <div>
+                <.settings_icon
+                  changeset={@changeset}
+                  selection_mode={@selection_mode}
+                  base_url={@base_url}
                 />
-                <div>
-                  <div>
-                    <.settings_icon
-                      changeset={@changeset}
-                      selection_mode={@selection_mode}
-                      base_url={@base_url}
-                    />
-                  </div>
-                </div>
-                <.offline_indicator />
               </div>
+            </div>
+            <.offline_indicator />
+            <.with_changes_indicator
+              :if={@snapshot_version_tag == "latest" && !@show_new_workflow_panel}
+              changeset={@changeset}
+            >
               <.save_workflow_button
                 id="top-bar-save-workflow-btn"
                 changeset={@changeset}
@@ -174,8 +182,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 project_repo_connection={@project_repo_connection}
                 dropdown_position={:bottom}
               />
-            </div>
-          </.with_changes_indicator>
+            </.with_changes_indicator>
+          </div>
         </LayoutComponents.header>
       </:header>
       <.WorkflowStore react-id="workflow-mount" />
@@ -192,8 +200,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
           current_user={@current_user}
           class="transition-all duration-300 ease-in-out"
         />
+        <.live_component
+          :if={@show_workflow_ai_chat}
+          id="workflow-ai-chat-panel"
+          module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
+          workflow={@workflow}
+          project={@project}
+          base_url={@base_url}
+          chat_session_id={@chat_session_id}
+          current_user={@current_user}
+          can_edit_workflow={@can_edit_workflow}
+          class="transition-all duration-300 ease-in-out"
+        />
         <div
-          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "w-2/3", else: ""}"}
+          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel or @show_workflow_ai_chat, do: "w-2/3", else: ""}"}
           id={"workflow-edit-#{@workflow.id}"}
         >
           <.selected_template_label
@@ -1248,6 +1268,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        show_missing_dataclip_selector: false,
        show_new_workflow_panel: assigns.live_action == :new,
        show_canvas_placeholder: assigns.live_action == :new,
+       show_workflow_ai_chat: false,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        publish_template: false,
@@ -1773,6 +1794,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
      update(socket, :show_missing_dataclip_selector, fn val -> !val end)}
   end
 
+  def handle_event("toggle-workflow-ai-chat", _params, socket) do
+    {:noreply, update(socket, :show_workflow_ai_chat, fn val -> !val end)}
+  end
+
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
     changeset =
       WorkOrders.Manual.new(
@@ -1936,19 +1961,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
-    %{
-      workflow: workflow,
-      workflow_template: workflow_template
-    } = socket.assigns
-
-    changeset =
-      WorkflowTemplate.changeset(workflow_template, %{
-        name: workflow_template.name || workflow.name,
-        code: code
-      })
-
+    # For persistent workflow AI chat: just send the generated YAML to the frontend
+    # The workflow editor will apply the YAML to update the current workflow
     {:noreply,
-     assign(socket, workflow_code: code, workflow_template_changeset: changeset)}
+     socket
+     |> push_event("workflow_code_generated", %{"code" => code})}
   end
 
   def handle_event("cancel_publish_template", _params, socket) do
@@ -2087,6 +2104,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
            Map.get(payload, "opts", [])
          )}
     end
+  end
+
+  def handle_info({:workflow_ai_chat_event, action, _payload}, socket) do
+    case action do
+      :close_panel ->
+        {:noreply,
+         socket
+         |> assign(show_workflow_ai_chat: false)}
+    end
+  end
+
+  def handle_info({:workflow_code_generated, code}, socket) do
+    # For persistent workflow AI chat: just send the generated YAML to the frontend
+    # The workflow editor will apply the YAML to update the current workflow
+    {:noreply,
+     socket
+     |> push_event("workflow_code_generated", %{"code" => code})}
   end
 
   def handle_info(%{}, socket) do
