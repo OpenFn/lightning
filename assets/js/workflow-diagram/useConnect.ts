@@ -186,13 +186,17 @@ export default (
         // wait for any deselection to be done!
         setTimeout(() => {
           const isOnNode = (evt.target as HTMLElement).closest('[data-a-node]');
-          if (isOnNode) return;
-          addPlaceholder(node, position);
+          if (isOnNode) {
+            // dropped connect line on an existing node -> do nothing
+            setDragActive(false);
+            return;
+          } else {
+            // dropped connect line on an empty space -> create placeholder & deactivate drag.
+            addPlaceholder(node, position);
+            setDragActive(false);
+          }
         }, 0);
       }
-      setTimeout(() => {
-        setDragActive(false);
-      }, 500);
     },
     [model, addPlaceholder]
   );
