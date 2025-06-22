@@ -39,12 +39,20 @@ export type StateEdge = {
   enabled: boolean;
 };
 
+export type Position = {
+  x: number;
+  y: number;
+};
+
+export type StatePositions = Record<string, Position>;
+
 export type WorkflowState = {
   id: string;
   name: string;
   jobs: StateJob[];
   triggers: StateTrigger[];
   edges: StateEdge[];
+  positions: StatePositions | null;
 };
 
 // Spec
@@ -52,17 +60,20 @@ export type SpecJob = {
   name: string;
   adaptor: string;
   body: string;
+  pos: Position | undefined;
 };
 
 export type SpecCronTrigger = {
   type: 'cron';
   enabled: boolean;
   cron_expression: string;
+  pos: Position | undefined;
 };
 
 export type SpecWebhookTrigger = {
   type: 'webhook';
   enabled: boolean;
+  pos: Position | undefined;
 };
 
 export type SpecKafkaTrigger = {

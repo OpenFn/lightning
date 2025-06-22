@@ -16,7 +16,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
         {current, next} when is_list(current) and is_map(next) ->
           merge_list_params(current, next)
 
-        {current, next} when is_map(current) ->
+        {current, next} when is_map(current) and is_map(next) ->
           Map.merge(current, next)
 
         _ ->
