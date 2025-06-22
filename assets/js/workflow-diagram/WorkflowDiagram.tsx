@@ -74,6 +74,7 @@ const useTippyForControls = (isManualLayout: boolean) => {
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { jobs, triggers, edges, disabled, positions: fixedPositions, updatePositions, updatePosition } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
+  // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
@@ -134,15 +135,16 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    const { positions } = chartCache.current;
-    const newModel = fromWorkflow(
+    const { positions, lastSelection } = chartCache.current;
+    // create model from workflow and also apply selection styling to the model.
+    const newModel = updateSelectionStyles(fromWorkflow(
       workflow,
       positions,
       placeholders,
       // Re-render the model based on whatever was last selected
       // This handles first load and new node safely
-      chartCache.current.lastSelection,
-    );
+      lastSelection,
+    ), lastSelection);
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
         newModel.edges,
@@ -192,11 +194,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       chartCache.current.positions = {};
     }
   }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions]);
-
-  useEffect(() => {
-    const updatedModel = updateSelectionStyles(model, selection);
-    setModel(updatedModel);
-  }, [selection]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {

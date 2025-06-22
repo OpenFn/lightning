@@ -10,7 +10,7 @@ import type { Flow } from './types';
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_DISABLED = '#E1E1E1';
 export const EDGE_COLOR_SELECTED = '#4f46e5';
-export const EDGE_COLOR_NEIGHBOUR = '#807CCE';
+export const EDGE_COLOR_NEIGHBOUR = '#8492d7';
 export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 
 export const ERROR_COLOR = '#ef4444';
