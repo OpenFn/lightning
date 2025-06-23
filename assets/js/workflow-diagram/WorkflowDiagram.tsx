@@ -331,19 +331,19 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             onClick={switchLayout}
             data-tooltip={
               isManualLayout
-                ? 'Switch to auto layout'
-                : 'Switch to manual layout'
+                ? 'Switch to auto layout mode'
+                : 'Switch to manual layout mode'
             }
           >
             {isManualLayout ? (
               <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
             ) : (
-              <span className="text-primary-600 hero-cursor-arrow-ripple w-4 h-4" />
+              <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
             )}
           </ControlButton>
           <ControlButton
             onClick={forceLayout}
-            data-tooltip="Force auto-layout (override all manual positions)"
+            data-tooltip="Run auto layout (override manual positions)"
           >
             <span className="text-black hero-squares-2x2 w-4 h-4" />
           </ControlButton>
