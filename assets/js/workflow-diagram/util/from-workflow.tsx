@@ -6,6 +6,7 @@ import {
   edgeLabelIconStyles,
   edgeLabelTextStyles,
 } from '../styles';
+import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 
 function getEdgeLabel(edge: Lightning.Edge) {
   let label: string | JSX.Element = '{ }';
@@ -51,7 +52,7 @@ const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
   placeholders: Flow.Model = { nodes: [], edges: [] },
-  selectedId: string | null,
+  selectedId: string | null
 ): Flow.Model => {
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
@@ -82,6 +83,8 @@ const fromWorkflow = (
         if (positions && positions[node.id]) {
           model.position = positions[node.id];
         }
+        model.width = NODE_WIDTH;
+        model.height = NODE_HEIGHT;
 
         model.data.allowPlaceholder = allowPlaceholder;
 

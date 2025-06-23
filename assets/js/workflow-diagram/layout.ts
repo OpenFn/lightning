@@ -2,7 +2,7 @@ import Dagre from '../../vendor/dagre.cjs';
 import { timer } from 'd3-timer';
 import { getNodesBounds, type ReactFlowInstance } from '@xyflow/react';
 
-import { FIT_PADDING } from './constants';
+import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
@@ -36,7 +36,7 @@ const calculateLayout = async (
 
   edges.forEach(edge => g.setEdge(edge.source, edge.target));
   nodes.forEach(node =>
-    g.setNode(node.id, { ...node, width: 350, height: 200 })
+    g.setNode(node.id, { ...node, width: NODE_WIDTH, height: NODE_HEIGHT })
   );
 
   Dagre.layout(g, { disableOptimalOrderHeuristic: true });
