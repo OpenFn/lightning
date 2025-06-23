@@ -41,15 +41,13 @@ const calculateLayout = async (
 
   Dagre.layout(g, { disableOptimalOrderHeuristic: true });
 
-  // we set width & height above for dagre calculations. 
-  // don't set width & height below. let reactflow calculate that!
   const newModel = {
     nodes: nodes.map(node => {
-      const { x, y } = g.node(node.id);
+      const { x, y, width, height } = g.node(node.id);
 
       return {
         ...node,
-        position: { x, y },
+        position: { x, y, width, height },
       };
     }),
     edges,
