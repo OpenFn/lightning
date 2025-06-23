@@ -906,8 +906,9 @@ defmodule Lightning.ProjectsTest do
 
       # Create multiple snapshots for the workflow
       older_snapshot = insert(:snapshot, workflow: workflow, lock_version: 1)
-      middle_snapshot = insert(:snapshot, workflow: workflow, lock_version: 2)
-      current_snapshot = insert(:snapshot, workflow: workflow, lock_version: 3)
+      unused_snapshot = insert(:snapshot, workflow: workflow, lock_version: 2)
+      middle_snapshot = insert(:snapshot, workflow: workflow, lock_version: 3)
+      current_snapshot = insert(:snapshot, workflow: workflow, lock_version: 4)
 
       # Create a workorder that should NOT be deleted (recent activity)
       # This workorder references the current snapshot
@@ -971,12 +972,28 @@ defmodule Lightning.ProjectsTest do
       assert Repo.get(Step, step_with_middle_snapshot.id),
              "Step referencing middle snapshot should not be deleted via cascade deletion"
 
+      # We should only have 3 snapshots left, despite creating 4
+      assert Repo.all(Snapshot) |> Enum.count() == 3
+
       # The snapshots should also still exist because they are referenced by runs/steps
       assert Repo.get(Snapshot, older_snapshot.id),
              "Older snapshot should not be deleted because it's referenced by active runs"
 
-      assert Repo.get(Snapshot, middle_snapshot.id),
+      middle_snapshot = Repo.get(Snapshot, middle_snapshot.id)
+
+      assert middle_snapshot,
              "Middle snapshot should not be deleted because it's referenced by active runs"
+
+      error =
+        assert_raise Ecto.ConstraintError, fn ->
+          Repo.delete(middle_snapshot)
+        end
+
+      assert error.constraint == "runs_snapshot_id_fkey"
+      assert error.message =~ "constraint error when attempting to delete"
+
+      # The snapshot that was never used in a run and is not the latest should be deleted
+      refute Repo.get(Snapshot, unused_snapshot.id)
 
       # The current snapshot should definitely still exist
       assert Repo.get(Snapshot, current_snapshot.id)
