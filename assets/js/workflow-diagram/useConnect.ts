@@ -133,12 +133,16 @@ export default (
   const [dragActive, setDragActive] = useState<string | false>(false);
   const { add: addTo } = useWorkflowStore();
 
-  const onConnect: F.OnConnect = useCallback(args => {
-    const newModel = generateEdgeDiff(args.source, args.target);
-    const wf = toWorkflow(newModel);
+  const onConnect: F.OnConnect = useCallback(
+    args => {
+      const newModel = generateEdgeDiff(args.source, args.target);
+      const wf = toWorkflow(newModel);
 
-    addTo(wf);
-  }, []);
+      setDragActive(false);
+      addTo(wf);
+    },
+    [model]
+  );
 
   const onConnectStart: F.OnConnectStart = useCallback(
     (_evt, args) => {
