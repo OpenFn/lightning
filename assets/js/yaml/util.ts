@@ -18,6 +18,13 @@ const hyphenate = (str: string) => {
   return str.replace(/\s+/g, '-');
 };
 
+const roundPosition = (pos: Position): Position => {
+  return {
+    x: Math.round(pos.x),
+    y: Math.round(pos.y),
+  };
+};
+
 export const convertWorkflowStateToSpec = (
   workflowState: WorkflowState
 ): WorkflowSpec => {
@@ -27,8 +34,10 @@ export const convertWorkflowStateToSpec = (
     jobDetails.name = job.name;
     jobDetails.adaptor = job.adaptor;
     jobDetails.body = job.body;
-    if (workflowState.positions && workflowState.positions[job.id]) {
-      jobDetails.pos = workflowState.positions[job.id];
+
+    const jobPos = workflowState.positions?.[job.id];
+    if (jobPos) {
+      jobDetails.pos = roundPosition(jobPos);
     }
     jobs[hyphenate(job.name)] = jobDetails;
   });
@@ -40,12 +49,10 @@ export const convertWorkflowStateToSpec = (
       triggerDetails.cron_expression = trigger.cron_expression;
     }
     triggerDetails.enabled = trigger.enabled;
-    if (
-      triggerDetails.type !== 'kafka' &&
-      workflowState.positions &&
-      workflowState.positions[trigger.id]
-    ) {
-      triggerDetails.pos = workflowState.positions[trigger.id];
+
+    const triggerPos = workflowState.positions?.[trigger.id];
+    if (triggerDetails.type !== 'kafka' && triggerPos) {
+      triggerDetails.pos = roundPosition(triggerPos);
     }
     // TODO: handle kafka config
     triggers[trigger.type] = triggerDetails;
