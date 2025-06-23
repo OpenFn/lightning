@@ -13,11 +13,12 @@ interface ManualRunBody {
 
 interface WorkflowRunPanel {
   job_id: string
+  job_title: string
   cancel_url: string
 }
 
 export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
-  const { job_id, cancel_url, pushEvent, ...actionProps } = props;
+  const { job_id, job_title, cancel_url, pushEvent, ...actionProps } = props;
   const [manualContent, setManualRunContent] = React.useState<ManualRunBody>({ manual: { body: null, dataclip_id: null } })
 
   const runDisabled = React.useMemo(() => {
@@ -51,7 +52,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
 
   return <>
     <Panel
-      heading="Select Input to start run"
+      heading={`Run from ${job_title}`}
       cancelUrl={cancel_url}
       className="flex flex-col h-150 bg-red"
       {...actionProps}

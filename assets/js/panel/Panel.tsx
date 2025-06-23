@@ -23,7 +23,7 @@ export const Panel: WithActionProps<PanelProps> = ({
     >
       <div className="divide-y divide-gray-200 rounded-lg bg-white shadow h-full flex flex-col">
         <div className="flex px-4 py-5 sm:px-6">
-          <div className="grow font-bold">{heading}</div>
+          <div className="grow font-bold truncate">{heading}</div>
           <div className="flex-none">
             <div
               onClick={() => { navigate(cancelUrl); }}

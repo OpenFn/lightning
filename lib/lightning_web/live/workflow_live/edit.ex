@@ -48,6 +48,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
   attr :job_id, :string
+  attr :job_title, :string
   attr :cancel_url, :string
   jsx("assets/js/panel/panels/WorkflowRunPanel.tsx")
 
@@ -657,6 +658,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     @selected_job.id
                   else
                     hd(@workflow_params["jobs"])["id"]
+                  end
+                }
+                job_title={
+                  if @selected_job do
+                    @selected_job.name
+                  else
+                    "Trigger"
                   end
                 }
                 cancel_url={@base_url}
