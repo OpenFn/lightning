@@ -296,7 +296,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const switchLayout = async () => {
     if (isManualLayout) {
-      await forceLayout();
       updatePositions(null);
     } else updatePositions(chartCache.current.positions)
   }
