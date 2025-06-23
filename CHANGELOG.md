@@ -29,6 +29,9 @@ and this project adheres to
 
 ### Fixed
 
+- `Lightning.Demo.reset_demo()` was broken by an ordering issue between
+  Credentials and Oauth tokens.
+
 ## [v2.13.1] - 2025-06-12
 
 ## [v2.13.1-pre] - 2025-06-11
