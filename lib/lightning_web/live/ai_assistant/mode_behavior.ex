@@ -63,8 +63,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
 
   ## Parameters
 
-  - `session_id` - UUID string of the session to retrieve
-  - `assigns` - LiveView assigns containing context for session preparation:
+  `assigns` - LiveView assigns containing context for session preparation:
+    - `chat_session_id` - UUID of the session to retrieve
     - `:selected_job` - Current job context
     - `:project` - Current project context
     - Mode-specific preparation data
@@ -79,11 +79,11 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   ## Examples
 
       # Retrieve job session with expression context
-      session = JobMode.get_session!(session_id, %{selected_job: job})
+      session = JobMode.get_session!(%{chat_session_id: session_id, selected_job: job})
       # session now includes job.expression and job.adaptor
 
       # Retrieve workflow session with project context
-      session = WorkflowMode.get_session!(session_id, %{project: project})
+      session = WorkflowMode.get_session!(%{chat_session_id: session_id, project: project})
 
   ## Implementation Notes
 
@@ -91,10 +91,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   - Must enrich session with mode-specific context
   - Should preload necessary associations for efficient rendering
   """
-  @callback get_session!(
-              session_id :: String.t(),
-              assigns :: map()
-            ) :: map()
+  @callback get_session!(assigns :: map()) :: map()
 
   @doc """
   Lists sessions with pagination and mode-specific filtering.

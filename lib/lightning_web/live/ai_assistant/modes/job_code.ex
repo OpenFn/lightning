@@ -10,6 +10,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
   alias Lightning.AiAssistant
+  alias Lightning.Invocation
   alias LightningWeb.Live.AiAssistant.ErrorHandler
 
   defmodule Form do
@@ -24,6 +25,9 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
       embeds_one :options, Options, primary_key: false do
         field :code, :boolean, default: true
+        field :input, :boolean, default: false
+        field :output, :boolean, default: false
+        field :logs, :boolean, default: false
       end
     end
 
@@ -90,10 +94,22 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       # session now includes job.body as expression and job.adaptor
   """
   @impl true
-  @spec get_session!(String.t(), map()) :: map()
-  def get_session!(session_id, %{selected_job: job}) do
+  @spec get_session!(map()) :: map()
+  def get_session!(%{chat_session_id: session_id, selected_job: job} = assigns) do
     AiAssistant.get_session!(session_id)
     |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
+    |> then(fn session ->
+      follow_run = assigns[:follow_run]
+
+      if follow_run do
+        logs =
+          Invocation.assemble_logs_for_job_and_run(job.id, follow_run.id)
+
+        %{session | logs: logs}
+      else
+        session
+      end
+    end)
   end
 
   @doc """

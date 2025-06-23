@@ -48,12 +48,12 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   ## Examples
 
-      session = WorkflowTemplate.get_session!(session_id, %{})
+      session = WorkflowTemplate.get_session!(%{chat_session_id: session_id})
       # Session includes all messages and any generated workflow YAML
   """
   @impl true
-  @spec get_session!(String.t(), map()) :: map()
-  def get_session!(session_id, _assigns) do
+  @spec get_session!(map()) :: map()
+  def get_session!(%{chat_session_id: session_id}) do
     AiAssistant.get_session!(session_id)
   end
 

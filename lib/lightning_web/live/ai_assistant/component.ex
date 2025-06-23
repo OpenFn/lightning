@@ -263,10 +263,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp apply_action(socket, :show, _mode) do
     session =
-      socket.assigns.handler.get_session!(
-        socket.assigns.chat_session_id,
-        socket.assigns
-      )
+      socket.assigns.handler.get_session!(socket.assigns)
 
     socket = maybe_push_workflow_code(socket, session)
     pending_message = find_pending_user_message(session)
@@ -599,11 +596,16 @@ defmodule LightningWeb.AiAssistant.Component do
 
       <div
         :if={@handler.enable_attachment_options_component?}
-        class="mt-2 flex gap-2"
+        class="mt-2 flex gap-2 content-center"
       >
-        <span><.icon name="hero-paper-clip" class="size-4" /> Attach:</span>
+        <span class="place-content-center">
+          <.icon name="hero-paper-clip" class="size-4" /> Attach:
+        </span>
         <.inputs_for :let={options} field={@form[:options]}>
           <.input type="checkbox" label="Code" field={options[:code]} />
+          <%!-- <.input type="checkbox" label="Input" field={options[:input]} />
+          <.input type="checkbox" label="Output" field={options[:output]} /> --%>
+          <.input type="checkbox" label="Logs" field={options[:logs]} />
         </.inputs_for>
       </div>
 

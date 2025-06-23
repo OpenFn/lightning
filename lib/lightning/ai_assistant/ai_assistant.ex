@@ -641,7 +641,11 @@ defmodule Lightning.AiAssistant do
 
     context =
       build_context(
-        %{expression: session.expression, adaptor: session.adaptor},
+        %{
+          expression: session.expression,
+          adaptor: session.adaptor,
+          log: session.logs
+        },
         opts
       )
 
@@ -658,6 +662,9 @@ defmodule Lightning.AiAssistant do
     Enum.reduce(opts, context, fn
       {:code, false}, acc ->
         Map.drop(acc, [:expression])
+
+      {:log, false}, acc ->
+        Map.drop(acc, [:log])
 
       _opt, acc ->
         acc

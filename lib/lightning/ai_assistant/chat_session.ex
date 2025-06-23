@@ -75,6 +75,7 @@ defmodule Lightning.AiAssistant.ChatSession do
 
     field :expression, :string, virtual: true
     field :adaptor, :string, virtual: true
+    field :logs, :string, virtual: true
     field :message_count, :integer, virtual: true
 
     belongs_to :user, User
