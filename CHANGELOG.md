@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Give users the option to send or not sent job code to AI Assistant
+[#2935](https://github.com/OpenFn/lightning/issues/2935)
+
 ### Changed
 
 ### Fixed
