@@ -137,6 +137,7 @@ export default (
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
 
+    setDragActive(false);
     addTo(wf);
   }, []);
 
