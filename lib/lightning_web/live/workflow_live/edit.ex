@@ -170,7 +170,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </div>
                 <.offline_indicator />
               </div>
-              <.run_workflow_button base_url={@base_url} />
+              <.run_workflow_button base_url={@base_url} trigger_id={hd(@workflow_params["triggers"])["id"]} />
               <.save_workflow_button
                 id="top-bar-save-workflow-btn"
                 changeset={@changeset}
@@ -3113,7 +3113,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp run_workflow_button(assigns) do
     ~H"""
     <.button_link
-      patch={"#{@base_url}?m=workflow_input"}
+      patch={"#{@base_url}?s=#{@trigger_id}&m=workflow_input"}
       type="button"
       theme="primary"
     >
