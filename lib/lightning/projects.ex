@@ -1008,7 +1008,8 @@ defmodule Lightning.Projects do
     # Otherwise, it's a cleanup for the whole project when the snapshots are automatically deleted
     # by the workflows deletion.
     if retention_period_days do
-      {count, _} = delete_unused_snapshots(project_workorders_query)
+      {count, _} =
+        delete_unused_snapshots(project_workorders_query)
 
       Logger.info("Deleted #{count} unused snapshots")
     end
