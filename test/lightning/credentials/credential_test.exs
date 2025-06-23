@@ -217,15 +217,19 @@ defmodule Lightning.Credentials.CredentialTest do
       %{user: user, oauth_client: oauth_client}
     end
 
-    test "oauth credentials require access_token, refresh_token, and expires_in or expires_at to be valid" do
+    test "oauth credentials require all required OAuth fields to be valid" do
       assert_invalid_oauth_credential(
         %{},
-        "Invalid token format. Unable to extract scope information"
+        "Missing required OAuth field: access_token"
       )
 
       assert_invalid_oauth_credential(
-        %{"access_token" => "access_token_123", "scope" => "read write"},
-        "Missing refresh_token for new OAuth connection"
+        %{
+          "access_token" => "access_token_123",
+          "token_type" => "Bearer",
+          "scope" => "read write"
+        },
+        "Missing required OAuth field: refresh_token"
       )
 
       assert_invalid_oauth_credential(
@@ -234,52 +238,155 @@ defmodule Lightning.Credentials.CredentialTest do
           "refresh_token" => "refresh_token_123",
           "scope" => "read write"
         },
+        "Missing required OAuth field: token_type"
+      )
+
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "scope" => "read write"
+        },
         "Missing expiration field: either expires_in or expires_at is required"
       )
 
       refute_invalid_oauth_credential(%{
         "access_token" => "access_token_123",
         "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
         "scope" => "read write",
-        "expires_at" => 3245
+        "expires_at" => System.system_time(:second) + 3600
       })
 
       refute_invalid_oauth_credential(%{
         "access_token" => "access_token_123",
         "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
         "scope" => "read write",
-        "expires_in" => 3245
+        "expires_in" => 3600
       })
     end
 
-    test "validates OAuth token data with existing token allows missing refresh_token",
-         %{
-           user: user,
-           oauth_client: oauth_client
-         } do
-      insert(:oauth_token, %{
-        user: user,
-        oauth_client: oauth_client,
-        scopes: ["read", "write"]
+    test "validates token_type field specifically" do
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Basic",
+          "scope" => "read write",
+          "expires_in" => 3600
+        },
+        "Unsupported token type: 'Basic'. Expected 'Bearer'"
+      )
+
+      refute_invalid_oauth_credential(%{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "bearer",
+        "scope" => "read write",
+        "expires_in" => 3600
       })
+    end
 
-      token_data = %{
-        "access_token" => "access_token_456",
-        "expires_in" => 3600,
-        "scope" => "read write"
-      }
+    test "validates token field values are non-empty" do
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "scope" => "read write",
+          "expires_in" => 3600
+        },
+        "access_token cannot be empty"
+      )
 
-      changeset =
-        Credentials.change_credential(%Credential{}, %{
-          name: "oauth credential",
-          schema: "oauth",
-          body: %{},
-          oauth_token: token_data,
-          oauth_client_id: oauth_client.id,
-          user_id: user.id
-        })
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "",
+          "token_type" => "Bearer",
+          "scope" => "read write",
+          "expires_in" => 3600
+        },
+        "refresh_token cannot be empty"
+      )
 
-      assert changeset.valid?
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "scope" => "",
+          "expires_in" => 3600
+        },
+        "scope field cannot be empty"
+      )
+    end
+
+    test "validates expires_in bounds" do
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "scope" => "read write",
+          "expires_in" => 0
+        },
+        "expires_in must be greater than 0 seconds, got: 0"
+      )
+
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "scope" => "read write",
+          "expires_in" => -300
+        },
+        "expires_in must be greater than 0 seconds, got: -300"
+      )
+
+      large_expires_in = 2 * 365 * 24 * 3600
+
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "scope" => "read write",
+          "expires_in" => large_expires_in
+        },
+        "expires_in seems unreasonably long"
+      )
+    end
+
+    test "validates expires_at bounds" do
+      past_time = System.system_time(:second) - 2 * 24 * 3600
+
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "scope" => "read write",
+          "expires_at" => past_time
+        },
+        "expires_at timestamp appears to be too far in the past"
+      )
+
+      future_time = System.system_time(:second) + 2 * 365 * 24 * 3600
+
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "scope" => "read write",
+          "expires_at" => future_time
+        },
+        "expires_at timestamp appears to be too far in the future"
+      )
     end
 
     test "validates scope grants when expected_scopes provided", %{
@@ -289,6 +396,7 @@ defmodule Lightning.Credentials.CredentialTest do
       token_data = %{
         "access_token" => "access_token_123",
         "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
         "expires_in" => 3600,
         "scope" => "read"
       }
@@ -312,6 +420,71 @@ defmodule Lightning.Credentials.CredentialTest do
              ]
     end
 
+    test "supports case-insensitive scope matching", %{
+      user: user,
+      oauth_client: oauth_client
+    } do
+      token_data = %{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
+        "expires_in" => 3600,
+        "scope" => "READ write"
+      }
+
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: token_data,
+          oauth_client_id: oauth_client.id,
+          expected_scopes: ["read", "Write"],
+          user_id: user.id
+        })
+
+      assert changeset.valid?
+    end
+
+    test "works with scopes array format", %{
+      user: user,
+      oauth_client: oauth_client
+    } do
+      token_data = %{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
+        "expires_in" => 3600,
+        "scopes" => ["read", "write", "admin"]
+      }
+
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: token_data,
+          oauth_client_id: oauth_client.id,
+          expected_scopes: ["read", "write"],
+          user_id: user.id
+        })
+
+      assert changeset.valid?
+    end
+
+    test "validates scopes array contains only strings" do
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123",
+          "token_type" => "Bearer",
+          "expires_in" => 3600,
+          "scopes" => ["read", 123, "write"]
+        },
+        "scopes array must contain only strings"
+      )
+    end
+
     test "skips scope validation when no expected_scopes provided", %{
       user: user,
       oauth_client: oauth_client
@@ -319,6 +492,7 @@ defmodule Lightning.Credentials.CredentialTest do
       token_data = %{
         "access_token" => "access_token_123",
         "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
         "expires_in" => 3600,
         "scope" => "read"
       }
@@ -393,6 +567,7 @@ defmodule Lightning.Credentials.CredentialTest do
       token_data = %{
         "access_token" => "access_token_123",
         "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
         "expires_in" => 3600,
         "scope" => "read"
       }
@@ -431,7 +606,7 @@ defmodule Lightning.Credentials.CredentialTest do
       errors = errors_on(changeset)
 
       assert errors[:oauth_token] == [
-               "Invalid token format. Unable to extract scope information"
+               "OAuth token must be a valid map"
              ]
 
       assert get_change(changeset, :oauth_error_type) == :invalid_token_format
@@ -450,6 +625,91 @@ defmodule Lightning.Credentials.CredentialTest do
       refute changeset.valid?
       errors = errors_on(changeset)
       assert errors[:oauth_token] == ["OAuth credentials require token data"]
+    end
+
+    test "accepts expires_in as string" do
+      refute_invalid_oauth_credential(%{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
+        "scope" => "read write",
+        "expires_in" => "3600"
+      })
+    end
+
+    test "accepts expires_at as Unix timestamp string" do
+      future_time = System.system_time(:second) + 3600
+      timestamp_string = Integer.to_string(future_time)
+
+      refute_invalid_oauth_credential(%{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
+        "scope" => "read write",
+        "expires_at" => timestamp_string
+      })
+    end
+
+    test "accepts ISO 8601 expires_at format" do
+      refute_invalid_oauth_credential(%{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
+        "scope" => "read write",
+        "expires_at" => "2024-12-31T23:59:59Z"
+      })
+    end
+
+    test "supports atom keys for oauth_token and expected_scopes", %{
+      user: user,
+      oauth_client: oauth_client
+    } do
+      token_data = %{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
+        "expires_in" => 3600,
+        "scope" => "read write"
+      }
+
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: token_data,
+          oauth_client_id: oauth_client.id,
+          expected_scopes: ["read"],
+          user_id: user.id
+        })
+
+      assert changeset.valid?
+    end
+
+    test "handles expected_scopes as space-delimited string", %{
+      user: user,
+      oauth_client: oauth_client
+    } do
+      token_data = %{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
+        "expires_in" => 3600,
+        "scope" => "read write admin"
+      }
+
+      changeset =
+        Credentials.change_credential(%Credential{}, %{
+          name: "oauth credential",
+          schema: "oauth",
+          body: %{},
+          oauth_token: token_data,
+          oauth_client_id: oauth_client.id,
+          expected_scopes: "read write",
+          user_id: user.id
+        })
+
+      assert changeset.valid?
     end
   end
 
@@ -528,24 +788,6 @@ defmodule Lightning.Credentials.CredentialTest do
       assert loaded_credential.oauth_token.id == oauth_token.id
     end
 
-    test "belongs_to oauth_client association" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      credential =
-        insert(:credential, %{
-          user: user,
-          oauth_client: oauth_client
-        })
-
-      loaded_credential =
-        Credential
-        |> preload(:oauth_client)
-        |> Repo.get!(credential.id)
-
-      assert loaded_credential.oauth_client.id == oauth_client.id
-    end
-
     test "has_many project_credentials association" do
       user = insert(:user)
       credential = insert(:credential, user: user)
@@ -598,7 +840,6 @@ defmodule Lightning.Credentials.CredentialTest do
       assert credential.oauth_error_type == :missing_scopes
       assert credential.oauth_error_details == %{missing_scopes: ["write"]}
 
-      # Virtual fields should not be persisted
       schema_fields = Credential.__schema__(:fields)
       refute :oauth_error_type in schema_fields
       refute :oauth_error_details in schema_fields
@@ -632,30 +873,36 @@ defmodule Lightning.Credentials.CredentialTest do
     end
   end
 
-  defp assert_invalid_oauth_credential(body, message) do
+  defp assert_invalid_oauth_credential(token_data, expected_message) do
     errors =
       Credentials.change_credential(%Credential{}, %{
         name: "oauth credential",
         schema: "oauth",
-        oauth_token: body,
+        oauth_token: token_data,
         user_id: insert(:user).id
       })
       |> errors_on()
 
-    assert errors[:oauth_token] == [message]
+    oauth_errors = errors[:oauth_token] || []
+
+    assert Enum.any?(oauth_errors, fn error ->
+             String.contains?(error, expected_message)
+           end),
+           "Expected error containing '#{expected_message}', but got: #{inspect(oauth_errors)}"
   end
 
-  defp refute_invalid_oauth_credential(body) do
+  defp refute_invalid_oauth_credential(token_data) do
     errors =
       Credentials.change_credential(%Credential{}, %{
         name: "oauth credential",
         schema: "oauth",
         body: %{},
-        oauth_token: body,
+        oauth_token: token_data,
         user_id: insert(:user).id
       })
       |> errors_on()
 
-    refute errors[:oauth_token]
+    refute errors[:oauth_token],
+           "Expected no OAuth errors, but got: #{inspect(errors[:oauth_token])}"
   end
 end

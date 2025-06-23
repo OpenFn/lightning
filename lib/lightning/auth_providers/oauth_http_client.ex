@@ -3,36 +3,59 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   Handles OAuth interactions for generic providers, including token fetching,
   refreshing, and user information retrieval. This module uses Tesla to make HTTP
   requests configured with middleware appropriate for OAuth specific tasks.
+
+  Returns structured error responses that integrate well with the audit system.
   """
 
   use Tesla
+  require Logger
 
   alias LightningWeb.RouteHelpers
 
   @doc """
   Revokes an OAuth token.
 
+  Attempts to revoke both access_token and refresh_token for comprehensive cleanup.
+  Per RFC 7009, providers should invalidate related tokens when one is revoked.
+
   ## Parameters
-  - `client`: The client configuration containing client_id and client_secret.
-  - `token`: The token to be revoked (access_token or refresh_token).
+  - `client`: The client configuration containing client_id, client_secret, and revocation_endpoint.
+  - `token`: The token data containing access_token and refresh_token.
 
   ## Returns
-  - `{:ok, response}` on success
-  - `{:error, reason}` on failure
+  - `:ok` on success (any token successfully revoked)
+  - `{:error, %{status: integer(), error: term(), details: map()}}` on failure
   """
   def revoke_token(client, token) do
-    body = %{
-      token: token["access_token"],
-      client_id: client.client_id,
-      client_secret: client.client_secret
-    }
+    # Try to revoke refresh_token first (more comprehensive), then access_token
+    tokens_to_revoke = [
+      {"refresh_token", token["refresh_token"]},
+      {"access_token", token["access_token"]}
+    ]
 
-    Tesla.client([
-      Tesla.Middleware.FormUrlencoded,
-      Tesla.Middleware.FollowRedirects
-    ])
-    |> post(client.revocation_endpoint, body)
-    |> handle_resp([200])
+    results =
+      tokens_to_revoke
+      |> Enum.filter(fn {_type, token_value} -> not is_nil(token_value) end)
+      |> Enum.map(fn {token_type, token_value} ->
+        revoke_single_token(client, token_value, token_type)
+      end)
+
+    case results do
+      [] ->
+        {:error,
+         %{
+           status: 400,
+           error: "no_tokens_to_revoke",
+           details: %{message: "No valid tokens found for revocation"}
+         }}
+
+      _ ->
+        if Enum.any?(results, &match?(:ok, &1)) do
+          :ok
+        else
+          List.last(results)
+        end
+    end
   end
 
   @doc """
@@ -44,7 +67,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
 
   ## Returns
   - `{:ok, token_data}` on success
-  - `{:error, reason}` on failure
+  - `{:error, %{status: integer(), error: term(), details: map()}}` on failure
   """
   def fetch_token(client, code) do
     body = %{
@@ -55,9 +78,11 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       redirect_uri: RouteHelpers.oidc_callback_url()
     }
 
-    Tesla.client([Tesla.Middleware.FormUrlencoded])
+    Tesla.client([
+      Tesla.Middleware.FormUrlencoded
+    ])
     |> post(client.token_endpoint, body)
-    |> handle_resp([200])
+    |> handle_response([200])
     |> maybe_introspect(client)
   end
 
@@ -69,27 +94,42 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   - `token`: The token configuration containing refresh_token
 
   ## Returns
-  - `{:ok, refreshed_token_data}` on success
-  - `{:error, reason}` on failure
+  - `{:ok, refreshed_token_data}` on success with preserved refresh_token
+  - `{:error, %{status: integer(), error: term(), details: map()}}` on failure
   """
   def refresh_token(client, token) do
-    body = %{
-      client_id: client.client_id,
-      client_secret: client.client_secret,
-      refresh_token: token["refresh_token"],
-      grant_type: "refresh_token"
-    }
+    refresh_token_value = token["refresh_token"]
 
-    Tesla.client([Tesla.Middleware.FormUrlencoded])
-    |> post(client.token_endpoint, body)
-    |> handle_resp([200])
-    |> maybe_introspect(client)
-    |> case do
-      {:ok, new_token} ->
-        {:ok, Map.merge(token, new_token)}
+    if is_nil(refresh_token_value) or refresh_token_value == "" do
+      {:error,
+       %{
+         status: 400,
+         error: "invalid_request",
+         details: %{message: "refresh_token is required"}
+       }}
+    else
+      body = %{
+        client_id: client.client_id,
+        client_secret: client.client_secret,
+        refresh_token: refresh_token_value,
+        grant_type: "refresh_token"
+      }
 
-      {:error, error} ->
-        {:error, error}
+      Tesla.client([
+        Tesla.Middleware.FormUrlencoded
+      ])
+      |> post(client.token_endpoint, body)
+      |> handle_response([200])
+      |> maybe_introspect(client)
+      |> case do
+        {:ok, new_token} ->
+          # Preserve the original refresh_token if not provided in response
+          merged_token = merge_token_response(token, new_token)
+          {:ok, merged_token}
+
+        {:error, error} ->
+          {:error, error}
+      end
     end
   end
 
@@ -102,13 +142,24 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
 
   ## Returns
   - `{:ok, user_info}` on success
-  - `{:error, reason}` on failure
+  - `{:error, %{status: integer(), error: term(), details: map()}}` on failure
   """
   def fetch_userinfo(client, token) do
-    headers = [{"Authorization", "Bearer #{token["access_token"]}"}]
+    access_token = token["access_token"]
 
-    get(client.userinfo_endpoint, headers: headers)
-    |> handle_resp([200])
+    if is_nil(access_token) or access_token == "" do
+      {:error,
+       %{
+         status: 400,
+         error: "invalid_request",
+         details: %{message: "access_token is required"}
+       }}
+    else
+      headers = [{"Authorization", "Bearer #{access_token}"}]
+
+      get(client.userinfo_endpoint, headers: headers)
+      |> handle_response([200])
+    end
   end
 
   @doc """
@@ -137,43 +188,29 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     "#{client.authorization_endpoint}?#{encoded_params}"
   end
 
-  @doc """
-  Determines if the token data is still considered fresh.
+  # Private helper functions
 
-  ## Parameters
-  - `token`: a map containing token data with `expires_at` or `expires_in` keys.
-  - `threshold`: the number of time units before expiration to consider the token still fresh.
-  - `time_unit`: the unit of time to consider for the threshold comparison.
+  defp revoke_single_token(client, token_value, token_type) do
+    body = %{
+      token: token_value,
+      token_type_hint: token_type,
+      client_id: client.client_id,
+      client_secret: client.client_secret
+    }
 
-  ## Returns
-  - `true` if the token is fresh.
-  - `{:error, reason}` if the token's expiration data is missing or invalid.
-  """
-  @spec still_fresh(map(), integer(), atom()) :: boolean() | {:error, String.t()}
-  def still_fresh(token, threshold \\ 5, time_unit \\ :minute)
+    Tesla.client([
+      Tesla.Middleware.FormUrlencoded
+    ])
+    |> post(client.revocation_endpoint, body)
+    |> handle_response([200, 204])
+    |> case do
+      {:ok, _} ->
+        Logger.debug("Successfully revoked #{token_type}")
+        :ok
 
-  def still_fresh(%{"expires_at" => nil} = _token, _threshold, _time_unit),
-    do: false
-
-  def still_fresh(%{"expires_in" => nil} = _token, _threshold, _time_unit),
-    do: false
-
-  def still_fresh(token, threshold, time_unit) do
-    current_time = DateTime.utc_now()
-
-    expiration_time =
-      case {Map.fetch(token, "expires_at"), Map.fetch(token, "expires_in")} do
-        {{:ok, expires_at}, :error} -> expires_at
-        {:error, {:ok, expires_in}} -> expires_in
-        _ -> {:error, "No valid expiration data found"}
-      end
-
-    if is_integer(expiration_time) do
-      expiration_time = DateTime.from_unix!(expiration_time)
-      time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
-      time_remaining >= threshold
-    else
-      expiration_time
+      {:error, error} ->
+        Logger.warning("Failed to revoke #{token_type}: #{inspect(error)}")
+        {:error, error}
     end
   end
 
@@ -184,8 +221,16 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   defp maybe_introspect({:ok, token}, client) do
     if Map.get(client, :introspection_endpoint) do
       case introspect(client, token) do
-        {:ok, response} -> {:ok, Map.put(token, "expires_at", response["exp"])}
-        {:error, _reason} -> {:ok, token}
+        {:ok, response} ->
+          {:ok, Map.put(token, "expires_at", response["exp"])}
+
+        {:error, _reason} ->
+          # Don't fail token operations if introspection fails
+          Logger.warning(
+            "Token introspection failed, proceeding without expires_at"
+          )
+
+          {:ok, token}
       end
     else
       {:ok, token}
@@ -200,32 +245,115 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       token_type_hint: "access_token"
     }
 
-    Tesla.client([Tesla.Middleware.FormUrlencoded])
+    Tesla.client([
+      Tesla.Middleware.FormUrlencoded
+    ])
     |> post(client.introspection_endpoint, body)
-    |> handle_resp([200])
+    |> handle_response([200])
   end
 
-  defp handle_resp(
+  defp merge_token_response(original_token, new_token) do
+    # Preserve refresh_token from original if not in new response
+    # This is common behavior for many OAuth providers
+    refresh_token =
+      new_token["refresh_token"] || original_token["refresh_token"]
+
+    new_token
+    |> Map.put("refresh_token", refresh_token)
+    |> Map.put("updated_at", DateTime.utc_now() |> DateTime.to_unix())
+  end
+
+  defp handle_response(
          {:ok, %Tesla.Env{status: status, body: body}},
          expected_statuses
        ) do
     if status in expected_statuses do
-      case body do
-        "" ->
-          {:ok, %{}}
+      case parse_response_body(body) do
+        {:ok, parsed_body} ->
+          {:ok, parsed_body}
 
-        _ ->
-          case Jason.decode(body) do
-            {:ok, decoded_body} -> {:ok, decoded_body}
-            {:error, reason} -> {:error, reason}
-          end
+        {:error, parse_error} ->
+          {:error,
+           %{
+             status: status,
+             error: "invalid_response_format",
+             details: %{parse_error: inspect(parse_error), raw_body: body}
+           }}
       end
     else
-      {:error, inspect(body)}
+      # Parse error response for better debugging
+      error_details = parse_error_response(body, status)
+
+      {:error,
+       %{
+         status: status,
+         error: error_details.error,
+         details: error_details.details
+       }}
     end
   end
 
-  defp handle_resp({:error, reason}, _expected_statuses) do
-    {:error, inspect(reason)}
+  defp handle_response(
+         {:error, %Tesla.Error{reason: reason}},
+         _expected_statuses
+       ) do
+    {:error,
+     %{
+       status: 0,
+       error: "network_error",
+       details: %{reason: inspect(reason)}
+     }}
+  end
+
+  defp handle_response({:error, reason}, _expected_statuses) do
+    {:error,
+     %{
+       status: 0,
+       error: "unknown_error",
+       details: %{reason: inspect(reason)}
+     }}
+  end
+
+  defp parse_response_body(""), do: {:ok, %{}}
+  defp parse_response_body(nil), do: {:ok, %{}}
+
+  defp parse_response_body(body) when is_binary(body) do
+    Jason.decode(body)
+  end
+
+  defp parse_response_body(body), do: {:ok, body}
+
+  defp parse_error_response(body, status) do
+    case parse_response_body(body) do
+      {:ok, %{"error" => error, "error_description" => description}} ->
+        %{
+          error: error,
+          details: %{
+            description: description,
+            status: status
+          }
+        }
+
+      {:ok, %{"error" => error}} ->
+        %{
+          error: error,
+          details: %{status: status}
+        }
+
+      {:ok, parsed_body} when is_map(parsed_body) ->
+        %{
+          error: "oauth_error",
+          details: Map.put(parsed_body, :status, status)
+        }
+
+      _ ->
+        %{
+          error: "http_error",
+          details: %{
+            status: status,
+            raw_response: inspect(body)
+          }
+        }
+    end
   end
 end

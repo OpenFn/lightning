@@ -15,13 +15,13 @@ defmodule Lightning.Credentials do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
-  alias Lightning.AuthProviders.Common
   alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthToken
+  alias Lightning.Credentials.OauthValidation
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
@@ -30,6 +30,37 @@ defmodule Lightning.Credentials do
   require Logger
 
   @type transfer_error :: :token_error | :not_found | :not_owner
+
+  # Delegate OAuth-specific functions to appropriate modules
+  defdelegate validate_oauth_token_data(token_data),
+    to: OauthValidation,
+    as: :validate_token_data
+
+  defdelegate validate_scope_grant(token_data, expected_scopes),
+    to: OauthValidation
+
+  defdelegate normalize_scopes(input, delimiter \\ " "),
+    to: OauthValidation
+
+  defdelegate extract_scopes(token_data),
+    to: OauthToken
+
+  # Delegate token state functions to OauthToken
+  defdelegate token_expired?(oauth_token),
+    to: OauthToken,
+    as: :expired?
+
+  defdelegate token_valid?(oauth_token),
+    to: OauthToken,
+    as: :valid?
+
+  defdelegate token_needs_refresh?(oauth_token, max_age_hours \\ 1),
+    to: OauthToken,
+    as: :needs_refresh?
+
+  defdelegate token_stale_or_expired?(oauth_token, max_age_hours \\ 1),
+    to: OauthToken,
+    as: :stale_or_expired?
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
@@ -156,8 +187,8 @@ defmodule Lightning.Credentials do
   Creates a new credential.
 
   For regular credentials, this simply inserts the changeset.
-  For OAuth credentials, this uses the oauth_token data provided directly,
-  finds or creates an OAuth token, and associates it with the credential.
+  For OAuth credentials, this creates a new OAuth token with the provided
+  oauth_token data and associates it with the credential in a 1:1 relationship.
 
   ## Parameters
     * `attrs` - Map of attributes for the credential including:
@@ -166,6 +197,7 @@ defmodule Lightning.Credentials do
       * `oauth_client_id` - OAuth client ID (for OAuth credentials)
       * `body` - Credential configuration data
       * `oauth_token` - OAuth token data (for OAuth credentials)
+      * `expected_scopes` - List of expected scopes (for OAuth credentials)
 
   ## Returns
     * `{:ok, credential}` - Successfully created credential
@@ -192,71 +224,44 @@ defmodule Lightning.Credentials do
 
   defp oauth_credential?(attrs), do: attrs["schema"] == "oauth"
 
-  defp build_oauth_create_multi(changeset, %{
-         "user_id" => user_id,
-         "oauth_client_id" => client_id,
-         "body" => body,
-         "oauth_token" => token
-       }) do
-    base_multi =
-      Multi.new()
-      |> Multi.run(:scopes, fn _repo, _changes ->
-        case OauthToken.extract_scopes(token) do
-          {:ok, scopes} -> {:ok, scopes}
-          :error -> {:error, "Missing required OAuth field: scope"}
-        end
-      end)
+  defp build_oauth_create_multi(
+         changeset,
+         %{
+           "user_id" => user_id,
+           "oauth_client_id" => client_id,
+           "body" => body,
+           "oauth_token" => token
+         }
+       ) do
+    Multi.new()
+    |> Multi.run(:scopes, fn _repo, _changes ->
+      case extract_scopes(token) do
+        {:ok, scopes} ->
+          {:ok, scopes}
 
-    token_multi = build_token_multi(user_id, client_id, token)
+        :error ->
+          error =
+            OauthValidation.Error.new(
+              :missing_scope,
+              "Missing required OAuth field: scope"
+            )
 
-    base_multi
-    |> Multi.append(token_multi)
+          {:error, error}
+      end
+    end)
+    |> Multi.insert(:oauth_token, fn %{scopes: scopes} ->
+      OauthToken.changeset(%{
+        user_id: user_id,
+        oauth_client_id: client_id,
+        scopes: scopes,
+        body: token
+      })
+    end)
     |> Multi.insert(:credential, fn %{oauth_token: fresh_token} ->
       changeset
       |> Ecto.Changeset.put_change(:oauth_token_id, fresh_token.id)
       |> Ecto.Changeset.put_change(:body, body)
     end)
-  end
-
-  defp build_token_multi(user_id, client_id, token) do
-    if token["refresh_token"] do
-      Multi.new()
-      |> Multi.insert(:oauth_token, fn %{scopes: scopes} ->
-        OauthToken.changeset(%{
-          user_id: user_id,
-          oauth_client_id: client_id,
-          scopes: scopes,
-          body: token
-        })
-      end)
-    else
-      Multi.new()
-      |> Multi.run(:token_changeset, fn _repo, %{scopes: scopes} ->
-        handle_missing_refresh_token(user_id, client_id, scopes, token)
-      end)
-      |> Multi.insert(:oauth_token, fn %{token_changeset: token_changeset} ->
-        token_changeset
-      end)
-    end
-  end
-
-  defp handle_missing_refresh_token(user_id, client_id, scopes, token) do
-    case find_best_matching_token_for_scopes(user_id, client_id, scopes) do
-      nil ->
-        {:error, "Missing required OAuth field: refresh_token"}
-
-      oauth_token ->
-        refresh_token = oauth_token.body["refresh_token"]
-        updated_token = Map.put(token, "refresh_token", refresh_token)
-
-        {:ok,
-         OauthToken.changeset(%{
-           user_id: user_id,
-           oauth_client_id: client_id,
-           scopes: scopes,
-           body: updated_token
-         })}
-    end
   end
 
   @doc """
@@ -303,6 +308,18 @@ defmodule Lightning.Credentials do
     credential_data = Map.get(attrs, "body", credential.body)
 
     Multi.new()
+    |> Multi.run(:validate_scopes, fn _repo, _changes ->
+      expected_scopes = get_expected_scopes(attrs)
+
+      if Enum.empty?(expected_scopes) do
+        {:ok, :no_validation_needed}
+      else
+        case validate_scope_grant(attrs["oauth_token"], expected_scopes) do
+          :ok -> {:ok, :valid}
+          {:error, error} -> {:error, error}
+        end
+      end
+    end)
     |> Multi.run(:oauth_token, fn _repo, _changes ->
       credential.oauth_token
       |> OauthToken.update_token_changeset(attrs["oauth_token"])
@@ -313,6 +330,17 @@ defmodule Lightning.Credentials do
       |> Ecto.Changeset.put_change(:body, credential_data)
       |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
     end)
+  end
+
+  defp get_expected_scopes(attrs) do
+    scopes =
+      Map.get(attrs, "expected_scopes") || Map.get(attrs, :expected_scopes) || []
+
+    case scopes do
+      list when is_list(list) -> list
+      binary when is_binary(binary) -> String.split(binary, " ", trim: true)
+      _ -> []
+    end
   end
 
   defp handle_transaction_result(transaction_result) do
@@ -569,14 +597,98 @@ defmodule Lightning.Credentials do
   defp maybe_revoke_oauth(nil), do: :ok
   defp maybe_revoke_oauth(%OauthToken{oauth_client_id: nil}), do: :ok
 
-  defp maybe_revoke_oauth(%OauthToken{
-         oauth_client_id: oauth_client_id,
-         body: body
-       }) do
+  defp maybe_revoke_oauth(
+         %OauthToken{
+           oauth_client_id: oauth_client_id,
+           body: body
+         } = oauth_token
+       ) do
     client = Repo.get(OauthClient, oauth_client_id)
 
     if client.revocation_endpoint do
-      OauthHTTPClient.revoke_token(client, body)
+      case OauthHTTPClient.revoke_token(client, body) do
+        :ok ->
+          # Audit successful revocation
+          revocation_metadata = %{
+            client_id: oauth_client_id,
+            revocation_endpoint: client.revocation_endpoint,
+            success: true
+          }
+
+          # Find the credential using the oauth_token relationship
+          # Note: We need to find the credential that has this oauth_token_id
+          credential =
+            from(c in Credential, where: c.oauth_token_id == ^oauth_token.id)
+            |> Repo.one()
+            |> Repo.preload(:user)
+
+          if credential do
+            audit_changeset =
+              Audit.oauth_token_revoked_event(credential, revocation_metadata)
+
+            save_audit_event(audit_changeset)
+          end
+
+          Logger.info("Successfully revoked OAuth token")
+          :ok
+
+        {:error, error} ->
+          # Audit failed revocation but don't fail the deletion process
+          revocation_metadata = %{
+            client_id: oauth_client_id,
+            revocation_endpoint: client.revocation_endpoint,
+            success: false,
+            error: inspect(error)
+          }
+
+          # Find the credential using the oauth_token relationship
+          credential =
+            from(c in Credential, where: c.oauth_token_id == ^oauth_token.id)
+            |> Repo.one()
+            |> Repo.preload(:user)
+
+          if credential do
+            audit_changeset =
+              Audit.oauth_token_revoked_event(credential, revocation_metadata)
+
+            save_audit_event(audit_changeset)
+          end
+
+          Logger.warning("Failed to revoke OAuth token: #{inspect(error)}")
+          :ok
+      end
+    else
+      :ok
+    end
+  end
+
+  # Helper function to update credential with audit event in a transaction
+  defp update_credential_with_audit(credential, attrs, audit_changeset) do
+    Multi.new()
+    |> Multi.run(:update_result, fn _repo, _changes ->
+      update_credential(credential, attrs)
+    end)
+    |> Multi.insert(:audit_event, audit_changeset)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{update_result: updated_credential}} ->
+        {:ok, updated_credential}
+
+      {:error, _operation, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
+  # Helper function to save audit events independently
+  defp save_audit_event(audit_changeset) do
+    case Repo.insert(audit_changeset) do
+      {:ok, _audit} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.error("Failed to save audit event: #{inspect(changeset.errors)}")
+        # Don't fail the main operation
+        :ok
     end
   end
 
@@ -727,32 +839,6 @@ defmodule Lightning.Credentials do
     |> refresh_oauth_token()
   end
 
-  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
-  def maybe_refresh_token(%Credential{schema: schema} = credential)
-      when schema in ["salesforce_oauth", "googlesheets"] do
-    token = Common.TokenBody.new(credential.body)
-
-    if Common.still_fresh(token) do
-      {:ok, credential}
-    else
-      adapter = lookup_adapter(schema)
-      wellknown_url = adapter.wellknown_url(token.sandbox)
-
-      case adapter.refresh_token(token, wellknown_url) do
-        {:ok, refreshed_token} ->
-          updated_body =
-            refreshed_token
-            |> Common.TokenBody.from_oauth2_token()
-            |> Lightning.Helpers.json_safe()
-
-          update_credential(credential, %{body: updated_body})
-
-        {:error, error} ->
-          {:error, error}
-      end
-    end
-  end
-
   def maybe_refresh_token(%Credential{} = credential) do
     {:ok, credential}
   end
@@ -768,19 +854,107 @@ defmodule Lightning.Credentials do
   end
 
   defp refresh_oauth_token(%Credential{oauth_token: oauth_token} = credential) do
-    if still_fresh(oauth_token) do
-      {:ok, credential}
-    else
+    if token_stale_or_expired?(oauth_token) do
       case OauthHTTPClient.refresh_token(
              oauth_token.oauth_client,
              oauth_token.body
            ) do
         {:ok, fresh_token} ->
-          update_credential(credential, %{oauth_token: fresh_token})
+          # Create audit event for successful token refresh
+          refresh_metadata = %{
+            client_id: oauth_token.oauth_client_id,
+            scopes: oauth_token.scopes,
+            expires_in: Map.get(fresh_token, "expires_in"),
+            token_type: Map.get(fresh_token, "token_type", "Bearer")
+          }
+
+          # Audit the refresh event
+          audit_changeset =
+            Audit.oauth_token_refreshed_event(credential, refresh_metadata)
+
+          case update_credential_with_audit(
+                 credential,
+                 %{oauth_token: fresh_token},
+                 audit_changeset
+               ) do
+            {:ok, updated_credential} ->
+              Logger.info("OAuth token refreshed successfully",
+                credential_id: credential.id,
+                client_id: oauth_token.oauth_client_id
+              )
+
+              {:ok, updated_credential}
+
+            {:error, error} ->
+              Logger.error("Failed to update credential after token refresh",
+                credential_id: credential.id,
+                error: inspect(error)
+              )
+
+              {:error, error}
+          end
+
+        {:error, %{status: 401} = error_response} ->
+          # Token permanently invalid - mark for re-authorization
+          error_details =
+            Map.take(error_response, [:status, :error, :details])
+            |> Map.put(:error_type, "reauthorization_required")
+            |> Map.put(:client_id, oauth_token.oauth_client_id)
+
+          # Audit the failed refresh
+          audit_changeset =
+            Audit.oauth_token_refresh_failed_event(credential, error_details)
+
+          save_audit_event(audit_changeset)
+
+          Logger.warning("OAuth token refresh failed - reauthorization required",
+            credential_id: credential.id,
+            client_id: oauth_token.oauth_client_id
+          )
+
+          {:error, :reauthorization_required}
+
+        {:error, %{status: status} = error_response} when status in [429, 503] ->
+          # Rate limited or service unavailable - retry later
+          error_details =
+            Map.take(error_response, [:status, :error, :details])
+            |> Map.put(:error_type, "temporary_failure")
+            |> Map.put(:client_id, oauth_token.oauth_client_id)
+
+          # Audit the failed refresh
+          audit_changeset =
+            Audit.oauth_token_refresh_failed_event(credential, error_details)
+
+          save_audit_event(audit_changeset)
+
+          Logger.warning("OAuth token refresh failed - temporary failure",
+            credential_id: credential.id,
+            client_id: oauth_token.oauth_client_id,
+            status: status
+          )
+
+          {:error, :temporary_failure}
 
         {:error, error} ->
+          # General error case
+          error_details = inspect(error)
+
+          # Audit the failed refresh
+          audit_changeset =
+            Audit.oauth_token_refresh_failed_event(credential, error_details)
+
+          save_audit_event(audit_changeset)
+
+          Logger.error("OAuth token refresh failed",
+            credential_id: credential.id,
+            client_id: oauth_token.oauth_client_id,
+            error: error_details
+          )
+
           {:error, error}
       end
+    else
+      {:ok, credential}
     end
   end
 
@@ -1169,65 +1343,6 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Determines if the token data is still considered fresh.
-
-  ## Parameters
-  - `token`: a map containing token data with `expires_at` or `expires_in` fields.
-    When using `expires_in`, the function will use the token's `updated_at` timestamp.
-  - `threshold`: the number of time units before expiration to consider the token still fresh.
-  - `time_unit`: the unit of time to consider for the threshold comparison.
-
-  ## Returns
-  - `true` if the token is fresh.
-  - `false` if the token is not fresh.
-  - `{:error, reason}` if the token's expiration data is missing or invalid.
-  """
-  @spec still_fresh(OauthToken.t(), integer(), atom()) ::
-          boolean() | {:error, String.t()}
-  def still_fresh(token, threshold \\ 5, time_unit \\ :minute)
-
-  def still_fresh(
-        %OauthToken{body: %{"expires_at" => nil}} = _token,
-        _threshold,
-        _time_unit
-      ),
-      do: false
-
-  def still_fresh(
-        %OauthToken{body: %{"expires_in" => nil}} = _token,
-        _threshold,
-        _time_unit
-      ),
-      do: false
-
-  def still_fresh(
-        %OauthToken{body: %{"expires_at" => expires_at}} = _token,
-        threshold,
-        time_unit
-      )
-      when is_integer(expires_at) do
-    expires_at
-    |> DateTime.from_unix!()
-    |> DateTime.diff(DateTime.utc_now(), time_unit) >= threshold
-  end
-
-  def still_fresh(
-        %OauthToken{body: %{"expires_in" => expires_in}, updated_at: updated_at} =
-          _token,
-        threshold,
-        time_unit
-      )
-      when is_integer(expires_in) do
-    updated_at
-    |> DateTime.add(expires_in, :second)
-    |> DateTime.diff(DateTime.utc_now(), time_unit) >= threshold
-  end
-
-  def still_fresh(_token, _threshold, _time_unit) do
-    {:error, "No valid expiration data found"}
-  end
-
-  @doc """
   Normalizes all map keys to strings recursively.
 
   This function walks through a map and converts all keys to strings using `to_string/1`.
@@ -1264,50 +1379,6 @@ defmodule Lightning.Credentials do
   end
 
   def normalize_keys(value), do: value
-
-  @doc """
-  Validates OAuth token data according to OAuth standards.
-  This function is used by both OauthToken and Credential modules to ensure
-  consistent validation of OAuth tokens.
-
-  ## Parameters
-    * `token_data` - The OAuth token data to validate
-    * `user_id` - User ID associated with the token
-    * `oauth_client_id` - OAuth client ID
-    * `scopes` - List of scopes for the token
-
-  ## Returns
-    * `{:ok, token_data}` - Token data is valid
-    * `{:error, reason}` - Token data is invalid with reason
-
-  ## Refresh Token Logic
-  A refresh token is only required for completely new OAuth connections.
-  It's NOT required if:
-  - An existing token already exists for this user/client/scope combination
-  - The new token data includes a refresh token
-  """
-
-  defdelegate validate_oauth_token_data(
-                token_data,
-                user_id,
-                oauth_client_id,
-                scopes
-              ),
-              to: Lightning.Credentials.OauthValidation,
-              as: :validate_token_data
-
-  defdelegate validate_scope_grant(token_data, expected_scopes),
-    to: Lightning.Credentials.OauthValidation
-
-  defdelegate find_best_matching_token_for_scopes(
-                user_id,
-                oauth_client_id,
-                requested_scopes
-              ),
-              to: Lightning.Credentials.OauthValidation
-
-  defdelegate normalize_scopes(input, delimiter \\ " "),
-    to: Lightning.Credentials.OauthValidation
 
   @doc """
   Returns all credentials owned by a specific user that are also being used in a specific project.
