@@ -47,6 +47,7 @@ defmodule LightningWeb.AiAssistant.Component do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:parent_id, assigns[:parent_id] || nil)
      |> assign(
        has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
      )
@@ -220,7 +221,7 @@ defmodule LightningWeb.AiAssistant.Component do
         :clear_template ->
           send_update(
             LightningWeb.WorkflowLive.NewWorkflowComponent,
-            id: socket.assigns.parent_component_id,
+            id: socket.assigns.parent_id,
             action: :template_selected,
             template: nil
           )
@@ -359,28 +360,28 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp maybe_push_workflow_code(socket, session_or_message) do
-    ui_callback = fn event, data ->
-      case event do
-        :workflow_code_generated ->
+    case socket.assigns.handler.extract_generated_code(session_or_message) do
+      nil ->
+        socket
+
+      %{yaml: yaml} ->
+        parent_id = socket.assigns.parent_id
+
+        # If parent_id is nil, send message to parent LiveView
+        # Otherwise, send_update to the component
+        if is_nil(parent_id) do
+          send(self(), {:workflow_code_generated, yaml})
+        else
           send_update(
             LightningWeb.WorkflowLive.NewWorkflowComponent,
-            id: socket.assigns.parent_component_id,
+            id: parent_id,
             action: :template_selected,
-            template: %{code: data}
+            template: %{code: yaml}
           )
+        end
 
-        _ ->
-          :ok
-      end
+        socket
     end
-
-    socket.assigns.handler.handle_response_generated(
-      socket.assigns,
-      session_or_message,
-      ui_callback
-    )
-
-    socket
   end
 
   defp render_ai_not_configured(assigns) do

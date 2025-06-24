@@ -648,7 +648,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         base_url={@base_url}
         input_value={@search_term}
         action={if(@chat_session_id, do: :show, else: :new)}
-        parent_component_id={@parent_id}
+        parent_id={@parent_id}
         id="workflow-ai-assistant"
       />
     </div>
