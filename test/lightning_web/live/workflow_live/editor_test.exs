@@ -1231,7 +1231,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # user gets option to rerun
       assert has_element?(view, "button", "Run (retry)")
-      assert has_element?(view, "button", "Run")
+      assert has_element?(view, "button", "Run (New Work Order)")
 
       # if we choose a different dataclip, the retry button disappears
       render_change(view, "manual_run_change",
@@ -1249,7 +1249,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       )
 
       assert has_element?(view, "button", "Run (retry)")
-      assert has_element?(view, "button", "Run")
+      assert has_element?(view, "button", "Run (New Work Order)")
 
       view |> element("button", "Run (retry)") |> render_click()
 
@@ -1286,7 +1286,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # user gets option to rerun
       assert has_element?(view, "button", "Run (retry)")
-      assert has_element?(view, "button", "Run")
+      assert has_element?(view, "button", "Run (New Work Order)")
 
       view |> element("button", "Run (retry)") |> render_click()
 

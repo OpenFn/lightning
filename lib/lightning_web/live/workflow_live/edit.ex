@@ -936,7 +936,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           class="hidden absolute right-0 bottom-9 z-10 mb-2 w-max"
           disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
         >
-          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Run
+          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Run (New Work Order)
         </.button>
       </div>
     </div>
