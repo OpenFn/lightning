@@ -18,7 +18,9 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
           limit :: integer(),
           offset :: integer()
         ) ::
-          {:ok, %{dataclips: [Dataclip.t()], next_cron_run_id: Ecto.UUID.t() | nil}} | {:error, Ecto.Changeset.t()}
+          {:ok,
+           %{dataclips: [Dataclip.t()], next_cron_run_id: Ecto.UUID.t() | nil}}
+          | {:error, Ecto.Changeset.t()}
   def search_selectable_dataclips(job_id, search_text, limit, offset) do
     with {:ok, filters} <-
            get_dataclips_filters(search_text),
@@ -29,9 +31,9 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
              limit: limit,
              offset: offset
            ) do
-
       # Check if this job is cron-triggered and include next run state if so
-      {enhanced_dataclips, next_cron_run_id} = maybe_add_next_cron_run(job_id, dataclips)
+      {enhanced_dataclips, next_cron_run_id} =
+        maybe_add_next_cron_run(job_id, dataclips)
 
       {:ok, %{dataclips: enhanced_dataclips, next_cron_run_id: next_cron_run_id}}
     end
@@ -42,9 +44,13 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     case is_cron_triggered_job?(job_id) do
       true ->
         case last_state_for_job(job_id) do
-          nil -> {dataclips, nil}
-          next_run_dataclip -> {[next_run_dataclip | dataclips], next_run_dataclip.id}
+          nil ->
+            {dataclips, nil}
+
+          next_run_dataclip ->
+            {[next_run_dataclip | dataclips], next_run_dataclip.id}
         end
+
       false ->
         {dataclips, nil}
     end
