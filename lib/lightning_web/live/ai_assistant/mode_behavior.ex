@@ -63,8 +63,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
 
   ## Parameters
 
-  - `session_id` - UUID string of the session to retrieve
-  - `assigns` - LiveView assigns containing context for session preparation:
+  `assigns` - LiveView assigns containing context for session preparation:
+    - `chat_session_id` - UUID of the session to retrieve
     - `:selected_job` - Current job context
     - `:project` - Current project context
     - Mode-specific preparation data
@@ -79,11 +79,11 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   ## Examples
 
       # Retrieve job session with expression context
-      session = JobMode.get_session!(session_id, %{selected_job: job})
+      session = JobMode.get_session!(%{chat_session_id: session_id, selected_job: job})
       # session now includes job.expression and job.adaptor
 
       # Retrieve workflow session with project context
-      session = WorkflowMode.get_session!(session_id, %{project: project})
+      session = WorkflowMode.get_session!(%{chat_session_id: session_id, project: project})
 
   ## Implementation Notes
 
@@ -91,10 +91,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   - Must enrich session with mode-specific context
   - Should preload necessary associations for efficient rendering
   """
-  @callback get_session!(
-              session_id :: String.t(),
-              assigns :: map()
-            ) :: map()
+  @callback get_session!(assigns :: map()) :: map()
 
   @doc """
   Lists sessions with pagination and mode-specific filtering.
@@ -243,8 +240,16 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   """
   @callback query(
               session :: map(),
-              content :: String.t()
+              content :: String.t(),
+              opts :: map()
             ) :: {:ok, map()} | {:error, any()}
+
+  @doc "validates form params"
+  @callback validate_form_changeset(map()) :: Ecto.Changeset.t()
+
+  @callback enable_attachment_options_component?() :: boolean()
+
+  @callback query_options(Ecto.Changeset.t()) :: map()
 
   @doc """
   Determines if the chat input should be disabled based on mode conditions.
@@ -513,6 +518,9 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   @callback on_session_start(socket :: map(), ui_callback :: function()) :: map()
 
   @optional_callbacks [
+    validate_form_changeset: 1,
+    query_options: 1,
+    enable_attachment_options_component?: 0,
     input_placeholder: 0,
     chat_title: 1,
     supports_template_generation?: 0,
@@ -553,6 +561,18 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
       def input_placeholder do
         "Open a previous session or send a message to start a new one"
       end
+
+      def validate_form_changeset(params) do
+        data = %{content: nil}
+        types = %{content: :string}
+
+        {data, types}
+        |> Ecto.Changeset.cast(params, Map.keys(types))
+      end
+
+      def query_options(_changeset), do: %{}
+
+      def enable_attachment_options_component?, do: false
 
       @doc """
       Default title formatting using session title or fallback.
@@ -598,7 +618,10 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
                      metadata: 0,
                      handle_response_generated: 3,
                      on_session_start: 2,
-                     error_message: 1
+                     error_message: 1,
+                     validate_form_changeset: 1,
+                     query_options: 1,
+                     enable_attachment_options_component?: 0
     end
   end
 end

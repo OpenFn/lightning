@@ -269,6 +269,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           project={@project}
                           current_user={@current_user}
                           selected_job={@selected_job}
+                          follow_run={@follow_run}
                           chat_session_id={@chat_session_id}
                           query_params={@query_params}
                           base_url={@base_url}

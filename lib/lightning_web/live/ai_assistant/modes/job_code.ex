@@ -10,7 +10,48 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
   alias Lightning.AiAssistant
+  alias Lightning.Invocation
   alias LightningWeb.Live.AiAssistant.ErrorHandler
+
+  defmodule Form do
+    @moduledoc false
+
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @primary_key false
+    embedded_schema do
+      field :content, :string
+
+      embeds_one :options, Options, defaults_to_struct: true do
+        field :code, :boolean, default: true
+        field :input, :boolean, default: false
+        field :output, :boolean, default: false
+        field :logs, :boolean, default: false
+      end
+    end
+
+    def changeset(params) do
+      %__MODULE__{}
+      |> cast(params, [:content])
+      |> cast_embed(:options, with: &options_changeset/2)
+    end
+
+    defp options_changeset(schema, params) do
+      schema
+      |> cast(params, [:code, :logs])
+    end
+
+    def get_options(changeset) do
+      data = apply_changes(changeset)
+
+      if data.options do
+        Map.from_struct(data.options)
+      else
+        %{}
+      end
+    end
+  end
 
   @doc """
   Creates a new job-specific AI assistance session.
@@ -53,10 +94,22 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       # session now includes job.body as expression and job.adaptor
   """
   @impl true
-  @spec get_session!(String.t(), map()) :: map()
-  def get_session!(session_id, %{selected_job: job}) do
+  @spec get_session!(map()) :: map()
+  def get_session!(%{chat_session_id: session_id, selected_job: job} = assigns) do
     AiAssistant.get_session!(session_id)
     |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
+    |> then(fn session ->
+      follow_run = assigns[:follow_run]
+
+      if follow_run do
+        logs =
+          Invocation.assemble_logs_for_job_and_run(job.id, follow_run.id)
+
+        %{session | logs: logs}
+      else
+        session
+      end
+    end)
   end
 
   @doc """
@@ -163,9 +216,14 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       )
   """
   @impl true
-  @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def query(session, content) do
-    AiAssistant.query(session, content)
+  @spec query(map(), String.t(), map()) :: {:ok, map()} | {:error, any()}
+  def query(session, content, opts) do
+    AiAssistant.query(session, content, opts)
+  end
+
+  @impl true
+  def query_options(changeset) do
+    Form.get_options(changeset)
   end
 
   @doc """
@@ -223,6 +281,14 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   def input_placeholder do
     "Ask about your job code, debugging, or OpenFn adaptors..."
   end
+
+  @impl true
+  def validate_form_changeset(params) do
+    Form.changeset(params)
+  end
+
+  @impl true
+  def enable_attachment_options_component?, do: true
 
   @doc """
   Generates contextual titles for job assistance sessions.

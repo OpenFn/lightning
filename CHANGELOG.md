@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Give users the option to attach job code and logs to AI Assistant
+  [#2935](https://github.com/OpenFn/lightning/issues/2935)
 - Allow users to edit position of nodes in the workflow
   [#3123](https://github.com/OpenFn/lightning/issues/3123)
 - Minimap for easier workflow navigation
