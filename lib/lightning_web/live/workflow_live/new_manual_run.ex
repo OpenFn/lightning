@@ -8,8 +8,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
   alias Lightning.Repo
-  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
 
   @spec search_selectable_dataclips(
@@ -41,7 +41,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
 
   # Private function to check if job is cron-triggered and add next run dataclip
   defp maybe_add_next_cron_run(job_id, dataclips) do
-    case is_cron_triggered_job?(job_id) do
+    case cron_triggered_job?(job_id) do
       true ->
         case last_state_for_job(job_id) do
           nil ->
@@ -57,7 +57,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   # Check if a job is triggered by a cron trigger
-  defp is_cron_triggered_job?(job_id) do
+  defp cron_triggered_job?(job_id) do
     from(e in Edge,
       join: t in Trigger,
       on: e.source_trigger_id == t.id,
