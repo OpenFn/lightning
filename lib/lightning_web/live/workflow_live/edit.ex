@@ -173,7 +173,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </div>
                 <.offline_indicator />
               </div>
-              <.run_workflow_button base_url={@base_url} trigger_id={hd(@workflow_params["triggers"])["id"]} />
+              <.run_workflow_button
+                base_url={@base_url}
+                trigger_id={hd(@workflow_params["triggers"])["id"]}
+              />
               <.save_workflow_button
                 id="top-bar-save-workflow-btn"
                 changeset={@changeset}
@@ -673,10 +676,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     "Trigger"
                   end
                 }
-                is_edge={if @selected_edge do true else false end}
+                is_edge={
+                  if @selected_edge do
+                    true
+                  else
+                    false
+                  end
+                }
                 cancel_url={@base_url}
                 back_url={
-                   if @selected_job do
+                  if @selected_job do
                     "#{@base_url}?s=#{@selected_job.id}"
                   else
                     @base_url
@@ -1121,9 +1130,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {is_empty, error_message} = editor_is_empty(assigns.form, assigns.job)
 
     button_classes =
-        if is_empty,
-          do: ~w(ring-red-300),
-          else: ~w()
+      if is_empty,
+        do: ~w(ring-red-300),
+        else: ~w(ring-0)
 
     assigns =
       assign(assigns,
