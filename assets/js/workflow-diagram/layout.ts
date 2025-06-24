@@ -29,9 +29,9 @@ const calculateLayout = async (
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({
     rankdir: 'TB',
-    // nodesep: 400,
-    // edgesep: 200,
-    // ranksep: 400,
+    nodesep: 250,
+    edgesep: 200,
+    ranksep: 150,
   });
 
   edges.forEach(edge => g.setEdge(edge.source, edge.target));
