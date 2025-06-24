@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.1">
-    <meta name="project" content="Lightning v2.13.2">
+    <meta name="project" content="Lightning v2.13.3-pre">
 
 
-    <title>LightningWeb.Live.AiAssistant.ModeRegistry — Lightning v2.13.2</title>
+    <title>LightningWeb.Live.AiAssistant.ModeRegistry — Lightning v2.13.3-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-6724702D.js"></script>
+    <script defer src="dist/sidebar_items-8878578A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.13.2
+          v2.13.3-pre
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.Live.AiAssistant.ModeRegistry</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.13.2)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.13.3-pre)</small>
 
     </h1>
 
@@ -221,7 +221,7 @@ coordination point for all AI assistance capabilities within Lightning.</p>
       </div>
 
 <p>Returns a comprehensive list of all available modes with their metadata.</p><p>Aggregates metadata from all registered modes to provide rich information
-for UI generation, feature detection, and mode selection interfaces.</p><h2 id="available_modes/0-returns" class="section-heading"><a href="#available_modes/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A list of maps, each containing:</p><ul><li><code class="inline">:id</code> - Mode identifier for programmatic access</li><li><code class="inline">:name</code> - Human-readable mode name for display</li><li><code class="inline">:description</code> - Brief explanation of mode capabilities</li><li><code class="inline">:icon</code> - UI icon class for visual representation</li><li><code class="inline">:category</code> - Optional grouping category</li><li><code class="inline">:features</code> - Optional list of supported features</li></ul><h2 id="available_modes/0-examples" class="section-heading"><a href="#available_modes/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">available_modes</span><span class="p" data-group-id="5490330803-1">(</span><span class="p" data-group-id="5490330803-1">)</span><span class="w">
+for UI generation, feature detection, and mode selection interfaces.</p><h2 id="available_modes/0-returns" class="section-heading"><a href="#available_modes/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A list of maps, each containing:</p><ul><li><code class="inline">:id</code> - Mode identifier for programmatic access</li><li><code class="inline">:name</code> - Human-readable mode name for display</li><li><code class="inline">:description</code> - Brief explanation of mode capabilities</li><li><code class="inline">:icon</code> - UI icon class for visual representation</li><li><code class="inline">:category</code> - Optional grouping category</li><li><code class="inline">:features</code> - Optional list of supported features</li></ul><h2 id="available_modes/0-examples" class="section-heading"><a href="#available_modes/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">available_modes</span><span class="p" data-group-id="1134128453-1">(</span><span class="p" data-group-id="1134128453-1">)</span><span class="w">
 </span><span class="c1"># =&gt; [</span><span class="w">
 </span><span class="c1">#   %{</span><span class="w">
 </span><span class="c1">#     id: :job,</span><span class="w">
@@ -240,18 +240,18 @@ for UI generation, feature detection, and mode selection interfaces.</p><h2 id="
 </span><span class="c1">#     features: [&quot;template_generation&quot;, &quot;yaml_creation&quot;]</span><span class="w">
 </span><span class="c1">#   }</span><span class="w">
 </span><span class="c1"># ]</span></code></pre><h2 id="available_modes/0-usage-patterns" class="section-heading"><a href="#available_modes/0-usage-patterns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage Patterns</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Generate mode selection dropdown</span><span class="w">
-</span><span class="n">available_modes</span><span class="p" data-group-id="7486915266-1">(</span><span class="p" data-group-id="7486915266-1">)</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7486915266-2">(</span><span class="k" data-group-id="7486915266-3">fn</span><span class="w"> </span><span class="n">mode</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-  </span><span class="p" data-group-id="7486915266-4">{</span><span class="n">mode</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">mode</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="7486915266-4">}</span><span class="w">
-</span><span class="k" data-group-id="7486915266-3">end</span><span class="p" data-group-id="7486915266-2">)</span><span class="w">
+</span><span class="n">available_modes</span><span class="p" data-group-id="3553721235-1">(</span><span class="p" data-group-id="3553721235-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="3553721235-2">(</span><span class="k" data-group-id="3553721235-3">fn</span><span class="w"> </span><span class="n">mode</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+  </span><span class="p" data-group-id="3553721235-4">{</span><span class="n">mode</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">mode</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="3553721235-4">}</span><span class="w">
+</span><span class="k" data-group-id="3553721235-3">end</span><span class="p" data-group-id="3553721235-2">)</span><span class="w">
 
 </span><span class="c1"># Filter modes by category</span><span class="w">
-</span><span class="n">available_modes</span><span class="p" data-group-id="7486915266-5">(</span><span class="p" data-group-id="7486915266-5">)</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="7486915266-6">(</span><span class="o">&amp;</span><span class="p" data-group-id="7486915266-7">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">category</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;development&quot;</span><span class="p" data-group-id="7486915266-7">)</span><span class="p" data-group-id="7486915266-6">)</span><span class="w">
+</span><span class="n">available_modes</span><span class="p" data-group-id="3553721235-5">(</span><span class="p" data-group-id="3553721235-5">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="3553721235-6">(</span><span class="o">&amp;</span><span class="p" data-group-id="3553721235-7">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">category</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;development&quot;</span><span class="p" data-group-id="3553721235-7">)</span><span class="p" data-group-id="3553721235-6">)</span><span class="w">
 
 </span><span class="c1"># Find modes with specific features</span><span class="w">
-</span><span class="n">available_modes</span><span class="p" data-group-id="7486915266-8">(</span><span class="p" data-group-id="7486915266-8">)</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="7486915266-9">(</span><span class="o">&amp;</span><span class="p" data-group-id="7486915266-10">(</span><span class="s">&quot;template_generation&quot;</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="p" data-group-id="7486915266-11">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">features</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p" data-group-id="7486915266-12">[</span><span class="p" data-group-id="7486915266-12">]</span><span class="p" data-group-id="7486915266-11">)</span><span class="p" data-group-id="7486915266-10">)</span><span class="p" data-group-id="7486915266-9">)</span></code></pre>
+</span><span class="n">available_modes</span><span class="p" data-group-id="3553721235-8">(</span><span class="p" data-group-id="3553721235-8">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="3553721235-9">(</span><span class="o">&amp;</span><span class="p" data-group-id="3553721235-10">(</span><span class="s">&quot;template_generation&quot;</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="p" data-group-id="3553721235-11">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">features</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p" data-group-id="3553721235-12">[</span><span class="p" data-group-id="3553721235-12">]</span><span class="p" data-group-id="3553721235-11">)</span><span class="p" data-group-id="3553721235-10">)</span><span class="p" data-group-id="3553721235-9">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="default_mode/0">
@@ -280,12 +280,12 @@ for UI generation, feature detection, and mode selection interfaces.</p><h2 id="
       </div>
 
 <p>Returns the default mode identifier for fallback scenarios.</p><p>Provides a programmatic way to access the default mode used when
-explicit mode selection fails or is unavailable.</p><h2 id="default_mode/0-returns" class="section-heading"><a href="#default_mode/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>The mode identifier atom for the default mode (currently <code class="inline">:job</code>).</p><h2 id="default_mode/0-examples" class="section-heading"><a href="#default_mode/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">default_mode</span><span class="p" data-group-id="4971585571-1">(</span><span class="p" data-group-id="4971585571-1">)</span><span class="w">
+explicit mode selection fails or is unavailable.</p><h2 id="default_mode/0-returns" class="section-heading"><a href="#default_mode/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>The mode identifier atom for the default mode (currently <code class="inline">:job</code>).</p><h2 id="default_mode/0-examples" class="section-heading"><a href="#default_mode/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">default_mode</span><span class="p" data-group-id="7221120311-1">(</span><span class="p" data-group-id="7221120311-1">)</span><span class="w">
 </span><span class="c1"># =&gt; :job</span><span class="w">
 
 </span><span class="c1"># Use for initialization</span><span class="w">
-</span><span class="n">initial_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">default_mode</span><span class="p" data-group-id="4971585571-2">(</span><span class="p" data-group-id="4971585571-2">)</span><span class="w">
-</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="4971585571-3">(</span><span class="n">initial_mode</span><span class="p" data-group-id="4971585571-3">)</span></code></pre>
+</span><span class="n">initial_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">default_mode</span><span class="p" data-group-id="7221120311-2">(</span><span class="p" data-group-id="7221120311-2">)</span><span class="w">
+</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="7221120311-3">(</span><span class="n">initial_mode</span><span class="p" data-group-id="7221120311-3">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_handler/1">
@@ -316,20 +316,20 @@ explicit mode selection fails or is unavailable.</p><h2 id="default_mode/0-retur
 <p>Retrieves the handler module for a specific AI Assistant mode.</p><p>Provides the primary lookup mechanism for mode delegation, with built-in
 fallback handling to ensure system stability even when invalid modes are requested.</p><h2 id="get_handler/1-parameters" class="section-heading"><a href="#get_handler/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom (e.g., <code class="inline">:job</code>, <code class="inline">:workflow</code>, <code class="inline">:custom</code>)</li></ul><h2 id="get_handler/1-returns" class="section-heading"><a href="#get_handler/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>The module implementing <code class="inline">ModeBehavior</code> for the requested mode, or the default
 <code class="inline">JobCode</code> mode if the requested mode is not found.</p><h2 id="get_handler/1-fallback-strategy" class="section-heading"><a href="#get_handler/1-fallback-strategy" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fallback Strategy</span></h2><p>When an unknown mode is requested:</p><ol><li>Registry lookup fails for the specified mode</li><li>System automatically falls back to <code class="inline">JobCode</code> mode</li><li>User receives basic AI assistance instead of error</li><li>Graceful degradation maintains system functionality</li></ol><h2 id="get_handler/1-examples" class="section-heading"><a href="#get_handler/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Get handler for known mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="9368056454-1">(</span><span class="ss">:job</span><span class="p" data-group-id="9368056454-1">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="1520811201-1">(</span><span class="ss">:job</span><span class="p" data-group-id="1520811201-1">)</span><span class="w">
 </span><span class="c1"># =&gt; LightningWeb.Live.AiAssistant.Modes.JobCode</span><span class="w">
 
 </span><span class="c1"># Get handler for workflow mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="9368056454-2">(</span><span class="ss">:workflow</span><span class="p" data-group-id="9368056454-2">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="1520811201-2">(</span><span class="ss">:workflow</span><span class="p" data-group-id="1520811201-2">)</span><span class="w">
 </span><span class="c1"># =&gt; LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate</span><span class="w">
 
 </span><span class="c1"># Fallback for unknown mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="9368056454-3">(</span><span class="ss">:nonexistent</span><span class="p" data-group-id="9368056454-3">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="1520811201-3">(</span><span class="ss">:nonexistent</span><span class="p" data-group-id="1520811201-3">)</span><span class="w">
 </span><span class="c1"># =&gt; LightningWeb.Live.AiAssistant.Modes.JobCode (default fallback)</span><span class="w">
 
 </span><span class="c1"># Use handler for delegation</span><span class="w">
-</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="9368056454-4">(</span><span class="n">current_mode</span><span class="p" data-group-id="9368056454-4">)</span><span class="w">
-</span><span class="p" data-group-id="9368056454-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="9368056454-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handler</span><span class="o">.</span><span class="n">create_session</span><span class="p" data-group-id="9368056454-6">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p" data-group-id="9368056454-6">)</span></code></pre>
+</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="1520811201-4">(</span><span class="n">current_mode</span><span class="p" data-group-id="1520811201-4">)</span><span class="w">
+</span><span class="p" data-group-id="1520811201-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="1520811201-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handler</span><span class="o">.</span><span class="n">create_session</span><span class="p" data-group-id="1520811201-6">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p" data-group-id="1520811201-6">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_mode_metadata/1">
@@ -360,7 +360,7 @@ fallback handling to ensure system stability even when invalid modes are request
 <p>Retrieves complete metadata for a specific mode.</p><p>Provides detailed information about a single mode's capabilities,
 configuration, and UI requirements for focused mode operations.</p><h2 id="get_mode_metadata/1-parameters" class="section-heading"><a href="#get_mode_metadata/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom to look up</li></ul><h2 id="get_mode_metadata/1-returns" class="section-heading"><a href="#get_mode_metadata/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A map containing the mode's metadata with the ID field automatically included.
 If the mode is not found, returns metadata for the default mode.</p><h2 id="get_mode_metadata/1-examples" class="section-heading"><a href="#get_mode_metadata/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Get metadata for job mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8348317910-1">(</span><span class="ss">:job</span><span class="p" data-group-id="8348317910-1">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8537285292-1">(</span><span class="ss">:job</span><span class="p" data-group-id="8537285292-1">)</span><span class="w">
 </span><span class="c1"># =&gt; %{</span><span class="w">
 </span><span class="c1">#   id: :job,</span><span class="w">
 </span><span class="c1">#   name: &quot;Job Code Assistant&quot;,</span><span class="w">
@@ -370,7 +370,7 @@ If the mode is not found, returns metadata for the default mode.</p><h2 id="get_
 </span><span class="c1"># }</span><span class="w">
 
 </span><span class="c1"># Get metadata for workflow mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8348317910-2">(</span><span class="ss">:workflow</span><span class="p" data-group-id="8348317910-2">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8537285292-2">(</span><span class="ss">:workflow</span><span class="p" data-group-id="8537285292-2">)</span><span class="w">
 </span><span class="c1"># =&gt; %{</span><span class="w">
 </span><span class="c1">#   id: :workflow,</span><span class="w">
 </span><span class="c1">#   name: &quot;Workflow Builder&quot;,</span><span class="w">
@@ -380,8 +380,8 @@ If the mode is not found, returns metadata for the default mode.</p><h2 id="get_
 </span><span class="c1"># }</span><span class="w">
 
 </span><span class="c1"># Use metadata for UI rendering</span><span class="w">
-</span><span class="n">mode_meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8348317910-3">(</span><span class="n">current_mode</span><span class="p" data-group-id="8348317910-3">)</span><span class="w">
-</span><span class="n">render_mode_header</span><span class="p" data-group-id="8348317910-4">(</span><span class="n">mode_meta</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">mode_meta</span><span class="o">.</span><span class="n">icon</span><span class="p" data-group-id="8348317910-4">)</span></code></pre>
+</span><span class="n">mode_meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8537285292-3">(</span><span class="n">current_mode</span><span class="p" data-group-id="8537285292-3">)</span><span class="w">
+</span><span class="n">render_mode_header</span><span class="p" data-group-id="8537285292-4">(</span><span class="n">mode_meta</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">mode_meta</span><span class="o">.</span><span class="n">icon</span><span class="p" data-group-id="8537285292-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="mode_exists?/1">
@@ -410,18 +410,18 @@ If the mode is not found, returns metadata for the default mode.</p><h2 id="get_
       </div>
 
 <p>Validates that a mode exists in the registry.</p><p>Provides explicit validation for mode identifiers before attempting
-operations, enabling better error handling and user feedback.</p><h2 id="mode_exists?/1-parameters" class="section-heading"><a href="#mode_exists?/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom to validate</li></ul><h2 id="mode_exists?/1-returns" class="section-heading"><a href="#mode_exists?/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">true</code> if mode exists in registry, <code class="inline">false</code> otherwise.</p><h2 id="mode_exists?/1-examples" class="section-heading"><a href="#mode_exists?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="1710921022-1">(</span><span class="ss">:job</span><span class="p" data-group-id="1710921022-1">)</span><span class="w">
+operations, enabling better error handling and user feedback.</p><h2 id="mode_exists?/1-parameters" class="section-heading"><a href="#mode_exists?/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom to validate</li></ul><h2 id="mode_exists?/1-returns" class="section-heading"><a href="#mode_exists?/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">true</code> if mode exists in registry, <code class="inline">false</code> otherwise.</p><h2 id="mode_exists?/1-examples" class="section-heading"><a href="#mode_exists?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="1288717852-1">(</span><span class="ss">:job</span><span class="p" data-group-id="1288717852-1">)</span><span class="w">
 </span><span class="c1"># =&gt; true</span><span class="w">
 
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="1710921022-2">(</span><span class="ss">:nonexistent</span><span class="p" data-group-id="1710921022-2">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="1288717852-2">(</span><span class="ss">:nonexistent</span><span class="p" data-group-id="1288717852-2">)</span><span class="w">
 </span><span class="c1"># =&gt; false</span><span class="w">
 
 </span><span class="c1"># Validation before operation</span><span class="w">
-</span><span class="k">if</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="1710921022-3">(</span><span class="n">requested_mode</span><span class="p" data-group-id="1710921022-3">)</span><span class="w"> </span><span class="k" data-group-id="1710921022-4">do</span><span class="w">
-  </span><span class="n">proceed_with_mode</span><span class="p" data-group-id="1710921022-5">(</span><span class="n">requested_mode</span><span class="p" data-group-id="1710921022-5">)</span><span class="w">
-</span><span class="k" data-group-id="1710921022-4">else</span><span class="w">
-  </span><span class="n">show_mode_selection_error</span><span class="p" data-group-id="1710921022-6">(</span><span class="p" data-group-id="1710921022-6">)</span><span class="w">
-</span><span class="k" data-group-id="1710921022-4">end</span></code></pre>
+</span><span class="k">if</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="1288717852-3">(</span><span class="n">requested_mode</span><span class="p" data-group-id="1288717852-3">)</span><span class="w"> </span><span class="k" data-group-id="1288717852-4">do</span><span class="w">
+  </span><span class="n">proceed_with_mode</span><span class="p" data-group-id="1288717852-5">(</span><span class="n">requested_mode</span><span class="p" data-group-id="1288717852-5">)</span><span class="w">
+</span><span class="k" data-group-id="1288717852-4">else</span><span class="w">
+  </span><span class="n">show_mode_selection_error</span><span class="p" data-group-id="1288717852-6">(</span><span class="p" data-group-id="1288717852-6">)</span><span class="w">
+</span><span class="k" data-group-id="1288717852-4">end</span></code></pre>
   </section>
 </section>
 <section class="detail" id="register_modes/0">
@@ -451,19 +451,19 @@ operations, enabling better error handling and user feedback.</p><h2 id="mode_ex
 
 <p>Returns the complete registry of available AI Assistant modes.</p><p>Retrieves mode mappings from application configuration, providing the
 foundation for all mode-related operations. The registry can be customized
-through application configuration to enable/disable modes or add custom implementations.</p><h2 id="register_modes/0-configuration" class="section-heading"><a href="#register_modes/0-configuration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Configuration</span></h2><p>Modes are configured in application config:</p><pre><code class="makeup elixir" translate="no"><span class="n">config</span><span class="w"> </span><span class="ss">:lightning</span><span class="p">,</span><span class="w"> </span><span class="ss">:ai_assistant_modes</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6723388158-1">%{</span><span class="w">
+through application configuration to enable/disable modes or add custom implementations.</p><h2 id="register_modes/0-configuration" class="section-heading"><a href="#register_modes/0-configuration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Configuration</span></h2><p>Modes are configured in application config:</p><pre><code class="makeup elixir" translate="no"><span class="n">config</span><span class="w"> </span><span class="ss">:lightning</span><span class="p">,</span><span class="w"> </span><span class="ss">:ai_assistant_modes</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1675833649-1">%{</span><span class="w">
   </span><span class="ss">job</span><span class="p">:</span><span class="w"> </span><span class="nc">LightningWeb.Live.AiAssistant.Modes.JobCode</span><span class="p">,</span><span class="w">
   </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="nc">LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate</span><span class="p">,</span><span class="w">
   </span><span class="ss">custom</span><span class="p">:</span><span class="w"> </span><span class="nc">MyApp.CustomAIMode</span><span class="w">
-</span><span class="p" data-group-id="6723388158-1">}</span></code></pre><h2 id="register_modes/0-returns" class="section-heading"><a href="#register_modes/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A map where:</p><ul><li><strong>Keys</strong> are mode identifiers (atoms) used for selection and routing</li><li><strong>Values</strong> are module names implementing the <code class="inline">ModeBehavior</code> protocol</li></ul><h2 id="register_modes/0-examples" class="section-heading"><a href="#register_modes/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Default configuration</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">register_modes</span><span class="p" data-group-id="2326686518-1">(</span><span class="p" data-group-id="2326686518-1">)</span><span class="w">
+</span><span class="p" data-group-id="1675833649-1">}</span></code></pre><h2 id="register_modes/0-returns" class="section-heading"><a href="#register_modes/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A map where:</p><ul><li><strong>Keys</strong> are mode identifiers (atoms) used for selection and routing</li><li><strong>Values</strong> are module names implementing the <code class="inline">ModeBehavior</code> protocol</li></ul><h2 id="register_modes/0-examples" class="section-heading"><a href="#register_modes/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Default configuration</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">register_modes</span><span class="p" data-group-id="6533008334-1">(</span><span class="p" data-group-id="6533008334-1">)</span><span class="w">
 </span><span class="c1"># =&gt; %{</span><span class="w">
 </span><span class="c1">#   job: LightningWeb.Live.AiAssistant.Modes.JobCode,</span><span class="w">
 </span><span class="c1">#   workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate</span><span class="w">
 </span><span class="c1"># }</span><span class="w">
 
 </span><span class="c1"># With custom mode added</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">register_modes</span><span class="p" data-group-id="2326686518-2">(</span><span class="p" data-group-id="2326686518-2">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">register_modes</span><span class="p" data-group-id="6533008334-2">(</span><span class="p" data-group-id="6533008334-2">)</span><span class="w">
 </span><span class="c1"># =&gt; %{</span><span class="w">
 </span><span class="c1">#   job: LightningWeb.Live.AiAssistant.Modes.JobCode,</span><span class="w">
 </span><span class="c1">#   workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate,</span><span class="w">
@@ -499,24 +499,24 @@ through application configuration to enable/disable modes or add custom implemen
 <p>Checks if a specific mode supports template generation capabilities.</p><p>Provides capability detection for UI features that depend on template
 generation, such as &quot;Apply Template&quot; buttons, template preview panels,
 and workflow export functionality.</p><h2 id="supports_template_generation?/1-parameters" class="section-heading"><a href="#supports_template_generation?/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom to check</li></ul><h2 id="supports_template_generation?/1-returns" class="section-heading"><a href="#supports_template_generation?/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">true</code> if the mode supports template generation, <code class="inline">false</code> otherwise.</p><h2 id="supports_template_generation?/1-examples" class="section-heading"><a href="#supports_template_generation?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Check workflow mode (supports templates)</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="6562962551-1">(</span><span class="ss">:workflow</span><span class="p" data-group-id="6562962551-1">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="5897505137-1">(</span><span class="ss">:workflow</span><span class="p" data-group-id="5897505137-1">)</span><span class="w">
 </span><span class="c1"># =&gt; true</span><span class="w">
 
 </span><span class="c1"># Check job mode (doesn&#39;t support templates)</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="6562962551-2">(</span><span class="ss">:job</span><span class="p" data-group-id="6562962551-2">)</span><span class="w">
+</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="5897505137-2">(</span><span class="ss">:job</span><span class="p" data-group-id="5897505137-2">)</span><span class="w">
 </span><span class="c1"># =&gt; false</span><span class="w">
 
 </span><span class="c1"># Conditional UI rendering</span><span class="w">
-</span><span class="k">if</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="6562962551-3">(</span><span class="n">current_mode</span><span class="p" data-group-id="6562962551-3">)</span><span class="w"> </span><span class="k" data-group-id="6562962551-4">do</span><span class="w">
-  </span><span class="n">render_template_actions</span><span class="p" data-group-id="6562962551-5">(</span><span class="p" data-group-id="6562962551-5">)</span><span class="w">
-</span><span class="k" data-group-id="6562962551-4">else</span><span class="w">
-  </span><span class="n">render_assistance_actions</span><span class="p" data-group-id="6562962551-6">(</span><span class="p" data-group-id="6562962551-6">)</span><span class="w">
-</span><span class="k" data-group-id="6562962551-4">end</span><span class="w">
+</span><span class="k">if</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="5897505137-3">(</span><span class="n">current_mode</span><span class="p" data-group-id="5897505137-3">)</span><span class="w"> </span><span class="k" data-group-id="5897505137-4">do</span><span class="w">
+  </span><span class="n">render_template_actions</span><span class="p" data-group-id="5897505137-5">(</span><span class="p" data-group-id="5897505137-5">)</span><span class="w">
+</span><span class="k" data-group-id="5897505137-4">else</span><span class="w">
+  </span><span class="n">render_assistance_actions</span><span class="p" data-group-id="5897505137-6">(</span><span class="p" data-group-id="5897505137-6">)</span><span class="w">
+</span><span class="k" data-group-id="5897505137-4">end</span><span class="w">
 
 </span><span class="c1"># Filter modes for template features</span><span class="w">
 </span><span class="n">template_modes</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="n">available_modes</span><span class="p" data-group-id="6562962551-7">(</span><span class="p" data-group-id="6562962551-7">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="6562962551-8">(</span><span class="o">&amp;</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="6562962551-9">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="6562962551-9">)</span><span class="p" data-group-id="6562962551-8">)</span></code></pre>
+  </span><span class="n">available_modes</span><span class="p" data-group-id="5897505137-7">(</span><span class="p" data-group-id="5897505137-7">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="5897505137-8">(</span><span class="o">&amp;</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="5897505137-9">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="5897505137-9">)</span><span class="p" data-group-id="5897505137-8">)</span></code></pre>
   </section>
 </section>
 
