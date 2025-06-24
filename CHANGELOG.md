@@ -35,6 +35,8 @@ and this project adheres to
 
 - AI Assistant fails to send job context in subsequent messages
 [#3329](https://github.com/OpenFn/lightning/issues/3329)
+- Fix snapshot cleanup incorrectly deleting runs via cascade deletion
+[#3313](https://github.com/OpenFn/lightning/issues/3313)
 
 ## [v2.13.2] - 2025-06-18
 
