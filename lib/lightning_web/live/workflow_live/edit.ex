@@ -51,6 +51,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :job_title, :string
   attr :cancel_url, :string
   attr :back_url, :string
+  attr :is_edge, :boolean
   jsx("assets/js/panel/panels/WorkflowRunPanel.tsx")
 
   attr :changeset, :map, required: true
@@ -666,6 +667,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     "Trigger"
                   end
                 }
+                is_edge={if @selected_edge do true else false end}
                 cancel_url={@base_url}
                 back_url={
                    if @selected_job do

@@ -16,10 +16,11 @@ interface WorkflowRunPanel {
   job_title: string
   cancel_url: string
   back_url: string
+  is_edge: boolean
 }
 
 export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
-  const { job_id, job_title, cancel_url, back_url, pushEvent, ...actionProps } = props;
+  const { job_id, job_title, cancel_url, back_url, is_edge, pushEvent, ...actionProps } = props;
   const [manualContent, setManualRunContent] = React.useState<ManualRunBody>({ manual: { body: null, dataclip_id: null } })
 
   const runDisabled = React.useMemo(() => {
@@ -53,7 +54,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
 
   return <>
     <Panel
-      heading={`Run from ${job_title}`}
+      heading={is_edge ? "Can't run from an edge" : `Run from ${job_title}`}
       onClose={() => { props.navigate(cancel_url); }}
       onBack={() => { props.navigate(back_url) }}
       className="flex flex-col h-150 bg-red"
@@ -62,7 +63,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
           <button
             type="button"
             className="rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 px-3 py-2"
-            disabled={runDisabled}
+            disabled={is_edge ? true : runDisabled}
             onClick={startRun}
           >
             Run Workflow Now
@@ -70,12 +71,18 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
         </div>
       }
     >
-      <ManualRunPanel
-        {...actionProps}
-        pushEvent={pushEventProxy}
-        job_id={job_id}
-        fixedHeight
-      />
+      {
+        is_edge ? <div className="flex justify-center flex-col items-center self-center">
+          <span className="hero-exclamation-circle w-8 h-8 text-red-300"></span>
+          <div>Select a Step or Trigger to start a Run from</div>
+        </div> :
+          <ManualRunPanel
+            {...actionProps}
+            pushEvent={pushEventProxy}
+            job_id={job_id}
+            fixedHeight
+          />
+      }
     </Panel>
   </>
 }

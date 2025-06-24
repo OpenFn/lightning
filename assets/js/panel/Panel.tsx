@@ -23,20 +23,20 @@ export const Panel: React.FC<PanelProps> = ({
     >
       <div className="divide-y divide-gray-200 rounded-lg bg-white shadow h-full flex flex-col">
         <div className="flex px-4 py-5 sm:px-6 gap-2 items-center">
-          <div className="flex-none">
+          <div className="flex-none flex items-center">
             <div
               onClick={() => { onBack(); }}
-              className="justify-center hover:text-gray-500 cursor-pointer"
+              className="justify-center flex items-center hover:text-gray-500 cursor-pointer"
               id="close-panel"
             >
               <span className="hero-arrow-left h-4 w-4 inline-block" />
             </div>
           </div>
           <div className="grow font-bold truncate">{heading}</div>
-          <div className="flex-none">
+          <div className="flex-none flex items-center">
             <div
               onClick={() => { onClose(); }}
-              className="justify-center hover:text-gray-500 cursor-pointer"
+              className="justify-center flex items-center hover:text-gray-500 cursor-pointer"
               id="close-panel"
             >
               <span className="hero-x-mark h-4 w-4 inline-block" />
