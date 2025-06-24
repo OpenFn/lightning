@@ -114,13 +114,16 @@ defmodule LightningWeb.RunChannel do
           %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
         })
 
+      {:error, %{"error" => "invalid_grant"} = error} ->
+        {:reply, {:error, error}, socket}
+
       {:error, error} ->
         Logger.error(fn ->
-          """
-          Something went wrong when fetching or refreshing a credential.
+          {"""
+           Something went wrong when fetching or refreshing a credential.
 
-          #{inspect(error)}
-          """
+           #{inspect(error)}
+           """, [credential_id: id]}
         end)
 
         reply_with(
