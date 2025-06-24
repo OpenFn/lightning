@@ -39,6 +39,7 @@ defmodule Lightning.Workflows.Trigger do
     field :custom_path, :string
     field :cron_expression, :string
     field :enabled, :boolean, default: false
+
     belongs_to :workflow, Workflow
 
     has_many :edges, Lightning.Workflows.Edge, foreign_key: :source_trigger_id

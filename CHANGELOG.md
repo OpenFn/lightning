@@ -18,14 +18,29 @@ and this project adheres to
 ### Added
 
 - Give users the option to attach job code and logs to AI Assistant
-[#2935](https://github.com/OpenFn/lightning/issues/2935)
+  [#2935](https://github.com/OpenFn/lightning/issues/2935)
+- Allow users to edit position of nodes in the workflow
+  [#3123](https://github.com/OpenFn/lightning/issues/3123)
+- Minimap for easier workflow navigation
+  [#3125](https://github.com/OpenFn/lightning/issues/3125)
+- Added icons to control layout in the workflow
+  [PR #3242](https://github.com/OpenFn/lightning/pull/3242)
 
 ### Changed
+
+- Update React Flow to version 12
+  [PR #3242](https://github.com/OpenFn/lightning/pull/3242)
+- Create nodes and edges with the same button in the workflow
+  [#2175](https://github.com/OpenFn/lightning/issues/2175)
 
 ### Fixed
 
 - AI Assistant fails to send job context in subsequent messages
-[#3329](https://github.com/OpenFn/lightning/issues/3329)
+  [#3329](https://github.com/OpenFn/lightning/issues/3329)
+- Fix snapshot cleanup incorrectly deleting runs via cascade deletion
+  [#3313](https://github.com/OpenFn/lightning/issues/3313)
+- `Lightning.Demo.reset_demo()` was broken by an ordering issue between
+  Credentials and Oauth tokens.
 
 ## [v2.13.2] - 2025-06-18
 

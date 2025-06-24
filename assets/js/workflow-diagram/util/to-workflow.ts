@@ -5,12 +5,13 @@ import type { Lightning, Flow } from '../types';
 // TODO how strict does this need to be? Can we lose information through this?
 // I think the store means we can be flexible and only convert stuff we want to edit
 // (stuff like body and adaptor we can ignore)
-const model = (model: Flow.Model) => {
+const model = (model: Flow.Model, isManualLayout = false) => {
   const workflow: Lightning.Workflow = {
     // What about the id? Do we need it? Did we lose it?
     triggers: [],
     jobs: [],
     edges: [],
+    positions: {},
   };
 
   model.nodes.forEach(node => {
@@ -27,6 +28,13 @@ const model = (model: Flow.Model) => {
       workflow.triggers.push(wfNode as Lightning.TriggerNode);
     } else {
       workflow.jobs.push(wfNode as Lightning.JobNode);
+    }
+    // if is manualLayout, we need to prepare position data for the commited node to be processed into the store
+    if (isManualLayout) {
+      workflow.positions[node.id] = {
+        x: node.position.x,
+        y: node.position.y,
+      };
     }
   });
 

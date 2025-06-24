@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import type * as F from 'reactflow';
+import React, { useCallback, useState } from 'react';
+import type * as F from '@xyflow/react';
 import { randomUUID } from '../common';
 import { useWorkflowStore } from '../workflow-store/store';
 import Connection from './edges/Connection';
@@ -125,7 +125,10 @@ const resetModel = (model: Flow.Model) => ({
 
 export default (
   model: Flow.Model,
-  setModel: React.Dispatch<React.SetStateAction<Flow.Model>>
+  setModel: React.Dispatch<React.SetStateAction<Flow.Model>>,
+  addPlaceholder: (node: Flow.Node, where?: F.XYPosition) => void,
+  bgClick: () => void,
+  flow: F.ReactFlowInstance
 ) => {
   const [dragActive, setDragActive] = useState<string | false>(false);
   const { add: addTo } = useWorkflowStore();
@@ -134,6 +137,7 @@ export default (
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
 
+    setDragActive(false);
     addTo(wf);
   }, []);
 
@@ -145,12 +149,57 @@ export default (
     [model]
   );
 
-  const onConnectEnd: F.OnConnectEnd = useCallback(
-    evt => {
-      setDragActive(false);
-      setModel(resetModel(model));
+  const onClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.classList?.contains('react-flow__pane') &&
+        !dragActive
+      ) {
+        bgClick();
+      }
     },
-    [model]
+    [dragActive]
+  );
+
+  const onConnectEnd: F.OnConnectEnd = useCallback(
+    (evt, connectionState) => {
+      if (!connectionState.isValid) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        const { clientX, clientY } =
+          'changedTouches' in evt ? evt.changedTouches[0] : evt;
+
+        // Use screenToFlowPosition to calculate flow coordinates
+        const position = flow.screenToFlowPosition({
+          x: clientX,
+          y: clientY,
+        });
+
+        // Give time for any deselection to take place
+        // when in auto-layout mode
+        const node = connectionState.fromNode;
+        if (!node) return;
+
+        // reset model to reverse setValidDropTarget
+        setModel(resetModel(model));
+
+        // wait for any deselection to be done!
+        setTimeout(() => {
+          const isOnNode = (evt.target as HTMLElement).closest('[data-a-node]');
+          if (isOnNode) {
+            // dropped connect line on an existing node -> do nothing
+            setDragActive(false);
+            return;
+          } else {
+            // dropped connect line on an empty space -> create placeholder & deactivate drag.
+            addPlaceholder(node, position);
+            setDragActive(false);
+          }
+        }, 0);
+      }
+    },
+    [model, addPlaceholder]
   );
 
   const onNodeMouseEnter: F.NodeMouseHandler = useCallback(
@@ -193,5 +242,6 @@ export default (
     onNodeMouseEnter,
     onNodeMouseLeave,
     isValidConnection,
+    onClick,
   };
 };
