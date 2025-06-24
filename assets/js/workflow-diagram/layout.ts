@@ -2,7 +2,7 @@ import Dagre from '../../vendor/dagre.cjs';
 import { timer } from 'd3-timer';
 import { getNodesBounds, type ReactFlowInstance } from '@xyflow/react';
 
-import { FIT_PADDING } from './constants';
+import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
@@ -29,27 +29,25 @@ const calculateLayout = async (
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({
     rankdir: 'TB',
-    // nodesep: 400,
-    // edgesep: 200,
-    // ranksep: 400,
+    nodesep: 250,
+    edgesep: 200,
+    ranksep: 150,
   });
 
   edges.forEach(edge => g.setEdge(edge.source, edge.target));
   nodes.forEach(node =>
-    g.setNode(node.id, { ...node, width: 350, height: 200 })
+    g.setNode(node.id, { ...node, width: NODE_WIDTH, height: NODE_HEIGHT })
   );
 
   Dagre.layout(g, { disableOptimalOrderHeuristic: true });
 
-  // we set width & height above for dagre calculations. 
-  // don't set width & height below. let reactflow calculate that!
   const newModel = {
     nodes: nodes.map(node => {
-      const { x, y } = g.node(node.id);
+      const { x, y, width, height } = g.node(node.id);
 
       return {
         ...node,
-        position: { x, y },
+        position: { x, y, width, height },
       };
     }),
     edges,
