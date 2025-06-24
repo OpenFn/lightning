@@ -5,11 +5,10 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Handle, type NodeProps, Position } from 'reactflow';
+import { Handle, type NodeProps, Position } from '@xyflow/react';
 import {
   CheckCircleIcon,
   InformationCircleIcon,
-  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 type NodeData = any;
@@ -40,7 +39,7 @@ const dispatch = (
 };
 
 const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
-  const textRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLInputElement | null>(null);
 
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: true,
@@ -120,7 +119,6 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         'shadow-xs',
         'text-center',
         'text-xs',
-        'border-dashed',
         'border-2',
         validationResult.isValid
           ? 'border-indigo-500'
@@ -131,7 +129,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         width: '180px',
         height: '40px',
 
-        // TODO for now, just curdely align this placeholder so that it sits in the right position
+        // TODO for now, just crudely align this placeholder so that it sits in the right position
         // We'll later change the placeholder to look more consistent
         // (or otherwise come back and do this nicely)
         marginLeft: '-35px', // magic number
@@ -164,18 +162,13 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
             .filter(Boolean)
             .join(' ')}
         >
-          <XMarkIcon
-            className={
-              validationResult.isValid
-                ? `${iconNormalStyle}`
-                : `${iconErrorStyle}`
-            }
-            title="Cancel creation of this job"
-            onClick={handleCancel}
-          />
           <input
             type="text"
-            ref={textRef}
+            ref={inputRef => {
+              // assign ref and force focus
+              textRef.current = inputRef;
+              inputRef?.focus();
+            }}
             autoFocus
             data-placeholder={id}
             className={[

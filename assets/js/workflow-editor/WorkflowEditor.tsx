@@ -4,7 +4,7 @@ import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
 import { useWorkflowStore } from '../workflow-store/store';
 
 export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) => {
-  const { getItem, selection, forceFit } = useWorkflowStore();
+  const { getItem, forceFit } = useWorkflowStore();
 
   const onSelectionChange = (id?: string) => {
     console.debug('onSelectionChange', id);
@@ -41,7 +41,7 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
   return <WorkflowDiagram
     el={props.el}
     containerEl={props.containerEl}
-    selection={selection}
+    selection={props.selection}
     onSelectionChange={onSelectionChange}
     forceFit={forceFit}
   />

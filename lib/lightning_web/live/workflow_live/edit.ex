@@ -41,6 +41,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
+  attr :selection, :string, required: false
   jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
@@ -345,6 +346,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.WorkflowEditor
             :if={!@show_canvas_placeholder}
             react-portal-target="workflow-mount"
+            selection={
+              if @selected_job || @selected_edge,
+                do: (@selected_job || @selected_edge).id,
+                else: nil
+            }
           />
           <.live_component
             :if={@selected_job}
@@ -1665,7 +1671,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       Map.merge(template_params, %{
         "code" => code,
         "workflow_id" => workflow.id,
-        "tags" => tags
+        "tags" => tags,
+        "positions" => workflow.positions
       })
 
     case WorkflowTemplates.create_template(params) do
