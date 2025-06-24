@@ -8,11 +8,11 @@ defmodule Lightning.Workflows.Query do
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
   alias Lightning.Run
-  alias Lightning.WorkOrder
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrder
 
   @doc """
   Returns all jobs accessible to a user, via their projects

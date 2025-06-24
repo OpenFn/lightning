@@ -141,10 +141,25 @@ defmodule Lightning.Workflows.QueryTest do
       dataclip = insert(:dataclip, project: workflow.project)
       job = insert(:job, workflow: workflow)
 
-      insert(:workorder, workflow: workflow, snapshot: old_referenced_by_workorder, dataclip: dataclip)
+      insert(:workorder,
+        workflow: workflow,
+        snapshot: old_referenced_by_workorder,
+        dataclip: dataclip
+      )
 
-      work_order_for_run = insert(:workorder, workflow: workflow, snapshot: old_referenced_by_run, dataclip: dataclip)
-      insert(:run, work_order: work_order_for_run, snapshot: old_referenced_by_run, dataclip: dataclip, starting_job: job)
+      work_order_for_run =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: old_referenced_by_run,
+          dataclip: dataclip
+        )
+
+      insert(:run,
+        work_order: work_order_for_run,
+        snapshot: old_referenced_by_run,
+        dataclip: dataclip,
+        starting_job: job
+      )
 
       insert(:step, snapshot: old_referenced_by_step)
 
