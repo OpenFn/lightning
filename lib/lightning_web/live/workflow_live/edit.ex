@@ -494,7 +494,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         type="button"
                         theme="primary"
                       >
-                        <.icon name="hero-play-solid" class="w-4 h-4" />
+                        <.icon name="hero-play-solid" class="w-4 h-4" /> Run
                       </.button_link>
                     </div>
                     <div class="grow flex justify-end">
@@ -1120,15 +1120,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp expand_job_editor(assigns) do
     {is_empty, error_message} = editor_is_empty(assigns.form, assigns.job)
 
-    button_base_classes =
-      ~w(
-        inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset hover:bg-gray-50)
-
     button_classes =
-      button_base_classes ++
         if is_empty,
           do: ~w(ring-red-300),
-          else: ~w(ring-gray-300)
+          else: ~w()
 
     assigns =
       assign(assigns,
@@ -1138,13 +1133,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     ~H"""
-    <.link
+    <.button_link
       id={"open-inspector-#{@job.id}"}
       patch={"#{@base_url}?s=#{@job.id}&m=expand" <> (if @snapshot_lock_version && @snapshot_version_tag != "latest", do: "&v=#{@snapshot_lock_version}", else: "") <> (if @selected_run, do: "&a=#{@selected_run}", else: "")}
+      theme="primary"
       class={@button_classes}
     >
-      <.icon name="hero-code-bracket" class="w-4 h-4 text-grey-400" />
-    </.link>
+      <.icon name="hero-code-bracket" class="w-4 h-4 text-grey-400" /> Edit
+    </.button_link>
 
     <.save_is_blocked_error :if={@is_empty}>
       {@error_message}
