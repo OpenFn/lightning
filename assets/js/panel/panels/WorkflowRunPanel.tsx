@@ -57,7 +57,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
       heading={is_edge ? "Can't run from an edge" : `Run from ${job_title}`}
       onClose={() => { props.navigate(cancel_url); }}
       onBack={() => { props.navigate(back_url) }}
-      className="flex flex-col h-150 bg-red"
+      className="flex flex-col h-160 bg-red"
       footer={
         <div className="flex justify-end">
           <button

@@ -872,9 +872,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin mr-1" /> Processing
       <% else %>
         <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
-          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Retry from here
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run (retry)
         <% else %>
-          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Create New Work Order
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run
         <% end %>
       <% end %>
     </.button>
@@ -936,7 +936,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           class="hidden absolute right-0 bottom-9 z-10 mb-2 w-max"
           disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
         >
-          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Create New Work Order
+          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Run
         </.button>
       </div>
     </div>
