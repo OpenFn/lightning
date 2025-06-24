@@ -50,6 +50,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :job_id, :string
   attr :job_title, :string
   attr :cancel_url, :string
+  attr :back_url, :string
   jsx("assets/js/panel/panels/WorkflowRunPanel.tsx")
 
   attr :changeset, :map, required: true
@@ -668,6 +669,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   end
                 }
                 cancel_url={@base_url}
+                back_url={
+                   if @selected_job do
+                    "#{@base_url}?s=#{@selected_job.id}"
+                  else
+                    @base_url
+                  end
+                }
               />
             </div>
           </.form>

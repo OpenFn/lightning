@@ -15,10 +15,11 @@ interface WorkflowRunPanel {
   job_id: string
   job_title: string
   cancel_url: string
+  back_url: string
 }
 
 export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
-  const { job_id, job_title, cancel_url, pushEvent, ...actionProps } = props;
+  const { job_id, job_title, cancel_url, back_url, pushEvent, ...actionProps } = props;
   const [manualContent, setManualRunContent] = React.useState<ManualRunBody>({ manual: { body: null, dataclip_id: null } })
 
   const runDisabled = React.useMemo(() => {
@@ -53,10 +54,9 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
   return <>
     <Panel
       heading={`Run from ${job_title}`}
-      cancelUrl={cancel_url}
+      onClose={() => { props.navigate(cancel_url); }}
+      onBack={() => { props.navigate(back_url) }}
       className="flex flex-col h-150 bg-red"
-      {...actionProps}
-      pushEvent={props.pushEvent}
       footer={
         <div className="flex justify-end">
           <button
