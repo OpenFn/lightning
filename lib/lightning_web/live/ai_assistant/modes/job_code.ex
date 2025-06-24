@@ -23,7 +23,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     embedded_schema do
       field :content, :string
 
-      embeds_one :options, Options, primary_key: false do
+      embeds_one :options, Options, defaults_to_struct: true do
         field :code, :boolean, default: true
         field :input, :boolean, default: false
         field :output, :boolean, default: false
@@ -39,7 +39,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
     defp options_changeset(schema, params) do
       schema
-      |> cast(params, [:code])
+      |> cast(params, [:code, :logs])
     end
 
     def get_options(changeset) do

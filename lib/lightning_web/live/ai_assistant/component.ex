@@ -595,7 +595,7 @@ defmodule LightningWeb.AiAssistant.Component do
       </div>
 
       <div
-        :if={@handler.enable_attachment_options_component?}
+        :if={@handler.enable_attachment_options_component?()}
         class="mt-2 flex gap-2 content-center"
       >
         <span class="place-content-center">

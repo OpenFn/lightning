@@ -663,7 +663,7 @@ defmodule Lightning.AiAssistant do
       {:code, false}, acc ->
         Map.drop(acc, [:expression])
 
-      {:log, false}, acc ->
+      {:logs, false}, acc ->
         Map.drop(acc, [:log])
 
       _opt, acc ->

@@ -3,9 +3,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
+  import Mox
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
+  setup :verify_on_exit!
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -1490,6 +1492,191 @@ defmodule LightningWeb.AiAssistantLiveTest do
                view,
                "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:not(:checked)"
              )
+    end
+
+    test "logs attachment option is disabled by default", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _], triggers: [trigger]} = workflow
+    } do
+      workflow = Lightning.Repo.reload(workflow)
+
+      snapshot = Lightning.Workflows.Snapshot.get_current_for(workflow)
+
+      dataclip = build(:http_request_dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          state: "failed",
+          error_type: "CompileError",
+          dataclip: dataclip,
+          steps: [
+            build(:step,
+              job: job_1,
+              snapshot: snapshot,
+              input_dataclip: dataclip,
+              exit_reason: "fail",
+              error_type: "CompileError",
+              started_at: DateTime.utc_now(),
+              finished_at: DateTime.utc_now()
+            )
+          ]
+        )
+
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+        end
+      )
+
+      # without following a run
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      # checkbox is unchecked
+      assert has_element?(
+               view,
+               "#ai-assistant-form input[type='checkbox'][name='assistant[options][logs]']:not(:checked)"
+             )
+
+      GenServer.stop(view.pid)
+
+      # when following a run
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}",
+          on_error: :raise
+        )
+
+      render_async(view)
+
+      # checkbox exists
+      assert has_element?(
+               view,
+               "#ai-assistant-form input[type='checkbox'][name='assistant[options][logs]']:not(:checked)"
+             )
+    end
+
+    test "logs attachment are sent when toggled on", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _], triggers: [trigger]} = workflow
+    } do
+      workflow = Lightning.Repo.reload(workflow)
+
+      snapshot = Lightning.Workflows.Snapshot.get_current_for(workflow)
+
+      dataclip = build(:http_request_dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          state: "failed",
+          error_type: "CompileError",
+          dataclip: dataclip,
+          steps: [
+            build(:step,
+              job: job_1,
+              snapshot: snapshot,
+              input_dataclip: dataclip,
+              exit_reason: "fail",
+              error_type: "CompileError",
+              started_at: DateTime.utc_now(),
+              finished_at: DateTime.utc_now()
+            )
+          ]
+        )
+
+      insert(:log_line, run: run)
+      log1 = insert(:log_line, run: run, step: hd(run.steps))
+      log2 = insert(:log_line, run: run, step: hd(run.steps))
+
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Lightning.Tesla.Mock
+      |> expect(
+        :call,
+        2,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post, body: json_body}, _opts ->
+            body = Jason.decode!(json_body)
+            assert Map.has_key?(body["context"], "log")
+            assert body["context"]["log"] == log1.message <> "\n" <> log2.message
+
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "user", "content" => "Ping"},
+                   %{"role" => "assistant", "content" => "Pong"}
+                 ]
+               }
+             }}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}",
+          on_error: :raise
+        )
+
+      render_async(view)
+
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(assistant: %{content: "Ping", options: %{logs: "true"}})
+
+      assert_patch(view)
+
+      render_async(view)
     end
   end
 
