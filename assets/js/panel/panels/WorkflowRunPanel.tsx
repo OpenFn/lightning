@@ -76,12 +76,15 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
           <span className="hero-exclamation-circle w-8 h-8 text-red-300"></span>
           <div>Select a Step or Trigger to start a Run from</div>
         </div> :
-          <ManualRunPanel
-            {...actionProps}
-            pushEvent={pushEventProxy}
-            job_id={job_id}
-            fixedHeight
-          />
+          <>
+            <div>Select input to start a run</div>
+            <ManualRunPanel
+              {...actionProps}
+              pushEvent={pushEventProxy}
+              job_id={job_id}
+              fixedHeight
+            />
+          </>
       }
     </Panel>
   </>

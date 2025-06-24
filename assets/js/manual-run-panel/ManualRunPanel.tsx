@@ -286,7 +286,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
 
   return (
     <>
-      <form ref={formRef} id="manual_run_form"></form>
+      <form ref={formRef} id="manual_run_form" className="hidden"></form>
       {selectedDataclip ? (
         <SelectedClipView
           dataclip={selectedDataclip}
