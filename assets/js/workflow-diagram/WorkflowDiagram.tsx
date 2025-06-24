@@ -105,7 +105,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // 2. selection prop becomes null (server event)
   // on option 2. chartCache isn't updated. Hence we call updateSelection to do that
   useEffect(() => {
-    if (selection === null) updateSelection(null);
+    // we know selection from server has changed when it's not equal to the one on client
+    if (selection !== chartCache.current.lastSelection) updateSelection(selection);
   }, [selection, updateSelection])
 
   const {

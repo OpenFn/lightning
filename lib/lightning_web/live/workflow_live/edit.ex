@@ -358,8 +358,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :if={!@show_canvas_placeholder}
             react-portal-target="workflow-mount"
             selection={
-              if @selected_job || @selected_edge,
-                do: (@selected_job || @selected_edge).id,
+              if @selected_job || @selected_trigger || @selected_edge,
+                do: (@selected_job || @selected_trigger || @selected_edge).id,
                 else: nil
             }
           />
