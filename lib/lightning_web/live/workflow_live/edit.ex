@@ -582,7 +582,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       type="button"
                       theme="primary"
                     >
-                      <.icon name="hero-play-solid" class="w-4 h-4" />
+                      <.icon name="hero-play-solid" class="w-4 h-4" /> Run
                     </.button_link>
                   </div>
                 </:footer>
