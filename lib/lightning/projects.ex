@@ -1021,42 +1021,10 @@ defmodule Lightning.Projects do
     batch_size = 100
 
     unused_snapshots_query =
-      from(ws in Snapshot,
-        as: :snapshot,
-        join: w in assoc(ws, :workflow),
-        join: wo in subquery(workorders_query),
-        on: wo.workflow_id == w.id,
-        where:
-          not exists(
-            from(w2 in Workflow,
-              where:
-                w2.id == parent_as(:snapshot).workflow_id and
-                  parent_as(:snapshot).lock_version == w2.lock_version,
-              select: 1
-            )
-          ),
-        where:
-          not exists(
-            from(wo2 in WorkOrder,
-              where: wo2.snapshot_id == parent_as(:snapshot).id,
-              select: 1
-            )
-          ),
-        where:
-          not exists(
-            from(r in Run,
-              where: r.snapshot_id == parent_as(:snapshot).id,
-              select: 1
-            )
-          ),
-        where:
-          not exists(
-            from(s in Step,
-              where: s.snapshot_id == parent_as(:snapshot).id,
-              select: 1
-            )
-          ),
-        select: ws.id
+      Lightning.Workflows.Query.unused_snapshots()
+      |> join(:inner, [ws], w in assoc(ws, :workflow))
+      |> join(:inner, [ws, w], wo in subquery(workorders_query),
+        on: wo.workflow_id == w.id
       )
 
     total_deleted =
