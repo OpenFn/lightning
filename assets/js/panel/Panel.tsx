@@ -43,11 +43,11 @@ export const Panel: React.FC<PanelProps> = ({
             </div>
           </div>
         </div>
-        <div className="px-4 py-5 sm:p-6 grow flex flex-col overflow-visible">
+        <div className="px-4 py-5 sm:p-6 grow flex flex-col overflow-visible h-130">
           <div className="md:gap-4 grow flex flex-col overflow-visible">{children}</div>
         </div>
         {footer && (
-          <div className="p-3">
+          <div className="p-3 z-50 bg-white rounded-lg">
             <div className="md:grid md:grid-cols-6 md:gap-4 @container">
               <div className="col-span-6">
                 {footer}

@@ -57,7 +57,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
       heading={is_edge ? "Can't run from an edge" : `Run from ${job_title}`}
       onClose={() => { props.navigate(cancel_url); }}
       onBack={() => { props.navigate(back_url) }}
-      className="flex flex-col h-160 bg-red"
+      className="flex flex-col bg-red"
       footer={
         <div className="flex justify-end">
           <button
@@ -76,7 +76,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
           <div>Select a Step or Trigger to start a Run from</div>
         </div> :
           <>
-            <div>Select input to start a run</div>
+            <div className="truncate">Select input to start a run</div>
             <ManualRunPanel
               {...actionProps}
               pushEvent={pushEventProxy}
