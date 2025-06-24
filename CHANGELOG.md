@@ -23,6 +23,8 @@ and this project adheres to
   [#3125](https://github.com/OpenFn/lightning/issues/3125)
 - Added icons to control layout in the workflow
   [PR #3242](https://github.com/OpenFn/lightning/pull/3242)
+- Allow users to see/use next cron input state
+  [3335](https://github.com/OpenFn/lightning/issues/3335)
 
 ### Changed
 
@@ -34,7 +36,7 @@ and this project adheres to
 ### Fixed
 
 - AI Assistant fails to send job context in subsequent messages
-[#3329](https://github.com/OpenFn/lightning/issues/3329)
+  [#3329](https://github.com/OpenFn/lightning/issues/3329)
 
 ## [v2.13.2] - 2025-06-18
 
