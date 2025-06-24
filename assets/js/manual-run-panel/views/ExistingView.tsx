@@ -11,6 +11,7 @@ import Pill from '../Pill';
 import DataclipTypePill from '../DataclipTypePill';
 import {
   CalendarDaysIcon,
+  ClockIcon,
   MagnifyingGlassIcon,
   RectangleGroupIcon,
   XMarkIcon,
@@ -31,6 +32,7 @@ interface ExistingViewProps {
   setSelectedDates: SetDates;
   onSubmit: () => void;
   currentRunDataclip?: Dataclip | null;
+  nextCronRunId?: string | null;
 }
 
 const ExistingView: React.FC<ExistingViewProps> = ({
@@ -46,6 +48,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   setSelectedDates,
   onSubmit,
   currentRunDataclip,
+  nextCronRunId,
 }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
@@ -216,6 +219,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
           dataclips.map(clip => {
             const isCurrent =
               currentRunDataclip && clip.id === currentRunDataclip.id;
+            const isNextCronRun = nextCronRunId && clip.id === nextCronRunId;
             return (
               <div
                 key={clip.id}
@@ -229,6 +233,11 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                     <span
                       className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
                       title="Current dataclip for this step"
+                    />
+                  ) : isNextCronRun ? (
+                    <ClockIcon
+                      className="size-4 text-orange-400 group-hover:text-orange-600"
+                      title="Next state that will be used for cron execution"
                     />
                   ) : (
                     <span className="hero-document-text align-middle size-4 group-hover:text-primary-600" />

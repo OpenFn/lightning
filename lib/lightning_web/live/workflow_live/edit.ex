@@ -1471,8 +1471,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
            limit,
            offset
          ) do
-      {:ok, dataclips} ->
-        {:reply, %{dataclips: dataclips}, socket}
+      {:ok, %{dataclips: dataclips, next_cron_run_id: next_cron_run_id}} ->
+        {:reply, %{dataclips: dataclips, next_cron_run_id: next_cron_run_id}, socket}
 
       {:error, changeset} ->
         {:reply, %{errors: LightningWeb.ChangesetJSON.errors(changeset)}, socket}
