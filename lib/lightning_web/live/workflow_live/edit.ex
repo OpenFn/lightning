@@ -650,8 +650,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <div
               :if={@selection_mode == "workflow_input"}
               class="flex flex-col h-120"
-              phx-mounted={fade_in()}
-              phx-remove={fade_out()}
             >
               <.WorkflowRunPanel
                 job_id={
