@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-67443C59.js"></script>
+    <script defer src="dist/sidebar_items-D090A7EC.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -132,6 +132,16 @@ or all jobs in a given project.</p></div>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#unused_snapshots/0" data-no-tooltip="" translate="no">unused_snapshots()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns snapshots that are no longer being used by any workflow, work order, run, or step.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -155,7 +165,7 @@ or all jobs in a given project.</p></div>
       <h1 class="signature" translate="no">enabled_cron_jobs_by_edge()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L36" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L41" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -184,7 +194,7 @@ service.</p>
       <h1 class="signature" translate="no">jobs_for(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L17" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L22" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -203,6 +213,34 @@ service.</p>
 
 <p>Returns all jobs accessible to a user, via their projects
 or all jobs in a given project.</p>
+  </section>
+</section>
+<section class="detail" id="unused_snapshots/0">
+
+  <div class="detail-header">
+    <a href="#unused_snapshots/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">unused_snapshots()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L60" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> unused_snapshots() :: <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Returns snapshots that are no longer being used by any workflow, work order, run, or step.</p><p>A snapshot is considered unused if:</p><ul><li>It's not the current version of any workflow (lock_version doesn't match workflow's lock_version)</li><li>It's not referenced by any work order</li><li>It's not referenced by any run</li><li>It's not referenced by any step</li></ul>
   </section>
 </section>
 
