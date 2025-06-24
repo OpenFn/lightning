@@ -175,7 +175,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
               </div>
               <.run_workflow_button
                 base_url={@base_url}
-                trigger_id={hd(@workflow_params["triggers"])["id"]}
+                trigger_id={
+                  if is_list(@workflow_params["triggers"]) and @workflow_params["triggers"] != [] do
+                    hd(@workflow_params["triggers"])["id"]
+                  else
+                    ""
+                  end
+                }
+                }
               />
               <.save_workflow_button
                 id="top-bar-save-workflow-btn"
