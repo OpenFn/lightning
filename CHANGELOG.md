@@ -34,9 +34,11 @@ and this project adheres to
 ### Fixed
 
 - AI Assistant fails to send job context in subsequent messages
-[#3329](https://github.com/OpenFn/lightning/issues/3329)
+  [#3329](https://github.com/OpenFn/lightning/issues/3329)
 - Fix snapshot cleanup incorrectly deleting runs via cascade deletion
-[#3313](https://github.com/OpenFn/lightning/issues/3313)
+  [#3313](https://github.com/OpenFn/lightning/issues/3313)
+- `Lightning.Demo.reset_demo()` was broken by an ordering issue between
+  Credentials and Oauth tokens.
 
 ## [v2.13.2] - 2025-06-18
 
