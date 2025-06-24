@@ -11,7 +11,6 @@ import Pill from '../Pill';
 import DataclipTypePill from '../DataclipTypePill';
 import {
   CalendarDaysIcon,
-  ClockIcon,
   MagnifyingGlassIcon,
   RectangleGroupIcon,
   XMarkIcon,
@@ -235,8 +234,8 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                       title="Current dataclip for this step"
                     />
                   ) : isNextCronRun ? (
-                    <ClockIcon
-                      className="size-4 text-orange-400 group-hover:text-orange-600"
+                    <span
+                      className="hero-clock-solid size-4 text-primary-400 group-hover:text-primary-600"
                       title="Next state that will be used for cron execution"
                     />
                   ) : (
