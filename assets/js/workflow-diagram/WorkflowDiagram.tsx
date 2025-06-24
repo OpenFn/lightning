@@ -10,7 +10,7 @@ import {
   type Rect,
   ControlButton,
   Background,
-  MiniMap
+  MiniMap,
 } from '@xyflow/react';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
@@ -66,19 +66,29 @@ const useTippyForControls = (isManualLayout: boolean) => {
     });
 
     return () => {
-      cleaner.forEach(f => { f() });
+      cleaner.forEach(f => {
+        f();
+      });
     };
   }, [isManualLayout]); // Only run once on mount
 };
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const { jobs, triggers, edges, disabled, positions: fixedPositions, updatePositions, updatePosition } = useWorkflowStore();
+  const {
+    jobs,
+    triggers,
+    edges,
+    disabled,
+    positions: fixedPositions,
+    updatePositions,
+    updatePosition,
+  } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
-  const workflowDiagramRef = useRef<HTMLDivElement>(null)
+  const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -97,12 +107,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updatePlaceholderPosition,
   } = usePlaceholders(el, isManualLayout, updateSelection);
 
-  const workflow = React.useMemo(() => ({
-    jobs,
-    triggers,
-    edges,
-    disabled,
-  }), [jobs, triggers, edges, disabled])
+  const workflow = React.useMemo(
+    () => ({
+      jobs,
+      triggers,
+      edges,
+      disabled,
+    }),
+    [jobs, triggers, edges, disabled]
+  );
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
@@ -127,9 +140,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       chartCache.current.positions = positions;
       if (isManualLayout) updatePositions(positions);
     });
-  },
-    [flow, model, isManualLayout, updatePositions]
-  );
+  }, [flow, model, isManualLayout, updatePositions]);
 
   // Respond to changes pushed into the component from outside
   // This usually means the workflow has changed or its the first load, so we don't want to animate
@@ -137,14 +148,17 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   useEffect(() => {
     const { positions, lastSelection } = chartCache.current;
     // create model from workflow and also apply selection styling to the model.
-    const newModel = updateSelectionStyles(fromWorkflow(
-      workflow,
-      positions,
-      placeholders,
-      // Re-render the model based on whatever was last selected
-      // This handles first load and new node safely
-      lastSelection,
-    ), lastSelection);
+    const newModel = updateSelectionStyles(
+      fromWorkflow(
+        workflow,
+        positions,
+        placeholders,
+        // Re-render the model based on whatever was last selected
+        // This handles first load and new node safely
+        lastSelection
+      ),
+      lastSelection
+    );
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
         newModel.edges,
@@ -164,10 +178,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           const nodesWPos = newModel.nodes.map(node => {
             // during manualLayout. a placeholder wouldn't have position in positions in store
             // hence use the position on the placeholder node
-            const isPlaceholder = node.type === "placeholder";
-            return { ...node, position: isPlaceholder ? node.position : fixedPositions[node.id] }
-          })
-          setModel({ ...newModel, nodes: nodesWPos })
+            const isPlaceholder = node.type === 'placeholder';
+            return {
+              ...node,
+              position: isPlaceholder ? node.position : fixedPositions[node.id],
+            };
+          });
+          setModel({ ...newModel, nodes: nodesWPos });
           chartCache.current.positions = fixedPositions;
         } else {
           layout(newModel, setModel, flow, viewBounds, {
@@ -183,7 +200,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         // This is really only needed when there's a single trigger node
         newModel.nodes.forEach(n => {
           // if isManualLayout, then we use values from store instead
-          if (isManualLayout && n.type !== "placeholder") n.position = fixedPositions[n.id];
+          if (isManualLayout && n.type !== 'placeholder')
+            n.position = fixedPositions[n.id];
           if (!n.position) {
             n.position = { x: 0, y: 0 };
           }
@@ -207,20 +225,27 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       }, {} as Positions);
       chartCache.current.positions = newPositions;
     },
-    [setModel, model]);
+    [setModel, model]
+  );
 
   // update node position data only on dragstop.
-  const onNodeDragStop = useCallback((e: React.MouseEvent, node: Flow.Node) => {
-    if (node.type === "placeholder") {
-      updatePlaceholderPosition(node.id, node.position);
-    } else {
-      updatePosition(node.id, node.position);
-    }
-  }, [updatePosition, updatePlaceholderPosition])
+  const onNodeDragStop = useCallback(
+    (e: React.MouseEvent, node: Flow.Node) => {
+      if (node.type === 'placeholder') {
+        updatePlaceholderPosition(node.id, node.position);
+      } else {
+        updatePosition(node.id, node.position);
+      }
+    },
+    [updatePosition, updatePlaceholderPosition]
+  );
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
-      if ((event.target as HTMLElement).getAttribute("data-handleid") === "node-connector") {
+      if (
+        (event.target as HTMLElement).getAttribute('data-handleid') ===
+        'node-connector'
+      ) {
         addPlaceholder(node);
         return;
       }
@@ -237,7 +262,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     },
     [updateSelection, cancelPlaceholder]
   );
-
 
   // Trigger a fit to bounds when the parent div changes size
   // To keep the chart more stable, try and take a snapshot of the target bounds
@@ -297,11 +321,27 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const switchLayout = async () => {
     if (isManualLayout) {
       updatePositions(null);
-    } else updatePositions(chartCache.current.positions)
-  }
+    } else updatePositions(chartCache.current.positions);
+  };
 
+  const handleFitView = useCallback(async () => {
+    const bounds = getNodesBounds(model.nodes);
+    flow.fitBounds(bounds, {
+      duration: 200,
+      padding: FIT_PADDING,
+    });
+  }, [model, flow]);
 
-  const connectHandlers = useConnect(model, setModel, addPlaceholder, () => { cancelPlaceholder(); updateSelection(null) }, flow);
+  const connectHandlers = useConnect(
+    model,
+    setModel,
+    addPlaceholder,
+    () => {
+      cancelPlaceholder();
+      updateSelection(null);
+    },
+    flow
+  );
   // Set up tooltips for control buttons
   useTippyForControls(isManualLayout);
   return (
@@ -326,7 +366,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         minZoom={0.2}
         {...connectHandlers}
       >
-        <Controls position="bottom-left" showInteractive={false}>
+        <Controls
+          position="bottom-left"
+          showInteractive={false}
+          showFitView={false}
+        >
+          <ControlButton onClick={handleFitView} data-tooltip="Fit view">
+            <span className="text-black hero-viewfinder-circle w-4 h-4" />
+          </ControlButton>
+
           <ControlButton
             onClick={switchLayout}
             data-tooltip={
@@ -356,6 +404,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           nodeComponent={MiniMapNode}
         />
       </ReactFlow>
-    </ReactFlowProvider >
+    </ReactFlowProvider>
   );
-};
+}
