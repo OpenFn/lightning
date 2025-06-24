@@ -100,6 +100,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     [onSelectionChange]
   );
 
+  // selection can be null give 2 events
+  // 1. we click empty space on editor (client event)
+  // 2. selection prop becomes null (server event)
+  // on option 2. chartCache isn't updated. Hence we call updateSelection to do that
+  useEffect(() => {
+    if (selection === null) updateSelection(null);
+  }, [selection, updateSelection])
+
   const {
     placeholders,
     add: addPlaceholder,
@@ -211,7 +219,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions]);
+  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
