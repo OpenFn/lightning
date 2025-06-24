@@ -146,19 +146,9 @@ defmodule Lightning.Workflows.Edge do
   defp validate_condition_expression(%{valid?: false} = changeset), do: changeset
 
   defp validate_condition_expression(changeset) do
-    js_expr = get_field(changeset, :condition_expression)
-
-    if String.match?(js_expr, ~r/(import\b|require\b|process\b|await\b|eval\b)/) do
-      add_error(
-        changeset,
-        :condition_expression,
-        "contains unacceptable words"
-      )
-    else
-      changeset
-      |> validate_length(:condition_label, max: 255)
-      |> validate_length(:condition_expression, max: 255)
-    end
+    changeset
+    |> validate_length(:condition_label, max: 255)
+    |> validate_length(:condition_expression, max: 255)
   end
 
   defp validate_different_nodes(changeset) do

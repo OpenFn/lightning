@@ -290,22 +290,23 @@ defmodule Lightning.AiAssistant do
 
   """
   def get_session!(id) do
-    message_query =
-      from(m in ChatMessage,
-        where: m.status != :cancelled,
-        order_by: [asc: :inserted_at]
-      )
-
     session =
       ChatSession
       |> Repo.get!(id)
-      |> Repo.preload(messages: {message_query, :user})
+      |> Repo.preload(messages: {session_messages_query(), :user})
 
     if session.session_type == "workflow_template" do
       Repo.preload(session, :project)
     else
       session
     end
+  end
+
+  defp session_messages_query do
+    from(m in ChatMessage,
+      where: m.status != :cancelled,
+      order_by: [asc: :inserted_at]
+    )
   end
 
   @doc """
@@ -562,8 +563,15 @@ defmodule Lightning.AiAssistant do
           {:ok, ChatSession.t()} | {:error, Changeset.t()}
   def update_message_status(session, message, status) do
     case Repo.update(ChatMessage.changeset(message, %{status: status})) do
-      {:ok, _updated_message} -> {:ok, get_session!(session.id)}
-      {:error, changeset} -> {:error, changeset}
+      {:ok, _updated_message} ->
+        {:ok,
+         session
+         |> Repo.preload([messages: {session_messages_query(), :user}],
+           force: true
+         )}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 

@@ -1,8 +1,8 @@
 import Dagre from '../../vendor/dagre.cjs';
 import { timer } from 'd3-timer';
-import { getRectOfNodes, type ReactFlowInstance } from 'reactflow';
+import { getNodesBounds, type ReactFlowInstance } from '@xyflow/react';
 
-import { FIT_PADDING } from './constants';
+import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
@@ -29,14 +29,14 @@ const calculateLayout = async (
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({
     rankdir: 'TB',
-    // nodesep: 400,
-    // edgesep: 200,
-    // ranksep: 400,
+    nodesep: 250,
+    edgesep: 200,
+    ranksep: 150,
   });
 
   edges.forEach(edge => g.setEdge(edge.source, edge.target));
   nodes.forEach(node =>
-    g.setNode(node.id, { ...node, width: 350, height: 200 })
+    g.setNode(node.id, { ...node, width: NODE_WIDTH, height: NODE_HEIGHT })
   );
 
   Dagre.layout(g, { disableOptimalOrderHeuristic: true });
@@ -45,7 +45,10 @@ const calculateLayout = async (
     nodes: nodes.map(node => {
       const { x, y, width, height } = g.node(node.id);
 
-      return { ...node, position: { x, y }, width, height };
+      return {
+        ...node,
+        position: { x, y, width, height },
+      };
     }),
     edges,
   };
@@ -195,7 +198,7 @@ export const animate = (
         if (typeof autofit !== 'boolean') {
           fitTarget = autofit;
         }
-        const bounds = getRectOfNodes(fitTarget);
+        const bounds = getNodesBounds(fitTarget);
         if (autofit) {
           flowInstance.fitBounds(bounds, {
             duration: typeof duration === 'number' ? duration : 0,
