@@ -651,7 +651,7 @@ defmodule Lightning.AiAssistant do
 
     ApolloClient.query(
       content,
-      build_context(context, opts),
+      context,
       build_history(session),
       session.meta || %{}
     )
