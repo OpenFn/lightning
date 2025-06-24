@@ -176,7 +176,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <.run_workflow_button
                 base_url={@base_url}
                 trigger_id={
-                  if is_list(@workflow_params["triggers"]) and @workflow_params["triggers"] != [] do
+                  if is_list(@workflow_params["triggers"]) and
+                       @workflow_params["triggers"] != [] do
                     hd(@workflow_params["triggers"])["id"]
                   else
                     ""
