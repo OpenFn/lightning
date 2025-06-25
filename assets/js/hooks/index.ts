@@ -379,7 +379,7 @@ export const Combobox = {
 export const OpenAuthorizeUrl = {
   mounted() {
     this.handleEvent<{ url: string }>('open_authorize_url', ({ url }) => {
-      window.open(url, '_blank');
+      window.open(url, 'oauth_authorization');
     });
   },
 } as PhoenixHook;
@@ -784,7 +784,7 @@ export const TypewriterHook = {
     // Generate time-based greeting
     const now = new Date();
     const hour = now.getHours();
-    
+
     let greeting;
     if (hour >= 22 || hour < 3) {
       // 10pm - 3am

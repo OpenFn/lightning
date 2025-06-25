@@ -153,10 +153,10 @@ defmodule LightningWeb.CredentialLive.OAuthErrorFormatter do
     %ErrorDisplay{
       header: "Missing Required Permissions",
       message:
-        "You didn't grant all the required permissions for #{provider || "this integration"}.",
+        "OpenFn didn't receive access to the required permissions for #{provider || "this integration"}.",
       details:
-        "Missing permissions: #{scope_list}. Please make sure to check all required permissions when authorizing.",
-      action_text: "Reauthorize with All Permissions",
+        "Missing permissions: #{scope_list}. Please make sure to select all required permissions when authorizing.",
+      action_text: "Reauthorize",
       severity: :error
     }
   end

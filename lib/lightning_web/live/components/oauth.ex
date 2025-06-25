@@ -222,10 +222,10 @@ defmodule LightningWeb.Components.Oauth do
 
   defp success_without_userinfo(assigns) do
     ~H"""
-    <LightningWeb.Components.Common.alert type="success">
+    <LightningWeb.Components.Common.alert type="info">
       <:message>
-        Successfully authenticated with {@provider}!
-        Your credential is ready to use, though we couldn't fetch your user information.
+        Successfully authenticated with {@provider}.
+        Your credential seems ready to use, but we couldn't fetch your user info to verify. This app may not provide a user info endpoint, or your admin may not have configured it.
       </:message>
     </LightningWeb.Components.Common.alert>
     """
@@ -317,7 +317,7 @@ defmodule LightningWeb.Components.Oauth do
   defp reauthorize_button(assigns) do
     ~H"""
     <div class="text-sm text-gray-600">
-      If your credential is no longer working, you can
+      If your credential isn't working as expected, you can
       <button
         type="button"
         phx-click="authorize_click"
