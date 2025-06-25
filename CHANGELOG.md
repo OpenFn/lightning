@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Cannot send message in old ai chat sessions
+  [#3347](https://github.com/OpenFn/lightning/issues/3347)
+
 ## [2.13.3-pre]
 
 ### Added
