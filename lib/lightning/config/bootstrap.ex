@@ -191,16 +191,6 @@ defmodule Lightning.Config.Bootstrap do
       local_adaptors_repo:
         use_local_adaptors_repo? && Path.expand(local_adaptors_repo)
 
-    config :lightning, :oauth_clients,
-      google: [
-        client_id: env!("GOOGLE_CLIENT_ID", :string, nil),
-        client_secret: env!("GOOGLE_CLIENT_SECRET", :string, nil)
-      ],
-      salesforce: [
-        client_id: env!("SALESFORCE_CLIENT_ID", :string, nil),
-        client_secret: env!("SALESFORCE_CLIENT_SECRET", :string, nil)
-      ]
-
     config :lightning,
       schemas_path:
         env!(

@@ -6,11 +6,11 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
 
   Returns structured error responses that integrate well with the audit system.
   """
-
   use Tesla
-  require Logger
 
   alias LightningWeb.RouteHelpers
+
+  require Logger
 
   @doc """
   Revokes an OAuth token.
@@ -27,7 +27,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   - `{:error, %{status: integer(), error: term(), details: map()}}` on failure
   """
   def revoke_token(client, token) do
-    # Try to revoke refresh_token first (more comprehensive), then access_token
     tokens_to_revoke = [
       {"refresh_token", token["refresh_token"]},
       {"access_token", token["access_token"]}
@@ -123,7 +122,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       |> maybe_introspect(client)
       |> case do
         {:ok, new_token} ->
-          # Preserve the original refresh_token if not provided in response
           merged_token = merge_token_response(token, new_token)
           {:ok, merged_token}
 
@@ -188,8 +186,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     "#{client.authorization_endpoint}?#{encoded_params}"
   end
 
-  # Private helper functions
-
   defp revoke_single_token(client, token_value, token_type) do
     body = %{
       token: token_value,
@@ -225,7 +221,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
           {:ok, Map.put(token, "expires_at", response["exp"])}
 
         {:error, _reason} ->
-          # Don't fail token operations if introspection fails
           Logger.warning(
             "Token introspection failed, proceeding without expires_at"
           )
@@ -253,8 +248,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   end
 
   defp merge_token_response(original_token, new_token) do
-    # Preserve refresh_token from original if not in new response
-    # This is common behavior for many OAuth providers
     refresh_token =
       new_token["refresh_token"] || original_token["refresh_token"]
 
@@ -281,7 +274,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
            }}
       end
     else
-      # Parse error response for better debugging
       error_details = parse_error_response(body, status)
 
       {:error,

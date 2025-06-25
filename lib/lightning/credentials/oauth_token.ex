@@ -19,10 +19,13 @@ defmodule Lightning.Credentials.OauthToken do
   alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthValidation
 
+  @default_freshness_buffer_minutes 5
+
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
           body: map(),
           scopes: [String.t()],
+          last_refreshed: DateTime.t() | nil,
           oauth_client_id: Ecto.UUID.t() | nil,
           oauth_client: OauthClient.t() | nil,
           user_id: Ecto.UUID.t() | nil,
@@ -81,36 +84,50 @@ defmodule Lightning.Credentials.OauthToken do
       ...> })
       #Ecto.Changeset<...>
   """
-  @spec changeset(map()) :: Ecto.Changeset.t()
+  @spec changeset(t() | map(), map()) :: Ecto.Changeset.t()
   def changeset(attrs), do: changeset(%__MODULE__{}, attrs)
 
-  @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(oauth_token, attrs) do
     oauth_token
     |> cast(attrs, [:body, :scopes, :oauth_client_id, :user_id, :last_refreshed])
-    |> validate_required([:body, :oauth_client_id, :user_id])
+    |> validate_required([
+      :body,
+      :scopes,
+      :oauth_client_id,
+      :user_id,
+      :last_refreshed
+    ])
     |> assoc_constraint(:oauth_client)
     |> assoc_constraint(:user)
-    |> validate_oauth_body()
-    |> maybe_extract_scopes()
-    |> validate_scopes_consistency()
+    |> validate_change(:body, &validate_oauth_body/2)
   end
 
-  @doc """
-  Extracts scopes from OAuth token data.
-  Delegates to OauthValidation.extract_scopes/1 for consistent scope handling.
-  """
-  defdelegate extract_scopes(token_data), to: OauthValidation
+  defp validate_oauth_body(:body, body) do
+    case OauthValidation.validate_token_data(body) do
+      {:ok, _} ->
+        []
+
+      {:error, %OauthValidation.Error{} = error} ->
+        [{:body, {error.message, [type: error.type, details: error.details]}}]
+    end
+  end
 
   @doc """
   Creates a changeset for updating token data.
 
-  Preserves the refresh_token from the existing token if the provider doesn't return a new one.
-  This is common with some OAuth providers that only return refresh_token on initial authorization.
+  Preserves the `refresh_token` from the existing token if the provider doesn't return a new one.
+  This is common with some OAuth providers that only return `refresh_token` on initial authorization.
+
+  By default, this function updates the `last_refreshed` timestamp to the current UTC time.
+  If the update is not the result of an actual token refresh (e.g., only scopes changed),
+  you can pass the option `refreshed: false` to skip updating the timestamp.
 
   ## Parameters
-  - `oauth_token` - The existing OauthToken struct
-  - `new_token` - Map containing new token data from the OAuth provider
+
+    - `oauth_token` - The existing `OauthToken` struct.
+    - `new_token` - A map containing new token data from the OAuth provider.
+    - `opts` - (optional) A keyword list of options:
+      - `:refreshed` - Whether this update corresponds to an actual token refresh (default: `true`).
 
   ## Examples
 
@@ -120,237 +137,83 @@ defmodule Lightning.Credentials.OauthToken do
       ...>   "scope" => "read write admin"
       ...> })
       #Ecto.Changeset<...>
+
+      iex> OauthToken.update_token_changeset(existing_token, new_token_map, refreshed: false)
+      #Ecto.Changeset<...>
+
   """
-  @spec update_token_changeset(t(), map()) :: Ecto.Changeset.t()
-  def update_token_changeset(oauth_token, new_token) do
-    scopes = extract_and_normalize_scopes(new_token)
-
-    body = ensure_refresh_token(oauth_token, new_token)
-
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
+  @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
+  def update_changeset(oauth_token, attrs) do
     oauth_token
-    |> cast(%{body: body, scopes: scopes, last_refreshed: now}, [
-      :body,
-      :scopes,
-      :last_refreshed
-    ])
-    |> validate_required([:body, :scopes])
-    |> validate_oauth_body()
+    |> cast(attrs, [:body, :scopes, :last_refreshed])
+    |> validate_required([:body, :scopes, :last_refreshed])
   end
 
   @doc """
-  Checks if the OAuth token has expired based on its expiration data.
+  Checks if the token is still fresh (not expired or about to expire).
+
+  ## Parameters
+  - `oauth_token` - The token to check
+  - `buffer_minutes` - Minutes before expiry to consider stale (default: 5)
+
+  ## Returns
+  - `true` - Token is fresh and can be used
+  - `false` - Token is stale (expired or expires within buffer period)
 
   ## Examples
-
-      iex> OauthToken.expired?(%OauthToken{body: %{"expires_at" => past_timestamp}})
+      iex> OauthToken.still_fresh?(token)
       true
 
-      iex> OauthToken.expired?(%OauthToken{body: %{"expires_in" => 3600}, updated_at: recent_time})
+      iex> OauthToken.still_fresh?(token, 10)  # More conservative buffer
       false
   """
-  @spec expired?(t()) :: boolean()
-  def expired?(%__MODULE__{body: body, updated_at: updated_at}) do
-    case body do
-      %{"expires_at" => expires_at} when is_integer(expires_at) ->
-        expires_at < System.system_time(:second)
+  @spec still_fresh?(t(), non_neg_integer()) :: boolean()
+  def still_fresh?(
+        %__MODULE__{} = oauth_token,
+        buffer_minutes \\ @default_freshness_buffer_minutes
+      ) do
+    case calculate_expiry_time(oauth_token) do
+      {:ok, expiry_time} ->
+        buffer_time = DateTime.add(DateTime.utc_now(), buffer_minutes, :minute)
+        DateTime.compare(expiry_time, buffer_time) == :gt
 
-      %{"expires_at" => expires_at} when is_binary(expires_at) ->
-        case Integer.parse(expires_at) do
-          {timestamp, ""} -> timestamp < System.system_time(:second)
-          _ -> false
-        end
-
-      %{"expires_in" => expires_in}
-      when is_integer(expires_in) and not is_nil(updated_at) ->
-        expiry_time = DateTime.add(updated_at, expires_in, :second)
-        DateTime.compare(expiry_time, DateTime.utc_now()) == :lt
-
-      %{"expires_in" => expires_in}
-      when is_binary(expires_in) and not is_nil(updated_at) ->
-        case Integer.parse(expires_in) do
-          {seconds, ""} ->
-            expiry_time = DateTime.add(updated_at, seconds, :second)
-            DateTime.compare(expiry_time, DateTime.utc_now()) == :lt
-
-          _ ->
-            false
-        end
-
-      _ ->
+      :error ->
         false
     end
   end
 
-  @doc """
-  Checks if the OAuth token is valid (not expired and passes OAuth validation).
-
-  ## Examples
-
-      iex> OauthToken.valid?(%OauthToken{body: valid_body})
-      true
-  """
-  @spec valid?(t()) :: boolean()
-  def valid?(oauth_token) do
-    not expired?(oauth_token) and oauth_valid?(oauth_token)
+  @spec calculate_expiry_time(t()) :: {:ok, DateTime.t()} | :error
+  defp calculate_expiry_time(%__MODULE__{body: %{"expires_at" => expires_at}})
+       when is_integer(expires_at) do
+    {:ok, DateTime.from_unix!(expires_at)}
   end
 
-  @doc """
-  Checks if the OAuth token needs to be refreshed based on age and expiration.
-
-  ## Parameters
-  - `oauth_token` - The OauthToken to check
-  - `max_age_hours` - Maximum age in hours before refresh is recommended (default: 1)
-
-  ## Examples
-
-      iex> OauthToken.needs_refresh?(%OauthToken{last_refreshed: old_time})
-      true
-
-      iex> OauthToken.needs_refresh?(%OauthToken{last_refreshed: recent_time})
-      false
-  """
-  @spec needs_refresh?(t(), integer()) :: boolean()
-  def needs_refresh?(oauth_token, max_age_hours \\ 1)
-
-  def needs_refresh?(%__MODULE__{last_refreshed: nil}, _), do: true
-
-  def needs_refresh?(%__MODULE__{last_refreshed: last_refreshed}, max_age_hours) do
-    age_hours = DateTime.diff(DateTime.utc_now(), last_refreshed, :hour)
-    age_hours >= max_age_hours
-  end
-
-  @doc """
-  Checks if the OAuth token is stale (needs refresh) or expired.
-
-  ## Examples
-
-      iex> OauthToken.stale_or_expired?(%OauthToken{last_refreshed: old_time})
-      true
-  """
-  @spec stale_or_expired?(t(), integer()) :: boolean()
-  def stale_or_expired?(oauth_token, max_age_hours \\ 1) do
-    expired?(oauth_token) or needs_refresh?(oauth_token, max_age_hours)
-  end
-
-  @doc """
-  Returns the age of the token in hours since last refresh.
-
-  ## Examples
-
-      iex> OauthToken.age_in_hours(%OauthToken{last_refreshed: two_hours_ago})
-      2
-  """
-  @spec age_in_hours(t()) :: integer() | nil
-  def age_in_hours(%__MODULE__{last_refreshed: nil}), do: nil
-
-  def age_in_hours(%__MODULE__{last_refreshed: last_refreshed}) do
-    DateTime.diff(DateTime.utc_now(), last_refreshed, :hour)
-  end
-
-  defp validate_oauth_body(changeset) do
-    case fetch_field(changeset, :body) do
-      {_, nil} ->
-        add_error(changeset, :body, "OAuth token body is required")
-
-      {_, body} when is_map(body) ->
-        case OauthValidation.validate_token_data(body) do
-          {:ok, _} ->
-            changeset
-
-          {:error, %OauthValidation.Error{} = error} ->
-            add_oauth_error(changeset, error)
-        end
-
-      {_, _} ->
-        add_error(changeset, :body, "OAuth token body must be a map")
+  defp calculate_expiry_time(%__MODULE__{body: %{"expires_at" => expires_at}})
+       when is_binary(expires_at) do
+    case Integer.parse(expires_at) do
+      {timestamp, ""} -> {:ok, DateTime.from_unix!(timestamp)}
+      _ -> :error
     end
   end
 
-  defp maybe_extract_scopes(changeset) do
-    case fetch_field(changeset, :scopes) do
-      {_, nil} ->
-        case fetch_field(changeset, :body) do
-          {_, body} when is_map(body) ->
-            scopes = extract_and_normalize_scopes(body)
-            put_change(changeset, :scopes, scopes)
+  defp calculate_expiry_time(%__MODULE__{
+         body: %{"expires_in" => expires_in},
+         last_refreshed: last_refreshed
+       })
+       when is_integer(expires_in) and not is_nil(last_refreshed) do
+    {:ok, DateTime.add(last_refreshed, expires_in, :second)}
+  end
 
-          _ ->
-            changeset
-        end
-
-      {_, scopes} when is_list(scopes) ->
-        normalized_scopes = OauthValidation.normalize_scopes(scopes)
-        put_change(changeset, :scopes, normalized_scopes)
-
-      _ ->
-        changeset
+  defp calculate_expiry_time(%__MODULE__{
+         body: %{"expires_in" => expires_in},
+         last_refreshed: last_refreshed
+       })
+       when is_binary(expires_in) and not is_nil(last_refreshed) do
+    case Integer.parse(expires_in) do
+      {seconds, ""} -> {:ok, DateTime.add(last_refreshed, seconds, :second)}
+      _ -> :error
     end
   end
 
-  defp validate_scopes_consistency(changeset) do
-    with {_, body} when is_map(body) <- fetch_field(changeset, :body),
-         {_, scopes} when is_list(scopes) <- fetch_field(changeset, :scopes) do
-      case OauthValidation.extract_scopes(body) do
-        {:ok, body_scopes} ->
-          normalized_body_scopes = OauthValidation.normalize_scopes(body_scopes)
-          normalized_field_scopes = OauthValidation.normalize_scopes(scopes)
-
-          if normalized_body_scopes == normalized_field_scopes do
-            changeset
-          else
-            add_error(
-              changeset,
-              :scopes,
-              "scopes field does not match scopes in token body"
-            )
-          end
-
-        :error ->
-          changeset
-      end
-    else
-      _ -> changeset
-    end
-  end
-
-  defp extract_and_normalize_scopes(token_data) do
-    case OauthValidation.extract_scopes(token_data) do
-      {:ok, scopes} -> OauthValidation.normalize_scopes(scopes)
-      :error -> []
-    end
-  end
-
-  defp ensure_refresh_token(
-         %__MODULE__{body: %{"refresh_token" => refresh_token}},
-         new_token
-       )
-       when is_map(new_token) do
-    case Map.get(new_token, "refresh_token") do
-      nil -> Map.put(new_token, "refresh_token", refresh_token)
-      _ -> new_token
-    end
-  end
-
-  defp ensure_refresh_token(_, new_token), do: new_token
-
-  defp oauth_valid?(%__MODULE__{body: body}) when is_map(body) do
-    case OauthValidation.validate_token_data(body) do
-      {:ok, _} -> true
-      {:error, _} -> false
-    end
-  end
-
-  defp oauth_valid?(_), do: false
-
-  defp add_oauth_error(
-         changeset,
-         %OauthValidation.Error{} = error
-       ) do
-    changeset
-    |> add_error(:body, error.message)
-    |> put_change(:oauth_error_type, error.type)
-    |> put_change(:oauth_error_details, error.details)
-  end
+  defp calculate_expiry_time(_), do: :error
 end

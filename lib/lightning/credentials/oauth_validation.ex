@@ -8,6 +8,7 @@ defmodule Lightning.Credentials.OauthValidation do
   Validates OAuth 2.0 tokens according to RFC 6749 specifications with
   additional robustness for real-world OAuth provider variations.
   """
+  import Lightning.Helpers, only: [normalize_keys: 1]
 
   alias Lightning.Credentials.OauthToken
 
@@ -281,11 +282,7 @@ defmodule Lightning.Credentials.OauthValidation do
   defp convert_to_string(value) when is_binary(value), do: value
 
   defp convert_to_string(value) when is_atom(value) and not is_nil(value) do
-    try do
-      Atom.to_string(value)
-    rescue
-      ArgumentError -> nil
-    end
+    Atom.to_string(value)
   end
 
   defp convert_to_string(_), do: nil
@@ -501,7 +498,7 @@ defmodule Lightning.Credentials.OauthValidation do
 
   defp validate_expires_at(expires_at) when is_integer(expires_at) do
     current_time = System.system_time(:second)
-    min_valid_time = current_time - 86400
+    min_valid_time = current_time - 86_400
     max_valid_time = current_time + 365 * 24 * 3600
 
     cond do
@@ -611,16 +608,4 @@ defmodule Lightning.Credentials.OauthValidation do
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
-
-  defp normalize_keys(map) when is_map(map) do
-    Enum.reduce(map, %{}, fn
-      {k, v}, acc when is_map(v) ->
-        Map.put(acc, to_string(k), normalize_keys(v))
-
-      {k, v}, acc ->
-        Map.put(acc, to_string(k), v)
-    end)
-  end
-
-  defp normalize_keys(value), do: value
 end

@@ -1,48 +1,11 @@
 defmodule LightningWeb.OauthComponentsTest do
-  use LightningWeb.ConnCase, async: false
+  use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
 
   alias LightningWeb.Components.Oauth
-  alias LightningWeb.Components.Oauth.{ActionButton, ErrorResponse}
 
   defp mock_target, do: "test-target"
-
-  describe "ActionButton struct" do
-    test "creates valid ActionButton with all parameters" do
-      button =
-        ActionButton.new("test-id", "Test Text", mock_target(), "test_click")
-
-      assert button.id == "test-id"
-      assert button.text == "Test Text"
-      assert button.target == mock_target()
-      assert button.click == "test_click"
-    end
-
-    test "validates string parameters with guards" do
-      assert_raise FunctionClauseError, fn ->
-        ActionButton.new(123, "Test Text", mock_target(), "test_click")
-      end
-
-      assert_raise FunctionClauseError, fn ->
-        ActionButton.new("test-id", 123, mock_target(), "test_click")
-      end
-
-      assert_raise FunctionClauseError, fn ->
-        ActionButton.new("test-id", "Test Text", mock_target(), 123)
-      end
-    end
-  end
-
-  describe "ErrorResponse struct" do
-    test "creates valid ErrorResponse" do
-      response = ErrorResponse.new("Test Header", :reauthorize, "Test message")
-
-      assert response.header == "Test Header"
-      assert response.action == :reauthorize
-      assert response.message == "Test message"
-    end
-  end
 
   describe "scopes_picklist/1" do
     test "renders scope selection interface with all scopes" do
@@ -142,89 +105,35 @@ defmodule LightningWeb.OauthComponentsTest do
       checkboxes = Floki.find(scopes_dom, "input[type='checkbox']")
       assert length(checkboxes) == 0
     end
-  end
 
-  describe "authorize_button/1" do
-    test "renders OAuth authorization button" do
-      button =
-        render_component(&Oauth.authorize_button/1,
-          authorize_url: "https://example.com/oauth",
-          myself: mock_target(),
-          provider: "GitHub"
+    test "scope checkbox interactions" do
+      picklist =
+        render_component(&Oauth.scopes_picklist/1,
+          id: "test_scopes",
+          on_change: "scope_changed",
+          target: mock_target(),
+          selected_scopes: ["read"],
+          mandatory_scopes: ["admin"],
+          scopes: ["read", "write", "admin"],
+          provider: "TestProvider"
         )
 
-      assert button =~ "https://example.com/oauth"
-      assert button =~ "Sign in with GitHub"
-      assert button =~ "authorize_click"
-      assert button =~ "authorize-button"
-    end
-  end
+      scopes_dom = Floki.parse_document!(picklist)
 
-  describe "userinfo/1" do
-    test "renders user information with avatar and details" do
-      socket = %Phoenix.LiveView.Socket{
-        router: LightningWeb.Router,
-        endpoint: LightningWeb.Endpoint
-      }
+      read_checkbox = Floki.find(scopes_dom, "#test_scopes_read")
+      assert read_checkbox != []
+      assert Floki.attribute(read_checkbox, "checked") == ["checked"]
+      assert Floki.attribute(read_checkbox, "disabled") == []
 
-      userinfo =
-        render_component(&Oauth.userinfo/1,
-          userinfo: %{
-            "name" => "John Doe",
-            "email" => "john@example.com",
-            "picture" => "https://example.com/avatar.jpg"
-          },
-          myself: mock_target(),
-          authorize_url: "https://example.com/oauth",
-          socket: socket
-        )
+      admin_checkbox = Floki.find(scopes_dom, "#test_scopes_admin")
+      assert admin_checkbox != []
+      assert Floki.attribute(admin_checkbox, "checked") == ["checked"]
+      assert Floki.attribute(admin_checkbox, "disabled") == ["disabled"]
 
-      assert userinfo =~ "John Doe"
-      assert userinfo =~ "john@example.com"
-      assert userinfo =~ "https://example.com/avatar.jpg"
-      assert userinfo =~ "/images/user.png"
-    end
-  end
-
-  describe "success_message/1" do
-    test "renders success message with reauthorization link when revocation available" do
-      message =
-        render_component(&Oauth.success_message/1,
-          revocation: :available,
-          myself: mock_target()
-        )
-
-      assert message =~ "Success"
-      assert message =~ "revoke and reauthenticate"
-      assert message =~ "re_authorize_click"
-    end
-
-    test "renders success message without reauthorization link when revocation unavailable" do
-      message =
-        render_component(&Oauth.success_message/1,
-          revocation: :unavailable,
-          myself: mock_target()
-        )
-
-      assert message =~ "Success"
-      assert message =~ "third party apps section"
-      refute message =~ "re_authorize_click"
-    end
-  end
-
-  describe "reauthorize_banner/1" do
-    test "renders reauthorization banner with provider-specific text" do
-      banner =
-        render_component(&Oauth.reauthorize_banner/1,
-          provider: "GitHub",
-          authorize_url: "https://example.com/oauth",
-          myself: mock_target()
-        )
-
-      assert banner =~ "Reauthentication required"
-      assert banner =~ "Reauthenticate with GitHub"
-      assert banner =~ "authorize_click"
-      assert banner =~ "scopes (i.e., permissions)"
+      write_checkbox = Floki.find(scopes_dom, "#test_scopes_write")
+      assert write_checkbox != []
+      assert Floki.attribute(write_checkbox, "checked") == []
+      assert Floki.attribute(write_checkbox, "disabled") == []
     end
   end
 
@@ -235,395 +144,274 @@ defmodule LightningWeb.OauthComponentsTest do
       assert warning =~ "OAuth client not found"
       assert warning =~ "The associated Oauth client"
       assert warning =~ "cannot be found"
+      assert warning =~ "Create"
+      assert warning =~ "a new client or contact your administrator"
     end
   end
 
-  describe "alert_block/1" do
-    test "renders missing_required alert with reauthorization" do
-      changeset =
-        create_test_changeset(:missing_refresh_token, %{
-          existing_token_available: false
-        })
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
+  describe "oauth_status/1" do
+    test "renders idle state with authorize button" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :idle,
           provider: "Salesforce",
-          myself: mock_target()
+          myself: mock_target(),
+          authorize_url: "https://salesforce.com/oauth/authorize",
+          scopes_changed: false
         )
 
-      assert alert =~ "Missing Refresh Token"
-      assert alert =~ "Please reauthorize to provide OpenFn"
-      assert alert =~ "Test error message"
-      assert alert =~ "authorize_click"
+      assert status =~ "Sign in with Salesforce"
+      assert status =~ "authorize_click"
+      assert status =~ "authorize-button"
     end
 
-    test "renders missing_required alert with revocation endpoint" do
-      changeset =
-        create_test_changeset(:missing_refresh_token, %{
-          existing_token_available: false
-        })
+    test "renders authenticating state" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :authenticating,
+          provider: "Google",
+          myself: mock_target(),
+          scopes_changed: false
+        )
 
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
+      assert status =~ "Authenticating with Google..."
+    end
+
+    test "renders fetching_userinfo state" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :fetching_userinfo,
           provider: "Salesforce",
-          revocation_endpoint: "https://example.com/revoke",
-          myself: mock_target()
+          myself: mock_target(),
+          scopes_changed: false
         )
 
-      assert alert =~ "re_authorize_click"
+      assert status =~ "Fetching user information from Salesforce..."
     end
 
-    test "renders missing_required alert with use_existing action" do
-      changeset =
-        create_test_changeset(:missing_refresh_token, %{
-          existing_token_available: true
-        })
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
+    test "renders complete state with user information" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :complete,
           provider: "Salesforce",
-          myself: mock_target()
+          myself: mock_target(),
+          userinfo: %{
+            "name" => "Sadio Mane",
+            "email" => "sadio@example.com",
+            "picture" => "https://example.com/avatar.jpg"
+          },
+          scopes_changed: false
         )
 
-      assert alert =~ "Use Existing Credential"
-      assert alert =~ "cancel_click"
+      assert status =~ "Sadio Mane"
+      assert status =~ "sadio@example.com"
+      assert status =~ "https://example.com/avatar.jpg"
+      assert status =~ "Successfully authenticated with Salesforce"
+      assert status =~ "reauthenticate with Salesforce"
     end
 
-    test "renders token_failed alert" do
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :token_failed,
-          myself: mock_target()
+    test "renders complete state without user information" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :complete,
+          provider: "Salesforce",
+          myself: mock_target(),
+          userinfo: nil,
+          scopes_changed: false
         )
 
-      assert alert =~ "Something went wrong"
-      assert alert =~ "Failed retrieving the token from the provider"
-      assert alert =~ "Try again"
-      assert alert =~ "re_authorize_click"
+      assert status =~ "Successfully authenticated with Salesforce!"
+      assert status =~ "Your credential is ready to use"
+      assert status =~ "couldn't fetch your user information"
     end
 
-    test "renders refresh_failed alert" do
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :refresh_failed,
-          myself: mock_target()
+    test "renders complete state with default user values" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :complete,
+          provider: "Salesforce",
+          myself: mock_target(),
+          userinfo: %{},
+          scopes_changed: false
         )
 
-      assert alert =~ "Something went wrong"
-      assert alert =~ "Failed renewing your access token"
-      assert alert =~ "Request new token"
-      assert alert =~ "re_authorize_click"
+      assert status =~ "Unknown User"
+      assert status =~ "No email provided"
+      assert status =~ "/images/user.png"
     end
 
-    test "renders userinfo_failed alert" do
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :userinfo_failed,
-          myself: mock_target()
+    test "renders error state" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :error,
+          provider: "Google",
+          myself: mock_target(),
+          authorize_url: "https://google.com/oauth",
+          error: :invalid_token,
+          scopes_changed: false
         )
 
-      assert alert =~ "couldn't fetch your user information"
-      assert alert =~ "Try again"
-      assert alert =~ "try_userinfo_again"
+      assert status =~ "authorize_click"
     end
 
-    test "renders code_failed alert" do
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :code_failed,
-          myself: mock_target()
+    test "renders scope change alert when scopes_changed is true" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :idle,
+          provider: "Salesforce",
+          myself: mock_target(),
+          authorize_url: "https://salesforce.com/oauth",
+          scopes_changed: true
         )
 
-      assert alert =~ "Something went wrong"
-      assert alert =~ "Failed retrieving authentication code"
-      assert alert =~ "Reauthorize"
-      assert alert =~ "re_authorize_click"
-    end
-
-    test "renders revoke_failed alert" do
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :revoke_failed,
-          myself: mock_target()
-        )
-
-      assert alert =~ "Something went wrong"
-      assert alert =~ "Token revocation failed"
-      assert alert =~ "Authorize again"
-      assert alert =~ "authorize_click"
-    end
-
-    test "renders fetching_userinfo alert" do
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :fetching_userinfo,
-          myself: mock_target()
-        )
-
-      assert alert =~ "Attempting to fetch user information"
+      assert status =~ "authorize_click"
+      refute status =~ "Sign in with Salesforce"
     end
   end
 
-  describe "error categorization" do
-    test "categorizes missing scopes error with no missing scopes" do
-      changeset = create_test_changeset(:missing_scopes, %{missing_scopes: []})
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
+  describe "oauth_status/1 edge cases" do
+    test "handles missing authorize_url in idle state" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :idle,
+          provider: "Salesforce",
+          myself: mock_target(),
+          scopes_changed: false
         )
 
-      assert alert =~ "Missing Required Permissions"
-      assert alert =~ "Some required permissions were not granted"
+      assert status =~ "Sign in with Salesforce"
     end
 
-    test "categorizes missing scopes error with single missing scope" do
-      changeset =
-        create_test_changeset(:missing_scopes, %{missing_scopes: ["read:user"]})
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
+    test "handles missing error in error state" do
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :error,
+          provider: "Salesforce",
+          myself: mock_target(),
+          authorize_url: "https://salesforce.com/oauth",
+          scopes_changed: false
         )
 
-      assert alert =~ "Missing Required Permission"
-      assert alert =~ "&#39;read:user&#39; permission was not granted"
+      assert status =~ "authorize_click"
     end
 
-    test "categorizes missing scopes error with multiple missing scopes" do
-      changeset =
-        create_test_changeset(:missing_scopes, %{
-          missing_scopes: ["read:user", "write:repo"]
-        })
+    test "handles all states with scopes_changed true" do
+      states = [:idle, :authenticating, :fetching_userinfo, :complete, :error]
 
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
+      for state <- states do
+        status =
+          render_component(&Oauth.oauth_status/1,
+            state: state,
+            provider: "TestProvider",
+            myself: mock_target(),
+            scopes_changed: true,
+            authorize_url: "https://example.com/oauth",
+            userinfo: %{"name" => "Test User"},
+            error: :test_error
+          )
 
-      assert alert =~ "Missing Required Permissions"
-      assert alert =~ "&#39;read:user&#39;, &#39;write:repo&#39;"
-    end
-
-    test "categorizes invalid_oauth_response error" do
-      changeset = create_test_changeset(:invalid_oauth_response)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
-
-      assert alert =~ "Invalid OAuth Response"
-      assert alert =~ "authorization response from GitHub is invalid"
-    end
-
-    test "categorizes invalid_token_format error" do
-      changeset = create_test_changeset(:invalid_token_format)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
-
-      assert alert =~ "Invalid Token Format"
-      assert alert =~ "OAuth token received from GitHub is in an invalid format"
-    end
-
-    test "categorizes missing_token_data error" do
-      changeset = create_test_changeset(:missing_token_data)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
-
-      assert alert =~ "Authorization Required"
-      assert alert =~ "Please complete the OAuth authorization process"
-    end
-
-    test "categorizes missing_access_token error" do
-      changeset = create_test_changeset(:missing_access_token)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
-
-      assert alert =~ "Missing Access Token"
-      assert alert =~ "missing the required access token"
-    end
-
-    test "categorizes missing_expiration error" do
-      changeset = create_test_changeset(:missing_expiration)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
-
-      assert alert =~ "Invalid Token Response"
-      assert alert =~ "missing expiration information"
-    end
-
-    test "categorizes unknown error type" do
-      changeset = create_test_changeset(:unknown_error_type)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
-
-      assert alert =~ "OAuth Error"
-      assert alert =~ "Please try authorizing with GitHub again"
-    end
-
-    test "handles nil error type" do
-      changeset = create_test_changeset(nil)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
-
-      assert alert =~ "OAuth Error"
-      assert alert =~ "Please try authorizing with GitHub again"
-    end
-
-    test "handles nil provider" do
-      changeset = create_test_changeset(:missing_refresh_token)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          myself: mock_target()
-        )
-
-      assert alert =~ "your provider"
-    end
-
-    test "handles malformed changeset" do
-      malformed_changeset = %Ecto.Changeset{
-        data: %Lightning.Credentials.Credential{},
-        changes: %{},
-        errors: [],
-        valid?: true
-      }
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: malformed_changeset,
-          myself: mock_target()
-        )
-
-      assert alert =~ "OAuth authorization failed"
-    end
-
-    test "handles changeset without oauth_token error" do
-      changeset =
-        %Lightning.Credentials.Credential{}
-        |> Ecto.Changeset.cast(%{}, [])
-        |> Ecto.Changeset.add_error(:other_field, "Some other error")
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          myself: mock_target()
-        )
-
-      assert alert =~ "OAuth authorization failed"
+        assert status =~ "authorize_click"
+      end
     end
   end
 
-  describe "default fallback behavior" do
-    test "handles unknown suggested action with help fallback" do
-      changeset =
-        create_test_changeset(:some_custom_error_that_returns_unknown_action)
+  describe "component integration" do
+    test "scopes_picklist integrates with oauth_status flow" do
+      scopes = ["api", "refresh_token", "offline_access"]
 
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          myself: mock_target()
+      picklist =
+        render_component(&Oauth.scopes_picklist/1,
+          id: "salesforce_scopes",
+          on_change: "update_scopes",
+          target: mock_target(),
+          selected_scopes: ["api"],
+          mandatory_scopes: ["api"],
+          scopes: scopes,
+          provider: "Salesforce",
+          doc_url: "https://help.salesforce.com/oauth"
         )
 
-      assert alert =~ "OAuth Error"
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :idle,
+          provider: "Salesforce",
+          myself: mock_target(),
+          authorize_url: "https://salesforce.com/oauth",
+          scopes_changed: false
+        )
+
+      # Both components should render without conflicts
+      assert picklist =~ "Select permissions"
+      assert status =~ "Sign in with Salesforce"
+    end
+
+    test "all components handle long provider names" do
+      long_provider = "Super Long OAuth Provider Name With Many Words"
+
+      picklist =
+        render_component(&Oauth.scopes_picklist/1,
+          id: "test",
+          on_change: "change",
+          target: mock_target(),
+          selected_scopes: [],
+          mandatory_scopes: [],
+          scopes: ["read"],
+          provider: long_provider
+        )
+
+      picklist_with_doc =
+        render_component(&Oauth.scopes_picklist/1,
+          id: "test_with_doc",
+          on_change: "change",
+          target: mock_target(),
+          selected_scopes: [],
+          mandatory_scopes: [],
+          scopes: ["read"],
+          provider: long_provider,
+          doc_url: "https://example.com/docs"
+        )
+
+      status =
+        render_component(&Oauth.oauth_status/1,
+          state: :complete,
+          provider: long_provider,
+          myself: mock_target(),
+          userinfo: %{"name" => "User"},
+          scopes_changed: false
+        )
+
+      warning = render_component(&Oauth.missing_client_warning/1, %{})
+
+      assert picklist =~ "Select permissions"
+      refute picklist =~ long_provider
+
+      assert picklist_with_doc =~ long_provider
+
+      assert status =~ long_provider
+      assert warning =~ "OAuth client"
     end
   end
 
-  describe "edge cases" do
-    test "handles empty error details" do
-      changeset = create_test_changeset(:missing_scopes, %{})
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
+  describe "accessibility" do
+    test "components include proper ARIA attributes and labels" do
+      picklist =
+        render_component(&Oauth.scopes_picklist/1,
+          id: "a11y_test",
+          on_change: "change",
+          target: mock_target(),
+          selected_scopes: ["read"],
+          mandatory_scopes: [],
+          scopes: ["read", "write"],
+          provider: "TestProvider"
         )
 
-      assert alert =~ "Missing Required Permissions"
+      dom = Floki.parse_document!(picklist)
+
+      checkboxes = Floki.find(dom, "input[type='checkbox']")
+      assert length(checkboxes) == 2
+
+      assert Floki.find(dom, "#a11y_test_read") != []
+      assert Floki.find(dom, "#a11y_test_write") != []
     end
-
-    test "handles nil error details" do
-      changeset = create_test_changeset(:missing_scopes, nil)
-
-      alert =
-        render_component(&Oauth.alert_block/1,
-          type: :missing_required,
-          changeset: changeset,
-          provider: "GitHub",
-          myself: mock_target()
-        )
-
-      assert alert =~ "Missing Required Permissions"
-    end
-  end
-
-  defp create_test_changeset(error_type, error_details \\ %{}) do
-    %Lightning.Credentials.Credential{}
-    |> Ecto.Changeset.cast(%{}, [])
-    |> Ecto.Changeset.put_change(:oauth_error_type, error_type)
-    |> Ecto.Changeset.put_change(:oauth_error_details, error_details)
-    |> Ecto.Changeset.add_error(:oauth_token, "Test error message")
   end
 end

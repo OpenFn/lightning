@@ -8,63 +8,41 @@ defmodule LightningWeb.Components.Oauth do
   """
   use LightningWeb, :component
 
-  import Ecto.Changeset, only: [get_field: 2]
-
   alias LightningWeb.Components.Common
-
-  @type provider :: String.t() | nil
-
-  defmodule ActionButton do
-    @moduledoc """
-    Represents an action button configuration for OAuth alerts.
-    """
-
-    @type t :: %__MODULE__{
-            id: String.t(),
-            text: String.t(),
-            target: any(),
-            click: String.t()
-          }
-
-    defstruct [:id, :text, :target, :click]
-
-    @spec new(String.t(), String.t(), any(), String.t()) :: t()
-    def new(id, text, target, click)
-        when is_binary(id) and is_binary(text) and is_binary(click) do
-      %__MODULE__{
-        id: id,
-        text: text,
-        target: target,
-        click: click
-      }
-    end
-  end
-
-  defmodule ErrorResponse do
-    @moduledoc """
-    Represents the categorized error response with header, action type, and message.
-    """
-
-    @type t :: %__MODULE__{
-            header: String.t(),
-            action: atom(),
-            message: String.t()
-          }
-
-    defstruct [:header, :action, :message]
-
-    @spec new(String.t(), atom(), String.t()) :: t()
-    def new(header, action, message) do
-      %__MODULE__{
-        header: header,
-        action: action,
-        message: message
-      }
-    end
-  end
+  alias LightningWeb.CredentialLive.OAuthErrorFormatter
 
   @doc """
   Renders a scope selection interface for OAuth permissions.
+
+  This component displays a list of OAuth scopes as checkboxes, allowing users
+  to select which permissions they want to grant. Mandatory scopes are automatically
+  checked and disabled to prevent deselection.
+
+  ## Attributes
+
+    * `:id` - Unique identifier for the component
+    * `:on_change` - Event handler for scope selection changes
+    * `:target` - Phoenix LiveView target for events
+    * `:selected_scopes` - List of currently selected scope strings
+    * `:mandatory_scopes` - List of required scope strings that cannot be deselected
+    * `:scopes` - Complete list of available scope strings
+    * `:provider` - OAuth provider name (e.g., "Google", "GitHub")
+    * `:doc_url` - Optional URL to provider's scope documentation
+    * `:disabled` - Whether all checkboxes should be disabled
+
+  ## Examples
+
+      <.scopes_picklist
+        id="google-scopes"
+        on_change="scope_changed"
+        target={@myself}
+        selected_scopes={["read", "write"]}
+        mandatory_scopes={["read"]}
+        scopes={["read", "write", "admin"]}
+        provider="Google"
+        doc_url="https://developers.google.com/identity/protocols/oauth2/scopes"
+        disabled={false}
+      />
   """
   attr :id, :string, required: true
   attr :on_change, :any, required: true
@@ -118,130 +96,14 @@ defmodule LightningWeb.Components.Oauth do
   end
 
   @doc """
-  Renders an OAuth authorization button.
-  """
-  attr :authorize_url, :string, required: true
-  attr :myself, :any, required: true
-  attr :provider, :string, required: true
+  Displays a warning alert when the OAuth client configuration is missing.
 
-  def authorize_button(assigns) do
-    ~H"""
-    <.button_link
-      href={@authorize_url}
-      id="authorize-button"
-      phx-click="authorize_click"
-      phx-target={@myself}
-      target="_blank"
-      theme="primary"
-    >
-      <span class="text-normal">Sign in with {@provider}</span>
-    </.button_link>
-    """
-  end
+  This component shows an error message when the OAuth client associated with
+  a credential cannot be found, typically due to misconfiguration or deletion.
 
-  @doc """
-  Displays OAuth user information with avatar and details.
-  """
-  attr :userinfo, :map, required: true
-  attr :myself, :any, required: true
-  attr :authorize_url, :any, required: true
-  attr :socket, :any, required: true
+  ## Examples
 
-  def userinfo(assigns) do
-    ~H"""
-    <div class="flex flex-wrap items-center justify-between sm:flex-nowrap mt-5">
-      <div class="flex items-center">
-        <img
-          src={@userinfo["picture"]}
-          class="h-20 w-20 rounded-full"
-          alt={@userinfo["name"]}
-          onerror={"this.onerror=null;this.src='#{Routes.static_path(
-              @socket,
-              "/images/user.png"
-            )
-          }';"}
-        />
-        <div class="ml-4">
-          <h3 class="text-base font-semibold leading-6 text-gray-900">
-            {@userinfo["name"]}
-          </h3>
-          <p class="text-sm text-gray-500">
-            <a href="#">{@userinfo["email"]}</a>
-          </p>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  @doc """
-  Renders success messages with optional reauthorization links.
-  """
-  attr :revocation, :atom, required: true, values: [:available, :unavailable]
-  attr :myself, :any, required: true
-
-  def success_message(%{revocation: :available} = assigns) do
-    ~H"""
-    <Common.alert type="success">
-      <:message>
-        Success. If your credential is no longer working, you may try to revoke and reauthenticate by clicking
-        <.reauthorize_button
-          id="re-authorize-button"
-          class="link-success"
-          target={@myself}
-        >
-          here <span aria-hidden="true"> &rarr;</span>
-        </.reauthorize_button>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def success_message(%{revocation: :unavailable} = assigns) do
-    ~H"""
-    <Common.alert type="success">
-      <:message>
-        Success. If your credential is no longer working, you may try to revoke OpenFn access and and reauthenticate. To revoke access, go to the third party apps section of the provider's website or portal.
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  @doc """
-  Renders a banner prompting users to reauthenticate when scopes have changed.
-  """
-  attr :provider, :string, required: true
-  attr :authorize_url, :any, required: true
-  attr :revocation_endpoint, :any, default: nil
-  attr :myself, :any, required: true
-
-  def reauthorize_banner(assigns) do
-    action =
-      create_auth_action(
-        assigns.myself,
-        "Reauthenticate with #{assigns.provider}"
-      )
-
-    assigns = assign(assigns, :action, Map.from_struct(action))
-
-    ~H"""
-    <Common.alert
-      id="re-authorize-banner"
-      type="warning"
-      header="Reauthentication required"
-      actions={[@action]}
-    >
-      <:message>
-        <p>
-          You've changed the scopes (i.e., permissions) on this credential. To save, you must first reauthenticate with your OAuth2 client.
-        </p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  @doc """
-  Displays a warning when OAuth client configuration is missing.
+      <.missing_client_warning />
   """
   def missing_client_warning(assigns) do
     ~H"""
@@ -257,345 +119,234 @@ defmodule LightningWeb.Components.Oauth do
   end
 
   @doc """
-  Renders structured error alerts based on OAuth validation results.
+  Renders the OAuth authentication status and flow UI.
 
-  This function provides intelligent error handling by extracting structured
-  error information from Ecto changesets and presenting appropriate user
-  guidance and action buttons.
+  This component manages the complete OAuth authentication flow, displaying
+  different UI states based on the authentication progress. It handles initial
+  authorization, loading states, success states with user information, and
+  various error conditions.
+
+  ## Attributes
+
+    * `:state` - Current authentication state (`:idle`, `:authenticating`, `:fetching_userinfo`, `:complete`, `:error`)
+    * `:provider` - OAuth provider name (e.g., "Google", "GitHub")
+    * `:myself` - Phoenix LiveView socket reference for event handling
+    * `:authorize_url` - OAuth authorization URL (required when state is `:idle` or `:error`)
+    * `:userinfo` - User information map from OAuth provider (required when state is `:complete`)
+    * `:error` - Error information (required when state is `:error`)
+    * `:scopes_changed` - Boolean indicating if selected scopes have changed since last authorization
+
+  ## States
+
+    * `:idle` - Initial state, shows authorize button
+    * `:authenticating` - OAuth flow in progress
+    * `:fetching_userinfo` - Retrieving user details from provider
+    * `:complete` - Successfully authenticated
+    * `:error` - Authentication failed
+
+  ## Examples
+
+      <.oauth_status
+        state={:complete}
+        provider="Google"
+        myself={@myself}
+        userinfo={%{"name" => "John Doe", "email" => "john@example.com"}}
+        scopes_changed={false}
+      />
+
+      <.oauth_status
+        state={:error}
+        provider="GitHub"
+        myself={@myself}
+        authorize_url="https://github.com/login/oauth/authorize?..."
+        error={:invalid_token}
+        scopes_changed={false}
+      />
   """
-  attr :type, :atom, required: true
-  attr :changeset, :any, default: nil
-  attr :provider, :string, default: nil
-  attr :authorize_url, :string, default: nil
+  attr :state, :atom, required: true
+  attr :provider, :string, required: true
   attr :myself, :any, required: true
-  attr :revocation_endpoint, :any, default: nil
+  attr :authorize_url, :string, default: nil
+  attr :userinfo, :map, default: nil
+  attr :error, :any, default: nil
+  attr :scopes_changed, :boolean, default: false
 
-  def alert_block(%{type: :missing_required} = assigns) do
-    oauth_error_type = get_field(assigns.changeset, :oauth_error_type)
-    oauth_error_details = get_field(assigns.changeset, :oauth_error_details)
+  def oauth_status(assigns) do
+    ~H"""
+    <div class="space-y-4">
+      <%= if @scopes_changed do %>
+        <.scope_change_alert provider={@provider} myself={@myself} />
+      <% else %>
+        <%= case @state do %>
+          <% :idle -> %>
+            <.authorize_button
+              authorize_url={@authorize_url}
+              provider={@provider}
+              myself={@myself}
+            />
+          <% :authenticating -> %>
+            <.text_ping_loader>
+              Authenticating with {@provider}...
+            </.text_ping_loader>
+          <% :fetching_userinfo -> %>
+            <.text_ping_loader>
+              Fetching user information from {@provider}...
+            </.text_ping_loader>
+          <% :complete -> %>
+            <%= if @userinfo do %>
+              <.userinfo_card userinfo={@userinfo} provider={@provider} />
+            <% else %>
+              <.success_without_userinfo provider={@provider} />
+            <% end %>
 
-    error_message = get_oauth_error_message(assigns.changeset)
+            <.reauthorize_button provider={@provider} myself={@myself} />
+          <% :error -> %>
+            <.oauth_error_alert
+              error={@error}
+              provider={@provider}
+              myself={@myself}
+              authorize_url={@authorize_url}
+            />
+        <% end %>
+      <% end %>
+    </div>
+    """
+  end
 
-    %ErrorResponse{
-      header: header,
-      action: suggested_action,
-      message: user_message
-    } =
-      categorize_oauth_error_by_type(
-        oauth_error_type,
-        oauth_error_details,
-        assigns[:provider]
-      )
+  # Private components
 
-    action = determine_action_button(assigns, suggested_action)
+  defp success_without_userinfo(assigns) do
+    ~H"""
+    <LightningWeb.Components.Common.alert type="success">
+      <:message>
+        Successfully authenticated with {@provider}!
+        Your credential is ready to use, though we couldn't fetch your user information.
+      </:message>
+    </LightningWeb.Components.Common.alert>
+    """
+  end
+
+  defp oauth_error_alert(assigns) do
+    error_display =
+      OAuthErrorFormatter.format_error(assigns.error, assigns.provider)
+
+    alert_type = OAuthErrorFormatter.alert_type(error_display)
+
+    action = %{
+      id: "oauth-error-action",
+      text: error_display.action_text,
+      click: "authorize_click",
+      target: assigns.myself
+    }
 
     assigns =
       assigns
-      |> assign(:action, Map.from_struct(action))
-      |> assign(:header, header)
-      |> assign(:error_message, error_message)
-      |> assign(:user_message, user_message)
+      |> assign(:error_display, error_display)
+      |> assign(:alert_type, alert_type)
+      |> assign(:action, action)
 
     ~H"""
-    <Common.alert type="danger" header={@header} actions={[@action]}>
+    <LightningWeb.Components.Common.alert
+      type={@alert_type}
+      header={@error_display.header}
+      actions={[@action]}
+    >
       <:message>
-        <p>{@error_message}</p>
-        <p>{@user_message}</p>
+        <p>{@error_display.message}</p>
+        <%= if @error_display.details do %>
+          <p class="mt-2 text-sm whitespace-pre-line">{@error_display.details}</p>
+        <% end %>
       </:message>
-    </Common.alert>
+    </LightningWeb.Components.Common.alert>
     """
   end
 
-  def alert_block(%{type: :token_failed} = assigns) do
-    action = create_reauth_action(assigns.myself, "Try again")
-    assigns = assign(assigns, :action, Map.from_struct(action))
+  defp scope_change_alert(assigns) do
+    error_display =
+      OAuthErrorFormatter.format_error(:scope_changed, assigns.provider)
+
+    action = %{
+      id: "scope-change-action",
+      text: error_display.action_text,
+      click: "authorize_click",
+      target: assigns.myself
+    }
+
+    assigns =
+      assigns
+      |> assign(:error_display, error_display)
+      |> assign(:action, action)
 
     ~H"""
-    <Common.alert type="warning" header="Something went wrong." actions={[@action]}>
+    <LightningWeb.Components.Common.alert
+      type="warning"
+      header={@error_display.header}
+      actions={[@action]}
+    >
       <:message>
-        <p>Failed retrieving the token from the provider.</p>
+        <p>{@error_display.message}</p>
+        <%= if @error_display.details do %>
+          <p class="mt-2 text-sm whitespace-pre-line">{@error_display.details}</p>
+        <% end %>
       </:message>
-    </Common.alert>
+    </LightningWeb.Components.Common.alert>
     """
   end
 
-  def alert_block(%{type: :refresh_failed} = assigns) do
-    action = create_reauth_action(assigns.myself, "Request new token")
-    assigns = assign(assigns, :action, Map.from_struct(action))
+  defp authorize_button(assigns) do
+    assigns =
+      assign_new(assigns, :text, fn -> "Sign in with #{assigns.provider}" end)
 
     ~H"""
-    <Common.alert type="warning" header="Something went wrong." actions={[@action]}>
-      <:message>
-        <p>Failed renewing your access token.</p>
-      </:message>
-    </Common.alert>
+    <.button
+      id="authorize-button"
+      phx-click="authorize_click"
+      phx-target={@myself}
+      theme="primary"
+    >
+      <span class="text-normal">{@text}</span>
+    </.button>
     """
-  end
-
-  def alert_block(%{type: :userinfo_failed} = assigns) do
-    action = create_userinfo_retry_action(assigns.myself)
-    assigns = assign(assigns, :action, Map.from_struct(action))
-
-    ~H"""
-    <Common.alert type="info" actions={[@action]}>
-      <:message>
-        <p>
-          That worked, but we couldn't fetch your user information.
-          You can save your credential now or try again.
-        </p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :code_failed} = assigns) do
-    action = create_reauth_action(assigns.myself, "Reauthorize")
-    assigns = assign(assigns, :action, Map.from_struct(action))
-
-    ~H"""
-    <Common.alert type="danger" header="Something went wrong." actions={[@action]}>
-      <:message>
-        <p>Failed retrieving authentication code.</p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :revoke_failed} = assigns) do
-    action = create_auth_action(assigns.myself, "Authorize again")
-    assigns = assign(assigns, :action, Map.from_struct(action))
-
-    ~H"""
-    <Common.alert type="danger" header="Something went wrong." actions={[@action]}>
-      <:message>
-        Token revocation failed. The token associated with this credential may
-        have already been revoked or expired. You may try to authorize again,
-        or delete this credential and create a new one.
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :fetching_userinfo} = assigns) do
-    ~H"""
-    <.text_ping_loader>
-      Attempting to fetch user information from your OAuth provider
-    </.text_ping_loader>
-    """
-  end
-
-  defp create_reauth_action(target, text) do
-    ActionButton.new("re-authorize-button", text, target, "re_authorize_click")
-  end
-
-  defp create_auth_action(target, text) do
-    ActionButton.new("authorize-button", text, target, "authorize_click")
-  end
-
-  defp create_userinfo_retry_action(target) do
-    ActionButton.new(
-      "try-userinfo-button",
-      "Try again",
-      target,
-      "try_userinfo_again"
-    )
   end
 
   defp reauthorize_button(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:class, fn -> "" end)
-      |> assign(:button_class, "link #{assigns.class}")
-
     ~H"""
-    <button
-      id={@id}
-      type="button"
-      phx-target={@target}
-      phx-click="re_authorize_click"
-      class={@button_class}
-    >
-      {render_slot(@inner_block)}
-    </button>
+    <div class="text-sm text-gray-600">
+      If your credential is no longer working, you can
+      <button
+        type="button"
+        phx-click="authorize_click"
+        phx-target={@myself}
+        class="font-medium text-blue-600 hover:text-blue-500"
+      >
+        reauthenticate with {@provider}
+      </button>
+    </div>
     """
   end
 
-  @spec get_oauth_error_message(Ecto.Changeset.t()) :: String.t()
-  defp get_oauth_error_message(changeset)
-       when is_struct(changeset, Ecto.Changeset) do
-    case Keyword.get(changeset.errors, :oauth_token) do
-      {message, _} when is_binary(message) -> message
-      _ -> "OAuth authorization failed"
-    end
-  end
-
-  defp get_oauth_error_message(_), do: "OAuth authorization failed"
-
-  @spec categorize_oauth_error_by_type(
-          atom() | nil,
-          map() | nil,
-          provider()
-        ) :: ErrorResponse.t()
-  defp categorize_oauth_error_by_type(nil, _error_details, provider) do
-    ErrorResponse.new(
-      "OAuth Error",
-      :generic,
-      build_generic_message(provider)
-    )
-  end
-
-  defp categorize_oauth_error_by_type(error_type, error_details, provider) do
-    case error_type do
-      :missing_scopes ->
-        handle_missing_scopes_error(error_details, provider)
-
-      :missing_refresh_token ->
-        handle_missing_refresh_token_error(error_details, provider)
-
-      :invalid_oauth_response ->
-        handle_invalid_oauth_response_error(provider)
-
-      :invalid_token_format ->
-        handle_invalid_token_format_error(provider)
-
-      :missing_token_data ->
-        handle_missing_token_data_error(provider)
-
-      :missing_access_token ->
-        handle_missing_access_token_error(provider)
-
-      :missing_expiration ->
-        handle_missing_expiration_error(provider)
-
-      _ ->
-        handle_generic_oauth_error(provider)
-    end
-  end
-
-  defp handle_invalid_oauth_response_error(provider) do
-    ErrorResponse.new(
-      "Invalid OAuth Response",
-      :reauthorize,
-      "The authorization response from #{provider || "the provider"} is invalid. This may be a temporary provider issue."
-    )
-  end
-
-  defp handle_invalid_token_format_error(provider) do
-    ErrorResponse.new(
-      "Invalid Token Format",
-      :reauthorize,
-      "The OAuth token received from #{provider || "the provider"} is in an invalid format. Please try authorizing again."
-    )
-  end
-
-  defp handle_missing_token_data_error(provider) do
-    ErrorResponse.new(
-      "Authorization Required",
-      :reauthorize,
-      "Please complete the OAuth authorization process with #{provider || "your provider"}."
-    )
-  end
-
-  defp handle_missing_access_token_error(provider) do
-    ErrorResponse.new(
-      "Missing Access Token",
-      :reauthorize,
-      "The authorization response from #{provider || "the provider"} is missing the required access token."
-    )
-  end
-
-  defp handle_missing_expiration_error(provider) do
-    ErrorResponse.new(
-      "Invalid Token Response",
-      :reauthorize,
-      "The OAuth token from #{provider || "the provider"} is missing expiration information."
-    )
-  end
-
-  defp handle_generic_oauth_error(provider) do
-    ErrorResponse.new(
-      "OAuth Error",
-      :generic,
-      build_generic_message(provider)
-    )
-  end
-
-  @spec handle_missing_scopes_error(map() | nil, provider()) :: ErrorResponse.t()
-  defp handle_missing_scopes_error(error_details, provider) do
-    missing_scopes = get_in(error_details, [:missing_scopes]) || []
-    missing_count = length(missing_scopes)
-
-    case missing_count do
-      0 ->
-        ErrorResponse.new(
-          "Missing Required Permissions",
-          :reauthorize,
-          "Some required permissions were not granted. Please ensure you grant all selected permissions when authorizing with #{provider || "your provider"}."
-        )
-
-      1 ->
-        scope = List.first(missing_scopes)
-
-        ErrorResponse.new(
-          "Missing Required Permission",
-          :reauthorize,
-          "The '#{scope}' permission was not granted. Please ensure you select this permission when authorizing with #{provider || "your provider"}."
-        )
-
-      _ ->
-        scope_list = Enum.join(missing_scopes, "', '")
-
-        ErrorResponse.new(
-          "Missing Required Permissions",
-          :reauthorize,
-          "The following permissions were not granted: '#{scope_list}'. Please ensure you select all required permissions when authorizing with #{provider || "your provider"}."
-        )
-    end
-  end
-
-  @spec handle_missing_refresh_token_error(map() | nil, provider()) ::
-          ErrorResponse.t()
-  defp handle_missing_refresh_token_error(error_details, provider) do
-    existing_available =
-      get_in(error_details, [:existing_token_available]) || false
-
-    if existing_available do
-      ErrorResponse.new(
-        "Missing Refresh Token",
-        :use_existing,
-        "We didn't receive a refresh token from #{provider || "this provider"}. You may have already granted access to OpenFn via another credential. If you have another credential, please use that one."
-      )
-    else
-      ErrorResponse.new(
-        "Missing Refresh Token",
-        :reauthorize,
-        "Please reauthorize to provide OpenFn with the necessary refresh token for #{provider || "your provider"}."
-      )
-    end
-  end
-
-  @spec build_generic_message(provider()) :: String.t()
-  defp build_generic_message(provider) do
-    "Please try authorizing with #{provider || "your provider"} again. If the problem persists, contact support."
-  end
-
-  @spec determine_action_button(map(), atom()) :: ActionButton.t()
-  defp determine_action_button(assigns, suggested_action) do
-    case suggested_action do
-      action when action in [:reauthorize, :generic] ->
-        if assigns[:revocation_endpoint] do
-          create_reauth_action(assigns.myself, "Reauthorize")
-        else
-          create_auth_action(assigns.myself, "Authorize")
-        end
-
-      :use_existing ->
-        ActionButton.new(
-          "cancel-button",
-          "Use Existing Credential",
-          assigns.myself,
-          "cancel_click"
-        )
-    end
+  defp userinfo_card(assigns) do
+    ~H"""
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div class="flex items-center">
+        <img
+          src={@userinfo["picture"] || "/images/user.png"}
+          class="h-16 w-16 rounded-full"
+          alt={@userinfo["name"] || "User"}
+        />
+        <div class="ml-4">
+          <h3 class="text-base font-semibold text-gray-900">
+            {@userinfo["name"] || "Unknown User"}
+          </h3>
+          <p class="text-sm text-gray-600">
+            {@userinfo["email"] || "No email provided"}
+          </p>
+          <p class="text-xs text-green-600 mt-1">
+            Successfully authenticated with {@provider}
+          </p>
+        </div>
+      </div>
+    </div>
+    """
   end
 end
