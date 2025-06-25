@@ -115,22 +115,22 @@ defmodule LightningWeb.RunChannel do
         })
 
       {:error, %{"error" => "invalid_grant"} = error} ->
+        Logger.error(
+          "Refresh token has expired: #{inspect(error)}",
+          credential_id: id
+        )
+
         {:reply, {:error, error}, socket}
 
       {:error, error} ->
         Logger.error(fn ->
           {"""
            Something went wrong when fetching or refreshing a credential.
-
            #{inspect(error)}
            """, [credential_id: id]}
         end)
 
-        reply_with(
-          socket,
-          {:error,
-           %{errors: "Something went wrong when retrieving the credential"}}
-        )
+        reply_with(socket, {:error, error})
     end
   end
 
