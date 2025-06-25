@@ -133,7 +133,7 @@ workflows:
             - run:
                 command: sudo -u lightning ./bin/ci_tests
             - codecov/upload:
-                file: test/reports/excoveralls.json
+                file: test/reports/coverage.json
             - store_test_results:
                 path: test/reports/
       - build:

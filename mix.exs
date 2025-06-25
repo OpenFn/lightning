@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.13.1",
+      version: "2.13.3-pre",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -211,7 +211,7 @@ defmodule Lightning.MixProject do
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",
-      homepage_url: "https://openfn.github.io/Lightning",
+      homepage_url: "https://openfn.github.io/lightning",
       groups_for_modules: [
         Accounts: [
           ~r/Lightning.Accounts/

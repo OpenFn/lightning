@@ -684,6 +684,21 @@ defmodule Lightning.Invocation do
     |> Repo.all()
   end
 
+  @spec assemble_logs_for_job_and_run(Ecto.UUID.t(), Ecto.UUID.t()) :: binary()
+  def assemble_logs_for_job_and_run(job_id, run_id) do
+    query =
+      from s in Step,
+        join: l in assoc(s, :log_lines),
+        on: s.job_id == ^job_id,
+        where: l.run_id == ^run_id,
+        order_by: [asc: l.timestamp],
+        select: l.message
+
+    query
+    |> Repo.all()
+    |> Enum.join("\n")
+  end
+
   def assemble_logs_for_step(nil), do: nil
 
   @doc """

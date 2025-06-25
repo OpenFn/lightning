@@ -31,6 +31,61 @@ and this project adheres to
   debugging and reauthorizing Oauth credentials.
   [#3326](https://github.com/OpenFn/lightning/issues/3326)
 
+## [2.13.3-pre]
+
+### Added
+
+- Give users the option to attach job code and logs to AI Assistant
+  [#2935](https://github.com/OpenFn/lightning/issues/2935)
+- Allow users to edit position of nodes in the workflow
+  [#3123](https://github.com/OpenFn/lightning/issues/3123)
+- Minimap for easier workflow navigation
+  [#3125](https://github.com/OpenFn/lightning/issues/3125)
+- Added icons to control layout in the workflow
+  [PR #3242](https://github.com/OpenFn/lightning/pull/3242)
+
+### Changed
+
+- Update React Flow to version 12
+  [PR #3242](https://github.com/OpenFn/lightning/pull/3242)
+- Create nodes and edges with the same button in the workflow
+  [#2175](https://github.com/OpenFn/lightning/issues/2175)
+
+### Fixed
+
+- AI Assistant fails to send job context in subsequent messages
+  [#3329](https://github.com/OpenFn/lightning/issues/3329)
+- Fix snapshot cleanup incorrectly deleting runs via cascade deletion
+  [#3313](https://github.com/OpenFn/lightning/issues/3313)
+- `Lightning.Demo.reset_demo()` was broken by an ordering issue between
+  Credentials and Oauth tokens.
+
+## [v2.13.2] - 2025-06-18
+
+⚠️️ Please note that **this version fixes an issue that caused premature run
+history deletion** when snapshots were cleaned. Certain additional runs related
+to pre-existing work orders were being deleted before their retention period.
+This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
+`latest` you'd see this bug come out in `v2.13.0` on June 4th.
+
+## [v2.13.2-pre] - 2025-06-18
+
+### Added
+
+- Show who started each run
+  [#3309](https://github.com/OpenFn/lightning/issues/3309)
+
+### Changed
+
+### Fixed
+
+- Stop cleanup of snapshots (was causing data loss)
+- The application env `queue_result_retention_period` was previously pulling
+  from a wrongly named `QUEUE_RESULT_RETENTION_PERIOD_SECONDS`; the calculation
+  is actually done in minutes; we now set this env from
+  `QUEUE_RESULT_RETENTION_PERIOD_MINUTES`
+  [#3316](https://github.com/OpenFn/lightning/issues/3316)
+
 ## [v2.13.1] - 2025-06-12
 
 ## [v2.13.1-pre] - 2025-06-11
@@ -39,6 +94,8 @@ and this project adheres to
 
 - Report AI Assistant errors to Sentry
   [#3010](https://github.com/OpenFn/lightning/issues/3010)
+- Do not validate edge js condition expression
+  [#3028](https://github.com/OpenFn/lightning/issues/3028)
 
 ### Fixed
 

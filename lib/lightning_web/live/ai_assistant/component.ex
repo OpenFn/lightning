@@ -31,7 +31,6 @@ defmodule LightningWeb.AiAssistant.Component do
        sort_direction: :desc,
        has_read_disclaimer: false,
        all_sessions: AsyncResult.ok([]),
-       form: to_form(%{"content" => nil}),
        pending_message: AsyncResult.ok(nil),
        ai_enabled?: AiAssistant.enabled?()
      })
@@ -52,6 +51,9 @@ defmodule LightningWeb.AiAssistant.Component do
      )
      |> assign(:mode, mode)
      |> assign(:handler, ModeRegistry.get_handler(mode))
+     |> assign_new(:changeset, fn %{handler: handler} ->
+       handler.validate_form_changeset(%{"content" => nil})
+     end)
      |> maybe_check_limit()
      |> apply_action(action, mode)}
   end
@@ -75,11 +77,20 @@ defmodule LightningWeb.AiAssistant.Component do
     """
   end
 
-  def handle_event("validate", params, socket) do
-    {:noreply, assign(socket, form: to_form(params))}
+  def handle_event("validate", %{"assistant" => params}, socket) do
+    handler = socket.assigns.handler
+
+    {:noreply,
+     assign(socket, changeset: handler.validate_form_changeset(params))}
   end
 
-  def handle_event("send_message", %{"content" => content}, socket) do
+  def handle_event(
+        "send_message",
+        %{"assistant" => %{"content" => content} = params},
+        socket
+      ) do
+    handler = socket.assigns.handler
+
     if socket.assigns.can_edit_workflow do
       %{action: action} = socket.assigns
 
@@ -90,8 +101,14 @@ defmodule LightningWeb.AiAssistant.Component do
 
       if socket.assigns.ai_limit_result == :ok do
         {:noreply,
-         save_message(socket, action, content)
-         |> assign(:form, to_form(%{"content" => nil}))}
+         socket
+         |> assign(
+           :changeset,
+           params
+           |> Map.merge(%{"content" => nil})
+           |> handler.validate_form_changeset()
+         )
+         |> save_message(action, content)}
       else
         {:noreply, socket}
       end
@@ -99,7 +116,10 @@ defmodule LightningWeb.AiAssistant.Component do
       {:noreply,
        socket
        |> assign(
-         form: to_form(%{"content" => nil}),
+         changeset:
+           params
+           |> Map.merge(%{"content" => nil})
+           |> handler.validate_form_changeset(),
          error_message: "You are not authorized to use the AI Assistant"
        )}
     end
@@ -146,13 +166,14 @@ defmodule LightningWeb.AiAssistant.Component do
       )
 
     handler = socket.assigns.handler
+    options = handler.query_options(socket.assigns.changeset)
 
     {:noreply,
      socket
      |> assign(:session, session)
      |> assign(:pending_message, AsyncResult.loading())
      |> start_async(:process_message, fn ->
-       handler.query(session, message.content)
+       handler.query(session, message.content, options)
      end)}
   end
 
@@ -242,10 +263,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp apply_action(socket, :show, _mode) do
     session =
-      socket.assigns.handler.get_session!(
-        socket.assigns.chat_session_id,
-        socket.assigns
-      )
+      socket.assigns.handler.get_session!(socket.assigns)
 
     socket = maybe_push_workflow_code(socket, session)
     pending_message = find_pending_user_message(session)
@@ -352,10 +370,13 @@ defmodule LightningWeb.AiAssistant.Component do
   defp process_message(socket, message) do
     session = socket.assigns.session
     handler = socket.assigns.handler
+    options = handler.query_options(socket.assigns.changeset)
 
     socket
     |> assign(:pending_message, AsyncResult.loading())
-    |> start_async(:process_message, fn -> handler.query(session, message) end)
+    |> start_async(:process_message, fn ->
+      handler.query(session, message, options)
+    end)
   end
 
   defp maybe_push_workflow_code(socket, session_or_message) do
@@ -459,7 +480,9 @@ defmodule LightningWeb.AiAssistant.Component do
         </:loading>
 
         <.form
-          for={@form}
+          :let={form}
+          as={:assistant}
+          for={@changeset}
           phx-submit="send_message"
           phx-change="validate"
           class="row-span-1 pl-2 pr-2 pb-1"
@@ -480,7 +503,7 @@ defmodule LightningWeb.AiAssistant.Component do
           </div>
 
           <.chat_input
-            form={@form}
+            form={form}
             disabled={
               @handler.chat_input_disabled?(%{
                 assigns
@@ -569,6 +592,21 @@ defmodule LightningWeb.AiAssistant.Component do
             <.icon name="hero-paper-airplane-solid" class="h-3 w-3" />
           </.simple_button_with_tooltip>
         </div>
+      </div>
+
+      <div
+        :if={@handler.enable_attachment_options_component?()}
+        class="mt-2 flex gap-2 content-center"
+      >
+        <span class="place-content-center">
+          <.icon name="hero-paper-clip" class="size-4" /> Attach:
+        </span>
+        <.inputs_for :let={options} field={@form[:options]}>
+          <.input type="checkbox" label="Code" field={options[:code]} />
+          <%!-- <.input type="checkbox" label="Input" field={options[:input]} />
+          <.input type="checkbox" label="Output" field={options[:output]} /> --%>
+          <.input type="checkbox" label="Logs" field={options[:logs]} />
+        </.inputs_for>
       </div>
 
       <div class="mt-2">

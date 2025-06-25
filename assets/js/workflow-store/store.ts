@@ -2,8 +2,9 @@ import type { Patch as ImmerPatch } from 'immer';
 
 import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore, useStore, type StoreApi } from 'zustand';
-import type { Lightning } from '../workflow-diagram/types';
+import type { Lightning, Positions } from '../workflow-diagram/types';
 import { randomUUID } from '../common';
+import type { XYPosition } from '@xyflow/react';
 
 enablePatches();
 
@@ -27,6 +28,7 @@ export type WorkflowProps = {
   edges: Lightning.Edge[];
   disabled: boolean;
   selection: string | null;
+  positions: Positions | null;
 };
 
 export interface WorkflowState extends WorkflowProps {
@@ -42,6 +44,8 @@ export interface WorkflowState extends WorkflowProps {
   observer: null | ((v: unknown) => void);
   subscribe: (cb: (v: unknown) => void) => void;
   add: (data: AddArgs) => void;
+  updatePositions: (data: Positions | null) => void;
+  updatePosition: (nodeId: string, pos: XYPosition) => void;
   change: (data: ChangeArgs) => void;
   remove: (data: RemoveArgs) => void;
   rebase: (data: Partial<WorkflowProps>) => void;
@@ -116,6 +120,7 @@ const DEFAULT_PROPS: WorkflowProps = {
   edges: [],
   disabled: false,
   selection: null,
+  positions: null,
 };
 
 export type WorkflowStore = StoreApi<WorkflowState>;
@@ -139,16 +144,28 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
         proposeChanges(
           state,
           draft => {
-            (['jobs', 'triggers', 'edges'] as const).forEach(
-              <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
+            (['jobs', 'triggers', 'edges', 'positions'] as const).forEach(
+              <K extends 'jobs' | 'triggers' | 'edges' | 'positions'>(
+                key: K
+              ) => {
                 const change = data[key];
-                if (change) {
-                  change.forEach((item: NonNullable<ChangeArgs[K]>[number]) => {
-                    if (!item.id) {
-                      item.id = randomUUID();
-                    }
-                    draft[key].push(item);
-                  });
+                if (change && typeof change === 'object') {
+                  if (Array.isArray(change)) {
+                    // update an array
+                    change.forEach(
+                      (item: NonNullable<ChangeArgs[K]>[number]) => {
+                        if (!item.id) {
+                          item.id = randomUUID();
+                        }
+                        draft[key].push(item);
+                      }
+                    );
+                  } else {
+                    // update a plain object literal
+                    Object.entries(change).forEach(([ckey, cvalue]) => {
+                      if (draft[key]) draft[key][ckey] = cvalue;
+                    });
+                  }
                 }
               }
             );
@@ -177,6 +194,30 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
                 }
               }
             );
+          },
+          get().observer
+        )
+      );
+    },
+    updatePositions: data => {
+      set(state =>
+        proposeChanges(
+          state,
+          draft => {
+            draft.positions = data;
+          },
+          get().observer
+        )
+      );
+    },
+    updatePosition(nodeId, pos) {
+      set(state =>
+        proposeChanges(
+          state,
+          draft => {
+            if (draft.positions) {
+              draft.positions = { ...draft.positions, [nodeId]: pos };
+            }
           },
           get().observer
         )
