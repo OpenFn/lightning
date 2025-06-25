@@ -469,30 +469,30 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     end)
   end
 
-  defp can_revoke?(socket) do
-    case socket.assigns do
-      %{selected_client: %{revocation_endpoint: endpoint}}
-      when not is_nil(endpoint) ->
-        true
+  # defp can_revoke?(socket) do
+  #   case socket.assigns do
+  #     %{selected_client: %{revocation_endpoint: endpoint}}
+  #     when not is_nil(endpoint) ->
+  #       true
 
-      _ ->
-        false
-    end
-  end
+  #     _ ->
+  #       false
+  #   end
+  # end
 
-  defp extract_token(socket) do
-    case socket.assigns do
-      %{credential: %{oauth_token: %{body: oauth_body}}} ->
-        oauth_body
+  # defp extract_token(socket) do
+  #   case socket.assigns do
+  #     %{credential: %{oauth_token: %{body: oauth_body}}} ->
+  #       oauth_body
 
-      %{changeset: %{params: %{"oauth_token" => token}}}
-      when not is_nil(token) ->
-        token
+  #     %{changeset: %{params: %{"oauth_token" => token}}}
+  #     when not is_nil(token) ->
+  #       token
 
-      _ ->
-        nil
-    end
-  end
+  #     _ ->
+  #       nil
+  #   end
+  # end
 
   defp validate_token(token, expected_scopes) do
     with {:ok, _} <- OauthValidation.validate_token_data(token) do
