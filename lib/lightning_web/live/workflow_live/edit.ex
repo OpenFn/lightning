@@ -459,7 +459,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
             <.single_inputs_for
               :let={{jf}}
-              :if={@selection_mode != "workflow_input" && @selected_job}
+              :if={@selected_job && @selection_mode != "workflow_input"}
               form={@workflow_form}
               field={:jobs}
               id={@selected_job.id}
@@ -541,7 +541,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </.single_inputs_for>
             <.single_inputs_for
               :let={tf}
-              :if={@selected_trigger}
+              :if={@selected_trigger && @selection_mode != "workflow_input"}
               form={@workflow_form}
               field={:triggers}
               id={@selected_trigger.id}
@@ -598,7 +598,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </.single_inputs_for>
             <.single_inputs_for
               :let={ef}
-              :if={@selected_edge}
+              :if={@selected_edge && @selection_mode != "workflow_input"}
               form={@workflow_form}
               field={:edges}
               id={@selected_edge.id}
