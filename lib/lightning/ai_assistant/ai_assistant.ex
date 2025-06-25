@@ -633,19 +633,42 @@ defmodule Lightning.AiAssistant do
       end
 
   """
-  @spec query(ChatSession.t(), String.t()) ::
+  @spec query(ChatSession.t(), String.t(), map()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
-  def query(session, content) do
+  def query(session, content, opts \\ %{}) do
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
     pending_user_message = find_pending_user_message(session, content)
 
+    context =
+      build_context(
+        %{
+          expression: session.expression,
+          adaptor: session.adaptor,
+          log: session.logs
+        },
+        opts
+      )
+
     ApolloClient.query(
       content,
-      %{expression: session.expression, adaptor: session.adaptor},
+      context,
       build_history(session),
       session.meta || %{}
     )
     |> handle_apollo_resp(session, pending_user_message)
+  end
+
+  defp build_context(context, opts) do
+    Enum.reduce(opts, context, fn
+      {:code, false}, acc ->
+        Map.drop(acc, [:expression])
+
+      {:logs, false}, acc ->
+        Map.drop(acc, [:log])
+
+      _opt, acc ->
+        acc
+    end)
   end
 
   @doc """
