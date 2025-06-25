@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="Lightning v2.13.3-pre">
+
+
+    <title>LightningWeb.Components.Oauth — Lightning v2.13.3-pre</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
+
+    <script defer src="dist/sidebar_items-3DF3751F.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.13.3-pre
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Components.Oauth</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.13.3-pre)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/oauth.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>OAuth-related UI components for Lightning credentials.</p><p>This module provides components for OAuth authentication flows, including
+scope selection, user information display, and error handling with
+structured error messages based on validation results.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#missing_client_warning/1" data-no-tooltip="" translate="no">missing_client_warning(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Displays a warning alert when the OAuth client configuration is missing.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#oauth_status/1" data-no-tooltip="" translate="no">oauth_status(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Renders the OAuth authentication status and flow UI.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#scopes_picklist/1" data-no-tooltip="" translate="no">scopes_picklist(assigns)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Renders a scope selection interface for OAuth permissions.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="missing_client_warning/1">
+
+  <div class="detail-header">
+    <a href="#missing_client_warning/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">missing_client_warning(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/oauth.ex#L108" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Displays a warning alert when the OAuth client configuration is missing.</p><p>This component shows an error message when the OAuth client associated with
+a credential cannot be found, typically due to misconfiguration or deletion.</p><h2 id="missing_client_warning/1-examples" class="section-heading"><a href="#missing_client_warning/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">missing_client_warning</span><span class="w"> </span><span class="o">/</span><span class="o">&gt;</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="oauth_status/1">
+
+  <div class="detail-header">
+    <a href="#oauth_status/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">oauth_status(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/oauth.ex#L175" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Renders the OAuth authentication status and flow UI.</p><p>This component manages the complete OAuth authentication flow, displaying
+different UI states based on the authentication progress. It handles initial
+authorization, loading states, success states with user information, and
+various error conditions.</p><h2 id="oauth_status/1-attributes" class="section-heading"><a href="#oauth_status/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">:state</code> - Current authentication state (<code class="inline">:idle</code>, <code class="inline">:authenticating</code>, <code class="inline">:fetching_userinfo</code>, <code class="inline">:complete</code>, <code class="inline">:error</code>)</li><li><code class="inline">:provider</code> - OAuth provider name (e.g., &quot;Google&quot;, &quot;GitHub&quot;)</li><li><code class="inline">:myself</code> - Phoenix LiveView socket reference for event handling</li><li><code class="inline">:authorize_url</code> - OAuth authorization URL (required when state is <code class="inline">:idle</code> or <code class="inline">:error</code>)</li><li><code class="inline">:userinfo</code> - User information map from OAuth provider (required when state is <code class="inline">:complete</code>)</li><li><code class="inline">:error</code> - Error information (required when state is <code class="inline">:error</code>)</li><li><code class="inline">:scopes_changed</code> - Boolean indicating if selected scopes have changed since last authorization</li></ul><h2 id="oauth_status/1-states" class="section-heading"><a href="#oauth_status/1-states" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">States</span></h2><ul><li><code class="inline">:idle</code> - Initial state, shows authorize button</li><li><code class="inline">:authenticating</code> - OAuth flow in progress</li><li><code class="inline">:fetching_userinfo</code> - Retrieving user details from provider</li><li><code class="inline">:complete</code> - Successfully authenticated</li><li><code class="inline">:error</code> - Authentication failed</li></ul><h2 id="oauth_status/1-examples" class="section-heading"><a href="#oauth_status/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">oauth_status</span><span class="w">
+  </span><span class="n">state</span><span class="o">=</span><span class="p" data-group-id="9877489021-1">{</span><span class="ss">:complete</span><span class="p" data-group-id="9877489021-1">}</span><span class="w">
+  </span><span class="n">provider</span><span class="o">=</span><span class="s">&quot;Google&quot;</span><span class="w">
+  </span><span class="n">myself</span><span class="o">=</span><span class="p" data-group-id="9877489021-2">{</span><span class="na">@myself</span><span class="p" data-group-id="9877489021-2">}</span><span class="w">
+  </span><span class="n">userinfo</span><span class="o">=</span><span class="p" data-group-id="9877489021-3">{</span><span class="p" data-group-id="9877489021-4">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;John Doe&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;email&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;john@example.com&quot;</span><span class="p" data-group-id="9877489021-4">}</span><span class="p" data-group-id="9877489021-3">}</span><span class="w">
+  </span><span class="n">scopes_changed</span><span class="o">=</span><span class="p" data-group-id="9877489021-5">{</span><span class="no">false</span><span class="p" data-group-id="9877489021-5">}</span><span class="w">
+</span><span class="o">/</span><span class="o">&gt;</span><span class="w">
+
+</span><span class="o">&lt;</span><span class="o">.</span><span class="n">oauth_status</span><span class="w">
+  </span><span class="n">state</span><span class="o">=</span><span class="p" data-group-id="9877489021-6">{</span><span class="ss">:error</span><span class="p" data-group-id="9877489021-6">}</span><span class="w">
+  </span><span class="n">provider</span><span class="o">=</span><span class="s">&quot;GitHub&quot;</span><span class="w">
+  </span><span class="n">myself</span><span class="o">=</span><span class="p" data-group-id="9877489021-7">{</span><span class="na">@myself</span><span class="p" data-group-id="9877489021-7">}</span><span class="w">
+  </span><span class="n">authorize_url</span><span class="o">=</span><span class="s">&quot;https://github.com/login/oauth/authorize?...&quot;</span><span class="w">
+  </span><span class="n">error</span><span class="o">=</span><span class="p" data-group-id="9877489021-8">{</span><span class="ss">:invalid_token</span><span class="p" data-group-id="9877489021-8">}</span><span class="w">
+  </span><span class="n">scopes_changed</span><span class="o">=</span><span class="p" data-group-id="9877489021-9">{</span><span class="no">false</span><span class="p" data-group-id="9877489021-9">}</span><span class="w">
+</span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="oauth_status/1-attributes-1" class="section-heading"><a href="#oauth_status/1-attributes-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">state</code> (<code class="inline">:atom</code>) (required)</li><li><code class="inline">provider</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">myself</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">authorize_url</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">userinfo</code> (<code class="inline">:map</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">error</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">scopes_changed</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">socket</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="scopes_picklist/1">
+
+  <div class="detail-header">
+    <a href="#scopes_picklist/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">scopes_picklist(assigns)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/oauth.ex#L57" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Renders a scope selection interface for OAuth permissions.</p><p>This component displays a list of OAuth scopes as checkboxes, allowing users
+to select which permissions they want to grant. Mandatory scopes are automatically
+checked and disabled to prevent deselection.</p><h2 id="scopes_picklist/1-attributes" class="section-heading"><a href="#scopes_picklist/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">:id</code> - Unique identifier for the component</li><li><code class="inline">:on_change</code> - Event handler for scope selection changes</li><li><code class="inline">:target</code> - Phoenix LiveView target for events</li><li><code class="inline">:selected_scopes</code> - List of currently selected scope strings</li><li><code class="inline">:mandatory_scopes</code> - List of required scope strings that cannot be deselected</li><li><code class="inline">:scopes</code> - Complete list of available scope strings</li><li><code class="inline">:provider</code> - OAuth provider name (e.g., &quot;Google&quot;, &quot;GitHub&quot;)</li><li><code class="inline">:doc_url</code> - Optional URL to provider's scope documentation</li><li><code class="inline">:disabled</code> - Whether all checkboxes should be disabled</li></ul><h2 id="scopes_picklist/1-examples" class="section-heading"><a href="#scopes_picklist/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">scopes_picklist</span><span class="w">
+  </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;google-scopes&quot;</span><span class="w">
+  </span><span class="n">on_change</span><span class="o">=</span><span class="s">&quot;scope_changed&quot;</span><span class="w">
+  </span><span class="n">target</span><span class="o">=</span><span class="p" data-group-id="4458749647-1">{</span><span class="na">@myself</span><span class="p" data-group-id="4458749647-1">}</span><span class="w">
+  </span><span class="n">selected_scopes</span><span class="o">=</span><span class="p" data-group-id="4458749647-2">{</span><span class="p" data-group-id="4458749647-3">[</span><span class="s">&quot;read&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;write&quot;</span><span class="p" data-group-id="4458749647-3">]</span><span class="p" data-group-id="4458749647-2">}</span><span class="w">
+  </span><span class="n">mandatory_scopes</span><span class="o">=</span><span class="p" data-group-id="4458749647-4">{</span><span class="p" data-group-id="4458749647-5">[</span><span class="s">&quot;read&quot;</span><span class="p" data-group-id="4458749647-5">]</span><span class="p" data-group-id="4458749647-4">}</span><span class="w">
+  </span><span class="n">scopes</span><span class="o">=</span><span class="p" data-group-id="4458749647-6">{</span><span class="p" data-group-id="4458749647-7">[</span><span class="s">&quot;read&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;write&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4458749647-7">]</span><span class="p" data-group-id="4458749647-6">}</span><span class="w">
+  </span><span class="n">provider</span><span class="o">=</span><span class="s">&quot;Google&quot;</span><span class="w">
+  </span><span class="n">doc_url</span><span class="o">=</span><span class="s">&quot;https://developers.google.com/identity/protocols/oauth2/scopes&quot;</span><span class="w">
+  </span><span class="n">disabled</span><span class="o">=</span><span class="p" data-group-id="4458749647-8">{</span><span class="no">false</span><span class="p" data-group-id="4458749647-8">}</span><span class="w">
+</span><span class="o">/</span><span class="o">&gt;</span></code></pre><h2 id="scopes_picklist/1-attributes-1" class="section-heading"><a href="#scopes_picklist/1-attributes-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Attributes</span></h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">on_change</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">target</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">selected_scopes</code> (<code class="inline">:list</code>) (required)</li><li><code class="inline">mandatory_scopes</code> (<code class="inline">:list</code>) (required)</li><li><code class="inline">scopes</code> (<code class="inline">:list</code>) (required)</li><li><code class="inline">provider</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">doc_url</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li></ul>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

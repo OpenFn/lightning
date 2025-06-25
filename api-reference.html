@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-8878578A.js"></script>
+    <script defer src="dist/sidebar_items-3DF3751F.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -526,22 +526,30 @@ projects through relational fields.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Lightning.Credentials.OauthMigration.html" translate="no">Lightning.Credentials.OauthMigration</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Module to migrate OAuth credentials to the new token architecture.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
     <a href="Lightning.Credentials.OauthToken.html" translate="no">Lightning.Credentials.OauthToken</a>
 
   </div>
 
     <div class="summary-synopsis"><p>Schema and functions for managing OAuth tokens. This module handles the storage and
-validation of OAuth tokens, allowing multiple credentials to share the same token
-when they have identical scope sets.</p></div>
+validation of OAuth tokens in a 1:1 relationship with credentials.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Credentials.OauthValidation.html" translate="no">Lightning.Credentials.OauthValidation</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Centralized OAuth token validation with structured error handling.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Credentials.OauthValidation.Error.html" translate="no">Lightning.Credentials.OauthValidation.Error</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Represents OAuth-related errors with structured error information.</p></div>
 
 </div>
 <div class="summary-row">
@@ -2281,6 +2289,15 @@ with the newer CoreComponents conventions introduced in Phoenix 1.7.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="LightningWeb.Components.Oauth.html" translate="no">LightningWeb.Components.Oauth</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>OAuth-related UI components for Lightning credentials.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="LightningWeb.Components.Pills.html" translate="no">LightningWeb.Components.Pills</a>
 
   </div>
@@ -2351,20 +2368,29 @@ of projects associations to credentials and / or oauth clients.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.OAuthErrorFormatter.html" translate="no">LightningWeb.CredentialLive.OAuthErrorFormatter</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Provides human-readable error messages for OAuth-related errors.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.OAuthErrorFormatter.ErrorDisplay.html" translate="no">LightningWeb.CredentialLive.OAuthErrorFormatter.ErrorDisplay</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Structured error display information</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="LightningWeb.CredentialLive.OauthClientFormComponent.html" translate="no">LightningWeb.CredentialLive.OauthClientFormComponent</a>
 
   </div>
 
     <div class="summary-synopsis"><p>Form Component for working with a single Credential</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="LightningWeb.CredentialLive.OauthComponent.html" translate="no">LightningWeb.CredentialLive.OauthComponent</a>
-
-  </div>
-
-    <div class="summary-synopsis"></div>
 
 </div>
 <div class="summary-row">
