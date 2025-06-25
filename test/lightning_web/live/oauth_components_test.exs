@@ -226,9 +226,9 @@ defmodule LightningWeb.OauthComponentsTest do
           scopes_changed: false
         )
 
-      assert status =~ "Successfully authenticated with Salesforce!"
-      assert status =~ "Your credential is ready to use"
-      assert status =~ "couldn't fetch your user information"
+      assert status =~ "Successfully authenticated with Salesforce."
+      assert status =~ "Your credential seems ready to use"
+      assert status =~ "we couldn't fetch your user info to verify"
     end
 
     test "renders complete state with default user values" do
