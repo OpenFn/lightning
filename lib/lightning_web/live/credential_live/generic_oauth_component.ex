@@ -293,17 +293,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event("authorize_click", _, socket) do
-    # with token when not is_nil(token) <- extract_token(socket),
-    #      true <- can_revoke?(socket) do
-    #   case OauthHTTPClient.revoke_token(socket.assigns.selected_client, token) do
-    #     :ok ->
-    #       Logger.info("Successfully revoked existing OAuth token")
-
-    #     {:error, error} ->
-    #       Logger.warning("Failed to revoke token: #{inspect(error)}")
-    #   end
-    # end
-
     {:noreply,
      socket
      |> assign(code: nil)
@@ -469,31 +458,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     end)
   end
 
-  # defp can_revoke?(socket) do
-  #   case socket.assigns do
-  #     %{selected_client: %{revocation_endpoint: endpoint}}
-  #     when not is_nil(endpoint) ->
-  #       true
-
-  #     _ ->
-  #       false
-  #   end
-  # end
-
-  # defp extract_token(socket) do
-  #   case socket.assigns do
-  #     %{credential: %{oauth_token: %{body: oauth_body}}} ->
-  #       oauth_body
-
-  #     %{changeset: %{params: %{"oauth_token" => token}}}
-  #     when not is_nil(token) ->
-  #       token
-
-  #     _ ->
-  #       nil
-  #   end
-  # end
-
   defp validate_token(token, expected_scopes) do
     with {:ok, _} <- OauthValidation.validate_token_data(token) do
       OauthValidation.validate_scope_grant(token, expected_scopes)
@@ -638,6 +602,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               authorize_url={@authorize_url}
               myself={@myself}
               scopes_changed={@scopes_changed}
+              socket={@socket}
             />
           </div>
 
