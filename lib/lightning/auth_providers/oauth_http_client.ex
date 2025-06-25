@@ -173,6 +173,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   def generate_authorize_url(client, params) do
     default_params = [
       access_type: "offline",
+      prompt: "consent",
       client_id: client.client_id,
       redirect_uri: RouteHelpers.oidc_callback_url(),
       response_type: "code",
@@ -181,9 +182,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     ]
 
     merged_params = Keyword.merge(default_params, params)
-    encoded_params = URI.encode_query(merged_params)
-
-    "#{client.authorization_endpoint}?#{encoded_params}"
+    encoded = URI.encode_query(merged_params)
+    "#{client.authorization_endpoint}?#{encoded}"
   end
 
   defp revoke_single_token(client, token_value, token_type) do

@@ -293,16 +293,16 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event("authorize_click", _, socket) do
-    with token when not is_nil(token) <- extract_token(socket),
-         true <- can_revoke?(socket) do
-      case OauthHTTPClient.revoke_token(socket.assigns.selected_client, token) do
-        :ok ->
-          Logger.info("Successfully revoked existing OAuth token")
+    # with token when not is_nil(token) <- extract_token(socket),
+    #      true <- can_revoke?(socket) do
+    #   case OauthHTTPClient.revoke_token(socket.assigns.selected_client, token) do
+    #     :ok ->
+    #       Logger.info("Successfully revoked existing OAuth token")
 
-        {:error, error} ->
-          Logger.warning("Failed to revoke token: #{inspect(error)}")
-      end
-    end
+    #     {:error, error} ->
+    #       Logger.warning("Failed to revoke token: #{inspect(error)}")
+    #   end
+    # end
 
     {:noreply,
      socket
