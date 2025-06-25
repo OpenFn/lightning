@@ -6,23 +6,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
+  alias Lightning.Credentials.OauthToken
+  alias Lightning.Credentials.OauthValidation
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.Helpers
   alias Phoenix.LiveView.JS
 
   require Logger
-
-  @oauth_states %{
-    success: [:userinfo_received, :token_received],
-    failure: [
-      :token_failed,
-      :userinfo_failed,
-      :code_failed,
-      :refresh_failed,
-      :missing_required,
-      :revoke_failed
-    ]
-  }
 
   @impl true
   def mount(socket) do
@@ -38,14 +28,16 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        scopes_changed: false,
        available_projects: [],
        selected_projects: [],
-       oauth_progress: :not_started
+       oauth_progress: :idle,
+       oauth_error: nil,
+       previous_oauth_state: nil
      )}
   end
 
   @impl true
   def update(%{selected_client: nil, action: _action} = assigns, socket) do
     selected_scopes =
-      Credentials.normalize_scopes(assigns.credential.oauth_token)
+      OauthValidation.normalize_scopes(assigns.credential.oauth_token)
 
     {:ok,
      build_assigns(socket, assigns,
@@ -63,13 +55,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         socket
       ) do
     selected_scopes =
-      Credentials.normalize_scopes(assigns.credential.oauth_token)
+      OauthValidation.normalize_scopes(assigns.credential.oauth_token)
 
     mandatory_scopes =
-      Credentials.normalize_scopes(selected_client.mandatory_scopes, ",")
+      OauthValidation.normalize_scopes(selected_client.mandatory_scopes, ",")
 
     optional_scopes =
-      Credentials.normalize_scopes(selected_client.optional_scopes, ",")
+      OauthValidation.normalize_scopes(selected_client.optional_scopes, ",")
 
     scopes = mandatory_scopes ++ optional_scopes ++ selected_scopes
     scopes = scopes |> Enum.map(&String.downcase/1) |> Enum.uniq()
@@ -98,10 +90,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   def update(%{action: :new, selected_client: selected_client} = assigns, socket) do
     mandatory_scopes =
-      Credentials.normalize_scopes(selected_client.mandatory_scopes, ",")
+      OauthValidation.normalize_scopes(selected_client.mandatory_scopes, ",")
 
     optional_scopes =
-      Credentials.normalize_scopes(selected_client.optional_scopes, ",")
+      OauthValidation.normalize_scopes(selected_client.optional_scopes, ",")
 
     state = build_state(socket.id, __MODULE__, assigns.id)
     stringified_scopes = Enum.join(mandatory_scopes, " ")
@@ -133,7 +125,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       {:ok,
        socket
        |> assign(code: code)
-       |> assign(:oauth_progress, :code_received)
+       |> assign(:oauth_progress, :authenticating)
        |> start_async(:token, fn ->
          OauthHTTPClient.fetch_token(client, code)
        end)}
@@ -141,66 +133,134 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def update(%{error: error} = _assigns, socket) do
-    Logger.info(
-      "Failed fetching authentication code using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
+    Logger.warning(
+      "Failed fetching authentication code for #{socket.assigns.selected_client.name}: #{inspect(error)}"
     )
 
-    {:ok, assign(socket, :oauth_progress, :code_failed)}
+    {:ok,
+     socket
+     |> assign(:oauth_progress, :error)
+     |> assign(:oauth_error, {:code_exchange_failed, error})}
   end
 
   @impl true
   def handle_async(:token, {:ok, {:ok, token}}, socket) do
-    params = Map.put(socket.assigns.changeset.params, "oauth_token", token)
+    params =
+      socket.assigns.changeset.params
+      |> Map.put("oauth_token", token)
+      |> Map.put("expected_scopes", socket.assigns.selected_scopes)
 
     changeset = Credentials.change_credential(socket.assigns.credential, params)
 
-    errors = changeset_errors(changeset)
-
     updated_socket =
       socket
-      |> assign(:oauth_progress, :token_received)
       |> assign(:scopes_changed, false)
       |> assign(:changeset, changeset)
 
-    cond do
-      errors[:oauth_token] ->
-        {:noreply, updated_socket |> assign(:oauth_progress, :missing_required)}
+    case validate_token(token, updated_socket.assigns.selected_scopes) do
+      :ok ->
+        Logger.info(
+          "Received valid token from #{updated_socket.assigns.selected_client.name}"
+        )
 
-      socket.assigns.selected_client.userinfo_endpoint ->
-        selected_client = socket.assigns.selected_client
+        if updated_socket.assigns.selected_client.userinfo_endpoint do
+          {:noreply,
+           updated_socket
+           |> assign(:oauth_progress, :fetching_userinfo)
+           |> start_async(:userinfo, fn ->
+             OauthHTTPClient.fetch_userinfo(
+               updated_socket.assigns.selected_client,
+               token
+             )
+           end)}
+        else
+          {:noreply, assign(updated_socket, :oauth_progress, :complete)}
+        end
+
+      {:error, %OauthValidation.Error{} = error} ->
+        Logger.warning(
+          "Invalid token from #{updated_socket.assigns.selected_client.name}: #{error.type}"
+        )
 
         {:noreply,
          updated_socket
-         |> start_async(:userinfo, fn ->
-           OauthHTTPClient.fetch_userinfo(selected_client, token)
-         end)}
-
-      true ->
-        {:noreply, updated_socket}
+         |> assign(:oauth_progress, :error)
+         |> assign(:oauth_error, error)}
     end
   end
 
-  def handle_async(:userinfo, {:ok, {:ok, userinfo}}, socket) do
-    {:noreply,
-     socket
-     |> assign(userinfo: userinfo)
-     |> assign(:oauth_progress, :userinfo_received)}
-  end
-
-  def handle_async(:token, {:ok, {:error, error}}, socket) do
-    Logger.info(
-      "Failed fetching valid token using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
+  def handle_async(:token, {:ok, {:error, http_error}}, socket) do
+    Logger.error(
+      "Failed to fetch token from #{socket.assigns.selected_client.name}: #{inspect(http_error)}"
     )
 
-    {:noreply, assign(socket, :oauth_progress, :token_failed)}
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :error)
+     |> assign(:oauth_error, {:http_error, http_error})}
+  end
+
+  def handle_async(:token, {:exit, reason}, socket) do
+    Logger.error(
+      "Token fetch crashed for #{socket.assigns.selected_client.name}: #{inspect(reason)}"
+    )
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :error)
+     |> assign(:oauth_error, {:task_crashed, reason})}
+  end
+
+  def handle_async(:userinfo, {:ok, {:ok, userinfo}}, socket) do
+    Logger.info(
+      "Successfully fetched userinfo from #{socket.assigns.selected_client.name}"
+    )
+
+    {:noreply,
+     socket
+     |> assign(:userinfo, userinfo)
+     |> assign(:oauth_progress, :complete)}
   end
 
   def handle_async(:userinfo, {:ok, {:error, error}}, socket) do
-    Logger.info(
-      "Failed fetching userinfo using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
+    case error do
+      %{status: 401} ->
+        Logger.error(
+          "Token is invalid or revoked for #{socket.assigns.selected_client.name}: #{inspect(error)}"
+        )
+
+        oauth_error = %OauthValidation.Error{
+          type: :invalid_access_token,
+          message: "The access token is no longer valid",
+          details: %{
+            reason:
+              "Token may have been revoked when you authorized another credential for the same account"
+          }
+        }
+
+        {:noreply,
+         socket
+         |> assign(:oauth_progress, :error)
+         |> assign(:oauth_error, oauth_error)}
+
+      _ ->
+        Logger.warning(
+          "Failed to fetch userinfo from #{socket.assigns.selected_client.name}, continuing anyway. Error: #{inspect(error)}"
+        )
+
+        {:noreply,
+         socket
+         |> assign(:oauth_progress, :complete)
+         |> assign(:userinfo_fetch_failed, true)}
+    end
+  end
+
+  def handle_async(:userinfo, {:exit, reason}, socket) do
+    Logger.error(
+      "User informations fetch crashed for #{socket.assigns.selected_client.name}: #{inspect(reason)}"
     )
 
-    {:noreply, assign(socket, :oauth_progress, :userinfo_failed)}
+    {:noreply, assign(socket, :oauth_progress, :complete)}
   end
 
   @impl true
@@ -215,10 +275,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> Map.put("body", %{"apiVersion" => credential_params["api_version"]})
 
     changeset =
-      Credentials.change_credential(
-        socket.assigns.credential,
-        params
-      )
+      Credentials.change_credential(socket.assigns.credential, params)
       |> Map.put(:action, :validate)
 
     available_projects =
@@ -235,52 +292,14 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      )}
   end
 
-  # TODO: Merge authorize_click and re_authorize_click when removing the old implementation
-  # Both re_authorize_click and authorize_click should be one function and make sure we
-  # always use the hook to open the authorization tab in the browser instead of a link
-  # for authorize_click and a hook for re_authorize_click. But this is expensive to do
-  # now without cleaning the implementations of the oauth by removing the old implementation
-  def handle_event("re_authorize_click", _, socket) do
-    body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
-
-    with selected_client <- socket.assigns.selected_client,
-         authorize_url <- socket.assigns.authorize_url,
-         {:ok, _response} <- OauthHTTPClient.revoke_token(selected_client, body) do
-      {
-        :noreply,
-        socket
-        |> assign(code: nil)
-        |> push_event("open_authorize_url", %{url: authorize_url})
-        |> assign(oauth_progress: :started)
-      }
-    else
-      {:error, reason} ->
-        Logger.info(
-          "Failed to revoke the token. Error received from the provider: #{reason}"
-        )
-
-        {:noreply, socket |> assign(oauth_progress: :revoke_failed)}
-    end
-  end
-
   def handle_event("authorize_click", _, socket) do
     {:noreply,
      socket
      |> assign(code: nil)
-     |> push_event("open_authorize_url", %{url: socket.assigns.authorize_url})
-     |> assign(oauth_progress: :started)}
-  end
-
-  def handle_event("try_userinfo_again", _, socket) do
-    body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
-    selected_client = socket.assigns.selected_client
-
-    {:noreply,
-     socket
-     |> assign(:oauth_progress, :fetching_userinfo)
-     |> start_async(:userinfo, fn ->
-       OauthHTTPClient.fetch_userinfo(selected_client, body)
-     end)}
+     |> assign(scopes_changed: false)
+     |> assign(oauth_progress: :authenticating)
+     |> assign(oauth_error: nil)
+     |> push_event("open_authorize_url", %{url: socket.assigns.authorize_url})}
   end
 
   def handle_event("check_scope", %{"_target" => [scope]}, socket) do
@@ -303,12 +322,40 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       )
 
     saved_scopes = get_scopes(socket.assigns.credential.oauth_token)
-    diff_scopes = Enum.sort(selected_scopes) == Enum.sort(saved_scopes)
+    scopes_changed = Enum.sort(selected_scopes) != Enum.sort(saved_scopes)
+
+    updated_socket =
+      if scopes_changed and not socket.assigns.scopes_changed do
+        socket
+        |> assign(:previous_oauth_state, %{
+          oauth_progress: socket.assigns.oauth_progress,
+          oauth_error: socket.assigns.oauth_error,
+          userinfo: socket.assigns.userinfo
+        })
+      else
+        socket
+      end
+
+    final_socket =
+      if not scopes_changed and socket.assigns.scopes_changed do
+        previous_state = socket.assigns.previous_oauth_state || %{}
+
+        updated_socket
+        |> assign(
+          :oauth_progress,
+          Map.get(previous_state, :oauth_progress, :idle)
+        )
+        |> assign(:oauth_error, Map.get(previous_state, :oauth_error, nil))
+        |> assign(:userinfo, Map.get(previous_state, :userinfo, nil))
+        |> assign(:previous_oauth_state, nil)
+      else
+        updated_socket
+      end
 
     {:noreply,
-     socket
-     |> assign(scopes_changed: !diff_scopes)
-     |> assign(selected_scopes: selected_scopes)
+     final_socket
+     |> assign(:scopes_changed, scopes_changed)
+     |> assign(:selected_scopes, selected_scopes)
      |> assign(:authorize_url, authorize_url)}
   end
 
@@ -330,11 +377,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     save_credential(socket, socket.assigns.action, credential_params)
   end
 
-  def handle_event(
-        "select_project",
-        %{"project_id" => project_id},
-        socket
-      ) do
+  def handle_event("select_project", %{"project_id" => project_id}, socket) do
     {:noreply, assign(socket, selected_project: project_id)}
   end
 
@@ -369,41 +412,56 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   defp refresh_token_or_fetch_userinfo(socket, assigns, selected_client) do
-    case Credentials.still_fresh(assigns.credential.oauth_token) do
+    cond do
+      not OauthToken.still_fresh?(assigns.credential.oauth_token) ->
+        refresh_token(
+          socket,
+          selected_client,
+          assigns.credential.oauth_token.body
+        )
+
+      selected_client.userinfo_endpoint ->
+        fetch_userinfo(
+          socket,
+          selected_client,
+          assigns.credential.oauth_token.body
+        )
+
       true ->
-        if selected_client.userinfo_endpoint do
-          Logger.info("Fetching user info.")
-
-          start_async(socket, :userinfo, fn ->
-            OauthHTTPClient.fetch_userinfo(
-              selected_client,
-              assigns.credential.oauth_token.body
-            )
-          end)
-        else
-          socket
-        end
-
-      false ->
-        Logger.info("Refreshing token.")
-
-        start_async(socket, :token, fn ->
-          OauthHTTPClient.refresh_token(
-            selected_client,
-            assigns.credential.oauth_token.body
-          )
-        end)
-
-      {:error, reason} ->
-        Logger.error("Error checking token freshness: #{reason}")
-        socket
+        assign(socket, :oauth_progress, :complete)
     end
   end
 
-  defp changeset_errors(changeset) do
-    changeset.errors
-    |> Enum.map(fn {field, {message, _opts}} -> {field, message} end)
-    |> Enum.into(%{})
+  defp refresh_token(socket, client, token) do
+    Logger.info("Refreshing token")
+
+    socket
+    |> assign(:oauth_progress, :authenticating)
+    |> start_async(:token, fn ->
+      OauthHTTPClient.refresh_token(
+        client,
+        token
+      )
+    end)
+  end
+
+  defp fetch_userinfo(socket, client, token) do
+    Logger.info("Fetching user info")
+
+    socket
+    |> assign(:oauth_progress, :fetching_userinfo)
+    |> start_async(:userinfo, fn ->
+      OauthHTTPClient.fetch_userinfo(
+        client,
+        token
+      )
+    end)
+  end
+
+  defp validate_token(token, expected_scopes) do
+    with {:ok, _} <- OauthValidation.validate_token_data(token) do
+      OauthValidation.validate_scope_grant(token, expected_scopes)
+    end
   end
 
   defp build_assigns(socket, assigns, additional_assigns) do
@@ -414,10 +472,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> Enum.map(fn poc -> poc.project end)
 
     available_projects =
-      Helpers.filter_available_projects(
-        assigns.projects,
-        selected_projects
-      )
+      Helpers.filter_available_projects(assigns.projects, selected_projects)
 
     client_id = assigns.selected_client && assigns.selected_client.id
 
@@ -491,28 +546,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def render(assigns) do
-    display_loader =
-      display_loader?(assigns.oauth_progress)
-
-    display_reauthorize_banner = display_reauthorize_banner?(assigns)
-
-    display_authorize_button =
-      display_authorize_button?(assigns, display_reauthorize_banner)
-
-    display_userinfo =
-      display_userinfo?(assigns.oauth_progress, display_reauthorize_banner)
-
-    display_error =
-      display_error?(assigns.oauth_progress, display_reauthorize_banner)
-
-    assigns =
-      assigns
-      |> assign(:display_loader, display_loader)
-      |> assign(:display_reauthorize_banner, display_reauthorize_banner)
-      |> assign(:display_authorize_button, display_authorize_button)
-      |> assign(:display_userinfo, display_userinfo)
-      |> assign(:display_error, display_error)
-
     ~H"""
     <div id={@id}>
       <.form
@@ -560,55 +593,16 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             />
           </div>
 
-          <div
-            id={"#{@id}-feedback"}
-            phx-hook="OpenAuthorizeUrl"
-            class="space-y-4 my-10"
-          >
-            <.reauthorize_banner
-              :if={@display_reauthorize_banner}
-              provider={@selected_client.name}
-              revocation_endpoint={@selected_client.revocation_endpoint}
-              authorize_url={@authorize_url}
-              myself={@myself}
-            />
-            <.text_ping_loader :if={@display_loader}>
-              <%= case @oauth_progress do %>
-                <% :started  -> %>
-                  Authenticating with {@selected_client.name}
-                <% _ -> %>
-                  Fetching user data from {@selected_client.name}
-              <% end %>
-            </.text_ping_loader>
-            <.authorize_button
-              :if={@display_authorize_button}
-              authorize_url={@authorize_url}
-              provider={@selected_client.name}
-              myself={@myself}
-            />
-            <.userinfo
-              :if={@display_userinfo && @userinfo}
-              myself={@myself}
+          <div id={"#{@id}-oauth-status"} phx-hook="OpenAuthorizeUrl" class="my-10">
+            <.oauth_status
+              state={@oauth_progress}
+              error={@oauth_error}
               userinfo={@userinfo}
+              provider={@selected_client && @selected_client.name}
+              authorize_url={@authorize_url}
+              myself={@myself}
+              scopes_changed={@scopes_changed}
               socket={@socket}
-              authorize_url={@authorize_url}
-            />
-            <.success_message
-              :if={@display_userinfo && !@userinfo}
-              revocation={
-                if @selected_client && @selected_client.revocation_endpoint,
-                  do: :available,
-                  else: :unavailable
-              }
-              myself={@myself}
-            />
-            <.alert_block
-              :if={@display_error}
-              type={@oauth_progress}
-              myself={@myself}
-              revocation_endpoint={@selected_client.revocation_endpoint}
-              provider={@selected_client.name}
-              authorize_url={@authorize_url}
             />
           </div>
 
@@ -636,6 +630,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               </div>
             </fieldset>
           </div>
+
           <div
             :if={@action == :edit and @allow_credential_transfer}
             class="space-y-4"
@@ -646,17 +641,19 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             />
           </div>
         </div>
+
         <.modal_footer class="mt-6 mx-4">
           <div class="flex justify-between items-center">
             <div class="flex-1 w-1/2">
               <div class="sm:flex sm:flex-row-reverse gap-3">
                 <.button
-                  id={
-                  "save-credential-button-#{@credential.id || "new"}"
-                }
+                  id={"save-credential-button-#{@credential.id || "new"}"}
                   type="submit"
                   theme="primary"
-                  disabled={!@changeset.valid? || @scopes_changed}
+                  disabled={
+                    !@changeset.valid? || @scopes_changed ||
+                      @oauth_progress == :error
+                  }
                 >
                   Save
                 </.button>
@@ -674,47 +671,5 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       </.form>
     </div>
     """
-  end
-
-  defp display_loader?(oauth_progress) do
-    oauth_progress not in List.flatten([
-      :not_started | Map.values(@oauth_states)
-    ])
-  end
-
-  defp display_reauthorize_banner?(%{
-         action: action,
-         scopes_changed: scopes_changed,
-         oauth_progress: oauth_progress
-       }) do
-    case action do
-      :new ->
-        scopes_changed &&
-          oauth_progress in (@oauth_states.success ++
-                               @oauth_states.failure)
-
-      :edit ->
-        scopes_changed && oauth_progress not in [:started]
-
-      _ ->
-        false
-    end
-  end
-
-  defp display_authorize_button?(
-         %{action: action, oauth_progress: oauth_progress},
-         display_reauthorize_banner
-       ) do
-    action == :new && oauth_progress == :not_started &&
-      !display_reauthorize_banner
-  end
-
-  defp display_userinfo?(oauth_progress, display_reauthorize_banner) do
-    oauth_progress in [:userinfo_received, :token_received] &&
-      !display_reauthorize_banner
-  end
-
-  defp display_error?(oauth_progress, display_reauthorize_banner) do
-    oauth_progress in @oauth_states.failure && !display_reauthorize_banner
   end
 end

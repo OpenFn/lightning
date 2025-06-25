@@ -191,7 +191,7 @@ defmodule Lightning.Factories do
       body:
         attrs
         |> Map.get(:body, default_token_body)
-        |> Lightning.Credentials.normalize_keys(),
+        |> Lightning.Helpers.normalize_keys(),
       user: Map.get(attrs, :user, build(:user)),
       oauth_client: Map.get(attrs, :oauth_client),
       scopes: Enum.sort(scopes),

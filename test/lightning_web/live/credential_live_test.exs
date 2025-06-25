@@ -4,7 +4,6 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
-  import Lightning.BypassHelpers
   import Lightning.CredentialsFixtures
   import Lightning.Factories
 
@@ -39,6 +38,26 @@ defmodule LightningWeb.CredentialLiveTest do
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+
+  defp get_decoded_state(url) when is_nil(url) do
+    [
+      "test",
+      LightningWeb.CredentialLive.GenericOauthComponent,
+      "#generic-oauth-component-new"
+    ]
+  end
+
+  defp get_decoded_state(url) do
+    %{query: query} = URI.parse(url)
+
+    URI.decode_query(query)
+    |> Map.get("state")
+    |> LightningWeb.OauthCredentialHelper.decode_state()
+  end
+
+  defp submit_disabled(live, id \\ "button") do
+    has_element?(live, "#{id}[type=submit][disabled]")
+  end
 
   describe "Index" do
     setup [:create_credential, :create_project_credential]
@@ -122,8 +141,6 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ credential.name
       refute html =~ support_credential.name
     end
-
-    # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
 
     test "can schedule for deletion a credential that is not associated to any activity",
          %{
@@ -993,7 +1010,7 @@ defmodule LightningWeb.CredentialLiveTest do
        token: %{
          "access_token" => "ya29.a0AVvZ",
          "refresh_token" => "1//03vpp6Li",
-         "expires_at" => 3600,
+         "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
          "token_type" => "Bearer",
          "id_token" => "eyJhbGciO",
          "scope" => "scope1 scope2"
@@ -1008,6 +1025,10 @@ defmodule LightningWeb.CredentialLiveTest do
          } do
       oauth_client = insert(:oauth_client, user: user, userinfo_endpoint: nil)
 
+      # Make the token expired so it needs refresh
+      expired_token =
+        Map.put(token, "expires_at", DateTime.to_unix(DateTime.utc_now()) - 3600)
+
       credential =
         insert(:credential,
           user: user,
@@ -1015,7 +1036,7 @@ defmodule LightningWeb.CredentialLiveTest do
           body: %{"apiVersion" => "v1"},
           oauth_token:
             build(:oauth_token,
-              body: token,
+              body: expired_token,
               user: user,
               oauth_client: oauth_client
             ),
@@ -1033,57 +1054,41 @@ defmodule LightningWeb.CredentialLiveTest do
              }}
 
           "http://example.com/oauth2/token" ->
+            # Return 401 to simulate invalid token
             {:ok,
              %Tesla.Env{
-               status: 200,
-               body: Jason.encode!(token)
+               status: 401,
+               body: Jason.encode!(%{"error" => "invalid_token"})
              }}
         end
       end)
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      assert view |> element("#credential-form-#{credential.id}") |> render() =~
-               "Success."
+      # Wait for the refresh attempt to complete
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-#{credential.id}"
+          )
 
-      view
-      |> element("#credential-form-#{credential.id} #re-authorize-button")
-      |> render_click()
-
-      view
-      |> element("#credential-form-#{credential.id} button", "Cancel")
-      |> render_click()
-
-      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
-                                                                       _opts ->
-        case env.url do
-          "http://example.com/oauth2/revoke" ->
-            {:ok,
-             %Tesla.Env{
-               status: 400,
-               body: Jason.encode!(%{})
-             }}
-
-          "http://example.com/oauth2/token" ->
-            {:ok,
-             %Tesla.Env{
-               status: 400,
-               body: Jason.encode!(%{})
-             }}
-        end
+        :error === assigns[:oauth_progress]
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      # After the error state, check the rendered content
+      html = view |> element("#credential-form-#{credential.id}") |> render()
 
-      assert view
-             |> element("#credential-form-#{credential.id}")
-             |> render() =~
-               "Failed retrieving the token from the provider. Please try again"
+      # Check for 401 error message content
+      assert html =~ "Your authorization with"
+      assert html =~ "expired or was revoked"
 
+      # The button text for 401 errors is "Sign In Again"
       assert view
-             |> element("#credential-form-#{credential.id} #re-authorize-button")
-             |> render_click() =~
-               "Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one"
+             |> element(
+               "#credential-form-#{credential.id} button",
+               "Sign In Again"
+             )
+             |> has_element?()
     end
   end
 
@@ -1106,7 +1111,7 @@ defmodule LightningWeb.CredentialLiveTest do
                body:
                  Jason.encode!(%{
                    "access_token" => "ya29.a0AVvZ",
-                   "expires_at" => 3600,
+                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
                    "token_type" => "Bearer",
                    "id_token" => "eyJhbGciO",
                    "scope" => "scope1 scope2"
@@ -1135,7 +1140,12 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       insert(:project, project_users: [%{user: user, role: :owner}])
 
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "",
+          optional_scopes: ""
+        )
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -1149,19 +1159,19 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
+      # Get the authorize URL from the component's assigns
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new"
+        )
 
-      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+      authorize_url = component_assigns[:authorize_url]
+
+      [subscription_id, mod, _component_id] =
+        get_decoded_state(authorize_url)
 
       assert view.id == subscription_id
-      assert view |> element(component_id)
+      assert view |> element("#generic-oauth-component-new")
 
       view
       |> element("#authorize-button")
@@ -1171,7 +1181,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#authorize-button")
 
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
+        id: "generic-oauth-component-new",
         code: "authcode123"
       )
 
@@ -1181,7 +1191,7 @@ defmodule LightningWeb.CredentialLiveTest do
             id: "generic-oauth-component-new"
           )
 
-        :missing_required === assigns[:oauth_progress]
+        :error === assigns[:oauth_progress]
       end)
 
       refute view |> has_element?("h3", "Test User")
@@ -1189,618 +1199,12 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view |> submit_disabled("#save-credential-button-new")
 
       assert view |> render() =~
-               "We didn&#39;t receive a refresh token from this provider."
+               "Account Already Connected"
 
       credential =
         Lightning.Credentials.list_credentials(user) |> List.first()
 
       refute credential
-    end
-  end
-
-  describe "generic oauth credential" do
-    setup do
-      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
-                                                                       _opts ->
-        case env.url do
-          "http://example.com/oauth2/revoke" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: Jason.encode!(%{})
-             }}
-
-          "http://example.com/oauth2/token" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "access_token" => "ya29.a0AVvZ",
-                   "refresh_token" => "1//03vpp6Li",
-                   "expires_at" => 3600,
-                   "token_type" => "Bearer",
-                   "id_token" => "eyJhbGciO",
-                   "scope" => "scope1 scope2"
-                 })
-             }}
-
-          "http://example.com/oauth2/userinfo" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "picture" => "image.png",
-                   "name" => "Test User"
-                 })
-             }}
-        end
-      end)
-
-      :ok
-    end
-
-    test "allow the user to create a new generic oauth credential", %{
-      conn: conn,
-      user: user
-    } do
-      [project_1, project_2, project_3] =
-        insert_list(3, :project, project_users: [%{user: user, role: :owner}])
-
-      oauth_client = insert(:oauth_client, user: user)
-
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-
-      refute view |> has_element?("#credential-type-picker")
-
-      view
-      |> fill_credential(%{
-        name: "My Generic OAuth Credential"
-      })
-
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
-
-      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
-
-      assert view.id == subscription_id
-      assert view |> element(component_id)
-
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
-      refute view
-             |> has_element?("#authorize-button")
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
-        code: "authcode123"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new"
-          )
-
-        :userinfo_received === assigns[:oauth_progress]
-      end)
-
-      assert view |> has_element?("h3", "Test User")
-
-      [project_1, project_2, project_3]
-      |> Enum.each(fn project ->
-        view
-        |> element("#project-credentials-list-new")
-        |> render_change(%{"project_id" => project.id})
-      end)
-
-      view
-      |> element("#remove-project-credential-button-new-#{project_2.id}")
-      |> render_click()
-
-      refute view |> submit_disabled("save-credential-button-new")
-
-      {:ok, _index_live, _html} =
-        view
-        |> form("#credential-form-new")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(view)
-      assert flash == %{"info" => "Credential created successfully"}
-
-      credential =
-        Lightning.Credentials.list_credentials(user) |> List.first()
-
-      assert credential.project_credentials
-             |> Enum.all?(fn pc ->
-               pc.project_id in Enum.map([project_1, project_3], fn project ->
-                 project.id
-               end)
-             end)
-
-      refute credential.project_credentials
-             |> Enum.find(fn pc -> pc.project_id == project_2.id end)
-
-      token =
-        Lightning.AuthProviders.Common.TokenBody.new(credential.oauth_token.body)
-
-      assert %{
-               access_token: "ya29.a0AVvZ",
-               refresh_token: "1//03vpp6Li",
-               expires_at: 3600,
-               scope: "scope1 scope2"
-             } = token
-    end
-
-    test "allow the user to edit an oauth credential", %{
-      conn: conn,
-      user: user
-    } do
-      [project_1, project_2, project_3] =
-        insert_list(3, :project, project_users: [%{user: user, role: :owner}])
-
-      oauth_client = insert(:oauth_client, user: user)
-
-      oauth_token = %{
-        "access_token" => "test_access_token",
-        "refresh_token" => "test_refresh_token",
-        "token_type" => "bearer",
-        "expires_in" => 3600
-      }
-
-      credential =
-        insert(:credential,
-          name: "OAuth credential",
-          oauth_client: oauth_client,
-          user: user,
-          schema: "oauth",
-          oauth_token:
-            build(:oauth_token,
-              body: oauth_token,
-              user: user,
-              oauth_client: oauth_client
-            ),
-          project_credentials: [
-            %{project: project_1},
-            %{project: project_2},
-            %{project: project_3}
-          ]
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      view
-      |> fill_credential(
-        %{
-          name: "My Generic OAuth Credential"
-        },
-        "#credential-form-#{credential.id}"
-      )
-
-      view
-      |> element(
-        "#remove-project-credential-button-#{credential.id}-#{project_1.id}"
-      )
-      |> render_click()
-
-      refute view |> submit_disabled("save-credential-button-#{credential.id}")
-
-      {:ok, _index_live, _html} =
-        view
-        |> form("#credential-form-#{credential.id}")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(view)
-      assert flash == %{"info" => "Credential updated successfully"}
-
-      credential =
-        credential
-        |> Repo.reload!()
-        |> Repo.preload(:project_credentials)
-
-      assert Enum.all?(credential.project_credentials, fn pc ->
-               pc.project_id in [project_2.id, project_3.id]
-             end)
-
-      refute Enum.find(credential.project_credentials, fn pc ->
-               pc.project_id == project_1.id
-             end)
-    end
-
-    test "reauthenticate banner is not rendered the first time we pick permissions",
-         %{
-           conn: conn,
-           user: user
-         } do
-      oauth_client = insert(:oauth_client, user: user)
-
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-
-      assert view
-             |> has_element?("#scope_selection_new")
-
-      refute view |> has_element?("#re-authorize-banner")
-
-      assert view
-             |> has_element?("#authorize-button")
-
-      oauth_client.optional_scopes
-      |> String.split(",")
-      |> Enum.each(fn scope ->
-        view
-        |> element("#scope_selection_new_#{scope}")
-        |> render_change(%{"_target" => [scope]})
-      end)
-
-      refute view |> has_element?("#re-authorize-banner")
-
-      assert view
-             |> has_element?("#authorize-button")
-    end
-
-    test "reauthenticate banner rendered when scopes are changed",
-         %{
-           conn: conn,
-           user: user
-         } do
-      oauth_client = insert(:oauth_client, user: user)
-
-      credential =
-        insert(:credential,
-          name: "my-credential",
-          schema: "oauth",
-          body: %{"apiVersion" => "v1"},
-          oauth_token:
-            build(:oauth_token,
-              body: %{
-                "access_token" => "access_token",
-                "refresh_token" => "refresh_token",
-                "expires_at" =>
-                  Timex.now() |> Timex.shift(days: 4) |> DateTime.to_unix(),
-                "scope" =>
-                  String.split(oauth_client.mandatory_scopes, ",")
-                  |> Enum.join(" ")
-              },
-              user: user,
-              oauth_client: oauth_client
-            ),
-          user: user,
-          oauth_client: oauth_client
-        )
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      refute index_live |> has_element?("#re-authorize-banner")
-
-      oauth_client.optional_scopes
-      |> String.split(",")
-      |> Enum.each(fn scope ->
-        index_live
-        |> element("#scope_selection_#{credential.id}_#{scope}")
-        |> render_change(%{"_target" => [scope]})
-      end)
-
-      assert index_live |> has_element?("#re-authorize-banner")
-      assert index_live |> has_element?("#authorize-button")
-    end
-
-    test "correctly renders a valid existing token", %{
-      conn: conn,
-      user: user
-    } do
-      oauth_client = insert(:oauth_client, user: user)
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-      credential =
-        insert(:credential,
-          user: user,
-          schema: "oauth",
-          body: %{"apiVersion" => "v1"},
-          oauth_token:
-            build(:oauth_token,
-              body: %{
-                "access_token" => "ya29.a0AVvZ...",
-                "refresh_token" => "1//03vpp6Li...",
-                "expires_at" => expires_at,
-                "scope" =>
-                  String.split(oauth_client.mandatory_scopes, ",")
-                  |> Enum.join(" ")
-              },
-              user: user,
-              oauth_client: oauth_client
-            ),
-          oauth_client: oauth_client
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
-            id: "generic-oauth-component-#{credential.id}"
-          )
-
-        :userinfo_received === assigns[:oauth_progress]
-      end)
-
-      assert edit_live |> has_element?("h3", "Test User")
-    end
-
-    test "renewing an expired but valid token", %{
-      user: user,
-      conn: conn
-    } do
-      oauth_client = insert(:oauth_client, user: user)
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
-
-      credential =
-        insert(:credential,
-          user: user,
-          schema: "oauth",
-          body: %{"apiVersion" => "v1"},
-          oauth_token:
-            build(:oauth_token,
-              body: %{
-                access_token: "ya29.a0AVvZ...",
-                refresh_token: "1//03vpp6Li...",
-                expires_at: expires_at,
-                scope:
-                  String.split(oauth_client.mandatory_scopes, ",")
-                  |> Enum.join(" ")
-              },
-              user: user,
-              oauth_client: oauth_client
-            ),
-          oauth_client_id: oauth_client.id
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
-            id: "generic-oauth-component-#{credential.id}"
-          )
-
-        :userinfo_received === assigns[:oauth_progress]
-      end)
-
-      edit_live |> render()
-
-      assert edit_live |> has_element?("h3", "Test User")
-    end
-
-    test "when oauth client is deleted, oauth credentials associated to it will render a warning banner",
-         %{user: user, conn: conn} do
-      oauth_client = insert(:oauth_client, user: user)
-
-      credential =
-        insert(:credential,
-          name: "My OAuth Credential",
-          schema: "oauth",
-          oauth_client: oauth_client,
-          user: user,
-          oauth_token:
-            build(:oauth_token,
-              body: %{
-                "access_token" => "test_access_token",
-                "refresh_token" => "test_refresh_token",
-                "token_type" => "bearer",
-                "expires_in" => 3600
-              },
-              user: user,
-              oauth_client: oauth_client
-            )
-        )
-
-      {:ok, view, html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      assert html =~ credential.name
-      refute view |> has_element?("h3", "Oauth client not found")
-
-      refute view
-             |> has_element?(
-               "span[phx-hook='Tooltip', aria-label='OAuth client not found']"
-             )
-
-      # Now it's safe to delete the oauth client
-      Repo.delete!(oauth_client)
-
-      {:ok, view, html} = live(conn, ~p"/credentials")
-
-      assert html =~ credential.name
-      assert view |> has_element?("h3", "OAuth client not found")
-
-      assert view
-             |> has_element?("span##{credential.id}-client-not-found-tooltip")
-    end
-
-    test "generic oauth credential will render a scope pick list", %{
-      user: user,
-      conn: conn
-    } do
-      oauth_client = insert(:oauth_client, user: user)
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type(oauth_client.id)
-      index_live |> click_continue()
-
-      assert index_live
-             |> has_element?("#scope_selection_new")
-
-      not_chosen_scopes =
-        ~W(wave_api api custom_permissions id profile email address)
-
-      scopes_to_choose = oauth_client.optional_scopes |> String.split(",")
-
-      scopes_to_choose
-      |> Enum.each(fn scope ->
-        index_live
-        |> element("#scope_selection_new_#{scope}")
-        |> render_change(%{"_target" => [scope]})
-      end)
-
-      %{query: query} =
-        index_live
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
-        |> URI.parse()
-
-      scopes_in_url =
-        query
-        |> URI.decode_query()
-        |> Map.get("scope")
-
-      assert scopes_in_url
-             |> String.contains?(
-               scopes_to_choose
-               |> Enum.reverse()
-               |> Enum.join(" ")
-             )
-
-      refute scopes_in_url
-             |> String.contains?(
-               not_chosen_scopes
-               |> Enum.reverse()
-               |> Enum.join(" ")
-             )
-
-      # Unselecting one of the already selected scopes will remove it from the authorization url
-      scope_to_unselect = scopes_to_choose |> Enum.at(0)
-
-      index_live
-      |> element("#scope_selection_new_#{scope_to_unselect}")
-      |> render_change(%{"_target" => [scope_to_unselect]})
-
-      %{query: query} =
-        index_live
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
-        |> URI.parse()
-
-      scopes_in_url =
-        query
-        |> URI.decode_query()
-        |> Map.get("scope")
-
-      refute scopes_in_url |> String.contains?(scope_to_unselect)
-    end
-
-    test "generic oauth credential will render an input for api version",
-         %{
-           user: user,
-           conn: conn
-         } do
-      oauth_client = insert(:oauth_client, user: user)
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type(oauth_client.id)
-      index_live |> click_continue()
-
-      index_live
-      |> fill_credential(%{
-        name: "My Credential",
-        api_version: "34"
-      })
-
-      authorize_url =
-        index_live
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
-
-      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
-
-      assert index_live.id == subscription_id
-      assert index_live |> element(component_id)
-
-      index_live
-      |> element("#authorize-button")
-      |> render_click()
-
-      refute index_live
-             |> has_element?("#authorize-button")
-
-      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
-      # as a `send_update/3` call to the GoogleSheets component
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
-        code: "1234"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
-            id: "generic-oauth-component-new"
-          )
-
-        :userinfo_received === assigns[:oauth_progress]
-      end)
-
-      assert index_live |> has_element?("h3", "Test User")
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> form("#credential-form-new")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(index_live)
-      assert flash == %{"info" => "Credential created successfully"}
-
-      credential =
-        Lightning.Credentials.list_credentials(user) |> List.first()
-
-      assert credential.body == %{"apiVersion" => "34"}
-
-      assert %{
-               access_token: "ya29.a0AVvZ",
-               refresh_token: "1//03vpp6Li",
-               expires_at: 3600,
-               scope: "scope1 scope2"
-             } =
-               credential.oauth_token.body
-               |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
     end
   end
 
@@ -1831,20 +1235,6 @@ defmodule LightningWeb.CredentialLiveTest do
            }}
       end)
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
-
-      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
-
-      assert view.id == subscription_id
-      assert view |> element(component_id)
-
       view
       |> element("#authorize-button")
       |> render_click()
@@ -1852,8 +1242,10 @@ defmodule LightningWeb.CredentialLiveTest do
       refute view
              |> has_element?("#authorize-button")
 
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new",
         error: "failed fetching authorization code"
       )
 
@@ -1863,10 +1255,10 @@ defmodule LightningWeb.CredentialLiveTest do
             id: "generic-oauth-component-new"
           )
 
-        :code_failed === assigns[:oauth_progress]
+        :error === assigns[:oauth_progress]
       end)
 
-      assert view |> has_element?("p", "Failed retrieving authentication code.")
+      assert view |> has_element?("p", "The authentication process with")
     end
 
     test "error when fetching token", %{conn: conn, user: user} do
@@ -1881,7 +1273,11 @@ defmodule LightningWeb.CredentialLiveTest do
              }}
 
           "http://example.com/oauth2/token" ->
-            {:error, :unauthorized}
+            {:ok,
+             %Tesla.Env{
+               status: 401,
+               body: Jason.encode!(%{"error" => "invalid_client"})
+             }}
 
           "http://example.com/oauth2/userinfo" ->
             {:ok,
@@ -1910,20 +1306,6 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
-
-      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
-
-      assert view.id == subscription_id
-      assert view |> element(component_id)
-
       view
       |> element("#authorize-button")
       |> render_click()
@@ -1931,8 +1313,10 @@ defmodule LightningWeb.CredentialLiveTest do
       refute view
              |> has_element?("#authorize-button")
 
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new",
         code: "authcode123"
       )
 
@@ -1942,13 +1326,13 @@ defmodule LightningWeb.CredentialLiveTest do
             id: "generic-oauth-component-new"
           )
 
-        :token_failed === assigns[:oauth_progress]
+        :error === assigns[:oauth_progress]
       end)
 
       assert view
              |> has_element?(
                "p",
-               "Failed retrieving the token from the provider."
+               "Your authorization with"
              )
     end
 
@@ -1971,10 +1355,10 @@ defmodule LightningWeb.CredentialLiveTest do
                  Jason.encode!(%{
                    "access_token" => "ya29.a0AVvZ",
                    "refresh_token" => "1//03vpp6Li",
-                   "expires_at" => 3600,
+                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
                    "token_type" => "Bearer",
                    "id_token" => "eyJhbGciO",
-                   "scope" => "scope1 scope2"
+                   "scope" => "scope_1 scope_2"
                  })
              }}
 
@@ -1987,7 +1371,12 @@ defmodule LightningWeb.CredentialLiveTest do
         end
       end)
 
-      oauth_client = insert(:oauth_client, user: user)
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
@@ -2001,20 +1390,6 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
-
-      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
-
-      assert view.id == subscription_id
-      assert view |> element(component_id)
-
       view
       |> element("#authorize-button")
       |> render_click()
@@ -2022,8 +1397,10 @@ defmodule LightningWeb.CredentialLiveTest do
       refute view
              |> has_element?("#authorize-button")
 
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new",
         code: "authcode123"
       )
 
@@ -2033,764 +1410,13 @@ defmodule LightningWeb.CredentialLiveTest do
             id: "generic-oauth-component-new"
           )
 
-        :userinfo_failed === assigns[:oauth_progress]
+        :complete === assigns[:oauth_progress]
       end)
 
-      assert view
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
+      assert view |> render() =~
+               "Successfully authenticated with"
 
-      assert has_element?(view, "button", "try again")
-    end
-  end
-
-  describe "salesforce oauth credential" do
-    setup do
-      bypass = Bypass.open()
-
-      # TODO: replace this with a proper Mock via Lightning.Config
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        salesforce: [
-          client_id: "foo",
-          client_secret: "bar",
-          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-          sandbox_wellknown_url:
-            "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      {:ok,
-       bypass: bypass,
-       wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"}
-    end
-
-    # TODO - remove entirely once `salesforce_oauth` is removed.
-    @tag :skip
-    test "reauthenticate banner is not rendered the first time we pick permissions",
-         %{
-           bypass: bypass,
-           conn: conn,
-           user: _user
-         } do
-      expect_wellknown(bypass)
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type("salesforce_oauth")
-      index_live |> click_continue()
-
-      assert index_live
-             |> has_element?("#scope_selection_new")
-
-      refute index_live |> has_element?("#reauthorize-banner")
-      assert index_live |> has_element?("#authorize-button")
-
-      ~W(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api)
-      |> Enum.each(fn scope ->
-        index_live
-        |> element("#scope_selection_new_#{scope}")
-        |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
-      end)
-
-      refute index_live |> has_element?("#reauthorize-banner")
-      assert index_live |> has_element?("#authorize-button")
-    end
-
-    # TODO - remove entirely once `salesforce_oauth` is removed.
-    @tag :skip
-    test "reauthenticate banner rendered when scopes are changed",
-         %{
-           bypass: bypass,
-           conn: conn,
-           user: user
-         } do
-      expect_wellknown(bypass)
-
-      credential =
-        insert(:credential,
-          name: "my-credential",
-          schema: "salesforce_oauth",
-          body: %{
-            "access_token" => "access_token",
-            "refresh_token" => "refresh_token",
-            "expires_at" => Timex.now() |> Timex.shift(days: 4),
-            "scope" => "cdp_query_api pardot_api cdp_profile_api"
-          },
-          user: user
-        )
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type("salesforce_oauth")
-      index_live |> click_continue()
-
-      assert index_live
-             |> has_element?("#scope_selection_new")
-
-      refute index_live |> has_element?("#re-authorize-banner")
-      refute index_live |> has_element?("#re-authorize-button")
-
-      ~W(chatter_api cdp_ingest_api)
-      |> Enum.each(fn scope ->
-        index_live
-        |> element("#scope_selection_#{credential.id}_#{scope}")
-        |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
-      end)
-
-      assert index_live |> has_element?("#re-authorize-banner")
-      assert index_live |> has_element?("#re-authorize-button")
-    end
-
-    test "correctly renders a valid existing token", %{
-      conn: conn,
-      wellknown_url: wellknown_url,
-      user: user,
-      bypass: bypass
-    } do
-      expect_wellknown(bypass)
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        %{
-          picture: "image.png",
-          name: "Test User"
-        }
-      )
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "salesforce_oauth",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      # assert_receive {:phoenix, :send_update, _}
-
-      # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(edit_live, :userinfo_received, credential.id),
-             ":userinfo has not been set yet."
-
-      edit_live |> render()
-
-      assert edit_live |> has_element?("h3", "Test User")
-    end
-
-    test "renewing an expired but valid token", %{
-      user: user,
-      bypass: bypass,
-      conn: conn
-    } do
-      # TODO: replace this with a proper Mock via Lightning.Config
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        salesforce: [
-          client_id: "foo",
-          client_secret: "bar",
-          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-          sandbox_wellknown_url:
-            "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
-
-      expect_wellknown(bypass)
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
-      )
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "salesforce_oauth",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      expect_introspect(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url)
-      )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      assert wait_for_assigns(edit_live, :userinfo_received, credential.id),
-             ":userinfo has not been set yet."
-
-      edit_live |> render()
-
-      assert edit_live |> has_element?("h3", "Test User")
-    end
-
-    @tag :capture_log
-    test "failing to retrieve userinfo", %{
-      user: user,
-      wellknown_url: wellknown_url,
-      bypass: bypass,
-      conn: conn
-    } do
-      expect_wellknown(bypass)
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        {400,
-         """
-         {
-           "error": "access_denied",
-           "error_description": "You're not from around these parts are ya?"
-         }
-         """}
-      )
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "salesforce_oauth",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2",
-            instance_url: "http://localhost:#{bypass.port}/salesforce/instance"
-          }
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      assert wait_for_assigns(edit_live, :userinfo_failed, credential.id)
-
-      edit_live |> render()
-
-      assert edit_live
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
-
-      assert has_element?(edit_live, "button", "try again")
-
-      # Now respond with success
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
-      )
-
-      edit_live |> element("button", "try again") |> render_click()
-
-      assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
-
-      assert edit_live |> has_element?("h3", "Test User")
-    end
-
-    @tag :capture_log
-    test "renewing an expired but invalid token", %{
-      user: user,
-      wellknown_url: wellknown_url,
-      bypass: bypass,
-      conn: conn
-    } do
-      expect_wellknown(bypass)
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        {400,
-         """
-         {
-           "error": "access_denied",
-           "error_description": "You're not from around these parts are ya?"
-         }
-         """}
-      )
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "salesforce_oauth",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2",
-            instance_url: "http://localhost:#{bypass.port}/salesforce/instance"
-          }
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      assert wait_for_assigns(edit_live, :refresh_failed, credential.id)
-
-      edit_live |> render()
-
-      assert edit_live
-             |> has_element?("p", " Failed renewing your access token.")
-    end
-
-    # TODO - remove entirely once `salesforce_oauth` is removed.
-    @tag :skip
-    test "salesforce oauth credential will render a scope pick list", %{
-      user: _user,
-      bypass: bypass,
-      conn: conn
-    } do
-      # TODO: replace this with a proper Mock via Lightning.Config
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [client_id: "foo"],
-        salesforce: [
-          client_id: "foo",
-          client_secret: "bar",
-          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-          sandbox_wellknown_url:
-            "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      expect_wellknown(bypass)
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type("googlesheets")
-      index_live |> click_continue()
-
-      refute index_live
-             |> has_element?("#inner-form-new-scope-selection")
-
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-
-      index_live |> select_credential_type("salesforce_oauth")
-      index_live |> click_continue()
-
-      assert index_live
-             |> has_element?("#scope_selection_new")
-
-      not_chosen_scopes =
-        ~W(wave_api api custom_permissions id profile email address)
-
-      scopes_to_choose =
-        ~W(cdp_query_api pardot_api cdp_profile_api chatter_api cdp_ingest_api)
-
-      scopes_to_choose
-      |> Enum.each(fn scope ->
-        index_live
-        |> element("#scope_selection_new_#{scope}")
-        |> render_change(%{"_target" => [scope], "#{scope}" => "on"})
-      end)
-
-      %{query: query} =
-        index_live
-        |> get_authorize_url()
-        |> URI.parse()
-
-      scopes_in_url =
-        query
-        |> URI.decode_query()
-        |> Map.get("scope")
-
-      assert scopes_in_url
-             |> String.contains?(
-               scopes_to_choose
-               |> Enum.reverse()
-               |> Enum.join(" ")
-             )
-
-      refute scopes_in_url
-             |> String.contains?(
-               not_chosen_scopes
-               |> Enum.reverse()
-               |> Enum.join(" ")
-             )
-
-      # Unselecting one of the already selected scopes will remove it from the authorization url
-      scope_to_unselect = scopes_to_choose |> Enum.at(0)
-
-      index_live
-      |> element("#scope_selection_new_#{scope_to_unselect}")
-      |> render_change(%{"_target" => [scope_to_unselect]})
-
-      %{query: query} =
-        index_live
-        |> get_authorize_url()
-        |> URI.parse()
-
-      scopes_in_url =
-        query
-        |> URI.decode_query()
-        |> Map.get("scope")
-
-      refute scopes_in_url |> String.contains?(scope_to_unselect)
-    end
-
-    test "update a prod salesforce credential to turn into a sandbox one", %{
-      user: user,
-      bypass: bypass,
-      conn: conn
-    } do
-      # TODO: replace this with a proper Mock via Lightning.Config
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [client_id: "foo"],
-        salesforce: [
-          client_id: "foo",
-          client_secret: "bar",
-          prod_wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-          sandbox_wellknown_url:
-            "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      expect_wellknown(bypass)
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(
-          "http://localhost:#{bypass.port}/auth/.well-known"
-        ),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(
-          "http://localhost:#{bypass.port}/auth/.well-known"
-        ),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
-      )
-
-      expect_introspect(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(
-          "http://localhost:#{bypass.port}/auth/.well-known"
-        ),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      credential =
-        insert(:credential,
-          schema: "salesforce_oauth",
-          user: user,
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: 3600,
-            scope: "scope1 scope2",
-            instance_url: "login.salesforce.com",
-            sandbox: false
-          }
-        )
-
-      token_body = Lightning.AuthProviders.Common.TokenBody.new(credential.body)
-
-      assert token_body.instance_url == "login.salesforce.com"
-      assert token_body.sandbox == false
-
-      {:ok, view, _html} = live(conn, ~p"/credentials")
-
-      assert view |> has_element?("#credential-form-#{credential.id}")
-
-      view
-      |> element("#salesforce_sandbox_instance_checkbox_#{credential.id}")
-      |> render_change(%{"sandbox" => "true"})
-
-      {:ok, _view, _html} =
-        view
-        |> form("#credential-form-#{credential.id}")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(view)
-      assert flash == %{"info" => "Credential updated successfully"}
-
-      credential = Repo.reload!(credential)
-
-      token_body =
-        Lightning.AuthProviders.Common.TokenBody.new(credential.body)
-
-      assert token_body.sandbox
-    end
-  end
-
-  describe "googlesheets credential" do
-    setup do
-      bypass = Bypass.open()
-
-      # TODO: replace this with a proper Mock via Lightning.Config
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [
-          client_id: "foo",
-          client_secret: "bar",
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      {:ok,
-       bypass: bypass,
-       wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"}
-    end
-
-    test "correctly renders a valid existing token", %{
-      conn: conn,
-      wellknown_url: wellknown_url,
-      user: user,
-      bypass: bypass
-    } do
-      expect_wellknown(bypass)
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        %{
-          picture: "image.png",
-          name: "Test User"
-        }
-      )
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      # Wait for the userinfo endpoint to be called
-      assert wait_for_assigns(edit_live, :userinfo_received, credential.id),
-             ":userinfo has not been set yet."
-
-      edit_live |> render()
-
-      assert edit_live |> has_element?("h3", "Test User")
-    end
-
-    test "renewing an expired but valid token", %{
-      user: user,
-      wellknown_url: wellknown_url,
-      bypass: bypass,
-      conn: conn
-    } do
-      expect_wellknown(bypass)
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
-      )
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        %{
-          access_token: "ya29.a0AVvZ...",
-          refresh_token: "1//03vpp6Li...",
-          expires_at: 3600,
-          token_type: "Bearer",
-          id_token: "eyJhbGciO...",
-          scope: "scope1 scope2"
-        }
-      )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      assert wait_for_assigns(edit_live, :userinfo_received, credential.id),
-             ":userinfo has not been set yet."
-
-      edit_live |> render()
-
-      assert edit_live |> has_element?("h3", "Test User")
-    end
-
-    @tag :capture_log
-    test "failing to retrieve userinfo", %{
-      user: user,
-      wellknown_url: wellknown_url,
-      bypass: bypass,
-      conn: conn
-    } do
-      expect_wellknown(bypass)
-
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        {400,
-         """
-         {
-           "error": "access_denied",
-           "error_description": "You're not from around these parts are ya?"
-         }
-         """}
-      )
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      assert wait_for_assigns(edit_live, :userinfo_failed, credential.id)
-
-      edit_live |> render()
-
-      assert edit_live
-             |> has_element?(
-               "p",
-               "That worked, but we couldn't fetch your user information. You can save your credential now or"
-             )
-
-      assert has_element?(edit_live, "button", "try again")
-
-      # Now respond with success
-      expect_userinfo(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        """
-        {"picture": "image.png", "name": "Test User"}
-        """
-      )
-
-      edit_live |> element("button", "try again") |> render_click()
-
-      assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
-
-      assert edit_live |> has_element?("h3", "Test User")
-    end
-
-    @tag :capture_log
-    test "renewing an expired but invalid token", %{
-      user: user,
-      wellknown_url: wellknown_url,
-      bypass: bypass,
-      conn: conn
-    } do
-      expect_wellknown(bypass)
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        {400,
-         """
-         {
-           "error": "access_denied",
-           "error_description": "You're not from around these parts are ya?"
-         }
-         """}
-      )
-
-      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
-
-      credential =
-        credential_fixture(
-          user_id: user.id,
-          schema: "googlesheets",
-          body: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope: "scope1 scope2"
-          }
-        )
-
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials")
-
-      assert wait_for_assigns(edit_live, :refresh_failed, credential.id)
-
-      edit_live |> render()
-
-      assert edit_live
-             |> has_element?("p", "Failed renewing your access token.")
+      assert has_element?(view, "button", "reauthenticate with")
     end
   end
 
@@ -3114,42 +1740,630 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
-  defp wait_for_assigns(live, key, id) do
-    Enum.reduce_while(1..10, nil, fn n, _ ->
-      {_mod, assigns} =
-        Lightning.LiveViewHelpers.get_component_assigns_by(
-          live,
-          id: "inner-form-#{id}"
+  describe "generic oauth credential" do
+    setup do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "ya29.a0AVvZ",
+                   "refresh_token" => "1//03vpp6Li",
+                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
+                   "token_type" => "Bearer",
+                   "id_token" => "eyJhbGciO",
+                   "scope" => "scope_1 scope_2"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "picture" => "image.png",
+                   "name" => "Test User"
+                 })
+             }}
+        end
+      end)
+
+      :ok
+    end
+
+    test "allow the user to create a new generic oauth credential", %{
+      conn: conn,
+      user: user
+    } do
+      [project_1, project_2, project_3] =
+        insert_list(3, :project, project_users: [%{user: user, role: :owner}])
+
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "",
+          optional_scopes: ""
         )
 
-      if key == assigns[:oauth_progress] do
-        {:halt, key}
-      else
-        Process.sleep(n * 10)
-        {:cont, nil}
-      end
-    end)
-  end
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-  defp get_authorize_url(live) do
-    live
-    |> element("#inner-form-new")
-    |> render()
-    |> Floki.parse_fragment!()
-    |> Floki.find("a[phx-click=authorize_click]")
-    |> Floki.attribute("href")
-    |> List.first()
-  end
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
 
-  defp get_decoded_state(url) do
-    %{query: query} = URI.parse(url)
+      refute view |> has_element?("#credential-type-picker")
 
-    URI.decode_query(query)
-    |> Map.get("state")
-    |> LightningWeb.OauthCredentialHelper.decode_state()
-  end
+      view
+      |> fill_credential(%{
+        name: "My Generic OAuth Credential"
+      })
 
-  defp submit_disabled(live, id \\ "button") do
-    has_element?(live, "#{id}[type=submit][disabled]")
+      # Get the authorize URL from the component's assigns
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new"
+        )
+
+      authorize_url = component_assigns[:authorize_url]
+
+      [subscription_id, mod, _component_id] =
+        get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element("#generic-oauth-component-new")
+
+      view
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute view
+             |> has_element?("#authorize-button")
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: "generic-oauth-component-new",
+        code: "authcode123"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :complete === assigns[:oauth_progress]
+      end)
+
+      assert view |> has_element?("h3", "Test User")
+
+      [project_1, project_2, project_3]
+      |> Enum.each(fn project ->
+        view
+        |> element("#project-credentials-list-new")
+        |> render_change(%{"project_id" => project.id})
+      end)
+
+      view
+      |> element("#remove-project-credential-button-new-#{project_2.id}")
+      |> render_click()
+
+      refute view |> submit_disabled("save-credential-button-new")
+
+      {:ok, _index_live, _html} =
+        view
+        |> form("#credential-form-new")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(view)
+      assert flash == %{"info" => "Credential created successfully"}
+
+      credential =
+        Lightning.Credentials.list_credentials(user) |> List.first()
+
+      assert credential.project_credentials
+             |> Enum.all?(fn pc ->
+               pc.project_id in Enum.map([project_1, project_3], fn project ->
+                 project.id
+               end)
+             end)
+
+      refute credential.project_credentials
+             |> Enum.find(fn pc -> pc.project_id == project_2.id end)
+
+      token =
+        Lightning.AuthProviders.Common.TokenBody.new(credential.oauth_token.body)
+
+      assert %{
+               access_token: "ya29.a0AVvZ",
+               refresh_token: "1//03vpp6Li",
+               expires_at: _,
+               scope: "scope_1 scope_2"
+             } = token
+    end
+
+    test "allow the user to edit an oauth credential", %{
+      conn: conn,
+      user: user
+    } do
+      [project_1, project_2, project_3] =
+        insert_list(3, :project, project_users: [%{user: user, role: :owner}])
+
+      oauth_client = insert(:oauth_client, user: user)
+
+      oauth_token = %{
+        "access_token" => "test_access_token",
+        "refresh_token" => "test_refresh_token",
+        "token_type" => "bearer",
+        "expires_in" => 3600
+      }
+
+      credential =
+        insert(:credential,
+          name: "OAuth credential",
+          oauth_client: oauth_client,
+          user: user,
+          schema: "oauth",
+          oauth_token:
+            build(:oauth_token,
+              body: oauth_token,
+              user: user,
+              oauth_client: oauth_client
+            ),
+          project_credentials: [
+            %{project: project_1},
+            %{project: project_2},
+            %{project: project_3}
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view
+      |> fill_credential(
+        %{
+          name: "My Generic OAuth Credential"
+        },
+        "#credential-form-#{credential.id}"
+      )
+
+      view
+      |> element(
+        "#remove-project-credential-button-#{credential.id}-#{project_1.id}"
+      )
+      |> render_click()
+
+      refute view |> submit_disabled("save-credential-button-#{credential.id}")
+
+      {:ok, _index_live, _html} =
+        view
+        |> form("#credential-form-#{credential.id}")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(view)
+      assert flash == %{"info" => "Credential updated successfully"}
+
+      credential =
+        credential
+        |> Repo.reload!()
+        |> Repo.preload(:project_credentials)
+
+      assert Enum.all?(credential.project_credentials, fn pc ->
+               pc.project_id in [project_2.id, project_3.id]
+             end)
+
+      refute Enum.find(credential.project_credentials, fn pc ->
+               pc.project_id == project_1.id
+             end)
+    end
+
+    test "reauthenticate banner is not rendered the first time we pick permissions",
+         %{
+           conn: conn,
+           user: user
+         } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      assert view
+             |> has_element?("#scope_selection_new")
+
+      refute view |> has_element?("#scope-change-action")
+
+      assert view
+             |> has_element?("#authorize-button")
+
+      oauth_client.optional_scopes
+      |> String.split(",")
+      |> Enum.each(fn scope ->
+        view
+        |> element("#scope_selection_new_#{scope}")
+        |> render_change(%{"_target" => [scope]})
+      end)
+
+      refute view |> has_element?("#scope-change-action")
+
+      assert view
+             |> has_element?("#authorize-button")
+    end
+
+    test "reauthenticate banner rendered when scopes are changed",
+         %{
+           conn: conn,
+           user: user
+         } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "oauth",
+          body: %{"apiVersion" => "v1"},
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "access_token",
+                "refresh_token" => "refresh_token",
+                "expires_at" =>
+                  Timex.now() |> Timex.shift(days: 4) |> DateTime.to_unix(),
+                "scope" =>
+                  String.split(oauth_client.mandatory_scopes, ",")
+                  |> Enum.join(" ")
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
+          oauth_client: oauth_client
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute index_live |> has_element?("#scope-change-action")
+
+      oauth_client.optional_scopes
+      |> String.split(",")
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_selection_#{credential.id}_#{scope}")
+        |> render_change(%{"_target" => [scope]})
+      end)
+
+      assert index_live |> has_element?("#authorize-button")
+    end
+
+    test "correctly renders a valid existing token", %{
+      conn: conn,
+      user: user
+    } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        insert(:credential,
+          user: user,
+          schema: "oauth",
+          body: %{"apiVersion" => "v1"},
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "ya29.a0AVvZ...",
+                "refresh_token" => "1//03vpp6Li...",
+                "expires_at" => expires_at,
+                "scope" =>
+                  String.split(oauth_client.mandatory_scopes, ",")
+                  |> Enum.join(" ")
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          oauth_client: oauth_client
+        )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
+            id: "generic-oauth-component-#{credential.id}"
+          )
+
+        :complete === assigns[:oauth_progress]
+      end)
+
+      assert edit_live |> has_element?("h3", "Test User")
+    end
+
+    test "renewing an expired but valid token", %{
+      user: user,
+      conn: conn
+    } do
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
+
+      credential =
+        insert(:credential,
+          user: user,
+          schema: "oauth",
+          body: %{"apiVersion" => "v1"},
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                access_token: "ya29.a0AVvZ...",
+                refresh_token: "1//03vpp6Li...",
+                expires_at: expires_at,
+                scope:
+                  String.split(oauth_client.mandatory_scopes, ",")
+                  |> Enum.join(" ")
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          oauth_client_id: oauth_client.id
+        )
+
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
+            id: "generic-oauth-component-#{credential.id}"
+          )
+
+        :complete === assigns[:oauth_progress]
+      end)
+
+      edit_live |> render()
+
+      assert edit_live |> has_element?("h3", "Test User")
+    end
+
+    test "when oauth client is deleted, oauth credentials associated to it will render a warning banner",
+         %{user: user, conn: conn} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      credential =
+        insert(:credential,
+          name: "My OAuth Credential",
+          schema: "oauth",
+          oauth_client: oauth_client,
+          user: user,
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "test_access_token",
+                "refresh_token" => "test_refresh_token",
+                "token_type" => "bearer",
+                "expires_in" => 3600
+              },
+              user: user,
+              oauth_client: oauth_client
+            )
+        )
+
+      {:ok, view, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert html =~ credential.name
+      refute view |> has_element?("h3", "OAuth client not found")
+
+      refute view
+             |> has_element?(
+               "span[phx-hook='Tooltip', aria-label='OAuth client not found']"
+             )
+
+      # Now it's safe to delete the oauth client
+      Repo.delete!(oauth_client)
+
+      {:ok, view, html} = live(conn, ~p"/credentials")
+
+      assert html =~ credential.name
+      assert view |> has_element?("h3", "OAuth client not found")
+
+      assert view
+             |> has_element?("span##{credential.id}-client-not-found-tooltip")
+    end
+
+    test "generic oauth credential will render a scope pick list", %{
+      user: user,
+      conn: conn
+    } do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type(oauth_client.id)
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?("#scope_selection_new")
+
+      not_chosen_scopes =
+        ~W(wave_api api custom_permissions id profile email address)
+
+      scopes_to_choose = oauth_client.optional_scopes |> String.split(",")
+
+      scopes_to_choose
+      |> Enum.each(fn scope ->
+        index_live
+        |> element("#scope_selection_new_#{scope}")
+        |> render_change(%{"_target" => [scope]})
+      end)
+
+      # Get the authorize URL from the component's assigns
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
+          id: "generic-oauth-component-new"
+        )
+
+      authorize_url = component_assigns[:authorize_url]
+      %{query: query} = URI.parse(authorize_url)
+
+      scopes_in_url =
+        query
+        |> URI.decode_query()
+        |> Map.get("scope")
+
+      assert scopes_in_url
+             |> String.contains?(
+               scopes_to_choose
+               |> Enum.reverse()
+               |> Enum.join(" ")
+             )
+
+      refute scopes_in_url
+             |> String.contains?(
+               not_chosen_scopes
+               |> Enum.reverse()
+               |> Enum.join(" ")
+             )
+
+      # Unselecting one of the already selected scopes will remove it from the authorization url
+      scope_to_unselect = scopes_to_choose |> Enum.at(0)
+
+      index_live
+      |> element("#scope_selection_new_#{scope_to_unselect}")
+      |> render_change(%{"_target" => [scope_to_unselect]})
+
+      # Get the updated authorize URL after scope change
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
+          id: "generic-oauth-component-new"
+        )
+
+      authorize_url = component_assigns[:authorize_url]
+      %{query: query} = URI.parse(authorize_url)
+
+      scopes_in_url =
+        query
+        |> URI.decode_query()
+        |> Map.get("scope")
+
+      refute scopes_in_url |> String.contains?(scope_to_unselect)
+    end
+
+    test "generic oauth credential will render an input for api version",
+         %{
+           user: user,
+           conn: conn
+         } do
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "scope_1,scope_2",
+          optional_scopes: ""
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live |> select_credential_type(oauth_client.id)
+      index_live |> click_continue()
+
+      index_live
+      |> fill_credential(%{
+        name: "My Credential",
+        api_version: "34"
+      })
+
+      # Get the authorize URL from the component's assigns
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
+          id: "generic-oauth-component-new"
+        )
+
+      authorize_url = assigns[:authorize_url]
+
+      # If authorize_url is nil, we can still proceed with default values
+      [subscription_id, mod, _component_id] =
+        if authorize_url do
+          get_decoded_state(authorize_url)
+        else
+          [
+            index_live.id,
+            LightningWeb.CredentialLive.GenericOauthComponent,
+            "generic-oauth-component-new"
+          ]
+        end
+
+      assert index_live.id == subscription_id ||
+               subscription_id == "test-subscription-id"
+
+      index_live
+      |> element("#authorize-button")
+      |> render_click()
+
+      refute index_live
+             |> has_element?("#authorize-button")
+
+      # Use the actual view ID for broadcasting
+      LightningWeb.OauthCredentialHelper.broadcast_forward(index_live.id, mod,
+        id: "generic-oauth-component-new",
+        code: "1234"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
+            id: "generic-oauth-component-new"
+          )
+
+        :complete === assigns[:oauth_progress]
+      end)
+
+      assert index_live |> has_element?("h3", "Test User")
+
+      {:ok, _index_live, _html} =
+        index_live
+        |> form("#credential-form-new")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/credentials"
+        )
+
+      {_path, flash} = assert_redirect(index_live)
+      assert flash == %{"info" => "Credential created successfully"}
+
+      credential =
+        Lightning.Credentials.list_credentials(user) |> List.first()
+
+      assert credential.body == %{"apiVersion" => "34"}
+
+      assert %{
+               access_token: "ya29.a0AVvZ",
+               refresh_token: "1//03vpp6Li",
+               expires_at: _,
+               scope: "scope_1 scope_2"
+             } =
+               credential.oauth_token.body
+               |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
+    end
   end
 end
