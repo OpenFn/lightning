@@ -28,7 +28,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   """
   def revoke_token(client, token) do
     tokens_to_revoke = [
-      # {"refresh_token", token["refresh_token"]},
+      {"refresh_token", token["refresh_token"]},
       {"access_token", token["access_token"]}
     ]
 

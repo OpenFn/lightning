@@ -190,11 +190,17 @@ defmodule LightningWeb.OauthComponentsTest do
     end
 
     test "renders complete state with user information" do
+      socket = %Phoenix.LiveView.Socket{
+        endpoint: LightningWeb.Endpoint,
+        router: LightningWeb.Router
+      }
+
       status =
         render_component(&Oauth.oauth_status/1,
           state: :complete,
           provider: "Salesforce",
           myself: mock_target(),
+          socket: socket,
           userinfo: %{
             "name" => "Sadio Mane",
             "email" => "sadio@example.com",
@@ -226,11 +232,17 @@ defmodule LightningWeb.OauthComponentsTest do
     end
 
     test "renders complete state with default user values" do
+      socket = %Phoenix.LiveView.Socket{
+        endpoint: LightningWeb.Endpoint,
+        router: LightningWeb.Router
+      }
+
       status =
         render_component(&Oauth.oauth_status/1,
           state: :complete,
           provider: "Salesforce",
           myself: mock_target(),
+          socket: socket,
           userinfo: %{},
           scopes_changed: false
         )
@@ -340,13 +352,17 @@ defmodule LightningWeb.OauthComponentsTest do
           scopes_changed: false
         )
 
-      # Both components should render without conflicts
       assert picklist =~ "Select permissions"
       assert status =~ "Sign in with Salesforce"
     end
 
     test "all components handle long provider names" do
       long_provider = "Super Long OAuth Provider Name With Many Words"
+
+      socket = %Phoenix.LiveView.Socket{
+        endpoint: LightningWeb.Endpoint,
+        router: LightningWeb.Router
+      }
 
       picklist =
         render_component(&Oauth.scopes_picklist/1,
@@ -376,6 +392,7 @@ defmodule LightningWeb.OauthComponentsTest do
           state: :complete,
           provider: long_provider,
           myself: mock_target(),
+          socket: socket,
           userinfo: %{"name" => "User"},
           scopes_changed: false
         )

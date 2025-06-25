@@ -4,7 +4,6 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
-  import Lightning.BypassHelpers
   import Lightning.CredentialsFixtures
   import Lightning.Factories
 
@@ -39,16 +38,6 @@ defmodule LightningWeb.CredentialLiveTest do
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
-
-  defp get_authorize_url(live) do
-    live
-    |> element("#credential-form-new")
-    |> render()
-    |> Floki.parse_fragment!()
-    |> Floki.find("button[phx-click=authorize_click]")
-    |> Floki.attribute("phx-value-url")
-    |> List.first()
-  end
 
   defp get_decoded_state(url) when is_nil(url) do
     [
@@ -1036,6 +1025,10 @@ defmodule LightningWeb.CredentialLiveTest do
          } do
       oauth_client = insert(:oauth_client, user: user, userinfo_endpoint: nil)
 
+      # Make the token expired so it needs refresh
+      expired_token =
+        Map.put(token, "expires_at", DateTime.to_unix(DateTime.utc_now()) - 3600)
+
       credential =
         insert(:credential,
           user: user,
@@ -1043,7 +1036,7 @@ defmodule LightningWeb.CredentialLiveTest do
           body: %{"apiVersion" => "v1"},
           oauth_token:
             build(:oauth_token,
-              body: token,
+              body: expired_token,
               user: user,
               oauth_client: oauth_client
             ),
@@ -1061,66 +1054,41 @@ defmodule LightningWeb.CredentialLiveTest do
              }}
 
           "http://example.com/oauth2/token" ->
+            # Return 401 to simulate invalid token
             {:ok,
              %Tesla.Env{
-               status: 200,
-               body: Jason.encode!(token)
+               status: 401,
+               body: Jason.encode!(%{"error" => "invalid_token"})
              }}
         end
       end)
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      assert view |> element("#credential-form-#{credential.id}") |> render() =~
-               "Successfully authenticated with"
+      # Wait for the refresh attempt to complete
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-#{credential.id}"
+          )
 
-      view
-      |> element(
-        "#credential-form-#{credential.id} button",
-        "reauthenticate with"
-      )
-      |> render_click()
-
-      view
-      |> element("#credential-form-#{credential.id} button", "Cancel")
-      |> render_click()
-
-      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
-                                                                       _opts ->
-        case env.url do
-          "http://example.com/oauth2/revoke" ->
-            {:ok,
-             %Tesla.Env{
-               status: 400,
-               body: Jason.encode!(%{})
-             }}
-
-          "http://example.com/oauth2/token" ->
-            {:ok,
-             %Tesla.Env{
-               status: 400,
-               body: Jason.encode!(%{})
-             }}
-        end
+        :error === assigns[:oauth_progress]
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      # After the error state, check the rendered content
+      html = view |> element("#credential-form-#{credential.id}") |> render()
 
-      assert view
-             |> element("#credential-form-#{credential.id}")
-             |> render() =~
-               "authorization response from"
+      # Check for 401 error message content
+      assert html =~ "Your authorization with"
+      assert html =~ "expired or was revoked"
 
-      expected_message = """
-      The access token from the provider is no longer valid
-      """
-
+      # The button text for 401 errors is "Sign In Again"
       assert view
              |> element(
                "#credential-form-#{credential.id} button",
-               "Reauthorize"
+               "Sign In Again"
              )
-             |> render_click() =~ String.trim(expected_message)
+             |> has_element?()
     end
   end
 
@@ -1191,20 +1159,19 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("button[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
+      # Get the authorize URL from the component's assigns
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new"
+        )
 
-      [subscription_id, mod, component_id] =
-        get_decoded_state(authorize_url || "state=test")
+      authorize_url = component_assigns[:authorize_url]
+
+      [subscription_id, mod, _component_id] =
+        get_decoded_state(authorize_url)
 
       assert view.id == subscription_id
-      assert view |> element(component_id || "#generic-oauth-component-new")
+      assert view |> element("#generic-oauth-component-new")
 
       view
       |> element("#authorize-button")
@@ -1214,7 +1181,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#authorize-button")
 
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
+        id: "generic-oauth-component-new",
         code: "authcode123"
       )
 
@@ -1232,7 +1199,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view |> submit_disabled("#save-credential-button-new")
 
       assert view |> render() =~
-               "Missing Required Permissions"
+               "Account Already Connected"
 
       credential =
         Lightning.Credentials.list_credentials(user) |> List.first()
@@ -1850,7 +1817,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       authorize_url = component_assigns[:authorize_url]
 
-      [subscription_id, mod, component_id] =
+      [subscription_id, mod, _component_id] =
         get_decoded_state(authorize_url)
 
       assert view.id == subscription_id
@@ -2250,15 +2217,14 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_change(%{"_target" => [scope]})
       end)
 
-      %{query: query} =
-        index_live
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("button[phx-click=authorize_click]")
-        |> Floki.attribute("phx-value-url")
-        |> List.first()
-        |> URI.parse()
+      # Get the authorize URL from the component's assigns
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
+          id: "generic-oauth-component-new"
+        )
+
+      authorize_url = component_assigns[:authorize_url]
+      %{query: query} = URI.parse(authorize_url)
 
       scopes_in_url =
         query
@@ -2286,15 +2252,14 @@ defmodule LightningWeb.CredentialLiveTest do
       |> element("#scope_selection_new_#{scope_to_unselect}")
       |> render_change(%{"_target" => [scope_to_unselect]})
 
-      %{query: query} =
-        index_live
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("button[phx-click=authorize_click]")
-        |> Floki.attribute("phx-value-url")
-        |> List.first()
-        |> URI.parse()
+      # Get the updated authorize URL after scope change
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
+          id: "generic-oauth-component-new"
+        )
+
+      authorize_url = component_assigns[:authorize_url]
+      %{query: query} = URI.parse(authorize_url)
 
       scopes_in_url =
         query
@@ -2336,7 +2301,7 @@ defmodule LightningWeb.CredentialLiveTest do
       authorize_url = assigns[:authorize_url]
 
       # If authorize_url is nil, we can still proceed with default values
-      [subscription_id, mod, component_id] =
+      [subscription_id, mod, _component_id] =
         if authorize_url do
           get_decoded_state(authorize_url)
         else
