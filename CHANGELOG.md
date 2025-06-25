@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [2.13.3-pre1]
+
+### Fixed
+
 - ⚠️️ **Security patch for cases when a single user creates multiple Oauth
   credentials for the same Oauth client.** This fix prevents credential token
   sharing for users with _multiple_ Oauth credentials linked to a single OpenFn
