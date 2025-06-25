@@ -505,7 +505,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         type="button"
                         theme="primary"
                       >
-                        <.icon name="hero-play-solid" class="w-4 h-4" /> Run
+                        Run
                       </.button_link>
                     </div>
                     <div class="grow flex justify-end">
@@ -531,7 +531,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           }
                           data-confirm="Are you sure you want to delete this step?"
                         >
-                          Delete Step
+                          Delete
                         </.button>
                       </label>
                     </div>
@@ -1156,7 +1156,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       theme="primary"
       class={@button_classes}
     >
-      <.icon name="hero-code-bracket" class="w-4 h-4 text-grey-400" /> Edit
+      Edit
     </.button_link>
 
     <.save_is_blocked_error :if={@is_empty}>

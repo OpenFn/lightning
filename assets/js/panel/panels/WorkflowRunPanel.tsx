@@ -54,7 +54,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
 
   return <>
     <Panel
-      heading={is_edge ? "Can't run from an edge" : `Run from ${job_title}`}
+      heading={is_edge ? "Run" : `Run from ${job_title}`}
       onClose={() => { props.navigate(cancel_url); }}
       onBack={() => { props.navigate(back_url) }}
       className="flex flex-col bg-red"
@@ -62,11 +62,11 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
         <div className="flex justify-end">
           <button
             type="button"
-            className="rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 px-3 py-2"
+            className="rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 px-3 py-2 flex items-center gap-1"
             disabled={is_edge ? true : runDisabled}
             onClick={startRun}
           >
-            Run Workflow Now
+            <span className="hero-play-solid w-4 h-4"></span>  Run Workflow Now
           </button>
         </div>
       }
