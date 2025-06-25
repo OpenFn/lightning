@@ -266,7 +266,7 @@ defmodule LightningWeb.Components.Oauth do
       OAuthErrorFormatter.format_error(:scope_changed, assigns.provider)
 
     action = %{
-      id: "scope-change-action",
+      id: "authorize-button",
       text: error_display.action_text,
       click: "authorize_click",
       target: assigns.myself

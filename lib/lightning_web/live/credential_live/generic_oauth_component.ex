@@ -255,7 +255,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     end
   end
 
-  def handle_async(:userinfo, {:exit, _reason}, socket) do
+  def handle_async(:userinfo, {:exit, reason}, socket) do
+    Logger.error(
+      "User informations fetch crashed for #{socket.assigns.selected_client.name}: #{inspect(reason)}"
+    )
+
     {:noreply, assign(socket, :oauth_progress, :complete)}
   end
 

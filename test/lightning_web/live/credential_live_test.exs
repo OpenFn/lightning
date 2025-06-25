@@ -40,24 +40,6 @@ defmodule LightningWeb.CredentialLiveTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
-  # Helper functions at the end
-  defp wait_for_assigns(live, key, id) do
-    Enum.reduce_while(1..10, nil, fn n, _ ->
-      {_mod, assigns} =
-        Lightning.LiveViewHelpers.get_component_assigns_by(
-          live,
-          id: "generic-oauth-component-#{id}"
-        )
-
-      if key == assigns[:oauth_progress] do
-        {:halt, key}
-      else
-        Process.sleep(n * 10)
-        {:cont, nil}
-      end
-    end)
-  end
-
   defp get_authorize_url(live) do
     live
     |> element("#credential-form-new")
@@ -1324,7 +1306,11 @@ defmodule LightningWeb.CredentialLiveTest do
              }}
 
           "http://example.com/oauth2/token" ->
-            {:error, :unauthorized}
+            {:ok,
+             %Tesla.Env{
+               status: 401,
+               body: Jason.encode!(%{"error" => "invalid_client"})
+             }}
 
           "http://example.com/oauth2/userinfo" ->
             {:ok,
@@ -1379,7 +1365,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view
              |> has_element?(
                "p",
-               "We couldn't connect to"
+               "Your authorization with"
              )
     end
 
@@ -1856,20 +1842,19 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("button[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
+      # Get the authorize URL from the component's assigns
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new"
+        )
+
+      authorize_url = component_assigns[:authorize_url]
 
       [subscription_id, mod, component_id] =
-        get_decoded_state(authorize_url || "state=test")
+        get_decoded_state(authorize_url)
 
       assert view.id == subscription_id
-      assert view |> element(component_id || "#generic-oauth-component-new")
+      assert view |> element("#generic-oauth-component-new")
 
       view
       |> element("#authorize-button")
@@ -1879,7 +1864,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#authorize-button")
 
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
+        id: "generic-oauth-component-new",
         code: "authcode123"
       )
 
@@ -2098,7 +2083,6 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_change(%{"_target" => [scope]})
       end)
 
-      assert index_live |> has_element?("#scope-change-action")
       assert index_live |> has_element?("#authorize-button")
     end
 
