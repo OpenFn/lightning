@@ -114,7 +114,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
         You are about to disconnect your OpenFn account from GitHub.
         Until you reconnect, you will not be able to set up or modify version control for your projects.
       </p>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -128,7 +128,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
         <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end

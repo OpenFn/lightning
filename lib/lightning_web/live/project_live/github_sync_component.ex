@@ -556,7 +556,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           Until you reconnect, you will not be able to sync this project to Github.
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -570,7 +570,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end
@@ -608,10 +608,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         phx-submit="reconnect"
         phx-target={@myself}
       >
-        <div class="px-6">
+        <div>
           <.sync_order_radio form={f} />
         </div>
-        <div class="px-6">
+        <div>
           <.accept_checkbox
             project={@project}
             form={f}
@@ -623,7 +623,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             }
           />
         </div>
-        <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+        <.modal_footer>
           <.button
             id="reconnect-project-button"
             type="submit"
@@ -632,7 +632,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           >
             Reconnect
           </.button>
-        </div>
+        </.modal_footer>
       </.form>
     </.modal>
     """

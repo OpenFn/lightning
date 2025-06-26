@@ -612,7 +612,7 @@ defmodule LightningWeb.ProjectLive.Settings do
           <br /> Do you wish to proceed with this action?
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mt-4">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -626,7 +626,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end
