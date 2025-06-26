@@ -6,11 +6,9 @@ defmodule Lightning.CredentialsTest do
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
-  alias Lightning.Credentials.OauthToken
   alias Lightning.CredentialsFixtures
   alias Lightning.Repo
 
-  import Lightning.BypassHelpers
   import Lightning.Factories
   import Ecto.Query
   import Mox
@@ -32,15 +30,15 @@ defmodule Lightning.CredentialsTest do
 
       credential_1 =
         insert(:credential, user_id: user_1.id, name: "a good cred")
-        |> Repo.preload([:projects, :user, :oauth_token])
+        |> Repo.preload([:projects, :user, oauth_token: :oauth_client])
 
       credential_2 =
         insert(:credential, user_id: user_2.id)
-        |> Repo.preload([:projects, :user, :oauth_token])
+        |> Repo.preload([:projects, :user, oauth_token: :oauth_client])
 
       credential_3 =
         insert(:credential, user_id: user_1.id, name: "better cred")
-        |> Repo.preload([:projects, :user, :oauth_token])
+        |> Repo.preload([:projects, :user, oauth_token: :oauth_client])
 
       credentials = Credentials.list_credentials(user_1)
 
@@ -222,9 +220,9 @@ defmodule Lightning.CredentialsTest do
               user: user,
               oauth_client: oauth_client,
               body: %{
-                access_token: "super_secret_access_token_123",
-                refresh_token: "super_secret_refresh_token_123",
-                expires_in: 3000
+                "access_token" => "super_secret_access_token_123",
+                "refresh_token" => "super_secret_refresh_token_123",
+                "expires_in" => 3000
               }
             ),
           user: user,
@@ -233,11 +231,11 @@ defmodule Lightning.CredentialsTest do
 
       refute oauth_credential.scheduled_deletion
 
-      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
         env, _opts
         when env.method == :post and
                env.url == "http://example.com/oauth2/revoke" ->
-          {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+          {:ok, %Tesla.Env{status: 200, body: %{}}}
       end)
 
       {:ok, oauth_credential} =
@@ -280,7 +278,7 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "get_credential_by_project_credential/1" do
-    test "sreturns the credential with given project_credential id" do
+    test "returns the credential with given project_credential id" do
       refute Credentials.get_credential_by_project_credential(
                Ecto.UUID.generate()
              )
@@ -320,7 +318,7 @@ defmodule Lightning.CredentialsTest do
              } = Credentials.create_credential(valid_attrs)
     end
 
-    test "suceeds with raw schema" do
+    test "succeeds with raw schema" do
       valid_attrs = %{
         body: %{"username" => "user", "password" => "pass", "port" => 5000},
         name: "some raw credential",
@@ -421,6 +419,9 @@ defmodule Lightning.CredentialsTest do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
 
+      # Use a proper future timestamp for expires_at
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
       credential =
         insert(:credential,
           name: "My Credential",
@@ -428,10 +429,10 @@ defmodule Lightning.CredentialsTest do
           oauth_token:
             build(:oauth_token,
               body: %{
-                access_token: "ya29.a0AWY7CknfkidjXaoDTuNi",
-                refresh_token: "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-                expires_at: 10_000,
-                scope: "email calendar chat"
+                "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+                "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+                "expires_at" => expires_at,
+                "scope" => "email calendar chat"
               },
               user: user,
               oauth_client: oauth_client
@@ -444,8 +445,9 @@ defmodule Lightning.CredentialsTest do
         oauth_token: %{
           "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
           "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-          "expires_at" => 10_000,
-          "scope" => "email calendar"
+          "expires_at" => expires_at,
+          "scope" => "email calendar",
+          "token_type" => "Bearer"
         }
       }
 
@@ -454,9 +456,10 @@ defmodule Lightning.CredentialsTest do
 
       assert credential.oauth_token.body == %{
                "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-               "expires_at" => 10_000,
+               "expires_at" => expires_at,
                "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-               "scope" => "email calendar"
+               "scope" => "email calendar",
+               "token_type" => "Bearer"
              }
     end
 
@@ -751,8 +754,7 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
-  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
-  describe "maybe_refresh_token/1 to remove" do
+  describe "maybe_refresh_token/1" do
     test "doesn't refresh non OAuth credentials" do
       credential = CredentialsFixtures.credential_fixture()
       {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
@@ -762,87 +764,87 @@ defmodule Lightning.CredentialsTest do
     test "doesn't refresh fresh OAuth credentials" do
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 6 * 60
 
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
       credential =
-        credential_fixture(
-          body: %{
-            "access_token" => "ya29.a0AWY7CknfkidjXaoDT...",
-            "expires_at" => expires_at,
-            "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGA...",
-            "scope" => "https://www.googleapis.com/auth/spreadsheets"
-          },
-          schema: "salesforce_oauth"
+        insert(:credential,
+          schema: "oauth",
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "ya29.a0AWY7CknfkidjXaoDT...",
+                "expires_at" => expires_at,
+                "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGA...",
+                "scope" => "https://www.googleapis.com/auth/spreadsheets"
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
+          oauth_client: oauth_client
         )
 
       {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
 
-      assert refreshed_credential.body["access_token"] ==
-               credential.body["access_token"]
+      assert refreshed_credential.oauth_token.body["access_token"] ==
+               credential.oauth_token.body["access_token"]
 
-      assert refreshed_credential.body["expires_at"] ==
-               credential.body["expires_at"]
+      assert refreshed_credential.oauth_token.body["expires_at"] ==
+               credential.oauth_token.body["expires_at"]
 
       assert refreshed_credential == credential
     end
 
     test "refreshes OAuth credentials when they are about to expire" do
-      bypass = Bypass.open()
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
 
-      [
-        %{provider: :google, schema: "googlesheets"},
-        %{provider: :salesforce, schema: "salesforce_oauth"}
-      ]
-      |> Enum.each(fn oauth ->
-        Lightning.ApplicationHelpers.put_temporary_env(
-          :lightning,
-          :oauth_clients,
-          [
-            {oauth.provider,
-             [
-               client_id: "client_id",
-               client_secret: "secret",
-               wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known",
-               prod_wellknown_url:
-                 "http://localhost:#{bypass.port}/auth/.well-known",
-               sandbox_wellknown_url:
-                 "http://localhost:#{bypass.port}/auth/.well-known"
-             ]}
-          ]
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+                "expires_at" => 1000,
+                "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+                "scope" => "https://www.googleapis.com/auth/spreadsheets"
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
+          oauth_client: oauth_client
         )
 
-        wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
+      new_expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-        expect_wellknown(bypass)
-
-        expect_token(
-          bypass,
-          Lightning.AuthProviders.Common.get_wellknown!(wellknown_url)
-        )
-
-        expect_introspect(
-          bypass,
-          Lightning.AuthProviders.Common.get_wellknown!(wellknown_url)
-        )
-
-        credential =
-          credential_fixture(
-            body: %{
-              "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-              "expires_at" => 1000,
-              "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-              "scope" => "https://www.googleapis.com/auth/spreadsheets"
-            },
-            schema: oauth.schema
-          )
-
-        {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
-
-        refute refreshed_credential == credential,
-               "Expected credentials to be refreshed for #{oauth.provider |> Atom.to_string()}"
-
-        assert refreshed_credential.body["expires_at"] >
-                 credential.body["expires_at"],
-               "Expected new expiry to be greater than the old expiry for #{oauth.provider |> Atom.to_string()}"
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        env, _opts
+        when env.method == :post and
+               env.url == oauth_client.token_endpoint ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "access_token" => "new_access_token",
+               "refresh_token" => "new_refresh_token",
+               "expires_at" => new_expires_at,
+               "scope" => "https://www.googleapis.com/auth/spreadsheets",
+               "token_type" => "Bearer"
+             }
+           }}
       end)
+
+      {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
+
+      refute refreshed_credential == credential,
+             "Expected credentials to be refreshed"
+
+      assert refreshed_credential.oauth_token.body["expires_at"] ==
+               new_expires_at,
+             "Expected new expiry to be updated"
     end
 
     test "doesn't refresh oauth credentials when they're oauth client is nil" do
@@ -1293,12 +1295,16 @@ defmodule Lightning.CredentialsTest do
           "access_token" => "test_access_token",
           "refresh_token" => "test_refresh_token",
           "expires_in" => 3600,
-          "scopex" => "read write"
+          "scopex" => "read write",
+          "token_type" => "Bearer"
         }
       }
 
-      assert {:error, "Missing required OAuth field: scope"} =
-               Credentials.create_credential(attrs)
+      assert {:error,
+              %Lightning.Credentials.OauthValidation.Error{
+                type: :missing_scope,
+                message: "Missing required OAuth field: scope or scopes"
+              }} = Credentials.create_credential(attrs)
     end
 
     test "update_credential/2 handles failure to extract scopes when updating OAuth token" do
@@ -1314,18 +1320,23 @@ defmodule Lightning.CredentialsTest do
           oauth_client: oauth_client
         )
 
+      # Test with missing scope field (scopex instead of scope)
       update_attrs = %{
         "oauth_token" => %{
           "access_token" => "new_token",
-          "expires_in" => 3600
+          "refresh_token" => "new_refresh_token",
+          "expires_in" => 3600,
+          "token_type" => "Bearer",
+          # Invalid field name
+          "scopex" => "read write"
         }
       }
 
-      assert {
-               :error,
-               %Ecto.Changeset{errors: [scopes: {"can't be blank", _}]}
-             } =
-               Credentials.update_credential(credential, update_attrs)
+      assert {:error,
+              %Lightning.Credentials.OauthValidation.Error{
+                type: :missing_scope,
+                message: "Missing required OAuth field: scope or scopes"
+              }} = Credentials.update_credential(credential, update_attrs)
     end
   end
 
@@ -1362,34 +1373,6 @@ defmodule Lightning.CredentialsTest do
       assert credential.scheduled_deletion
     end
 
-    test "still_fresh/3 handles token with nil expires_at" do
-      token = %OauthToken{
-        body: %{"expires_at" => nil, "access_token" => "token123"},
-        updated_at: DateTime.utc_now()
-      }
-
-      refute Credentials.still_fresh(token)
-    end
-
-    test "still_fresh/3 handles token with nil expires_in" do
-      token = %OauthToken{
-        body: %{"expires_in" => nil, "access_token" => "token123"},
-        updated_at: DateTime.utc_now()
-      }
-
-      refute Credentials.still_fresh(token)
-    end
-
-    test "still_fresh/3 returns error for token without valid expiration data" do
-      token = %OauthToken{
-        body: %{"access_token" => "token123"},
-        updated_at: DateTime.utc_now()
-      }
-
-      assert {:error, "No valid expiration data found"} =
-               Credentials.still_fresh(token)
-    end
-
     test "maybe_refresh_token/1 handles OAuth client errors during refresh" do
       oauth_client = insert(:oauth_client)
       user = insert(:user)
@@ -1402,9 +1385,9 @@ defmodule Lightning.CredentialsTest do
           oauth_token:
             build(:oauth_token,
               body: %{
-                access_token: "expired_token",
-                refresh_token: "refresh_token",
-                expires_at: expired_at
+                "access_token" => "expired_token",
+                "refresh_token" => "refresh_token",
+                "expires_at" => expired_at
               },
               user: user,
               oauth_client: oauth_client
@@ -1417,161 +1400,129 @@ defmodule Lightning.CredentialsTest do
         env, _opts
         when env.method == :post and
                env.url == oauth_client.token_endpoint ->
-          {:error, "Refresh token expired"}
+          {:error, %{status: 500, error: "Server Error", details: %{}}}
       end)
 
-      assert {:error, "\"Refresh token expired\""} =
+      assert {:error,
+              %{status: 0, error: "unknown_error", details: %{reason: _}}} =
                Credentials.maybe_refresh_token(credential)
     end
   end
 
-  describe "helper functions" do
-    test "normalize_keys/1 handles non-map values" do
-      assert Credentials.normalize_keys("string") == "string"
-      assert Credentials.normalize_keys(123) == 123
-      assert Credentials.normalize_keys([1, 2, 3]) == [1, 2, 3]
-      assert Credentials.normalize_keys(nil) == nil
-    end
-
-    test "normalize_keys/1 properly normalizes nested maps" do
-      input = %{
-        key1: "value1",
-        key2: %{
-          nested_key: "nested_value",
-          another_key: 123
-        }
-      }
-
-      expected = %{
-        "key1" => "value1",
-        "key2" => %{
-          "nested_key" => "nested_value",
-          "another_key" => 123
-        }
-      }
-
-      assert Credentials.normalize_keys(input) == expected
-    end
-  end
-
   describe "OAuth token validation" do
-    test "validate_oauth_token_data/5 handles non-map token data" do
+    test "create_credential/1 validates OAuth token data" do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
 
-      assert {:error, "Invalid OAuth token body"} =
-               Credentials.validate_oauth_token_data(
-                 "not_a_map",
-                 user.id,
-                 oauth_client.id,
-                 ["read", "write"]
-               )
-    end
-
-    test "validate_oauth_token_data/5 requires access_token" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      token_data = %{
-        "refresh_token" => "refresh_token",
-        "expires_in" => 3600
-      }
-
-      assert {:error, "Missing required OAuth field: access_token"} =
-               Credentials.validate_oauth_token_data(
-                 token_data,
-                 user.id,
-                 oauth_client.id,
-                 ["read", "write"]
-               )
-    end
-
-    test "validate_oauth_token_data/5 requires refresh_token for new connection" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      token_data = %{
-        "access_token" => "access_token",
-        "expires_in" => 3600
-      }
-
-      assert {:error, "Missing refresh_token for new OAuth connection"} =
-               Credentials.validate_oauth_token_data(
-                 token_data,
-                 user.id,
-                 oauth_client.id,
-                 ["read", "write"]
-               )
-    end
-
-    test "validate_oauth_token_data/5 requires expiration fields" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      token_data = %{
-        "access_token" => "access_token",
-        "refresh_token" => "refresh_token"
+      # Test missing access_token
+      attrs = %{
+        "user_id" => user.id,
+        "name" => "Test OAuth Credential",
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client.id,
+        "body" => %{"key" => "value"},
+        "oauth_token" => %{
+          "refresh_token" => "test_refresh_token",
+          "expires_in" => 3600,
+          "scope" => "read write"
+        }
       }
 
       assert {:error,
-              "Missing expiration field: either expires_in or expires_at is required"} =
-               Credentials.validate_oauth_token_data(
-                 token_data,
-                 user.id,
-                 oauth_client.id,
-                 ["read", "write"]
-               )
+              %Lightning.Credentials.OauthValidation.Error{
+                type: :missing_access_token,
+                message: "Missing required OAuth field: access_token"
+              }} = Credentials.create_credential(attrs)
+
+      # Test missing refresh_token
+      attrs = %{
+        "user_id" => user.id,
+        "name" => "Test OAuth Credential",
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client.id,
+        "body" => %{"key" => "value"},
+        "oauth_token" => %{
+          "access_token" => "test_access_token",
+          "expires_in" => 3600,
+          "scope" => "read write"
+        }
+      }
+
+      assert {:error,
+              %Lightning.Credentials.OauthValidation.Error{
+                type: :missing_refresh_token,
+                message: "Missing required OAuth field: refresh_token"
+              }} = Credentials.create_credential(attrs)
+
+      # Test missing expiration fields
+      attrs = %{
+        "user_id" => user.id,
+        "name" => "Test OAuth Credential",
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client.id,
+        "body" => %{"key" => "value"},
+        "oauth_token" => %{
+          "access_token" => "test_access_token",
+          "refresh_token" => "test_refresh_token",
+          "scope" => "read write",
+          "token_type" => "Bearer"
+        }
+      }
+
+      assert {:error,
+              %Lightning.Credentials.OauthValidation.Error{
+                type: :missing_expiration,
+                message:
+                  "Missing expiration field: either expires_in or expires_at is required"
+              }} = Credentials.create_credential(attrs)
+
+      # Test valid token data
+      attrs = %{
+        "user_id" => user.id,
+        "name" => "Test OAuth Credential",
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client.id,
+        "body" => %{"key" => "value"},
+        "oauth_token" => %{
+          "access_token" => "test_access_token",
+          "refresh_token" => "test_refresh_token",
+          "expires_in" => 3600,
+          "scope" => "read write",
+          "token_type" => "Bearer"
+        }
+      }
+
+      assert {:ok, _credential} = Credentials.create_credential(attrs)
     end
 
-    test "validate_oauth_token_data/5 accepts valid token data" do
+    test "create_credential/1 validates expected scopes" do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
 
-      token_data = %{
-        "access_token" => "access_token",
-        "refresh_token" => "refresh_token",
-        "expires_in" => 3600
+      attrs = %{
+        "user_id" => user.id,
+        "name" => "Test OAuth Credential",
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client.id,
+        "body" => %{"key" => "value"},
+        "oauth_token" => %{
+          "access_token" => "test_access_token",
+          "refresh_token" => "test_refresh_token",
+          "expires_in" => 3600,
+          "scope" => "read",
+          "token_type" => "Bearer"
+        },
+        "expected_scopes" => ["read", "write"]
       }
 
-      assert {:ok, ^token_data} =
-               Credentials.validate_oauth_token_data(
-                 token_data,
-                 user.id,
-                 oauth_client.id,
-                 ["read", "write"]
-               )
-    end
+      assert {:error,
+              %Lightning.Credentials.OauthValidation.Error{
+                type: :missing_scopes,
+                message: message,
+                details: %{missing_scopes: ["write"]}
+              }} = Credentials.create_credential(attrs)
 
-    test "validate_oauth_token_data/5 handles nil parameter cases" do
-      token_data = %{
-        "access_token" => "access_token",
-        "refresh_token" => "refresh_token",
-        "expires_in" => 3600
-      }
-
-      assert {:ok, ^token_data} =
-               Credentials.validate_oauth_token_data(
-                 token_data,
-                 nil,
-                 "client_id",
-                 ["read"]
-               )
-
-      assert {:ok, ^token_data} =
-               Credentials.validate_oauth_token_data(
-                 token_data,
-                 "user_id",
-                 nil,
-                 ["read"]
-               )
-
-      assert {:error, "Missing required OAuth field: scope"} =
-               Credentials.validate_oauth_token_data(
-                 token_data,
-                 "user_id",
-                 "client_id",
-                 nil
-               )
+      assert message =~ "Missing required scopes: write"
     end
   end
 
@@ -1605,12 +1556,13 @@ defmodule Lightning.CredentialsTest do
       expect(
         Lightning.AuthProviders.OauthHTTPClient.Mock,
         :call,
-        fn _client, _token ->
-          {:error, "Network error"}
+        fn _env, _opts ->
+          {:error, %{status: 500, error: "Network error", details: %{}}}
         end
       )
 
-      assert {:error, "\"Network error\""} =
+      assert {:error,
+              %{status: 0, error: "unknown_error", details: %{reason: _}}} =
                Credentials.maybe_refresh_token(credential)
 
       reloaded =
@@ -1632,9 +1584,9 @@ defmodule Lightning.CredentialsTest do
           oauth_token:
             build(:oauth_token,
               body: %{
-                access_token: "expired_token",
-                refresh_token: "refresh_token",
-                expires_at: expired_at
+                "access_token" => "expired_token",
+                "refresh_token" => "refresh_token",
+                "expires_at" => expired_at
               },
               user: user,
               oauth_client: oauth_client
@@ -1649,7 +1601,8 @@ defmodule Lightning.CredentialsTest do
         "access_token" => "new_token",
         "refresh_token" => "new_refresh",
         "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
-        "scope" => Enum.join(credential.oauth_token.scopes, " ")
+        "scope" => Enum.join(credential.oauth_token.scopes, " "),
+        "token_type" => "Bearer"
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
@@ -1659,7 +1612,7 @@ defmodule Lightning.CredentialsTest do
           {:ok,
            %Tesla.Env{
              status: 200,
-             body: Jason.encode!(fresh_token)
+             body: fresh_token
            }}
       end)
 
@@ -1673,527 +1626,134 @@ defmodule Lightning.CredentialsTest do
 
       assert updated_credential.oauth_token.body["expires_at"] > expired_at
     end
+
+    test "maybe_refresh_token/1 returns specific errors for different status codes" do
+      oauth_client = insert(:oauth_client)
+      user = insert(:user)
+      expired_at = DateTime.to_unix(DateTime.utc_now()) - 1000
+
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "expired_token",
+                "refresh_token" => "refresh_token",
+                "expires_at" => expired_at
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
+          oauth_client: oauth_client
+        )
+
+      # Test 401 error
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        _env, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 401,
+             body: %{"error" => "invalid_token"}
+           }}
+      end)
+
+      assert {:error, :reauthorization_required} =
+               Credentials.maybe_refresh_token(credential)
+
+      # Test 429 error
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        _env, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 429,
+             body: %{"error" => "rate_limit_exceeded"}
+           }}
+      end)
+
+      assert {:error, :temporary_failure} =
+               Credentials.maybe_refresh_token(credential)
+
+      # Test 503 error
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        _env, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 503,
+             body: %{"error" => "service_unavailable"}
+           }}
+      end)
+
+      assert {:error, :temporary_failure} =
+               Credentials.maybe_refresh_token(credential)
+    end
   end
 
-  describe "OAuth token selection through create_credential/1" do
-    test "reuses existing token when creating a credential with matching scopes" do
+  describe "OAuth token creation with scope matching" do
+    test "create_credential/1 validates token_type field" do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
 
-      {:ok, _existing_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "First Credential",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "original_token",
-            "refresh_token" => "original_refresh",
-            "expires_in" => 3600,
-            "scope" => "read write profile"
-          }
-        })
-
-      {:ok, new_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "Second Credential",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "new_token",
-            "expires_in" => 3600,
-            "scope" => "read write"
-          }
-        })
-
-      assert new_credential.oauth_token.body["refresh_token"] ==
-               "original_refresh"
-    end
-
-    test "prioritizes exact scope matches when multiple tokens exist" do
-      user = insert(:user)
-
-      client_attrs = %{
-        client_id: "someclientid",
-        client_secret: "someclientsecret"
-      }
-
-      oauth_client_1 = insert(:oauth_client, client_attrs)
-      oauth_client_2 = insert(:oauth_client, client_attrs)
-
-      {:ok, _broad_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client_1.id,
-          "name" => "Broad Scopes",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "broad_token",
-            "refresh_token" => "broad_refresh",
-            "expires_in" => 3600,
-            "scope" => "read write profile email contacts"
-          }
-        })
-
-      {:ok, _exact_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client_1.id,
-          "name" => "Exact Scopes",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "exact_token",
-            "refresh_token" => "exact_refresh",
-            "expires_in" => 3600,
-            "scope" => "read write"
-          }
-        })
-
-      {:ok, new_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client_2.id,
-          "name" => "New Credential",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "new_token",
-            "expires_in" => 3600,
-            "scope" => "read write"
-          }
-        })
-
-      assert new_credential.oauth_token.body["refresh_token"] == "exact_refresh"
-    end
-
-    test "prioritizes token with most scope overlap when no exact match exists" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      {:ok, _minimal_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "Minimal Overlap",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "minimal_token",
-            "refresh_token" => "minimal_refresh",
-            "expires_in" => 3600,
-            "scope" => "read"
-          }
-        })
-
-      {:ok, _better_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "Better Overlap",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "better_token",
-            "refresh_token" => "better_refresh",
-            "expires_in" => 3600,
-            "scope" => "read write"
-          }
-        })
-
-      {:ok, new_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "New Credential",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "new_token",
-            "expires_in" => 3600,
-            "scope" => "read write email"
-          }
-        })
-
-      assert new_credential.oauth_token.body["refresh_token"] == "better_refresh"
-    end
-
-    test "prioritizes newer token when scope overlap is equal" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      {:ok, first_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "First Token",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "first_token",
-            "refresh_token" => "first_refresh",
-            "expires_in" => 3600,
-            "scope" => "read write andmore"
-          }
-        })
-
-      Credentials.create_credential(%{
+      attrs = %{
         "user_id" => user.id,
+        "name" => "Test OAuth Credential",
         "schema" => "oauth",
         "oauth_client_id" => oauth_client.id,
-        "name" => "Second Token",
-        "body" => %{},
+        "body" => %{"key" => "value"},
         "oauth_token" => %{
-          "access_token" => "second_token",
-          "refresh_token" => "second_refresh",
+          "access_token" => "test_access_token",
+          "refresh_token" => "test_refresh_token",
           "expires_in" => 3600,
-          "scope" => "read write"
+          "scope" => "read write",
+          "token_type" => "Basic"
         }
-      })
-
-      first_token = Repo.get!(OauthToken, first_credential.oauth_token.id)
-      older_timestamp = DateTime.add(DateTime.utc_now(), -3600, :second)
-
-      Repo.update_all(
-        from(t in OauthToken, where: t.id == ^first_token.id),
-        set: [updated_at: older_timestamp]
-      )
-
-      # Now create a new credential with scopes that overlap equally with both existing tokens
-      # Both tokens have "read", so they have equal overlap with our new "read execute" token
-      {:ok, new_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "New Token",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "new_token",
-            "expires_in" => 3600,
-            "scope" => "read execute"
-          }
-        })
-
-      assert new_credential.oauth_token.body["refresh_token"] == "second_refresh"
-    end
-
-    test "handles case with no tokens matching requested scopes" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      {:ok, _existing_credential} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "Existing Token",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "existing_token",
-            "refresh_token" => "existing_refresh",
-            "expires_in" => 3600,
-            "scope" => "profile email contacts"
-          }
-        })
-
-      result =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "New Token",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "new_token",
-            "expires_in" => 3600,
-            "scope" => "read write"
-          }
-        })
-
-      assert {:error, "Missing required OAuth field: refresh_token"} = result
-    end
-
-    test "selects token with best scope match when new token has multiple scope overlaps" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      {:ok, token_a} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "Token with Scope A",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "token_a",
-            "refresh_token" => "refresh_a",
-            "expires_in" => 3600,
-            "scope" => "scope_a"
-          }
-        })
-
-      {:ok, _token_b} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "Token with Scope B",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "token_b",
-            "refresh_token" => "refresh_b",
-            "expires_in" => 3600,
-            "scope" => "scope_b"
-          }
-        })
-
-      # Make token_b more recent
-      token_a_record = Repo.get!(OauthToken, token_a.oauth_token.id)
-      older_timestamp = DateTime.add(DateTime.utc_now(), -3600, :second)
-
-      Repo.update_all(
-        from(t in OauthToken, where: t.id == ^token_a_record.id),
-        set: [updated_at: older_timestamp]
-      )
-
-      # Create token with both scope A and scope B but no refresh token
-      {:ok, combined_token} =
-        Credentials.create_credential(%{
-          "user_id" => user.id,
-          "schema" => "oauth",
-          "oauth_client_id" => oauth_client.id,
-          "name" => "Token with Scopes A and B",
-          "body" => %{},
-          "oauth_token" => %{
-            "access_token" => "combined_token",
-            "expires_in" => 3600,
-            "scope" => "scope_a scope_b"
-          }
-        })
-
-      # The combined token should use token_b's refresh token since it's more recent
-      # and both tokens have the same scope overlap (1 scope each)
-      assert combined_token.oauth_token.body["refresh_token"] == "refresh_b"
-    end
-  end
-
-  test "finds tokens across different OAuth clients with same client credentials" do
-    user = insert(:user)
-
-    client_attrs = %{
-      client_id: "shared_client_id",
-      client_secret: "shared_client_secret"
-    }
-
-    oauth_client1 = insert(:oauth_client, client_attrs)
-    oauth_client2 = insert(:oauth_client, client_attrs)
-
-    Credentials.create_credential(%{
-      "user_id" => user.id,
-      "schema" => "oauth",
-      "oauth_client_id" => oauth_client1.id,
-      "name" => "First Credential",
-      "body" => %{},
-      "oauth_token" => %{
-        "access_token" => "original_token",
-        "refresh_token" => "original_refresh",
-        "expires_in" => 3600,
-        "scope" => "read write"
       }
-    })
 
-    {:ok, credential2} =
-      Credentials.create_credential(%{
-        "user_id" => user.id,
-        "schema" => "oauth",
-        "oauth_client_id" => oauth_client2.id,
-        "name" => "Second Credential",
-        "body" => %{},
+      assert {:error,
+              %Lightning.Credentials.OauthValidation.Error{
+                type: :unsupported_token_type,
+                message: "Unsupported token type: 'Basic'. Expected 'Bearer'"
+              }} = Credentials.create_credential(attrs)
+    end
+
+    test "update_credential/2 preserves refresh_token when not provided in update" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "old_token",
+                "refresh_token" => "existing_refresh",
+                "expires_in" => 3600,
+                "scope" => "read write",
+                "token_type" => "Bearer"
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
+          oauth_client: oauth_client
+        )
+
+      update_attrs = %{
         "oauth_token" => %{
           "access_token" => "new_token",
-          "expires_in" => 3600,
-          "scope" => "read write"
+          "expires_in" => 7200,
+          "scope" => "read write",
+          "token_type" => "Bearer"
         }
-      })
-
-    assert credential2.oauth_token.body["refresh_token"] == "original_refresh"
-  end
-
-  describe "find_best_matching_token_for_scopes/3" do
-    test "returns nil when oauth_client_id doesn't exist" do
-      user = insert(:user)
-      non_existent_client_id = Ecto.UUID.generate()
-
-      result =
-        Credentials.find_best_matching_token_for_scopes(
-          user.id,
-          non_existent_client_id,
-          ["read", "write"]
-        )
-
-      assert is_nil(result)
-    end
-
-    test "returns nil when no tokens are available" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client, mandatory_scopes: "openid,profile")
-
-      result =
-        Credentials.find_best_matching_token_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["read", "write"]
-        )
-
-      assert is_nil(result)
-    end
-
-    test "handles mandatory scopes correctly" do
-      user = insert(:user)
-
-      oauth_client =
-        insert(:oauth_client, mandatory_scopes: "openid,profile,email")
-
-      token1 =
-        insert(:oauth_token, %{
-          user: user,
-          oauth_client: oauth_client,
-          scope: ["openid", "profile", "email", "calendar"],
-          body: %{
-            "access_token" => "token1",
-            "refresh_token" => "refresh1",
-            "expires_in" => 3600
-          }
-        })
-
-      token2 =
-        insert(:oauth_token, %{
-          user: user,
-          oauth_client: oauth_client,
-          scope: ["openid", "profile", "email"],
-          body: %{
-            "access_token" => "token2",
-            "refresh_token" => "refresh2",
-            "expires_in" => 3600
-          }
-        })
-
-      result1 =
-        Credentials.find_best_matching_token_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["openid", "profile", "email", "calendar"]
-        )
-
-      assert result1.id == token1.id
-
-      result2 =
-        Credentials.find_best_matching_token_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["openid", "profile", "email"]
-        )
-
-      assert result2.id == token2.id
-    end
-
-    test "prefers token with fewest additional scopes when requesting only mandatory scopes" do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client, mandatory_scopes: "openid,profile")
-
-      insert(:oauth_token, %{
-        user: user,
-        oauth_client: oauth_client,
-        scope: ["openid", "profile", "calendar", "drive", "mail"],
-        body: %{
-          "access_token" => "token1",
-          "refresh_token" => "refresh1",
-          "expires_in" => 3600
-        }
-      })
-
-      token2 =
-        insert(:oauth_token, %{
-          user: user,
-          oauth_client: oauth_client,
-          scope: ["openid", "profile", "calendar"],
-          body: %{
-            "access_token" => "token2",
-            "refresh_token" => "refresh2",
-            "expires_in" => 3600
-          }
-        })
-
-      token3 =
-        insert(:oauth_token, %{
-          user: user,
-          oauth_client: oauth_client,
-          scope: ["openid", "profile"],
-          body: %{
-            "access_token" => "token3",
-            "refresh_token" => "refresh3",
-            "expires_in" => 3600
-          }
-        })
-
-      result =
-        Credentials.find_best_matching_token_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["openid", "profile"]
-        )
-
-      assert result.id == token3.id
-
-      Repo.delete!(token3)
-
-      result =
-        Credentials.find_best_matching_token_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["openid", "profile"]
-        )
-
-      assert result.id == token2.id
-    end
-
-    test "properly handles cross-client matching" do
-      user = insert(:user)
-
-      client_attrs = %{
-        client_id: "shared_client_id",
-        client_secret: "shared_client_secret",
-        mandatory_scopes: "openid,profile"
       }
 
-      oauth_client1 = insert(:oauth_client, client_attrs)
-      oauth_client2 = insert(:oauth_client, client_attrs)
+      assert {:ok, updated_credential} =
+               Credentials.update_credential(credential, update_attrs)
 
-      token =
-        insert(:oauth_token, %{
-          user: user,
-          oauth_client: oauth_client1,
-          scope: ["openid", "profile", "calendar"],
-          body: %{
-            "access_token" => "token",
-            "refresh_token" => "refresh",
-            "expires_in" => 3600
-          }
-        })
-
-      result =
-        Credentials.find_best_matching_token_for_scopes(
-          user.id,
-          oauth_client2.id,
-          ["openid", "profile", "calendar"]
-        )
-
-      assert result.id == token.id
+      assert updated_credential.oauth_token.body["refresh_token"] ==
+               "existing_refresh"
     end
   end
 

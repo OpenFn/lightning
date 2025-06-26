@@ -9,19 +9,6 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
-    # Initialize ETS table for adapter lookup
-    :ets.new(:adapter_lookup, [:named_table, :public, read_concurrency: true])
-
-    :ets.insert(
-      :adapter_lookup,
-      {"googlesheets", Lightning.AuthProviders.Google}
-    )
-
-    :ets.insert(
-      :adapter_lookup,
-      {"salesforce_oauth", Lightning.AuthProviders.Salesforce}
-    )
-
     # mnesia startup
     :mnesia.stop()
     :mnesia.create_schema([node()])
