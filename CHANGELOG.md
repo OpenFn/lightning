@@ -23,6 +23,8 @@ and this project adheres to
 
 - Cannot send message in old ai chat sessions
   [#3347](https://github.com/OpenFn/lightning/issues/3347)
+- Fixes brief flash of previously viewed diagram when switching workflows
+  [#3352](https://github.com/OpenFn/lightning/pull/3352)
 
 ## [2.13.3] 2025-06-26
 
