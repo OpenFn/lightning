@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Dont send oauth token expiry errors to Sentry
+  [#3334](https://github.com/OpenFn/lightning/issues/3334)
+
 ### Fixed
 
 - Cannot send message in old ai chat sessions
