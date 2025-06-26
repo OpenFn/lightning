@@ -19,8 +19,8 @@ and this project adheres to
 
 ### Changed
 
-- Dont send run channel errors to Sentry
-  [#3155](https://github.com/OpenFn/lightning/issues/3155)
+- Dont send oauth token expiry errors to Sentry
+  [#3334](https://github.com/OpenFn/lightning/issues/3334)
 
 ### Fixed
 
