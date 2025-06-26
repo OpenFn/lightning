@@ -3,6 +3,7 @@ defmodule LightningWeb.RunChannel do
   Phoenix channel to interact with Runs.
   """
   use LightningWeb, :channel
+  use LightningWeb, :verified_routes
 
   import LightningWeb.ChannelHelpers
 
@@ -86,10 +87,11 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("fetch:credential", %{"id" => id}, socket) do
-    %{run: run, scrubber: scrubber} = socket.assigns
+    %{run: run, scrubber: scrubber, project_id: project_id} = socket.assigns
 
-    with credential when is_map(credential) <-
-           Runs.get_credential(run, id) || :not_found,
+    credential = Runs.get_credential(run, id)
+
+    with credential when is_map(credential) <- credential || :not_found,
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
          credential <- maybe_merge_oauth(credential),
          samples <- Credentials.sensitive_values_for(credential),
@@ -116,13 +118,18 @@ defmodule LightningWeb.RunChannel do
 
       {:error, :reauthorization_required} ->
         Logger.error("oauth refresh token has expired", credential_id: id)
+        credentials_url = url(~p"/projects/#{project_id}/settings#credentials")
 
-        {:reply,
-         {:error,
-          %{
-            message: "Your oauth token has expired",
-            fix: "Visit your credentials page and reauthorize the credential"
-          }}, socket}
+        fix = """
+        Reauthorize with your external system:
+        1. Go to #{credentials_url}
+        2. Find #{credential.name}
+        3. Click "Edit" and then "Reauthorize"
+        If this is not your credential, send this link to the owner and ask them to reauthorize.
+        """
+
+        {:reply, {:error, %{message: "Oauth token has expired", fix: fix}},
+         socket}
 
       {:error, :temporary_failure} ->
         Logger.error("Could not reach the oauth provider", credential_id: id)

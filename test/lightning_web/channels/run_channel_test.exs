@@ -612,9 +612,15 @@ defmodule LightningWeb.RunChannelTest do
       ref = push(socket, "fetch:credential", %{"id" => credential.id})
 
       assert_reply ref, :error, %{
-        message: "Your oauth token has expired",
-        fix: "Visit your credentials page and reauthorize the credential"
+        message: "Oauth token has expired",
+        fix: fix_msg
       }
+
+      assert fix_msg =~ credential.name
+      assert fix_msg =~ "Reauthorize with your external system"
+
+      assert fix_msg =~
+               "If this is not your credential, send this link to the owner and ask them to reauthorize"
 
       # temporary failure
       ref = push(socket, "fetch:credential", %{"id" => credential.id})
