@@ -162,4 +162,42 @@ defmodule Lightning.Helpers do
     |> String.replace(~r/[^\p{L}0-9_\.\-]+/u, "-")
     |> String.trim("-")
   end
+
+  @doc """
+  Normalizes all map keys to strings recursively.
+
+  This function walks through a map and converts all keys to strings using `to_string/1`.
+  If a key's value is also a map, it recursively normalizes the nested map as well.
+  Non-map values are returned unchanged.
+
+  ## Examples
+
+      iex> normalize_keys(%{foo: "bar", baz: %{qux: 123}})
+      %{"foo" => "bar", "baz" => %{"qux" => 123}}
+
+      iex> normalize_keys(%{1 => "one", 2 => "two"})
+      %{"1" => "one", "2" => "two"}
+
+      iex> normalize_keys("not a map")
+      "not a map"
+
+  ## Parameters
+    - `map`: The map whose keys should be normalized to strings
+    - `value`: Any non-map value that should be returned as-is
+
+  ## Returns
+    - A new map with all keys converted to strings (for map inputs)
+    - The original value unchanged (for non-map inputs)
+  """
+  def normalize_keys(map) when is_map(map) do
+    Enum.reduce(map, %{}, fn
+      {k, v}, acc when is_map(v) ->
+        Map.put(acc, to_string(k), normalize_keys(v))
+
+      {k, v}, acc ->
+        Map.put(acc, to_string(k), v)
+    end)
+  end
+
+  def normalize_keys(value), do: value
 end

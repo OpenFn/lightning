@@ -1,17 +1,57 @@
 defmodule LightningWeb.Components.Oauth do
-  @moduledoc false
+  @moduledoc """
+  OAuth-related UI components for Lightning credentials.
+
+  This module provides components for OAuth authentication flows, including
+  scope selection, user information display, and error handling with
+  structured error messages based on validation results.
+  """
   use LightningWeb, :component
 
   alias LightningWeb.Components.Common
+  alias LightningWeb.CredentialLive.OAuthErrorFormatter
 
+  @doc """
+  Renders a scope selection interface for OAuth permissions.
+
+  This component displays a list of OAuth scopes as checkboxes, allowing users
+  to select which permissions they want to grant. Mandatory scopes are automatically
+  checked and disabled to prevent deselection.
+
+  ## Attributes
+
+    * `:id` - Unique identifier for the component
+    * `:on_change` - Event handler for scope selection changes
+    * `:target` - Phoenix LiveView target for events
+    * `:selected_scopes` - List of currently selected scope strings
+    * `:mandatory_scopes` - List of required scope strings that cannot be deselected
+    * `:scopes` - Complete list of available scope strings
+    * `:provider` - OAuth provider name (e.g., "Google", "GitHub")
+    * `:doc_url` - Optional URL to provider's scope documentation
+    * `:disabled` - Whether all checkboxes should be disabled
+
+  ## Examples
+
+      <.scopes_picklist
+        id="google-scopes"
+        on_change="scope_changed"
+        target={@myself}
+        selected_scopes={["read", "write"]}
+        mandatory_scopes={["read"]}
+        scopes={["read", "write", "admin"]}
+        provider="Google"
+        doc_url="https://developers.google.com/identity/protocols/oauth2/scopes"
+        disabled={false}
+      />
+  """
   attr :id, :string, required: true
   attr :on_change, :any, required: true
   attr :target, :any, required: true
-  attr :selected_scopes, :any, required: true
-  attr :mandatory_scopes, :any, required: true
-  attr :scopes, :any, required: true
+  attr :selected_scopes, :list, required: true
+  attr :mandatory_scopes, :list, required: true
+  attr :scopes, :list, required: true
   attr :provider, :string, required: true
-  attr :doc_url, :any, default: nil
+  attr :doc_url, :string, default: nil
   attr :disabled, :boolean, default: false
 
   def scopes_picklist(assigns) do
@@ -55,238 +95,16 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def authorize_button(assigns) do
-    ~H"""
-    <.button_link
-      href={@authorize_url}
-      id="authorize-button"
-      phx-click="authorize_click"
-      phx-target={@myself}
-      target="_blank"
-      theme="primary"
-    >
-      <span class="text-normal">Sign in with {@provider}</span>
-    </.button_link>
-    """
-  end
+  @doc """
+  Displays a warning alert when the OAuth client configuration is missing.
 
-  def userinfo(assigns) do
-    ~H"""
-    <div class="flex flex-wrap items-center justify-between sm:flex-nowrap mt-5">
-      <div class="flex items-center">
-        <img
-          src={@userinfo["picture"]}
-          class="h-20 w-20 rounded-full"
-          alt={@userinfo["name"]}
-          onerror={"this.onerror=null;this.src='#{Routes.static_path(
-              @socket,
-              "/images/user.png"
-            )
-          }';"}
-        />
-        <div class="ml-4">
-          <h3 class="text-base font-semibold leading-6 text-gray-900">
-            {@userinfo["name"]}
-          </h3>
-          <p class="text-sm text-gray-500">
-            <a href="#">{@userinfo["email"]}</a>
-          </p>
-        </div>
-      </div>
-    </div>
-    """
-  end
+  This component shows an error message when the OAuth client associated with
+  a credential cannot be found, typically due to misconfiguration or deletion.
 
-  defp reauthorize_button(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:class, fn -> "" end)
-      |> assign(:button_class, "link #{assigns.class}")
+  ## Examples
 
-    ~H"""
-    <button
-      id={@id}
-      type="button"
-      phx-target={@target}
-      phx-click="re_authorize_click"
-      class={@button_class}
-    >
-      {render_slot(@inner_block)}
-    </button>
-    """
-  end
-
-  def success_message(%{revocation: :available} = assigns) do
-    ~H"""
-    <Common.alert type="success">
-      <:message>
-        Success. If your credential is no longer working, you may try to revoke and reauthenticate by clicking
-        <.reauthorize_button
-          id="re-authorize-button"
-          class="link-success"
-          target={@myself}
-        >
-          here <span aria-hidden="true"> &rarr;</span>
-        </.reauthorize_button>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def success_message(%{revocation: :unavailable} = assigns) do
-    ~H"""
-    <Common.alert type="success">
-      <:message>
-        Success. If your credential is no longer working, you may try to revoke OpenFn access and and reauthenticate. To revoke access, go to the third party apps section of the provider's website or portal.
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :token_failed} = assigns) do
-    ~H"""
-    <Common.alert type="warning" header="Something went wrong.">
-      <:message>
-        <p>
-          Failed retrieving the token from the provider. Please try again
-          <.reauthorize_button
-            id="re-authorize-button"
-            class="link-warning"
-            target={@myself}
-          >
-            here <span aria-hidden="true"> &rarr;</span>
-          </.reauthorize_button>
-        </p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :revoke_failed} = assigns) do
-    ~H"""
-    <Common.alert
-      type="danger"
-      header="Something went wrong."
-      actions={[
-        %{
-          id: "authorize-button",
-          text: "Authorize again",
-          target: @myself,
-          click: "authorize_click"
-        }
-      ]}
-    >
-      <:message>
-        <p>
-          Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one.
-        </p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :refresh_failed} = assigns) do
-    ~H"""
-    <Common.alert type="warning" header="Something went wrong.">
-      <:message>
-        <p>
-          Failed renewing your access token. Please request a new token by clicking
-          <.reauthorize_button
-            id="re-authorize-button"
-            class="link-warning"
-            target={@myself}
-          >
-            here <span aria-hidden="true"> &rarr;</span>
-          </.reauthorize_button>
-        </p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :userinfo_failed} = assigns) do
-    ~H"""
-    <Common.alert type="info">
-      <:message>
-        <p>
-          That worked, but we couldn't fetch your user information. You can save your credential now or
-          <button
-            class="link link-info"
-            type="button"
-            phx-click="try_userinfo_again"
-            phx-target={@myself}
-          >
-            try again <span aria-hidden="true"> &rarr;</span>
-          </button>
-        </p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :fetching_userinfo} = assigns) do
-    ~H"""
-    <.text_ping_loader>
-      Attempting to fetch user information from your OAuth provider
-    </.text_ping_loader>
-    """
-  end
-
-  def alert_block(%{type: :missing_required} = assigns) do
-    ~H"""
-    <Common.alert type="danger" header="Missing refresh token" actions={[]}>
-      <:message>
-        <p>
-          We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one.
-        </p>
-        <p>
-          If you don't have another credential, please
-          <%= if assigns[:revocation_endpoint] do %>
-            reauthorize OpenFn's access to your provider
-            <.reauthorize_button
-              id="re-authorize-button"
-              class="link-danger"
-              target={@myself}
-            >
-              here <span aria-hidden="true"> &rarr;</span>
-            </.reauthorize_button>
-          <% else %>
-            revoke OpenFn's access to your provider via the "third party apps" section of their website. Once that is done, you can try to reauthorize
-            <button
-              id="authorize-button"
-              type="button"
-              phx-target={@myself}
-              phx-click="authorize_click"
-              class="link link-danger"
-            >
-              here <span aria-hidden="true"> &rarr;</span>
-            </button>
-          <% end %>
-        </p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
-  def alert_block(%{type: :code_failed} = assigns) do
-    ~H"""
-    <Common.alert type="danger" header="Something went wrong.">
-      <:message>
-        <p>
-          Failed retrieving authentication code. Please reauthorize
-          <.reauthorize_button
-            id="re-authorize-button"
-            class="link-danger"
-            target={@myself}
-          >
-            here <span aria-hidden="true"> &rarr;</span>
-          </.reauthorize_button>
-        </p>
-      </:message>
-    </Common.alert>
-    """
-  end
-
+      <.missing_client_warning />
+  """
   def missing_client_warning(assigns) do
     ~H"""
     <Common.alert type="danger" header="OAuth client not found">
@@ -300,43 +118,245 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def reauthorize_banner(assigns) do
-    # TODO - consider https://github.com/OpenFn/lightning/issues/2320
-    # click =
-    #   if assigns[:revocation_endpoint],
-    #     do: "re_authorize_click",
-    #     else: "authorize_click"
+  @doc """
+  Renders the OAuth authentication status and flow UI.
 
-    # id =
-    #   if assigns[:revocation_endpoint],
-    #     do: "re-authorize-button",
-    #     else: "authorize-button"
+  This component manages the complete OAuth authentication flow, displaying
+  different UI states based on the authentication progress. It handles initial
+  authorization, loading states, success states with user information, and
+  various error conditions.
 
-    # assigns =
-    #   assigns
-    #   |> assign(:click, click)
-    #   |> assign(:id, id)
+  ## Attributes
+
+    * `:state` - Current authentication state (`:idle`, `:authenticating`, `:fetching_userinfo`, `:complete`, `:error`)
+    * `:provider` - OAuth provider name (e.g., "Google", "GitHub")
+    * `:myself` - Phoenix LiveView socket reference for event handling
+    * `:authorize_url` - OAuth authorization URL (required when state is `:idle` or `:error`)
+    * `:userinfo` - User information map from OAuth provider (required when state is `:complete`)
+    * `:error` - Error information (required when state is `:error`)
+    * `:scopes_changed` - Boolean indicating if selected scopes have changed since last authorization
+
+  ## States
+
+    * `:idle` - Initial state, shows authorize button
+    * `:authenticating` - OAuth flow in progress
+    * `:fetching_userinfo` - Retrieving user details from provider
+    * `:complete` - Successfully authenticated
+    * `:error` - Authentication failed
+
+  ## Examples
+
+      <.oauth_status
+        state={:complete}
+        provider="Google"
+        myself={@myself}
+        userinfo={%{"name" => "John Doe", "email" => "john@example.com"}}
+        scopes_changed={false}
+      />
+
+      <.oauth_status
+        state={:error}
+        provider="GitHub"
+        myself={@myself}
+        authorize_url="https://github.com/login/oauth/authorize?..."
+        error={:invalid_token}
+        scopes_changed={false}
+      />
+  """
+  attr :state, :atom, required: true
+  attr :provider, :string, required: true
+  attr :myself, :any, required: true
+  attr :authorize_url, :string, default: nil
+  attr :userinfo, :map, default: nil
+  attr :error, :any, default: nil
+  attr :scopes_changed, :boolean, default: false
+  attr :socket, :any, default: nil
+
+  def oauth_status(assigns) do
+    ~H"""
+    <div class="space-y-4">
+      <%= if @scopes_changed do %>
+        <.scope_change_alert provider={@provider} myself={@myself} />
+      <% else %>
+        <%= case @state do %>
+          <% :idle -> %>
+            <.authorize_button
+              authorize_url={@authorize_url}
+              provider={@provider}
+              myself={@myself}
+            />
+          <% :authenticating -> %>
+            <.text_ping_loader>
+              Authenticating with {@provider}...
+            </.text_ping_loader>
+          <% :fetching_userinfo -> %>
+            <.text_ping_loader>
+              Fetching user information from {@provider}...
+            </.text_ping_loader>
+          <% :complete -> %>
+            <%= if @userinfo do %>
+              <.userinfo_card
+                socket={@socket}
+                userinfo={@userinfo}
+                provider={@provider}
+              />
+            <% else %>
+              <.success_without_userinfo provider={@provider} />
+            <% end %>
+
+            <.reauthorize_button provider={@provider} myself={@myself} />
+          <% :error -> %>
+            <.oauth_error_alert
+              error={@error}
+              provider={@provider}
+              myself={@myself}
+              authorize_url={@authorize_url}
+            />
+        <% end %>
+      <% end %>
+    </div>
+    """
+  end
+
+  # Private components
+
+  defp success_without_userinfo(assigns) do
+    ~H"""
+    <LightningWeb.Components.Common.alert type="info">
+      <:message>
+        Successfully authenticated with {@provider}.
+        Your credential seems ready to use, but we couldn't fetch your user info to verify. This app may not provide a user info endpoint, or your admin may not have configured it.
+      </:message>
+    </LightningWeb.Components.Common.alert>
+    """
+  end
+
+  defp oauth_error_alert(assigns) do
+    error_display =
+      OAuthErrorFormatter.format_error(assigns.error, assigns.provider)
+
+    alert_type = OAuthErrorFormatter.alert_type(error_display)
+
+    action = %{
+      id: "oauth-error-action",
+      text: error_display.action_text,
+      click: "authorize_click",
+      target: assigns.myself
+    }
+
+    assigns =
+      assigns
+      |> assign(:error_display, error_display)
+      |> assign(:alert_type, alert_type)
+      |> assign(:action, action)
 
     ~H"""
-    <Common.alert
-      id="re-authorize-banner"
-      type="warning"
-      header="Reauthentication required"
-      actions={[
-        %{
-          id: "authorize-button",
-          text: "Reauthenticate with #{@provider}",
-          click: "authorize_click",
-          target: @myself
-        }
-      ]}
+    <LightningWeb.Components.Common.alert
+      type={@alert_type}
+      header={@error_display.header}
+      actions={[@action]}
     >
       <:message>
-        <p>
-          You've changed the scopes (i.e., permissions) on this credential. To save, you must first reauthenticate with your OAuth2 client.
-        </p>
+        <p>{@error_display.message}</p>
+        <%= if @error_display.details do %>
+          <p class="mt-2 text-sm whitespace-pre-line">{@error_display.details}</p>
+        <% end %>
       </:message>
-    </Common.alert>
+    </LightningWeb.Components.Common.alert>
+    """
+  end
+
+  defp scope_change_alert(assigns) do
+    error_display =
+      OAuthErrorFormatter.format_error(:scope_changed, assigns.provider)
+
+    action = %{
+      id: "authorize-button",
+      text: error_display.action_text,
+      click: "authorize_click",
+      target: assigns.myself
+    }
+
+    assigns =
+      assigns
+      |> assign(:error_display, error_display)
+      |> assign(:action, action)
+
+    ~H"""
+    <LightningWeb.Components.Common.alert
+      type="warning"
+      header={@error_display.header}
+      actions={[@action]}
+    >
+      <:message>
+        <p>{@error_display.message}</p>
+        <%= if @error_display.details do %>
+          <p class="mt-2 text-sm whitespace-pre-line">{@error_display.details}</p>
+        <% end %>
+      </:message>
+    </LightningWeb.Components.Common.alert>
+    """
+  end
+
+  defp authorize_button(assigns) do
+    assigns =
+      assign_new(assigns, :text, fn -> "Sign in with #{assigns.provider}" end)
+
+    ~H"""
+    <.button
+      id="authorize-button"
+      phx-click="authorize_click"
+      phx-target={@myself}
+      theme="primary"
+    >
+      <span class="text-normal">{@text}</span>
+    </.button>
+    """
+  end
+
+  defp reauthorize_button(assigns) do
+    ~H"""
+    <div class="text-sm text-gray-600">
+      If your credential isn't working as expected, you can
+      <button
+        type="button"
+        phx-click="authorize_click"
+        phx-target={@myself}
+        class="font-medium text-blue-600 hover:text-blue-500"
+      >
+        reauthenticate with {@provider}
+      </button>
+    </div>
+    """
+  end
+
+  defp userinfo_card(assigns) do
+    ~H"""
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div class="flex items-center">
+        <img
+          src={@userinfo["picture"]}
+          alt={@userinfo["name"] || "Unknown"}
+          class="h-16 w-16 rounded-full"
+          onerror={"this.onerror=null;this.src='#{Routes.static_path(
+              @socket,
+              "/images/user.png"
+            )
+          }';"}
+        />
+        <div class="ml-4">
+          <h3 class="text-base font-semibold text-gray-900">
+            {@userinfo["name"] || "Unknown User"}
+          </h3>
+          <p class="text-sm text-gray-600">
+            {@userinfo["email"] || "No email provided"}
+          </p>
+          <p class="text-xs text-green-600 mt-1">
+            Successfully authenticated with {@provider}
+          </p>
+        </div>
+      </div>
+    </div>
     """
   end
 end

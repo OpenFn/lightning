@@ -80,17 +80,6 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 # Set OAuth2 to use Hackney for HTTP calls
 config :oauth2, adapter: Tesla.Adapter.Hackney
 
-config :lightning, :oauth_clients,
-  google: [
-    wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
-  ],
-  salesforce: [
-    prod_wellknown_url:
-      "https://login.salesforce.com/.well-known/openid-configuration",
-    sandbox_wellknown_url:
-      "https://test.salesforce.com/.well-known/openid-configuration"
-  ]
-
 # Configure esbuild (the version is required)
 # TODO: work out how to _NOT_ have this set of entry points try and build
 # monaco-editor, since we already have a separate esbuild task for that.

@@ -24,6 +24,22 @@ and this project adheres to
 
 ### Fixed
 
+## [2.13.3] 2025-06-26
+
+## [2.13.3-pre1] 2025-06-26
+
+### Fixed
+
+- ⚠️️ **Security patch for cases when a single user creates multiple Oauth
+  credentials for the same Oauth client.** This fix prevents credential token
+  sharing for users with _multiple_ Oauth credentials linked to a single OpenFn
+  username, a single Oauth Client, and the _same_ set of scopes. Previously,
+  these credentials would be considered the unique (`user_id`, `client_id`,
+  `scopes`) and only the _last_ issued token would be persisted. This fix binds
+  oauth_tokens to credentials 1:1 and provides a number of enhancements for
+  debugging and reauthorizing Oauth credentials.
+  [#3326](https://github.com/OpenFn/lightning/issues/3326)
+
 ## [2.13.3-pre]
 
 ### Added
