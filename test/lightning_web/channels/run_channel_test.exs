@@ -577,7 +577,8 @@ defmodule LightningWeb.RunChannelTest do
 
       endpoint = oauth_client.token_endpoint
 
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+      Lightning.AuthProviders.OauthHTTPClient.Mock
+      |> Mox.expect(:call, fn
         %Tesla.Env{
           method: :post,
           url: ^endpoint
@@ -590,15 +591,37 @@ defmodule LightningWeb.RunChannelTest do
                body: %{"error" => "invalid_grant"}
            }}
       end)
+      |> Mox.expect(:call, fn
+        %Tesla.Env{
+          method: :post,
+          url: ^endpoint
+        } = env,
+        _opts ->
+          {:ok,
+           %Tesla.Env{
+             env
+             | status: 429,
+               body: %{"error" => "rate limit"}
+           }}
+      end)
 
       %{socket: socket} =
         create_socket_and_run(%{credential: credential, user: user})
 
+      # token expiry
       ref = push(socket, "fetch:credential", %{"id" => credential.id})
 
       assert_reply ref, :error, %{
         message: "Your oauth token has expired",
         fix: "Visit your credentials page and reauthorize the credential"
+      }
+
+      # temporary failure
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      assert_reply ref, :error, %{
+        message: "Could not reach the oauth provider",
+        fix: "Try again later"
       }
     end
   end
