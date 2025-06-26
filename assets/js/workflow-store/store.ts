@@ -42,6 +42,7 @@ export interface WorkflowState extends WorkflowProps {
     replace?: boolean
   ) => void;
   observer: null | ((v: unknown) => void);
+  reset: () => void;
   subscribe: (cb: (v: unknown) => void) => void;
   add: (data: AddArgs) => void;
   updatePositions: (data: Positions | null) => void;
@@ -313,6 +314,9 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       }));
 
       set(state => applyPatches(state, immerPatches));
+    },
+    reset() {
+      set(DEFAULT_PROPS);
     },
     setDisabled: (value: boolean) => {
       set(state => ({
