@@ -61,8 +61,7 @@ defmodule LightningWeb.Components.TokenDeletionModal do
             Are you sure you want to delete this token?
           </p>
         </div>
-        <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-        <div class="flex flex-row-reverse gap-4">
+        <.modal_footer>
           <.button
             id={"delete-token-#{@id}_confirm_button"}
             type="button"
@@ -82,7 +81,7 @@ defmodule LightningWeb.Components.TokenDeletionModal do
           >
             Cancel
           </.button>
-        </div>
+        </.modal_footer>
       </.modal>
     </div>
     """

@@ -123,26 +123,24 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
               </small>
             </div>
           </div>
-          <.modal_footer class="mt-6 mx-6">
-            <div class="sm:flex sm:flex-row-reverse gap-3">
-              <.button
-                type="submit"
-                theme="primary"
-                disabled={!@changeset.valid?}
-                phx-target={@myself}
-              >
-                Create project
-              </.button>
-              <.button
-                id="cancel-project-creation"
-                theme="secondary"
-                type="button"
-                phx-click="close_modal"
-                phx-target={@myself}
-              >
-                Cancel
-              </.button>
-            </div>
+          <.modal_footer>
+            <.button
+              type="submit"
+              theme="primary"
+              disabled={!@changeset.valid?}
+              phx-target={@myself}
+            >
+              Create project
+            </.button>
+            <.button
+              id="cancel-project-creation"
+              theme="secondary"
+              type="button"
+              phx-click="close_modal"
+              phx-target={@myself}
+            >
+              Cancel
+            </.button>
           </.modal_footer>
         </.form>
       </.modal>

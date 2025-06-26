@@ -120,7 +120,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
               aria-label={gettext("close")}
             >
               <span class="sr-only">Close</span>
-              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+              <.icon name="hero-x-mark-solid" class="h-5 w-5 stroke-current" />
             </button>
           </div>
         </:title>
@@ -160,27 +160,25 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
               />
             </div>
           </div>
-          <.modal_footer class="mt-6">
-            <div class="sm:flex sm:flex-row-reverse gap-3">
-              <.button
-                id={"save-collection-#{@collection.id || "new"}"}
-                type="submit"
-                theme="primary"
-                disabled={!@changeset.valid?}
-                phx-target={@myself}
-              >
-                Save
-              </.button>
-              <.button
-                id={"cancel-collection-creation-#{@collection.id || "new"}"}
-                type="button"
-                phx-click="close_modal"
-                phx-target={@myself}
-                theme="secondary"
-              >
-                Cancel
-              </.button>
-            </div>
+          <.modal_footer>
+            <.button
+              id={"save-collection-#{@collection.id || "new"}"}
+              type="submit"
+              theme="primary"
+              disabled={!@changeset.valid?}
+              phx-target={@myself}
+            >
+              Save
+            </.button>
+            <.button
+              id={"cancel-collection-creation-#{@collection.id || "new"}"}
+              type="button"
+              phx-click="close_modal"
+              phx-target={@myself}
+              theme="secondary"
+            >
+              Cancel
+            </.button>
           </.modal_footer>
         </.form>
       </.modal>

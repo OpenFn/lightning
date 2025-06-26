@@ -361,7 +361,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
           phx-change="validate"
           phx-submit="save"
         >
-          <div class="space-y-6 bg-white px-4 px-6 sm:px-6">
+          <div class="space-y-6 bg-white">
             <div class="space-y-4">
               <div>
                 <NewInputs.input
@@ -509,20 +509,18 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               </fieldset>
             </div>
           </div>
-          <.modal_footer class="mt-6 mx-6">
-            <div class="sm:flex sm:flex-row-reverse gap-3">
-              <.button type="submit" theme="primary" disabled={!@changeset.valid?}>
-                <%= case @action do %>
-                  <% :edit -> %>
-                    Save Changes
-                  <% :new -> %>
-                    Add OAuth Client
-                <% end %>
-              </.button>
-              <.button_link type="button" navigate={@return_to} theme="secondary">
-                Cancel
-              </.button_link>
-            </div>
+          <.modal_footer>
+            <.button type="submit" theme="primary" disabled={!@changeset.valid?}>
+              <%= case @action do %>
+                <% :edit -> %>
+                  Save Changes
+                <% :new -> %>
+                  Add OAuth Client
+              <% end %>
+            </.button>
+            <.button_link type="button" navigate={@return_to} theme="secondary">
+              Cancel
+            </.button_link>
           </.modal_footer>
         </.form>
       </.modal>

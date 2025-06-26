@@ -30,7 +30,7 @@ defmodule LightningWeb.CollectionLive.Components do
           If you wish to proceed with this action, click on the delete button. To cancel click on the cancel button.<br /><br />
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mt-2">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -44,7 +44,7 @@ defmodule LightningWeb.CollectionLive.Components do
         <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end
