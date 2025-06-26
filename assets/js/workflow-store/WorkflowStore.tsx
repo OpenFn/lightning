@@ -47,6 +47,7 @@ export const WorkflowStore: WithActionProps = props => {
     subscribe,
     setDisabled,
     setForceFit,
+    reset
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -152,6 +153,13 @@ export const WorkflowStore: WithActionProps = props => {
       setDisabled(response.disabled);
     });
   }, [props, setDisabled]);
+
+  // clear store when store-component unmounted
+  React.useEffect(() => {
+    return () => {
+      reset();
+    }
+  }, [reset])
 
   return <>{props.children}</>;
 };
