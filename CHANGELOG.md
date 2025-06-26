@@ -54,6 +54,8 @@ and this project adheres to
   [#3125](https://github.com/OpenFn/lightning/issues/3125)
 - Added icons to control layout in the workflow
   [PR #3242](https://github.com/OpenFn/lightning/pull/3242)
+- Allow users to see/use next cron input state
+  [3335](https://github.com/OpenFn/lightning/issues/3335)
 
 ### Changed
 

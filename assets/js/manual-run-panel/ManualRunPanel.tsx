@@ -38,6 +38,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
   const [currentRunDataclip, setCurrentRunDataclip] =
     React.useState<Dataclip | null>(null);
+  const [nextCronRunId, setNextCronRunId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState(urlQuery ? urlQuery : '');
   const [selectedDataclip, setSelectedDataclip] =
     React.useState<Dataclip | null>();
@@ -125,7 +126,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     };
 
     const cleanFilters = Object.fromEntries(
-      Object.entries(filters).filter(([_, value]) => value !== undefined)
+      Object.entries(filters).filter(([, value]) => value !== undefined)
     ) as Record<string, string>;
 
     return { query, filters: cleanFilters };
@@ -168,12 +169,23 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     pushEventTo(
       'search-selectable-dataclips',
       { job_id: job_id, search_text: '', limit: 10 },
-      (response: any) => {
-        const dataclips = response.dataclips as Dataclip[];
-        setRecentClips(dataclips);
+      (response: unknown) => {
+        const typedResponse = response as { dataclips: Dataclip[]; next_cron_run_id: string | null };
+        setRecentClips(typedResponse.dataclips);
+        setNextCronRunId(typedResponse.next_cron_run_id);
+        
+        // Auto-select the next cron run dataclip if it exists (for cron jobs)
+        if (typedResponse.next_cron_run_id && !runId) {
+          const nextCronDataclip = typedResponse.dataclips.find(
+            clip => clip.id === typedResponse.next_cron_run_id
+          );
+          if (nextCronDataclip) {
+            selectDataclipForManualRun(nextCronDataclip);
+          }
+        }
       }
     );
-  }, [pushEvent, job_id]);
+  }, [pushEvent, job_id, runId, selectDataclipForManualRun]);
 
   const handleSearchSumbit = React.useCallback(() => {
     const queryData = {
@@ -189,12 +201,23 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     pushEventTo(
       'search-selectable-dataclips',
       { job_id: job_id, search_text: q, limit: 10 },
-      (response: any) => {
-        const dataclips = (response.dataclips || []) as Dataclip[];
-        setRecentClips(dataclips);
+      (response: unknown) => {
+        const typedResponse = response as { dataclips: Dataclip[]; next_cron_run_id: string | null };
+        setRecentClips(typedResponse.dataclips);
+        setNextCronRunId(typedResponse.next_cron_run_id);
+        
+        // Auto-select the next cron run dataclip if it exists and no search criteria
+        if (typedResponse.next_cron_run_id && !q && !runId) {
+          const nextCronDataclip = typedResponse.dataclips.find(
+            clip => clip.id === typedResponse.next_cron_run_id
+          );
+          if (nextCronDataclip) {
+            selectDataclipForManualRun(nextCronDataclip);
+          }
+        }
       }
     );
-  }, [job_id, parsedQuery, pushEvent, navigate]);
+  }, [job_id, parsedQuery, pushEvent, navigate, runId, selectDataclipForManualRun]);
 
   React.useEffect(() => {
     if (!query.trim()) handleSearchSumbit();
@@ -224,6 +247,11 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       return recentclips;
     }
 
+    // If we have a next cron run, the backend already put it at the top, so just use as-is
+    if (nextCronRunId) {
+      return recentclips;
+    }
+
     // If not searching and we have a current run dataclip, put it at the top
     if (currentRunDataclip) {
       // Filter out current run dataclip from recent clips to avoid duplication
@@ -237,7 +265,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
 
     // Default: just show recent clips
     return recentclips;
-  }, [recentclips, currentRunDataclip, query]);
+  }, [recentclips, currentRunDataclip, nextCronRunId, query]);
 
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
@@ -256,6 +284,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             selectedDates={selectedDates}
             setSelectedDates={setSelectedDates}
             currentRunDataclip={currentRunDataclip}
+            nextCronRunId={nextCronRunId}
           />
         );
       case SeletableOptions.CUSTOM:
@@ -279,6 +308,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     pushEvent,
     handleSearchSumbit,
     currentRunDataclip,
+    nextCronRunId,
   ]);
 
   return (
@@ -290,6 +320,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
           onUnselect={() => {
             selectDataclipForManualRun(null);
           }}
+          isNextCronRun={nextCronRunId === selectedDataclip.id}
         />
       ) : (
         <div className="grow overflow-auto no-scrollbar">
