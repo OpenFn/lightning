@@ -114,13 +114,25 @@ defmodule LightningWeb.RunChannel do
           %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
         })
 
-      {:error, %{"error" => "invalid_grant"} = error} ->
-        Logger.error(
-          "Refresh token has expired: #{inspect(error)}",
-          credential_id: id
-        )
+      {:error, :reauthorization_required} ->
+        Logger.error("oauth refresh token has expired", credential_id: id)
 
-        {:reply, {:error, error}, socket}
+        {:reply,
+         {:error,
+          %{
+            message: "Your oauth token has expired",
+            fix: "Visit your credentials page and reauthorize the credential"
+          }}, socket}
+
+      {:error, :temporary_failure} ->
+        Logger.error("Could not reach the oauth provider", credential_id: id)
+
+        {:reply,
+         {:error,
+          %{
+            message: "Could not reach the oauth provider",
+            fix: "Try again later"
+          }}, socket}
 
       {:error, error} ->
         Logger.error(fn ->
@@ -130,7 +142,14 @@ defmodule LightningWeb.RunChannel do
            """, [credential_id: id]}
         end)
 
-        reply_with(socket, {:error, error})
+        reply_with(
+          socket,
+          {:error,
+           %{
+             error: error,
+             message: "An error occured when fetching your credential"
+           }}
+        )
     end
   end
 

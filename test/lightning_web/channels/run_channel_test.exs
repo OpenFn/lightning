@@ -415,6 +415,8 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   describe "fetch:credential" do
+    setup :set_google_credential
+
     test "doesn't cast credential body fields" do
       user = insert(:user)
 
@@ -564,6 +566,40 @@ defmodule LightningWeb.RunChannelTest do
       assert response["access_token"] == "test_access_token"
       assert response["refresh_token"] == "test_refresh_token"
       assert Map.has_key?(response, "expires_at")
+    end
+
+    test "translates error messages properly", %{
+      credential: credential,
+      user: user
+    } do
+      credential = Repo.preload(credential, oauth_token: [:oauth_client])
+      oauth_client = credential.oauth_client
+
+      endpoint = oauth_client.token_endpoint
+
+      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %Tesla.Env{
+          method: :post,
+          url: ^endpoint
+        } = env,
+        _opts ->
+          {:ok,
+           %Tesla.Env{
+             env
+             | status: 401,
+               body: %{"error" => "invalid_grant"}
+           }}
+      end)
+
+      %{socket: socket} =
+        create_socket_and_run(%{credential: credential, user: user})
+
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      assert_reply ref, :error, %{
+        message: "Your oauth token has expired",
+        fix: "Visit your credentials page and reauthorize the credential"
+      }
     end
   end
 
