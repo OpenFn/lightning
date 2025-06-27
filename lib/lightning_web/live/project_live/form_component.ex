@@ -187,40 +187,50 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   defp passes_filter?(user, form, filter) do
     if user do
       filter_lower = String.downcase(filter)
-      String.contains?(String.downcase("#{user.first_name} #{user.last_name}"), filter_lower) ||
-      String.contains?(String.downcase(user.email || ""), filter_lower) ||
-      String.contains?(String.downcase(to_string(form[:role].value || "")), filter_lower)
+
+      String.contains?(
+        String.downcase("#{user.first_name} #{user.last_name}"),
+        filter_lower
+      ) ||
+        String.contains?(String.downcase(user.email || ""), filter_lower) ||
+        String.contains?(
+          String.downcase(to_string(form[:role].value || "")),
+          filter_lower
+        )
     else
       false
     end
   end
 
-        defp get_sorted_filtered_forms(f, users, filter, sort_key, sort_direction) do
+  defp get_sorted_filtered_forms(f, users, filter, sort_key, sort_direction) do
     forms = Phoenix.HTML.FormData.to_form(f.source, f, :project_users, f.options)
 
     forms
-    |> Enum.filter(fn form -> passes_filter?(find_user_by_id(users, form[:user_id].value), form, filter) end)
-    |> Enum.sort_by(fn form ->
-      user = find_user_by_id(users, form[:user_id].value)
-      user_name = user && "#{user.first_name} #{user.last_name}" || ""
-      user_role = to_string(form[:role].value || "")
-
-      case sort_key do
-        "name" -> user_name
-        "email" -> user && user.email || ""
-        "role" -> user_role
-        "no_access" -> {user_role == "", user_name}
-        "owner" -> {user_role != "owner", user_name}
-        "admin" -> {user_role != "admin", user_name}
-        "editor" -> {user_role != "editor", user_name}
-        "viewer" -> {user_role != "viewer", user_name}
-        _ -> user_name
-      end
-    end, case sort_direction do
-      "asc" -> &<=/2
-      "desc" -> &>=/2
+    |> Enum.filter(fn form ->
+      passes_filter?(find_user_by_id(users, form[:user_id].value), form, filter)
     end)
+    |> Enum.sort_by(
+      fn form ->
+        user = find_user_by_id(users, form[:user_id].value)
+        user_name = (user && "#{user.first_name} #{user.last_name}") || ""
+        user_role = to_string(form[:role].value || "")
+
+        case sort_key do
+          "name" -> user_name
+          "email" -> (user && user.email) || ""
+          "role" -> user_role
+          "no_access" -> {user_role == "", user_name}
+          "owner" -> {user_role != "owner", user_name}
+          "admin" -> {user_role != "admin", user_name}
+          "editor" -> {user_role != "editor", user_name}
+          "viewer" -> {user_role != "viewer", user_name}
+          _ -> user_name
+        end
+      end,
+      case sort_direction do
+        "asc" -> &<=/2
+        "desc" -> &>=/2
+      end
+    )
   end
-
-
 end

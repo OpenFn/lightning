@@ -95,7 +95,8 @@ defmodule LightningWeb.UserLive.Index do
   end
 
   def handle_event("filter", %{"value" => filter}, socket) do
-    users = list_users(filter, socket.assigns.sort_key, socket.assigns.sort_direction)
+    users =
+      list_users(filter, socket.assigns.sort_key, socket.assigns.sort_direction)
 
     {:noreply,
      assign(socket,
@@ -105,7 +106,8 @@ defmodule LightningWeb.UserLive.Index do
   end
 
   def handle_event("clear_filter", _params, socket) do
-    users = list_users("", socket.assigns.sort_key, socket.assigns.sort_direction)
+    users =
+      list_users("", socket.assigns.sort_key, socket.assigns.sort_direction)
 
     {:noreply,
      assign(socket,
@@ -135,29 +137,49 @@ defmodule LightningWeb.UserLive.Index do
 
     Enum.filter(users, fn user ->
       String.contains?(String.downcase(user.first_name || ""), filter_lower) ||
-      String.contains?(String.downcase(user.last_name || ""), filter_lower) ||
-      String.contains?(String.downcase(user.email || ""), filter_lower) ||
-      String.contains?(String.downcase(to_string(user.role)), filter_lower)
+        String.contains?(String.downcase(user.last_name || ""), filter_lower) ||
+        String.contains?(String.downcase(user.email || ""), filter_lower) ||
+        String.contains?(String.downcase(to_string(user.role)), filter_lower)
     end)
   end
 
   defp sort_users(users, sort_key, sort_direction) do
-    compare_fn = case sort_direction do
-      "asc" -> &<=/2
-      "desc" -> &>=/2
-    end
-
-    Enum.sort_by(users, fn user ->
-      case sort_key do
-        "first_name" -> user.first_name || ""
-        "last_name" -> user.last_name || ""
-        "email" -> user.email || ""
-        "role" -> to_string(user.role)
-        "enabled" -> !user.disabled
-        "support_user" -> user.support_user
-        "scheduled_deletion" -> user.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
-        _ -> user.email || ""
+    compare_fn =
+      case sort_direction do
+        "asc" -> &<=/2
+        "desc" -> &>=/2
       end
-    end, compare_fn)
+
+    Enum.sort_by(
+      users,
+      fn user ->
+        case sort_key do
+          "first_name" ->
+            user.first_name || ""
+
+          "last_name" ->
+            user.last_name || ""
+
+          "email" ->
+            user.email || ""
+
+          "role" ->
+            to_string(user.role)
+
+          "enabled" ->
+            !user.disabled
+
+          "support_user" ->
+            user.support_user
+
+          "scheduled_deletion" ->
+            user.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
+
+          _ ->
+            user.email || ""
+        end
+      end,
+      compare_fn
+    )
   end
 end

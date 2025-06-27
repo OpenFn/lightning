@@ -546,7 +546,7 @@ defmodule LightningWeb.UserLiveTest do
       |> element("a[phx-click='sort'][phx-value-by='role']")
       |> render_click()
 
-            html = render(index_live)
+      html = render(index_live)
 
       # Check that superuser appears before user (alphabetical order)
       super_pos = :binary.match(html, "superuser") |> elem(0)
@@ -557,7 +557,9 @@ defmodule LightningWeb.UserLiveTest do
 
     test "sorting by enabled status works correctly", %{conn: conn} do
       _user_enabled = user_fixture(disabled: false, email: "enabled@example.com")
-      _user_disabled = user_fixture(disabled: true, email: "disabled@example.com")
+
+      _user_disabled =
+        user_fixture(disabled: true, email: "disabled@example.com")
 
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
@@ -576,18 +578,21 @@ defmodule LightningWeb.UserLiveTest do
     end
 
     test "filtering users by search term works correctly", %{conn: conn} do
-      _user_a = user_fixture(
-        first_name: "Alice",
-        last_name: "Smith",
-        email: "alice@example.com",
-        role: :user
-      )
-      _user_b = user_fixture(
-        first_name: "Bob",
-        last_name: "Johnson",
-        email: "bob@example.com",
-        role: :superuser
-      )
+      _user_a =
+        user_fixture(
+          first_name: "Alice",
+          last_name: "Smith",
+          email: "alice@example.com",
+          role: :user
+        )
+
+      _user_b =
+        user_fixture(
+          first_name: "Bob",
+          last_name: "Johnson",
+          email: "bob@example.com",
+          role: :superuser
+        )
 
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 

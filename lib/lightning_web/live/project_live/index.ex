@@ -228,12 +228,23 @@ defmodule LightningWeb.ProjectLive.Index do
       projects,
       fn project ->
         case sort_key do
-          "name" -> project.name || ""
-          "inserted_at" -> project.inserted_at
-          "description" -> project.description || ""
-          "owner" -> get_project_owner_name(project)
-          "scheduled_deletion" -> project.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
-          _ -> project.name || ""
+          "name" ->
+            project.name || ""
+
+          "inserted_at" ->
+            project.inserted_at
+
+          "description" ->
+            project.description || ""
+
+          "owner" ->
+            get_project_owner_name(project)
+
+          "scheduled_deletion" ->
+            project.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
+
+          _ ->
+            project.name || ""
         end
       end,
       compare_fn

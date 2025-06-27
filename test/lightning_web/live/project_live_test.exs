@@ -401,7 +401,8 @@ defmodule LightningWeb.ProjectLiveTest do
       _project_b = insert(:project, name: "beta-project")
       _project_c = insert(:project, name: "charlie-project")
 
-      {:ok, index_live, _html} = live(conn, Routes.project_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_index_path(conn, :index))
 
       # Click name header to sort descending (first click)
       index_live
@@ -436,10 +437,20 @@ defmodule LightningWeb.ProjectLiveTest do
 
     test "sorting projects by created date works correctly", %{conn: conn} do
       # Create projects with different dates
-      _project_old = insert(:project, name: "old-project", inserted_at: ~N[2023-01-01 00:00:00])
-      _project_new = insert(:project, name: "new-project", inserted_at: ~N[2023-12-01 00:00:00])
+      _project_old =
+        insert(:project,
+          name: "old-project",
+          inserted_at: ~N[2023-01-01 00:00:00]
+        )
 
-      {:ok, index_live, _html} = live(conn, Routes.project_index_path(conn, :index))
+      _project_new =
+        insert(:project,
+          name: "new-project",
+          inserted_at: ~N[2023-12-01 00:00:00]
+        )
+
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_index_path(conn, :index))
 
       # Click created at header to sort
       index_live
@@ -456,14 +467,18 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     test "filtering projects by search term works correctly", %{conn: conn} do
-      project_a = insert(:project, name: "alpha-project", description: "First project")
-      _project_b = insert(:project, name: "beta-project", description: "Second project")
+      project_a =
+        insert(:project, name: "alpha-project", description: "First project")
+
+      _project_b =
+        insert(:project, name: "beta-project", description: "Second project")
 
       # Add an owner to project_a so it shows up in owner search
       user_owner = insert(:user, first_name: "John", last_name: "Owner")
       insert(:project_user, project: project_a, user: user_owner, role: :owner)
 
-      {:ok, index_live, _html} = live(conn, Routes.project_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_index_path(conn, :index))
 
       # Filter by project name
       index_live
@@ -501,8 +516,11 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "beta-project"
     end
 
-    test "project filter input shows correct placeholder and clear button", %{conn: conn} do
-      {:ok, index_live, html} = live(conn, Routes.project_index_path(conn, :index))
+    test "project filter input shows correct placeholder and clear button", %{
+      conn: conn
+    } do
+      {:ok, index_live, html} =
+        live(conn, Routes.project_index_path(conn, :index))
 
       # Check filter input is present
       assert has_element?(index_live, "input[name=filter]")
@@ -552,7 +570,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # Check that users were added
       updated_project = Repo.preload(project, [:project_users], force: true)
-      user_roles = Enum.map(updated_project.project_users, &{&1.user_id, &1.role})
+
+      user_roles =
+        Enum.map(updated_project.project_users, &{&1.user_id, &1.role})
 
       assert {user2.id, :editor} in user_roles
       assert {user3.id, :viewer} in user_roles
@@ -625,15 +645,34 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # Check that user2's role was changed
       updated_project = Repo.preload(project, [:project_users], force: true)
-      user2_project_user = Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
+
+      user2_project_user =
+        Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
 
       assert user2_project_user.role == :admin
     end
 
     test "project user management form has sorting and filtering", %{conn: conn} do
-      user1 = insert(:user, first_name: "Alice", last_name: "Alpha", email: "alice@example.com")
-      _user2 = insert(:user, first_name: "Bob", last_name: "Beta", email: "bob@example.com")
-      _user3 = insert(:user, first_name: "Charlie", last_name: "Gamma", email: "charlie@example.com")
+      user1 =
+        insert(:user,
+          first_name: "Alice",
+          last_name: "Alpha",
+          email: "alice@example.com"
+        )
+
+      _user2 =
+        insert(:user,
+          first_name: "Bob",
+          last_name: "Beta",
+          email: "bob@example.com"
+        )
+
+      _user3 =
+        insert(:user,
+          first_name: "Charlie",
+          last_name: "Gamma",
+          email: "charlie@example.com"
+        )
 
       project = insert(:project)
       insert(:project_user, project: project, user: user1, role: :owner)
