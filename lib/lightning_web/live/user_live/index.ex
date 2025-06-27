@@ -153,6 +153,9 @@ defmodule LightningWeb.UserLive.Index do
         "last_name" -> user.last_name || ""
         "email" -> user.email || ""
         "role" -> to_string(user.role)
+        "enabled" -> !user.disabled
+        "support_user" -> user.support_user
+        "scheduled_deletion" -> user.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
         _ -> user.email || ""
       end
     end, compare_fn)

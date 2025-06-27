@@ -48,6 +48,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      socket
      |> assign(assigns)
      |> assign(:changeset, changeset)
+     |> assign(:sort_key, "name")
+     |> assign(:sort_direction, "asc")
+     |> assign(:filter, "")
      |> assign(
        :name,
        Helpers.url_safe_name(fetch_field!(changeset, :name))
@@ -68,6 +71,40 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      socket
      |> assign(:changeset, changeset)
      |> assign(:name, fetch_field!(changeset, :name))}
+  end
+
+  def handle_event("sort", %{"by" => sort_key}, socket) do
+    {sort_key, sort_direction} =
+      case socket.assigns do
+        %{sort_key: ^sort_key, sort_direction: "asc"} ->
+          {sort_key, "desc"}
+
+        %{sort_key: ^sort_key, sort_direction: "desc"} ->
+          {sort_key, "asc"}
+
+        _ ->
+          {sort_key, "asc"}
+      end
+
+    {:noreply,
+     assign(socket,
+       sort_key: sort_key,
+       sort_direction: sort_direction
+     )}
+  end
+
+  def handle_event("filter", %{"value" => filter}, socket) do
+    {:noreply,
+     assign(socket,
+       filter: filter
+     )}
+  end
+
+  def handle_event("clear_filter", _params, socket) do
+    {:noreply,
+     assign(socket,
+       filter: ""
+     )}
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
@@ -142,4 +179,48 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   defp find_user_by_id(users, user_id) do
     Enum.find(users, fn user -> user.id == user_id end)
   end
+
+  defp passes_filter?(_user, _form, "") do
+    true
+  end
+
+  defp passes_filter?(user, form, filter) do
+    if user do
+      filter_lower = String.downcase(filter)
+      String.contains?(String.downcase("#{user.first_name} #{user.last_name}"), filter_lower) ||
+      String.contains?(String.downcase(user.email || ""), filter_lower) ||
+      String.contains?(String.downcase(to_string(form[:role].value || "")), filter_lower)
+    else
+      false
+    end
+  end
+
+        defp get_sorted_filtered_forms(f, users, filter, sort_key, sort_direction) do
+    forms = Phoenix.HTML.FormData.to_form(f.source, f, :project_users, f.options)
+
+    forms
+    |> Enum.filter(fn form -> passes_filter?(find_user_by_id(users, form[:user_id].value), form, filter) end)
+    |> Enum.sort_by(fn form ->
+      user = find_user_by_id(users, form[:user_id].value)
+      user_name = user && "#{user.first_name} #{user.last_name}" || ""
+      user_role = to_string(form[:role].value || "")
+
+      case sort_key do
+        "name" -> user_name
+        "email" -> user && user.email || ""
+        "role" -> user_role
+        "no_access" -> {user_role == "", user_name}
+        "owner" -> {user_role != "owner", user_name}
+        "admin" -> {user_role != "admin", user_name}
+        "editor" -> {user_role != "editor", user_name}
+        "viewer" -> {user_role != "viewer", user_name}
+        _ -> user_name
+      end
+    end, case sort_direction do
+      "asc" -> &<=/2
+      "desc" -> &>=/2
+    end)
+  end
+
+
 end

@@ -78,7 +78,14 @@
             >
               Created At
             </.th>
-            <.th>Description</.th>
+            <.th
+              sortable={true}
+              sort_by="description"
+              active={@sort_key == "description"}
+              sort_direction={@sort_direction}
+            >
+              Description
+            </.th>
             <.th
               sortable={true}
               sort_by="owner"
@@ -87,7 +94,12 @@
             >
               Owner
             </.th>
-            <.th>
+            <.th
+              sortable={true}
+              sort_by="scheduled_deletion"
+              active={@sort_key == "scheduled_deletion"}
+              sort_direction={@sort_direction}
+            >
               Scheduled Deletion
             </.th>
             <.th>

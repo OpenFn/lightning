@@ -93,9 +93,33 @@ defmodule LightningWeb.UserLive.Components do
           >
             Role*
           </.th>
-          <.th>Enabled?</.th>
-          <.th>Support?</.th>
-          <.th>Scheduled Deletion</.th>
+          <.th
+            sortable={true}
+            sort_by="enabled"
+            active={@sort_key == "enabled"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Enabled?
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="support_user"
+            active={@sort_key == "support_user"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Support?
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="scheduled_deletion"
+            active={@sort_key == "scheduled_deletion"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Scheduled Deletion
+          </.th>
           <.th>Actions</.th>
         </.tr>
       </:header>

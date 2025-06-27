@@ -7,23 +7,23 @@
     phx-change="validate"
     phx-submit="save"
   >
-    <div class="flex items-end gap-2">
-      <div class="w-3/6">
-        <.input type="hidden" field={f[:name]} />
-        <.input
-          type="text"
-          field={f[:raw_name]}
-          label="Name"
-          value={f[:name].value}
-        />
-        <.old_error field={f[:name]} />
-      </div>
-      <div class="">
-        <%= if to_string(f[:name].value) != "" do %>
-          Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
-      <%= @name %></span>.
-        <% end %>
-      </div>
+    <div class="w-3/6">
+      <.input type="hidden" field={f[:name]} />
+      <.input
+        type="text"
+        field={f[:raw_name]}
+        label="Name"
+        value={f[:name].value}
+      />
+      <.old_error field={f[:name]} />
+      <%= if to_string(f[:name].value) != "" do %>
+        <div class="mt-2 text-sm text-gray-600">
+          Note that this project will be named:
+          <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
+            {@name}
+          </span>
+        </div>
+      <% end %>
     </div>
     <div class="sm:flex sm:items-center mt-8 mb-2">
       <div class="sm:flex-auto">
@@ -48,34 +48,118 @@
         </div>
       </div>
     </div>
+
+    <div class="mb-4">
+      <div class="relative max-w-sm">
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+          <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
+        </div>
+        <.input
+          type="text"
+          name="filter"
+          value={@filter}
+          placeholder="Filter users..."
+          class="block w-full rounded-md py-1.5 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+          phx-keyup="filter"
+          phx-debounce="300"
+          phx-target={@myself}
+        />
+        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+          <a
+            href="#"
+            class={if @filter == "", do: "hidden"}
+            id="clear_filter_button"
+            phx-click="clear_filter"
+            phx-target={@myself}
+          >
+            <Heroicons.x_mark class="h-5 w-5 text-gray-400" />
+          </a>
+        </div>
+      </div>
+    </div>
+
     <div class="mt-2 flow-root">
       <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
         <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
           <.table id="project_users_table">
             <:header>
               <.tr>
-                <.th>NAME</.th>
-                <.th>EMAIL</.th>
-                <.th class="!text-center">
+                <.th
+                  sortable={true}
+                  sort_by="name"
+                  active={@sort_key == "name"}
+                  sort_direction={@sort_direction}
+                  phx_target={@myself}
+                >
+                  NAME
+                </.th>
+                <.th
+                  sortable={true}
+                  sort_by="email"
+                  active={@sort_key == "email"}
+                  sort_direction={@sort_direction}
+                  phx_target={@myself}
+                >
+                  EMAIL
+                </.th>
+                <.th
+                  class="!text-center"
+                  sortable={true}
+                  sort_by="no_access"
+                  active={@sort_key == "no_access"}
+                  sort_direction={@sort_direction}
+                  phx_target={@myself}
+                >
                   NO ACCESS
                 </.th>
-                <.th class="!text-center">
+                <.th
+                  class="!text-center"
+                  sortable={true}
+                  sort_by="owner"
+                  active={@sort_key == "owner"}
+                  sort_direction={@sort_direction}
+                  phx_target={@myself}
+                >
                   OWNER
                 </.th>
-                <.th class="!text-center">
+                <.th
+                  class="!text-center"
+                  sortable={true}
+                  sort_by="admin"
+                  active={@sort_key == "admin"}
+                  sort_direction={@sort_direction}
+                  phx_target={@myself}
+                >
                   ADMIN
                 </.th>
-                <.th class="!text-center">
+                <.th
+                  class="!text-center"
+                  sortable={true}
+                  sort_by="editor"
+                  active={@sort_key == "editor"}
+                  sort_direction={@sort_direction}
+                  phx_target={@myself}
+                >
                   EDITOR
                 </.th>
-                <.th class="!text-center">
+                <.th
+                  class="!text-center"
+                  sortable={true}
+                  sort_by="viewer"
+                  active={@sort_key == "viewer"}
+                  sort_direction={@sort_direction}
+                  phx_target={@myself}
+                >
                   VIEWER
                 </.th>
               </.tr>
             </:header>
             <:body>
-              <%= for form <- Phoenix.HTML.FormData.to_form(f.source, f, :project_users, f.options) do %>
-                <.tr>
+              <%= for form <- get_sorted_filtered_forms(f, @users, @filter, @sort_key, @sort_direction) do %>
+                <.tr class={
+                  if !form[:role].value || form[:role].value == "",
+                    do: "text-gray-500 opacity-60"
+                }>
                   <.td>
                     {@users
                     |> find_user_by_id(form[:user_id].value)
