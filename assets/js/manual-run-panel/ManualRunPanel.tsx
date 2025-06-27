@@ -287,44 +287,45 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   return (
     <>
       <form ref={formRef} id="manual_run_form" className="hidden"></form>
-      {selectedDataclip ? (
+      {selectedDataclip ? <div className='grow overflow-hidden'>
         <SelectedClipView
           dataclip={selectedDataclip}
           onUnselect={() => {
             selectDataclipForManualRun(null);
           }}
         />
-      ) : (
-        <div className="grow overflow-visible no-scrollbar">
-          <div className="flex flex-col h-full">
-            <div className="flex justify-center flex-wrap mb-1">
-              <Tabs
-                options={[
-                  {
-                    label: 'Empty',
-                    id: SeletableOptions.EMPTY.toString(),
-                    icon: DocumentIcon,
-                  },
-                  {
-                    label: 'Custom',
-                    id: SeletableOptions.CUSTOM.toString(),
-                    icon: PencilSquareIcon,
-                  },
-                  {
-                    label: 'Existing',
-                    id: SeletableOptions.EXISTING.toString(),
-                    icon: QueueListIcon,
-                  },
-                ]}
-                initialSelection={selectedOption.toString()}
-                onSelectionChange={handleTabSelectionChange}
-                collapsedVertical={false}
-              />
+      </div>
+        : (
+          <div className="grow overflow-visible no-scrollbar">
+            <div className="flex flex-col h-full">
+              <div className="flex justify-center flex-wrap mb-1">
+                <Tabs
+                  options={[
+                    {
+                      label: 'Empty',
+                      id: SeletableOptions.EMPTY.toString(),
+                      icon: DocumentIcon,
+                    },
+                    {
+                      label: 'Custom',
+                      id: SeletableOptions.CUSTOM.toString(),
+                      icon: PencilSquareIcon,
+                    },
+                    {
+                      label: 'Existing',
+                      id: SeletableOptions.EXISTING.toString(),
+                      icon: QueueListIcon,
+                    },
+                  ]}
+                  initialSelection={selectedOption.toString()}
+                  onSelectionChange={handleTabSelectionChange}
+                  collapsedVertical={false}
+                />
+              </div>
+              {innerView}
             </div>
-            {innerView}
           </div>
-        </div>
-      )}
+        )}
     </>
   );
 };
