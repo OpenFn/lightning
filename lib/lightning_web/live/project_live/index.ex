@@ -4,6 +4,7 @@ defmodule LightningWeb.ProjectLive.Index do
   """
   use LightningWeb, :live_view
 
+  import Ecto.Query
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
   alias Lightning.Projects
@@ -117,7 +118,12 @@ defmodule LightningWeb.ProjectLive.Index do
   end
 
   def handle_event("filter", %{"value" => filter}, socket) do
-    projects = list_projects(filter, socket.assigns.sort_key, socket.assigns.sort_direction)
+    projects =
+      list_projects(
+        filter,
+        socket.assigns.sort_key,
+        socket.assigns.sort_direction
+      )
 
     {:noreply,
      assign(socket,
@@ -127,7 +133,8 @@ defmodule LightningWeb.ProjectLive.Index do
   end
 
   def handle_event("clear_filter", _params, socket) do
-    projects = list_projects("", socket.assigns.sort_key, socket.assigns.sort_direction)
+    projects =
+      list_projects("", socket.assigns.sort_key, socket.assigns.sort_direction)
 
     {:noreply,
      assign(socket,
@@ -176,11 +183,19 @@ defmodule LightningWeb.ProjectLive.Index do
   end
 
   defp list_projects(filter, sort_key, sort_direction) do
-    projects = Projects.list_projects()
+    projects = list_projects_with_owners()
 
     projects
     |> filter_projects(filter)
     |> sort_projects(sort_key, sort_direction)
+  end
+
+  defp list_projects_with_owners do
+    from(p in Lightning.Projects.Project,
+      preload: [project_users: :user],
+      order_by: p.name
+    )
+    |> Lightning.Repo.all()
   end
 
   defp filter_projects(projects, "") do
@@ -191,23 +206,45 @@ defmodule LightningWeb.ProjectLive.Index do
     filter_lower = String.downcase(filter)
 
     Enum.filter(projects, fn project ->
+      owner_name = get_project_owner_name(project)
+
       String.contains?(String.downcase(project.name || ""), filter_lower) ||
-      String.contains?(String.downcase(project.description || ""), filter_lower)
+        String.contains?(
+          String.downcase(project.description || ""),
+          filter_lower
+        ) ||
+        String.contains?(String.downcase(owner_name), filter_lower)
     end)
   end
 
   defp sort_projects(projects, sort_key, sort_direction) do
-    compare_fn = case sort_direction do
-      "asc" -> &<=/2
-      "desc" -> &>=/2
-    end
-
-    Enum.sort_by(projects, fn project ->
-      case sort_key do
-        "name" -> project.name || ""
-        "inserted_at" -> project.inserted_at
-        _ -> project.name || ""
+    compare_fn =
+      case sort_direction do
+        "asc" -> &<=/2
+        "desc" -> &>=/2
       end
-    end, compare_fn)
+
+    Enum.sort_by(
+      projects,
+      fn project ->
+        case sort_key do
+          "name" -> project.name || ""
+          "inserted_at" -> project.inserted_at
+          "owner" -> get_project_owner_name(project)
+          _ -> project.name || ""
+        end
+      end,
+      compare_fn
+    )
+  end
+
+  defp get_project_owner_name(project) do
+    case Enum.find(project.project_users, fn pu -> pu.role == :owner end) do
+      %{user: user} when not is_nil(user) ->
+        "#{user.first_name || ""} #{user.last_name || ""}" |> String.trim()
+
+      _ ->
+        ""
+    end
   end
 end
