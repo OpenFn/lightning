@@ -33,7 +33,10 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(
       page_title: "Projects",
       active_menu_item: :projects,
-      projects: Projects.list_projects()
+      projects: list_projects("", "name", "asc"),
+      sort_key: "name",
+      sort_direction: "asc",
+      filter: ""
     )
   end
 
@@ -43,7 +46,10 @@ defmodule LightningWeb.ProjectLive.Index do
       page_title: "Edit Project",
       active_menu_item: :projects,
       project: Projects.get_project_with_users!(id),
-      users: Lightning.Accounts.list_users()
+      users: Lightning.Accounts.list_users(),
+      sort_key: "name",
+      sort_direction: "asc",
+      filter: ""
     )
   end
 
@@ -53,7 +59,10 @@ defmodule LightningWeb.ProjectLive.Index do
       page_title: "New Project",
       active_menu_item: :projects,
       project: %Lightning.Projects.Project{project_users: []},
-      users: Lightning.Accounts.list_users()
+      users: Lightning.Accounts.list_users(),
+      sort_key: "name",
+      sort_direction: "asc",
+      filter: ""
     )
   end
 
@@ -62,8 +71,11 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(
       page_title: "Projects",
       active_menu_item: :settings,
-      projects: Projects.list_projects(),
-      project: Projects.get_project(id)
+      projects: list_projects("", "name", "asc"),
+      project: Projects.get_project(id),
+      sort_key: "name",
+      sort_direction: "asc",
+      filter: ""
     )
   end
 
@@ -79,6 +91,49 @@ defmodule LightningWeb.ProjectLive.Index do
      socket
      |> put_flash(:info, "Project deletion canceled")
      |> push_patch(to: ~p"/settings/projects")}
+  end
+
+  def handle_event("sort", %{"by" => sort_key}, socket) do
+    {sort_key, sort_direction} =
+      case socket.assigns do
+        %{sort_key: ^sort_key, sort_direction: "asc"} ->
+          {sort_key, "desc"}
+
+        %{sort_key: ^sort_key, sort_direction: "desc"} ->
+          {sort_key, "asc"}
+
+        _ ->
+          {sort_key, "asc"}
+      end
+
+    projects = list_projects(socket.assigns.filter, sort_key, sort_direction)
+
+    {:noreply,
+     assign(socket,
+       projects: projects,
+       sort_key: sort_key,
+       sort_direction: sort_direction
+     )}
+  end
+
+  def handle_event("filter", %{"value" => filter}, socket) do
+    projects = list_projects(filter, socket.assigns.sort_key, socket.assigns.sort_direction)
+
+    {:noreply,
+     assign(socket,
+       projects: projects,
+       filter: filter
+     )}
+  end
+
+  def handle_event("clear_filter", _params, socket) do
+    projects = list_projects("", socket.assigns.sort_key, socket.assigns.sort_direction)
+
+    {:noreply,
+     assign(socket,
+       projects: projects,
+       filter: ""
+     )}
   end
 
   def delete_action(assigns) do
@@ -118,5 +173,41 @@ defmodule LightningWeb.ProjectLive.Index do
       </span>
       """
     end
+  end
+
+  defp list_projects(filter, sort_key, sort_direction) do
+    projects = Projects.list_projects()
+
+    projects
+    |> filter_projects(filter)
+    |> sort_projects(sort_key, sort_direction)
+  end
+
+  defp filter_projects(projects, "") do
+    projects
+  end
+
+  defp filter_projects(projects, filter) do
+    filter_lower = String.downcase(filter)
+
+    Enum.filter(projects, fn project ->
+      String.contains?(String.downcase(project.name || ""), filter_lower) ||
+      String.contains?(String.downcase(project.description || ""), filter_lower)
+    end)
+  end
+
+  defp sort_projects(projects, sort_key, sort_direction) do
+    compare_fn = case sort_direction do
+      "asc" -> &<=/2
+      "desc" -> &>=/2
+    end
+
+    Enum.sort_by(projects, fn project ->
+      case sort_key do
+        "name" -> project.name || ""
+        "inserted_at" -> project.inserted_at
+        _ -> project.name || ""
+      end
+    end, compare_fn)
   end
 end
