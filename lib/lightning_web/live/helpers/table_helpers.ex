@@ -1,10 +1,61 @@
 defmodule LightningWeb.Live.Helpers.TableHelpers do
+  use LightningWeb, :component
+
   @moduledoc """
   Utilities for simplifying common table operations like sorting and filtering.
 
   This module provides reusable functions to reduce complexity in LiveView components
   that handle sortable, filterable tables.
   """
+
+  @doc """
+  Renders a filter input with magnifying glass icon and clear button.
+
+  ## Attributes
+
+  - `filter` - The current filter value
+  - `placeholder` - Placeholder text for the input
+  - `target` - Optional phx-target for the events
+  - All other attributes are passed through to the input
+  """
+  attr :filter, :string, required: true
+  attr :placeholder, :string, default: "Filter..."
+  attr :target, :any, default: nil
+  attr :rest, :global, include: ~w(class phx-keyup phx-debounce)
+
+  def filter_input(assigns) do
+    ~H"""
+    <div class="mb-4">
+      <div class="relative max-w-sm">
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+          <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
+        </div>
+        <.input
+          type="text"
+          name="filter"
+          value={@filter}
+          placeholder={@placeholder}
+          class="block w-full rounded-md py-1.5 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+          phx-keyup="filter"
+          phx-debounce="300"
+          phx-target={@target}
+          {@rest}
+        />
+        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+          <a
+            href="#"
+            class={if @filter == "", do: "hidden"}
+            id="clear_filter_button"
+            phx-click="clear_filter"
+            phx-target={@target}
+          >
+            <Heroicons.x_mark class="h-5 w-5 text-gray-400" />
+          </a>
+        </div>
+      </div>
+    </div>
+    """
+  end
 
   @doc """
   Creates a sort function based on direction string.

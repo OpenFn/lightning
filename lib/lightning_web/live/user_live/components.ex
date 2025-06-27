@@ -26,33 +26,11 @@ defmodule LightningWeb.UserLive.Components do
       return_to={Routes.user_index_path(@socket, :index)}
     />
 
-    <div class="mb-4">
-      <div class="relative max-w-sm">
-        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
-        </div>
-        <.input
-          type="text"
-          name="filter"
-          value={@filter}
-          placeholder="Filter users..."
-          class="block w-full rounded-md py-1.5 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-          phx-keyup="filter"
-          phx-debounce="300"
-          {if @target, do: [phx_target: @target], else: []}
-        />
-        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-          <a
-            href="#"
-            class={if @filter == "", do: "hidden"}
-            id="clear_filter_button"
-            phx-click="clear_filter"
-          >
-            <Heroicons.x_mark class="h-5 w-5 text-gray-400" />
-          </a>
-        </div>
-      </div>
-    </div>
+    <LightningWeb.Live.Helpers.TableHelpers.filter_input
+      filter={@filter}
+      placeholder="Filter users..."
+      target={@target}
+    />
 
     <.table>
       <:header>
