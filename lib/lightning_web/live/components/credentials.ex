@@ -25,7 +25,7 @@ defmodule LightningWeb.Components.Credentials do
           </button>
         </div>
       </:title>
-      <div class="text-left text-wrap">
+      <div>
         <p class="text-sm text-gray-500">
           You are about the delete the credential "{@credential.name}" which may be used in other projects. All jobs using this credential will fail.
           <br /><br />Do you want to proceed with this action?
@@ -70,7 +70,7 @@ defmodule LightningWeb.Components.Credentials do
           </button>
         </div>
       </:title>
-      <div class="text-left text-wrap">
+      <div>
         <p class="text-sm text-gray-500">
           You are about the delete the Oauth client "{@client.name}" which may be used in other projects. All jobs dependent on this client will fail.
           <br /><br />Do you want to proceed with this action?

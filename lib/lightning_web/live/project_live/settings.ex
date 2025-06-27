@@ -606,7 +606,7 @@ defmodule LightningWeb.ProjectLive.Settings do
           </button>
         </div>
       </:title>
-      <div class="text-left text-wrap">
+      <div>
         <p class="text-sm text-gray-500">
           Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project? {@access_text}{@credentials_text}.
           <br /> Do you wish to proceed with this action?

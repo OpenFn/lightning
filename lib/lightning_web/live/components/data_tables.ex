@@ -87,7 +87,7 @@ defmodule LightningWeb.Components.DataTables do
                     </div>
                   <% end %>
                 </.td>
-                <.td class="text-right py-0.5">
+                <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, credential)}
                 </.td>
               </.tr>
@@ -154,7 +154,7 @@ defmodule LightningWeb.Components.DataTables do
                 <.td class="break-words max-w-[21rem]">
                   {client.authorization_endpoint}
                 </.td>
-                <.td class="text-right py-0.5">
+                <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, client)}
                 </.td>
               </.tr>
@@ -224,7 +224,7 @@ defmodule LightningWeb.Components.DataTables do
                   {file.created_by.first_name <> " " <> file.created_by.last_name}
                 </.td>
                 <.td>{format_export_status(file.status)}</.td>
-                <.td class="text-right py-0.5">
+                <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, file)}
                 </.td>
               </.tr>
@@ -271,7 +271,7 @@ defmodule LightningWeb.Components.DataTables do
               <.tr id={"collection-row-#{collection.id}"}>
                 <.td>{collection.name}</.td>
                 <.td>{div(collection.byte_size_sum, 1_000_000)}</.td>
-                <.td class="text-right py-0.5">
+                <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, collection)}
                 </.td>
               </.tr>
@@ -334,7 +334,7 @@ defmodule LightningWeb.Components.DataTables do
                 <.td>
                   <.digest current_user={@current_user} project_user={project_user} />
                 </.td>
-                <.td class="text-right py-0.5">
+                <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, project_user)}
                 </.td>
               </.tr>

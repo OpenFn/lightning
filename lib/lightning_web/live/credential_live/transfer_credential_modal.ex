@@ -126,7 +126,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
           </div>
         </:title>
         <:subtitle>
-          <span class="text-xs text-left text-wrap">
+          <span class="text-xs">
             <.modal_subtitle {assigns} />
           </span>
         </:subtitle>
