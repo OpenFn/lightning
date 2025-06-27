@@ -20,7 +20,9 @@ defmodule LightningWeb.UserLive.Index do
       "role" => fn user -> to_string(user.role) end,
       "enabled" => fn user -> !user.disabled end,
       "support_user" => :support_user,
-      "scheduled_deletion" => fn user -> user.scheduled_deletion || ~U[9999-12-31 23:59:59Z] end
+      "scheduled_deletion" => fn user ->
+        user.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
+      end
     }
   end
 

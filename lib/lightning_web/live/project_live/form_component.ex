@@ -52,11 +52,21 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       "name" => fn enriched_form -> get_user_name_from_form(enriched_form) end,
       "email" => fn enriched_form -> get_user_email_from_form(enriched_form) end,
       "role" => fn enriched_form -> get_user_role_from_form(enriched_form) end,
-      "no_access" => fn enriched_form -> get_no_access_sort_key(enriched_form) end,
-      "owner" => fn enriched_form -> get_role_sort_key(enriched_form, "owner") end,
-      "admin" => fn enriched_form -> get_role_sort_key(enriched_form, "admin") end,
-      "editor" => fn enriched_form -> get_role_sort_key(enriched_form, "editor") end,
-      "viewer" => fn enriched_form -> get_role_sort_key(enriched_form, "viewer") end
+      "no_access" => fn enriched_form ->
+        get_no_access_sort_key(enriched_form)
+      end,
+      "owner" => fn enriched_form ->
+        get_role_sort_key(enriched_form, "owner")
+      end,
+      "admin" => fn enriched_form ->
+        get_role_sort_key(enriched_form, "admin")
+      end,
+      "editor" => fn enriched_form ->
+        get_role_sort_key(enriched_form, "editor")
+      end,
+      "viewer" => fn enriched_form ->
+        get_role_sort_key(enriched_form, "viewer")
+      end
     }
   end
 
@@ -255,11 +265,16 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       end)
 
     # Sort forms using our utility
-    sort_function = Map.get(user_form_sort_map(), sort_key, user_form_sort_map()["name"])
+    sort_function =
+      Map.get(user_form_sort_map(), sort_key, user_form_sort_map()["name"])
+
     compare_fn = TableHelpers.sort_compare_fn(sort_direction)
 
     filtered_forms
-    |> Enum.sort_by(fn enriched_form -> sort_function.(enriched_form) end, compare_fn)
+    |> Enum.sort_by(
+      fn enriched_form -> sort_function.(enriched_form) end,
+      compare_fn
+    )
     |> Enum.map(fn %{form: form} -> form end)
   end
 end

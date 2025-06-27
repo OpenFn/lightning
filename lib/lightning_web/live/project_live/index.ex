@@ -17,7 +17,9 @@ defmodule LightningWeb.ProjectLive.Index do
       "inserted_at" => :inserted_at,
       "description" => fn project -> project.description || "" end,
       "owner" => fn project -> get_project_owner_name(project) end,
-      "scheduled_deletion" => fn project -> project.scheduled_deletion || ~U[9999-12-31 23:59:59Z] end
+      "scheduled_deletion" => fn project ->
+        project.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
+      end
     }
   end
 

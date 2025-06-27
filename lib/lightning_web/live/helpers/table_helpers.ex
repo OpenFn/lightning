@@ -34,7 +34,8 @@ defmodule LightningWeb.Live.Helpers.TableHelpers do
       iex> toggle_sort_direction("asc", "name", "email")
       {"email", "asc"}
   """
-  def toggle_sort_direction(current_direction, current_key, new_key) when current_key == new_key do
+  def toggle_sort_direction(current_direction, current_key, new_key)
+      when current_key == new_key do
     new_direction = if current_direction == "asc", do: "desc", else: "asc"
     {new_key, new_direction}
   end
@@ -75,13 +76,18 @@ defmodule LightningWeb.Live.Helpers.TableHelpers do
       sort_items(users, "name", "asc", %{"name" => :name})
       # => [%{name: "Alice"}, %{name: "Bob"}]
   """
-  def sort_items(items, sort_key, sort_direction, sort_map) when is_map(sort_map) do
+  def sort_items(items, sort_key, sort_direction, sort_map)
+      when is_map(sort_map) do
     compare_fn = sort_compare_fn(sort_direction)
     sort_field = Map.get(sort_map, sort_key, sort_key)
 
-    Enum.sort_by(items, fn item ->
-      get_sort_value(item, sort_field)
-    end, compare_fn)
+    Enum.sort_by(
+      items,
+      fn item ->
+        get_sort_value(item, sort_field)
+      end,
+      compare_fn
+    )
   end
 
   @doc """
@@ -92,7 +98,14 @@ defmodule LightningWeb.Live.Helpers.TableHelpers do
       users = [%{name: "Bob", email: "bob@test.com"}, %{name: "Alice", email: "alice@test.com"}]
       filter_and_sort(users, "test", [:email], "name", "asc", %{"name" => :name})
   """
-  def filter_and_sort(items, filter, search_fields, sort_key, sort_direction, sort_map) do
+  def filter_and_sort(
+        items,
+        filter,
+        search_fields,
+        sort_key,
+        sort_direction,
+        sort_map
+      ) do
     items
     |> filter_items(filter, search_fields)
     |> sort_items(sort_key, sort_direction, sort_map)
