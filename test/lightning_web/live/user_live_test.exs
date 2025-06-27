@@ -480,6 +480,161 @@ defmodule LightningWeb.UserLiveTest do
       assert html =~
                "This user cannot be deleted until their auditable activities have also been purged."
     end
+
+    test "sorting by email column works correctly", %{conn: conn} do
+      _user_a = user_fixture(email: "alpha@example.com", first_name: "Alpha")
+      _user_b = user_fixture(email: "beta@example.com", first_name: "Beta")
+      _user_c = user_fixture(email: "charlie@example.com", first_name: "Charlie")
+
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Check initial state (should be sorted by email ascending by default)
+      alpha_pos = :binary.match(html, "alpha@example.com") |> elem(0)
+      beta_pos = :binary.match(html, "beta@example.com") |> elem(0)
+      charlie_pos = :binary.match(html, "charlie@example.com") |> elem(0)
+
+      assert alpha_pos < beta_pos
+      assert beta_pos < charlie_pos
+
+      # Click email header to toggle to descending
+      index_live
+      |> element("a[phx-click='sort'][phx-value-by='email']")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check reverse order
+      alpha_pos = :binary.match(html, "alpha@example.com") |> elem(0)
+      beta_pos = :binary.match(html, "beta@example.com") |> elem(0)
+      charlie_pos = :binary.match(html, "charlie@example.com") |> elem(0)
+
+      assert charlie_pos < beta_pos
+      assert beta_pos < alpha_pos
+    end
+
+    test "sorting by first name column works correctly", %{conn: conn} do
+      _user_a = user_fixture(first_name: "Alice", email: "alice@example.com")
+      _user_b = user_fixture(first_name: "Bob", email: "bob@example.com")
+      _user_c = user_fixture(first_name: "Charlie", email: "charlie@example.com")
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Click first name header to sort ascending
+      index_live
+      |> element("a[phx-click='sort'][phx-value-by='first_name']")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check that first names are in alphabetical order
+      alice_pos = :binary.match(html, "Alice") |> elem(0)
+      bob_pos = :binary.match(html, "Bob") |> elem(0)
+      charlie_pos = :binary.match(html, "Charlie") |> elem(0)
+
+      assert alice_pos < bob_pos
+      assert bob_pos < charlie_pos
+    end
+
+    test "sorting by role column works correctly", %{conn: conn} do
+      _user_a = user_fixture(role: :user, email: "user@example.com")
+      _user_b = user_fixture(role: :superuser, email: "super@example.com")
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Click role header to sort
+      index_live
+      |> element("a[phx-click='sort'][phx-value-by='role']")
+      |> render_click()
+
+            html = render(index_live)
+
+      # Check that superuser appears before user (alphabetical order)
+      super_pos = :binary.match(html, "superuser") |> elem(0)
+      user_pos = :binary.match(html, "user@example.com") |> elem(0)
+
+      assert super_pos < user_pos
+    end
+
+    test "sorting by enabled status works correctly", %{conn: conn} do
+      _user_enabled = user_fixture(disabled: false, email: "enabled@example.com")
+      _user_disabled = user_fixture(disabled: true, email: "disabled@example.com")
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Click enabled header to sort (enabled users should appear first)
+      index_live
+      |> element("a[phx-click='sort'][phx-value-by='enabled']")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check that disabled user appears before enabled user (false < true)
+      enabled_pos = :binary.match(html, "enabled@example.com") |> elem(0)
+      disabled_pos = :binary.match(html, "disabled@example.com") |> elem(0)
+
+      assert disabled_pos < enabled_pos
+    end
+
+    test "filtering users by search term works correctly", %{conn: conn} do
+      _user_a = user_fixture(
+        first_name: "Alice",
+        last_name: "Smith",
+        email: "alice@example.com",
+        role: :user
+      )
+      _user_b = user_fixture(
+        first_name: "Bob",
+        last_name: "Johnson",
+        email: "bob@example.com",
+        role: :superuser
+      )
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Filter by first name
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "a", "value" => "alice"})
+
+      html = render(index_live)
+      assert html =~ "alice@example.com"
+      refute html =~ "bob@example.com"
+
+      # Filter by role
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "s", "value" => "superuser"})
+
+      html = render(index_live)
+      assert html =~ "bob@example.com"
+      refute html =~ "alice@example.com"
+
+      # Clear filter
+      index_live
+      |> render_click("clear_filter")
+
+      html = render(index_live)
+      assert html =~ "alice@example.com"
+      assert html =~ "bob@example.com"
+    end
+
+    test "filter input shows clear button when text is entered", %{conn: conn} do
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Initially clear button should be hidden (check CSS class)
+      assert html =~ "class=\"hidden\""
+
+      # Type in filter
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "a", "value" => "test"})
+
+      html = render(index_live)
+
+      # Clear button should now be visible (no longer hidden)
+      refute html =~ "class=\"hidden\""
+      assert has_element?(index_live, "a[phx-click='clear_filter']")
+    end
   end
 
   describe "Index and edit for user" do

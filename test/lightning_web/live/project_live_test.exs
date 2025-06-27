@@ -395,6 +395,285 @@ defmodule LightningWeb.ProjectLiveTest do
         refute p_user.user_id == superuser.id
       end
     end
+
+    test "sorting projects by name works correctly", %{conn: conn} do
+      _project_a = insert(:project, name: "alpha-project")
+      _project_b = insert(:project, name: "beta-project")
+      _project_c = insert(:project, name: "charlie-project")
+
+      {:ok, index_live, _html} = live(conn, Routes.project_index_path(conn, :index))
+
+      # Click name header to sort descending (first click)
+      index_live
+      |> element("th a", "Name")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check that projects appear in reverse name order
+      alpha_pos = :binary.match(html, "alpha-project") |> elem(0)
+      beta_pos = :binary.match(html, "beta-project") |> elem(0)
+      charlie_pos = :binary.match(html, "charlie-project") |> elem(0)
+
+      assert charlie_pos < beta_pos
+      assert beta_pos < alpha_pos
+
+      # Click name header again to sort ascending
+      index_live
+      |> element("th a", "Name")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check that projects appear in name alphabetical order
+      alpha_pos = :binary.match(html, "alpha-project") |> elem(0)
+      beta_pos = :binary.match(html, "beta-project") |> elem(0)
+      charlie_pos = :binary.match(html, "charlie-project") |> elem(0)
+
+      assert alpha_pos < beta_pos
+      assert beta_pos < charlie_pos
+    end
+
+    test "sorting projects by created date works correctly", %{conn: conn} do
+      # Create projects with different dates
+      _project_old = insert(:project, name: "old-project", inserted_at: ~N[2023-01-01 00:00:00])
+      _project_new = insert(:project, name: "new-project", inserted_at: ~N[2023-12-01 00:00:00])
+
+      {:ok, index_live, _html} = live(conn, Routes.project_index_path(conn, :index))
+
+      # Click created at header to sort
+      index_live
+      |> element("th a", "Created At")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Old project should appear first when sorted by created date ascending
+      old_pos = :binary.match(html, "old-project") |> elem(0)
+      new_pos = :binary.match(html, "new-project") |> elem(0)
+
+      assert old_pos < new_pos
+    end
+
+    test "filtering projects by search term works correctly", %{conn: conn} do
+      project_a = insert(:project, name: "alpha-project", description: "First project")
+      _project_b = insert(:project, name: "beta-project", description: "Second project")
+
+      # Add an owner to project_a so it shows up in owner search
+      user_owner = insert(:user, first_name: "John", last_name: "Owner")
+      insert(:project_user, project: project_a, user: user_owner, role: :owner)
+
+      {:ok, index_live, _html} = live(conn, Routes.project_index_path(conn, :index))
+
+      # Filter by project name
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "a", "value" => "alpha"})
+
+      html = render(index_live)
+      assert html =~ "alpha-project"
+      refute html =~ "beta-project"
+
+      # Filter by description
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "f", "value" => "First"})
+
+      html = render(index_live)
+      assert html =~ "alpha-project"
+      refute html =~ "beta-project"
+
+      # Filter by owner name
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "j", "value" => "John"})
+
+      html = render(index_live)
+      assert html =~ "alpha-project"
+      refute html =~ "beta-project"
+
+      # Clear filter
+      index_live
+      |> render_click("clear_filter")
+
+      html = render(index_live)
+      assert html =~ "alpha-project"
+      assert html =~ "beta-project"
+    end
+
+    test "project filter input shows correct placeholder and clear button", %{conn: conn} do
+      {:ok, index_live, html} = live(conn, Routes.project_index_path(conn, :index))
+
+      # Check filter input is present
+      assert has_element?(index_live, "input[name=filter]")
+
+      # Initially clear button should be hidden
+      assert html =~ "class=\"hidden\""
+
+      # Type in filter
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "a", "value" => "test"})
+
+      html = render(index_live)
+
+      # Clear button should now be visible (not hidden)
+      refute html =~ "class=\"hidden\""
+      assert has_element?(index_live, "a[phx-click='clear_filter']")
+    end
+
+    test "adding collaborators to project works correctly", %{conn: conn} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
+      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
+      user3 = insert(:user, first_name: "Charlie", last_name: "Brown")
+
+      # Create project with only user1 as owner
+      project = insert(:project)
+      insert(:project_user, project: project, user: user1, role: :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      # Find user indices in the form
+      user2_index = find_user_index_in_list(view, user2)
+      user3_index = find_user_index_in_list(view, user3)
+
+      # Add user2 as editor and user3 as viewer
+      view
+      |> form("#project-form",
+        project: %{
+          "project_users" => %{
+            user2_index => %{"user_id" => user2.id, "role" => "editor"},
+            user3_index => %{"user_id" => user3.id, "role" => "viewer"}
+          }
+        }
+      )
+      |> render_submit()
+
+      # Check that users were added
+      updated_project = Repo.preload(project, [:project_users], force: true)
+      user_roles = Enum.map(updated_project.project_users, &{&1.user_id, &1.role})
+
+      assert {user2.id, :editor} in user_roles
+      assert {user3.id, :viewer} in user_roles
+    end
+
+    test "removing collaborators from project works correctly", %{conn: conn} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
+      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
+      user3 = insert(:user, first_name: "Charlie", last_name: "Brown")
+
+      # Create project with all three users
+      project = insert(:project)
+      insert(:project_user, project: project, user: user1, role: :owner)
+      insert(:project_user, project: project, user: user2, role: :editor)
+      insert(:project_user, project: project, user: user3, role: :viewer)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      # Find user indices in the form
+      user2_index = find_user_index_in_list(view, user2)
+      user3_index = find_user_index_in_list(view, user3)
+
+      # Remove user2 and user3 by setting their roles to empty
+      view
+      |> form("#project-form",
+        project: %{
+          "project_users" => %{
+            user2_index => %{"user_id" => user2.id, "role" => ""},
+            user3_index => %{"user_id" => user3.id, "role" => ""}
+          }
+        }
+      )
+      |> render_submit()
+
+      # Check that users were removed
+      updated_project = Repo.preload(project, [:project_users], force: true)
+      user_ids = Enum.map(updated_project.project_users, & &1.user_id)
+
+      assert user1.id in user_ids
+      refute user2.id in user_ids
+      refute user3.id in user_ids
+    end
+
+    test "changing collaborator roles works correctly", %{conn: conn} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
+      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
+
+      # Create project with user1 as owner and user2 as viewer
+      project = insert(:project)
+      insert(:project_user, project: project, user: user1, role: :owner)
+      insert(:project_user, project: project, user: user2, role: :viewer)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      # Find user2's index
+      user2_index = find_user_index_in_list(view, user2)
+
+      # Change user2 from viewer to admin
+      view
+      |> form("#project-form",
+        project: %{
+          "project_users" => %{
+            user2_index => %{"user_id" => user2.id, "role" => "admin"}
+          }
+        }
+      )
+      |> render_submit()
+
+      # Check that user2's role was changed
+      updated_project = Repo.preload(project, [:project_users], force: true)
+      user2_project_user = Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
+
+      assert user2_project_user.role == :admin
+    end
+
+    test "project user management form has sorting and filtering", %{conn: conn} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Alpha", email: "alice@example.com")
+      _user2 = insert(:user, first_name: "Bob", last_name: "Beta", email: "bob@example.com")
+      _user3 = insert(:user, first_name: "Charlie", last_name: "Gamma", email: "charlie@example.com")
+
+      project = insert(:project)
+      insert(:project_user, project: project, user: user1, role: :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      # Check that filter input is present
+      assert has_element?(view, "input[name=filter]")
+
+      # Test filtering by name
+      view
+      |> element("input[name=filter]")
+      |> render_keyup(%{"value" => "Alice"})
+
+      html = render(view)
+      assert html =~ "Alice Alpha"
+      refute html =~ "Bob Beta"
+      refute html =~ "Charlie Gamma"
+
+      # Clear the filter first to test sorting
+      view
+      |> element("#clear_filter_button")
+      |> render_click()
+
+      # Test sorting by name
+      view
+      |> element("th a", "NAME")
+      |> render_click()
+
+      html = render(view)
+      # Check that users are sorted in descending order (first click)
+      alice_pos = :binary.match(html, "Alice Alpha") |> elem(0)
+      bob_pos = :binary.match(html, "Bob Beta") |> elem(0)
+      charlie_pos = :binary.match(html, "Charlie Gamma") |> elem(0)
+
+      # First click sorts in descending order: Charlie, Bob, Alice
+      assert charlie_pos < bob_pos
+      assert bob_pos < alice_pos
+    end
   end
 
   describe "download exported project" do
