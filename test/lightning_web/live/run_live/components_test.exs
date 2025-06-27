@@ -390,7 +390,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{span[aria-label="Rerun from this step with the latest version of this workflow"]}
+             ~s{span[aria-label="Run this step with the latest version of this workflow"]}
            )
            |> Enum.any?()
 
@@ -407,7 +407,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     refute html
            |> Floki.find(
-             ~s{span[aria-label="Rerun from this step with the latest version of this workflow"]}
+             ~s{span[aria-label="Run this step with the latest version of this workflow"]}
            )
            |> Enum.any?()
   end

@@ -14,7 +14,7 @@ interface SelectedClipViewProps {
 }
 
 const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselect }) => {
-  return <>
+  return <div className="relative h-full flex flex-col overflow-hidden">
     <div className="flex flex-col flex-0 gap-2">
       <Pill onClose={onUnselect}>
         <div className='flex py-1 grow items-center justify-between'>
@@ -56,7 +56,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselec
       </div>
     </div>
     <DataclipViewer dataclipId={dataclip.id} />
-  </>
+  </div>
 }
 
 export default SelectedClipView;
