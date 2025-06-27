@@ -606,13 +606,13 @@ defmodule LightningWeb.ProjectLive.Settings do
           </button>
         </div>
       </:title>
-      <div class="text-left text-wrap">
+      <div>
         <p class="text-sm text-gray-500">
           Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project? {@access_text}{@credentials_text}.
           <br /> Do you wish to proceed with this action?
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mt-4">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -626,7 +626,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end

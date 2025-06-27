@@ -30,25 +30,23 @@ defmodule LightningWeb.RunLive.ExportConfirmationModal do
           Exporting history will download all {@count_work_orders} work orders and associated runs, steps, and I/O data clips that match your query.<br />
           The export will happen in the background and you'll receive an email when it is complete.
         </div>
-        <.modal_footer class="mt-6 mx-6">
-          <div class="sm:flex sm:flex-row-reverse gap-3">
-            <.button
-              id="confirm-export"
-              type="button"
-              theme="primary"
-              phx-click="confirm-export"
-            >
-              Export history
-            </.button>
-            <.button
-              id="cancel-export"
-              type="button"
-              phx-click="close-export-modal"
-              theme="secondary"
-            >
-              Cancel
-            </.button>
-          </div>
+        <.modal_footer>
+          <.button
+            id="confirm-export"
+            type="button"
+            theme="primary"
+            phx-click="confirm-export"
+          >
+            Export history
+          </.button>
+          <.button
+            id="cancel-export"
+            type="button"
+            phx-click="close-export-modal"
+            theme="secondary"
+          >
+            Cancel
+          </.button>
         </.modal_footer>
       </.modal>
     </div>

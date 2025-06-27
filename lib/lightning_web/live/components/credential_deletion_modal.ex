@@ -86,8 +86,8 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
             </button>
           </div>
         </:title>
-        <div class="">
-          <p class="">
+        <div class="text-sm text-gray-500">
+          <p>
             This credential has been used in workflow runs that
             are still monitored in at least one project's audit trail. The
             credential will be made unavailable for future use immediately and
@@ -99,8 +99,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
             Contact your instance administrator for more details.
           </p>
         </div>
-        <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-        <div class="flex flex-row-reverse gap-4">
+        <.modal_footer>
           <.button
             type="button"
             phx-click="close_modal"
@@ -109,7 +108,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
           >
             Ok, understood
           </.button>
-        </div>
+        </.modal_footer>
       </.modal>
     </div>
     """
@@ -137,7 +136,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
             </button>
           </div>
         </:title>
-        <div class="">
+        <div class="text-sm text-gray-500">
           <p class="">
             Deleting this credential will immediately remove it from all jobs and
             projects. If you later restore it, you will need to re-share it with
@@ -153,8 +152,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
             runs have been purged.
           </p>
         </div>
-        <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-        <div class="flex flex-row-reverse gap-4">
+        <.modal_footer>
           <.button
             id={"user-#{@id}_confirm_button"}
             type="button"
@@ -174,7 +172,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
           >
             Cancel
           </.button>
-        </div>
+        </.modal_footer>
       </.modal>
     </div>
     """
