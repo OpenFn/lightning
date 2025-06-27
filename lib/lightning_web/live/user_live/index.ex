@@ -19,8 +19,11 @@ defmodule LightningWeb.UserLive.Index do
     if can_access_admin_space do
       socket =
         assign(socket,
-          users: list_users(),
-          active_menu_item: :users
+          users: list_users("", "email", "asc"),
+          active_menu_item: :users,
+          sort_key: "email",
+          sort_direction: "asc",
+          filter: ""
         )
 
       {:ok, socket, layout: {LightningWeb.Layouts, :settings}}
@@ -68,7 +71,90 @@ defmodule LightningWeb.UserLive.Index do
     end
   end
 
-  defp list_users do
-    Accounts.list_users()
+  def handle_event("sort", %{"by" => sort_key}, socket) do
+    {sort_key, sort_direction} =
+      case socket.assigns do
+        %{sort_key: ^sort_key, sort_direction: "asc"} ->
+          {sort_key, "desc"}
+
+        %{sort_key: ^sort_key, sort_direction: "desc"} ->
+          {sort_key, "asc"}
+
+        _ ->
+          {sort_key, "asc"}
+      end
+
+    users = list_users(socket.assigns.filter, sort_key, sort_direction)
+
+    {:noreply,
+     assign(socket,
+       users: users,
+       sort_key: sort_key,
+       sort_direction: sort_direction
+     )}
+  end
+
+  def handle_event("filter", %{"value" => filter}, socket) do
+    users = list_users(filter, socket.assigns.sort_key, socket.assigns.sort_direction)
+
+    {:noreply,
+     assign(socket,
+       users: users,
+       filter: filter
+     )}
+  end
+
+  def handle_event("clear_filter", _params, socket) do
+    users = list_users("", socket.assigns.sort_key, socket.assigns.sort_direction)
+
+    {:noreply,
+     assign(socket,
+       users: users,
+       filter: ""
+     )}
+  end
+
+  # defp list_users do
+  #   Accounts.list_users()
+  # end
+
+  defp list_users(filter, sort_key, sort_direction) do
+    users = Accounts.list_users()
+
+    users
+    |> filter_users(filter)
+    |> sort_users(sort_key, sort_direction)
+  end
+
+  defp filter_users(users, "") do
+    users
+  end
+
+  defp filter_users(users, filter) do
+    filter_lower = String.downcase(filter)
+
+    Enum.filter(users, fn user ->
+      String.contains?(String.downcase(user.first_name || ""), filter_lower) ||
+      String.contains?(String.downcase(user.last_name || ""), filter_lower) ||
+      String.contains?(String.downcase(user.email || ""), filter_lower) ||
+      String.contains?(String.downcase(to_string(user.role)), filter_lower)
+    end)
+  end
+
+  defp sort_users(users, sort_key, sort_direction) do
+    compare_fn = case sort_direction do
+      "asc" -> &<=/2
+      "desc" -> &>=/2
+    end
+
+    Enum.sort_by(users, fn user ->
+      case sort_key do
+        "first_name" -> user.first_name || ""
+        "last_name" -> user.last_name || ""
+        "email" -> user.email || ""
+        "role" -> to_string(user.role)
+        _ -> user.email || ""
+      end
+    end, compare_fn)
   end
 end
