@@ -6,10 +6,10 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
+  alias LightningWeb.Live.Helpers.TableHelpers
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.Helpers
-  alias LightningWeb.Live.Helpers.TableHelpers
 
   on_mount {LightningWeb.Hooks, :project_scope}
 

@@ -1,12 +1,12 @@
 defmodule LightningWeb.Live.Helpers.TableHelpers do
-  use LightningWeb, :component
-
   @moduledoc """
   Utilities for simplifying common table operations like sorting and filtering.
 
   This module provides reusable functions to reduce complexity in LiveView components
   that handle sortable, filterable tables.
   """
+
+  use LightningWeb, :component
 
   @doc """
   Renders a filter input with magnifying glass icon and clear button.
