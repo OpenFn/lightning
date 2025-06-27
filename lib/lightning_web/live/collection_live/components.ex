@@ -22,7 +22,7 @@ defmodule LightningWeb.CollectionLive.Components do
           </button>
         </div>
       </:title>
-      <div class="text-left text-wrap">
+      <div>
         <p class="text-sm text-gray-500">
           Are you sure you want to delete the collection
           <span class="font-medium">{@collection.name}</span>

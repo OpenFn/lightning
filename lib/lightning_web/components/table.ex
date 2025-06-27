@@ -270,7 +270,7 @@ defmodule LightningWeb.Components.Table do
       id={@id}
       colspan={@colspan}
       rowspan={@rowspan}
-      class={["text-sm text-gray-500 whitespace-nowrap", @class]}
+      class={["text-sm text-gray-500", @class]}
     >
       {render_slot(@inner_block)}
     </td>
