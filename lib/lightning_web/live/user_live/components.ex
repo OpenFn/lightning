@@ -26,8 +26,8 @@ defmodule LightningWeb.UserLive.Components do
       return_to={Routes.user_index_path(@socket, :index)}
     />
 
-    <div class="mb-4 max-w-sm">
-      <div class="relative rounded-md shadow-xs flex h-full">
+    <div class="mb-4">
+      <div class="relative max-w-sm">
         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
           <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
         </div>
@@ -36,7 +36,7 @@ defmodule LightningWeb.UserLive.Components do
           name="filter"
           value={@filter}
           placeholder="Filter users..."
-          class="block w-full rounded-md py-1.5 pl-10 pr-20 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+          class="block w-full rounded-md py-1.5 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
           phx-keyup="filter"
           phx-debounce="300"
           {if @target, do: [phx_target: @target], else: []}
