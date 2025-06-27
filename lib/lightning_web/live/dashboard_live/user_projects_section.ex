@@ -2,7 +2,7 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
   use LightningWeb, :live_component
 
   import LightningWeb.DashboardLive.Components
-
+  alias LightningWeb.Live.Helpers.TableHelpers
   alias Lightning.Projects
 
   require Logger
@@ -18,23 +18,18 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
 
   @impl true
   def handle_event("sort", %{"by" => field}, socket) do
-    sort_assigns =
-      case socket.assigns do
-        %{sort_key: ^field, sort_direction: direction} ->
-          %{sort_key: field, sort_direction: switch_sort_direction(direction)}
-
-        _new_sort_key ->
-          %{sort_key: field, sort_direction: "asc"}
-      end
+    {sort_key, sort_direction} =
+      TableHelpers.toggle_sort_direction(
+        socket.assigns.sort_direction,
+        socket.assigns.sort_key,
+        field
+      )
 
     {:noreply,
      socket
-     |> assign(sort_assigns)
+     |> assign(sort_key: sort_key, sort_direction: sort_direction)
      |> assign_projects()}
   end
-
-  defp switch_sort_direction("asc"), do: "desc"
-  defp switch_sort_direction("desc"), do: "asc"
 
   defp assign_projects(%{assigns: assigns} = socket) do
     sort_param = {

@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Sorting & filtering superuser interfaces for Projects, Project, and Users
+  [#3354](https://github.com/OpenFn/lightning/pull/3354)
+
 ### Changed
 
 ### Fixed

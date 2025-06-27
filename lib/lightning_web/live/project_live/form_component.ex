@@ -14,10 +14,51 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   import Ecto.Changeset, only: [fetch_field!: 2]
   import LightningWeb.Components.Form
+  alias LightningWeb.Live.Helpers.TableHelpers
 
   alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
+
+  # Helper functions needed for module attributes
+
+  defp get_user_name_from_form(%{user: user}) do
+    (user && "#{user.first_name} #{user.last_name}") || ""
+  end
+
+  defp get_user_email_from_form(%{user: user}) do
+    (user && user.email) || ""
+  end
+
+  defp get_user_role_from_form(%{form: form}) do
+    to_string(form[:role].value || "")
+  end
+
+  defp get_no_access_sort_key(%{form: form, user: user}) do
+    user_role = to_string(form[:role].value || "")
+    user_name = (user && "#{user.first_name} #{user.last_name}") || ""
+    {user_role == "", user_name}
+  end
+
+  defp get_role_sort_key(%{form: form, user: user}, target_role) do
+    user_role = to_string(form[:role].value || "")
+    user_name = (user && "#{user.first_name} #{user.last_name}") || ""
+    {user_role != target_role, user_name}
+  end
+
+  # Configuration for user form sorting
+  defp user_form_sort_map do
+    %{
+      "name" => fn enriched_form -> get_user_name_from_form(enriched_form) end,
+      "email" => fn enriched_form -> get_user_email_from_form(enriched_form) end,
+      "role" => fn enriched_form -> get_user_role_from_form(enriched_form) end,
+      "no_access" => fn enriched_form -> get_no_access_sort_key(enriched_form) end,
+      "owner" => fn enriched_form -> get_role_sort_key(enriched_form, "owner") end,
+      "admin" => fn enriched_form -> get_role_sort_key(enriched_form, "admin") end,
+      "editor" => fn enriched_form -> get_role_sort_key(enriched_form, "editor") end,
+      "viewer" => fn enriched_form -> get_role_sort_key(enriched_form, "viewer") end
+    }
+  end
 
   @impl true
   def update(
@@ -75,16 +116,11 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   def handle_event("sort", %{"by" => sort_key}, socket) do
     {sort_key, sort_direction} =
-      case socket.assigns do
-        %{sort_key: ^sort_key, sort_direction: "asc"} ->
-          {sort_key, "desc"}
-
-        %{sort_key: ^sort_key, sort_direction: "desc"} ->
-          {sort_key, "asc"}
-
-        _ ->
-          {sort_key, "asc"}
-      end
+      TableHelpers.toggle_sort_direction(
+        socket.assigns.sort_direction,
+        socket.assigns.sort_key,
+        sort_key
+      )
 
     {:noreply,
      assign(socket,
@@ -205,32 +241,25 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   defp get_sorted_filtered_forms(f, users, filter, sort_key, sort_direction) do
     forms = Phoenix.HTML.FormData.to_form(f.source, f, :project_users, f.options)
 
-    forms
-    |> Enum.filter(fn form ->
-      passes_filter?(find_user_by_id(users, form[:user_id].value), form, filter)
-    end)
-    |> Enum.sort_by(
-      fn form ->
+    # Create enriched form data with user info for easier sorting/filtering
+    enriched_forms =
+      Enum.map(forms, fn form ->
         user = find_user_by_id(users, form[:user_id].value)
-        user_name = (user && "#{user.first_name} #{user.last_name}") || ""
-        user_role = to_string(form[:role].value || "")
+        %{form: form, user: user}
+      end)
 
-        case sort_key do
-          "name" -> user_name
-          "email" -> (user && user.email) || ""
-          "role" -> user_role
-          "no_access" -> {user_role == "", user_name}
-          "owner" -> {user_role != "owner", user_name}
-          "admin" -> {user_role != "admin", user_name}
-          "editor" -> {user_role != "editor", user_name}
-          "viewer" -> {user_role != "viewer", user_name}
-          _ -> user_name
-        end
-      end,
-      case sort_direction do
-        "asc" -> &<=/2
-        "desc" -> &>=/2
-      end
-    )
+    # Filter forms
+    filtered_forms =
+      Enum.filter(enriched_forms, fn %{form: form, user: user} ->
+        passes_filter?(user, form, filter)
+      end)
+
+    # Sort forms using our utility
+    sort_function = Map.get(user_form_sort_map(), sort_key, user_form_sort_map()["name"])
+    compare_fn = TableHelpers.sort_compare_fn(sort_direction)
+
+    filtered_forms
+    |> Enum.sort_by(fn enriched_form -> sort_function.(enriched_form) end, compare_fn)
+    |> Enum.map(fn %{form: form} -> form end)
   end
 end

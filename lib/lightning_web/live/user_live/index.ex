@@ -5,10 +5,28 @@ defmodule LightningWeb.UserLive.Index do
   use LightningWeb, :live_view
 
   import LightningWeb.UserLive.Components
+  alias LightningWeb.Live.Helpers.TableHelpers
 
   alias Lightning.Accounts
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
+
+  # Configuration for user table sorting
+  defp user_sort_map do
+    %{
+      "first_name" => :first_name,
+      "last_name" => :last_name,
+      "email" => :email,
+      "role" => fn user -> to_string(user.role) end,
+      "enabled" => fn user -> !user.disabled end,
+      "support_user" => :support_user,
+      "scheduled_deletion" => fn user -> user.scheduled_deletion || ~U[9999-12-31 23:59:59Z] end
+    }
+  end
+
+  defp user_search_fields do
+    [:first_name, :last_name, :email, fn user -> to_string(user.role) end]
+  end
 
   @impl true
   def mount(_params, _session, socket) do
@@ -73,16 +91,11 @@ defmodule LightningWeb.UserLive.Index do
 
   def handle_event("sort", %{"by" => sort_key}, socket) do
     {sort_key, sort_direction} =
-      case socket.assigns do
-        %{sort_key: ^sort_key, sort_direction: "asc"} ->
-          {sort_key, "desc"}
-
-        %{sort_key: ^sort_key, sort_direction: "desc"} ->
-          {sort_key, "asc"}
-
-        _ ->
-          {sort_key, "asc"}
-      end
+      TableHelpers.toggle_sort_direction(
+        socket.assigns.sort_direction,
+        socket.assigns.sort_key,
+        sort_key
+      )
 
     users = list_users(socket.assigns.filter, sort_key, sort_direction)
 
@@ -116,70 +129,16 @@ defmodule LightningWeb.UserLive.Index do
      )}
   end
 
-  # defp list_users do
-  #   Accounts.list_users()
-  # end
-
   defp list_users(filter, sort_key, sort_direction) do
     users = Accounts.list_users()
 
-    users
-    |> filter_users(filter)
-    |> sort_users(sort_key, sort_direction)
-  end
-
-  defp filter_users(users, "") do
-    users
-  end
-
-  defp filter_users(users, filter) do
-    filter_lower = String.downcase(filter)
-
-    Enum.filter(users, fn user ->
-      String.contains?(String.downcase(user.first_name || ""), filter_lower) ||
-        String.contains?(String.downcase(user.last_name || ""), filter_lower) ||
-        String.contains?(String.downcase(user.email || ""), filter_lower) ||
-        String.contains?(String.downcase(to_string(user.role)), filter_lower)
-    end)
-  end
-
-  defp sort_users(users, sort_key, sort_direction) do
-    compare_fn =
-      case sort_direction do
-        "asc" -> &<=/2
-        "desc" -> &>=/2
-      end
-
-    Enum.sort_by(
+    TableHelpers.filter_and_sort(
       users,
-      fn user ->
-        case sort_key do
-          "first_name" ->
-            user.first_name || ""
-
-          "last_name" ->
-            user.last_name || ""
-
-          "email" ->
-            user.email || ""
-
-          "role" ->
-            to_string(user.role)
-
-          "enabled" ->
-            !user.disabled
-
-          "support_user" ->
-            user.support_user
-
-          "scheduled_deletion" ->
-            user.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
-
-          _ ->
-            user.email || ""
-        end
-      end,
-      compare_fn
+      filter,
+      user_search_fields(),
+      sort_key,
+      sort_direction,
+      user_sort_map()
     )
   end
 end

@@ -8,6 +8,26 @@ defmodule LightningWeb.ProjectLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
   alias Lightning.Projects
+  alias LightningWeb.Live.Helpers.TableHelpers
+
+  # Configuration for project table sorting
+  defp project_sort_map do
+    %{
+      "name" => fn project -> project.name || "" end,
+      "inserted_at" => :inserted_at,
+      "description" => fn project -> project.description || "" end,
+      "owner" => fn project -> get_project_owner_name(project) end,
+      "scheduled_deletion" => fn project -> project.scheduled_deletion || ~U[9999-12-31 23:59:59Z] end
+    }
+  end
+
+  defp project_search_fields do
+    [
+      fn project -> project.name || "" end,
+      fn project -> project.description || "" end,
+      fn project -> get_project_owner_name(project) end
+    ]
+  end
 
   @impl true
   def mount(_params, _session, socket) do
@@ -96,16 +116,11 @@ defmodule LightningWeb.ProjectLive.Index do
 
   def handle_event("sort", %{"by" => sort_key}, socket) do
     {sort_key, sort_direction} =
-      case socket.assigns do
-        %{sort_key: ^sort_key, sort_direction: "asc"} ->
-          {sort_key, "desc"}
-
-        %{sort_key: ^sort_key, sort_direction: "desc"} ->
-          {sort_key, "asc"}
-
-        _ ->
-          {sort_key, "asc"}
-      end
+      TableHelpers.toggle_sort_direction(
+        socket.assigns.sort_direction,
+        socket.assigns.sort_key,
+        sort_key
+      )
 
     projects = list_projects(socket.assigns.filter, sort_key, sort_direction)
 
@@ -185,9 +200,14 @@ defmodule LightningWeb.ProjectLive.Index do
   defp list_projects(filter, sort_key, sort_direction) do
     projects = list_projects_with_owners()
 
-    projects
-    |> filter_projects(filter)
-    |> sort_projects(sort_key, sort_direction)
+    TableHelpers.filter_and_sort(
+      projects,
+      filter,
+      project_search_fields(),
+      sort_key,
+      sort_direction,
+      project_sort_map()
+    )
   end
 
   defp list_projects_with_owners do
@@ -196,59 +216,6 @@ defmodule LightningWeb.ProjectLive.Index do
       order_by: p.name
     )
     |> Lightning.Repo.all()
-  end
-
-  defp filter_projects(projects, "") do
-    projects
-  end
-
-  defp filter_projects(projects, filter) do
-    filter_lower = String.downcase(filter)
-
-    Enum.filter(projects, fn project ->
-      owner_name = get_project_owner_name(project)
-
-      String.contains?(String.downcase(project.name || ""), filter_lower) ||
-        String.contains?(
-          String.downcase(project.description || ""),
-          filter_lower
-        ) ||
-        String.contains?(String.downcase(owner_name), filter_lower)
-    end)
-  end
-
-  defp sort_projects(projects, sort_key, sort_direction) do
-    compare_fn =
-      case sort_direction do
-        "asc" -> &<=/2
-        "desc" -> &>=/2
-      end
-
-    Enum.sort_by(
-      projects,
-      fn project ->
-        case sort_key do
-          "name" ->
-            project.name || ""
-
-          "inserted_at" ->
-            project.inserted_at
-
-          "description" ->
-            project.description || ""
-
-          "owner" ->
-            get_project_owner_name(project)
-
-          "scheduled_deletion" ->
-            project.scheduled_deletion || ~U[9999-12-31 23:59:59Z]
-
-          _ ->
-            project.name || ""
-        end
-      end,
-      compare_fn
-    )
   end
 
   defp get_project_owner_name(project) do
