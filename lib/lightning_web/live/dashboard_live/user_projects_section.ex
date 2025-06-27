@@ -2,8 +2,8 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
   use LightningWeb, :live_component
 
   import LightningWeb.DashboardLive.Components
-  alias LightningWeb.Live.Helpers.TableHelpers
   alias Lightning.Projects
+  alias LightningWeb.Live.Helpers.TableHelpers
 
   require Logger
 
