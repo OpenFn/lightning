@@ -4,6 +4,10 @@ defmodule LightningWeb.UserLive.Components do
   attr :socket, :map, required: true
   attr :users, :list, required: true
   attr :live_action, :atom, required: true
+  attr :sort_key, :string, default: "email"
+  attr :sort_direction, :string, default: "asc"
+  attr :target, :any, default: nil
+  attr :filter, :string, default: ""
 
   attr :user_deletion_modal, :atom,
     default: LightningWeb.Components.UserDeletionModal
@@ -21,16 +25,79 @@ defmodule LightningWeb.UserLive.Components do
       logout={false}
       return_to={Routes.user_index_path(@socket, :index)}
     />
+
+    <LightningWeb.Live.Helpers.TableHelpers.filter_input
+      filter={@filter}
+      placeholder="Filter users..."
+      target={@target}
+    />
+
     <.table>
       <:header>
         <.tr>
-          <.th>First name</.th>
-          <.th>Last name</.th>
-          <.th>Email</.th>
-          <.th>Role*</.th>
-          <.th>Enabled?</.th>
-          <.th>Support?</.th>
-          <.th>Scheduled Deletion</.th>
+          <.th
+            sortable={true}
+            sort_by="first_name"
+            active={@sort_key == "first_name"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            First name
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="last_name"
+            active={@sort_key == "last_name"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Last name
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="email"
+            active={@sort_key == "email"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Email
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="role"
+            active={@sort_key == "role"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Role*
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="enabled"
+            active={@sort_key == "enabled"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Enabled?
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="support_user"
+            active={@sort_key == "support_user"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Support?
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="scheduled_deletion"
+            active={@sort_key == "scheduled_deletion"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Scheduled Deletion
+          </.th>
           <.th>Actions</.th>
         </.tr>
       </:header>
