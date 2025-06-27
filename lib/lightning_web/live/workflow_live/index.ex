@@ -9,6 +9,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.Helpers
+  alias LightningWeb.Live.Helpers.TableHelpers
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -178,12 +179,16 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   def handle_event("sort", %{"by" => field}, socket) do
-    %{search_term: search_term, sort_direction: current_direction} =
-      socket.assigns
+    %{search_term: search_term} = socket.assigns
 
-    new_direction = switch_sort_direction(current_direction)
+    {sort_key, sort_direction} =
+      TableHelpers.toggle_sort_direction(
+        Atom.to_string(socket.assigns.sort_direction),
+        Atom.to_string(socket.assigns.sort_key),
+        field
+      )
 
-    query_params = build_query_params(search_term, field, new_direction)
+    query_params = build_query_params(search_term, sort_key, sort_direction)
 
     {:noreply,
      push_patch(socket,
@@ -289,7 +294,4 @@ defmodule LightningWeb.WorkflowLive.Index do
   defp to_sort_direction("asc"), do: :asc
   defp to_sort_direction("desc"), do: :desc
   defp to_sort_direction(nil), do: :asc
-
-  defp switch_sort_direction(:asc), do: :desc
-  defp switch_sort_direction(:desc), do: :asc
 end
