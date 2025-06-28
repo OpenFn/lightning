@@ -22,14 +22,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   - `:selected_job` - The job struct to provide assistance for
   - `:current_user` - The user creating the session
-
-  ## Examples
-
-      # Create session for debugging help
-      {:ok, session} = JobCode.create_session(
-        %{selected_job: job, current_user: user},
-        "Help me debug this HTTP request error"
-      )
   """
   @impl true
   @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
@@ -46,11 +38,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   ## Required Assigns
 
   - `:selected_job` - The job struct to provide context from
-
-  ## Examples
-
-      session = JobCode.get_session!(session_id, %{selected_job: current_job})
-      # session now includes job.body as expression and job.adaptor
   """
   @impl true
   @spec get_session!(String.t(), map()) :: map()
@@ -68,15 +55,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   ## Required Assigns
 
   - `:selected_job` - The job to filter sessions by
-
-  ## Examples
-
-      # Load recent sessions for current job
-      %{sessions: sessions, pagination: meta} = JobCode.list_sessions(
-        %{selected_job: job},
-        :desc,
-        limit: 10
-      )
   """
   @impl true
   @spec list_sessions(map(), atom(), keyword()) :: %{
@@ -96,12 +74,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   ## Required Assigns
 
   - `:selected_job` - The job to check session count for
-
-  ## Examples
-
-      if JobCode.more_sessions?(%{selected_job: job}, 20) do
-        # Show "Load More" button
-      end
   """
   @impl true
   @spec more_sessions?(map(), integer()) :: boolean()
@@ -119,13 +91,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   - `:session` - The target session
   - `:current_user` - The user sending the message
-
-  ## Examples
-
-      {:ok, updated_session} = JobCode.save_message(
-        %{session: session, current_user: user},
-        "How do I handle this API error?"
-      )
   """
   @impl true
   @spec save_message(map(), String.t()) :: {:ok, map()} | {:error, any()}
@@ -147,20 +112,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   - `session` - Session with job context (expression and adaptor)
   - `content` - User's question or request for assistance
-
-  ## Examples
-
-      # Get help with specific code issue
-      {:ok, updated_session} = JobCode.query(
-        session,
-        "Why is my data transformation returning undefined?"
-      )
-
-      # Request adaptor-specific guidance
-      {:ok, updated_session} = JobCode.query(
-        session,
-        "What's the best way to handle errors in HTTP requests?"
-      )
   """
   @impl true
   @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
@@ -173,28 +124,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   Evaluates multiple conditions to ensure AI assistance is only available
   when appropriate permissions, limits, and job state allow it.
-
-  ## Examples
-
-      # Input disabled due to unsaved job
-      chat_input_disabled?(%{
-        selected_job: %{__meta__: %{state: :built}},
-        can_edit_workflow: true,
-        ai_limit_result: :ok,
-        endpoint_available?: true,
-        pending_message: %{loading: nil}
-      })
-      # => true
-
-      # Input enabled for saved job with permissions
-      chat_input_disabled?(%{
-        selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
-        ai_limit_result: :ok,
-        endpoint_available?: true,
-        pending_message: %{loading: nil}
-      })
-      # => false
   """
   @impl true
   @spec chat_input_disabled?(map()) :: boolean()
@@ -229,20 +158,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   Creates descriptive titles that include job context when available,
   making it easier to identify sessions in lists.
-
-  ## Examples
-
-      # With custom title
-      chat_title(%{title: "Debug HTTP 401 error"})
-      # => "Debug HTTP 401 error"
-
-      # With job context
-      chat_title(%{job: %{name: "Fetch Salesforce Data"}})
-      # => "Help with Fetch Salesforce Data"
-
-      # Fallback
-      chat_title(%{})
-      # => "Job Code Help"
   """
   @impl true
   @spec chat_title(map()) :: String.t()
@@ -298,20 +213,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   ## Returns
 
   String explanation or `nil` if input should be enabled.
-
-  ## Examples
-
-      # Permission denied
-      disabled_tooltip_message(%{can_edit_workflow: false})
-      # => "You are not authorized to use the AI Assistant"
-
-      # Usage limit reached
-      disabled_tooltip_message(%{ai_limit_result: {:error, :limit_exceeded}})
-      # => "Monthly AI usage limit exceeded"
-
-      # Unsaved job
-      disabled_tooltip_message(%{selected_job: %{__meta__: %{state: :built}}})
-      # => "Save your workflow first to use the AI Assistant"
   """
   @spec disabled_tooltip_message(map()) :: String.t() | nil
   def disabled_tooltip_message(assigns) do
@@ -344,14 +245,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   ## Returns
 
   Human-readable error message string.
-
-  ## Examples
-
-      error_message({:error, :timeout})
-      # => "Request timed out. Please try again."
-
-      error_message(%Ecto.Changeset{})
-      # => "Validation failed: [specific field errors]"
   """
   @spec error_message(any()) :: String.t()
   def error_message(error) do

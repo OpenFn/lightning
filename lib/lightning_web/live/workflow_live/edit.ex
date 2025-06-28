@@ -146,10 +146,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 @snapshot_version_tag == "latest" && @can_edit_workflow &&
                   @ai_assistant_enabled && @live_action == :edit
               }
-              name="hero-chat-bubble-left-ellipsis"
+              name="hero-chat-bubble-left-right"
               phx-click="toggle-workflow-ai-chat"
               id="workflow-ai-chat-toggle"
-              class="w-5 h-5 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
+              phx-hook="Tooltip"
+              aria-label={"Click to #{if @show_workflow_ai_chat, do: "close", else: "open"} the AI Assistant"}
+              class={[
+                "w-5 h-5 place-self-center cursor-pointer",
+                if(@show_workflow_ai_chat,
+                  do: "text-indigo-600 hover:text-indigo-500",
+                  else: "text-slate-500 hover:text-slate-400"
+                )
+              ]}
             />
             <div class="flex flex-row m-auto gap-2">
               <.input
@@ -205,9 +213,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           id="workflow-ai-chat-panel"
           module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
           workflow={@workflow}
+          workflow_params={@workflow_params}
           project={@project}
           base_url={@base_url}
-          chat_session_id={@chat_session_id}
+          chat_session_id={@query_params["chat"]}
           current_user={@current_user}
           can_edit_workflow={@can_edit_workflow}
           class="transition-all duration-300 ease-in-out"
@@ -1795,7 +1804,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("toggle-workflow-ai-chat", _params, socket) do
-    {:noreply, update(socket, :show_workflow_ai_chat, fn val -> !val end)}
+    query_params =
+      case socket.assigns.query_params["method"] do
+        "ai" ->
+          socket.assigns.query_params
+          |> Map.delete("method")
+          |> Map.delete("chat")
+
+        _ ->
+          Map.put(socket.assigns.query_params, "method", "ai")
+      end
+      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+
+    {:noreply,
+     push_patch(socket,
+       to:
+         ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}?#{query_params}"
+     )}
   end
 
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
@@ -2106,14 +2131,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def handle_info({:workflow_ai_chat_event, action, _payload}, socket) do
-    case action do
-      :close_panel ->
-        {:noreply,
-         socket
-         |> assign(show_workflow_ai_chat: false)}
-    end
-  end
+  # def handle_info({:chat_session_created, session_id}, socket) do
+  #   query_params =
+  #     socket.assigns.query_params
+  #     |> Map.put("chat", session_id)
+  #     |> Map.put("method", "ai")
+  #     |> Map.reject(fn {_k, v} -> is_nil(v) end)
+
+  #   {:noreply,
+  #    push_patch(socket,
+  #      to:
+  #        ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}?#{query_params}"
+  #    )}
+  # end
 
   def handle_info({:workflow_code_generated, code}, socket) do
     # For persistent workflow AI chat: just send the generated YAML to the frontend
@@ -2279,7 +2309,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       snapshot_version_tag: version,
       can_edit_workflow: can_edit_workflow,
       workflow: workflow,
-      show_new_workflow_panel: show_new_workflow_panel
+      show_new_workflow_panel: show_new_workflow_panel,
+      show_workflow_ai_chat: show_workflow_ai_chat
     } = socket.assigns
 
     disabled =
@@ -2287,7 +2318,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_workflow)
 
     push_event(socket, "set-disabled", %{
-      disabled: show_new_workflow_panel || disabled
+      disabled: show_new_workflow_panel || show_workflow_ai_chat || disabled
     })
   end
 
@@ -2624,6 +2655,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> handle_new_workflow_panel()
     |> assign_follow_run(socket.assigns.query_params)
     |> assign_chat_session_id(socket.assigns.query_params)
+    |> assign_show_workflow_ai_chat()
   end
 
   defp apply_mode_and_selection(socket) do
@@ -2670,6 +2702,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> set_selected_node(type, selected)
         |> set_mode(if mode in ["expand"], do: mode, else: nil)
+        |> assign(method: nil)
 
       nil ->
         socket |> unselect_all()
@@ -2693,6 +2726,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp assign_chat_session_id(socket, _params) do
     socket
     |> assign(chat_session_id: nil)
+  end
+
+  defp assign_show_workflow_ai_chat(socket) do
+    show_chat =
+      socket.assigns.live_action == :edit &&
+        socket.assigns.query_params["method"] == "ai"
+
+    assign(socket, show_workflow_ai_chat: show_chat)
   end
 
   defp switch_changeset(socket) do

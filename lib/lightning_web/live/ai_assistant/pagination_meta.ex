@@ -41,53 +41,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
   - **Page 1**: 1 to page_size sessions loaded
   - **Page 2**: (page_size + 1) to (2 * page_size) sessions loaded
   - **Page N**: ((N-1) * page_size + 1) to (N * page_size) sessions loaded
-
-  ## Navigation State Logic
-
-  - **has_next_page**: `true` if `current_sessions_count < total_count`
-  - **has_prev_page**: `true` if `current_sessions_count > page_size`
-
-  ## Examples
-
-      # First page - 20 sessions loaded out of 100 total
-      PaginationMeta.new(20, 20, 100)
-      # => %PaginationMeta{
-      #   current_page: 1,
-      #   page_size: 20,
-      #   total_count: 100,
-      #   has_next_page: true,
-      #   has_prev_page: false
-      # }
-
-      # Second page - 40 sessions loaded out of 100 total
-      PaginationMeta.new(40, 20, 100)
-      # => %PaginationMeta{
-      #   current_page: 2,
-      #   page_size: 20,
-      #   total_count: 100,
-      #   has_next_page: true,
-      #   has_prev_page: true
-      # }
-
-      # Last page - all 100 sessions loaded
-      PaginationMeta.new(100, 20, 100)
-      # => %PaginationMeta{
-      #   current_page: 5,
-      #   page_size: 20,
-      #   total_count: 100,
-      #   has_next_page: false,
-      #   has_prev_page: true
-      # }
-
-      # Empty state - no sessions available
-      PaginationMeta.new(0, 20, 0)
-      # => %PaginationMeta{
-      #   current_page: 1,
-      #   page_size: 20,
-      #   total_count: 0,
-      #   has_next_page: false,
-      #   has_prev_page: false
-      # }
   """
   @spec new(non_neg_integer(), pos_integer(), non_neg_integer()) :: t()
   def new(current_sessions_count, page_size, total_count) do
@@ -118,43 +71,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
   ## Returns
 
   The total number of pages as a positive integer (minimum 1).
-
-  ## Examples
-
-      # 100 sessions with 20 per page = 5 pages
-      meta = PaginationMeta.new(40, 20, 100)
-      PaginationMeta.total_pages(meta)
-      # => 5
-
-      # 95 sessions with 20 per page = 5 pages (partial last page)
-      meta = PaginationMeta.new(20, 20, 95)
-      PaginationMeta.total_pages(meta)
-      # => 5
-
-      # 20 sessions with 20 per page = 1 page (exact fit)
-      meta = PaginationMeta.new(20, 20, 20)
-      PaginationMeta.total_pages(meta)
-      # => 1
-
-      # Empty dataset = 1 page (for consistency)
-      meta = PaginationMeta.new(0, 20, 0)
-      PaginationMeta.total_pages(meta)
-      # => 1
-
-  ## Usage Patterns
-
-      # Generate complete page navigation
-      for page <- 1..PaginationMeta.total_pages(meta) do
-        render_page_number(page, page == meta.current_page)
-      end
-
-      # Show progress indicator
-      "Page # {meta.current_page} of # {PaginationMeta.total_pages(meta)}"
-
-      # Determine if pagination needed
-      if PaginationMeta.total_pages(meta) > 1 do
-        show_pagination_controls()
-      end
   """
   @spec total_pages(t()) :: pos_integer()
   def total_pages(%__MODULE__{total_count: total_count, page_size: page_size}) do
@@ -174,42 +90,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
   ## Returns
 
   The zero-based offset for database queries.
-
-  ## Examples
-
-      # First page (page 1) = offset 0
-      meta = PaginationMeta.new(20, 20, 100)  # current_page: 1
-      PaginationMeta.current_offset(meta)
-      # => 0
-
-      # Second page (page 2) = offset 20
-      meta = PaginationMeta.new(40, 20, 100)  # current_page: 2
-      PaginationMeta.current_offset(meta)
-      # => 20
-
-      # Third page (page 3) = offset 40
-      meta = PaginationMeta.new(60, 20, 100)  # current_page: 3
-      PaginationMeta.current_offset(meta)
-      # => 40
-
-  ## Database Query Integration
-
-      # Use with Ecto queries
-      offset = PaginationMeta.current_offset(meta)
-
-      from(s in ChatSession,
-        limit: ^meta.page_size,
-        offset: ^offset,
-        order_by: [desc: :updated_at]
-      )
-
-      # Use with AiAssistant functions
-      AiAssistant.list_sessions(
-        resource,
-        :desc,
-        offset: PaginationMeta.current_offset(meta),
-        limit: meta.page_size
-      )
   """
   @spec current_offset(t()) :: non_neg_integer()
   def current_offset(%__MODULE__{
@@ -233,33 +113,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
   ## Returns
 
   A string describing the visible range and total count.
-
-  ## Examples
-
-      # First page showing 20 of 100 sessions
-      meta = PaginationMeta.new(20, 20, 100)
-      PaginationMeta.summary(meta)
-      # => "Showing 1-20 of 100"
-
-      # Second page showing next 20 of 100 sessions
-      meta = PaginationMeta.new(40, 20, 100)
-      PaginationMeta.summary(meta)
-      # => "Showing 21-40 of 100"
-
-      # Last page showing partial results
-      meta = PaginationMeta.new(95, 20, 95)
-      PaginationMeta.summary(meta)
-      # => "Showing 81-95 of 95"
-
-      # Single page with fewer items than page size
-      meta = PaginationMeta.new(15, 20, 15)
-      PaginationMeta.summary(meta)
-      # => "Showing 1-15 of 15"
-
-      # Empty dataset
-      meta = PaginationMeta.new(0, 20, 0)
-      PaginationMeta.summary(meta)
-      # => "No items"
   """
   @spec summary(t()) :: String.t()
   def summary(%__MODULE__{
@@ -282,16 +135,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
 
   Useful for conditionally enabling/disabling "Previous" or "First" navigation
   buttons in UI components.
-
-  ## Examples
-
-      meta = PaginationMeta.new(20, 20, 100)
-      PaginationMeta.first_page?(meta)
-      # => true
-
-      meta = PaginationMeta.new(40, 20, 100)
-      PaginationMeta.first_page?(meta)
-      # => false
   """
   @spec first_page?(t()) :: boolean()
   def first_page?(%__MODULE__{current_page: 1}), do: true
@@ -302,16 +145,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
 
   Useful for conditionally enabling/disabling "Next" or "Last" navigation
   buttons in UI components.
-
-  ## Examples
-
-      meta = PaginationMeta.new(100, 20, 100)  # All sessions loaded
-      PaginationMeta.last_page?(meta)
-      # => true
-
-      meta = PaginationMeta.new(40, 20, 100)   # More sessions available
-      PaginationMeta.last_page?(meta)
-      # => false
   """
   @spec last_page?(t()) :: boolean()
   def last_page?(%__MODULE__{has_next_page: false}), do: true
@@ -328,18 +161,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
 
   - `meta` - Current PaginationMeta struct
   - `target_page` - The page number to calculate metadata for
-
-  ## Examples
-
-      current_meta = PaginationMeta.new(20, 20, 100)
-
-      # Calculate metadata for page 3
-      page3_meta = PaginationMeta.for_page(current_meta, 3)
-      # => %PaginationMeta{current_page: 3, has_prev_page: true, ...}
-
-      # Calculate offset for page 3
-      PaginationMeta.current_offset(page3_meta)
-      # => 40
   """
   @spec for_page(t(), pos_integer()) :: t()
   def for_page(
@@ -361,16 +182,6 @@ defmodule LightningWeb.Live.AiAssistant.PaginationMeta do
 
   - `meta` - Current PaginationMeta struct
   - `max_pages` - Maximum number of page links to show (default: 5)
-
-  ## Examples
-
-      meta = PaginationMeta.new(60, 20, 200)  # Page 3 of 10
-      PaginationMeta.page_range(meta, 5)
-      # => [1, 2, 3, 4, 5]
-
-      meta = PaginationMeta.new(120, 20, 200)  # Page 6 of 10
-      PaginationMeta.page_range(meta, 5)
-      # => [4, 5, 6, 7, 8]
   """
   @spec page_range(t(), pos_integer()) :: [pos_integer()]
   def page_range(%__MODULE__{} = meta, max_pages \\ 5) do

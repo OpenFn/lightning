@@ -30,26 +30,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
 
   - `{:ok, session}` - Session created successfully with initial message
   - `{:error, reason}` - Creation failed due to validation or system errors
-
-  ## Examples
-
-      # Job mode session creation
-      {:ok, session} = MyJobMode.create_session(
-        %{selected_job: job, current_user: user},
-        "Help me debug this HTTP request"
-      )
-
-      # Workflow template mode session creation
-      {:ok, session} = WorkflowMode.create_session(
-        %{project: project, current_user: user},
-        "Create a daily Salesforce sync workflow"
-      )
-
-  ## Implementation Notes
-
-  - Should validate required context in assigns
-  - Must associate session with appropriate resources (job, project, etc.)
-  - Should set mode-specific metadata and configuration
   """
   @callback create_session(
               assigns :: map(),
@@ -77,21 +57,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   - Preloaded messages and user data
   - Mode-specific context (expressions, adaptors, etc.)
   - UI-ready metadata
-
-  ## Examples
-
-      # Retrieve job session with expression context
-      session = JobMode.get_session!(session_id, %{selected_job: job})
-      # session now includes job.expression and job.adaptor
-
-      # Retrieve workflow session with project context
-      session = WorkflowMode.get_session!(session_id, %{project: project})
-
-  ## Implementation Notes
-
-  - Should handle session not found errors gracefully
-  - Must enrich session with mode-specific context
-  - Should preload necessary associations for efficient rendering
   """
   @callback get_session!(
               session_id :: String.t(),
@@ -123,28 +88,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   A map containing:
   - `:sessions` - List of session maps with preview data
   - `:pagination` - `PaginationMeta` struct with navigation info
-
-  ## Examples
-
-      # Load recent sessions for a job
-      %{sessions: sessions, pagination: meta} = JobMode.list_sessions(
-        %{selected_job: job, current_user: user},
-        :desc,
-        limit: 10
-      )
-
-      # Load sessions with search
-      %{sessions: sessions, pagination: meta} = Mode.list_sessions(
-        assigns,
-        :desc,
-        offset: 20, limit: 10, search: "debugging"
-      )
-
-  ## Implementation Notes
-
-  - Should respect mode-specific filtering rules
-  - Must include message counts for session previews
-  - Should optimize queries for large session lists
   """
   @callback list_sessions(
               assigns :: map(),
@@ -170,28 +113,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
 
   - `{:ok, session}` - Message saved successfully, returns updated session
   - `{:error, reason}` - Save failed due to validation or system errors
-
-  ## Examples
-
-      # Save user message to job session
-      {:ok, updated_session} = JobMode.save_message(
-        %{session: session, current_user: user},
-        "Can you explain this error message?"
-      )
-
-      # Save message with validation
-      case Mode.save_message(assigns, message_content) do
-        {:ok, session} ->
-          # Continue with AI processing
-        {:error, changeset} ->
-          # Handle validation errors
-      end
-
-  ## Implementation Notes
-
-  - Should validate message content and length
-  - Must set appropriate message status (pending, etc.)
-  - Should update session metadata as needed
   """
   @callback save_message(
               assigns :: map(),
@@ -214,34 +135,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
 
   - `{:ok, session}` - AI processed successfully, returns updated session with response
   - `{:error, reason}` - Processing failed due to AI service or system errors
-
-  ## Examples
-
-      # Job mode AI query with code context
-      {:ok, updated_session} = JobMode.query(session, "How do I add error handling?")
-      # Uses job expression and adaptor for targeted assistance
-
-      # Workflow mode AI query for template generation
-      {:ok, updated_session} = WorkflowMode.query(session, "Add logging to this workflow")
-      # Generates updated workflow YAML
-
-  ## Error Handling
-
-      case Mode.query(session, content) do
-        {:ok, session} ->
-          # AI responded successfully
-        {:error, "Request timed out. Please try again."} ->
-          # Handle timeout
-        {:error, changeset} ->
-          # Handle validation errors
-      end
-
-  ## Implementation Notes
-
-  - Should use appropriate AI service endpoint (job_chat, workflow_chat)
-  - Must include mode-specific context in AI requests
-  - Should handle various error types gracefully
-  - Must update message statuses appropriately
   """
   @callback query(
               session :: map(),
@@ -266,22 +159,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   ## Returns
 
   `true` if chat input should be disabled, `false` otherwise.
-
-  ## Examples
-
-      # Job mode disables input when no job is selected
-      defp chat_input_disabled?(%{selected_job: nil}), do: true
-      defp chat_input_disabled?(%{loading: true}), do: true
-      defp chat_input_disabled?(_), do: false
-
-      # Workflow mode disables during template generation
-      defp chat_input_disabled?(%{generating_template: true}), do: true
-
-  ## Implementation Notes
-
-  - Should check for required context availability
-  - Must consider loading and error states
-  - Should provide clear user feedback when disabled
   """
   @callback chat_input_disabled?(assigns :: map()) :: boolean()
 
@@ -299,20 +176,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   ## Returns
 
   `true` if more sessions exist, `false` if all sessions are loaded.
-
-  ## Examples
-
-      if Mode.more_sessions?(assigns, length(loaded_sessions)) do
-        # Show "Load More" button
-      else
-        # Hide pagination controls
-      end
-
-  ## Implementation Notes
-
-  - Should be efficient and avoid loading actual session data
-  - Must respect same filtering as `list_sessions/3`
-  - Should handle edge cases gracefully
   """
   @callback more_sessions?(
               assigns :: map(),
@@ -328,18 +191,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   ## Returns
 
   A string to display as placeholder text in the chat input.
-
-  ## Examples
-
-      # Job mode placeholder
-      def input_placeholder, do: "Ask about code, debugging, or adaptor usage..."
-
-      # Workflow mode placeholder
-      def input_placeholder, do: "Describe the workflow you want to create..."
-
-  ## Default Implementation
-
-  Returns a generic placeholder encouraging users to start a conversation.
   """
   @callback input_placeholder() :: String.t()
 
@@ -356,22 +207,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   ## Returns
 
   A formatted string to display as the session title.
-
-  ## Examples
-
-      # Job mode with job context
-      def chat_title(%{title: title, job: %{name: job_name}}) do
-        "# {title} (# {job_name})"
-      end
-
-      # Workflow mode with workflow context
-      def chat_title(%{title: title, workflow: %{name: workflow_name}}) do
-        "# {workflow_name}: # {title}"
-      end
-
-  ## Default Implementation
-
-  Returns the session's title field, or "Untitled Chat" if empty.
   """
   @callback chat_title(session :: map()) :: String.t()
 
@@ -385,18 +220,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   ## Returns
 
   `true` if mode generates templates/code, `false` otherwise.
-
-  ## Examples
-
-      # Workflow template mode supports generation
-      def supports_template_generation?, do: true
-
-      # Job assistance mode doesn't generate templates
-      def supports_template_generation?, do: false
-
-  ## Default Implementation
-
-  Returns `false` - most modes provide assistance rather than generation.
   """
   @callback supports_template_generation?() :: boolean()
 
@@ -414,22 +237,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   - `:icon` - Icon class for UI display
   - `:category` - Optional grouping category
   - `:features` - Optional list of supported features
-
-  ## Examples
-
-      def metadata do
-        %{
-          name: "Job Assistant",
-          description: "Get help with coding tasks and debugging",
-          icon: "hero-code-bracket",
-          category: "development",
-          features: ["code_help", "debugging", "adaptor_guidance"]
-        }
-      end
-
-  ## Default Implementation
-
-  Returns basic metadata with generic name, description, and icon.
   """
   @callback metadata() :: map()
 
@@ -447,23 +254,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
 
   - `%{yaml: String.t()}` - If code/template was generated
   - `nil` - If no extractable code was found
-
-  ## Examples
-
-      # Workflow mode extracts generated YAML
-      def extract_generated_code(session) do
-        case find_workflow_yaml(session) do
-          nil -> nil
-          yaml -> %{yaml: yaml}
-        end
-      end
-
-      # Job mode doesn't generate extractable code
-      def extract_generated_code(_session_or_message), do: nil
-
-  ## Default Implementation
-
-  Returns nil - no code extraction by default.
   """
   @callback extract_generated_code(
               session_or_message :: ChatSession.t() | ChatMessage.t()
@@ -485,26 +275,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   ## Returns
 
   Updated socket with mode-specific initialization.
-
-  ## Examples
-
-      # Job mode ensures job is selected
-      def on_session_start(socket, ui_callback) do
-        if is_nil(socket.assigns.selected_job) do
-          ui_callback.(:prompt_job_selection)
-        end
-        socket
-      end
-
-      # Workflow mode shows template options
-      def on_session_start(socket, ui_callback) do
-        ui_callback.(:show_template_suggestions)
-        socket
-      end
-
-  ## Default Implementation
-
-  Returns socket unchanged - no initialization needed.
   """
   @callback on_session_start(socket :: map(), ui_callback :: function()) :: map()
 

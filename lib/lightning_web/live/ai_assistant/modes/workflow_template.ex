@@ -21,20 +21,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   Initializes a project-scoped session for AI-powered workflow creation.
   The session is configured for template generation with appropriate
   metadata and context for the AI service.
-
-  ## Examples
-
-      # Create session for new workflow
-      {:ok, session} = WorkflowTemplate.create_session(
-        %{project: project, current_user: user},
-        "Create a daily Salesforce to PostgreSQL sync workflow"
-      )
-
-      # Create session for workflow enhancement
-      {:ok, session} = WorkflowTemplate.create_session(
-        %{project: project, current_user: user},
-        "Add error handling and retry logic to existing webhook workflow"
-      )
   """
   @impl true
   @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
@@ -47,11 +33,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Loads the complete session including all messages, generated templates,
   and conversation history for template generation continuation.
-
-  ## Examples
-
-      session = WorkflowTemplate.get_session!(session_id, %{})
-      # Session includes all messages and any generated workflow YAML
   """
   @impl true
   @spec get_session!(String.t(), map()) :: map()
@@ -64,15 +45,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Retrieves paginated sessions associated with the project, filtered
   to show only workflow template generation conversations.
-
-  ## Examples
-
-      # Load recent template sessions
-      %{sessions: sessions, pagination: meta} = WorkflowTemplate.list_sessions(
-        %{project: project},
-        :desc,
-        limit: 15
-      )
   """
   @impl true
   @spec list_sessions(map(), atom(), keyword()) :: %{
@@ -88,12 +60,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Determines if additional sessions are available beyond the current count
   for implementing pagination controls.
-
-  ## Examples
-
-      if WorkflowTemplate.more_sessions?(%{project: project}, 15) do
-        # Show "Load More" button
-      end
   """
   @impl true
   @spec more_sessions?(map(), integer()) :: boolean()
@@ -106,29 +72,27 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Adds user requests, modifications, or questions to the conversation
   history for AI processing and template generation.
-
-  ## Examples
-
-      # Save template modification request
-      {:ok, updated_session} = WorkflowTemplate.save_message(
-        %{session: session, current_user: user},
-        "Add data validation before database insertion"
-      )
-
-      # Save error correction request
-      {:ok, updated_session} = WorkflowTemplate.save_message(
-        %{session: session, current_user: user},
-        "Fix the cron expression to run every 2 hours"
-      )
   """
   @impl true
   @spec save_message(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def save_message(%{session: session, current_user: user}, content) do
-    AiAssistant.save_message(session, %{
-      role: :user,
-      content: content,
-      user: user
-    })
+  def save_message(%{session: session, current_user: user} = assigns, content) do
+    # Extract workflow params and convert to simple structure
+    workflow_yaml = extract_workflow_yaml(assigns)
+
+    # Store in meta since that persists across the session
+    updated_meta = Map.put(session.meta || %{}, "workflow_yaml", workflow_yaml)
+
+    AiAssistant.save_message(
+      session,
+      %{
+        role: :user,
+        content: content,
+        user: user
+      },
+      # Pass meta as 4th parameter
+      %{},
+      updated_meta
+    )
   end
 
   @doc """
@@ -142,26 +106,19 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   - `session` - Session with conversation history and context
   - `content` - User's workflow description or modification request
-
-  ## Examples
-
-      # Generate new workflow template
-      {:ok, updated_session} = WorkflowTemplate.query(
-        session,
-        "Create a workflow that processes CSV files uploaded to Google Drive"
-      )
-
-      # Modify existing template
-      {:ok, updated_session} = WorkflowTemplate.query(
-        session,
-        "Add error notifications to Slack when the sync fails"
-      )
   """
   @impl true
   @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
   def query(session, content) do
-    Logger.info("Querying workflow template with content: #{inspect(content)}")
-    AiAssistant.query_workflow(session, content)
+    # Get workflow YAML from meta or from previous messages
+    # FIX: Use direct field access instead of get_in
+    workflow_yaml =
+      session.meta["workflow_yaml"] ||
+        get_latest_workflow_context(session)
+
+    Logger.info("Querying workflow with existing YAML: #{workflow_yaml != nil}")
+
+    AiAssistant.query_workflow(session, content, workflow_yaml)
   end
 
   @doc """
@@ -170,26 +127,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   Evaluates conditions specific to template generation to ensure the
   feature is only available when appropriate permissions and service
   availability allow it.
-
-  ## Examples
-
-      # Input enabled for template generation
-      chat_input_disabled?(%{
-        can_edit_workflow: true,
-        ai_limit_result: :ok,
-        endpoint_available?: true,
-        pending_message: %{loading: nil}
-      })
-      # => false
-
-      # Input disabled due to usage limits
-      chat_input_disabled?(%{
-        can_edit_workflow: true,
-        ai_limit_result: {:error, :limit_exceeded},
-        endpoint_available?: true,
-        pending_message: %{loading: nil}
-      })
-      # => true
   """
   @impl true
   @spec chat_input_disabled?(map()) :: boolean()
@@ -222,20 +159,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Creates descriptive titles that include project context when available,
   making it easier to identify and organize template generation sessions.
-
-  ## Examples
-
-      # With custom title
-      chat_title(%{title: "Salesforce to PostgreSQL Sync"})
-      # => "Salesforce to PostgreSQL Sync"
-
-      # With project context
-      chat_title(%{project: %{name: "Customer Data Platform"}})
-      # => "Customer Data Platform Workflow"
-
-      # Fallback
-      chat_title(%{})
-      # => "New Workflow"
   """
   @impl true
   @spec chat_title(map()) :: String.t()
@@ -292,19 +215,12 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   - `%{yaml: String.t()}` - If workflow YAML was found
   - `nil` - If no workflow code was generated
-
-  ## Examples
-
-      # When YAML is generated
-      extract_generated_code(session_with_yaml)
-      # => %{yaml: "name: My Workflow\njobs:\n  ..."}
-
-      # When no YAML is present
-      extract_generated_code(session_without_yaml)
-      # => nil
   """
   @impl true
-  @spec extract_generated_code(ChatSession.t() | ChatMessage.t()) ::
+  @spec extract_generated_code(
+          Lightning.AiAssistant.ChatSession.t()
+          | Lightning.AiAssistant.ChatMessage.t()
+        ) ::
           %{yaml: String.t()} | nil
   def extract_generated_code(session_or_message) do
     case extract_workflow_yaml(session_or_message) do
@@ -323,12 +239,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   - `socket` - LiveView socket with current state
   - `ui_callback` - Function for triggering UI updates
-
-  ## Examples
-
-      # Starting new template session
-      on_session_start(socket, ui_callback)
-      # Triggers :clear_template to reset UI state
   """
   @impl true
   @spec on_session_start(map(), function()) :: map()
@@ -350,20 +260,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   ## Returns
 
   String explanation or `nil` if input should be enabled.
-
-  ## Examples
-
-      # Permission denied
-      disabled_tooltip_message(%{can_edit_workflow: false})
-      # => "You are not authorized to use the AI Assistant"
-
-      # Usage limit reached
-      disabled_tooltip_message(%{ai_limit_result: {:error, :monthly_limit}})
-      # => "Monthly AI usage limit exceeded"
-
-      # Service available
-      disabled_tooltip_message(%{can_edit_workflow: true, ai_limit_result: :ok})
-      # => nil
   """
   @spec disabled_tooltip_message(map()) :: String.t() | nil
   def disabled_tooltip_message(assigns) do
@@ -392,24 +288,29 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   ## Returns
 
   Human-readable error message string.
-
-  ## Examples
-
-      error_message({:error, :service_unavailable})
-      # => "AI service is temporarily unavailable. Please try again."
-
-      error_message(%Ecto.Changeset{})
-      # => "Template validation failed: [specific field errors]"
   """
   @spec error_message(any()) :: String.t()
   def error_message(error) do
     ErrorHandler.format_error(error)
   end
 
+  # Private functions
+
   defp has_reached_limit?(ai_limit_result) do
     ai_limit_result != :ok
   end
 
+  defp get_latest_workflow_context(session) do
+    # Try to extract from messages
+    session.messages
+    |> Enum.reverse()
+    |> Enum.find_value(nil, fn
+      %{role: :assistant, workflow_code: yaml} when not is_nil(yaml) -> yaml
+      _ -> nil
+    end)
+  end
+
+  # Combined extract_workflow_yaml function with all clauses
   defp extract_workflow_yaml(%Lightning.AiAssistant.ChatSession{
          messages: messages
        }) do
@@ -426,8 +327,52 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     if has_workflow_code?(code), do: code
   end
 
+  defp extract_workflow_yaml(%{workflow_params: params}) when is_map(params) do
+    # Simple YAML-like string representation
+    # The AI just needs to understand the structure
+    """
+    name: #{params["name"]}
+    jobs:
+    #{format_jobs(params["jobs"])}
+    triggers:
+    #{format_triggers(params["triggers"])}
+    edges:
+    #{format_edges(params["edges"])}
+    """
+  end
+
   defp extract_workflow_yaml(_), do: nil
 
   defp has_workflow_code?(code) when is_binary(code), do: code != ""
   defp has_workflow_code?(_), do: false
+
+  defp format_jobs(nil), do: "  # No jobs"
+
+  defp format_jobs(jobs) do
+    jobs
+    |> Enum.map(fn job ->
+      "  #{job["name"]}:\n    id: #{job["id"]}\n    adaptor: #{job["adaptor"]}\n    has_code: #{job["body"] && job["body"] != ""}"
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp format_triggers(nil), do: "  # No triggers"
+
+  defp format_triggers(triggers) do
+    triggers
+    |> Enum.map(fn trigger ->
+      "  #{trigger["type"]}:\n    enabled: #{trigger["enabled"]}"
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp format_edges(nil), do: "  # No edges"
+
+  defp format_edges(edges) do
+    edges
+    |> Enum.map(fn edge ->
+      "  edge_#{edge["id"]}:\n    source: #{edge["source_job_id"] || edge["source_trigger_id"]}\n    target: #{edge["target_job_id"]}"
+    end)
+    |> Enum.join("\n")
+  end
 end
