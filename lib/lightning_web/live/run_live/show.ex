@@ -132,7 +132,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Started</:label>
                   <:value>
                     <%= if run.started_at do %>
-                      <Common.datetime datetime={run.started_at} />
+                      <Common.datetime datetime={run.started_at} format={:detailed}/>
                     <% end %>
                   </:value>
                 </.list_item>
