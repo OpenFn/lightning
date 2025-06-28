@@ -37,8 +37,8 @@ defmodule LightningWeb.RunLive.Show do
       tooltip={
         if @snapshot_version == "latest",
           do: "This run is based on the latest version of this workflow.",
-          else:
-            "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at)}"
+                      else:
+             "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at, "%F at %T")}"
       }
     />
     """
@@ -132,15 +132,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Started</:label>
                   <:value>
                     <%= if run.started_at do %>
-                      <Common.wrapper_tooltip
-                        id={run.id <> "start-tip"}
-                        tooltip={DateTime.to_iso8601(run.started_at)}
-                      >
-                        {Timex.Format.DateTime.Formatters.Relative.format!(
-                          run.started_at,
-                          "{relative}"
-                        )}
-                      </Common.wrapper_tooltip>
+                      <Common.datetime datetime={run.started_at} />
                     <% end %>
                   </:value>
                 </.list_item>
@@ -148,15 +140,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Finished</:label>
                   <:value>
                     <%= if run.finished_at do %>
-                      <Common.wrapper_tooltip
-                        id={run.id <> "finish-tip"}
-                        tooltip={DateTime.to_iso8601(run.finished_at)}
-                      >
-                        {Timex.Format.DateTime.Formatters.Relative.format!(
-                          run.finished_at,
-                          "{relative}"
-                        )}
-                      </Common.wrapper_tooltip>
+                      <Common.datetime datetime={run.finished_at} />
                     <% end %>
                   </:value>
                 </.list_item>

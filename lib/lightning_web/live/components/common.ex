@@ -294,6 +294,95 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
+  attr :datetime, :map, required: true
+  attr :id, :string, default: nil
+  attr :class, :string, default: ""
+  attr :show_tooltip, :boolean, default: true
+  attr :format, :atom, default: :relative, values: [:relative, :detailed]
+
+  @doc """
+  Renders a datetime with click-to-copy functionality and optional hover tooltip.
+
+  ## Format Options
+
+  - `:relative` - Shows relative time like "2 hours ago"
+  - `:detailed` - Shows absolute time like "2024-01-15 14:30:00" in user's timezone
+
+  ## Examples
+
+      <Common.datetime datetime={@user.inserted_at} />
+      <Common.datetime datetime={@run.finished_at} format={:detailed} />
+      <Common.datetime datetime={@event.created_at} class="text-gray-500" show_tooltip={false} />
+  """
+  def datetime(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:id, fn ->
+        "datetime-" <> Base.encode16(:crypto.strong_rand_bytes(4))
+      end)
+      |> assign(
+        display_text: format_datetime_display(assigns.datetime, assigns.format),
+        iso_timestamp: DateTime.to_iso8601(assigns.datetime),
+        copy_value: DateTime.to_iso8601(assigns.datetime)
+      )
+
+    ~H"""
+    <%= if is_nil(@datetime) do %>
+      <span class={["text-gray-400", @class]}>--</span>
+    <% else %>
+      <%= if @show_tooltip do %>
+        <Common.wrapper_tooltip
+          id={@id}
+          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy timestamp</span>"}
+        >
+          <span
+            id={"#{@id}-inner"}
+            class={[
+              "relative inline-flex items-center gap-1 cursor-pointer select-none group",
+              "rounded transition-colors",
+              @class
+            ]}
+            phx-hook="CopyableDateTime"
+            data-copy-value={@copy_value}
+            data-format={@format}
+            data-iso-timestamp={@iso_timestamp}
+          >
+            <span class="datetime-text">{@display_text}</span>
+          </span>
+        </Common.wrapper_tooltip>
+      <% else %>
+        <span
+          id={@id}
+          class={[
+            "relative inline-flex items-center cursor-pointer select-none group",
+            "rounded transition-colors",
+            @class
+          ]}
+          phx-hook="CopyableDateTime"
+          data-copy-value={@copy_value}
+          data-format={@format}
+          data-iso-timestamp={@iso_timestamp}
+        >
+          <span class="datetime-text">{@display_text}</span>
+        </span>
+      <% end %>
+    <% end %>
+    """
+  end
+
+  defp format_datetime_display(datetime, format) do
+    case format do
+      :relative ->
+        case Timex.Format.DateTime.Formatters.Relative.format(datetime, "{relative}") do
+          {:ok, relative_time} -> relative_time
+          {:error, _} -> "Invalid date"
+        end
+      :detailed ->
+        # Return ISO format - the frontend will convert to user's timezone
+        DateTime.to_iso8601(datetime)
+    end
+  end
+
   attr :function, {:fun, 1}, required: true
   attr :args, :map, required: true
 
