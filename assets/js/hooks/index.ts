@@ -2,6 +2,7 @@ import tippy, {
   type Instance as TippyInstance,
   type Placement,
 } from 'tippy.js';
+import { format, formatRelative } from 'date-fns';
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
@@ -583,15 +584,14 @@ export const Tooltip = {
       placement: placement,
       animation: false,
       allowHTML: allowHTML === 'true',
-      interactive: true,
+      interactive: false,
     });
     this._tippyInstance.setContent(content);
   },
   updated() {
-    // Update tooltip content if it exists and ISO timestamp changed
-    if (this._tippyInstance && this.el.dataset.isoTimestamp) {
-      const tooltipContent = `${this.el.dataset.isoTimestamp}<br/><span class="text-xs text-gray-500">Click to copy</span>`;
-      this._tippyInstance.setContent(tooltipContent);
+    let content = this.el.ariaLabel;
+    if (content && this._tippyInstance) {
+      this._tippyInstance.setContent(content);
     }
   },
   destroyed() {
@@ -678,6 +678,7 @@ export const Copy = {
 
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
+      ev.stopPropagation();
 
       let text = '';
 
@@ -706,7 +707,7 @@ export const Copy = {
               element.textContent = 'Copied!';
               setTimeout(function () {
                 element.textContent = originalText;
-              }, 3000);
+              }, 500);
             } else {
               this.liveSocket.execJS(this.el, phxThenAttribute);
             }
@@ -848,75 +849,44 @@ export const TypewriterHook = {
   },
 };
 
-export const CopyableDateTime = {
+export const LocalTimeConverter = {
   mounted() {
-    const copyValue = this.el.dataset.copyValue;
-    const format = this.el.dataset.format;
-    const isoTimestamp = this.el.dataset.isoTimestamp;
-
-    if (!copyValue) {
-      console.warn('CopyableDateTime: missing data-copy-value attribute');
-      return;
-    }
-
-    // Convert detailed format to user's local timezone
-    if (format === 'detailed' && isoTimestamp) {
-      this.convertToLocalTime(isoTimestamp);
-    }
-
-    this.el.addEventListener('click', event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      navigator.clipboard
-        .writeText(copyValue)
-        .then(() => {
-          this.showFeedback('Copied!', 'text-green-600');
-        })
-        .catch(err => {
-          console.error('Failed to copy datetime text:', err);
-          this.showFeedback('Copy failed', 'text-red-600');
-        });
-    });
+    this.convertDateTime();
   },
 
-  convertToLocalTime(isoTimestamp: string) {
+  updated() {
+    this.convertDateTime();
+  },
+
+  convertDateTime() {
+    const isoTimestamp = this.el.dataset['isoTimestamp'];
+    const display = this.el.dataset['format'];
+
+    if (!isoTimestamp) return;
+    this.convertToDisplayTime(isoTimestamp, display || 'relative');
+  },
+
+  convertToDisplayTime(isoTimestamp: string, display: string) {
     try {
       const date = new Date(isoTimestamp);
-      const localDateTime = date.toLocaleString('sv-SE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        timeZoneName: 'short',
-      });
+      let displayTime: string | undefined;
+
+      if (display === 'detailed') {
+        displayTime = format(date, "MMMM do 'at' hh:mm:ss a");
+      } else if (display === 'relative') {
+        const now = new Date();
+        displayTime = formatRelative(date, now);
+      }
 
       const textElement = this.el.querySelector('.datetime-text');
-      if (textElement) {
-        textElement.textContent = localDateTime;
+      if (textElement && displayTime) {
+        textElement.textContent = displayTime;
       }
     } catch (err) {
-      console.error('Failed to convert timestamp to local time:', err);
-    }
-  },
-
-  showFeedback(message: string, colorClass: string) {
-    const textElement = this.el.querySelector('.datetime-text');
-    const originalText = textElement?.textContent;
-
-    if (textElement && originalText) {
-      textElement.textContent = message;
-      textElement.classList.add(colorClass);
-
-      setTimeout(() => {
-        textElement.textContent = originalText;
-        textElement.classList.remove(colorClass);
-      }, 2000);
+      console.error('Failed to convert timestamp to display time:', err);
     }
   },
 } as PhoenixHook<{
-  convertToLocalTime: (isoTimestamp: string) => void;
-  showFeedback: (message: string, colorClass: string) => void;
+  convertDateTime: () => void;
+  convertToDisplayTime: (isoTimestamp: string, display: string) => void;
 }>;
