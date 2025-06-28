@@ -80,15 +80,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     <:label>Started</:label>
                     <:value>
                       <%= if run.started_at do %>
-                        <Common.wrapper_tooltip
-                          id={run.id <> "start-tip"}
-                          tooltip={DateTime.to_iso8601(run.started_at)}
-                        >
-                          {Timex.Format.DateTime.Formatters.Relative.format!(
-                            run.started_at,
-                            "{relative}"
-                          )}
-                        </Common.wrapper_tooltip>
+                        <Common.datetime datetime={run.started_at} />
                       <% end %>
                     </:value>
                   </.list_item>

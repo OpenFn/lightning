@@ -80,17 +80,17 @@
             </.td>
             <.td>
               <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
-                {Lightning.Helpers.format_date_long(token.inserted_at)}
+                <Common.datetime datetime={token.inserted_at} format={:detailed} />
               </span>
             </.td>
             <.td>
               <div class="flex content-center justify-between">
                 <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
                   <%= if token.last_used_at do %>
-                    {Timex.Format.DateTime.Formatters.Relative.format!(
-                      token.last_used_at,
-                      "{relative}"
-                    )}
+                    <Common.datetime
+                      datetime={token.last_used_at}
+                      format={:relative}
+                    />
                   <% else %>
                     Never used
                   <% end %>
