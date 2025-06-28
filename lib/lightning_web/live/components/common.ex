@@ -317,10 +317,8 @@ defmodule LightningWeb.Components.Common do
   def datetime(assigns) do
     assigns =
       assigns
-      |> assign_new(:id, fn ->
-        "datetime-" <> Base.encode16(:crypto.strong_rand_bytes(4))
-      end)
       |> assign(
+        id: "datetime-" <> Base.encode16(:crypto.strong_rand_bytes(4)),
         display_text: format_datetime_display(assigns.datetime, assigns.format),
         iso_timestamp: DateTime.to_iso8601(assigns.datetime),
         copy_value: DateTime.to_iso8601(assigns.datetime)
@@ -333,37 +331,47 @@ defmodule LightningWeb.Components.Common do
       <%= if @show_tooltip do %>
         <Common.wrapper_tooltip
           id={@id}
-          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy timestamp</span>"}
+          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy UTC timestamp</span>"}
         >
           <span
-            id={"#{@id}-inner"}
-            class={[
-              "relative inline-flex items-center gap-1 cursor-pointer select-none group",
-              "rounded transition-colors",
-              @class
-            ]}
-            phx-hook="CopyableDateTime"
-            data-copy-value={@copy_value}
+            id={"#{@id}-outer"}
+            phx-hook="LocalTimeConverter"
             data-format={@format}
             data-iso-timestamp={@iso_timestamp}
           >
-            <span class="datetime-text">{@display_text}</span>
+            <span
+              id={"#{@id}-inner"}
+              class={[
+                "relative inline-flex items-center cursor-pointer select-none group",
+                "rounded transition-colors",
+                @class
+              ]}
+              phx-hook="Copy"
+              data-content={@copy_value}
+            >
+              <span class="datetime-text">{@display_text}</span>
+            </span>
           </span>
         </Common.wrapper_tooltip>
       <% else %>
         <span
-          id={@id}
-          class={[
-            "relative inline-flex items-center cursor-pointer select-none group",
-            "rounded transition-colors",
-            @class
-          ]}
-          phx-hook="CopyableDateTime"
-          data-copy-value={@copy_value}
+          id={"#{@id}-outer"}
+          phx-hook="LocalTimeConverter"
           data-format={@format}
           data-iso-timestamp={@iso_timestamp}
         >
-          <span class="datetime-text">{@display_text}</span>
+          <span
+            id={@id}
+            class={[
+              "relative inline-flex items-center cursor-pointer select-none group",
+              "rounded transition-colors",
+              @class
+            ]}
+            phx-hook="Copy"
+            data-content={@copy_value}
+          >
+            <span class="datetime-text">{@display_text}</span>
+          </span>
         </span>
       <% end %>
     <% end %>
@@ -373,10 +381,9 @@ defmodule LightningWeb.Components.Common do
   defp format_datetime_display(datetime, format) do
     case format do
       :relative ->
-        case Timex.Format.DateTime.Formatters.Relative.format(datetime, "{relative}") do
-          {:ok, relative_time} -> relative_time
-          {:error, _} -> "Invalid date"
-        end
+        # Let JavaScript handle relative formatting using date-fns
+        DateTime.to_iso8601(datetime)
+
       :detailed ->
         # Return ISO format - the frontend will convert to user's timezone
         DateTime.to_iso8601(datetime)
