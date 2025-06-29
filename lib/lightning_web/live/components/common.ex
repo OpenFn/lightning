@@ -294,11 +294,20 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
+  def duration(assigns) do
+    ~H"""
+    {@duration}ms
+    """
+  end
+
   attr :datetime, :map, required: true
   attr :id, :string, default: nil
   attr :class, :string, default: ""
   attr :show_tooltip, :boolean, default: true
-  attr :format, :atom, default: :relative, values: [:relative, :detailed]
+
+  attr :format, :atom,
+    default: :standard,
+    values: [:standard, :relative, :detailed]
 
   @doc """
   Renders a datetime with click-to-copy functionality and optional hover tooltip.
@@ -319,9 +328,8 @@ defmodule LightningWeb.Components.Common do
       assigns
       |> assign(
         id: "datetime-" <> Base.encode16(:crypto.strong_rand_bytes(4)),
-        display_text: format_datetime_display(assigns.datetime, assigns.format),
-        iso_timestamp: DateTime.to_iso8601(assigns.datetime),
-        copy_value: DateTime.to_iso8601(assigns.datetime)
+        iso_timestamp: assigns.datetime && DateTime.to_iso8601(assigns.datetime),
+        copy_value: assigns.datetime && DateTime.to_iso8601(assigns.datetime)
       )
 
     ~H"""
@@ -349,7 +357,7 @@ defmodule LightningWeb.Components.Common do
               phx-hook="Copy"
               data-content={@copy_value}
             >
-              <span class="datetime-text">{@display_text}</span>
+              <span class="datetime-text">{@datetime}</span>
             </span>
           </span>
         </Common.wrapper_tooltip>
@@ -370,24 +378,12 @@ defmodule LightningWeb.Components.Common do
             phx-hook="Copy"
             data-content={@copy_value}
           >
-            <span class="datetime-text">{@display_text}</span>
+            <span class="datetime-text">{@datetime}</span>
           </span>
         </span>
       <% end %>
     <% end %>
     """
-  end
-
-  defp format_datetime_display(datetime, format) do
-    case format do
-      :relative ->
-        # Let JavaScript handle relative formatting using date-fns
-        DateTime.to_iso8601(datetime)
-
-      :detailed ->
-        # Return ISO format - the frontend will convert to user's timezone
-        DateTime.to_iso8601(datetime)
-    end
   end
 
   attr :function, {:fun, 1}, required: true
