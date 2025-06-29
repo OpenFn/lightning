@@ -401,13 +401,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             onClick={undo}
             data-tooltip="Undo"
           >
-            <span className="text-black hero-arrow-uturn-down w-4 h-4" />
+            <span className="text-black hero-arrow-uturn-left w-4 h-4" />
           </ControlButton>
           <ControlButton
             onClick={redo}
             data-tooltip="Redo"
           >
-            <span className="text-black hero-arrow-uturn-up w-4 h-4" />
+            <span className="text-black hero-arrow-uturn-right w-4 h-4" />
           </ControlButton>
 
         </Controls>
