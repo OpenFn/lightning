@@ -294,6 +294,98 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
+  def duration(assigns) do
+    ~H"""
+    {@duration}ms
+    """
+  end
+
+  attr :datetime, :map, required: true
+  attr :id, :string, default: nil
+  attr :class, :string, default: ""
+  attr :show_tooltip, :boolean, default: true
+
+  attr :format, :atom,
+    default: :standard,
+    values: [:standard, :relative, :detailed]
+
+  @doc """
+  Renders a datetime with click-to-copy functionality and optional hover tooltip.
+
+  ## Format Options
+
+  - `:relative` - Shows relative time like "2 hours ago"
+  - `:detailed` - Shows absolute time like "2024-01-15 14:30:00" in user's timezone
+
+  ## Examples
+
+      <Common.datetime datetime={@user.inserted_at} />
+      <Common.datetime datetime={@run.finished_at} format={:detailed} />
+      <Common.datetime datetime={@event.created_at} class="text-gray-500" show_tooltip={false} />
+  """
+  def datetime(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        id: "datetime-" <> Base.encode16(:crypto.strong_rand_bytes(4)),
+        iso_timestamp: assigns.datetime && DateTime.to_iso8601(assigns.datetime),
+        copy_value: assigns.datetime && DateTime.to_iso8601(assigns.datetime)
+      )
+
+    ~H"""
+    <%= if is_nil(@datetime) do %>
+      <span class={["text-gray-400", @class]}>--</span>
+    <% else %>
+      <%= if @show_tooltip do %>
+        <Common.wrapper_tooltip
+          id={@id}
+          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy UTC timestamp</span>"}
+        >
+          <span
+            id={"#{@id}-outer"}
+            phx-hook="LocalTimeConverter"
+            data-format={@format}
+            data-iso-timestamp={@iso_timestamp}
+          >
+            <span
+              id={"#{@id}-inner"}
+              class={[
+                "relative inline-flex items-center cursor-pointer select-none group",
+                "rounded transition-colors",
+                @class
+              ]}
+              phx-hook="Copy"
+              data-content={@copy_value}
+            >
+              <span class="datetime-text">{@datetime}</span>
+            </span>
+          </span>
+        </Common.wrapper_tooltip>
+      <% else %>
+        <span
+          id={"#{@id}-outer"}
+          phx-hook="LocalTimeConverter"
+          data-format={@format}
+          data-iso-timestamp={@iso_timestamp}
+        >
+          <span
+            id={@id}
+            class={[
+              "relative inline-flex items-center cursor-pointer select-none group",
+              "rounded transition-colors",
+              @class
+            ]}
+            phx-hook="Copy"
+            data-content={@copy_value}
+          >
+            <span class="datetime-text">{@datetime}</span>
+          </span>
+        </span>
+      <% end %>
+    <% end %>
+    """
+  end
+
   attr :function, {:fun, 1}, required: true
   attr :args, :map, required: true
 

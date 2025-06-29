@@ -2,6 +2,7 @@ import tippy, {
   type Instance as TippyInstance,
   type Placement,
 } from 'tippy.js';
+import { format, formatRelative } from 'date-fns';
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
@@ -583,7 +584,7 @@ export const Tooltip = {
       placement: placement,
       animation: false,
       allowHTML: allowHTML === 'true',
-      interactive: true,
+      interactive: false,
     });
     this._tippyInstance.setContent(content);
   },
@@ -677,6 +678,7 @@ export const Copy = {
 
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
+      ev.stopPropagation();
 
       let text = '';
 
@@ -705,7 +707,7 @@ export const Copy = {
               element.textContent = 'Copied!';
               setTimeout(function () {
                 element.textContent = originalText;
-              }, 3000);
+              }, 500);
             } else {
               this.liveSocket.execJS(this.el, phxThenAttribute);
             }
@@ -846,3 +848,52 @@ export const TypewriterHook = {
     typeH1();
   },
 };
+
+export const LocalTimeConverter = {
+  mounted() {
+    this.convertDateTime();
+  },
+
+  updated() {
+    this.convertDateTime();
+  },
+
+  convertDateTime() {
+    const isoTimestamp = this.el.dataset['isoTimestamp'];
+    const display = this.el.dataset['format'];
+
+    if (!isoTimestamp) return;
+    this.convertToDisplayTime(isoTimestamp, display || 'standard');
+  },
+
+  convertToDisplayTime(isoTimestamp: string, display: string) {
+    try {
+      const now = new Date();
+      const date = new Date(isoTimestamp);
+      let displayTime: string | undefined;
+
+      switch (display) {
+        case 'detailed':
+          displayTime = format(date, "MMMM do 'at' hh:mm:ss a");
+          break;
+
+        case 'relative':
+          displayTime = formatRelative(date, now);
+          break;
+
+        default:
+          displayTime = formatRelative(date, now);
+      }
+
+      const textElement = this.el.querySelector('.datetime-text');
+      if (textElement && displayTime) {
+        textElement.textContent = displayTime;
+      }
+    } catch (err) {
+      console.error('Failed to convert timestamp to display time:', err);
+    }
+  },
+} as PhoenixHook<{
+  convertDateTime: () => void;
+  convertToDisplayTime: (isoTimestamp: string, display: string) => void;
+}>;
