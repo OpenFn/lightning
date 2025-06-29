@@ -571,17 +571,10 @@
       <div class="mt-2">
         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div class="overflow-hidden border border-gray-200 md:rounded-lg">
-              <div
-                class="min-w-full divide-y divide-gray-200"
-                role="table"
-                data-entity="work_order_index"
-              >
-                <div class="bg-gray-100 grid grid-cols-6" role="row">
-                  <div
-                    role="columnheader"
-                    class="flex items-center col-span-2 py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-                  >
+            <.table id="work-orders-table">
+              <:header>
+                <.tr>
+                  <.th class="break-words max-w-[25rem]">
                     <div class="flex gap-8 items-center">
                       <div class="">
                         <.form
@@ -650,62 +643,43 @@
                         <% end %>
                       </div>
                     </div>
-                  </div>
-                  <div
-                    role="columnheader"
-                    class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                  >
-                    <div>
-                      <h1 class="text-sm text-gray-500 mb-1">Created</h1>
-                    </div>
-                  </div>
-
-                  <div
-                    role="columnheader"
-                    class="px-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                  >
-                    <div>
-                      <h1 class="text-sm text-gray-500 mb-1">
-                        Last Run (count)
-                      </h1>
-                    </div>
-                  </div>
-                  <div
-                    role="columnheader"
-                    class="px-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                  >
-                    <div>
-                      <h1 class="text-sm text-gray-500 mb-1">
-                        Duration
-                      </h1>
-                    </div>
-                  </div>
-                  <div
-                    role="columnheader"
-                    class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                  >
-                    <div>
-                      <p class="text-sm text-gray-500 mb-1">Status</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  data-entity="work_order_list"
-                  class="bg-white divide-y divide-gray-200 text-gray-500"
-                >
-                  <.async_result :let={searched_page} assign={@async_page}>
-                    <:loading>
-                      <Components.async_filler
-                        message="Loading work orders ..."
-                        class="animate-pulse"
-                      />
-                    </:loading>
-                    <:failed :let={_reason}>
-                      <Components.async_filler message="There was an error loading the work orders" />
-                    </:failed>
-                    <%= for workorder <- searched_page.entries do %>
-                      <div>
+                  </.th>
+                  <.th>
+                    Created
+                  </.th>
+                  <.th>
+                    Last Run (count)
+                  </.th>
+                  <.th>
+                    Duration
+                  </.th>
+                  <.th>
+                    Status
+                  </.th>
+                </.tr>
+              </:header>
+              <:body>
+                <.async_result :let={searched_page} assign={@async_page}>
+                  <:loading>
+                    <.tr>
+                      <.td colspan={5}>
+                        <Components.async_filler
+                          message="Loading work orders ..."
+                          class="animate-pulse"
+                        />
+                      </.td>
+                    </.tr>
+                  </:loading>
+                  <:failed :let={_reason}>
+                    <.tr>
+                      <.td colspan={5}>
+                        <Components.async_filler message="There was an error loading the work orders" />
+                      </.td>
+                    </.tr>
+                  </:failed>
+                  <%= for workorder <- searched_page.entries do %>
+                    <.tr>
+                      <.td colspan={5} class="!p-0">
                         <.live_component
                           module={LightningWeb.RunLive.WorkOrderComponent}
                           id={workorder.id}
@@ -719,33 +693,33 @@
                             end)
                           }
                         />
-                      </div>
-                    <% end %>
-                  </.async_result>
-                </div>
-              </div>
+                      </.td>
+                    </.tr>
+                  <% end %>
+                </.async_result>
+              </:body>
+            </.table>
 
-              <LightningWeb.Pagination.pagination_bar
-                page={@page}
-                async_page={@async_page}
-                url={@pagination_path}
-                help_text="Use whole words or the start of words for better results; partial string matching often won't find substrings in the middle or at the end of a word."
-              >
-                <:action>
-                  <button
-                    :if={@page.total_entries > 0}
-                    id="export-history-button"
-                    type="button"
-                    phx-click="show-export-modal"
-                    class="icon-button"
-                    phx-hook="Tooltip"
-                    aria-label={"Export all #{@page.total_entries} results matching your query"}
-                  >
-                    <.icon name="hero-cloud-arrow-down" class="w-5 h-5" />
-                  </button>
-                </:action>
-              </LightningWeb.Pagination.pagination_bar>
-            </div>
+            <LightningWeb.Pagination.pagination_bar
+              page={@page}
+              async_page={@async_page}
+              url={@pagination_path}
+              help_text="Use whole words or the start of words for better results; partial string matching often won't find substrings in the middle or at the end of a word."
+            >
+              <:action>
+                <button
+                  :if={@page.total_entries > 0}
+                  id="export-history-button"
+                  type="button"
+                  phx-click="show-export-modal"
+                  class="icon-button"
+                  phx-hook="Tooltip"
+                  aria-label={"Export all #{@page.total_entries} results matching your query"}
+                >
+                  <.icon name="hero-cloud-arrow-down" class="w-5 h-5" />
+                </button>
+              </:action>
+            </LightningWeb.Pagination.pagination_bar>
           </div>
         </div>
       </div>
