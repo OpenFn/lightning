@@ -1,6 +1,10 @@
 import type { Patch as ImmerPatch } from 'immer';
 
-import { applyPatches, enablePatches, produce } from 'immer';
+import {
+  applyPatches as immerApplyPatches,
+  enablePatches,
+  produce,
+} from 'immer';
 import { createStore, useStore, type StoreApi } from 'zustand';
 import type { Lightning, Positions } from '../workflow-diagram/types';
 import { randomUUID } from '../common';
@@ -44,6 +48,8 @@ export interface WorkflowState extends WorkflowProps {
   observer: null | ((v: unknown) => void);
   reset: () => void;
   subscribe: (cb: (v: unknown) => void) => void;
+  undo: () => void;
+  redo: () => void;
   add: (data: AddArgs) => void;
   updatePositions: (data: Positions | null) => void;
   updatePosition: (nodeId: string, pos: XYPosition) => void;
@@ -56,7 +62,7 @@ export interface WorkflowState extends WorkflowProps {
   getItem: (
     id?: string
   ) => Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined;
-  applyPatches: (patches: Patch[]) => void;
+  applyPatches: (patches: Partial<ReplayAction>) => void;
   setDisabled: (value: boolean) => void;
   setSelection: (value: string) => void;
 }
@@ -89,12 +95,21 @@ function toRFC6902Patch(patch: ImmerPatch): Patch {
   return newPatch;
 }
 
+export type ReplayAction = {
+  patches: ImmerPatch[];
+  inverse: ImmerPatch[];
+};
+
+const undos: ReplayAction[] = [];
+const redos: ReplayAction[] = [];
+
 // Calculate the next state using Immer, and then call the onChange callback
 // with the patches resulting from the change.
 function proposeChanges(
   state: WorkflowState,
   fn: (draft: WorkflowState) => void,
-  onChange?: (v: unknown) => void
+  onChange?: (v: unknown) => void,
+  skipUndoStack = false // set to true for the actual undo/redo action to prevent an undo loop
 ) {
   let patches: Patch[] = [];
 
@@ -104,6 +119,10 @@ function proposeChanges(
       fn(draft);
     },
     (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
+      if (!skipUndoStack) {
+        undos.push({ patches: p, inverse: _inverse });
+        redos.splice(0, redos.length);
+      }
       patches = p.map(toRFC6902Patch);
     }
   );
@@ -137,6 +156,38 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
     subscribe: cb => {
       if (get().observer) return;
       set({ observer: cb });
+    },
+    undo: () => {
+      set(state => {
+        return proposeChanges(
+          state,
+          draft => {
+            const lastPatch = undos.pop();
+            if (!lastPatch) return draft;
+            const newState = immerApplyPatches(draft, lastPatch.inverse);
+            redos.push(lastPatch);
+            return newState;
+          },
+          get().observer,
+          true
+        );
+      });
+    },
+    redo: () => {
+      set(state => {
+        return proposeChanges(
+          state,
+          draft => {
+            const lastPatch = redos.pop();
+            if (!lastPatch) return draft;
+            const newState = immerApplyPatches(draft, lastPatch.patches);
+            undos.push(lastPatch);
+            return newState;
+          },
+          get().observer,
+          true
+        );
+      });
     },
     add: data => {
       console.log('add', data);
@@ -308,12 +359,25 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       );
     },
     applyPatches: patches => {
-      const immerPatches: ImmerPatch[] = patches.map(patch => ({
+      if (!patches.patches) return;
+      const immerPatches: ImmerPatch[] = patches.patches.map(patch => ({
         ...patch,
         path: patch.path.split('/').filter(Boolean),
       }));
 
-      set(state => applyPatches(state, immerPatches));
+      // if there's an inverse, add this to undo stack
+      if (patches.inverse && patches.inverse.length) {
+        // don't forget to prep inverse patches path.
+        const inverseImmerPatches: ImmerPatch[] = patches.inverse.map(
+          patch => ({
+            ...patch,
+            path: patch.path.split('/').filter(Boolean),
+          })
+        );
+        undos.push({ patches: immerPatches, inverse: inverseImmerPatches });
+      }
+
+      set(state => immerApplyPatches(state, immerPatches));
     },
     reset() {
       set(DEFAULT_PROPS);

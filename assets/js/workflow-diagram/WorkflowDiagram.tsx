@@ -82,6 +82,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     positions: fixedPositions,
     updatePositions,
     updatePosition,
+    undo,
+    redo
   } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
@@ -395,6 +397,19 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           >
             <span className="text-black hero-squares-2x2 w-4 h-4" />
           </ControlButton>
+          <ControlButton
+            onClick={undo}
+            data-tooltip="Undo"
+          >
+            <span className="text-black hero-arrow-uturn-down w-4 h-4" />
+          </ControlButton>
+          <ControlButton
+            onClick={redo}
+            data-tooltip="Redo"
+          >
+            <span className="text-black hero-arrow-uturn-up w-4 h-4" />
+          </ControlButton>
+
         </Controls>
         <Background />
         <MiniMap
