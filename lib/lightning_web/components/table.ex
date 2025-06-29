@@ -104,7 +104,7 @@ defmodule LightningWeb.Components.Table do
         <tfoot>{render_slot(@footer)}</tfoot>
       </table>
       <%= if @page && @url do %>
-        <div class="border-t border-gray-200">
+        <div class={!@divide && "border-t border-gray-200"}>
           <LightningWeb.Pagination.pagination_bar page={@page} url={@url} />
         </div>
       <% end %>

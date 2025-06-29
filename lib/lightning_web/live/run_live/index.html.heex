@@ -569,159 +569,136 @@
 
     <div>
       <div class="mt-2">
-        <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <.table id="work-orders-table">
-              <:header>
-                <.tr>
-                  <.th class="break-words max-w-[25rem]">
-                    <div class="flex gap-8 items-center">
-                      <div class="">
-                        <.form
-                          :let={f}
-                          :if={@page.entries != []}
-                          for={
-                            %{
-                              "all_selections" =>
-                                all_selected?(
-                                  @selected_work_orders,
-                                  @page.entries
-                                )
-                            }
-                          }
-                          phx-change="toggle_all_selections"
-                        >
-                          <.input
-                            type="checkbox"
-                            field={f[:all_selections]}
-                            id="select_all"
-                            phx-hook="CheckboxIndeterminate"
-                            class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"}
-                          />
-                        </.form>
-                      </div>
+        <.table id="work-orders-table" page={@page} url={@pagination_path}>
+          <:header>
+            <.tr>
+              <.th class="break-words max-w-[25rem]">
+                <div class="flex gap-8 items-center">
+                  <div class="">
+                    <.form
+                      :let={f}
+                      :if={@page.entries != []}
+                      for={
+                        %{
+                          "all_selections" =>
+                            all_selected?(
+                              @selected_work_orders,
+                              @page.entries
+                            )
+                        }
+                      }
+                      phx-change="toggle_all_selections"
+                    >
+                      <.input
+                        type="checkbox"
+                        field={f[:all_selections]}
+                        id="select_all"
+                        phx-hook="CheckboxIndeterminate"
+                        class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"}
+                      />
+                    </.form>
+                  </div>
 
+                  <div>
+                    <%= if none_selected?(@selected_work_orders) do %>
                       <div>
-                        <%= if none_selected?(@selected_work_orders) do %>
-                          <div>
-                            <p class="text-sm mb-1">Workflow Name</p>
-                          </div>
-                        <% else %>
-                          <.button
-                            type="button"
-                            theme="secondary"
-                            phx-click={
-                              with :ok <-
-                                     validate_bulk_rerun(
-                                       @selected_work_orders,
-                                       @project
-                                     ),
-                                   do: show_modal("bulk-rerun-from-start-modal")
-                            }
-                          >
-                            Retry
-                          </.button>
-                          <.button
-                            :if={
-                              selected_workflow_count(@selected_work_orders) ==
-                                1
-                            }
-                            id="bulk-rerun-from-job-modal-trigger"
-                            type="button"
-                            theme="secondary"
-                            phx-click={
-                              with :ok <-
-                                     validate_bulk_rerun(
-                                       @selected_work_orders,
-                                       @project
-                                     ),
-                                   do: show_modal("bulk-rerun-from-job-modal")
-                            }
-                          >
-                            Retry from step
-                          </.button>
-                        <% end %>
+                        <p class="text-sm mb-1">ID</p>
                       </div>
-                    </div>
-                  </.th>
-                  <.th>
-                    Created
-                  </.th>
-                  <.th>
-                    Last Run (count)
-                  </.th>
-                  <.th>
-                    Duration
-                  </.th>
-                  <.th>
-                    Status
-                  </.th>
+                    <% else %>
+                      <.button
+                        type="button"
+                        theme="secondary"
+                        phx-click={
+                          with :ok <-
+                                 validate_bulk_rerun(
+                                   @selected_work_orders,
+                                   @project
+                                 ),
+                               do: show_modal("bulk-rerun-from-start-modal")
+                        }
+                      >
+                        Retry
+                      </.button>
+                      <.button
+                        :if={
+                          selected_workflow_count(@selected_work_orders) ==
+                            1
+                        }
+                        id="bulk-rerun-from-job-modal-trigger"
+                        type="button"
+                        theme="secondary"
+                        phx-click={
+                          with :ok <-
+                                 validate_bulk_rerun(
+                                   @selected_work_orders,
+                                   @project
+                                 ),
+                               do: show_modal("bulk-rerun-from-job-modal")
+                        }
+                      >
+                        Retry from step
+                      </.button>
+                    <% end %>
+                  </div>
+                </div>
+              </.th>
+              <.th>
+                Workflow
+              </.th>
+              <.th>
+                Input
+              </.th>
+              <.th>
+                Created
+              </.th>
+              <.th>
+                Last Run (count)
+              </.th>
+              <.th>
+                Duration
+              </.th>
+              <.th>
+                Status
+              </.th>
+            </.tr>
+          </:header>
+          <:body>
+            <.async_result :let={searched_page} assign={@async_page}>
+              <:loading>
+                <.tr>
+                  <.td colspan={5}>
+                    <Components.async_filler
+                      message="Loading work orders ..."
+                      class="animate-pulse"
+                    />
+                  </.td>
                 </.tr>
-              </:header>
-              <:body>
-                <.async_result :let={searched_page} assign={@async_page}>
-                  <:loading>
-                    <.tr>
-                      <.td colspan={5}>
-                        <Components.async_filler
-                          message="Loading work orders ..."
-                          class="animate-pulse"
-                        />
-                      </.td>
-                    </.tr>
-                  </:loading>
-                  <:failed :let={_reason}>
-                    <.tr>
-                      <.td colspan={5}>
-                        <Components.async_filler message="There was an error loading the work orders" />
-                      </.td>
-                    </.tr>
-                  </:failed>
-                  <%= for workorder <- searched_page.entries do %>
-                    <.tr>
-                      <.td colspan={5} class="!p-0">
-                        <.live_component
-                          module={LightningWeb.RunLive.WorkOrderComponent}
-                          id={workorder.id}
-                          work_order={workorder}
-                          project={@project}
-                          can_edit_data_retention={@can_edit_data_retention}
-                          can_run_workflow={@can_run_workflow}
-                          entry_selected={
-                            Enum.any?(@selected_work_orders, fn wo ->
-                              wo.id == workorder.id
-                            end)
-                          }
-                        />
-                      </.td>
-                    </.tr>
-                  <% end %>
-                </.async_result>
-              </:body>
-            </.table>
-
-            <LightningWeb.Pagination.pagination_bar
-              page={@page}
-              async_page={@async_page}
-              url={@pagination_path}
-              help_text="Use whole words or the start of words for better results; partial string matching often won't find substrings in the middle or at the end of a word."
-            >
-              <:action>
-                <button
-                  :if={@page.total_entries > 0}
-                  id="export-history-button"
-                  type="button"
-                  phx-click="show-export-modal"
-                  class="icon-button"
-                  phx-hook="Tooltip"
-                  aria-label={"Export all #{@page.total_entries} results matching your query"}
-                >
-                  <.icon name="hero-cloud-arrow-down" class="w-5 h-5" />
-                </button>
-              </:action>
-            </LightningWeb.Pagination.pagination_bar>
-          </div>
-        </div>
+              </:loading>
+              <:failed :let={_reason}>
+                <.tr>
+                  <.td colspan={5}>
+                    <Components.async_filler message="There was an error loading the work orders" />
+                  </.td>
+                </.tr>
+              </:failed>
+              <%= for workorder <- searched_page.entries do %>
+                <.live_component
+                  module={LightningWeb.RunLive.WorkOrderComponent}
+                  id={workorder.id}
+                  work_order={workorder}
+                  project={@project}
+                  can_edit_data_retention={@can_edit_data_retention}
+                  can_run_workflow={@can_run_workflow}
+                  entry_selected={
+                    Enum.any?(@selected_work_orders, fn wo ->
+                      wo.id == workorder.id
+                    end)
+                  }
+                />
+              <% end %>
+            </.async_result>
+          </:body>
+        </.table>
       </div>
     </div>
 
