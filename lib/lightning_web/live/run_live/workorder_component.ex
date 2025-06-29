@@ -32,8 +32,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   defp set_details(socket, work_order) do
-    last_step = get_last_step(work_order)
-    last_step_finished_at = format_finished_at(last_step)
+    last_run = get_last_run(work_order)
 
     work_order_inserted_at =
       Lightning.Helpers.format_date(work_order.inserted_at)
@@ -54,30 +53,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     |> assign(
       work_order: work_order,
       runs: work_order.runs,
-      last_step: last_step,
-      last_step_finished_at: last_step_finished_at,
+      last_run: last_run,
       work_order_inserted_at: work_order_inserted_at,
       workflow_name: workflow_name
     )
   end
 
-  defp get_last_step(work_order) do
+  defp get_last_run(work_order) do
     work_order.runs
     |> List.first()
-    |> case do
-      nil -> nil
-      run -> List.last(run.steps)
-    end
-  end
-
-  defp format_finished_at(last_step) do
-    case last_step do
-      %{finished_at: %_{} = finished_at} ->
-        Lightning.Helpers.format_date(finished_at)
-
-      _ ->
-        nil
-    end
   end
 
   @impl true
@@ -115,7 +99,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <div role="row" class="grid grid-cols-6 items-center">
         <div
           role="cell"
-          class="col-span-3 py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+          class="col-span-2 py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         >
           <div class="flex gap-4 items-center">
             <%= if wo_dataclip_available?(@work_order) do %>
@@ -190,11 +174,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               </span>
             <% end %>
 
+            <%!-- TODO - make the whole thing a component.  --%>
             <div class="ml-3 py-2">
               <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
                 {@workflow_name}
               </h1>
-              <span class="mt-2 text-gray-700">
+              <span class="mt-2 text-gray-700 hidden">
                 <.link navigate={
                   ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
                 }>
@@ -222,7 +207,14 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-xs font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <Common.datetime datetime={@work_order.last_activity} />
+          <Common.datetime datetime={@last_run.started_at} />
+          ({@work_order.runs |> Enum.count()})
+        </div>
+        <div
+          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+          role="cell"
+        >
+          <LightningWeb.RunLive.Components.elapsed_indicator run={@last_run} />
         </div>
         <div
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"

@@ -407,24 +407,16 @@ defmodule LightningWeb.RunLive.Components do
         </div>
       </div>
       <div
-        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="py-2 px-4 text-xs font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
-        <.timestamp
-          tooltip_prefix="Step started at"
-          timestamp={@step.started_at}
-          style={:wrapped}
-        />
+        <Common.datetime datetime={@step.started_at} />
       </div>
       <div
         class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
-        <.timestamp
-          tooltip_prefix="Step finished at"
-          timestamp={@step.finished_at}
-          style={:wrapped}
-        />
+        <Common.datetime datetime={@step.finished_at} />
       </div>
       <div class="ml-3 py-2 px-4 text-xs text-gray-500 font-mono" role="cell">
         {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
@@ -498,57 +490,6 @@ defmodule LightningWeb.RunLive.Components do
     else
       "For more information, contact one of your project admins"
     end
-  end
-
-  attr :timestamp, :map, required: true
-  attr :style, :atom, default: :default, values: [:default, :wrapped, :time_only]
-  attr :tooltip_prefix, :string, default: ""
-
-  def timestamp(assigns) do
-    assigns =
-      assign_new(assigns, :tooltip_id, fn ->
-        "tooltip-" <> Base.encode16(:crypto.strong_rand_bytes(3))
-      end)
-
-    ~H"""
-    <%= if is_nil(@timestamp) do %>
-      <%= case @style do %>
-        <% :wrapped -> %>
-          <span>--</span>
-          <br />
-          <span class="font-medium text-gray-700">--</span>
-        <% :default -> %>
-          <span>--</span>
-        <% :time_only -> %>
-          <span>--</span>
-      <% end %>
-    <% else %>
-      <Common.wrapper_tooltip
-        id={@tooltip_id}
-        tooltip={"#{@tooltip_prefix} #{DateTime.to_iso8601(@timestamp)}"}
-      >
-        <%= case @style do %>
-          <% :default -> %>
-            {Timex.format!(
-              @timestamp,
-              "%d/%b/%y, %H:%M:%S",
-              :strftime
-            )}
-          <% :wrapped -> %>
-            {Timex.format!(
-              @timestamp,
-              "%d/%b/%y",
-              :strftime
-            )}<br />
-            <span class="font-medium text-gray-700">
-              {Timex.format!(@timestamp, "%H:%M:%S", :strftime)}
-            </span>
-          <% :time_only -> %>
-            {Timex.format!(@timestamp, "%H:%M:%S", :strftime)}
-        <% end %>
-      </Common.wrapper_tooltip>
-    <% end %>
-    """
   end
 
   @spec step_icon(%{

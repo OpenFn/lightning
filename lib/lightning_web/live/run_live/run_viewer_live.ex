@@ -87,7 +87,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <.list_item>
                     <:label>Duration</:label>
                     <:value>
-                      <.elapsed_indicator run={run} />
+                      <LightningWeb.RunLive.Components.elapsed_indicator run={run} />
                     </:value>
                   </.list_item>
                   <.list_item>

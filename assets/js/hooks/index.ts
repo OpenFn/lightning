@@ -863,19 +863,26 @@ export const LocalTimeConverter = {
     const display = this.el.dataset['format'];
 
     if (!isoTimestamp) return;
-    this.convertToDisplayTime(isoTimestamp, display || 'relative');
+    this.convertToDisplayTime(isoTimestamp, display || 'standard');
   },
 
   convertToDisplayTime(isoTimestamp: string, display: string) {
     try {
+      const now = new Date();
       const date = new Date(isoTimestamp);
       let displayTime: string | undefined;
 
-      if (display === 'detailed') {
-        displayTime = format(date, "MMMM do 'at' hh:mm:ss a");
-      } else if (display === 'relative') {
-        const now = new Date();
-        displayTime = formatRelative(date, now);
+      switch (display) {
+        case 'detailed':
+          displayTime = format(date, "MMMM do 'at' hh:mm:ss a");
+          break;
+
+        case 'relative':
+          displayTime = formatRelative(date, now);
+          break;
+
+        default:
+          displayTime = formatRelative(date, now);
       }
 
       const textElement = this.el.querySelector('.datetime-text');

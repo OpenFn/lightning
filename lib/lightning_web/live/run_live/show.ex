@@ -37,8 +37,8 @@ defmodule LightningWeb.RunLive.Show do
       tooltip={
         if @snapshot_version == "latest",
           do: "This run is based on the latest version of this workflow.",
-                      else:
-             "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at, "%F at %T")}"
+          else:
+            "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at, "%F at %T")}"
       }
     />
     """
@@ -132,7 +132,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Started</:label>
                   <:value>
                     <%= if run.started_at do %>
-                      <Common.datetime datetime={run.started_at} format={:detailed}/>
+                      <Common.datetime datetime={run.started_at} format={:detailed} />
                     <% end %>
                   </:value>
                 </.list_item>
@@ -140,7 +140,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Finished</:label>
                   <:value>
                     <%= if run.finished_at do %>
-                      <Common.datetime datetime={run.finished_at} />
+                      <Common.datetime datetime={run.finished_at} format={:detailed} />
                     <% end %>
                   </:value>
                 </.list_item>

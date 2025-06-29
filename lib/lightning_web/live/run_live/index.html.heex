@@ -580,7 +580,7 @@
                 <div class="bg-gray-100 grid grid-cols-6" role="row">
                   <div
                     role="columnheader"
-                    class="flex items-center col-span-3 py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+                    class="flex items-center col-span-2 py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div class="flex gap-8 items-center">
                       <div class="">
@@ -612,9 +612,6 @@
                         <%= if none_selected?(@selected_work_orders) do %>
                           <div>
                             <p class="text-sm mb-1">Workflow Name</p>
-                            <span class="text-gray-700 mt-2 font-medium">
-                              WORK ORDER ID &bull; INPUT
-                            </span>
                           </div>
                         <% else %>
                           <.button
@@ -659,10 +656,7 @@
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <p class="text-sm text-gray-500 mb-1">Work Order</p>
-                      <span class="text-gray-700 mt-2 font-medium">
-                        RECEIVED
-                      </span>
+                      <h1 class="text-sm text-gray-500 mb-1">Created</h1>
                     </div>
                   </div>
 
@@ -671,10 +665,19 @@
                     class="px-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
-                      <span class="text-gray-700 mt-2 font-medium">
-                        LAST ACTIVITY
-                      </span>
+                      <h1 class="text-sm text-gray-500 mb-1">
+                        Last Run (count)
+                      </h1>
+                    </div>
+                  </div>
+                  <div
+                    role="columnheader"
+                    class="px-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                  >
+                    <div>
+                      <h1 class="text-sm text-gray-500 mb-1">
+                        Duration
+                      </h1>
                     </div>
                   </div>
                   <div
@@ -682,10 +685,7 @@
                     class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div>
-                      <p class="text-sm text-gray-500 mb-1">Work Order</p>
-                      <span class="text-gray-700 mt-2 font-medium">
-                        STATUS
-                      </span>
+                      <p class="text-sm text-gray-500 mb-1">Status</p>
                     </div>
                   </div>
                 </div>
