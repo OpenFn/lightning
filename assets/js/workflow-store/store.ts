@@ -101,7 +101,7 @@ export type ReplayAction = {
 };
 
 const undos: ReplayAction[] = [];
-const redos: ReplayAction[] = [];
+let redos: ReplayAction[] = [];
 
 // Calculate the next state using Immer, and then call the onChange callback
 // with the patches resulting from the change.
@@ -121,7 +121,7 @@ function proposeChanges(
     (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
       if (!skipUndoStack) {
         undos.push({ patches: p, inverse: _inverse });
-        redos.splice(0, redos.length);
+        redos = [];
       }
       patches = p.map(toRFC6902Patch);
     }
