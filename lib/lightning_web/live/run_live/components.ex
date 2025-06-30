@@ -5,15 +5,25 @@ defmodule LightningWeb.RunLive.Components do
   alias Lightning.WorkOrders.SearchParams
   alias Phoenix.LiveView.JS
 
-  attr :run, Lightning.Run, required: true
+  attr :item, :map,
+    required: true,
+    doc: "An item with id, started_at, and finished_at fields"
 
+  @type item_with_timestamps :: %{
+          id: String.t(),
+          started_at: DateTime.t() | nil,
+          finished_at: DateTime.t() | nil
+        }
+
+  @spec elapsed_indicator(%{item: item_with_timestamps()}) ::
+          Phoenix.LiveView.Rendered.t()
   def elapsed_indicator(assigns) do
     ~H"""
     <div
       phx-hook="ElapsedIndicator"
-      data-start-time={as_timestamp(@run.started_at)}
-      data-finish-time={as_timestamp(@run.finished_at)}
-      id={"elapsed-indicator-#{@run.id}"}
+      data-start-time={as_timestamp(@item.started_at)}
+      data-finish-time={as_timestamp(@item.finished_at)}
+      id={"elapsed-indicator-#{@item.id}"}
     />
     """
   end
@@ -416,7 +426,7 @@ defmodule LightningWeb.RunLive.Components do
         class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
-        <Common.datetime datetime={@step.finished_at} />
+        <.elapsed_indicator item={@step} />
       </div>
       <div class="ml-3 py-2 px-4 text-xs text-gray-500 font-mono" role="cell">
         {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}

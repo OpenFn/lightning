@@ -315,6 +315,40 @@
             </span>
           <% end %>
 
+          <%= if workorder_id = get_change(@filters_changeset, :workorder_id) do %>
+            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+              Work order: {display_short_uuid(workorder_id)}
+              <.form
+                :let={f}
+                for={@filters_changeset}
+                as={:filters}
+                class="inline"
+                phx-submit="apply_filters"
+              >
+                <.input
+                  id={"workorder_chip_#{workorder_id}"}
+                  type="hidden"
+                  field={f[:workorder_id]}
+                  value={nil}
+                />
+
+                <button
+                  type="submit"
+                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
+                >
+                  <span class="sr-only">Remove</span>
+                  <svg
+                    viewBox="0 0 14 14"
+                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
+                  >
+                    <path d="M4 4l6 6m0-6l-6 6" />
+                  </svg>
+                  <span class="absolute -inset-1"></span>
+                </button>
+              </.form>
+            </span>
+          <% end %>
+
           <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end)  do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
               Work order status: {status.label}
@@ -606,6 +640,7 @@
                       </div>
                     <% else %>
                       <.button
+                        size="sm"
                         type="button"
                         theme="secondary"
                         phx-click={
@@ -624,6 +659,7 @@
                           selected_workflow_count(@selected_work_orders) ==
                             1
                         }
+                        size="sm"
                         id="bulk-rerun-from-job-modal-trigger"
                         type="button"
                         theme="secondary"
@@ -636,7 +672,7 @@
                                do: show_modal("bulk-rerun-from-job-modal")
                         }
                       >
-                        Retry from step
+                        Retry from
                       </.button>
                     <% end %>
                   </div>
