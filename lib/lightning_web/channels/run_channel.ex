@@ -120,26 +120,21 @@ defmodule LightningWeb.RunChannel do
         Logger.error("oauth refresh token has expired", credential_id: id)
         credentials_url = url(~p"/projects/#{project_id}/settings#credentials")
 
-        fix = """
-        Reauthorize with your external system:
-        1. Go to #{credentials_url}
-        2. Find #{credential.name}
-        3. Click "Edit" and then "Reauthorize"
+        error = """
+        Oauth token has expired. Reauthorize with your external system:
+          1. Go to #{credentials_url}
+          2. Find #{credential.name}
+          3. Click "Edit" and then "Reauthorize"
         If this is not your credential, send this link to the owner and ask them to reauthorize.
         """
 
-        {:reply, {:error, %{message: "Oauth token has expired", fix: fix}},
-         socket}
+        {:reply, {:error, error}, socket}
 
       {:error, :temporary_failure} ->
         Logger.error("Could not reach the oauth provider", credential_id: id)
 
-        {:reply,
-         {:error,
-          %{
-            message: "Could not reach the oauth provider",
-            fix: "Try again later"
-          }}, socket}
+        {:reply, {:error, "Could not reach the oauth provider. Try again later"},
+         socket}
 
       {:error, error} ->
         Logger.error(fn ->
