@@ -21,6 +21,8 @@ and this project adheres to
 
 - Dont send oauth token expiry errors to Sentry
   [#3334](https://github.com/OpenFn/lightning/issues/3334)
+- Improve error message when credential fails during runs
+  [#3332](https://github.com/OpenFn/lightning/issues/3332)
 
 ### Fixed
 
