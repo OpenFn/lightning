@@ -5,6 +5,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   use LightningWeb, :live_component
 
   import LightningWeb.RunLive.Components
+  alias Phoenix.LiveView.JS
 
   @impl true
   def update(
@@ -91,7 +92,20 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   def render(assigns) do
     ~H"""
     <tbody id={"workorder-#{@work_order.id}"}>
-      <.tr class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}>
+            <.tr
+        class={
+          if @entry_selected do
+            "bg-gray-50"
+          else
+            "bg-white"
+          end
+        }
+        onclick={
+          if @work_order.runs !== [] do
+            JS.push("toggle_details", target: @myself)
+          end
+        }
+      >
         <.td class="break-words max-w-[25rem]">
           <div class="flex gap-4 items-center">
             <%= if wo_dataclip_available?(@work_order) do %>
@@ -105,14 +119,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   name="workorder_id"
                   value={@work_order.id}
                 />
-
                 <input
                   type="hidden"
                   id={"unselect_#{@work_order.id}"}
                   name="selected"
                   value="false"
                 />
-
                 <input
                   type="checkbox"
                   id={"select_#{@work_order.id}"}
@@ -146,24 +158,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   />
                 </span>
               </form>
-            <% end %>
-            <%= if @work_order.runs !== [] do %>
-              <button
-                id={"toggle_details_for_#{@work_order.id}"}
-                class="w-10 rounded-full p-3 hover:bg-gray-100"
-                phx-click="toggle_details"
-                phx-target={@myself}
-              >
-                <%= if @show_details do %>
-                  <Heroicons.chevron_up outline class="h-4 w-4 rounded-lg" />
-                <% else %>
-                  <Heroicons.chevron_down outline class="h-4 w-4 rounded-lg" />
-                <% end %>
-              </button>
-            <% else %>
-              <span class="w-auto p-3">
-                <Heroicons.minus outline class="h-4 w-4 rounded-lg" />
-              </span>
             <% end %>
 
             <div class="ml-3 py-2">
@@ -199,7 +193,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           ({@work_order.runs |> Enum.count()})
         </.td>
         <.td>
-          <LightningWeb.RunLive.Components.elapsed_indicator run={@last_run} />
+          <LightningWeb.RunLive.Components.elapsed_indicator item={@last_run} />
         </.td>
         <.td>
           <.state_pill state={@work_order.state} />
@@ -207,72 +201,66 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       </.tr>
       <%= if @show_details do %>
         <.tr>
-          <.td colspan={5} class="!p-0">
-            <div class="flex flex-col bg-gray-100 gap-3 p-3">
-              <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-                <div
-                  id={"run_#{run.id}"}
-                  class={
-                    if index != Enum.count(@runs) and !@show_prev_runs,
-                      do: "hidden",
-                      else: "outline outline-2 outline-gray-300 rounded"
-                  }
-                >
-                  <div
-                    class="flex bg-gray-200 text-xs py-2 grid grid-cols-6"
-                    role="rowgroup"
-                  >
-                    <div role="columnheader" class="col-span-3 pl-4">
-                      Run
-                      <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
-                        <span title={run.id} class="link font-mono">
-                          {display_short_uuid(run.id)}
-                        </span>
-                      </.link>
-                      <%= if Enum.count(@runs) > 1 do %>
-                        ({index}/{Enum.count(@runs)}{if index !=
-                                                          Enum.count(@runs),
-                                                        do: ")"}
-                        <%= if index == Enum.count(@runs) do %>
-                          <span>
-                            &bull; <a
-                              id={"toggle_runs_for_#{@work_order.id}"}
-                              href="#"
-                              class="link"
-                              phx-click="toggle_runs"
-                              phx-target={@myself}
-                            >
+          <.td colspan={7} class="bg-gray-100 rounded-lg p-3 space-y-3">
+            <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
+              <div
+                id={"run_#{run.id}"}
+                class={[
+                  "bg-white border border-gray-300 rounded-lg overflow-hidden",
+                  if(index != Enum.count(@runs) and !@show_prev_runs, do: "hidden")
+                ]}
+              >
+                <div class="bg-gray-200 py-2 px-4 text-xs flex justify-between items-center border-b border-gray-300">
+                  <div class="flex-1">
+                    Run
+                    <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
+                      <span title={run.id} class="link font-mono">
+                        {display_short_uuid(run.id)}
+                      </span>
+                    </.link>
+                    <%= if Enum.count(@runs) > 1 do %>
+                      ({index}/{Enum.count(@runs)}{if index !=
+                                                        Enum.count(@runs),
+                                                      do: ")"}
+                      <%= if index == Enum.count(@runs) do %>
+                        <span>
+                          &bull; <a
+                            id={"toggle_runs_for_#{@work_order.id}"}
+                            href="#"
+                            class="link"
+                            phx-click="toggle_runs"
+                            phx-target={@myself}
+                          >
                         <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
-                          </span>
-                        <% end %>
+                        </span>
                       <% end %>
-                    </div>
-                    <div role="columnheader" class="col-span-2 px-4">
-                      <%= case run.state do %>
-                        <% :available -> %>
-                          enqueued <Common.datetime datetime={run.inserted_at} />
-                        <% :claimed -> %>
-                          claimed <Common.datetime datetime={run.claimed_at} />
-                        <% :started -> %>
-                          started <Common.datetime datetime={run.started_at} />
-                        <% _state -> %>
-                          finished <Common.datetime datetime={run.finished_at} />
-                      <% end %>
-                    </div>
-                    <div role="columnheader" class="ml-3 col-span-1 px-4">
-                      {run.state}
-                    </div>
+                    <% end %>
                   </div>
-                  <.run_item
-                    can_edit_data_retention={@can_edit_data_retention}
-                    can_run_workflow={@can_run_workflow}
-                    run={run}
-                    workflow_version={@work_order.workflow.lock_version}
-                    project={@project}
-                  />
+                  <div class="flex-1">
+                    <%= case run.state do %>
+                      <% :available -> %>
+                        enqueued <Common.datetime datetime={run.inserted_at} />
+                      <% :claimed -> %>
+                        claimed <Common.datetime datetime={run.claimed_at} />
+                      <% :started -> %>
+                        started <Common.datetime datetime={run.started_at} />
+                      <% _state -> %>
+                        finished <Common.datetime datetime={run.finished_at} />
+                    <% end %>
+                  </div>
+                  <div class="flex-shrink-0">
+                    {run.state}
+                  </div>
                 </div>
-              <% end %>
-            </div>
+                <.run_item
+                  can_edit_data_retention={@can_edit_data_retention}
+                  can_run_workflow={@can_run_workflow}
+                  run={run}
+                  workflow_version={@work_order.workflow.lock_version}
+                  project={@project}
+                />
+              </div>
+            <% end %>
           </.td>
         </.tr>
       <% end %>

@@ -87,7 +87,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <.list_item>
                     <:label>Duration</:label>
                     <:value>
-                      <LightningWeb.RunLive.Components.elapsed_indicator run={run} />
+                      <LightningWeb.RunLive.Components.elapsed_indicator item={run} />
                     </:value>
                   </.list_item>
                   <.list_item>
@@ -122,7 +122,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
               </:panel>
               <:panel hash="log" class="h-full mb-2">
                 <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                  <div class="z-50 min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
+                  <div class="z-50 min-h-0 max-h-[30%] 0 mb-1 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                     <.step_list
                       :let={step}
                       id={"log-tab-step-list-#{run.id}"}
