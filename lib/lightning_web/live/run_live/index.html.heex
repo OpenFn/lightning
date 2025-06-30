@@ -606,9 +606,14 @@
         <.table id="work-orders-table" page={@page} url={@pagination_path}>
           <:header>
             <.tr>
-              <.th class="break-words max-w-[25rem]">
+              <.th
+                class="break-words max-w-[25rem]"
+                colspan={
+                  if none_selected?(@selected_work_orders), do: "1", else: "2"
+                }
+              >
                 <div class="flex gap-8 items-center">
-                  <div class="">
+                  <div>
                     <.form
                       :let={f}
                       :if={@page.entries != []}
@@ -632,53 +637,53 @@
                       />
                     </.form>
                   </div>
-
-                  <div>
-                    <%= if none_selected?(@selected_work_orders) do %>
-                      <div>
-                        <p class="text-sm mb-1">ID</p>
-                      </div>
-                    <% else %>
-                      <.button
-                        size="sm"
-                        type="button"
-                        theme="secondary"
-                        phx-click={
-                          with :ok <-
-                                 validate_bulk_rerun(
-                                   @selected_work_orders,
-                                   @project
-                                 ),
-                               do: show_modal("bulk-rerun-from-start-modal")
-                        }
-                      >
-                        Retry
-                      </.button>
-                      <.button
-                        :if={
-                          selected_workflow_count(@selected_work_orders) ==
-                            1
-                        }
-                        size="sm"
-                        id="bulk-rerun-from-job-modal-trigger"
-                        type="button"
-                        theme="secondary"
-                        phx-click={
-                          with :ok <-
-                                 validate_bulk_rerun(
-                                   @selected_work_orders,
-                                   @project
-                                 ),
-                               do: show_modal("bulk-rerun-from-job-modal")
-                        }
-                      >
-                        Retry from
-                      </.button>
-                    <% end %>
-                  </div>
                 </div>
+                <.th :if={!none_selected?(@selected_work_orders)}>
+                  <div>
+                    <.button
+                      size="sm"
+                      type="button"
+                      theme="secondary"
+                      class="!py-1"
+                      phx-click={
+                        with :ok <-
+                               validate_bulk_rerun(
+                                 @selected_work_orders,
+                                 @project
+                               ),
+                             do: show_modal("bulk-rerun-from-start-modal")
+                      }
+                    >
+                      Retry
+                    </.button>
+                    <.button
+                      :if={
+                        selected_workflow_count(@selected_work_orders) ==
+                          1
+                      }
+                      size="sm"
+                      class="!py-1"
+                      id="bulk-rerun-from-job-modal-trigger"
+                      type="button"
+                      theme="secondary"
+                      phx-click={
+                        with :ok <-
+                               validate_bulk_rerun(
+                                 @selected_work_orders,
+                                 @project
+                               ),
+                             do: show_modal("bulk-rerun-from-job-modal")
+                      }
+                    >
+                      Retry from
+                    </.button>
+                  </div>
+                </.th>
               </.th>
-              <.th>
+              <.th :if={none_selected?(@selected_work_orders)}>
+                ID
+              </.th>
+              <.th :if={none_selected?(@selected_work_orders)}>
                 Workflow
               </.th>
               <.th>
