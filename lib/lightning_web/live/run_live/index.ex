@@ -509,6 +509,26 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
+  def handle_event("validate_and_show_bulk_rerun", _params, socket) do
+    case validate_bulk_rerun(socket.assigns.selected_work_orders, socket.assigns.project) do
+      :ok ->
+        {:noreply, socket, LightningWeb.Components.Modal.show_modal("bulk-rerun-from-start-modal")}
+
+      error_event ->
+        {:noreply, push_event(socket, error_event, %{})}
+    end
+  end
+
+  def handle_event("validate_and_show_bulk_rerun_from_job", _params, socket) do
+    case validate_bulk_rerun(socket.assigns.selected_work_orders, socket.assigns.project) do
+      :ok ->
+        {:noreply, socket, LightningWeb.Components.Modal.show_modal("bulk-rerun-from-job-modal")}
+
+      error_event ->
+        {:noreply, push_event(socket, error_event, %{})}
+    end
+  end
+
   defp find_workflow_name(workflows, workflow_id) do
     Enum.find_value(workflows, fn {name, id} ->
       if id == workflow_id do

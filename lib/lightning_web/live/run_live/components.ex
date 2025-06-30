@@ -298,7 +298,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"run-#{@run.id}"}
       data-entity="run"
-      class="bg-gray-100"
+      class={["bg-gray-100", @step_list != [] && "border-t border-gray-300"]}
     >
       <%= for step <- @step_list do %>
         <.step_list_item
