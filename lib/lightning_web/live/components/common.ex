@@ -324,12 +324,16 @@ defmodule LightningWeb.Components.Common do
       <Common.datetime datetime={@event.created_at} class="text-gray-500" show_tooltip={false} />
   """
   def datetime(assigns) do
+    clean_timestamp =
+      assigns.datetime &&
+        Calendar.strftime(assigns.datetime, "%Y-%m-%d %H:%M:%S UTC")
+
     assigns =
       assigns
       |> assign(
         id: "datetime-" <> Base.encode16(:crypto.strong_rand_bytes(4)),
-        iso_timestamp: assigns.datetime && DateTime.to_iso8601(assigns.datetime),
-        copy_value: assigns.datetime && DateTime.to_iso8601(assigns.datetime)
+        iso_timestamp: clean_timestamp,
+        copy_value: clean_timestamp
       )
 
     ~H"""
@@ -339,7 +343,7 @@ defmodule LightningWeb.Components.Common do
       <%= if @show_tooltip do %>
         <Common.wrapper_tooltip
           id={@id}
-          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy UTC timestamp</span>"}
+          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy timestamp</span>"}
         >
           <span
             id={"#{@id}-outer"}

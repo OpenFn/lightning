@@ -882,7 +882,7 @@ export const LocalTimeConverter = {
           break;
 
         default:
-          displayTime = formatRelative(date, now);
+          displayTime = format(date, "MMM do 'at' h:mmaaa");
       }
 
       const textElement = this.el.querySelector('.datetime-text');
