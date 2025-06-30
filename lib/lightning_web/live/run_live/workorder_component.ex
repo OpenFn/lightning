@@ -94,10 +94,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     <tbody id={"workorder-#{@work_order.id}"}>
       <.tr
         class={
-          if @entry_selected do
-            "bg-gray-50"
-          else
-            "bg-white"
+          cond do
+            @entry_selected -> "bg-gray-50"
+            true -> "bg-white"
           end
         }
         onclick={
@@ -110,6 +109,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           <%= if wo_dataclip_available?(@work_order) do %>
             <form
               phx-change="toggle_selection"
+              phx-click={JS.exec("event.stopPropagation()")}
               id={"selection-form-#{@work_order.id}"}
             >
               <input
@@ -130,11 +130,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 name="selected"
                 class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
                 value="true"
+                phx-click={JS.exec("event.stopPropagation()")}
                 {if @entry_selected, do: [checked: "checked"], else: []}
               />
             </form>
           <% else %>
-            <form id={"selection-form-#{@work_order.id}"}>
+            <form
+              phx-click={JS.exec("event.stopPropagation()")}
+              id={"selection-form-#{@work_order.id}"}
+            >
               <span
                 id={"select_#{@work_order.id}_tooltip"}
                 class="cursor-pointer"
@@ -197,11 +201,21 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           <Common.datetime datetime={@last_run.started_at} />
           ({@work_order.runs |> Enum.count()})
         </.td>
-        <.td>
+        <.td class="text-right">
           <LightningWeb.RunLive.Components.elapsed_indicator item={@last_run} />
         </.td>
-        <.td>
-          <.state_pill state={@work_order.state} />
+        <.td class="text-right">
+          <div class="flex items-center justify-end gap-2">
+            <.state_pill state={@work_order.state} />
+            <%= if @work_order.runs !== [] do %>
+              <.icon
+                name={
+                  if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
+                }
+                class="size-4 text-gray-400"
+              />
+            <% end %>
+          </div>
         </.td>
       </.tr>
       <%= if @show_details do %>
@@ -216,7 +230,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     if(index != Enum.count(@runs) and !@show_prev_runs, do: "hidden")
                   ]}
                 >
-                  <div class="bg-gray-200 text-xs flex items-center border-b border-gray-300">
+                  <div class="bg-gray-200 text-xs flex items-center">
                     <div class="flex-[2] py-2 text-left">
                       <div class="pl-4">
                         Run

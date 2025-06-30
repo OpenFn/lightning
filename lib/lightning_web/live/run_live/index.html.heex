@@ -634,20 +634,13 @@
                 ID
               </.th>
               <.th :if={!none_selected?(@selected_work_orders)} colspan={2}>
-                <div>
+                <div class="-my-2">
                   <.button
                     size="sm"
                     type="button"
                     theme="secondary"
                     class="!py-1"
-                    phx-click={
-                      with :ok <-
-                             validate_bulk_rerun(
-                               @selected_work_orders,
-                               @project
-                             ),
-                           do: show_modal("bulk-rerun-from-start-modal")
-                    }
+                    phx-click="validate_and_show_bulk_rerun"
                   >
                     Retry
                   </.button>
@@ -657,18 +650,11 @@
                         1
                     }
                     size="sm"
-                    class="!py-1"
+                    class="ml-1 !py-1"
                     id="bulk-rerun-from-job-modal-trigger"
                     type="button"
                     theme="secondary"
-                    phx-click={
-                      with :ok <-
-                             validate_bulk_rerun(
-                               @selected_work_orders,
-                               @project
-                             ),
-                           do: show_modal("bulk-rerun-from-job-modal")
-                    }
+                    phx-click="validate_and_show_bulk_rerun_from_job"
                   >
                     Retry from
                   </.button>
@@ -686,10 +672,10 @@
               <.th>
                 Last Run (count)
               </.th>
-              <.th>
+              <.th class="text-right">
                 Duration
               </.th>
-              <.th>
+              <.th class="text-right">
                 Status
               </.th>
             </.tr>
