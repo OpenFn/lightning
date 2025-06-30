@@ -173,6 +173,7 @@ defmodule LightningWeb.Components.Table do
   - `:class` - Optional additional CSS classes
   - `:id` - Optional HTML id attribute
   - `:scope` - HTML scope attribute (default: "col")
+  - `:colspan` - Optional number of columns to span
   - `:sortable` - Whether the column is sortable (default: false)
   - `:sort_by` - The field to sort by when clicked
   - `:active` - Whether this column is currently being sorted
@@ -202,6 +203,7 @@ defmodule LightningWeb.Components.Table do
   attr :class, :string, default: nil
   attr :id, :string, default: nil
   attr :scope, :string, default: "col"
+  attr :colspan, :integer, default: nil
   attr :sortable, :boolean, default: false
   attr :sort_by, :string, default: nil
   attr :active, :boolean, default: false
@@ -214,6 +216,7 @@ defmodule LightningWeb.Components.Table do
     <th
       id={@id}
       scope={@scope}
+      colspan={@colspan}
       class={[
         "text-sm text-left font-semibold text-gray-900 select-none whitespace-nowrap",
         @class

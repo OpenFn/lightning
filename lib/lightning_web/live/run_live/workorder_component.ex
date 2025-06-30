@@ -106,84 +106,81 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           end
         }
       >
-        <.td class="break-words max-w-[25rem]">
-          <div class="flex gap-4 items-center">
-            <%= if wo_dataclip_available?(@work_order) do %>
-              <form
-                phx-change="toggle_selection"
-                id={"selection-form-#{@work_order.id}"}
+        <.td>
+          <%= if wo_dataclip_available?(@work_order) do %>
+            <form
+              phx-change="toggle_selection"
+              id={"selection-form-#{@work_order.id}"}
+            >
+              <input
+                type="hidden"
+                id={"id_#{@work_order.id}"}
+                name="workorder_id"
+                value={@work_order.id}
+              />
+              <input
+                type="hidden"
+                id={"unselect_#{@work_order.id}"}
+                name="selected"
+                value="false"
+              />
+              <input
+                type="checkbox"
+                id={"select_#{@work_order.id}"}
+                name="selected"
+                class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                value="true"
+                {if @entry_selected, do: [checked: "checked"], else: []}
+              />
+            </form>
+          <% else %>
+            <form id={"selection-form-#{@work_order.id}"}>
+              <span
+                id={"select_#{@work_order.id}_tooltip"}
+                class="cursor-pointer"
+                phx-hook="Tooltip"
+                data-placement="top"
+                data-allow-html="true"
+                aria-label={
+                  rerun_zero_persistence_tooltip_message(
+                    @project.id,
+                    @can_edit_data_retention
+                  )
+                }
               >
-                <input
-                  type="hidden"
-                  id={"id_#{@work_order.id}"}
-                  name="workorder_id"
-                  value={@work_order.id}
-                />
-                <input
-                  type="hidden"
-                  id={"unselect_#{@work_order.id}"}
-                  name="selected"
-                  value="false"
-                />
                 <input
                   type="checkbox"
                   id={"select_#{@work_order.id}"}
                   name="selected"
-                  class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                  value="true"
-                  {if @entry_selected, do: [checked: "checked"], else: []}
+                  class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 bg-gray-100 text-indigo-600 focus:ring-indigo-600"
+                  disabled
                 />
-              </form>
-            <% else %>
-              <form id={"selection-form-#{@work_order.id}"}>
-                <span
-                  id={"select_#{@work_order.id}_tooltip"}
-                  class="cursor-pointer"
-                  phx-hook="Tooltip"
-                  data-placement="top"
-                  data-allow-html="true"
-                  aria-label={
-                    rerun_zero_persistence_tooltip_message(
-                      @project.id,
-                      @can_edit_data_retention
-                    )
-                  }
-                >
-                  <input
-                    type="checkbox"
-                    id={"select_#{@work_order.id}"}
-                    name="selected"
-                    class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 bg-gray-100 text-indigo-600 focus:ring-indigo-600"
-                    disabled
-                  />
-                </span>
-              </form>
-            <% end %>
-
-            <div class="ml-3 py-2">
-              <span class="mt-2 text-gray-700">
-                <.link navigate={
-                  ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
-                }>
-                  <span class="link-uuid" title={@work_order.id}>
-                    {display_short_uuid(@work_order.id)}
-                  </span>
-                </.link>
               </span>
-              <td>
-                <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
-                  {@workflow_name}
-                </h1>
-              </td>
-              <td>
-                <.workorder_dataclip_link
-                  work_order={@work_order}
-                  project={@project}
-                  can_edit_data_retention={@can_edit_data_retention}
-                />
-              </td>
-            </div>
-          </div>
+            </form>
+          <% end %>
+        </.td>
+        <.td>
+          <span class="mt-2 text-gray-700">
+            <.link navigate={
+              ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
+            }>
+              <span class="link-uuid" title={@work_order.id}>
+                {display_short_uuid(@work_order.id)}
+              </span>
+            </.link>
+          </span>
+        </.td>
+        <.td>
+          <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
+            {@workflow_name}
+          </h1>
+        </.td>
+        <.td>
+          <.workorder_dataclip_link
+            work_order={@work_order}
+            project={@project}
+            can_edit_data_retention={@can_edit_data_retention}
+          />
         </.td>
         <.td>
           <Common.datetime datetime={@work_order.inserted_at} />
