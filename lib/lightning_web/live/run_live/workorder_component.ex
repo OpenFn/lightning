@@ -211,33 +211,35 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     if(index != Enum.count(@runs) and !@show_prev_runs, do: "hidden")
                   ]}
                 >
-                <div class="bg-gray-200 py-2 px-4 text-xs flex justify-between items-center border-b border-gray-300">
-                  <div class="flex-1">
-                    Run
-                    <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
-                      <span title={run.id} class="link font-mono">
-                        {display_short_uuid(run.id)}
-                      </span>
-                    </.link>
-                    <%= if Enum.count(@runs) > 1 do %>
-                      ({index}/{Enum.count(@runs)}{if index !=
-                                                        Enum.count(@runs),
-                                                      do: ")"}
-                      <%= if index == Enum.count(@runs) do %>
-                        <span>
-                          &bull; <a
-                            id={"toggle_runs_for_#{@work_order.id}"}
-                            href="#"
-                            class="link"
-                            phx-click="toggle_runs"
-                            phx-target={@myself}
-                          >
-                        <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
+                <div class="bg-gray-200 py-2 text-xs flex items-center border-b border-gray-300">
+                  <div class="flex-[2] py-2 text-left">
+                    <div class="pl-4">
+                      Run
+                      <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
+                        <span title={run.id} class="link font-mono">
+                          {display_short_uuid(run.id)}
                         </span>
+                      </.link>
+                      <%= if Enum.count(@runs) > 1 do %>
+                        ({index}/{Enum.count(@runs)}{if index !=
+                                                          Enum.count(@runs),
+                                                        do: ")"}
+                        <%= if index == Enum.count(@runs) do %>
+                          <span>
+                            &bull; <a
+                              id={"toggle_runs_for_#{@work_order.id}"}
+                              href="#"
+                              class="link"
+                              phx-click="toggle_runs"
+                              phx-target={@myself}
+                            >
+                          <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
+                          </span>
+                        <% end %>
                       <% end %>
-                    <% end %>
+                    </div>
                   </div>
-                  <div class="flex-1">
+                  <div class="flex-1 py-2 px-4 text-right">
                     <%= case run.state do %>
                       <% :available -> %>
                         enqueued <Common.datetime datetime={run.inserted_at} />
@@ -249,7 +251,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                         finished <Common.datetime datetime={run.finished_at} />
                     <% end %>
                   </div>
-                  <div class="flex-shrink-0">
+                  <div class="flex-1 py-2 px-4 text-right">
+                    <.elapsed_indicator item={run} />
+                  </div>
+                  <div class="flex-1 py-2 px-4 text-right">
                     {run.state}
                   </div>
                 </div>

@@ -220,24 +220,10 @@ defmodule LightningWeb.RunLive.Components do
           <% end %>
         </div>
         <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
-          <.step_duration step={@step} />
+          <.elapsed_indicator item={@step} />
         </div>
       </div>
     </div>
-    """
-  end
-
-  defp step_duration(assigns) do
-    ~H"""
-    <%= cond do %>
-      <% is_nil(@step.started_at) -> %>
-        Unknown
-      <% is_nil(@step.finished_at) -> %>
-        Running...
-      <% true -> %>
-        {DateTime.to_unix(@step.finished_at, :millisecond) -
-          DateTime.to_unix(@step.started_at, :millisecond)} ms
-    <% end %>
     """
   end
 
@@ -345,10 +331,8 @@ defmodule LightningWeb.RunLive.Components do
       DateTime.compare(assigns.step.inserted_at, assigns.run.inserted_at) ==
         :lt
 
-    base_classes = ~w(grid grid-cols-6 items-center)
-
     step_item_classes =
-      if is_clone, do: base_classes ++ ~w(opacity-50), else: base_classes
+      if is_clone, do: ~w(flex items-center opacity-50), else: ~w(flex items-center)
 
     assigns =
       assign(assigns,
@@ -359,10 +343,7 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
-      <div
-        role="cell"
-        class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
-      >
+      <div role="cell" class="flex-[2] py-2 text-sm font-normal text-gray-500 text-left">
         <div class="flex pl-4">
           <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
           <div class="text-gray-800 flex gap-2 text-sm">
@@ -416,19 +397,13 @@ defmodule LightningWeb.RunLive.Components do
           </div>
         </div>
       </div>
-      <div
-        class="py-2 px-4 text-xs font-normal text-left rtl:text-right text-gray-500"
-        role="cell"
-      >
+      <div role="cell" class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right">
         <Common.datetime datetime={@step.started_at} />
       </div>
-      <div
-        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-        role="cell"
-      >
+      <div role="cell" class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right">
         <.elapsed_indicator item={@step} />
       </div>
-      <div class="ml-3 py-2 px-4 text-xs text-gray-500 font-mono" role="cell">
+      <div role="cell" class="flex-1 py-2 px-4 text-xs text-gray-500 font-mono text-right">
         {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
       </div>
     </div>
