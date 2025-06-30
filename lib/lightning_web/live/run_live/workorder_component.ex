@@ -201,15 +201,16 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       </.tr>
       <%= if @show_details do %>
         <.tr>
-          <.td colspan={7} class="bg-gray-100 rounded-lg p-3 space-y-3">
-            <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-              <div
-                id={"run_#{run.id}"}
-                class={[
-                  "bg-white border border-gray-300 rounded-lg overflow-hidden",
-                  if(index != Enum.count(@runs) and !@show_prev_runs, do: "hidden")
-                ]}
-              >
+          <.td colspan={7} class="!p-0">
+            <div class="bg-gray-100 p-3 flex flex-col gap-3">
+              <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
+                <div
+                  id={"run_#{run.id}"}
+                  class={[
+                    "w-full bg-white border border-gray-300 rounded-lg overflow-hidden",
+                    if(index != Enum.count(@runs) and !@show_prev_runs, do: "hidden")
+                  ]}
+                >
                 <div class="bg-gray-200 py-2 px-4 text-xs flex justify-between items-center border-b border-gray-300">
                   <div class="flex-1">
                     Run
@@ -261,6 +262,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 />
               </div>
             <% end %>
+            </div>
           </.td>
         </.tr>
       <% end %>
