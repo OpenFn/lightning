@@ -273,7 +273,7 @@ defmodule Lightning.Accounts.UserNotifier do
     deliver(user, "Your OpenFn History Export Is Complete", """
     Hello #{user.first_name},
 
-    You history export started requested on #{Helpers.format_date(project_file.inserted_at, "%F at %T")} is completed. Please visit this URL to download the file:acceptor
+    You history export requested on #{Helpers.format_date(project_file.inserted_at, "%F at %T")} is completed. Please visit this URL to download the file:
 
     #{url(~p"/project_files/#{project_file.id}/download")}
 
