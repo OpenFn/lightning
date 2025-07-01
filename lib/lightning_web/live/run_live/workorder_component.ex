@@ -202,7 +202,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           ({@work_order.runs |> Enum.count()})
         </.td>
         <.td class="text-right">
-          <LightningWeb.RunLive.Components.elapsed_indicator item={@last_run} context="table" />
+          <LightningWeb.RunLive.Components.elapsed_indicator
+            item={@last_run}
+            context="table"
+          />
         </.td>
         <.td class="text-right">
           <div class="flex items-center justify-end gap-2">
@@ -234,7 +237,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       <div class="flex-[2] py-2 text-left">
                         <div class="pl-4">
                           Run
-                          <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
+                          <.link navigate={
+                            ~p"/projects/#{@project.id}/runs/#{run.id}"
+                          }>
                             <span title={run.id} class="link font-mono">
                               {display_short_uuid(run.id)}
                             </span>

@@ -98,7 +98,7 @@ defmodule LightningWeb.DataclipLive.Show do
             </dl>
           </div>
         </div>
-
+        
     <!-- Body Section -->
         <div class="bg-white shadow rounded-lg">
           <div class="h-96 overflow-hidden">
