@@ -9,6 +9,8 @@ defmodule LightningWeb.RunLive.Components do
     required: true,
     doc: "An item with id, started_at, and finished_at fields"
 
+  attr :context, :string, default: "", doc: "Optional context to make IDs unique"
+
   @type item_with_timestamps :: %{
           id: String.t(),
           started_at: DateTime.t() | nil,
@@ -23,7 +25,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-hook="ElapsedIndicator"
       data-start-time={as_timestamp(@item.started_at)}
       data-finish-time={as_timestamp(@item.finished_at)}
-      id={"elapsed-indicator-#{@item.id}"}
+      id={"elapsed-indicator#{if @context != "", do: "-#{@context}"}-#{@item.id}"}
     />
     """
   end
