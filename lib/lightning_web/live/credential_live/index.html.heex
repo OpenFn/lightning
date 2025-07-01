@@ -102,32 +102,35 @@
         </:empty_state>
         <:actions :let={credential}>
           <div :if={can_edit?(credential, @current_user)}>
-            <span>
-              <.link
-                class="table-action"
-                phx-click={
+            <Common.simple_dropdown
+              id={"credential-actions-#{credential.id}-dropdown"}
+              button_theme="secondary"
+            >
+              <:button>
+                Actions
+              </:button>
+              <:options>
+                <.link phx-click={
                   show_modal("transfer-credential-#{credential.id}-modal")
-                }
-              >
-                <%= case credential.transfer_status do %>
-                  <% :pending -> %>
-                    Revoke Transfer
-                  <% :completed -> %>
-                    Transfer
-                  <% nil -> %>
-                    Transfer
-                <% end %>
-              </.link>
-            </span>
-            <span>
-              <.link
-                class="table-action"
-                phx-click={show_modal("edit-credential-#{credential.id}-modal")}
-              >
-                Edit
-              </.link>
-            </span>
-            <.delete_action socket={@socket} credential={credential} />
+                }>
+                  <%= case credential.transfer_status do %>
+                    <% :pending -> %>
+                      Revoke Transfer
+                    <% :completed -> %>
+                      Transfer
+                    <% nil -> %>
+                      Transfer
+                  <% end %>
+                </.link>
+                <.link phx-click={
+                  show_modal("edit-credential-#{credential.id}-modal")
+                }>
+                  Edit
+                </.link>
+                <.delete_action socket={@socket} credential={credential} />
+              </:options>
+            </Common.simple_dropdown>
+
             <.live_component
               id={"edit-credential-#{credential.id}-modal"}
               module={LightningWeb.CredentialLive.CredentialFormComponent}

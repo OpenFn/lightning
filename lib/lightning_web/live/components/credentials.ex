@@ -2,6 +2,7 @@ defmodule LightningWeb.Components.Credentials do
   @moduledoc false
   use LightningWeb, :component
 
+  alias LightningWeb.Components.Common
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
   alias LightningWeb.CredentialLive.RawBodyComponent
 
@@ -235,49 +236,27 @@ defmodule LightningWeb.Components.Credentials do
 
   def options_menu_button(assigns) do
     ~H"""
-    <div id={@id} class="inline-flex rounded-md shadow-xs">
-      <.button
-        type="button"
-        theme="primary"
-        phx-click={show_dropdown("menu")}
-        class="relative inline-flex items-center"
-        aria-expanded="true"
-        aria-haspopup="true"
-        disabled={@disabled}
-      >
+    <Common.simple_dropdown id={@id}>
+      <:button>
         {render_slot(@inner_block)}
-        <.icon name="hero-chevron-down" class="ml-1 h-5 w-5" />
-      </.button>
-      <div class="relative -ml-px block">
-        <div
-          class="hidden absolute right-0 z-10 -mr-1 mt-12 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
-          role="menu"
-          aria-orientation="vertical"
-          aria-labelledby="option-menu-button"
+      </:button>
+      <:options>
+        <a
+          :for={%{name: name, id: id, target: target} = option <- @options}
+          href="#"
+          role="menuitem"
           tabindex="-1"
-          phx-click-away={hide_dropdown("menu")}
-          id="menu"
+          id={id}
+          phx-click={show_modal(target)}
+          disabled={@disabled}
         >
-          <div class="py-1" role="none">
-            <a
-              :for={%{name: name, id: id, target: target} = option <- @options}
-              href="#"
-              class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100"
-              role="menuitem"
-              tabindex="-1"
-              id={id}
-              phx-click={show_modal(target)}
-              disabled={@disabled}
-            >
-              {name}<span
-                :if={Map.get(option, :badge)}
-                class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
-              ><%= Map.get(option, :badge) %></span>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+          {name}<span
+            :if={Map.get(option, :badge)}
+            class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
+          ><%= Map.get(option, :badge) %></span>
+        </a>
+      </:options>
+    </Common.simple_dropdown>
     """
   end
 end
