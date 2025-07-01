@@ -129,8 +129,6 @@ defmodule LightningWeb.RunLive.Index do
        work_orders: [],
        selected_work_orders: [],
        show_export_modal: false,
-       show_bulk_rerun_modal: false,
-       show_bulk_rerun_from_job_modal: false,
        can_edit_data_retention: can_edit_data_retention,
        can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
@@ -322,11 +320,6 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   @impl true
-  def handle_info(:close_bulk_rerun_from_job_modal, socket) do
-    {:noreply, socket |> assign(:show_bulk_rerun_from_job_modal, false)}
-  end
-
-  @impl true
   def handle_event(
         "rerun",
         %{"run_id" => run_id, "step_id" => step_id},
@@ -375,8 +368,6 @@ defmodule LightningWeb.RunLive.Index do
          {:ok, count, discarded_count} <- handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
-       |> assign(:show_bulk_rerun_modal, false)
-       |> assign(:show_bulk_rerun_from_job_modal, false)
        |> put_flash(
          :info,
          "New run#{if count > 1, do: "s"} enqueued for #{count} workorder#{if count > 1, do: "s"}"
@@ -396,15 +387,11 @@ defmodule LightningWeb.RunLive.Index do
       false ->
         {:noreply,
          socket
-         |> assign(:show_bulk_rerun_modal, false)
-         |> assign(:show_bulk_rerun_from_job_modal, false)
          |> put_flash(:error, "You are not authorized to perform this action.")}
 
       {:ok, %{reasons: {0, []}}} ->
         {:noreply,
          socket
-         |> assign(:show_bulk_rerun_modal, false)
-         |> assign(:show_bulk_rerun_from_job_modal, false)
          |> put_flash(
            :error,
            "Oops! The chosen step hasn't been run in the latest runs of any of the selected workorders"
@@ -413,15 +400,11 @@ defmodule LightningWeb.RunLive.Index do
       {:error, _changes} ->
         {:noreply,
          socket
-         |> assign(:show_bulk_rerun_modal, false)
-         |> assign(:show_bulk_rerun_from_job_modal, false)
          |> put_flash(:error, "Oops! an error occured during retries.")}
 
       {:error, _reason, %{text: error_message}} ->
         {:noreply,
          socket
-         |> assign(:show_bulk_rerun_modal, false)
-         |> assign(:show_bulk_rerun_from_job_modal, false)
          |> put_flash(:error, error_message)}
     end
   end
@@ -555,40 +538,6 @@ defmodule LightningWeb.RunLive.Index do
          socket
          |> put_flash(:error, "Failed to start export. Please try again.")}
     end
-  end
-
-  def handle_event("validate_and_show_bulk_rerun", _params, socket) do
-    case validate_bulk_rerun(
-           socket.assigns.selected_work_orders,
-           socket.assigns.project
-         ) do
-      :ok ->
-        {:noreply, socket |> assign(:show_bulk_rerun_modal, true)}
-
-      error_event ->
-        {:noreply, push_event(socket, error_event, %{})}
-    end
-  end
-
-  def handle_event("validate_and_show_bulk_rerun_from_job", _params, socket) do
-    case validate_bulk_rerun(
-           socket.assigns.selected_work_orders,
-           socket.assigns.project
-         ) do
-      :ok ->
-        {:noreply, socket |> assign(:show_bulk_rerun_from_job_modal, true)}
-
-      error_event ->
-        {:noreply, push_event(socket, error_event, %{})}
-    end
-  end
-
-  def handle_event("close_bulk_rerun_modal", _params, socket) do
-    {:noreply, socket |> assign(:show_bulk_rerun_modal, false)}
-  end
-
-  def handle_event("close_bulk_rerun_from_job_modal", _params, socket) do
-    {:noreply, socket |> assign(:show_bulk_rerun_from_job_modal, false)}
   end
 
   defp find_workflow_name(workflows, workflow_id) do

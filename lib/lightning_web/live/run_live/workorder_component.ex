@@ -222,7 +222,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       </.tr>
       <%= if @show_details do %>
         <.tr>
-          <.td colspan={8} class="!p-0">
+          <.td colspan={9} class="!p-0">
             <div class="bg-gray-100 p-3 flex flex-col gap-3">
               <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
                 <div

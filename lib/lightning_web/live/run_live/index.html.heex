@@ -695,7 +695,7 @@
             <.async_result :let={searched_page} assign={@async_page}>
               <:loading>
                 <.tr>
-                  <.td colspan={7}>
+                  <.td colspan={9}>
                     <Components.async_filler
                       message="Loading work orders ..."
                       class="animate-pulse"
@@ -705,7 +705,7 @@
               </:loading>
               <:failed :let={_reason}>
                 <.tr>
-                  <.td colspan={7}>
+                  <.td colspan={9}>
                     <Components.async_filler message="There was an error loading the work orders" />
                   </.td>
                 </.tr>
@@ -741,6 +741,7 @@
         selected_count={Enum.count(@selected_work_orders)}
         filters={SearchParams.new(@filters)}
         workflows={@workflows}
+        show={Map.get(assigns, :show_bulk_rerun_modal, false)}
       />
 
       <.live_component
@@ -751,6 +752,7 @@
         all_selected?={all_selected?(@selected_work_orders, @page.entries)}
         selected_workorders={@selected_work_orders}
         pages={@page.total_pages}
+        show={Map.get(assigns, :show_bulk_rerun_from_job_modal, false)}
       />
     </div>
   </LayoutComponents.centered>
