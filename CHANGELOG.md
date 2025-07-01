@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- New buttons to run a workflow directly from the canvas, both from the start of
+  the workflow [#3290](https://github.com/OpenFn/lightning/issues/3290) and from
+  an individual step [#3294](https://github.com/OpenFn/lightning/issues/3294)
+
 ### Changed
 
 ### Fixed
