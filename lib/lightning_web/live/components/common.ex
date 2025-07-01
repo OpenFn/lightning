@@ -294,12 +294,6 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  def duration(assigns) do
-    ~H"""
-    {@duration}ms
-    """
-  end
-
   attr :datetime, :map, required: true
   attr :id, :string, default: nil
   attr :class, :string, default: ""
