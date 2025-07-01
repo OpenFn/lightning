@@ -25,6 +25,8 @@ and this project adheres to
   [#3347](https://github.com/OpenFn/lightning/issues/3347)
 - Fixes brief flash of previously viewed diagram when switching workflows
   [#3352](https://github.com/OpenFn/lightning/pull/3352)
+- Fixes import of workflow YML for a manual laid out workflow.
+  [#3360](https://github.com/OpenFn/lightning/pull/3360)
 
 ## [2.13.3] 2025-06-26
 
