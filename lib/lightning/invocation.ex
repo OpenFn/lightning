@@ -523,6 +523,7 @@ defmodule Lightning.Invocation do
       search_params.search_fields,
       search_params.search_term
     )
+    |> apply_sorting(search_params.sort_by, search_params.sort_direction)
   end
 
   defp exclude_wiped_dataclips(work_order_query) do
@@ -914,5 +915,38 @@ defmodule Lightning.Invocation do
       _ ->
         dataclips
     end
+  end
+
+  defp apply_sorting(query, sort_by, sort_direction)
+       when sort_by in ["inserted_at", "last_activity"] and
+              sort_direction in ["asc", "desc"] do
+    sort_direction_atom = String.to_existing_atom(sort_direction)
+    sort_field = String.to_existing_atom(sort_by)
+
+    # Remove existing order_by clauses first
+    query = exclude(query, :order_by)
+
+    case sort_field do
+      :inserted_at ->
+        from([workorder: workorder] in query,
+          order_by: [{^sort_direction_atom, workorder.inserted_at}]
+        )
+
+      :last_activity ->
+        if sort_direction == "desc" do
+          from([workorder: workorder] in query,
+            order_by: [desc_nulls_first: workorder.last_activity]
+          )
+        else
+          from([workorder: workorder] in query,
+            order_by: [asc_nulls_last: workorder.last_activity]
+          )
+        end
+    end
+  end
+
+  defp apply_sorting(query, _sort_by, _sort_direction) do
+    # Default sorting: keep the original order_by from base_query
+    query
   end
 end

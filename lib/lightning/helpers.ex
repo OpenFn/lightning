@@ -77,6 +77,7 @@ defmodule Lightning.Helpers do
           {:ok, relative_time} -> relative_time
           {:error, _} -> Strftime.format!(date, "%F %T")
         end
+
       formatter_string when is_binary(formatter_string) ->
         Strftime.format!(date, formatter_string)
     end
