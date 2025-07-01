@@ -48,6 +48,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :job_id, :string
   jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
+  attr :job_id, :string
+  attr :job_title, :string
+  attr :cancel_url, :string
+  attr :back_url, :string
+  attr :is_edge, :boolean
+  jsx("assets/js/panel/panels/WorkflowRunPanel.tsx")
+
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
 
@@ -166,6 +173,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </div>
                 <.offline_indicator />
               </div>
+              <.run_workflow_button
+                base_url={@base_url}
+                trigger_id={
+                  if is_list(@workflow_params["triggers"]) and
+                       @workflow_params["triggers"] != [] do
+                    hd(@workflow_params["triggers"])["id"]
+                  else
+                    ""
+                  end
+                }
+                }
+              />
               <.save_workflow_button
                 id="top-bar-save-workflow-btn"
                 changeset={@changeset}
@@ -348,8 +367,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :if={!@show_canvas_placeholder}
             react-portal-target="workflow-mount"
             selection={
-              if @selected_job || @selected_edge,
-                do: (@selected_job || @selected_edge).id,
+              if @selected_job || @selected_trigger || @selected_edge,
+                do: (@selected_job || @selected_trigger || @selected_edge).id,
                 else: nil
             }
           />
@@ -412,7 +431,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             project_repo_connection={@project_repo_connection}
           />
           <.form
-            :if={@selection_mode !== "expand"}
+            :if={@selection_mode != "expand"}
             id="workflow-form"
             for={@workflow_form}
             phx-submit="save"
@@ -441,7 +460,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
             <.single_inputs_for
               :let={{jf}}
-              :if={@selected_job}
+              :if={@selected_job && @selection_mode != "workflow_input"}
               form={@workflow_form}
               field={:jobs}
               id={@selected_job.id}
@@ -473,7 +492,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 />
                 <:footer>
                   <div class="flex flex-row">
-                    <div class="flex items-center">
+                    <div class="flex items-center gap-3">
                       <.expand_job_editor
                         base_url={@base_url}
                         snapshot_lock_version={@snapshot && @snapshot.lock_version}
@@ -482,6 +501,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         selected_run={@selected_run}
                         form={@workflow_form}
                       />
+                      <.button_link
+                        patch={"#{@base_url}?s=#{@selected_job.id}&m=workflow_input"}
+                        type="button"
+                        theme="primary"
+                      >
+                        Run
+                      </.button_link>
                     </div>
                     <div class="grow flex justify-end">
                       <label>
@@ -506,7 +532,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           }
                           data-confirm="Are you sure you want to delete this step?"
                         >
-                          Delete Step
+                          Delete
                         </.button>
                       </label>
                     </div>
@@ -516,7 +542,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </.single_inputs_for>
             <.single_inputs_for
               :let={tf}
-              :if={@selected_trigger}
+              :if={@selected_trigger && @selection_mode != "workflow_input"}
               form={@workflow_form}
               field={:triggers}
               id={@selected_trigger.id}
@@ -547,7 +573,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   cancel_url={close_url(assigns, :selected_trigger, :unselect)}
                 />
                 <:footer>
-                  <div class="flex flex-row">
+                  <div class="flex flex-row justify-between">
                     <div class="flex items-center">
                       <.input
                         type="toggle"
@@ -560,13 +586,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         label="Enabled"
                       />
                     </div>
+                    <.button_link
+                      patch={"#{@base_url}?s=#{@selected_trigger.id}&m=workflow_input"}
+                      type="button"
+                      theme="primary"
+                    >
+                      <.icon name="hero-play-solid" class="w-4 h-4" /> Run
+                    </.button_link>
                   </div>
                 </:footer>
               </.panel>
             </.single_inputs_for>
             <.single_inputs_for
               :let={ef}
-              :if={@selected_edge}
+              :if={@selected_edge && @selection_mode != "workflow_input"}
               form={@workflow_form}
               field={:edges}
               id={@selected_edge.id}
@@ -633,6 +666,42 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </:footer>
               </.panel>
             </.single_inputs_for>
+            <div
+              :if={@selection_mode == "workflow_input"}
+              class="flex flex-col h-120"
+            >
+              <.WorkflowRunPanel
+                job_id={
+                  if @selected_job do
+                    @selected_job.id
+                  else
+                    hd(@workflow_params["jobs"])["id"]
+                  end
+                }
+                job_title={
+                  if @selected_job do
+                    @selected_job.name
+                  else
+                    "Trigger"
+                  end
+                }
+                is_edge={
+                  if @selected_edge do
+                    true
+                  else
+                    false
+                  end
+                }
+                cancel_url={@base_url}
+                back_url={
+                  if @selected_job do
+                    "#{@base_url}?s=#{@selected_job.id}"
+                  else
+                    @base_url
+                  end
+                }
+              />
+            </div>
           </.form>
 
           <.panel
@@ -821,9 +890,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin mr-1" /> Processing
       <% else %>
         <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
-          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Retry from here
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run (retry)
         <% else %>
-          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Create New Work Order
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run
         <% end %>
       <% end %>
     </.button>
@@ -885,7 +954,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           class="hidden absolute right-0 bottom-9 z-10 mb-2 w-max"
           disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
         >
-          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Create New Work Order
+          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Run (New Work Order)
         </.button>
       </div>
     </div>
@@ -1069,15 +1138,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp expand_job_editor(assigns) do
     {is_empty, error_message} = editor_is_empty(assigns.form, assigns.job)
 
-    button_base_classes =
-      ~w(
-        inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset hover:bg-gray-50)
-
     button_classes =
-      button_base_classes ++
-        if is_empty,
-          do: ~w(ring-red-300),
-          else: ~w(ring-gray-300)
+      if is_empty,
+        do: ~w(ring-red-300),
+        else: ~w(ring-0)
 
     assigns =
       assign(assigns,
@@ -1087,13 +1151,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     ~H"""
-    <.link
+    <.button_link
       id={"open-inspector-#{@job.id}"}
       patch={"#{@base_url}?s=#{@job.id}&m=expand" <> (if @snapshot_lock_version && @snapshot_version_tag != "latest", do: "&v=#{@snapshot_lock_version}", else: "") <> (if @selected_run, do: "&a=#{@selected_run}", else: "")}
+      theme="primary"
       class={@button_classes}
     >
-      <.icon name="hero-code-bracket" class="w-4 h-4 text-grey-400" />
-    </.link>
+      Edit
+    </.button_link>
 
     <.save_is_blocked_error :if={@is_empty}>
       {@error_message}
@@ -1847,7 +1912,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       project: project,
       selected_job: selected_job,
-      current_user: current_user,
       workflow_params: workflow_params,
       has_presence_edit_priority: has_presence_edit_priority,
       workflow: workflow,
@@ -1855,6 +1919,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     } = socket.assigns
 
     manual_params = Map.get(params, "manual", %{})
+    from_start? = Map.get(params, "from_start", false)
+    from_job = Map.get(params, "from_job", nil)
 
     params =
       case form do
@@ -1871,55 +1937,43 @@ defmodule LightningWeb.WorkflowLive.Edit do
         get_workflow_by_id(workflow.id)
       end
 
-    with :ok <- check_user_can_manual_run_workflow(socket) do
-      case Helpers.run_workflow(
+    selected_job =
+      cond do
+        from_start? ->
+          get_starting_job(workflow_or_changeset)
+
+        from_job != nil ->
+          get_job_by_id(workflow_or_changeset, from_job)
+
+        true ->
+          selected_job
+      end
+
+    with {:ok, %{workorder: %{runs: [run]}, workflow: workflow}} <-
+           manual_run_workflow(
+             socket,
              workflow_or_changeset,
              params,
-             project: project,
-             selected_job: selected_job,
-             created_by: current_user
+             selected_job
            ) do
-        {:ok, %{workorder: workorder, workflow: workflow}} ->
-          %{runs: [run]} = workorder
+      if from_start? || from_job != nil do
+        {:noreply,
+         socket
+         |> push_navigate(to: ~p"/projects/#{project}/runs/#{run}")}
+      else
+        Runs.subscribe(run)
 
-          Runs.subscribe(run)
+        snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
-          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
+        # Get the dataclip for the run
+        dataclip = Invocation.get_dataclip_for_run(run.id)
 
-          # Get the dataclip for the run
-          dataclip = Invocation.get_dataclip_for_run(run.id)
-
-          {:noreply,
-           socket
-           |> assign_workflow(workflow, snapshot)
-           |> follow_run(run)
-           |> push_event("push-hash", %{"hash" => "log"})
-           |> push_event("manual_run_created", %{dataclip: dataclip})}
-
-        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
-          {:noreply,
-           socket
-           |> assign_manual_run_form(changeset)}
-
-        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
-          {
-            :noreply,
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-          }
-
-        {:error, %{text: message}} ->
-          {:noreply, put_flash(socket, :error, message)}
-
-        {:error, :workflow_deleted} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "Oops! You cannot modify a deleted workflow"
-           )}
+        {:noreply,
+         socket
+         |> assign_workflow(workflow, snapshot)
+         |> follow_run(run)
+         |> push_event("push-hash", %{"hash" => "log"})
+         |> push_event("manual_run_created", %{dataclip: dataclip})}
       end
     end
   end
@@ -2158,6 +2212,53 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  defp manual_run_workflow(
+         socket,
+         workflow_or_changeset,
+         manual_params,
+         selected_job
+       ) do
+    %{project: project, current_user: current_user} = socket.assigns
+
+    with :ok <- check_user_can_manual_run_workflow(socket) do
+      case Helpers.run_workflow(
+             workflow_or_changeset,
+             manual_params,
+             project: project,
+             selected_job: selected_job,
+             created_by: current_user
+           ) do
+        {:ok, result} ->
+          {:ok, result}
+
+        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
+          {:noreply,
+           socket
+           |> assign_manual_run_form(changeset)}
+
+        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
+          {
+            :noreply,
+            socket
+            |> assign_changeset(changeset)
+            |> mark_validated()
+            |> put_flash(:error, "Workflow could not be saved")
+          }
+
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
+
+        {:error, :workflow_deleted} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "Oops! You cannot modify a deleted workflow"
+           )}
+      end
+    end
+  end
+
   defp check_user_can_manual_run_workflow(socket) do
     case socket.assigns do
       %{
@@ -2214,6 +2315,43 @@ defmodule LightningWeb.WorkflowLive.Edit do
            "Cannot save in snapshot mode, switch to the latest version."
          )}
     end
+  end
+
+  defp get_job_by_id(%Workflow{} = workflow, job_id) do
+    Enum.find(workflow.jobs, fn job -> job.id == job_id end)
+  end
+
+  defp get_job_by_id(%Ecto.Changeset{} = workflow_changeset, job_id) do
+    workflow_changeset
+    |> Ecto.Changeset.get_assoc(:jobs, :struct)
+    |> Enum.find(fn job -> job.id == job_id end)
+  end
+
+  defp get_starting_job(%Workflow{} = workflow) do
+    trigger = hd(workflow.triggers)
+
+    edge =
+      Enum.find(workflow.edges, fn edge ->
+        edge.source_trigger_id == trigger.id
+      end)
+
+    get_job_by_id(workflow, edge.target_job_id)
+  end
+
+  defp get_starting_job(%Ecto.Changeset{} = workflow_changeset) do
+    trigger =
+      workflow_changeset
+      |> Ecto.Changeset.get_assoc(:triggers, :struct)
+      |> hd()
+
+    edge =
+      workflow_changeset
+      |> Ecto.Changeset.get_assoc(:edges, :struct)
+      |> Enum.find(fn edge ->
+        edge.source_trigger_id == trigger.id
+      end)
+
+    get_job_by_id(workflow_changeset, edge.target_job_id)
   end
 
   defp sync_to_github(socket, %{
@@ -2605,6 +2743,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"m" => "settings", "s" => nil, "a" => nil} ->
         handle_settings_mode(socket)
 
+      %{"m" => "workflow_input", "s" => selected_id, "a" => nil} ->
+        handle_selection_with_mode(socket, selected_id, "workflow_input")
+
       %{"m" => "code", "s" => nil, "a" => nil} ->
         handle_code_mode(socket)
 
@@ -2638,12 +2779,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket |> unselect_all() |> set_mode(nil)
   end
 
+  defp handle_selection_with_mode(socket, nil, mode) do
+    socket
+    |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
+  end
+
   defp handle_selection_with_mode(socket, selected_id, mode) do
     case find_item(socket.assigns.changeset, selected_id) do
       [type, selected] ->
         socket
         |> set_selected_node(type, selected)
-        |> set_mode(if mode in ["expand"], do: mode, else: nil)
+        |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
 
       nil ->
         socket |> unselect_all()
@@ -2749,7 +2895,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp set_mode(socket, mode) do
-    if mode in [nil, "expand", "settings", "code"] do
+    if mode in [nil, "expand", "settings", "code", "workflow_input"] do
       socket
       |> assign(selection_mode: mode)
     else
@@ -2990,6 +3136,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </div>
       </div>
     </div>
+    """
+  end
+
+  defp run_workflow_button(assigns) do
+    ~H"""
+    <.button_link
+      patch={"#{@base_url}?s=#{@trigger_id}&m=workflow_input"}
+      type="button"
+      theme="primary"
+    >
+      Run
+    </.button_link>
     """
   end
 

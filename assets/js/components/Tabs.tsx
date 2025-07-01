@@ -63,13 +63,13 @@ export const Tabs = ({
 
               return (
                 <button
+                  type="button"
                   key={id}
                   onClick={() => handleSelectionChange(id)}
-                  className={`flex-1 rounded-md px-2 py-3 text-sm font-medium flex flex-col items-center justify-center transition-all duration-200 ${
-                    isSelected
-                      ? 'bg-white text-indigo-600'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-slate-50'
-                  }`}
+                  className={`flex-1 rounded-md px-2 py-3 text-sm font-medium flex flex-col items-center justify-center transition-all duration-200 ${isSelected
+                    ? 'bg-white text-indigo-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-slate-50'
+                    }`}
                   aria-current={isSelected ? 'page' : undefined}
                   style={{
                     writingMode: 'vertical-rl',
@@ -120,13 +120,13 @@ export const Tabs = ({
 
               return (
                 <button
+                  type="button"
                   key={id}
                   onClick={() => handleSelectionChange(id)}
-                  className={`${widthClass} rounded-md px-3 py-2 text-sm font-medium flex items-center justify-center transition-all duration-200 ${
-                    isSelected
-                      ? 'bg-white text-indigo-600'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-slate-50'
-                  }`}
+                  className={`${widthClass} rounded-md px-3 py-2 text-sm font-medium flex items-center justify-center transition-all duration-200 ${isSelected
+                    ? 'bg-white text-indigo-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-slate-50'
+                    }`}
                   aria-current={isSelected ? 'page' : undefined}
                 >
                   {React.createElement(icon, {
