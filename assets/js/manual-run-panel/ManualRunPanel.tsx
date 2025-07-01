@@ -17,6 +17,7 @@ import useQuery from '../hooks/useQuery';
 
 interface ManualRunPanelProps {
   job_id: string;
+  fixedHeight: boolean
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
@@ -28,7 +29,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     query: urlQuery,
     a: runId,
   } = useQuery(['active_panel', 'type', 'before', 'after', 'query', 'a']);
-  const { pushEvent, pushEventTo, job_id, navigate } = props;
+  const { pushEvent, pushEventTo, job_id, navigate, fixedHeight = false } = props;
 
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
     active_panel
@@ -255,6 +256,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             clearFilter={clearFilter}
             selectedDates={selectedDates}
             setSelectedDates={setSelectedDates}
+            fixedHeight={fixedHeight}
             currentRunDataclip={currentRunDataclip}
           />
         );
@@ -279,49 +281,51 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     pushEvent,
     handleSearchSumbit,
     currentRunDataclip,
+    fixedHeight
   ]);
 
   return (
     <>
-      <form ref={formRef} id="manual_run_form"></form>
-      {selectedDataclip ? (
+      <form ref={formRef} id="manual_run_form" className="hidden"></form>
+      {selectedDataclip ? <div className='grow overflow-hidden'>
         <SelectedClipView
           dataclip={selectedDataclip}
           onUnselect={() => {
             selectDataclipForManualRun(null);
           }}
         />
-      ) : (
-        <div className="grow overflow-auto no-scrollbar">
-          <div className="flex flex-col h-full">
-            <div className="flex justify-center flex-wrap mb-1">
-              <Tabs
-                options={[
-                  {
-                    label: 'Empty',
-                    id: SeletableOptions.EMPTY.toString(),
-                    icon: DocumentIcon,
-                  },
-                  {
-                    label: 'Custom',
-                    id: SeletableOptions.CUSTOM.toString(),
-                    icon: PencilSquareIcon,
-                  },
-                  {
-                    label: 'Existing',
-                    id: SeletableOptions.EXISTING.toString(),
-                    icon: QueueListIcon,
-                  },
-                ]}
-                initialSelection={selectedOption.toString()}
-                onSelectionChange={handleTabSelectionChange}
-                collapsedVertical={false}
-              />
+      </div>
+        : (
+          <div className="grow overflow-visible no-scrollbar">
+            <div className="flex flex-col h-full">
+              <div className="flex justify-center flex-wrap mb-1">
+                <Tabs
+                  options={[
+                    {
+                      label: 'Empty',
+                      id: SeletableOptions.EMPTY.toString(),
+                      icon: DocumentIcon,
+                    },
+                    {
+                      label: 'Custom',
+                      id: SeletableOptions.CUSTOM.toString(),
+                      icon: PencilSquareIcon,
+                    },
+                    {
+                      label: 'Existing',
+                      id: SeletableOptions.EXISTING.toString(),
+                      icon: QueueListIcon,
+                    },
+                  ]}
+                  initialSelection={selectedOption.toString()}
+                  onSelectionChange={handleTabSelectionChange}
+                  collapsedVertical={false}
+                />
+              </div>
+              {innerView}
             </div>
-            {innerView}
           </div>
-        </div>
-      )}
+        )}
     </>
   );
 };
