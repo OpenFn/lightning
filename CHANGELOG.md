@@ -27,6 +27,8 @@ and this project adheres to
   [#3334](https://github.com/OpenFn/lightning/issues/3334)
 - Improve error message when credential fails during runs
   [#3332](https://github.com/OpenFn/lightning/issues/3332)
+- Standardize modal footers and paddings
+  [#3277](https://github.com/OpenFn/lightning/issues/3277)
 
 ### Fixed
 
@@ -36,6 +38,8 @@ and this project adheres to
   [#3352](https://github.com/OpenFn/lightning/pull/3352)
 - Fixes import of workflow YML for a manual laid out workflow.
   [#3360](https://github.com/OpenFn/lightning/pull/3360)
+- Fix text content overflowing in credential modal
+  [#3280](https://github.com/OpenFn/lightning/pull/3280)
 
 ## [2.13.3] 2025-06-26
 
