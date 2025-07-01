@@ -609,13 +609,16 @@
               <.th>
                 <.form
                   :let={f}
-                  :if={@page.entries != []}
                   for={
                     %{
                       "all_selections" =>
-                        all_selected?(
-                          @selected_work_orders,
-                          @page.entries
+                        if(@page.entries == [],
+                          do: false,
+                          else:
+                            all_selected?(
+                              @selected_work_orders,
+                              @page.entries
+                            )
                         )
                     }
                   }
@@ -626,7 +629,8 @@
                     field={f[:all_selections]}
                     id="select_all"
                     phx-hook="CheckboxIndeterminate"
-                    class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"}
+                    disabled={@page.entries == []}
+                    class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"} #{if @page.entries == [], do: "opacity-50 cursor-not-allowed"}"}
                   />
                 </.form>
               </.th>
