@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- New buttons to run a workflow directly from the canvas, both from the start of
+  the workflow [#3290](https://github.com/OpenFn/lightning/issues/3290) and from
+  an individual step [#3294](https://github.com/OpenFn/lightning/issues/3294)
+
 ### Changed
 
 - Dont send oauth token expiry errors to Sentry
@@ -30,6 +34,8 @@ and this project adheres to
   [#3347](https://github.com/OpenFn/lightning/issues/3347)
 - Fixes brief flash of previously viewed diagram when switching workflows
   [#3352](https://github.com/OpenFn/lightning/pull/3352)
+- Fixes import of workflow YML for a manual laid out workflow.
+  [#3360](https://github.com/OpenFn/lightning/pull/3360)
 
 ## [2.13.3] 2025-06-26
 

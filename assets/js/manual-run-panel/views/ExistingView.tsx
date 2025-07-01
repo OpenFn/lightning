@@ -30,6 +30,7 @@ interface ExistingViewProps {
   selectedDates: { before: string; after: string };
   setSelectedDates: SetDates;
   onSubmit: () => void;
+  fixedHeight: boolean;
   currentRunDataclip?: Dataclip | null;
 }
 
@@ -45,6 +46,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   selectedDates,
   setSelectedDates,
   onSubmit,
+  fixedHeight,
   currentRunDataclip,
 }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
@@ -72,14 +74,18 @@ const ExistingView: React.FC<ExistingViewProps> = ({
     ));
 
   const keyDownHandler = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') onSubmit();
+    if (e.key === 'Enter') {
+      e.stopPropagation();
+      e.preventDefault();
+      onSubmit();
+    }
   };
 
   return (
     <>
       <div className="mt-2 flex flex-col gap-3">
         <div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             <div className="relative rounded-md shadow-xs flex grow">
               <input
                 onKeyDown={keyDownHandler}
@@ -107,6 +113,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
             </div>
             <div className="relative inline-block">
               <button
+                type="button"
                 onClick={() => {
                   setDateOpen(p => !p);
                 }}
@@ -116,9 +123,8 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <div
                 ref={calendarRef}
-                className={`absolute right-0 ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none min-w-[260px] ${
-                  dateOpen ? '' : 'hidden'
-                } `}
+                className={`absolute right-0 ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none min-w-[260px] ${dateOpen ? '' : 'hidden'
+                  } `}
               >
                 <div className="py-3" role="none">
                   <div className="px-4 py-1 text-gray-500 text-sm">
@@ -159,6 +165,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
             </div>
             <div className="relative inline-block">
               <button
+                type="button"
                 onClick={() => {
                   setTypesOpen(p => !p);
                 }}
@@ -168,9 +175,8 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <ul
                 ref={typesRef}
-                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto overflow-hidden ${
-                  typesOpen ? '' : 'hidden'
-                } `}
+                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto overflow-hidden ${typesOpen ? '' : 'hidden'
+                  } `}
               >
                 {DataclipTypes.map(type => {
                   return (
@@ -181,16 +187,14 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                           type === selectedClipType ? '' : type
                         );
                       }}
-                      className={`px-3 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-slate-700 ${
-                        type === selectedClipType
-                          ? 'bg-blue-200 text-blue-700'
-                          : ''
-                      }`}
+                      className={`px-3 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-slate-700 ${type === selectedClipType
+                        ? 'bg-blue-200 text-blue-700'
+                        : ''
+                        }`}
                     >
                       <span
-                        className={`hero-check size-4 text-gray-400 ${
-                          type !== selectedClipType ? 'invisible' : ''
-                        }`}
+                        className={`hero-check size-4 text-gray-400 ${type !== selectedClipType ? 'invisible' : ''
+                          }`}
                       />
                       <span className="text-sm">{DataclipTypeNames[type]}</span>
                     </li>
@@ -200,6 +204,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
             </div>
             <div className="relative inline-block">
               <button
+                type="button"
                 onClick={() => {
                   onSubmit();
                 }}
@@ -212,52 +217,54 @@ const ExistingView: React.FC<ExistingViewProps> = ({
           </div>
           <div className="flex gap-1 mt-2">{pills}</div>
         </div>
-        {dataclips.length ? (
-          dataclips.map(clip => {
-            const isCurrent =
-              currentRunDataclip && clip.id === currentRunDataclip.id;
-            return (
-              <div
-                key={clip.id}
-                onClick={() => {
-                  setSelected(clip);
-                }}
-                className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
-              >
-                <div className="flex gap-2 items-center text-sm">
-                  {isCurrent ? (
-                    <span
-                      className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
-                      title="Current dataclip for this step"
-                    />
-                  ) : (
-                    <span className="hero-document-text align-middle size-4 group-hover:text-primary-600" />
-                  )}
-                  <span className="font-mono leading-none align-middle relative top-[1px]">
-                    {truncateUid(clip.id)}
-                  </span>
-                  <span className="align-middle">
-                    <DataclipTypePill type={clip.type} size="small" />
-                  </span>
+        <div className={`${fixedHeight ? "h-64" : ""} flex flex-col gap-3 overflow-auto`}>
+          {dataclips.length ? (
+            dataclips.map(clip => {
+              const isCurrent =
+                currentRunDataclip && clip.id === currentRunDataclip.id;
+              return (
+                <div
+                  key={clip.id}
+                  onClick={() => {
+                    setSelected(clip);
+                  }}
+                  className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
+                >
+                  <div className="flex gap-2 items-center text-sm">
+                    {isCurrent ? (
+                      <span
+                        className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
+                        title="Current dataclip for this step"
+                      />
+                    ) : (
+                      <span className="hero-document-text align-middle size-4 group-hover:text-primary-600" />
+                    )}
+                    <span className="font-mono leading-none align-middle relative top-[1px]">
+                      {truncateUid(clip.id)}
+                    </span>
+                    <span className="align-middle">
+                      <DataclipTypePill type={clip.type} size="small" />
+                    </span>
+                  </div>
+                  <div className="text-xs truncate ml-2">
+                    {formatDate(new Date(clip.updated_at))}
+                  </div>
                 </div>
-                <div className="text-xs truncate ml-2">
-                  {formatDate(new Date(clip.updated_at))}
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="text-center text-sm">
-            No dataclips match the filter.
-          </div>
-        )}
-        {dataclips.length ? (
-          <div className="text-center text-sm text-gray-600">
-            Search results are limited to the 10 most recent matches for this
-            step.
-          </div>
-        ) : null}
-      </div>
+              );
+            })
+          ) : (
+            <div className="text-center text-sm">
+              No dataclips match the filter.
+            </div>
+          )}
+          {dataclips.length ? (
+            <div className="text-center text-sm text-gray-600">
+              Search results are limited to the 10 most recent matches for this
+              step.
+            </div>
+          ) : null}
+        </div>
+      </div >
     </>
   );
 };
