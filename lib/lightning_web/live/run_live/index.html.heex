@@ -640,7 +640,14 @@
                     type="button"
                     theme="secondary"
                     class="!py-1"
-                    phx-click="validate_and_show_bulk_rerun"
+                    phx-click={
+                      with :ok <-
+                             validate_bulk_rerun(
+                               @selected_work_orders,
+                               @project
+                             ),
+                           do: show_modal("bulk-rerun-from-start-modal")
+                    }
                   >
                     Retry
                   </.button>
@@ -654,7 +661,14 @@
                     id="bulk-rerun-from-job-modal-trigger"
                     type="button"
                     theme="secondary"
-                    phx-click="validate_and_show_bulk_rerun_from_job"
+                    phx-click={
+                      with :ok <-
+                             validate_bulk_rerun(
+                               @selected_work_orders,
+                               @project
+                             ),
+                           do: show_modal("bulk-rerun-from-job-modal")
+                    }
                   >
                     Retry from
                   </.button>
