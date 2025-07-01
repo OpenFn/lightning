@@ -666,11 +666,21 @@
               <.th>
                 Input
               </.th>
-              <.th>
+              <.th
+                sortable={true}
+                sort_by="inserted_at"
+                active={Map.get(@filters, "sort_by") == "inserted_at"}
+                sort_direction={Map.get(@filters, "sort_direction")}
+              >
                 Created
               </.th>
-              <.th>
-                Last Run (count)
+              <.th
+                sortable={true}
+                sort_by="last_activity"
+                active={Map.get(@filters, "sort_by") == "last_activity"}
+                sort_direction={Map.get(@filters, "sort_direction")}
+              >
+                Last Run Finished (#)
               </.th>
               <.th class="text-right">
                 Duration
@@ -678,13 +688,14 @@
               <.th class="text-right">
                 Status
               </.th>
+              <.th></.th>
             </.tr>
           </:header>
           <:body>
             <.async_result :let={searched_page} assign={@async_page}>
               <:loading>
                 <.tr>
-                  <.td colspan={5}>
+                  <.td colspan={7}>
                     <Components.async_filler
                       message="Loading work orders ..."
                       class="animate-pulse"
@@ -694,7 +705,7 @@
               </:loading>
               <:failed :let={_reason}>
                 <.tr>
-                  <.td colspan={5}>
+                  <.td colspan={7}>
                     <Components.async_filler message="There was an error loading the work orders" />
                   </.td>
                 </.tr>

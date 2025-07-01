@@ -198,7 +198,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           <Common.datetime datetime={@work_order.inserted_at} />
         </.td>
         <.td>
-          <Common.datetime datetime={@last_run.started_at} />
+          <Common.datetime datetime={@work_order.last_activity} />
           ({@work_order.runs |> Enum.count()})
         </.td>
         <.td class="text-right">
@@ -207,15 +207,17 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <.td class="text-right">
           <div class="flex items-center justify-end gap-2">
             <.state_pill state={@work_order.state} />
-            <%= if @work_order.runs !== [] do %>
-              <.icon
-                name={
-                  if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
-                }
-                class="size-4 text-gray-400"
-              />
-            <% end %>
           </div>
+        </.td>
+        <.td>
+          <%= if @work_order.runs !== [] do %>
+            <.icon
+              name={
+                if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
+              }
+              class="size-4 text-gray-400"
+            />
+          <% end %>
         </.td>
       </.tr>
       <%= if @show_details do %>
