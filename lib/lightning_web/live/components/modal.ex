@@ -93,7 +93,7 @@ defmodule LightningWeb.Components.Modal do
                 {render_slot(@inner_block)}
               </section>
               <%= for footer <- @footer do %>
-                <.modal_footer {if(footer[:class], do: [class: footer[:class], else: []])}>
+                <.modal_footer {if(footer[:class], do: [class: footer[:class]], else: [])}>
                   {render_slot(footer)}
                 </.modal_footer>
               <% end %>
