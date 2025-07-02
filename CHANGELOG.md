@@ -32,6 +32,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix OAuth scope validation error caused by `offline_access`
+  [#3363](https://github.com/OpenFn/lightning/issues/3363)
 - Cannot send message in old ai chat sessions
   [#3347](https://github.com/OpenFn/lightning/issues/3347)
 - Fixes brief flash of previously viewed diagram when switching workflows
