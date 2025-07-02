@@ -206,18 +206,11 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         setRecentClips(typedResponse.dataclips);
         setNextCronRunId(typedResponse.next_cron_run_id);
         
-        // Auto-select the next cron run dataclip if it exists and no search criteria
-        if (typedResponse.next_cron_run_id && !q && !runId) {
-          const nextCronDataclip = typedResponse.dataclips.find(
-            clip => clip.id === typedResponse.next_cron_run_id
-          );
-          if (nextCronDataclip) {
-            selectDataclipForManualRun(nextCronDataclip);
-          }
-        }
+        // Note: Auto-selection of next cron run is handled in the initial useEffect only
+        // We don't auto-select here to avoid re-selecting when filters are cleared
       }
     );
-  }, [job_id, parsedQuery, pushEvent, navigate, runId, selectDataclipForManualRun]);
+  }, [job_id, parsedQuery, pushEvent, navigate, selectedOption]);
 
   React.useEffect(() => {
     if (!query.trim()) handleSearchSumbit();
