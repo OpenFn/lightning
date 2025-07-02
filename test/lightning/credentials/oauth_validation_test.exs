@@ -596,6 +596,78 @@ defmodule Lightning.Credentials.OauthValidationTest do
 
       assert :ok = result
     end
+
+    test "ignores offline_access in expected scopes when validating" do
+      token_data = %{"scope" => "read write"}
+      expected_scopes = ["read", "write", "offline_access"]
+
+      result = OauthValidation.validate_scope_grant(token_data, expected_scopes)
+
+      assert :ok = result
+    end
+
+    test "ignores offline_access but validates other missing scopes" do
+      token_data = %{"scope" => "read"}
+      expected_scopes = ["read", "write", "offline_access"]
+
+      result = OauthValidation.validate_scope_grant(token_data, expected_scopes)
+
+      assert {:error,
+              %Error{type: :missing_scopes, details: details, message: message}} =
+               result
+
+      assert details.missing_scopes == ["write"]
+
+      assert message ==
+               "Missing required scopes: write. Please reauthorize and grant all selected permissions."
+    end
+
+    test "ignores offline_access with different casing" do
+      token_data = %{"scope" => "read write"}
+      expected_scopes = ["read", "write", "OFFLINE_ACCESS"]
+
+      result = OauthValidation.validate_scope_grant(token_data, expected_scopes)
+
+      assert :ok = result
+    end
+
+    test "handles only offline_access in expected scopes" do
+      token_data = %{"scope" => "read write"}
+      expected_scopes = ["offline_access"]
+
+      result = OauthValidation.validate_scope_grant(token_data, expected_scopes)
+
+      assert :ok = result
+    end
+
+    test "preserves original case of non-offline_access scopes in error messages" do
+      token_data = %{"scope" => "read"}
+      expected_scopes = ["Read", "WRITE", "offline_access", "Admin"]
+
+      result = OauthValidation.validate_scope_grant(token_data, expected_scopes)
+
+      assert {:error, %Error{type: :missing_scopes, details: details}} = result
+      assert details.missing_scopes == ["WRITE", "Admin"]
+      assert "offline_access" not in details.missing_scopes
+    end
+
+    test "handles offline_access in granted scopes (provider included it)" do
+      token_data = %{"scope" => "read write offline_access"}
+      expected_scopes = ["read", "write", "offline_access"]
+
+      result = OauthValidation.validate_scope_grant(token_data, expected_scopes)
+
+      assert :ok = result
+    end
+
+    test "ignores offline_access even when it's the only missing scope" do
+      token_data = %{"scope" => "read write admin"}
+      expected_scopes = ["read", "write", "admin", "offline_access"]
+
+      result = OauthValidation.validate_scope_grant(token_data, expected_scopes)
+
+      assert :ok = result
+    end
   end
 
   describe "extract_scopes/1" do

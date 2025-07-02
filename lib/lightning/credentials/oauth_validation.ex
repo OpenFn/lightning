@@ -567,7 +567,11 @@ defmodule Lightning.Credentials.OauthValidation do
 
   defp check_scope_match(granted_scopes, expected_scopes) do
     granted_normalized = Enum.map(granted_scopes, &String.downcase/1)
-    expected_normalized = Enum.map(expected_scopes, &String.downcase/1)
+
+    expected_normalized =
+      expected_scopes
+      |> Enum.map(&String.downcase/1)
+      |> Enum.reject(&(&1 == "offline_access"))
 
     missing_normalized = expected_normalized -- granted_normalized
 
