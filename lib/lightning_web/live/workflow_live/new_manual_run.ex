@@ -61,20 +61,81 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
+    # Build filters for database queries
     db_filters = build_db_filters(user_filters)
-    input_query = build_input_dataclips_query(job_id, db_filters)
-    next_cron_query = build_next_cron_run_query(job_id, db_filters)
 
-    dataclips_data =
-      build_union_query(input_query, next_cron_query)
+    # Get the next cron run dataclip (with filters applied)
+    next_cron_dataclip = get_next_cron_run_dataclip(job_id, db_filters)
+
+    next_cron_run_id =
+      if next_cron_dataclip, do: next_cron_dataclip.id, else: nil
+
+    # Build filters for input dataclips (excluding the next cron run to avoid duplication)
+    input_db_filters =
+      if next_cron_run_id do
+        dynamic([d], ^db_filters and d.id != ^next_cron_run_id)
+      else
+        db_filters
+      end
+
+    # Get filtered input dataclips
+    input_dataclips =
+      build_input_dataclips_query(job_id, input_db_filters)
       |> apply_pagination(limit, offset)
       |> Repo.all()
-      |> maybe_filter_uuid_prefix(user_filters)
 
-    next_cron_run_id = extract_next_cron_run_id(dataclips_data)
-    dataclips = convert_to_dataclip_structs(dataclips_data)
+    # Apply UUID prefix filtering if needed
+    input_dataclips = maybe_filter_uuid_prefix(input_dataclips, user_filters)
 
-    {dataclips, next_cron_run_id}
+    next_cron_dataclip =
+      if next_cron_dataclip do
+        case maybe_filter_uuid_prefix([next_cron_dataclip], user_filters) do
+          [filtered_clip] -> filtered_clip
+          [] -> nil
+        end
+      else
+        nil
+      end
+
+    # Combine results - next cron run first (if it exists and matches filters), then input dataclips
+    all_dataclips =
+      if next_cron_dataclip do
+        [next_cron_dataclip | input_dataclips]
+      else
+        input_dataclips
+      end
+
+    # Convert to proper dataclip structs
+    dataclips = convert_to_dataclip_structs(all_dataclips)
+
+    # Only return next_cron_run_id if the dataclip actually made it through filtering
+    final_next_cron_run_id =
+      if next_cron_dataclip, do: next_cron_dataclip.id, else: nil
+
+    {dataclips, final_next_cron_run_id}
+  end
+
+  # Get the next cron run dataclip (with filters applied)
+  defp get_next_cron_run_dataclip(job_id, db_filters) do
+    from(d in Dataclip,
+      join: s in Step,
+      on: s.output_dataclip_id == d.id,
+      where:
+        s.job_id == ^job_id and s.exit_reason == "success" and
+          is_nil(d.wiped_at),
+      where: ^db_filters,
+      select: %{
+        id: d.id,
+        type: d.type,
+        inserted_at: d.inserted_at,
+        project_id: d.project_id,
+        wiped_at: d.wiped_at,
+        is_next_cron_run: true
+      },
+      order_by: [desc: s.finished_at],
+      limit: 1
+    )
+    |> Repo.one()
   end
 
   # Build dynamic filters for the database queries
@@ -116,42 +177,10 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
         type: d.type,
         inserted_at: d.inserted_at,
         project_id: d.project_id,
-        wiped_at: d.wiped_at,
-        is_next_cron_run: false
+        wiped_at: d.wiped_at
       },
       distinct: [desc: d.inserted_at],
       order_by: [desc: d.inserted_at]
-    )
-  end
-
-  # Build query for next cron run dataclip (output of last successful step)
-  defp build_next_cron_run_query(job_id, db_filters) do
-    from(d in Dataclip,
-      join: s in Step,
-      on: s.output_dataclip_id == d.id,
-      where:
-        s.job_id == ^job_id and s.exit_reason == "success" and
-          is_nil(d.wiped_at),
-      where: ^db_filters,
-      select: %{
-        id: d.id,
-        type: d.type,
-        inserted_at: d.inserted_at,
-        project_id: d.project_id,
-        wiped_at: d.wiped_at,
-        is_next_cron_run: true
-      },
-      order_by: [desc: s.finished_at],
-      limit: 1
-    )
-  end
-
-  # Build the union query and apply final ordering
-  defp build_union_query(input_query, next_cron_query) do
-    union_query = from(d in subquery(input_query), union: ^next_cron_query)
-
-    from(u in subquery(union_query),
-      order_by: [desc: u.is_next_cron_run, desc: u.inserted_at]
     )
   end
 
@@ -160,14 +189,6 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     query
     |> limit(^limit)
     |> then(fn q -> if offset, do: offset(q, ^offset), else: q end)
-  end
-
-  # Extract the next cron run ID from the dataclips data
-  defp extract_next_cron_run_id(dataclips_data) do
-    case Enum.find(dataclips_data, & &1.is_next_cron_run) do
-      nil -> nil
-      data -> data.id
-    end
   end
 
   # Convert the result data back to proper Dataclip structs
