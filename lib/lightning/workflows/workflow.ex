@@ -40,9 +40,8 @@ defmodule Lightning.Workflows.Workflow do
     field :enable_job_logs, :boolean, default: true
 
     has_many :edges, Edge, on_replace: :delete_if_exists
-
     has_many :jobs, Job, on_replace: :delete
-    has_many :triggers, Trigger
+    has_many :triggers, Trigger, on_replace: :delete_if_exists
 
     has_many :work_orders, Lightning.WorkOrder
     has_many :runs, through: [:work_orders, :runs]

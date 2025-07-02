@@ -34,7 +34,7 @@ defmodule LightningWeb.AiAssistant.Component do
        form: to_form(%{"content" => nil}),
        pending_message: AsyncResult.ok(nil),
        ai_enabled?: AiAssistant.enabled?(),
-       workflow_context: nil
+       workflow_code: nil
      })
      |> assign_async(:endpoint_available?, fn ->
        {:ok, %{endpoint_available?: AiAssistant.endpoint_available?()}}
@@ -48,11 +48,9 @@ defmodule LightningWeb.AiAssistant.Component do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:parent_id, assigns[:parent_id] || nil)
      |> assign(
        has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
      )
-     |> assign(:mode, mode)
      |> assign(:handler, ModeRegistry.get_handler(mode))
      |> maybe_check_limit()
      |> apply_action(action, mode)}
@@ -199,10 +197,6 @@ defmodule LightningWeb.AiAssistant.Component do
     {:noreply, socket}
   end
 
-  def handle_event("workflow_context_ready", %{"yaml" => yaml}, socket) do
-    {:noreply, assign(socket, workflow_context: yaml)}
-  end
-
   def handle_async(:process_message, {:ok, {:ok, session}}, socket) do
     {:noreply,
      socket
@@ -224,16 +218,12 @@ defmodule LightningWeb.AiAssistant.Component do
     ui_callback = fn event, _data ->
       case event do
         :clear_template ->
-          if is_nil(socket.assigns.parent_id) do
-            send(self(), {:workflow_code_generated, nil})
-          else
-            send_update(
-              LightningWeb.WorkflowLive.NewWorkflowComponent,
-              id: socket.assigns.parent_id,
-              action: :template_selected,
-              template: nil
-            )
-          end
+          send_update(
+            socket.assigns.parent_module,
+            id: socket.assigns.parent_id,
+            action: :template_selected,
+            template: nil
+          )
 
         _ ->
           :ok
@@ -291,14 +281,7 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp save_message(socket, :show, content) do
-    enhanced_assigns =
-      if socket.assigns.mode == :workflow && socket.assigns.workflow_context do
-        Map.put(socket.assigns, :workflow_yaml, socket.assigns.workflow_context)
-      else
-        socket.assigns
-      end
-
-    case socket.assigns.handler.save_message(enhanced_assigns, content) do
+    case socket.assigns.handler.save_message(socket.assigns, content) do
       {:ok, session} ->
         socket
         |> assign(:session, session)
@@ -369,10 +352,13 @@ defmodule LightningWeb.AiAssistant.Component do
   defp process_message(socket, message) do
     session = socket.assigns.session
     handler = socket.assigns.handler
+    workflow_code = socket.assigns.workflow_code
 
     socket
     |> assign(:pending_message, AsyncResult.loading())
-    |> start_async(:process_message, fn -> handler.query(session, message) end)
+    |> start_async(:process_message, fn ->
+      handler.query(session, message, workflow_code: workflow_code)
+    end)
   end
 
   defp maybe_push_workflow_code(socket, session_or_message) do
@@ -381,20 +367,16 @@ defmodule LightningWeb.AiAssistant.Component do
         socket
 
       %{yaml: yaml} ->
-        parent_id = socket.assigns.parent_id
+        IO.inspect("FIRING FIRING FIRING !")
+        IO.inspect(socket.assigns.parent_module)
+        IO.inspect(socket.assigns.parent_id)
 
-        # If parent_id is nil, send message to parent LiveView
-        # Otherwise, send_update to the component
-        if is_nil(parent_id) do
-          send(self(), {:workflow_code_generated, yaml})
-        else
-          send_update(
-            LightningWeb.WorkflowLive.NewWorkflowComponent,
-            id: parent_id,
-            action: :template_selected,
-            template: %{code: yaml}
-          )
-        end
+        send_update(
+          socket.assigns.parent_module,
+          id: socket.assigns.parent_id,
+          action: :template_selected,
+          template: %{code: yaml}
+        )
 
         socket
     end

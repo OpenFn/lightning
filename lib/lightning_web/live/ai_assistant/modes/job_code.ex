@@ -25,8 +25,12 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   """
   @impl true
   @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def create_session(%{selected_job: job, current_user: user}, content) do
-    AiAssistant.create_session(job, user, content)
+  def create_session(
+        %{selected_job: job, current_user: user},
+        content,
+        opts \\ []
+      ) do
+    AiAssistant.create_session(job, user, content, opts)
   end
 
   @doc """
@@ -114,8 +118,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   - `content` - User's question or request for assistance
   """
   @impl true
-  @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def query(session, content) do
+  @spec query(map(), String.t(), keyword()) :: {:ok, map()} | {:error, any()}
+  def query(session, content, _opts \\ []) do
     AiAssistant.query(session, content)
   end
 

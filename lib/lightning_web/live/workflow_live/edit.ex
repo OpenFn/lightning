@@ -195,7 +195,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </LayoutComponents.header>
       </:header>
       <.WorkflowStore react-id="workflow-mount" />
-      <div class="h-full flex">
+      <div id="workflow-to-yaml" class="h-full flex" phx-hook="WorkflowToYAML">
         <.live_component
           :if={@show_new_workflow_panel}
           id="new-workflow-panel"
@@ -213,7 +213,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           id="workflow-ai-chat-panel"
           module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
           workflow={@workflow}
-          workflow_params={@workflow_params}
           project={@project}
           base_url={@base_url}
           chat_session_id={@query_params["chat"]}
@@ -669,7 +668,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
             cancel_url={@base_url}
-            phx-hook="WorkflowToYAML"
           >
             <div
               :if={!@workflow_code && !@publish_template}
@@ -1552,7 +1550,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:noreply,
        socket
        |> apply_params(next_params, :workflow)
-       |> push_patches_applied(initial_params)}
+       |> push_patches_applied(initial_params)
+       |> trigger_yaml_generation()}
     else
       :not_authorized ->
         {:noreply,
@@ -1783,7 +1782,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         :snapshot
       end
 
-    socket = socket |> apply_params(params, version_type)
+    socket =
+      socket
+      |> apply_params(params, version_type)
+      |> trigger_yaml_generation()
 
     # Calculate the difference between the new params and changes introduced by
     # the changeset/validation.
@@ -1986,11 +1988,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
-    # For persistent workflow AI chat: just send the generated YAML to the frontend
-    # The workflow editor will apply the YAML to update the current workflow
-    {:noreply,
-     socket
-     |> push_event("workflow_code_generated", %{"code" => code})}
+    if socket.assigns.show_workflow_ai_chat do
+      send_update(LightningWeb.WorkflowLive.WorkflowAiChatComponent,
+        id: "workflow-ai-chat-panel",
+        action: :workflow_updated,
+        workflow_code: code
+      )
+    end
+
+    {:noreply, assign(socket, workflow_code: code)}
   end
 
   def handle_event("cancel_publish_template", _params, socket) do
@@ -2121,40 +2127,30 @@ defmodule LightningWeb.WorkflowLive.Edit do
          )}
 
       :form_changed ->
+        next_params =
+          WorkflowParams.apply_form_params(
+            socket.assigns.workflow_params,
+            payload["workflow"]
+          )
+          |> dbg()
+
         {:noreply,
-         handle_new_params(
-           socket,
-           payload["workflow"],
-           :workflow,
+         socket
+         |> apply_params(next_params, :workflow)
+         |> mark_validated()
+         |> maybe_push_patches_applied(
+           socket.assigns.workflow_params,
            Map.get(payload, "opts", [])
          )}
     end
   end
 
-  # def handle_info({:chat_session_created, session_id}, socket) do
-  #   query_params =
-  #     socket.assigns.query_params
-  #     |> Map.put("chat", session_id)
-  #     |> Map.put("method", "ai")
-  #     |> Map.reject(fn {_k, v} -> is_nil(v) end)
-
-  #   {:noreply,
-  #    push_patch(socket,
-  #      to:
-  #        ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}?#{query_params}"
-  #    )}
-  # end
-
-  def handle_info({:workflow_code_generated, code}, socket) do
-    # For persistent workflow AI chat: just send the generated YAML to the frontend
-    # The workflow editor will apply the YAML to update the current workflow
-    {:noreply,
-     socket
-     |> push_event("workflow_code_generated", %{"code" => code})}
-  end
-
   def handle_info(%{}, socket) do
     {:noreply, socket}
+  end
+
+  defp trigger_yaml_generation(socket) do
+    push_event(socket, "generate_workflow_code", %{})
   end
 
   defp save_workflow(socket, submitted_params) do
@@ -2557,6 +2553,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> apply_params(next_params, type)
       |> mark_validated()
       |> maybe_push_patches_applied(initial_params, opts)
+      |> trigger_yaml_generation()
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")

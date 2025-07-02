@@ -24,8 +24,12 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   """
   @impl true
   @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def create_session(%{project: project, current_user: current_user}, content) do
-    AiAssistant.create_workflow_session(project, current_user, content)
+  def create_session(
+        %{project: project, current_user: current_user},
+        content,
+        opts \\ []
+      ) do
+    AiAssistant.create_workflow_session(project, current_user, content, opts)
   end
 
   @doc """
@@ -76,22 +80,15 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   @impl true
   @spec save_message(map(), String.t()) :: {:ok, map()} | {:error, any()}
   def save_message(%{session: session, current_user: user} = assigns, content) do
-    # Extract workflow params and convert to simple structure
-    workflow_yaml = extract_workflow_yaml(assigns)
-
-    # Store in meta since that persists across the session
-    updated_meta = Map.put(session.meta || %{}, "workflow_yaml", workflow_yaml)
+    opts =
+      if assigns[:workflow_code],
+        do: [workflow_code: assigns[:workflow_code]],
+        else: []
 
     AiAssistant.save_message(
       session,
-      %{
-        role: :user,
-        content: content,
-        user: user
-      },
-      # Pass meta as 4th parameter
-      %{},
-      updated_meta
+      %{role: :user, content: content, user: user},
+      opts
     )
   end
 
@@ -106,19 +103,11 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   - `session` - Session with conversation history and context
   - `content` - User's workflow description or modification request
+  - `opts` - Additional options for AI processing (e.g., workflow YAML, errors, etc.)
   """
   @impl true
-  @spec query(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def query(session, content) do
-    # Get workflow YAML from meta or from previous messages
-    # FIX: Use direct field access instead of get_in
-    workflow_yaml =
-      session.meta["workflow_yaml"] ||
-        get_latest_workflow_context(session)
-
-    Logger.info("Querying workflow with existing YAML: #{workflow_yaml != nil}")
-
-    AiAssistant.query_workflow(session, content, workflow_yaml)
+  def query(session, content, opts \\ []) do
+    AiAssistant.query_workflow(session, content, opts)
   end
 
   @doc """
@@ -294,23 +283,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     ErrorHandler.format_error(error)
   end
 
-  # Private functions
-
   defp has_reached_limit?(ai_limit_result) do
     ai_limit_result != :ok
   end
 
-  defp get_latest_workflow_context(session) do
-    # Try to extract from messages
-    session.messages
-    |> Enum.reverse()
-    |> Enum.find_value(nil, fn
-      %{role: :assistant, workflow_code: yaml} when not is_nil(yaml) -> yaml
-      _ -> nil
-    end)
-  end
-
-  # Combined extract_workflow_yaml function with all clauses
   defp extract_workflow_yaml(%Lightning.AiAssistant.ChatSession{
          messages: messages
        }) do
@@ -327,52 +303,6 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     if has_workflow_code?(code), do: code
   end
 
-  defp extract_workflow_yaml(%{workflow_params: params}) when is_map(params) do
-    # Simple YAML-like string representation
-    # The AI just needs to understand the structure
-    """
-    name: #{params["name"]}
-    jobs:
-    #{format_jobs(params["jobs"])}
-    triggers:
-    #{format_triggers(params["triggers"])}
-    edges:
-    #{format_edges(params["edges"])}
-    """
-  end
-
-  defp extract_workflow_yaml(_), do: nil
-
   defp has_workflow_code?(code) when is_binary(code), do: code != ""
   defp has_workflow_code?(_), do: false
-
-  defp format_jobs(nil), do: "  # No jobs"
-
-  defp format_jobs(jobs) do
-    jobs
-    |> Enum.map(fn job ->
-      "  #{job["name"]}:\n    id: #{job["id"]}\n    adaptor: #{job["adaptor"]}\n    has_code: #{job["body"] && job["body"] != ""}"
-    end)
-    |> Enum.join("\n")
-  end
-
-  defp format_triggers(nil), do: "  # No triggers"
-
-  defp format_triggers(triggers) do
-    triggers
-    |> Enum.map(fn trigger ->
-      "  #{trigger["type"]}:\n    enabled: #{trigger["enabled"]}"
-    end)
-    |> Enum.join("\n")
-  end
-
-  defp format_edges(nil), do: "  # No edges"
-
-  defp format_edges(edges) do
-    edges
-    |> Enum.map(fn edge ->
-      "  edge_#{edge["id"]}:\n    source: #{edge["source_job_id"] || edge["source_trigger_id"]}\n    target: #{edge["target_job_id"]}"
-    end)
-    |> Enum.join("\n")
-  end
 end
