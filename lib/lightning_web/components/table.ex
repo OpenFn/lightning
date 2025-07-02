@@ -258,17 +258,11 @@ defmodule LightningWeb.Components.Table do
   slot :inner_block, required: true
   attr :class, :string, default: nil
   attr :id, :string, default: nil
-  attr :colspan, :integer, default: nil
-  attr :rowspan, :integer, default: nil
+  attr :rest, :global, include: ~w(colspan rowspan)
 
   def td(assigns) do
     ~H"""
-    <td
-      id={@id}
-      colspan={@colspan}
-      rowspan={@rowspan}
-      class={["text-sm text-gray-500", @class]}
-    >
+    <td id={@id} class={["text-sm text-gray-500", @class]} {@rest}>
       {render_slot(@inner_block)}
     </td>
     """

@@ -42,6 +42,8 @@ and this project adheres to
   [#3360](https://github.com/OpenFn/lightning/pull/3360)
 - Fix text content overflowing in credential modal
   [#3280](https://github.com/OpenFn/lightning/pull/3280)
+- Fix tables UI broken
+  [#3324](https://github.com/OpenFn/lightning/issues/3324)
 
 ## [2.13.3] 2025-06-26
 
