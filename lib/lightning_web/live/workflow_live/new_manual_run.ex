@@ -7,6 +7,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
 
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -24,35 +25,179 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   def search_selectable_dataclips(job_id, search_text, limit, offset) do
     with {:ok, filters} <-
            get_dataclips_filters(search_text),
-         dataclips <-
-           Invocation.list_dataclips_for_job(
+         {dataclips, next_cron_run_id} <-
+           list_dataclips_for_job_with_cron_state(
              %Job{id: job_id},
              filters,
              limit: limit,
              offset: offset
            ) do
-      # Check if this job is cron-triggered and include next run state if so
-      {enhanced_dataclips, next_cron_run_id} =
-        maybe_add_next_cron_run(job_id, dataclips)
-
-      {:ok, %{dataclips: enhanced_dataclips, next_cron_run_id: next_cron_run_id}}
+      {:ok, %{dataclips: dataclips, next_cron_run_id: next_cron_run_id}}
     end
   end
 
-  # Private function to check if job is cron-triggered and add next run dataclip
-  defp maybe_add_next_cron_run(job_id, dataclips) do
-    case cron_triggered_job?(job_id) do
-      true ->
-        case last_state_for_job(job_id) do
-          nil ->
-            {dataclips, nil}
+  # Private function to list dataclips for a job, including next cron run state if cron-triggered
+  defp list_dataclips_for_job_with_cron_state(%Job{id: job_id}, user_filters, opts) do
+    if cron_triggered_job?(job_id) do
+      list_dataclips_with_cron_state(job_id, user_filters, opts)
+    else
+      dataclips = Invocation.list_dataclips_for_job(
+        %Job{id: job_id},
+        user_filters,
+        opts
+      )
+      {dataclips, nil}
+    end
+  end
 
-          next_run_dataclip ->
-            {[next_run_dataclip | dataclips], next_run_dataclip.id}
-        end
+  # Query dataclips for cron-triggered jobs, including the next run state
+  defp list_dataclips_with_cron_state(job_id, user_filters, opts) do
+    limit = Keyword.fetch!(opts, :limit)
+    offset = Keyword.get(opts, :offset)
 
-      false ->
-        {dataclips, nil}
+    # Create the filters that will be applied to both parts of the union
+    db_filters =
+      Enum.reduce(user_filters, dynamic(true), fn
+        {:id, uuid}, dynamic ->
+          dynamic([d], ^dynamic and d.id == ^uuid)
+
+        {:id_prefix, id_prefix}, dynamic ->
+          {id_prefix_start, id_prefix_end} =
+            id_prefix_interval(id_prefix)
+
+          dynamic(
+            [d],
+            ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
+          )
+
+        {:type, type}, dynamic ->
+          dynamic([d], ^dynamic and d.type == ^type)
+
+        {:after, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at >= ^ts)
+
+        {:before, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at <= ^ts)
+      end)
+
+    # Query for regular input dataclips
+    input_dataclips_query =
+      from(d in Dataclip,
+        join: s in Step,
+        on: s.input_dataclip_id == d.id,
+        where: s.job_id == ^job_id and is_nil(d.wiped_at),
+        where: ^db_filters,
+        select: %{
+          id: d.id,
+          type: d.type,
+          inserted_at: d.inserted_at,
+          project_id: d.project_id,
+          wiped_at: d.wiped_at,
+          is_next_cron_run: false
+        },
+        distinct: [desc: d.inserted_at],
+        order_by: [desc: d.inserted_at]
+      )
+
+    # Query for next cron run dataclip (output of last successful step)
+    next_cron_run_query =
+      from(d in Dataclip,
+        join: s in Step,
+        on: s.output_dataclip_id == d.id,
+        where: s.job_id == ^job_id and s.exit_reason == "success" and is_nil(d.wiped_at),
+        where: ^db_filters,
+        select: %{
+          id: d.id,
+          type: d.type,
+          inserted_at: d.inserted_at,
+          project_id: d.project_id,
+          wiped_at: d.wiped_at,
+          is_next_cron_run: true
+        },
+        order_by: [desc: s.finished_at],
+        limit: 1
+      )
+
+    # Union both queries
+    union_query =
+      from(d in subquery(input_dataclips_query),
+        union: ^next_cron_run_query
+      )
+
+    # Apply final ordering, limit, and offset
+    dataclips_data =
+      from(u in subquery(union_query),
+        order_by: [desc: u.is_next_cron_run, desc: u.inserted_at],
+        limit: ^limit
+      )
+      |> then(fn query -> if offset, do: offset(query, ^offset), else: query end)
+      |> Repo.all()
+      |> maybe_filter_uuid_prefix(user_filters)
+
+    # Extract next_cron_run_id and convert to proper dataclip structs
+    next_cron_run_id =
+      dataclips_data
+      |> Enum.find(&(&1.is_next_cron_run))
+      |> case do
+        nil -> nil
+        data -> data.id
+      end
+
+    # Convert the result data back to proper Dataclip structs
+    dataclips =
+      dataclips_data
+      |> Enum.map(fn data ->
+        %Dataclip{
+          id: data.id,
+          type: data.type,
+          inserted_at: data.inserted_at,
+          project_id: data.project_id,
+          wiped_at: data.wiped_at,
+          body: nil,
+          request: nil
+        }
+      end)
+
+    {dataclips, next_cron_run_id}
+  end
+
+  # Helper function copied from Lightning.Invocation for id_prefix filtering
+  defp id_prefix_interval(id_prefix) do
+    prefix_bin =
+      id_prefix
+      |> String.to_charlist()
+      |> Enum.chunk_every(2)
+      |> Enum.reduce(<<>>, fn
+        [_single_char], prefix_bin ->
+          prefix_bin
+
+        byte_list, prefix_bin ->
+          byte_int = byte_list |> :binary.list_to_bin() |> String.to_integer(16)
+          prefix_bin <> <<byte_int>>
+      end)
+
+    prefix_size = byte_size(prefix_bin)
+
+    # UUIDs are 128 bits (16 bytes) in binary form.
+    # We calculate how many bytes are missing from the prefix.
+    # missing_byte_size is the number of bytes to pad to reach a full UUID binary.
+    # We pad with 0s for the lower bound and 255s for the upper bound.
+    missing_byte_size = 16 - prefix_size
+
+    {
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<0>>, missing_byte_size)),
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<255>>, missing_byte_size))
+    }
+  end
+
+  # Helper function copied from Lightning.Invocation for uuid_prefix filtering
+  defp maybe_filter_uuid_prefix(dataclips, filters) do
+    case Map.get(filters, :id_prefix, "") do
+      id_prefix when rem(byte_size(id_prefix), 2) == 1 ->
+        Enum.filter(dataclips, &String.starts_with?(&1.id, id_prefix))
+
+      _ ->
+        dataclips
     end
   end
 
@@ -68,19 +213,6 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     |> case do
       count when count > 0 -> true
       _ -> false
-    end
-  end
-
-  # Copy of the last_state_for_job function from the scheduler
-  defp last_state_for_job(id) do
-    step =
-      %Job{id: id}
-      |> Invocation.Query.last_successful_step_for_job()
-      |> Repo.one()
-
-    case step do
-      nil -> nil
-      step -> Invocation.get_output_dataclip_query(step) |> Repo.one()
     end
   end
 
