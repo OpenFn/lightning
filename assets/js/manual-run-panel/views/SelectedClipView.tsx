@@ -51,7 +51,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
               {truncateUid(dataclip.id)}{' '}
             </div>
             <div className="text-xs truncate ml-2">
-              {formatDate(new Date(dataclip.updated_at))}
+              {formatDate(new Date(dataclip.inserted_at))}
             </div>
           </div>
         </Pill>
