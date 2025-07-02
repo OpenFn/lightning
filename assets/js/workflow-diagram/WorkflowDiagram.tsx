@@ -355,6 +355,27 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   );
   // Set up tooltips for control buttons
   useTippyForControls(isManualLayout);
+
+  // undo/redo keyboard shortcuts
+  React.useEffect(() => {
+    const keyHandler = (e: KeyboardEvent) => {
+      const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z';
+      const isRedo = ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z');
+
+      if (isUndo) {
+        e.preventDefault();
+        undo();
+      }
+      if (isRedo) {
+        e.preventDefault();
+        redo();
+      }
+    }
+    window.addEventListener('keydown', keyHandler);
+    return () => { window.removeEventListener('keydown', keyHandler); }
+  }, [redo, undo]);
+
   return (
     <ReactFlowProvider>
       <ReactFlow
