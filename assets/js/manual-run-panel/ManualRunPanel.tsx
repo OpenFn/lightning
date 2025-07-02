@@ -152,11 +152,12 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       pushEventTo(
         'get-run-input-dataclip',
         { run_id: runId, job_id: job_id },
-        (response: any) => {
-          if (response.dataclip) {
-            setCurrentRunDataclip(response.dataclip);
+        (response: unknown) => {
+          const typedResponse = response as { dataclip: Dataclip | null };
+          if (typedResponse.dataclip) {
+            setCurrentRunDataclip(typedResponse.dataclip);
             // Auto-select the current run's dataclip when viewing a specific run
-            selectDataclipForManualRun(response.dataclip);
+            selectDataclipForManualRun(typedResponse.dataclip);
           }
         }
       );

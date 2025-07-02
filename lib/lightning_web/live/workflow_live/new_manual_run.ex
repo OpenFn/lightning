@@ -37,15 +37,21 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   # Private function to list dataclips for a job, including next cron run state if cron-triggered
-  defp list_dataclips_for_job_with_cron_state(%Job{id: job_id}, user_filters, opts) do
+  defp list_dataclips_for_job_with_cron_state(
+         %Job{id: job_id},
+         user_filters,
+         opts
+       ) do
     if cron_triggered_job?(job_id) do
       list_dataclips_with_cron_state(job_id, user_filters, opts)
     else
-      dataclips = Invocation.list_dataclips_for_job(
-        %Job{id: job_id},
-        user_filters,
-        opts
-      )
+      dataclips =
+        Invocation.list_dataclips_for_job(
+          %Job{id: job_id},
+          user_filters,
+          opts
+        )
+
       {dataclips, nil}
     end
   end
@@ -104,7 +110,9 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
       from(d in Dataclip,
         join: s in Step,
         on: s.output_dataclip_id == d.id,
-        where: s.job_id == ^job_id and s.exit_reason == "success" and is_nil(d.wiped_at),
+        where:
+          s.job_id == ^job_id and s.exit_reason == "success" and
+            is_nil(d.wiped_at),
         where: ^db_filters,
         select: %{
           id: d.id,
@@ -137,7 +145,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     # Extract next_cron_run_id and convert to proper dataclip structs
     next_cron_run_id =
       dataclips_data
-      |> Enum.find(&(&1.is_next_cron_run))
+      |> Enum.find(& &1.is_next_cron_run)
       |> case do
         nil -> nil
         data -> data.id
