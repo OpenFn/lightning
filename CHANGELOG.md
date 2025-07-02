@@ -20,6 +20,8 @@ and this project adheres to
 - New buttons to run a workflow directly from the canvas, both from the start of
   the workflow [#3290](https://github.com/OpenFn/lightning/issues/3290) and from
   an individual step [#3294](https://github.com/OpenFn/lightning/issues/3294)
+- Sorting & filtering superuser interfaces for Projects, Project, and Users
+  [#3354](https://github.com/OpenFn/lightning/pull/3354)
 
 ### Changed
 
