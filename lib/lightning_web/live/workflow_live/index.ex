@@ -51,8 +51,8 @@ defmodule LightningWeb.WorkflowLive.Index do
           can_delete_workflow={@can_delete_workflow}
           workflows_stats={@workflows_stats}
           project={@project}
-          sort_key={Atom.to_string(@sort_key)}
-          sort_direction={Atom.to_string(@sort_direction)}
+          sort_key={@sort_key}
+          sort_direction={@sort_direction}
           search_term={@search_term}
         />
       </LayoutComponents.centered>
@@ -95,8 +95,8 @@ defmodule LightningWeb.WorkflowLive.Index do
   def handle_params(params, _url, socket) do
     search_term = params["q"] || ""
 
-    sort_key = params["sort"] |> to_sort_key()
-    sort_direction = params["dir"] |> to_sort_direction()
+    sort_key = params["sort"] || "name"
+    sort_direction = params["dir"] || "asc"
 
     {:noreply,
      socket
@@ -116,7 +116,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       sort_direction: sort_direction
     } = socket.assigns
 
-    opts = [order_by: {sort_key, sort_direction}]
+    opts = [order_by: {String.to_atom(sort_key), String.to_atom(sort_direction)}]
 
     opts =
       if search_term && search_term != "" do
@@ -129,13 +129,13 @@ defmodule LightningWeb.WorkflowLive.Index do
     workflow_stats = Enum.map(workflows, &DashboardStats.get_workflow_stats/1)
 
     sorted_stats =
-      if sort_key in [:name, :enabled] do
+      if sort_key in ["name", "enabled"] do
         workflow_stats
       else
         DashboardStats.sort_workflow_stats(
           workflow_stats,
-          sort_key,
-          sort_direction
+          String.to_atom(sort_key),
+          String.to_atom(sort_direction)
         )
       end
 
@@ -183,8 +183,8 @@ defmodule LightningWeb.WorkflowLive.Index do
 
     {sort_key, sort_direction} =
       TableHelpers.toggle_sort_direction(
-        Atom.to_string(socket.assigns.sort_direction),
-        Atom.to_string(socket.assigns.sort_key),
+        socket.assigns.sort_direction,
+        socket.assigns.sort_key,
         field
       )
 
@@ -283,15 +283,4 @@ defmodule LightningWeb.WorkflowLive.Index do
   defp check_run_limits(assigns, project_id) do
     LiveHelpers.check_limits(assigns, project_id)
   end
-
-  defp to_sort_key("name"), do: :name
-  defp to_sort_key("enabled"), do: :enabled
-  defp to_sort_key("workorders_count"), do: :workorders_count
-  defp to_sort_key("failed_workorders_count"), do: :failed_workorders_count
-  defp to_sort_key("last_workorder_updated_at"), do: :last_workorder_updated_at
-  defp to_sort_key(nil), do: :name
-
-  defp to_sort_direction("asc"), do: :asc
-  defp to_sort_direction("desc"), do: :desc
-  defp to_sort_direction(nil), do: :asc
 end

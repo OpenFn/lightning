@@ -92,11 +92,11 @@
               <.td>{project.inserted_at}</.td>
               <.td>{project.description}</.td>
               <.td>
-                <%= case Enum.find(project.project_users, fn pu -> pu.role == :owner end) do %>
-                  <% %{user: user} when not is_nil(user) -> %>
-                    {user.first_name} {user.last_name}
-                  <% _ -> %>
+                <%= case get_project_owner_name(project) do %>
+                  <% "" -> %>
                     <span class="text-gray-400">No owner</span>
+                  <% owner_name -> %>
+                    {owner_name}
                 <% end %>
               </.td>
               <.td>{project.scheduled_deletion}</.td>

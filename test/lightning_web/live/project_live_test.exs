@@ -356,8 +356,8 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     test "Edits a project", %{conn: conn, user: superuser} do
-      user1 = insert(:user, first_name: "2")
-      user2 = insert(:user, first_name: "3")
+      user1 = insert(:user, first_name: "Alice", last_name: "Owner")
+      user2 = insert(:user, first_name: "Bob", last_name: "Viewer")
 
       project =
         insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
@@ -412,9 +412,12 @@ defmodule LightningWeb.ProjectLiveTest do
       html = render(index_live)
 
       # Check that projects appear in reverse name order
-      alpha_pos = :binary.match(html, "alpha-project") |> elem(0)
-      beta_pos = :binary.match(html, "beta-project") |> elem(0)
-      charlie_pos = :binary.match(html, "charlie-project") |> elem(0)
+      [alpha_pos, beta_pos, charlie_pos] =
+        get_element_order(html, [
+          "alpha-project",
+          "beta-project",
+          "charlie-project"
+        ])
 
       assert charlie_pos < beta_pos
       assert beta_pos < alpha_pos
@@ -427,12 +430,11 @@ defmodule LightningWeb.ProjectLiveTest do
       html = render(index_live)
 
       # Check that projects appear in name alphabetical order
-      alpha_pos = :binary.match(html, "alpha-project") |> elem(0)
-      beta_pos = :binary.match(html, "beta-project") |> elem(0)
-      charlie_pos = :binary.match(html, "charlie-project") |> elem(0)
-
-      assert alpha_pos < beta_pos
-      assert beta_pos < charlie_pos
+      assert assert_elements_in_order(html, [
+               "alpha-project",
+               "beta-project",
+               "charlie-project"
+             ])
     end
 
     test "sorting projects by created date works correctly", %{conn: conn} do
@@ -460,10 +462,7 @@ defmodule LightningWeb.ProjectLiveTest do
       html = render(index_live)
 
       # Old project should appear first when sorted by created date ascending
-      old_pos = :binary.match(html, "old-project") |> elem(0)
-      new_pos = :binary.match(html, "new-project") |> elem(0)
-
-      assert old_pos < new_pos
+      assert assert_elements_in_order(html, ["old-project", "new-project"])
     end
 
     test "filtering projects by search term works correctly", %{conn: conn} do
@@ -705,11 +704,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       html = render(view)
       # Check that users are sorted in descending order (first click)
-      alice_pos = :binary.match(html, "Alice Alpha") |> elem(0)
-      bob_pos = :binary.match(html, "Bob Beta") |> elem(0)
-      charlie_pos = :binary.match(html, "Charlie Gamma") |> elem(0)
+      [charlie_pos, bob_pos, alice_pos] =
+        get_element_order(
+          html,
+          ["Charlie Gamma", "Bob Beta", "Alice Alpha"],
+          "#project_users_table tbody tr"
+        )
 
-      # First click sorts in descending order: Charlie, Bob, Alice
+      # First click sorts in descending order: Charlie, Bob, Alice  
       assert charlie_pos < bob_pos
       assert bob_pos < alice_pos
     end
@@ -5888,5 +5890,42 @@ defmodule LightningWeb.ProjectLiveTest do
         "#{user.first_name} #{user.last_name}"
     end)
     |> to_string()
+  end
+
+  # Helper to check element order in rendered HTML using proper parsing
+  defp assert_elements_in_order(
+         html,
+         elements,
+         table_selector \\ "table tbody tr"
+       ) do
+    parsed_html = Floki.parse_fragment!(html)
+    rows = Floki.find(parsed_html, table_selector)
+
+    row_texts = Enum.map(rows, fn row -> Floki.text(row) end)
+
+    # Find positions of each element in the row texts
+    positions =
+      Enum.map(elements, fn element ->
+        Enum.find_index(row_texts, fn row_text ->
+          String.contains?(row_text, element)
+        end)
+      end)
+
+    # Check if positions are in ascending order
+    positions == Enum.sort(positions)
+  end
+
+  defp get_element_order(html, elements, table_selector \\ "table tbody tr") do
+    parsed_html = Floki.parse_fragment!(html)
+    rows = Floki.find(parsed_html, table_selector)
+
+    row_texts = Enum.map(rows, fn row -> Floki.text(row) end)
+
+    # Find positions of each element in the row texts
+    Enum.map(elements, fn element ->
+      Enum.find_index(row_texts, fn row_text ->
+        String.contains?(row_text, element)
+      end)
+    end)
   end
 end

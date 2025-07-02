@@ -220,7 +220,7 @@ defmodule LightningWeb.ProjectLive.Index do
     |> Lightning.Repo.all()
   end
 
-  defp get_project_owner_name(project) do
+  def get_project_owner_name(project) do
     case Enum.find(project.project_users, fn pu -> pu.role == :owner end) do
       %{user: user} when not is_nil(user) ->
         "#{user.first_name || ""} #{user.last_name || ""}" |> String.trim()

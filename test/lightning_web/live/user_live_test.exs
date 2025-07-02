@@ -489,12 +489,11 @@ defmodule LightningWeb.UserLiveTest do
       {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
 
       # Check initial state (should be sorted by email ascending by default)
-      alpha_pos = :binary.match(html, "alpha@example.com") |> elem(0)
-      beta_pos = :binary.match(html, "beta@example.com") |> elem(0)
-      charlie_pos = :binary.match(html, "charlie@example.com") |> elem(0)
-
-      assert alpha_pos < beta_pos
-      assert beta_pos < charlie_pos
+      assert assert_elements_in_order(html, [
+               "alpha@example.com",
+               "beta@example.com",
+               "charlie@example.com"
+             ])
 
       # Click email header to toggle to descending
       index_live
@@ -504,12 +503,11 @@ defmodule LightningWeb.UserLiveTest do
       html = render(index_live)
 
       # Check reverse order
-      alpha_pos = :binary.match(html, "alpha@example.com") |> elem(0)
-      beta_pos = :binary.match(html, "beta@example.com") |> elem(0)
-      charlie_pos = :binary.match(html, "charlie@example.com") |> elem(0)
-
-      assert charlie_pos < beta_pos
-      assert beta_pos < alpha_pos
+      assert assert_elements_in_order(html, [
+               "charlie@example.com",
+               "beta@example.com",
+               "alpha@example.com"
+             ])
     end
 
     test "sorting by first name column works correctly", %{conn: conn} do
@@ -527,12 +525,7 @@ defmodule LightningWeb.UserLiveTest do
       html = render(index_live)
 
       # Check that first names are in alphabetical order
-      alice_pos = :binary.match(html, "Alice") |> elem(0)
-      bob_pos = :binary.match(html, "Bob") |> elem(0)
-      charlie_pos = :binary.match(html, "Charlie") |> elem(0)
-
-      assert alice_pos < bob_pos
-      assert bob_pos < charlie_pos
+      assert assert_elements_in_order(html, ["Alice", "Bob", "Charlie"])
     end
 
     test "sorting by role column works correctly", %{conn: conn} do
@@ -549,10 +542,7 @@ defmodule LightningWeb.UserLiveTest do
       html = render(index_live)
 
       # Check that superuser appears before user (alphabetical order)
-      super_pos = :binary.match(html, "superuser") |> elem(0)
-      user_pos = :binary.match(html, "user@example.com") |> elem(0)
-
-      assert super_pos < user_pos
+      assert assert_elements_in_order(html, ["superuser", "user@example.com"])
     end
 
     test "sorting by enabled status works correctly", %{conn: conn} do
@@ -571,10 +561,10 @@ defmodule LightningWeb.UserLiveTest do
       html = render(index_live)
 
       # Check that disabled user appears before enabled user (false < true)
-      enabled_pos = :binary.match(html, "enabled@example.com") |> elem(0)
-      disabled_pos = :binary.match(html, "disabled@example.com") |> elem(0)
-
-      assert disabled_pos < enabled_pos
+      assert assert_elements_in_order(html, [
+               "disabled@example.com",
+               "enabled@example.com"
+             ])
     end
 
     test "filtering users by search term works correctly", %{conn: conn} do
@@ -676,5 +666,28 @@ defmodule LightningWeb.UserLiveTest do
       {key, value} ->
         Map.get(user, key) == value
     end)
+  end
+
+  # Helper to check element order in rendered HTML using proper parsing
+  defp assert_elements_in_order(
+         html,
+         elements,
+         table_selector \\ "table tbody tr"
+       ) do
+    parsed_html = Floki.parse_fragment!(html)
+    rows = Floki.find(parsed_html, table_selector)
+
+    row_texts = Enum.map(rows, fn row -> Floki.text(row) end)
+
+    # Find positions of each element in the row texts
+    positions =
+      Enum.map(elements, fn element ->
+        Enum.find_index(row_texts, fn row_text ->
+          String.contains?(row_text, element)
+        end)
+      end)
+
+    # Check if positions are in ascending order
+    positions == Enum.sort(positions)
   end
 end
