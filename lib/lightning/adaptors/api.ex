@@ -30,6 +30,16 @@ defmodule Lightning.Adaptors.API do
           warm_interval: pos_integer()
         }
 
+  @typedoc """
+  Options for starting an Adaptors instance.
+  """
+  @type option ::
+          {:name, name()}
+          | {:strategy, {module(), term()}}
+          | {:persist_path, String.t()}
+          | {:offline_mode, boolean()}
+          | {:warm_interval, pos_integer()}
+
   @doc """
   Returns a list of all adaptor names.
 

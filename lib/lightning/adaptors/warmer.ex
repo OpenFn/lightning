@@ -59,7 +59,7 @@ defmodule Lightning.Adaptors.Warmer do
     - {:ok, pairs} where pairs is a list of {key, value} tuples for caching
     - :ignore if an error occurs during fetching
   """
-  @spec execute(config :: Lightning.Adaptors.config()) ::
+  @spec execute(config :: Lightning.Adaptors.API.config()) ::
           {:ok, list({String.t(), any()})} | :ignore
   def execute(config) do
     {module, strategy_config} = split_strategy(config.strategy)

@@ -14,7 +14,7 @@ defmodule Lightning.Adaptors.Supervisor do
   Configuration for the Adaptors supervisor.
   """
   @type config :: %{
-          name: Lightning.Adaptors.name(),
+          name: Lightning.Adaptors.API.name(),
           cache: atom(),
           strategy: {module(), term()},
           persist_path: String.t() | nil,
@@ -25,7 +25,7 @@ defmodule Lightning.Adaptors.Supervisor do
   @doc """
   Returns the child spec for starting the Adaptors supervisor.
   """
-  @spec child_spec([Lightning.Adaptors.option()]) :: Supervisor.child_spec()
+  @spec child_spec([Lightning.Adaptors.API.option()]) :: Supervisor.child_spec()
   def child_spec(opts) do
     opts
     |> super()
@@ -75,7 +75,7 @@ defmodule Lightning.Adaptors.Supervisor do
         persist_path: "/tmp/adaptors_cache"
       ])
   """
-  @spec start_link([Lightning.Adaptors.option()]) :: Supervisor.on_start()
+  @spec start_link([Lightning.Adaptors.API.option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
     name = Keyword.get(opts, :name, Lightning.Adaptors)
     cache_name = :"adaptors_cache_#{name}"

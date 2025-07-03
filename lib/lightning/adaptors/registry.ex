@@ -4,7 +4,7 @@ defmodule Lightning.Adaptors.Registry do
   """
 
   @type role :: term()
-  @type key :: Lightning.Adaptors.name() | {Lightning.Adaptors.name(), role()}
+  @type key :: Lightning.Adaptors.API.name() | {Lightning.Adaptors.API.name(), role()}
   @type value :: term()
 
   @doc false
@@ -26,7 +26,7 @@ defmodule Lightning.Adaptors.Registry do
 
       Lightning.Adaptors.Registry.config(MyApp.Adaptors)
   """
-  @spec config(Lightning.Adaptors.name()) :: Lightning.Adaptors.config()
+  @spec config(Lightning.Adaptors.API.name()) :: Lightning.Adaptors.API.config()
   def config(adaptors_name) do
     case lookup(adaptors_name) do
       {_pid, config} ->
@@ -52,7 +52,7 @@ defmodule Lightning.Adaptors.Registry do
 
       Lightning.Adaptors.Registry.lookup(Lightning.Adaptors, :cache)
   """
-  @spec lookup(Lightning.Adaptors.name(), role()) :: nil | {pid(), value()}
+  @spec lookup(Lightning.Adaptors.API.name(), role()) :: nil | {pid(), value()}
   def lookup(adaptors_name, role \\ nil) do
     __MODULE__
     |> Registry.lookup(key(adaptors_name, role))
@@ -72,7 +72,7 @@ defmodule Lightning.Adaptors.Registry do
 
       Lightning.Adaptors.Registry.whereis(Lightning.Adaptors, :cache)
   """
-  @spec whereis(Lightning.Adaptors.name(), role()) ::
+  @spec whereis(Lightning.Adaptors.API.name(), role()) ::
           pid() | {atom(), node()} | nil
   def whereis(adaptors_name, role \\ nil) do
     adaptors_name
@@ -93,7 +93,7 @@ defmodule Lightning.Adaptors.Registry do
 
       Lightning.Adaptors.Registry.via(Lightning.Adaptors, :cache)
   """
-  @spec via(Lightning.Adaptors.name(), role(), value()) ::
+  @spec via(Lightning.Adaptors.API.name(), role(), value()) ::
           {:via, Registry, {__MODULE__, key()}}
   def via(adaptors_name, role \\ nil, value \\ nil)
 
