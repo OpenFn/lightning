@@ -247,7 +247,7 @@ defmodule LightningWeb.AiAssistant.Component do
         socket.assigns
       )
 
-    socket = maybe_push_workflow_code(socket, session)
+    # socket = maybe_push_workflow_code(socket, session)
     pending_message = find_pending_user_message(session)
 
     if pending_message do
@@ -367,15 +367,11 @@ defmodule LightningWeb.AiAssistant.Component do
         socket
 
       %{yaml: yaml} ->
-        IO.inspect("FIRING FIRING FIRING !")
-        IO.inspect(socket.assigns.parent_module)
-        IO.inspect(socket.assigns.parent_id)
-
         send_update(
           socket.assigns.parent_module,
           id: socket.assigns.parent_id,
-          action: :template_selected,
-          template: %{code: yaml}
+          action: :workflow_updated,
+          workflow_code: yaml
         )
 
         socket

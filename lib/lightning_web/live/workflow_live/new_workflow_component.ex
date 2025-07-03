@@ -45,7 +45,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     {:ok, socket |> assign(template_generated: nil)}
   end
 
-  def update(%{action: :template_selected, template: template}, socket) do
+  def update(%{action: :workflow_updated, workflow_code: code}, socket) do
     notify_parent(:canvas_state_changed, %{
       show_canvas_placeholder: false,
       show_template_tooltip: nil
@@ -53,8 +53,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
     {:ok,
      socket
-     |> assign(template_generated: template)
-     |> push_event("template_selected", %{template: template.code})}
+     |> assign(template_generated: %{template: code})
+     |> push_event("template_selected", %{template: code})}
   end
 
   def update(assigns, socket) do

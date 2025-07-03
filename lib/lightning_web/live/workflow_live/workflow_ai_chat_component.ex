@@ -10,32 +10,29 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, workflow_code: nil)}
+    {:ok, assign(socket, workflow_code: nil, workflow_checksum: nil)}
   end
 
   @impl true
   def update(%{action: :workflow_updated, workflow_code: code}, socket) do
-    IO.inspect(code, label: "Updating workflow code in AI chat component")
-
-    {:ok,
-     assign(socket, workflow_code: code)
-     |> push_event("template_selected", %{template: code})}
+    {:ok, push_event(socket, "template_selected", %{template: code})}
   end
 
   def update(assigns, socket) do
-    {:ok, assign(socket, assigns)}
+    {:ok, socket |> assign(assigns)}
   end
 
   @impl true
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
-    IO.inspect(params, label: "Template selected in AI chat component")
-
     notify_parent(:form_changed, %{
       "workflow" => params,
       "opts" => [push_patches: false]
     })
 
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> push_event("state-applied", %{"state" => params})
+     |> push_event("force-fit", %{})}
   end
 
   defp notify_parent(action, payload) do

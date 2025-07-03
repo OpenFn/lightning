@@ -25,11 +25,16 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   @impl true
   @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
   def create_session(
-        %{project: project, current_user: current_user},
-        content,
-        opts \\ []
+        %{
+          project: project,
+          current_user: current_user,
+          workflow_code: workflow_code
+        },
+        content
       ) do
-    AiAssistant.create_workflow_session(project, current_user, content, opts)
+    AiAssistant.create_workflow_session(project, current_user, content,
+      workflow_code: workflow_code
+    )
   end
 
   @doc """
@@ -79,16 +84,14 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   """
   @impl true
   @spec save_message(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def save_message(%{session: session, current_user: user} = assigns, content) do
-    opts =
-      if assigns[:workflow_code],
-        do: [workflow_code: assigns[:workflow_code]],
-        else: []
-
+  def save_message(
+        %{session: session, current_user: user, workflow_code: workflow_code},
+        content
+      ) do
     AiAssistant.save_message(
       session,
       %{role: :user, content: content, user: user},
-      opts
+      workflow_code: workflow_code
     )
   end
 

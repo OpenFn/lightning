@@ -213,6 +213,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           id="workflow-ai-chat-panel"
           module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
           workflow={@workflow}
+          workflow_code={@workflow_code}
           project={@project}
           base_url={@base_url}
           chat_session_id={@query_params["chat"]}
@@ -1988,15 +1989,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
-    if socket.assigns.show_workflow_ai_chat do
-      send_update(LightningWeb.WorkflowLive.WorkflowAiChatComponent,
-        id: "workflow-ai-chat-panel",
-        action: :workflow_updated,
-        workflow_code: code
-      )
-    end
+    # if socket.assigns.show_workflow_ai_chat do
+    #   send_update(LightningWeb.WorkflowLive.WorkflowAiChatComponent,
+    #     id: "workflow-ai-chat-panel",
+    #     action: :workflow_updated,
+    #     workflow_code: code
+    #   )
+    # end
 
-    {:noreply, assign(socket, workflow_code: code)}
+    current_workflow_checksum = generate_checksum(code)
+    previous_workflow_checksum = generate_checksum(socket.assigns.workflow_code)
+
+    if current_workflow_checksum != previous_workflow_checksum do
+      # If the code has changed, we need to update the workflow_code assign
+      # so that it can be used in the publish template form.
+      {:noreply, assign(socket, workflow_code: code)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("cancel_publish_template", _params, socket) do
@@ -2127,21 +2137,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
          )}
 
       :form_changed ->
-        next_params =
-          WorkflowParams.apply_form_params(
+        equivalent? =
+          Lightning.Workflows.Comparison.equivalent?(
             socket.assigns.workflow_params,
             payload["workflow"]
           )
           |> dbg()
 
-        {:noreply,
-         socket
-         |> apply_params(next_params, :workflow)
-         |> mark_validated()
-         |> maybe_push_patches_applied(
-           socket.assigns.workflow_params,
-           Map.get(payload, "opts", [])
-         )}
+        if equivalent? do
+          {:noreply, socket}
+        else
+          next_params =
+            WorkflowParams.apply_form_params(
+              socket.assigns.workflow_params,
+              payload["workflow"]
+            )
+
+          {
+            :noreply,
+            socket
+            |> apply_params(next_params, :workflow)
+            |> mark_validated()
+            |> maybe_push_patches_applied(
+              socket.assigns.workflow_params,
+              Map.get(payload, "opts", [])
+            )
+            |> trigger_yaml_generation()
+          }
+        end
     end
   end
 
@@ -2234,6 +2257,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
     end
+  end
+
+  defp generate_checksum(nil), do: nil
+
+  defp generate_checksum(code) do
+    :crypto.hash(:sha256, code)
+    |> Base.encode16(case: :lower)
   end
 
   defp check_user_can_save_workflow(socket) do

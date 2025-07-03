@@ -571,7 +571,6 @@ defmodule Lightning.AiAssistant do
       history: build_history(session),
       meta: meta
     )
-    |> dbg()
     |> handle_ai_response(
       session,
       pending_user_message,
