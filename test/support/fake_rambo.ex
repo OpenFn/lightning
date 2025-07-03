@@ -13,6 +13,7 @@ defmodule FakeRambo do
 
   def run(command, args, opts) do
     send(self(), {command, args, opts})
+
     case Cachex.get(:fake_rambo_cache, :res) do
       {:ok, nil} -> {:ok, %{out: "", status: 0}}
       {:ok, res} -> res
