@@ -162,7 +162,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> assign(:scopes_changed, false)
       |> assign(:changeset, changeset)
 
-    case validate_token(token, updated_socket.assigns.selected_scopes) do
+    case validate_token(token, expected_scopes) do
       :ok ->
         Logger.info(
           "Received valid token from #{updated_socket.assigns.selected_client.name}"
