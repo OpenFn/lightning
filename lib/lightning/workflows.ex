@@ -349,14 +349,22 @@ defmodule Lightning.Workflows do
   end
 
   def get_workflows_for(%Project{id: project_id}, %User{id: user_id}, opts) do
-    chat_session_exists_query =
+    job_code_sessions_query =
       from cs in ChatSession,
         join: j in Job,
         on: cs.job_id == j.id,
-        join: w in Workflow,
-        on: j.workflow_id == w.id,
-        where: cs.user_id == ^user_id,
-        where: w.project_id == ^project_id and is_nil(w.deleted_at),
+        where:
+          cs.user_id == ^user_id and
+            cs.session_type == "job_code" and
+            j.workflow_id == parent_as(:workflow).id,
+        select: 1
+
+    workflow_template_sessions_query =
+      from cs in ChatSession,
+        where:
+          cs.user_id == ^user_id and
+            cs.session_type == "workflow_template" and
+            cs.workflow_id == parent_as(:workflow).id,
         select: 1
 
     include = Keyword.get(opts, :include, [:triggers])
@@ -366,7 +374,12 @@ defmodule Lightning.Workflows do
       from(w in Workflow,
         as: :workflow,
         where: w.project_id == ^project_id and is_nil(w.deleted_at),
-        select: %{w | has_ai_chat: exists(chat_session_exists_query)},
+        select: %{
+          w
+          | has_ai_chat:
+              exists(job_code_sessions_query) or
+                exists(workflow_template_sessions_query)
+        },
         preload: ^include
       )
 

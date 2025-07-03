@@ -97,15 +97,25 @@ defmodule Lightning.Projects do
   end
 
   defp projects_overview_query(user_id) do
-    chat_session_exists_query =
+    job_code_sessions_query =
       from cs in ChatSession,
         join: j in Job,
         on: cs.job_id == j.id,
         join: w in Workflow,
         on: j.workflow_id == w.id,
         where:
-          cs.user_id == ^user_id and w.project_id == parent_as(:project).id and
+          cs.user_id == ^user_id and
+            w.project_id == parent_as(:project).id and
+            cs.session_type == "job_code" and
             is_nil(w.deleted_at),
+        select: 1
+
+    workflow_template_sessions_query =
+      from cs in ChatSession,
+        where:
+          cs.user_id == ^user_id and
+            cs.project_id == parent_as(:project).id and
+            cs.session_type == "workflow_template",
         select: 1
 
     from(p in Project,
@@ -122,7 +132,9 @@ defmodule Lightning.Projects do
         workflows_count: count(w.id, :distinct),
         collaborators_count: count(pu_all.user_id, :distinct),
         last_updated_at: max(w.updated_at),
-        has_ai_chat: exists(chat_session_exists_query)
+        has_ai_chat:
+          exists(job_code_sessions_query) or
+            exists(workflow_template_sessions_query)
       }
     )
   end

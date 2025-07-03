@@ -79,7 +79,7 @@ defmodule LightningWeb.DashboardLive.Components do
         </div>
       </div>
       <div>
-        <.table id="projects-table">
+        <.table id="projects-table" class="table-fixed">
           <:header>
             <.tr>
               <.th
@@ -113,22 +113,23 @@ defmodule LightningWeb.DashboardLive.Components do
                 class="hover:bg-gray-100 transition-colors duration-200"
                 onclick={JS.navigate(~p"/projects/#{project.id}/w")}
               >
-                <% dbg(project) %>
                 <.td>
-                  <.icon
-                    :if={project.has_ai_chat}
-                    name="hero-sparkles"
-                    class="size-4"
-                  />
-                  {project.name}
+                  <div class="flex items-center gap-1 max-w-[15rem]">
+                    <span class="truncate">{project.name}</span>
+                    <.icon
+                      :if={project.has_ai_chat}
+                      name="hero-sparkles"
+                      class="size-4 flex-shrink-0"
+                    />
+                  </div>
                 </.td>
-                <.td class="break-words max-w-[25rem]">
+                <.td>
                   {String.capitalize(to_string(project.role))}
                 </.td>
-                <.td class="break-words max-w-[10rem]">
+                <.td>
                   {project.workflows_count}
                 </.td>
-                <.td class="break-words max-w-[5rem]">
+                <.td>
                   <.link
                     class="link"
                     href={~p"/projects/#{project.id}/settings#collaboration"}

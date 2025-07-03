@@ -318,14 +318,15 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         tooltip={@workflow.name}
       >
         <div class="text-sm">
-          <div class="flex items-center">
-            <span
-              class="flex-shrink truncate text-gray-900 font-medium workflow-name"
-              style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-            >
-              <.icon :if={@workflow.has_ai_chat} name="hero-sparkles" class="size-4" />
+          <div class="flex items-center gap-1 max-w-[15rem]">
+            <span class="truncate text-gray-900 font-medium workflow-name">
               {@workflow.name}
             </span>
+            <.icon
+              :if={@workflow.has_ai_chat}
+              name="hero-sparkles"
+              class="size-4 flex-shrink-0"
+            />
           </div>
           <%= if @trigger_enabled do %>
             <p class="text-gray-500 text-xs mt-1">
