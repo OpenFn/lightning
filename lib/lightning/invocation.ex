@@ -837,42 +837,25 @@ defmodule Lightning.Invocation do
 
   # Query dataclips for cron-triggered jobs, including the next run state
   defp list_dataclips_with_cron_state(job_id, user_filters, opts) do
-    # Get the next cron run dataclip WITHOUT filters to get the true next run ID
-    unfiltered_next_cron_dataclip =
-      get_next_cron_run_dataclip(job_id, dynamic(true))
+    # Get the next cron run dataclip (always needed for the ID)
+    next_cron_dataclip = get_next_cron_run_dataclip(job_id, dynamic(true))
+    next_cron_run_id = next_cron_dataclip && next_cron_dataclip.id
 
-    next_cron_run_id =
-      if unfiltered_next_cron_dataclip,
-        do: unfiltered_next_cron_dataclip.id,
-        else: nil
+    # Check if next cron dataclip matches user filters
+    include_next_cron? =
+      next_cron_dataclip && dataclip_matches_filters?(next_cron_dataclip, user_filters)
 
-    # Apply filters in Elixir to determine if the next cron run should be included in results
-    filtered_next_cron_dataclip =
-      if unfiltered_next_cron_dataclip &&
-           dataclip_matches_filters?(unfiltered_next_cron_dataclip, user_filters) do
-        unfiltered_next_cron_dataclip
-      else
-        nil
-      end
+    # Get regular dataclips, excluding next cron if it will be included to avoid duplication
+    filters = if include_next_cron?,
+      do: Map.put(user_filters, :exclude_id, next_cron_dataclip.id),
+      else: user_filters
 
-    # Build user filters for input dataclips (excluding the filtered next cron run to avoid duplication)
-    input_user_filters =
-      if filtered_next_cron_dataclip do
-        Map.put(user_filters, :exclude_id, filtered_next_cron_dataclip.id)
-      else
-        user_filters
-      end
+    regular_dataclips = list_dataclips_for_job(%Job{id: job_id}, filters, opts)
 
-    # Get filtered input dataclips using the existing function
-    input_dataclips = list_dataclips_for_job(%Job{id: job_id}, input_user_filters, opts)
-
-    # Combine results - filtered next cron run first (if it exists and matches filters), then input dataclips
-    dataclips =
-      if filtered_next_cron_dataclip do
-        [filtered_next_cron_dataclip | input_dataclips]
-      else
-        input_dataclips
-      end
+    # Combine results with next cron dataclip first if it matches filters
+    dataclips = if include_next_cron?,
+      do: [next_cron_dataclip | regular_dataclips],
+      else: regular_dataclips
 
     {dataclips, next_cron_run_id}
   end
