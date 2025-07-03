@@ -49,7 +49,6 @@ defmodule Lightning.Adaptors do
   be automatically restored on first access and saved after updates.
   """
 
-  alias Lightning.Adaptors.Repository
   require Logger
 
   @doc """
@@ -245,9 +244,7 @@ defmodule Lightning.Adaptors do
       adaptors = Lightning.Adaptors.all(MyAdaptors)
   """
   def all(name \\ __MODULE__) do
-    name
-    |> config()
-    |> Repository.all()
+    Lightning.Adaptors.API.all(name)
   end
 
   @doc """
@@ -268,16 +265,12 @@ defmodule Lightning.Adaptors do
 
   def versions_for(name, nil) do
     # Single argument case - use default instance
-    __MODULE__
-    |> config()
-    |> Repository.versions_for(name)
+    Lightning.Adaptors.API.versions_for(__MODULE__, name)
   end
 
   def versions_for(name, module_name) do
     # Two argument case - named instance
-    name
-    |> config()
-    |> Repository.versions_for(module_name)
+    Lightning.Adaptors.API.versions_for(name, module_name)
   end
 
   @doc """
@@ -298,22 +291,16 @@ defmodule Lightning.Adaptors do
 
   def latest_for(name, nil) do
     # Single argument case - use default instance
-    __MODULE__
-    |> config()
-    |> Repository.latest_for(name)
+    Lightning.Adaptors.API.latest_for(__MODULE__, name)
   end
 
   def latest_for(name, module_name) do
     # Two argument case - named instance
-    name
-    |> config()
-    |> Repository.latest_for(module_name)
+    Lightning.Adaptors.API.latest_for(name, module_name)
   end
 
   def fetch_configuration_schema(name, module_name) do
-    name
-    |> config()
-    |> Repository.fetch_configuration_schema(module_name)
+    Lightning.Adaptors.API.fetch_configuration_schema(name, module_name)
   end
 
   @doc """
@@ -323,9 +310,7 @@ defmodule Lightning.Adaptors do
   {:error, reason} if saving fails.
   """
   def save_cache(name \\ __MODULE__) do
-    name
-    |> config()
-    |> Repository.save_cache()
+    Lightning.Adaptors.API.save_cache(name)
   end
 
   @doc """
@@ -335,9 +320,7 @@ defmodule Lightning.Adaptors do
   {:error, reason} if restoration fails.
   """
   def restore_cache(name \\ __MODULE__) do
-    name
-    |> config()
-    |> Repository.restore_cache()
+    Lightning.Adaptors.API.restore_cache(name)
   end
 
   @doc """
@@ -347,9 +330,7 @@ defmodule Lightning.Adaptors do
   {:error, reason} if deletion fails.
   """
   def clear_persisted_cache(name \\ __MODULE__) do
-    name
-    |> config()
-    |> Repository.clear_persisted_cache()
+    Lightning.Adaptors.API.clear_persisted_cache(name)
   end
 
   # defp restore_cache_if_needed(config) do
