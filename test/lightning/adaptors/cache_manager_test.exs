@@ -20,17 +20,17 @@ defmodule Lightning.Adaptors.CacheManagerTest do
       }
 
       {:ok, pid} = CacheManager.start_link(config)
-      
+
       # Give it time to initialize
       Process.sleep(100)
-      
+
       # Should still be running
       assert Process.alive?(pid)
-      
+
       # Check that Cachex is running as a child
       children = Supervisor.which_children(pid)
       assert length(children) == 1
-      
+
       # The child should be Cachex
       [{_, child_pid, :supervisor, [Cachex]}] = children
       assert Process.alive?(child_pid)
@@ -49,15 +49,15 @@ defmodule Lightning.Adaptors.CacheManagerTest do
 
       try do
         warmers = CacheManager.determine_warmers(config)
-        
+
         # Should have both CacheRestorer and StrategyWarmer
         assert length(warmers) == 2
-        
+
         # First warmer should be CacheRestorer (required)
         # Warmer tuple format: {:warmer, required, interval, module, state, async}
         assert elem(warmers |> Enum.at(0), 3) == Lightning.Adaptors.CacheRestorer
         assert elem(warmers |> Enum.at(0), 1) == true
-        
+
         # Second warmer should be StrategyWarmer (optional)
         assert elem(warmers |> Enum.at(1), 3) == Lightning.Adaptors.Warmer
         assert elem(warmers |> Enum.at(1), 1) == false
@@ -76,10 +76,10 @@ defmodule Lightning.Adaptors.CacheManagerTest do
       }
 
       warmers = CacheManager.determine_warmers(config)
-      
+
       # Should have only StrategyWarmer
       assert length(warmers) == 1
-      
+
       # Only warmer should be StrategyWarmer (required)
       # Warmer tuple format: {:warmer, required, interval, module, state, async}
       assert elem(warmers |> Enum.at(0), 3) == Lightning.Adaptors.Warmer
@@ -96,19 +96,19 @@ defmodule Lightning.Adaptors.CacheManagerTest do
       }
 
       {:ok, pid} = CacheManager.start_link(config)
-      
+
       # Give it time to initialize
       Process.sleep(100)
-      
+
       # Should still be running
       assert Process.alive?(pid)
-      
+
       # Verify Cachex is running as child
       children = Supervisor.which_children(pid)
       assert length(children) == 1
       [{_, child_pid, :supervisor, [Cachex]}] = children
       assert Process.alive?(child_pid)
-      
+
       # Verify the cache exists and is accessible
       assert {:ok, nil} = Cachex.get(:no_cache_cache, "nonexistent_key")
     end
@@ -134,7 +134,7 @@ defmodule Lightning.Adaptors.CacheManagerTest do
         # Check if cache was restored from file
         {:ok, test_value} = Cachex.get(:restore_cache, "test_key")
         assert test_value == "test_value"
-        
+
         {:ok, adaptors} = Cachex.get(:restore_cache, "adaptors")
         assert adaptors == ["@openfn/language-test"]
       after
@@ -170,7 +170,7 @@ defmodule Lightning.Adaptors.CacheManagerTest do
 
   defp create_temp_cache_file_with_data do
     path = Path.join(System.tmp_dir!(), "test_cache_#{:rand.uniform(10000)}.bin")
-    
+
     # Create test data that matches what the warmers would create
     test_pairs = [
       {"test_key", "test_value"},
@@ -178,7 +178,7 @@ defmodule Lightning.Adaptors.CacheManagerTest do
       {"@openfn/language-test:versions", %{"1.0.0" => %{"version" => "1.0.0"}}},
       {"@openfn/language-test:schema", %{"type" => "object"}}
     ]
-    
+
     binary_data = :erlang.term_to_binary(test_pairs)
     File.write!(path, binary_data)
     path

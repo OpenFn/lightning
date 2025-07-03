@@ -20,15 +20,13 @@ defmodule Lightning.Adaptors.IntegrationTest do
         name: :explicit_config_test,
         strategy: {MockAdaptorStrategy, [user: "test"]},
         persist_path: cache_path,
-        # Use offline mode to avoid network calls in tests
-        offline_mode: true,
         # Fast interval for testing
         warm_interval: :timer.seconds(1)
       ]
 
       try do
-        # Create an empty cache file for offline mode
-        File.touch!(cache_path)
+        # Create a cache file with test data
+        create_test_cache_file(cache_path)
 
         {:ok, _pid} = start_supervised({Lightning.Adaptors.Supervisor, config})
 
@@ -43,31 +41,30 @@ defmodule Lightning.Adaptors.IntegrationTest do
       end
     end
 
-    test "offline mode works with explicit config" do
+    test "cache restoration works with explicit config" do
       cache_path =
-        Path.join(System.tmp_dir!(), "offline_test_#{:rand.uniform(1000)}.bin")
+        Path.join(System.tmp_dir!(), "cache_test_#{:rand.uniform(1000)}.bin")
 
-      # First, create a cache file
-      File.touch!(cache_path)
+      # First, create a cache file with test data
+      create_test_cache_file(cache_path)
 
       config = [
-        name: :offline_test,
+        name: :cache_test,
         strategy: {MockAdaptorStrategy, [user: "test"]},
         persist_path: cache_path,
-        # Explicit offline mode
-        offline_mode: true,
         warm_interval: :timer.minutes(5)
       ]
 
       try do
         {:ok, _pid} = start_supervised({Lightning.Adaptors.Supervisor, config})
 
-        # Wait for initialization
-        Process.sleep(200)
+        # Wait for initialization and cache restoration
+        Process.sleep(500)
 
-        # In offline mode, should still be able to make calls
-        # (though cache might be empty since we created an empty file)
-        assert {:ok, _} = Lightning.Adaptors.all(:offline_test)
+        # Should be able to make calls with restored cache
+        assert {:ok, adaptors} = Lightning.Adaptors.all(:cache_test)
+        assert is_list(adaptors)
+        assert "@openfn/language-foo" in adaptors
       after
         if File.exists?(cache_path), do: File.rm!(cache_path)
       end
@@ -82,8 +79,6 @@ defmodule Lightning.Adaptors.IntegrationTest do
       # Set up config for the facade
       Application.put_env(:lightning_test, TestAdaptors,
         strategy: {MockAdaptorStrategy, [user: "facade_test"]},
-        # Default online mode - will attempt to warm
-        offline_mode: false,
         warm_interval: :timer.seconds(1)
       )
 
@@ -102,51 +97,26 @@ defmodule Lightning.Adaptors.IntegrationTest do
     end
   end
 
-  # Mock strategy for testing
-  defmodule MockAdaptorStrategy do
-    @behaviour Lightning.Adaptors.Strategy
+  # Helper function to create test cache file
+  defp create_test_cache_file(path) do
+    # Use data that matches MockAdaptorStrategy from test/support
+    test_pairs = [
+      {"adaptors", ["@openfn/language-foo", "@openfn/language-bar"]},
+      {"@openfn/language-foo:versions",
+       %{
+         "1.0.0" => %{"version" => "1.0.0"},
+         "2.0.0" => %{"version" => "2.0.0"},
+         "2.1.0" => %{"version" => "2.1.0"}
+       }},
+      {"@openfn/language-bar:versions",
+       %{
+         "2.0.0" => %{"version" => "2.0.0"},
+         "2.1.0" => %{"version" => "2.1.0"},
+         "latest" => %{"version" => "2.1.0"}
+       }}
+    ]
 
-    @impl true
-    def fetch_packages(_config) do
-      {:ok, ["@openfn/language-test", "@openfn/language-mock"]}
-    end
-
-    @impl true
-    def fetch_versions(_config, "@openfn/language-test") do
-      {:ok,
-       %{"1.0.0" => %{"version" => "1.0.0"}, "1.1.0" => %{"version" => "1.1.0"}}}
-    end
-
-    @impl true
-    def fetch_versions(_config, "@openfn/language-mock") do
-      {:ok, %{"2.0.0" => %{"version" => "2.0.0"}}}
-    end
-
-    @impl true
-    def fetch_versions(_config, _name) do
-      {:error, :not_found}
-    end
-
-    @impl true
-    def fetch_configuration_schema("@openfn/language-test") do
-      {:ok,
-       %{"type" => "object", "properties" => %{"test" => %{"type" => "string"}}}}
-    end
-
-    @impl true
-    def fetch_configuration_schema("@openfn/language-mock") do
-      {:ok,
-       %{"type" => "object", "properties" => %{"mock" => %{"type" => "boolean"}}}}
-    end
-
-    @impl true
-    def fetch_configuration_schema(_name) do
-      {:error, :not_found}
-    end
-
-    @impl true
-    def fetch_icon(_name, _version) do
-      {:error, :not_implemented}
-    end
+    binary_data = :erlang.term_to_binary(test_pairs)
+    File.write!(path, binary_data)
   end
 end

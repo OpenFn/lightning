@@ -17,7 +17,6 @@ defmodule Lightning.Adaptors.Supervisor do
           cache: atom(),
           strategy: {module(), term()},
           persist_path: String.t() | nil,
-          offline_mode: boolean(),
           warm_interval: pos_integer()
         }
 
@@ -67,13 +66,6 @@ defmodule Lightning.Adaptors.Supervisor do
       cache: cache_name,
       strategy: Keyword.get(opts, :strategy, nil),
       persist_path: Keyword.get(opts, :persist_path),
-      # Gather application-level config for cache manager
-      offline_mode:
-        Keyword.get(
-          opts,
-          :offline_mode,
-          Application.get_env(:lightning, :adaptor_offline_mode, false)
-        ),
       warm_interval:
         Keyword.get(
           opts,
@@ -90,5 +82,4 @@ defmodule Lightning.Adaptors.Supervisor do
       name: Lightning.Adaptors.Registry.via(name, nil, config)
     )
   end
-
 end

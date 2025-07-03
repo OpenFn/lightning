@@ -25,7 +25,8 @@ defmodule Lightning.Adaptors.CacheRestorerTest do
       # Create test data
       test_pairs = [
         {"adaptors", ["@openfn/language-http", "@openfn/language-dhis2"]},
-        {"@openfn/language-http:versions", %{"1.0.0" => %{"version" => "1.0.0"}}},
+        {"@openfn/language-http:versions",
+         %{"1.0.0" => %{"version" => "1.0.0"}}},
         {"@openfn/language-dhis2:schema", %{"type" => "object"}}
       ]
 

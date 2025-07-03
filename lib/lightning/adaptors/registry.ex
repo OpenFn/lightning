@@ -4,7 +4,8 @@ defmodule Lightning.Adaptors.Registry do
   """
 
   @type role :: term()
-  @type key :: Lightning.Adaptors.API.name() | {Lightning.Adaptors.API.name(), role()}
+  @type key ::
+          Lightning.Adaptors.API.name() | {Lightning.Adaptors.API.name(), role()}
   @type value :: term()
 
   @doc false

@@ -26,7 +26,6 @@ defmodule Lightning.Adaptors.API do
           strategy: {module(), term()},
           cache: Cachex.t(),
           persist_path: String.t() | nil,
-          offline_mode: boolean(),
           warm_interval: pos_integer()
         }
 
@@ -37,7 +36,6 @@ defmodule Lightning.Adaptors.API do
           {:name, name()}
           | {:strategy, {module(), term()}}
           | {:persist_path, String.t()}
-          | {:offline_mode, boolean()}
           | {:warm_interval, pos_integer()}
 
   @doc """

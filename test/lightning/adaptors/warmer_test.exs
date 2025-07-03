@@ -285,7 +285,9 @@ defmodule Lightning.Adaptors.WarmerTest do
       assert Warmer.execute(config) == :ignore
     end
 
-    test "saves cache to disk when persist_path is configured", %{schemas: schemas} do
+    test "saves cache to disk when persist_path is configured", %{
+      schemas: schemas
+    } do
       persist_path = "/tmp/warmer_test_cache_#{:rand.uniform(10000)}.bin"
 
       config = %{

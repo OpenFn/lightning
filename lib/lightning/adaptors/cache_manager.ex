@@ -52,8 +52,10 @@ defmodule Lightning.Adaptors.CacheManager do
       {Cachex, [config.cache, [warmers: warmers]]}
     ]
 
-    Logger.info("Cache manager initialized for #{config.name} with #{length(warmers)} warmers")
-    
+    Logger.info(
+      "Cache manager initialized for #{config.name} with #{length(warmers)} warmers"
+    )
+
     Supervisor.init(children, strategy: :one_for_one)
   end
 
