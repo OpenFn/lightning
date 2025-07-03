@@ -269,8 +269,10 @@ defmodule LightningWeb.UserLiveTest do
 
       assert html =~ "Users"
 
-      refute html =~
-               "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
+      formated_deletion_date =
+        DateTime.utc_now() |> Timex.shift(days: 7) |> Calendar.strftime("%d %b")
+
+      refute html =~ formated_deletion_date
 
       {:ok, form_live, _} =
         index_live
@@ -302,8 +304,7 @@ defmodule LightningWeb.UserLiveTest do
         to: Swoosh.Email.Recipient.format(user)
       )
 
-      assert html =~
-               "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
+      assert html =~ formated_deletion_date
     end
 
     test "disables the delete link for listed superusers", %{
@@ -315,14 +316,14 @@ defmodule LightningWeb.UserLiveTest do
       assert(
         index_live
         |> has_element?(
-          "span#delete-#{user.id}.table-action-disabled",
+          "span#delete-#{user.id}.cursor-not-allowed",
           "Delete"
         )
       )
 
       refute(
         index_live
-        |> has_element?("a#delete-#{user.id}.table-action", "Delete")
+        |> has_element?("a#delete-#{user.id}", "Delete")
       )
     end
 
@@ -382,7 +383,7 @@ defmodule LightningWeb.UserLiveTest do
 
       assert index_live
              |> has_element?(
-               "a#cancel-deletion-#{user.id}.table-action",
+               "a#cancel-deletion-#{user.id}",
                "Cancel deletion"
              )
     end
@@ -429,7 +430,7 @@ defmodule LightningWeb.UserLiveTest do
       assert(
         index_live
         |> has_element?(
-          "span#delete-now-#{user.id}.table-action-disabled",
+          "span#delete-now-#{user.id}.cursor-not-allowed",
           "Delete now"
         )
       )
@@ -437,7 +438,7 @@ defmodule LightningWeb.UserLiveTest do
       refute(
         index_live
         |> has_element?(
-          "a#delete-now-#{user.id}.table-action",
+          "a#delete-now-#{user.id}",
           "Delete now"
         )
       )
