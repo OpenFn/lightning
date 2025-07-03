@@ -14,16 +14,51 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   import Ecto.Changeset, only: [fetch_field!: 2]
   import LightningWeb.Components.Form
+  alias LightningWeb.Live.Helpers.TableHelpers
 
   alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
+
+  # Simple helper functions for user data
+  defp get_user_name(user) when is_nil(user), do: ""
+
+  defp get_user_name(user),
+    do: "#{user.first_name || ""} #{user.last_name || ""}" |> String.trim()
+
+  defp get_user_email(user) when is_nil(user), do: ""
+  defp get_user_email(user), do: user.email || ""
+
+  defp get_user_role(form_input) do
+    case form_input[:role].value do
+      nil -> ""
+      role -> to_string(role)
+    end
+  end
+
+  # Simplified sorting configuration
+  defp user_search_fields do
+    [
+      fn enriched_form -> get_user_name(enriched_form.user) end,
+      fn enriched_form -> get_user_email(enriched_form.user) end,
+      fn enriched_form -> get_user_role(enriched_form.form) end
+    ]
+  end
+
+  defp user_sort_map do
+    %{
+      "name" => fn enriched_form -> get_user_name(enriched_form.user) end,
+      "email" => fn enriched_form -> get_user_email(enriched_form.user) end,
+      "role" => fn enriched_form -> get_user_role(enriched_form.form) end
+    }
+  end
 
   @impl true
   def update(
         %{project: project, users: users} = assigns,
         socket
       ) do
+    # Create project_users list with consistent ordering for form stability
     project_users =
       users
       |> Enum.sort_by(fn user -> user.first_name end, :asc)
@@ -48,6 +83,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      socket
      |> assign(assigns)
      |> assign(:changeset, changeset)
+     |> assign(:sort_key, "name")
+     |> assign(:sort_direction, "asc")
+     |> assign(:filter, "")
      |> assign(
        :name,
        Helpers.url_safe_name(fetch_field!(changeset, :name))
@@ -68,6 +106,35 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      socket
      |> assign(:changeset, changeset)
      |> assign(:name, fetch_field!(changeset, :name))}
+  end
+
+  def handle_event("sort", %{"by" => sort_key}, socket) do
+    {sort_key, sort_direction} =
+      TableHelpers.toggle_sort_direction(
+        socket.assigns.sort_direction,
+        socket.assigns.sort_key,
+        sort_key
+      )
+
+    {:noreply,
+     assign(socket,
+       sort_key: sort_key,
+       sort_direction: sort_direction
+     )}
+  end
+
+  def handle_event("filter", %{"value" => filter}, socket) do
+    {:noreply,
+     assign(socket,
+       filter: filter
+     )}
+  end
+
+  def handle_event("clear_filter", _params, socket) do
+    {:noreply,
+     assign(socket,
+       filter: ""
+     )}
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
@@ -141,5 +208,30 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   defp find_user_by_id(users, user_id) do
     Enum.find(users, fn user -> user.id == user_id end)
+  end
+
+  defp get_sorted_filtered_forms(f, users, filter, sort_key, sort_direction) do
+    forms = Phoenix.HTML.FormData.to_form(f.source, f, :project_users, f.options)
+
+    # Create enriched form data with user info for easier sorting/filtering
+    enriched_forms =
+      Enum.map(forms, fn form ->
+        user = find_user_by_id(users, form[:user_id].value)
+        %{form: form, user: user}
+      end)
+
+    # Use TableHelpers for consistent filtering and sorting
+    sorted_filtered_forms =
+      TableHelpers.filter_and_sort(
+        enriched_forms,
+        filter,
+        user_search_fields(),
+        sort_key,
+        sort_direction,
+        user_sort_map()
+      )
+
+    # Extract just the forms for the template
+    Enum.map(sorted_filtered_forms, fn %{form: form} -> form end)
   end
 end

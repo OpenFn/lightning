@@ -3,6 +3,7 @@ defmodule LightningWeb.RunChannel do
   Phoenix channel to interact with Runs.
   """
   use LightningWeb, :channel
+  use LightningWeb, :verified_routes
 
   import LightningWeb.ChannelHelpers
 
@@ -86,10 +87,11 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("fetch:credential", %{"id" => id}, socket) do
-    %{run: run, scrubber: scrubber} = socket.assigns
+    %{run: run, scrubber: scrubber, project_id: project_id} = socket.assigns
 
-    with credential when is_map(credential) <-
-           Runs.get_credential(run, id) || :not_found,
+    credential = Runs.get_credential(run, id)
+
+    with credential when is_map(credential) <- credential || :not_found,
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
          credential <- maybe_merge_oauth(credential),
          samples <- Credentials.sensitive_values_for(credential),
@@ -114,19 +116,41 @@ defmodule LightningWeb.RunChannel do
           %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
         })
 
+      {:error, :reauthorization_required} ->
+        Logger.error("oauth refresh token has expired", credential_id: id)
+        credentials_url = url(~p"/projects/#{project_id}/settings#credentials")
+
+        error = """
+        Oauth token has expired. Reauthorize with your external system:
+          1. Go to #{credentials_url}
+          2. Find #{credential.name}
+          3. Click "Edit" and then "Reauthorize"
+        If this is not your credential, send this link to the owner and ask them to reauthorize.
+        """
+
+        {:reply, {:error, error}, socket}
+
+      {:error, :temporary_failure} ->
+        Logger.error("Could not reach the oauth provider", credential_id: id)
+
+        {:reply, {:error, "Could not reach the oauth provider. Try again later"},
+         socket}
+
       {:error, error} ->
         Logger.error(fn ->
-          """
-          Something went wrong when fetching or refreshing a credential.
-
-          #{inspect(error)}
-          """
+          {"""
+           Something went wrong when fetching or refreshing a credential.
+           #{inspect(error)}
+           """, [credential_id: id]}
         end)
 
         reply_with(
           socket,
           {:error,
-           %{errors: "Something went wrong when retrieving the credential"}}
+           %{
+             error: error,
+             message: "An error occured when fetching your credential"
+           }}
         )
     end
   end

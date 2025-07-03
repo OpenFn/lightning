@@ -3,6 +3,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
 
   import Mox
 
+  alias Lightning.AuthProviders.OauthHTTPClient
+
   setup :verify_on_exit!
 
   describe "fetch_token/2" do
@@ -18,256 +20,482 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       response_body = %{
         "access_token" => "token123",
         "token_type" => "bearer",
+        "refresh_token" => "refresh_token123",
+        "expires_in" => 3600
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+          assert env.body =~ "client_id=id"
+          assert env.body =~ "client_secret=secret"
+          assert env.body =~ "code=authcode123"
+          assert env.body =~ "grant_type=authorization_code"
+          assert env.body =~ "redirect_uri="
+
+          {:ok, %Tesla.Env{env | status: 200, body: response_body}}
+      end)
+
+      assert {:ok, ^response_body} = OauthHTTPClient.fetch_token(client, code)
+    end
+
+    test "fetches token with introspection endpoint" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token",
+        introspection_endpoint: "http://example.com/introspect"
+      }
+
+      code = "authcode123"
+
+      token_response = %{
+        "access_token" => "token123",
+        "token_type" => "bearer",
         "refresh_token" => "refresh_token123"
       }
 
-      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        env, _opts
-        when env.method == :post and env.url == "http://example.com/token" ->
-          assert env.body ==
-                   %{
-                     client_id: "id",
-                     client_secret: "secret",
-                     code: "authcode123",
-                     grant_type: "authorization_code",
-                     redirect_uri: "http://localhost:4002/authenticate/callback"
-                   }
-                   |> URI.encode_query()
+      introspection_response = %{
+        "active" => true,
+        "exp" => 1_234_567_890
+      }
 
-          {:ok, %Tesla.Env{status: 200, body: Jason.encode!(response_body)}}
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
+        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 200, body: token_response}}
+
+        %{method: :post, url: "http://example.com/introspect"} = env, _opts ->
+          assert env.body =~ "token=token123"
+          assert env.body =~ "client_id=id"
+          assert env.body =~ "client_secret=secret"
+          assert env.body =~ "token_type_hint=access_token"
+
+          {:ok, %Tesla.Env{env | status: 200, body: introspection_response}}
       end)
 
-      result =
-        Lightning.AuthProviders.OauthHTTPClient.fetch_token(client, code)
+      expected_token = Map.put(token_response, "expires_at", 1_234_567_890)
+      assert {:ok, ^expected_token} = OauthHTTPClient.fetch_token(client, code)
+    end
 
-      assert {:ok, response_body} == result
+    test "handles token fetch error" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token"
+      }
+
+      error_response = %{
+        "error" => "invalid_grant",
+        "error_description" => "The authorization code is invalid"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 400, body: error_response}}
+      end)
+
+      assert {:error, %{status: 400, error: "invalid_grant", details: details}} =
+               OauthHTTPClient.fetch_token(client, "invalid_code")
+
+      assert details.description == "The authorization code is invalid"
+    end
+
+    test "handles network error" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %{method: :post, url: "http://example.com/token"}, _opts ->
+          {:error, %Tesla.Error{reason: :econnrefused}}
+      end)
+
+      assert {:error,
+              %{
+                status: 0,
+                error: "network_error",
+                details: %{reason: ":econnrefused"}
+              }} =
+               OauthHTTPClient.fetch_token(client, "code")
     end
   end
 
-  describe "refresh_token/4" do
-    test "refreshes the token successfully and merges with old token" do
-      client_id = "id"
-      client_secret = "secret"
-      refresh_token = "validRefreshToken"
-      token_endpoint = "http://example.com/refresh"
-
-      response_body = %{
-        "refresh_token" => "validRefreshToken",
-        "access_token" => "newToken123",
-        "token_type" => "bearer"
+  describe "refresh_token/2" do
+    test "refreshes token successfully and preserves refresh_token" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token"
       }
 
       old_token = %{
-        "refresh_token" => refresh_token,
-        "access_token" => "oldToken123",
-        "custom_key" => "custom_value"
+        "refresh_token" => "refresh123",
+        "access_token" => "oldToken123"
       }
 
-      expected_merged_token = %{
-        "refresh_token" => "validRefreshToken",
+      response_body = %{
         "access_token" => "newToken123",
         "token_type" => "bearer",
-        "custom_key" => "custom_value"
+        "expires_in" => 3600
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        env, _opts
-        when env.method == :post and env.url == token_endpoint ->
-          assert env.body ==
-                   %{
-                     client_id: client_id,
-                     client_secret: client_secret,
-                     refresh_token: refresh_token,
-                     grant_type: "refresh_token"
-                   }
-                   |> URI.encode_query()
+        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+          assert env.body =~ "grant_type=refresh_token"
+          assert env.body =~ "refresh_token=refresh123"
 
-          {:ok, %Tesla.Env{status: 200, body: Jason.encode!(response_body)}}
+          {:ok, %Tesla.Env{env | status: 200, body: response_body}}
       end)
 
-      result =
-        Lightning.AuthProviders.OauthHTTPClient.refresh_token(
-          %{
-            client_id: client_id,
-            client_secret: client_secret,
-            token_endpoint: token_endpoint
-          },
-          old_token
-        )
+      assert {:ok, new_token} = OauthHTTPClient.refresh_token(client, old_token)
 
-      assert {:ok, expected_merged_token} == result
+      assert new_token["refresh_token"] == "refresh123"
+      assert new_token["access_token"] == "newToken123"
+      assert new_token["updated_at"]
     end
 
-    test "handles error when refresh token is invalid" do
-      client_id = "id"
-      client_secret = "secret"
-      refresh_token = "invalidRefreshToken"
-      token_endpoint = "http://example.com/refresh"
-
-      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        env, _opts
-        when env.method == :post and env.url == token_endpoint ->
-          {:ok, %Tesla.Env{status: 400, body: "Invalid refresh token"}}
-      end)
-
-      result =
-        Lightning.AuthProviders.OauthHTTPClient.refresh_token(
-          %{
-            client_id: client_id,
-            client_secret: client_secret,
-            token_endpoint: token_endpoint
-          },
-          %{"refresh_token" => refresh_token}
-        )
-
-      assert {:error, "\"Invalid refresh token\""} ==
-               result
-    end
-  end
-
-  describe "still_fresh/3" do
-    test "returns true if the token is still fresh based on expires_in" do
-      current_time = DateTime.utc_now()
-      future_time = DateTime.add(current_time, 10 * 60, :second)
-      params = %{"expires_in" => DateTime.to_unix(future_time)}
-
-      assert Lightning.AuthProviders.OauthHTTPClient.still_fresh(
-               params,
-               5,
-               :minute
-             )
-    end
-
-    test "returns false if the token has expired" do
-      expired_time =
-        DateTime.utc_now() |> DateTime.add(-30, :minute)
-
-      params = %{"expires_at" => DateTime.to_unix(expired_time)}
-
-      refute Lightning.AuthProviders.OauthHTTPClient.still_fresh(
-               params,
-               5,
-               :minute
-             )
-    end
-
-    test "returns false if the token has a nil expires_at / expires_in value" do
-      ~w(expires_at expires_in)
-      |> Enum.each(fn key ->
-        params = %{key => nil}
-
-        refute Lightning.AuthProviders.OauthHTTPClient.still_fresh(
-                 params,
-                 5,
-                 :minute
-               )
-      end)
-    end
-
-    test "handles invalid expiration data" do
-      params = %{}
-
-      assert {:error, "No valid expiration data found"} ===
-               Lightning.AuthProviders.OauthHTTPClient.still_fresh(
-                 params,
-                 5,
-                 :minute
-               )
-    end
-  end
-
-  describe "generate_authorize_url/3" do
-    test "generates a correct authorization URL with default parameters" do
-      authorization_endpoint = "http://example.com/auth"
-      client_id = "client123"
-      custom_params = [scope: "email", state: "xyz"]
-
+    test "refreshes token with new refresh_token in response" do
       client = %{
-        client_id: client_id,
-        authorization_endpoint: authorization_endpoint
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token"
       }
 
-      expected_params = [
-        access_type: "offline",
-        client_id: "client123",
-        redirect_uri: "http://localhost:4002/authenticate/callback",
-        response_type: "code",
-        scope: "email",
-        state: "xyz"
-      ]
+      old_token = %{
+        "refresh_token" => "old_refresh",
+        "access_token" => "oldToken"
+      }
 
-      expected_url =
-        "#{authorization_endpoint}?#{URI.encode_query(expected_params)}"
+      response_body = %{
+        "access_token" => "newToken",
+        "refresh_token" => "new_refresh",
+        "token_type" => "bearer"
+      }
 
-      assert expected_url ===
-               Lightning.AuthProviders.OauthHTTPClient.generate_authorize_url(
-                 client,
-                 custom_params
-               )
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 200, body: response_body}}
+      end)
+
+      assert {:ok, new_token} = OauthHTTPClient.refresh_token(client, old_token)
+      assert new_token["refresh_token"] == "new_refresh"
+      assert new_token["updated_at"]
+    end
+
+    test "handles missing refresh_token" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token"
+      }
+
+      assert {:error,
+              %{
+                status: 400,
+                error: "invalid_request",
+                details: %{message: "refresh_token is required"}
+              }} =
+               OauthHTTPClient.refresh_token(client, %{})
+
+      assert {:error,
+              %{
+                status: 400,
+                error: "invalid_request",
+                details: %{message: "refresh_token is required"}
+              }} =
+               OauthHTTPClient.refresh_token(client, %{"refresh_token" => ""})
+    end
+
+    test "handles refresh token error" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+          {:ok,
+           %Tesla.Env{env | status: 401, body: %{"error" => "invalid_token"}}}
+      end)
+
+      assert {:error,
+              %{status: 401, error: "invalid_token", details: %{status: 401}}} =
+               OauthHTTPClient.refresh_token(client, %{
+                 "refresh_token" => "invalid"
+               })
     end
   end
 
   describe "fetch_userinfo/2" do
     test "fetches user information successfully" do
-      token = "validAccessToken"
-      userinfo_endpoint = "http://example.com/userinfo"
-      response_body = %{"user_id" => "123", "name" => "John Doe"}
+      client = %{
+        userinfo_endpoint: "http://example.com/userinfo"
+      }
+
+      token = %{"access_token" => "validToken"}
+      response_body = %{"user_id" => "123", "name" => "Sadio Mane"}
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        env, _opts
-        when env.method == :get and env.url == userinfo_endpoint ->
-          assert Enum.any?(env.headers, fn {k, v} ->
-                   k == "Authorization" and v == "Bearer #{token}"
-                 end)
-
-          {:ok, %Tesla.Env{status: 200, body: Jason.encode!(response_body)}}
+        %{method: :get, url: "http://example.com/userinfo", headers: headers} =
+            env,
+        _opts ->
+          assert {"Authorization", "Bearer validToken"} in headers
+          {:ok, %Tesla.Env{env | status: 200, body: response_body}}
       end)
 
-      result =
-        Lightning.AuthProviders.OauthHTTPClient.fetch_userinfo(
-          %{userinfo_endpoint: userinfo_endpoint},
-          %{"access_token" => token}
-        )
-
-      assert {:ok, response_body} == result
+      assert {:ok, ^response_body} =
+               OauthHTTPClient.fetch_userinfo(client, token)
     end
 
-    test "handles error when access token is expired" do
-      token = "expiredAccessToken"
-      userinfo_endpoint = "http://example.com/userinfo"
+    test "handles missing access_token" do
+      client = %{
+        userinfo_endpoint: "http://example.com/userinfo"
+      }
 
-      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        env, _opts
-        when env.method == :get and env.url == userinfo_endpoint ->
-          {:ok, %Tesla.Env{status: 401, body: "Token expired"}}
-      end)
+      assert {:error,
+              %{
+                status: 400,
+                error: "invalid_request",
+                details: %{message: "access_token is required"}
+              }} =
+               OauthHTTPClient.fetch_userinfo(client, %{})
 
-      result =
-        Lightning.AuthProviders.OauthHTTPClient.fetch_userinfo(
-          %{userinfo_endpoint: userinfo_endpoint},
-          %{"access_token" => token}
-        )
-
-      assert {:error, "\"Token expired\""} == result
+      assert {:error,
+              %{
+                status: 400,
+                error: "invalid_request",
+                details: %{message: "access_token is required"}
+              }} =
+               OauthHTTPClient.fetch_userinfo(client, %{"access_token" => ""})
     end
 
-    test "handles http request error" do
-      token = "accessToken"
-      userinfo_endpoint = "http://example.com/userinfo"
+    test "handles userinfo fetch error" do
+      client = %{
+        userinfo_endpoint: "http://example.com/userinfo"
+      }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        env, _opts
-        when env.method == :get and env.url == userinfo_endpoint ->
-          {:error, :nxdomain}
+        %{method: :get, url: "http://example.com/userinfo"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 401, body: "Unauthorized"}}
       end)
 
-      result =
-        Lightning.AuthProviders.OauthHTTPClient.fetch_userinfo(
-          %{userinfo_endpoint: userinfo_endpoint},
-          %{"access_token" => token}
-        )
+      assert {:error, %{status: 401, error: "http_error", details: details}} =
+               OauthHTTPClient.fetch_userinfo(client, %{
+                 "access_token" => "expired"
+               })
 
-      assert {:error, ":nxdomain"} == result
+      assert details.status == 401
+      assert details.raw_response =~ "Unauthorized"
+    end
+  end
+
+  describe "revoke_token/2" do
+    test "revokes both tokens successfully" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        revocation_endpoint: "http://example.com/revoke"
+      }
+
+      token = %{
+        "access_token" => "access123",
+        "refresh_token" => "refresh123"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
+        %{method: :post, url: "http://example.com/revoke", body: body} = env,
+        _opts ->
+          cond do
+            body =~ "token=refresh123" ->
+              assert body =~ "token_type_hint=refresh_token"
+              {:ok, %Tesla.Env{env | status: 200, body: ""}}
+
+            body =~ "token=access123" ->
+              assert body =~ "token_type_hint=access_token"
+              {:ok, %Tesla.Env{env | status: 200, body: ""}}
+          end
+      end)
+
+      assert :ok = OauthHTTPClient.revoke_token(client, token)
+    end
+
+    test "returns ok if at least one token revocation succeeds" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        revocation_endpoint: "http://example.com/revoke"
+      }
+
+      token = %{
+        "access_token" => "access123",
+        "refresh_token" => "refresh123"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
+        %{method: :post, url: "http://example.com/revoke", body: body} = env,
+        _opts ->
+          cond do
+            body =~ "token=refresh123" ->
+              {:ok, %Tesla.Env{env | status: 400, body: "Invalid token"}}
+
+            body =~ "token=access123" ->
+              {:ok, %Tesla.Env{env | status: 200, body: ""}}
+          end
+      end)
+
+      assert :ok = OauthHTTPClient.revoke_token(client, token)
+    end
+
+    test "handles no tokens to revoke" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        revocation_endpoint: "http://example.com/revoke"
+      }
+
+      assert {:error,
+              %{
+                status: 400,
+                error: "no_tokens_to_revoke",
+                details: %{message: "No valid tokens found for revocation"}
+              }} =
+               OauthHTTPClient.revoke_token(client, %{})
+    end
+
+    test "returns error if all revocations fail" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        revocation_endpoint: "http://example.com/revoke"
+      }
+
+      token = %{
+        "access_token" => "access123",
+        "refresh_token" => "refresh123"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
+        %{method: :post, url: "http://example.com/revoke"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 500, body: "Server error"}}
+      end)
+
+      assert {:error, %{status: 500, error: "oauth_error", details: details}} =
+               OauthHTTPClient.revoke_token(client, token)
+
+      assert Map.has_key?(details, "Server error")
+      assert details.status == 500
+    end
+  end
+
+  describe "generate_authorize_url/2" do
+    test "generates authorization URL with default parameters" do
+      client = %{
+        client_id: "client123",
+        authorization_endpoint: "http://example.com/auth"
+      }
+
+      url = OauthHTTPClient.generate_authorize_url(client, [])
+
+      assert url =~ "http://example.com/auth?"
+      assert url =~ "client_id=client123"
+      assert url =~ "response_type=code"
+      assert url =~ "access_type=offline"
+      assert url =~ "redirect_uri="
+    end
+
+    test "generates authorization URL with custom parameters" do
+      client = %{
+        client_id: "client123",
+        authorization_endpoint: "http://example.com/auth"
+      }
+
+      custom_params = [
+        scope: "email profile",
+        state: "xyz123",
+        prompt: "consent"
+      ]
+
+      url = OauthHTTPClient.generate_authorize_url(client, custom_params)
+
+      assert url =~ "scope=email+profile"
+      assert url =~ "state=xyz123"
+      assert url =~ "prompt=consent"
+    end
+
+    test "custom parameters override defaults" do
+      client = %{
+        client_id: "client123",
+        authorization_endpoint: "http://example.com/auth"
+      }
+
+      url =
+        OauthHTTPClient.generate_authorize_url(client, response_type: "token")
+
+      assert url =~ "response_type=token"
+      refute url =~ "response_type=code"
+    end
+  end
+
+  describe "error handling" do
+    test "handles non-JSON error response" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 500, body: "Internal Server Error"}}
+      end)
+
+      assert {:error, %{status: 500, error: "oauth_error", details: details}} =
+               OauthHTTPClient.fetch_token(client, "code")
+
+      assert Map.has_key?(details, "Internal Server Error")
+      assert details.status == 500
+    end
+
+    test "handles empty response body" do
+      client = %{
+        userinfo_endpoint: "http://example.com/userinfo"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %{method: :get, url: "http://example.com/userinfo"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 200, body: ""}}
+      end)
+
+      assert {:ok, %{}} =
+               OauthHTTPClient.fetch_userinfo(client, %{
+                 "access_token" => "token"
+               })
+    end
+
+    test "handles introspection failure gracefully" do
+      client = %{
+        client_id: "id",
+        client_secret: "secret",
+        token_endpoint: "http://example.com/token",
+        introspection_endpoint: "http://example.com/introspect"
+      }
+
+      token_response = %{
+        "access_token" => "token123",
+        "refresh_token" => "refresh123"
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
+        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 200, body: token_response}}
+
+        %{method: :post, url: "http://example.com/introspect"} = env, _opts ->
+          {:ok, %Tesla.Env{env | status: 500, body: "Server Error"}}
+      end)
+
+      assert {:ok, ^token_response} = OauthHTTPClient.fetch_token(client, "code")
     end
   end
 end

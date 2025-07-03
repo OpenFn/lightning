@@ -95,7 +95,7 @@ const FileUploader: React.FC<FileUploader> = ({
       >
         <div className="flex flex-col items-center">
           <CloudArrowUpIcon className="mx-auto size-10 text-gray-300" />
-          <div className="mt-4 flex text-sm/6 text-gray-600">
+          <div className="mt-4 flex flex-wrap justify-center text-sm/6 text-gray-600">
             <label
               htmlFor="uploader"
               className="relative cursor-pointer rounded-md font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-offset-2 hover:text-indigo-500"

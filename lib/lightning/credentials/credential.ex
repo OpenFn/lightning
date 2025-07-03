@@ -5,8 +5,6 @@ defmodule Lightning.Credentials.Credential do
   use Lightning.Schema
 
   alias Lightning.Accounts.User
-  alias Lightning.Credentials
-  alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthToken
   alias Lightning.Projects.ProjectCredential
 
@@ -26,7 +24,6 @@ defmodule Lightning.Credentials.Credential do
 
     belongs_to :user, User
     belongs_to :oauth_token, OauthToken
-    belongs_to :oauth_client, OauthClient
 
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
@@ -56,45 +53,5 @@ defmodule Lightning.Credentials.Credential do
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
       message: "credential name has invalid format"
     )
-    |> maybe_validate_oauth_fields(attrs)
-  end
-
-  defp maybe_validate_oauth_fields(changeset, attrs) do
-    is_oauth = get_field(changeset, :schema) == "oauth"
-    reusing_token? = !get_field(changeset, :oauth_token_id)
-
-    if is_oauth && reusing_token? do
-      user_id = get_field(changeset, :user_id)
-
-      oauth_client_id = Map.get(attrs, "oauth_client_id")
-
-      token_data = Map.get(attrs, "oauth_token")
-
-      if is_nil(token_data) do
-        add_error(
-          changeset,
-          :oauth_token,
-          "OAuth credentials require token data"
-        )
-      else
-        scopes =
-          case OauthToken.extract_scopes(token_data) do
-            {:ok, extracted_scopes} -> extracted_scopes
-            :error -> nil
-          end
-
-        case Credentials.validate_oauth_token_data(
-               token_data,
-               user_id,
-               oauth_client_id,
-               scopes
-             ) do
-          {:ok, _} -> changeset
-          {:error, reason} -> add_error(changeset, :oauth_token, reason)
-        end
-      end
-    else
-      changeset
-    end
   end
 end

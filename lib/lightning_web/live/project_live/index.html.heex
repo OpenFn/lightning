@@ -32,13 +32,52 @@
         return_to={Routes.project_index_path(@socket, :index)}
       />
     <% else %>
+      <LightningWeb.Live.Helpers.TableHelpers.filter_input
+        filter={@filter}
+        placeholder="Filter projects..."
+      />
+
       <.table id="projects">
         <:header>
           <.tr>
-            <.th>Name</.th>
-            <.th>Created At</.th>
-            <.th>Description</.th>
-            <.th>
+            <.th
+              sortable={true}
+              sort_by="name"
+              active={@sort_key == "name"}
+              sort_direction={@sort_direction}
+            >
+              Name
+            </.th>
+            <.th
+              sortable={true}
+              sort_by="inserted_at"
+              active={@sort_key == "inserted_at"}
+              sort_direction={@sort_direction}
+            >
+              Created At
+            </.th>
+            <.th
+              sortable={true}
+              sort_by="description"
+              active={@sort_key == "description"}
+              sort_direction={@sort_direction}
+            >
+              Description
+            </.th>
+            <.th
+              sortable={true}
+              sort_by="owner"
+              active={@sort_key == "owner"}
+              sort_direction={@sort_direction}
+            >
+              Owner
+            </.th>
+            <.th
+              sortable={true}
+              sort_by="scheduled_deletion"
+              active={@sort_key == "scheduled_deletion"}
+              sort_direction={@sort_direction}
+            >
               Scheduled Deletion
             </.th>
             <.th>
@@ -52,6 +91,14 @@
               <.td>{project.name}</.td>
               <.td>{project.inserted_at}</.td>
               <.td>{project.description}</.td>
+              <.td>
+                <%= case get_project_owner_name(project) do %>
+                  <% "" -> %>
+                    <span class="text-gray-400">No owner</span>
+                  <% owner_name -> %>
+                    {owner_name}
+                <% end %>
+              </.td>
               <.td>{project.scheduled_deletion}</.td>
               <.td class="text-right py-0.5">
                 <span>
