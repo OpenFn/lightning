@@ -74,56 +74,99 @@ defmodule Lightning.Adaptors.Service do
       end
 
       def config do
-        Lightning.Adaptors.config(__MODULE__)
+        Lightning.Adaptors.Registry.config(__MODULE__)
       end
 
       def all do
         Lightning.Adaptors.API.all(__MODULE__)
       end
 
+      def all(name) do
+        Lightning.Adaptors.API.all(name)
+      end
+
       def versions_for(module_name) do
         Lightning.Adaptors.API.versions_for(__MODULE__, module_name)
+      end
+
+      def versions_for(name, module_name) do
+        Lightning.Adaptors.API.versions_for(name, module_name)
       end
 
       def latest_for(module_name) do
         Lightning.Adaptors.API.latest_for(__MODULE__, module_name)
       end
 
+      def latest_for(name, module_name) do
+        Lightning.Adaptors.API.latest_for(name, module_name)
+      end
+
       def fetch_configuration_schema(module_name) do
         Lightning.Adaptors.API.fetch_configuration_schema(__MODULE__, module_name)
+      end
+
+      def fetch_configuration_schema(name, module_name) do
+        Lightning.Adaptors.API.fetch_configuration_schema(name, module_name)
       end
 
       def save_cache do
         Lightning.Adaptors.API.save_cache(__MODULE__)
       end
 
+      def save_cache(name) do
+        Lightning.Adaptors.API.save_cache(name)
+      end
+
       def restore_cache do
         Lightning.Adaptors.API.restore_cache(__MODULE__)
+      end
+
+      def restore_cache(name) do
+        Lightning.Adaptors.API.restore_cache(name)
       end
 
       def clear_persisted_cache do
         Lightning.Adaptors.API.clear_persisted_cache(__MODULE__)
       end
 
+      def clear_persisted_cache(name) do
+        Lightning.Adaptors.API.clear_persisted_cache(name)
+      end
+
       defoverridable config: 0,
                      all: 0,
+                     all: 1,
                      versions_for: 1,
+                     versions_for: 2,
                      latest_for: 1,
+                     latest_for: 2,
+                     fetch_configuration_schema: 1,
+                     fetch_configuration_schema: 2,
                      save_cache: 0,
+                     save_cache: 1,
                      restore_cache: 0,
-                     clear_persisted_cache: 0
+                     restore_cache: 1,
+                     clear_persisted_cache: 0,
+                     clear_persisted_cache: 1
     end
   end
 
   @doc """
   Behaviour for Lightning.Adaptors facade modules.
   """
-  @callback config() :: Lightning.Adaptors.config()
+  @callback config() :: term()
   @callback all() :: {:ok, [String.t()]} | {:error, term()}
+  @callback all(term()) :: {:ok, [String.t()]} | {:error, term()}
   @callback versions_for(String.t()) :: {:ok, map()} | {:error, term()}
+  @callback versions_for(term(), String.t()) :: {:ok, map()} | {:error, term()}
   @callback latest_for(String.t()) :: {:ok, map()} | {:error, term()}
+  @callback latest_for(term(), String.t()) :: {:ok, map()} | {:error, term()}
   @callback fetch_configuration_schema(String.t()) :: {:ok, map()} | {:error, term()}
+  @callback fetch_configuration_schema(term(), String.t()) :: {:ok, map()} | {:error, term()}
   @callback save_cache() :: :ok | {:error, term()}
+  @callback save_cache(term()) :: :ok | {:error, term()}
   @callback restore_cache() :: :ok | {:error, term()}
+  @callback restore_cache(term()) :: :ok | {:error, term()}
   @callback clear_persisted_cache() :: :ok | {:error, term()}
+  @callback clear_persisted_cache(term()) :: :ok | {:error, term()}
 end
