@@ -20,6 +20,7 @@ defmodule LightningWeb.UserLive.TableComponent do
         sort_key={@sort_key}
         sort_direction={@sort_direction}
         filter={@filter}
+        user_deletion_modal={@user_deletion_modal}
       />
     </div>
     """
