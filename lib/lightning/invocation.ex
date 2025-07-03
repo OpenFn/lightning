@@ -261,14 +261,9 @@ defmodule Lightning.Invocation do
     from(e in Edge,
       join: t in Trigger,
       on: e.source_trigger_id == t.id,
-      where: e.target_job_id == ^job_id and t.type == :cron,
-      select: count(e.id)
+      where: e.target_job_id == ^job_id and t.type == :cron
     )
-    |> Repo.one()
-    |> case do
-      count when count > 0 -> true
-      _ -> false
-    end
+    |> Repo.exists?()
   end
 
   @doc """
