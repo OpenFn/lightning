@@ -103,6 +103,28 @@ export type ReplayAction = {
 const undos: ReplayAction[] = [];
 let redos: ReplayAction[] = [];
 
+// simple squash function
+// I think after squashing. we can actually ignore in-between states.
+function pushUndo(action: ReplayAction) {
+  const lastAction = undos[undos.length - 1];
+  if (lastAction) {
+    const firstPatch = lastAction.patches[0];
+    const patch = action.patches[0];
+    if (
+      firstPatch &&
+      firstPatch.path.join('.') === patch?.path.join('.') &&
+      patch.path.length >= 3
+    ) {
+      lastAction.patches = [...lastAction.patches, ...action.patches];
+      lastAction.inverse = [...action.inverse, ...lastAction.inverse];
+      redos = [];
+      return;
+    }
+  }
+  undos.push(action);
+  redos = [];
+}
+
 // Calculate the next state using Immer, and then call the onChange callback
 // with the patches resulting from the change.
 function proposeChanges(
@@ -120,8 +142,7 @@ function proposeChanges(
     },
     (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
       if (!skipUndoStack) {
-        undos.push({ patches: p, inverse: _inverse });
-        redos = [];
+        pushUndo({ patches: p, inverse: _inverse });
       }
       patches = p.map(toRFC6902Patch);
     }
@@ -163,6 +184,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
           state,
           draft => {
             const lastPatch = undos.pop();
+            console.log('undoing:', lastPatch);
             if (!lastPatch) return draft;
             const newState = immerApplyPatches(draft, lastPatch.inverse);
             redos.push(lastPatch);
@@ -374,7 +396,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
             path: patch.path.split('/').filter(Boolean),
           })
         );
-        undos.push({ patches: immerPatches, inverse: inverseImmerPatches });
+        pushUndo({ patches: immerPatches, inverse: inverseImmerPatches });
       }
 
       set(state => immerApplyPatches(state, immerPatches));
