@@ -48,7 +48,7 @@ defmodule Lightning.AdaptorsTest do
   use ExUnit.Case, async: true
 
   setup do
-    # Start the Registry before each test
+    # Start the new Adaptors Registry for tests (independent of the old AdaptorRegistry)
     start_supervised!(Lightning.Adaptors.Registry)
     :ok
   end

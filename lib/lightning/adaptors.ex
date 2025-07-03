@@ -49,8 +49,6 @@ defmodule Lightning.Adaptors do
   be automatically restored on first access and saved after updates.
   """
 
-  use Supervisor
-  import Cachex.Spec
   alias Lightning.Adaptors.Repository
   require Logger
 
@@ -116,7 +114,7 @@ defmodule Lightning.Adaptors do
         |> Keyword.merge(Application.get_env(unquote(otp_app), __MODULE__, []))
         |> Keyword.merge(opts)
         |> Keyword.put(:name, __MODULE__)
-        |> Lightning.Adaptors.child_spec()
+        |> Lightning.Adaptors.Supervisor.child_spec()
       end
 
       def config do
@@ -170,60 +168,26 @@ defmodule Lightning.Adaptors do
   @type config :: %{
           strategy: {module(), term()},
           cache: Cachex.t(),
-          persist_path: String.t() | nil
+          persist_path: String.t() | nil,
+          offline_mode: boolean(),
+          warm_interval: pos_integer()
         }
 
   @type option ::
           {:name, name()}
           | {:strategy, {module(), term()} | module()}
           | {:persist_path, String.t() | nil}
+          | {:offline_mode, boolean()}
+          | {:warm_interval, pos_integer()}
 
   @doc """
   Returns the child spec for starting Adaptors in a supervision tree.
   """
   @spec child_spec([option()]) :: Supervisor.child_spec()
   def child_spec(opts) do
-    opts
-    |> super()
-    |> Supervisor.child_spec(id: Keyword.get(opts, :name, __MODULE__))
+    Lightning.Adaptors.Supervisor.child_spec(opts)
   end
 
-  @impl Supervisor
-  def init(config) do
-    children =
-      [
-        # Start the cache process
-        {Cachex,
-         [
-           config.cache,
-           [
-             warmers: [
-               warmer(
-                 state: config,
-                 module: Lightning.Adaptors.Warmer,
-                 required: true
-               )
-             ]
-           ]
-         ]}
-        # Start a task to restore cache if needed
-        # {Task,
-        #  fn ->
-        #    try do
-        #      restore_cache_if_needed(config)
-        #    rescue
-        #      error ->
-        #        Logger.warning(
-        #          "Failed to restore adaptor cache on startup: #{inspect(error)}"
-        #        )
-
-        #        :ok
-        #    end
-        #  end}
-      ]
-
-    Supervisor.init(children, strategy: :one_for_all)
-  end
 
   @doc """
   Start an Adaptors supervision tree with the given options.
@@ -243,31 +207,7 @@ defmodule Lightning.Adaptors do
   """
   @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
-    # # Ensure Registry is started if needed
-    if Process.whereis(Lightning.Adaptors.Registry) == nil do
-      Logger.warning("""
-      Can't find running Adaptors.Registry process.
-
-      Usually the Adaptors.Registry process is started by the Application.start/2 callback.
-      If you are not using an Application, you can start it manually with:
-
-      {:ok, _} = Supervisor.start_link([Lightning.Adaptors.Registry], strategy: :one_for_all)
-      """)
-    end
-
-    name = Keyword.get(opts, :name, __MODULE__)
-    cache_name = :"adaptors_cache_#{name}"
-
-    config = %{
-      name: name,
-      cache: cache_name,
-      strategy: Keyword.get(opts, :strategy, nil),
-      persist_path: Keyword.get(opts, :persist_path)
-    }
-
-    Supervisor.start_link(__MODULE__, config,
-      name: Lightning.Adaptors.Registry.via(name, nil, config)
-    )
+    Lightning.Adaptors.Supervisor.start_link(opts)
   end
 
   @doc """
@@ -432,4 +372,5 @@ defmodule Lightning.Adaptors do
     ] &&
       Regex.match?(~r/@openfn\/language-\w+/, name)
   end
+
 end
