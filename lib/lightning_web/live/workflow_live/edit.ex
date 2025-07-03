@@ -1542,7 +1542,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket}
 
       {:error, changeset} ->
-        {:reply, %{errors: LightningWeb.ChangesetJSON.errors(changeset)}, socket}
+        {:reply,
+         %{
+           dataclips: [],
+           next_cron_run_id: nil,
+           errors: LightningWeb.ChangesetJSON.errors(changeset)
+         }, socket}
     end
   end
 
