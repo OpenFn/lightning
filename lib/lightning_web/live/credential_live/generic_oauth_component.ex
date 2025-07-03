@@ -145,10 +145,15 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def handle_async(:token, {:ok, {:ok, token}}, socket) do
+    expected_scopes =
+      socket.assigns.selected_scopes
+      |> Enum.map(&String.downcase/1)
+      |> Enum.reject(&(&1 == "offline_access"))
+
     params =
       socket.assigns.changeset.params
       |> Map.put("oauth_token", token)
-      |> Map.put("expected_scopes", socket.assigns.selected_scopes)
+      |> Map.put("expected_scopes", expected_scopes)
 
     changeset = Credentials.change_credential(socket.assigns.credential, params)
 
@@ -157,7 +162,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> assign(:scopes_changed, false)
       |> assign(:changeset, changeset)
 
-    case validate_token(token, updated_socket.assigns.selected_scopes) do
+    case validate_token(token, expected_scopes) do
       :ok ->
         Logger.info(
           "Received valid token from #{updated_socket.assigns.selected_client.name}"
