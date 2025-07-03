@@ -9,8 +9,11 @@ defmodule Lightning.Adaptors.ServiceTest do
   setup do
     # Ensure the new Adaptors Registry is available for tests
     unless Process.whereis(Lightning.Adaptors.Registry) do
-      start_supervised!({Registry, keys: :unique, name: Lightning.Adaptors.Registry})
+      start_supervised!(
+        {Registry, keys: :unique, name: Lightning.Adaptors.Registry}
+      )
     end
+
     :ok
   end
 
@@ -19,7 +22,11 @@ defmodule Lightning.Adaptors.ServiceTest do
       assert function_exported?(TestAdaptors, :child_spec, 1)
 
       child_spec = TestAdaptors.child_spec([])
-      assert %{id: TestAdaptors, start: {Lightning.Adaptors.Supervisor, :start_link, _}} = child_spec
+
+      assert %{
+               id: TestAdaptors,
+               start: {Lightning.Adaptors.Supervisor, :start_link, _}
+             } = child_spec
     end
 
     test "generates config/0 function" do
@@ -31,8 +38,7 @@ defmodule Lightning.Adaptors.ServiceTest do
 
       # Start the test adaptor
       start_supervised!(
-        {TestAdaptors, 
-         [strategy: {MockAdaptorStrategy, [config: "test"]}]},
+        {TestAdaptors, [strategy: {MockAdaptorStrategy, [config: "test"]}]},
         id: :test_adaptors_all
       )
 
@@ -49,18 +55,19 @@ defmodule Lightning.Adaptors.ServiceTest do
 
       # Start the test adaptor
       start_supervised!(
-        {TestAdaptors, 
-         [strategy: {MockAdaptorStrategy, [config: "test"]}]},
+        {TestAdaptors, [strategy: {MockAdaptorStrategy, [config: "test"]}]},
         id: :test_adaptors_versions
       )
 
       # Test that versions_for/1 works
       {:ok, versions} = TestAdaptors.versions_for("@openfn/language-foo")
+
       expected_versions = %{
         "1.0.0" => %{"version" => "1.0.0"},
         "2.0.0" => %{"version" => "2.0.0"},
         "2.1.0" => %{"version" => "2.1.0"}
       }
+
       assert versions == expected_versions
     end
 
@@ -69,13 +76,13 @@ defmodule Lightning.Adaptors.ServiceTest do
 
       # Start the test adaptor
       start_supervised!(
-        {TestAdaptors, 
-         [strategy: {MockAdaptorStrategy, [config: "test"]}]},
+        {TestAdaptors, [strategy: {MockAdaptorStrategy, [config: "test"]}]},
         id: :test_adaptors_latest
       )
 
       # Test that latest_for/1 works
-      assert {:ok, %{"version" => "2.1.0"}} = TestAdaptors.latest_for("@openfn/language-bar")
+      assert {:ok, %{"version" => "2.1.0"}} =
+               TestAdaptors.latest_for("@openfn/language-bar")
     end
 
     test "generates fetch_configuration_schema/1 function that delegates to API" do
@@ -83,18 +90,18 @@ defmodule Lightning.Adaptors.ServiceTest do
 
       # Start the test adaptor
       start_supervised!(
-        {TestAdaptors, 
-         [strategy: {MockAdaptorStrategy, [config: "test"]}]},
+        {TestAdaptors, [strategy: {MockAdaptorStrategy, [config: "test"]}]},
         id: :test_adaptors_schema
       )
 
       # Test that fetch_configuration_schema/1 works (MockAdaptorStrategy returns not_implemented)
       result = TestAdaptors.fetch_configuration_schema("@openfn/language-foo")
+
       # The MockAdaptorStrategy returns {:error, :not_implemented}, which might be wrapped by Repository
       assert result in [
-        {:error, :not_implemented},
-        {:ok, {:ignore, :not_implemented}}
-      ]
+               {:error, :not_implemented},
+               {:ok, {:ignore, :not_implemented}}
+             ]
     end
 
     test "generates cache management functions" do
@@ -103,10 +110,14 @@ defmodule Lightning.Adaptors.ServiceTest do
       assert function_exported?(TestAdaptors, :clear_persisted_cache, 0)
 
       # Start the test adaptor with persistence
-      cache_path = Path.join(System.tmp_dir!(), "service_test_cache_#{:rand.uniform(1000)}.bin")
-      
+      cache_path =
+        Path.join(
+          System.tmp_dir!(),
+          "service_test_cache_#{:rand.uniform(1000)}.bin"
+        )
+
       start_supervised!(
-        {TestAdaptors, 
+        {TestAdaptors,
          [
            strategy: {MockAdaptorStrategy, [config: "test"]},
            persist_path: cache_path

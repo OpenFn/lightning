@@ -1,18 +1,18 @@
 defmodule Lightning.Adaptors.API do
   @moduledoc """
   API functions for Lightning Adaptors registry.
-  
+
   This module contains the core API functions for interacting with the adaptors registry:
   - all/1: Get list of all adaptor names
   - versions_for/2: Get versions for a specific adaptor
   - latest_for/2: Get latest version for a specific adaptor
   - fetch_configuration_schema/2: Get configuration schema for an adaptor
   - save_cache/1, restore_cache/1, clear_persisted_cache/1: Cache management
-  
+
   These functions use Lightning.Adaptors.Registry.config/1 to get the configuration
   for each adaptor instance.
   """
-  
+
   alias Lightning.Adaptors.Repository
   require Logger
 
@@ -100,7 +100,8 @@ defmodule Lightning.Adaptors.API do
 
       schema = Lightning.Adaptors.API.fetch_configuration_schema(Lightning.Adaptors, "@openfn/language-http")
   """
-  @spec fetch_configuration_schema(name(), String.t()) :: {:ok, map()} | {:error, term()}
+  @spec fetch_configuration_schema(name(), String.t()) ::
+          {:ok, map()} | {:error, term()}
   def fetch_configuration_schema(name, module_name) do
     name
     |> Lightning.Adaptors.Registry.config()

@@ -4,8 +4,11 @@ defmodule Lightning.AdaptorsTest do
   setup do
     # Ensure the new Adaptors Registry is available for tests
     unless Process.whereis(Lightning.Adaptors.Registry) do
-      start_supervised!({Registry, keys: :unique, name: Lightning.Adaptors.Registry})
+      start_supervised!(
+        {Registry, keys: :unique, name: Lightning.Adaptors.Registry}
+      )
     end
+
     :ok
   end
 

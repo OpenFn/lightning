@@ -2,7 +2,7 @@ defmodule MockAdaptorStrategy do
   @moduledoc """
   Mock adaptor strategy for testing Lightning.Adaptors functionality.
   """
-  
+
   @behaviour Lightning.Adaptors.Strategy
 
   @impl true

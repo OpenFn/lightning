@@ -1,7 +1,7 @@
 defmodule Lightning.Adaptors.Service do
   @moduledoc """
   Service module for creating Lightning.Adaptors facade modules.
-  
+
   This module provides the `__using__` macro that allows creating facade modules
   for Lightning.Adaptors functionality with custom configuration.
   """
@@ -102,7 +102,10 @@ defmodule Lightning.Adaptors.Service do
       end
 
       def fetch_configuration_schema(module_name) do
-        Lightning.Adaptors.API.fetch_configuration_schema(__MODULE__, module_name)
+        Lightning.Adaptors.API.fetch_configuration_schema(
+          __MODULE__,
+          module_name
+        )
       end
 
       def fetch_configuration_schema(name, module_name) do
@@ -161,8 +164,10 @@ defmodule Lightning.Adaptors.Service do
   @callback versions_for(term(), String.t()) :: {:ok, map()} | {:error, term()}
   @callback latest_for(String.t()) :: {:ok, map()} | {:error, term()}
   @callback latest_for(term(), String.t()) :: {:ok, map()} | {:error, term()}
-  @callback fetch_configuration_schema(String.t()) :: {:ok, map()} | {:error, term()}
-  @callback fetch_configuration_schema(term(), String.t()) :: {:ok, map()} | {:error, term()}
+  @callback fetch_configuration_schema(String.t()) ::
+              {:ok, map()} | {:error, term()}
+  @callback fetch_configuration_schema(term(), String.t()) ::
+              {:ok, map()} | {:error, term()}
   @callback save_cache() :: :ok | {:error, term()}
   @callback save_cache(term()) :: :ok | {:error, term()}
   @callback restore_cache() :: :ok | {:error, term()}

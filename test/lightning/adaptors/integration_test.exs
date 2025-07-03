@@ -12,15 +12,18 @@ defmodule Lightning.Adaptors.IntegrationTest do
 
   describe "configuration passing" do
     test "passes config explicitly without Application.get_env" do
-      cache_path = Path.join(System.tmp_dir!(), "test_cache_#{:rand.uniform(1000)}.bin")
+      cache_path =
+        Path.join(System.tmp_dir!(), "test_cache_#{:rand.uniform(1000)}.bin")
 
       # Configuration passed explicitly - no Application.get_env used
       config = [
         name: :explicit_config_test,
         strategy: {MockAdaptorStrategy, [user: "test"]},
         persist_path: cache_path,
-        offline_mode: true,  # Use offline mode to avoid network calls in tests
-        warm_interval: :timer.seconds(1)  # Fast interval for testing
+        # Use offline mode to avoid network calls in tests
+        offline_mode: true,
+        # Fast interval for testing
+        warm_interval: :timer.seconds(1)
       ]
 
       try do
@@ -41,7 +44,8 @@ defmodule Lightning.Adaptors.IntegrationTest do
     end
 
     test "offline mode works with explicit config" do
-      cache_path = Path.join(System.tmp_dir!(), "offline_test_#{:rand.uniform(1000)}.bin")
+      cache_path =
+        Path.join(System.tmp_dir!(), "offline_test_#{:rand.uniform(1000)}.bin")
 
       # First, create a cache file
       File.touch!(cache_path)
@@ -50,7 +54,8 @@ defmodule Lightning.Adaptors.IntegrationTest do
         name: :offline_test,
         strategy: {MockAdaptorStrategy, [user: "test"]},
         persist_path: cache_path,
-        offline_mode: true,  # Explicit offline mode
+        # Explicit offline mode
+        offline_mode: true,
         warm_interval: :timer.minutes(5)
       ]
 
@@ -75,11 +80,12 @@ defmodule Lightning.Adaptors.IntegrationTest do
       end
 
       # Set up config for the facade
-      Application.put_env(:lightning_test, TestAdaptors, [
+      Application.put_env(:lightning_test, TestAdaptors,
         strategy: {MockAdaptorStrategy, [user: "facade_test"]},
-        offline_mode: false,  # Default online mode - will attempt to warm
+        # Default online mode - will attempt to warm
+        offline_mode: false,
         warm_interval: :timer.seconds(1)
-      ])
+      )
 
       try do
         {:ok, _pid} = start_supervised(TestAdaptors)
@@ -107,7 +113,8 @@ defmodule Lightning.Adaptors.IntegrationTest do
 
     @impl true
     def fetch_versions(_config, "@openfn/language-test") do
-      {:ok, %{"1.0.0" => %{"version" => "1.0.0"}, "1.1.0" => %{"version" => "1.1.0"}}}
+      {:ok,
+       %{"1.0.0" => %{"version" => "1.0.0"}, "1.1.0" => %{"version" => "1.1.0"}}}
     end
 
     @impl true
@@ -122,12 +129,14 @@ defmodule Lightning.Adaptors.IntegrationTest do
 
     @impl true
     def fetch_configuration_schema("@openfn/language-test") do
-      {:ok, %{"type" => "object", "properties" => %{"test" => %{"type" => "string"}}}}
+      {:ok,
+       %{"type" => "object", "properties" => %{"test" => %{"type" => "string"}}}}
     end
 
     @impl true
     def fetch_configuration_schema("@openfn/language-mock") do
-      {:ok, %{"type" => "object", "properties" => %{"mock" => %{"type" => "boolean"}}}}
+      {:ok,
+       %{"type" => "object", "properties" => %{"mock" => %{"type" => "boolean"}}}}
     end
 
     @impl true

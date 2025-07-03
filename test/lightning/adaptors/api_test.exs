@@ -4,8 +4,11 @@ defmodule Lightning.Adaptors.APITest do
   setup do
     # Ensure the new Adaptors Registry is available for tests
     unless Process.whereis(Lightning.Adaptors.Registry) do
-      start_supervised!({Registry, keys: :unique, name: Lightning.Adaptors.Registry})
+      start_supervised!(
+        {Registry, keys: :unique, name: Lightning.Adaptors.Registry}
+      )
     end
+
     :ok
   end
 
@@ -69,7 +72,10 @@ defmodule Lightning.Adaptors.APITest do
 
       # Test versions_for
       {:ok, versions} =
-        Lightning.Adaptors.API.versions_for(adaptors_name, "@openfn/language-foo")
+        Lightning.Adaptors.API.versions_for(
+          adaptors_name,
+          "@openfn/language-foo"
+        )
 
       expected_versions = %{
         "1.0.0" => %{"version" => "1.0.0"},
@@ -266,13 +272,17 @@ defmodule Lightning.Adaptors.APITest do
          ]}
       )
 
-      result = Lightning.Adaptors.API.fetch_configuration_schema(adaptors_name, "@openfn/language-foo")
+      result =
+        Lightning.Adaptors.API.fetch_configuration_schema(
+          adaptors_name,
+          "@openfn/language-foo"
+        )
 
       # MockAdaptorStrategy returns {:error, :not_implemented}, which might be wrapped by Repository
       assert result in [
-        {:error, :not_implemented},
-        {:ok, {:ignore, :not_implemented}}
-      ]
+               {:error, :not_implemented},
+               {:ok, {:ignore, :not_implemented}}
+             ]
     end
   end
 end
