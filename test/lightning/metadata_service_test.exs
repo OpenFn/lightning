@@ -5,11 +5,6 @@ defmodule Lightning.MetadataServiceTest do
   import Lightning.CredentialsFixtures
 
   describe "fetch/2" do
-    # Now that MetadataService is run inside another process, the FakeRambo
-    # test stub doesn't have access to the stubbed data.
-    # Need to reconsider _how_ this is tested, or refactor the MetadataService,
-    # TaskWorker and/or CLI module.
-    @tag :skip
     test "returns the metadata when it exists" do
       path =
         Briefly.create!(extname: ".json")
@@ -18,6 +13,10 @@ defmodule Lightning.MetadataServiceTest do
         end)
 
       stdout = """
+      {"level":"debug","name":"CLI","message":["config hash: ","0c11f1bffdcb34f4832fea539604e55990f5b42f96a6142b18e0c1de98fef084"],"time":"1751556807184679728"}
+      {"level":"debug","name":"CLI","message":["loading adaptor from","/app/priv/openfn/lib/node_modules/@openfn/language-http-7.0.0/dist/index.cjs"],"time":"1751556807185164761"}
+      {"level":"info","name":"CLI","message":["Metadata function found. Generating metadata..."],"time":"1751556986984195830"}
+      {"level":"success","name":"CLI","message":["Done!"],"time":"1751556989156386986"}
       {"message":["#{path}"]}
       """
 
@@ -31,7 +30,6 @@ defmodule Lightning.MetadataServiceTest do
                 }}
     end
 
-    @tag :skip
     test "returns an error when the cli failed" do
       stdout = """
       {"level":"info","name":"CLI","message":["Metadata function found. Generating metadata..."]}
@@ -62,6 +60,13 @@ defmodule Lightning.MetadataServiceTest do
     end
 
     test "returns an error when there's no magic yet for an adaptor" do
+      stdout = """
+      {"level":"debug","name":"CLI","message":["config hash: ","0c11f1bffdcb34f4832fea539604e55990f5b42f96a6142b18e0c1de98fef084"],"time":"1751556807184679728"}
+      {"level":"debug","name":"CLI","message":["loading adaptor from","/app/priv/openfn/lib/node_modules/@openfn/language-http-7.0.0/dist/index.cjs"],"time":"1751556807185164761"}
+      {"level":"error","name":"CLI","message":["No metadata helper found"],"time":"1751556807394005966"}
+      """
+
+      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
       credential = credential_fixture()
 
       assert MetadataService.fetch("@openfn/language-common", credential) == {
