@@ -843,19 +843,22 @@ defmodule Lightning.Invocation do
 
     # Check if next cron dataclip matches user filters
     include_next_cron? =
-      next_cron_dataclip && dataclip_matches_filters?(next_cron_dataclip, user_filters)
+      next_cron_dataclip &&
+        dataclip_matches_filters?(next_cron_dataclip, user_filters)
 
     # Get regular dataclips, excluding next cron if it will be included to avoid duplication
-    filters = if include_next_cron?,
-      do: Map.put(user_filters, :exclude_id, next_cron_dataclip.id),
-      else: user_filters
+    filters =
+      if include_next_cron?,
+        do: Map.put(user_filters, :exclude_id, next_cron_dataclip.id),
+        else: user_filters
 
     regular_dataclips = list_dataclips_for_job(%Job{id: job_id}, filters, opts)
 
     # Combine results with next cron dataclip first if it matches filters
-    dataclips = if include_next_cron?,
-      do: [next_cron_dataclip | regular_dataclips],
-      else: regular_dataclips
+    dataclips =
+      if include_next_cron?,
+        do: [next_cron_dataclip | regular_dataclips],
+        else: regular_dataclips
 
     {dataclips, next_cron_run_id}
   end
