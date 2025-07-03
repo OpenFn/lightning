@@ -64,16 +64,36 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     # Build filters for database queries
     db_filters = build_db_filters(user_filters)
 
-    # Get the next cron run dataclip (with filters applied)
-    next_cron_dataclip = get_next_cron_run_dataclip(job_id, db_filters)
+    # Get the next cron run dataclip WITHOUT filters to get the true next run ID
+    unfiltered_next_cron_dataclip =
+      get_next_cron_run_dataclip(job_id, dynamic(true))
 
     next_cron_run_id =
-      if next_cron_dataclip, do: next_cron_dataclip.id, else: nil
+      if unfiltered_next_cron_dataclip,
+        do: unfiltered_next_cron_dataclip.id,
+        else: nil
 
-    # Build filters for input dataclips (excluding the next cron run to avoid duplication)
+    # Get the next cron run dataclip WITH filters to decide if it should be included in results
+    filtered_next_cron_dataclip = get_next_cron_run_dataclip(job_id, db_filters)
+
+    # Apply UUID prefix filtering to the filtered dataclip
+    filtered_next_cron_dataclip =
+      if filtered_next_cron_dataclip do
+        case maybe_filter_uuid_prefix(
+               [filtered_next_cron_dataclip],
+               user_filters
+             ) do
+          [filtered_clip] -> filtered_clip
+          [] -> nil
+        end
+      else
+        nil
+      end
+
+    # Build filters for input dataclips (excluding the filtered next cron run to avoid duplication)
     input_db_filters =
-      if next_cron_run_id do
-        dynamic([d], ^db_filters and d.id != ^next_cron_run_id)
+      if filtered_next_cron_dataclip do
+        dynamic([d], ^db_filters and d.id != ^filtered_next_cron_dataclip.id)
       else
         db_filters
       end
@@ -84,23 +104,13 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
       |> apply_pagination(limit, offset)
       |> Repo.all()
 
-    # Apply UUID prefix filtering if needed
+    # Apply UUID prefix filtering to input dataclips
     input_dataclips = maybe_filter_uuid_prefix(input_dataclips, user_filters)
 
-    next_cron_dataclip =
-      if next_cron_dataclip do
-        case maybe_filter_uuid_prefix([next_cron_dataclip], user_filters) do
-          [filtered_clip] -> filtered_clip
-          [] -> nil
-        end
-      else
-        nil
-      end
-
-    # Combine results - next cron run first (if it exists and matches filters), then input dataclips
+    # Combine results - filtered next cron run first (if it exists and matches filters), then input dataclips
     all_dataclips =
-      if next_cron_dataclip do
-        [next_cron_dataclip | input_dataclips]
+      if filtered_next_cron_dataclip do
+        [filtered_next_cron_dataclip | input_dataclips]
       else
         input_dataclips
       end
@@ -108,11 +118,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     # Convert to proper dataclip structs
     dataclips = convert_to_dataclip_structs(all_dataclips)
 
-    # Only return next_cron_run_id if the dataclip actually made it through filtering
-    final_next_cron_run_id =
-      if next_cron_dataclip, do: next_cron_dataclip.id, else: nil
-
-    {dataclips, final_next_cron_run_id}
+    {dataclips, next_cron_run_id}
   end
 
   # Get the next cron run dataclip (with filters applied)
