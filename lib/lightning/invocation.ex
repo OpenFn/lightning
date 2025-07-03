@@ -87,6 +87,9 @@ defmodule Lightning.Invocation do
 
         {:before, ts}, dynamic ->
           dynamic([d], ^dynamic and d.inserted_at <= ^ts)
+
+        {:exclude_id, exclude_id}, dynamic ->
+          dynamic([d], ^dynamic and d.id != ^exclude_id)
       end)
 
     Query.last_n_for_job(job_id, limit)
@@ -236,14 +239,6 @@ defmodule Lightning.Invocation do
         s.job_id == ^job_id and s.exit_reason == "success" and
           is_nil(d.wiped_at),
       where: ^db_filters,
-      select: %{
-        id: d.id,
-        type: d.type,
-        inserted_at: d.inserted_at,
-        project_id: d.project_id,
-        wiped_at: d.wiped_at,
-        is_next_cron_run: true
-      },
       order_by: [desc: s.finished_at],
       limit: 1
     )
@@ -842,12 +837,6 @@ defmodule Lightning.Invocation do
 
   # Query dataclips for cron-triggered jobs, including the next run state
   defp list_dataclips_with_cron_state(job_id, user_filters, opts) do
-    limit = Keyword.fetch!(opts, :limit)
-    offset = Keyword.get(opts, :offset)
-
-    # Build filters for database queries
-    db_filters = build_db_filters(user_filters)
-
     # Get the next cron run dataclip WITHOUT filters to get the true next run ID
     unfiltered_next_cron_dataclip =
       get_next_cron_run_dataclip(job_id, dynamic(true))
@@ -857,119 +846,46 @@ defmodule Lightning.Invocation do
         do: unfiltered_next_cron_dataclip.id,
         else: nil
 
-    # Get the next cron run dataclip WITH filters to decide if it should be included in results
-    filtered_next_cron_dataclip = get_next_cron_run_dataclip(job_id, db_filters)
-
-    # Apply UUID prefix filtering to the filtered dataclip
+    # Apply filters in Elixir to determine if the next cron run should be included in results
     filtered_next_cron_dataclip =
-      if filtered_next_cron_dataclip do
-        case maybe_filter_uuid_prefix(
-               [filtered_next_cron_dataclip],
-               user_filters
-             ) do
-          [filtered_clip] -> filtered_clip
-          [] -> nil
-        end
+      if unfiltered_next_cron_dataclip &&
+           dataclip_matches_filters?(unfiltered_next_cron_dataclip, user_filters) do
+        unfiltered_next_cron_dataclip
       else
         nil
       end
 
-    # Build filters for input dataclips (excluding the filtered next cron run to avoid duplication)
-    input_db_filters =
+    # Build user filters for input dataclips (excluding the filtered next cron run to avoid duplication)
+    input_user_filters =
       if filtered_next_cron_dataclip do
-        dynamic([d], ^db_filters and d.id != ^filtered_next_cron_dataclip.id)
+        Map.put(user_filters, :exclude_id, filtered_next_cron_dataclip.id)
       else
-        db_filters
+        user_filters
       end
 
-    # Get filtered input dataclips
-    input_dataclips =
-      build_input_dataclips_query(job_id, input_db_filters)
-      |> apply_pagination(limit, offset)
-      |> Repo.all()
-
-    # Apply UUID prefix filtering to input dataclips
-    input_dataclips = maybe_filter_uuid_prefix(input_dataclips, user_filters)
+    # Get filtered input dataclips using the existing function
+    input_dataclips = list_dataclips_for_job(%Job{id: job_id}, input_user_filters, opts)
 
     # Combine results - filtered next cron run first (if it exists and matches filters), then input dataclips
-    all_dataclips =
+    dataclips =
       if filtered_next_cron_dataclip do
         [filtered_next_cron_dataclip | input_dataclips]
       else
         input_dataclips
       end
 
-    # Convert to proper dataclip structs
-    dataclips = convert_to_dataclip_structs(all_dataclips)
-
     {dataclips, next_cron_run_id}
   end
 
-  # Build dynamic filters for the database queries
-  defp build_db_filters(user_filters) do
-    Enum.reduce(user_filters, dynamic(true), &build_single_filter/2)
-  end
-
-  # Build a single filter condition
-  defp build_single_filter({:id, uuid}, dynamic) do
-    dynamic([d], ^dynamic and d.id == ^uuid)
-  end
-
-  defp build_single_filter({:id_prefix, id_prefix}, dynamic) do
-    {id_prefix_start, id_prefix_end} = id_prefix_interval(id_prefix)
-    dynamic([d], ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end)
-  end
-
-  defp build_single_filter({:type, type}, dynamic) do
-    dynamic([d], ^dynamic and d.type == ^type)
-  end
-
-  defp build_single_filter({:after, ts}, dynamic) do
-    dynamic([d], ^dynamic and d.inserted_at >= ^ts)
-  end
-
-  defp build_single_filter({:before, ts}, dynamic) do
-    dynamic([d], ^dynamic and d.inserted_at <= ^ts)
-  end
-
-  # Build query for regular input dataclips
-  defp build_input_dataclips_query(job_id, db_filters) do
-    from(d in Dataclip,
-      join: s in Step,
-      on: s.input_dataclip_id == d.id,
-      where: s.job_id == ^job_id and is_nil(d.wiped_at),
-      where: ^db_filters,
-      select: %{
-        id: d.id,
-        type: d.type,
-        inserted_at: d.inserted_at,
-        project_id: d.project_id,
-        wiped_at: d.wiped_at
-      },
-      distinct: [desc: d.inserted_at],
-      order_by: [desc: d.inserted_at]
-    )
-  end
-
-  # Apply pagination to the query
-  defp apply_pagination(query, limit, offset) do
-    query
-    |> limit(^limit)
-    |> then(fn q -> if offset, do: offset(q, ^offset), else: q end)
-  end
-
-  # Convert the result data back to proper Dataclip structs
-  defp convert_to_dataclip_structs(dataclips_data) do
-    Enum.map(dataclips_data, fn data ->
-      %Dataclip{
-        id: data.id,
-        type: data.type,
-        inserted_at: data.inserted_at,
-        project_id: data.project_id,
-        wiped_at: data.wiped_at,
-        body: nil,
-        request: nil
-      }
+  # Check if a dataclip matches the user filters (applied in Elixir)
+  defp dataclip_matches_filters?(dataclip, user_filters) do
+    Enum.all?(user_filters, fn
+      {:id, uuid} -> dataclip.id == uuid
+      {:id_prefix, id_prefix} -> String.starts_with?(dataclip.id, id_prefix)
+      {:type, type} -> dataclip.type == type
+      {:after, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :lt
+      {:before, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :gt
+      {:exclude_id, exclude_id} -> dataclip.id != exclude_id
     end)
   end
 
