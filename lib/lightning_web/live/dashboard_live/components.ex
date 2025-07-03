@@ -113,13 +113,14 @@ defmodule LightningWeb.DashboardLive.Components do
                 class="hover:bg-gray-100 transition-colors duration-200"
                 onclick={JS.navigate(~p"/projects/#{project.id}/w")}
               >
+                <% dbg(project) %>
                 <.td>
-                  {project.name}
                   <.icon
                     :if={project.has_ai_chat}
                     name="hero-sparkles"
                     class="size-4"
                   />
+                  {project.name}
                 </.td>
                 <.td class="break-words max-w-[25rem]">
                   {String.capitalize(to_string(project.role))}
