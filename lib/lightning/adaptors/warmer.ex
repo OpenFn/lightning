@@ -42,6 +42,7 @@ defmodule Lightning.Adaptors.Warmer do
   """
 
   use Cachex.Warmer
+  require Logger
 
   @doc """
   Executes the cache warmer with the provided config.
@@ -95,17 +96,8 @@ defmodule Lightning.Adaptors.Warmer do
         |> Stream.concat([{"adaptors", adaptors}])
         |> Enum.to_list()
 
-      # TODO: add persistence after the cache is populated
-      # Save cache to disk asynchronously if persistence is configured
-      # This will run after the warmer has finished populating the cache
-      # if Map.has_key?(config, :persist_path) and
-      #      not is_nil(config.persist_path) do
-      #   Task.start(fn ->
-      #     # Small delay to ensure cache is fully populated
-      #     Process.sleep(500)
-      #     Lightning.Adaptors.save_cache(config)
-      #   end)
-      # end
+      # Save cache to disk if persistence is configured
+      save_cache_to_disk(cache_pairs, config)
 
       {:ok, cache_pairs}
     else
@@ -134,6 +126,23 @@ defmodule Lightning.Adaptors.Warmer do
            function_exported?(module, :fetch_packages, 1) ||
              {:error, :function_not_exported} do
       :ok
+    end
+  end
+
+  defp save_cache_to_disk(cache_pairs, config) do
+    persist_path = Map.get(config, :persist_path)
+
+    if persist_path do
+      try do
+        binary_data = :erlang.term_to_binary(cache_pairs)
+        File.write!(persist_path, binary_data)
+        Logger.debug("Successfully saved cache to #{persist_path}")
+      rescue
+        error ->
+          Logger.warning(
+            "Failed to save cache to #{persist_path}: #{inspect(error)}"
+          )
+      end
     end
   end
 end

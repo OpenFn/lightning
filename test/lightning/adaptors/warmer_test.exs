@@ -284,6 +284,61 @@ defmodule Lightning.Adaptors.WarmerTest do
 
       assert Warmer.execute(config) == :ignore
     end
+
+    test "saves cache to disk when persist_path is configured", %{schemas: schemas} do
+      persist_path = "/tmp/warmer_test_cache_#{:rand.uniform(10000)}.bin"
+
+      config = %{
+        strategy: {MockStrategySuccess, [config: "test"]},
+        cache: :test_cache,
+        persist_path: persist_path
+      }
+
+      # Ensure the file doesn't exist before the test
+      File.rm(persist_path)
+
+      assert {:ok, _pairs} = Warmer.execute(config)
+
+      # Verify the file was created
+      assert File.exists?(persist_path)
+
+      # Verify the file contains the correct data
+      {:ok, binary_data} = File.read(persist_path)
+      pairs = :erlang.binary_to_term(binary_data)
+
+      assert {"adaptors", ["@openfn/language-dhis2"]} in pairs
+      assert {"@openfn/language-dhis2:schema", schemas.dhis2} in pairs
+
+      # Clean up
+      File.rm(persist_path)
+    end
+
+    test "does not save cache when persist_path is not configured" do
+      config = %{
+        strategy: {MockStrategySuccess, [config: "test"]},
+        cache: :test_cache
+      }
+
+      assert {:ok, _pairs} = Warmer.execute(config)
+      # No file should be created since persist_path is not configured
+    end
+
+    test "handles file write errors gracefully" do
+      # Use a path that will cause a write error (non-existent directory)
+      persist_path = "/nonexistent_directory/cache.bin"
+
+      config = %{
+        strategy: {MockStrategySuccess, [config: "test"]},
+        cache: :test_cache,
+        persist_path: persist_path
+      }
+
+      # Should still return {:ok, pairs} even if file write fails
+      assert {:ok, _pairs} = Warmer.execute(config)
+
+      # Verify the file was not created
+      refute File.exists?(persist_path)
+    end
   end
 
   describe "integration with Cachex" do
