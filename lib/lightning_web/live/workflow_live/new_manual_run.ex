@@ -100,6 +100,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
             else
               nil
             end
+
           [] ->
             nil
         end
@@ -151,7 +152,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
       {:type, type} -> dataclip.type == type
       {:after, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :lt
       {:before, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :gt
-      {:id_prefix, _} -> true  # Already handled by maybe_filter_uuid_prefix
+      # Already handled by maybe_filter_uuid_prefix
+      {:id_prefix, _} -> true
       _ -> true
     end)
   end
