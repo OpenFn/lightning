@@ -49,9 +49,15 @@ defmodule LightningWeb.Components.DataTables do
           <:body>
             <%= for credential <- @credentials do %>
               <.tr id={"#{@id}-#{credential.id}"}>
-                <.td class="break-words max-w-[15rem]">
-                  <div class="flex-auto items-center">
-                    {credential.name}
+                <.td class="max-w-[15rem]">
+                  <div class="flex items-center truncate">
+                    <Common.wrapper_tooltip
+                      id={"credential-name-#{credential.id}"}
+                      tooltip={credential.name}
+                    >
+                      {credential.name}
+                    </Common.wrapper_tooltip>
+
                     <%= if missing_oauth_client?(credential) do %>
                       <span
                         id={"#{credential.id}-client-not-found-tooltip"}
@@ -82,13 +88,17 @@ defmodule LightningWeb.Components.DataTables do
                 <.td class="break-words max-w-[5rem]">
                   <%= if credential.production do %>
                     <div class="flex">
-                      <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
-                      &nbsp;Production
+                      <.icon
+                        name="hero-exclamation-triangle"
+                        class="w-5 h-5 text-secondary-500"
+                      /> &nbsp;Production
                     </div>
                   <% end %>
                 </.td>
-                <.td class="flex justify-end py-0.5">
-                  {render_slot(@actions, credential)}
+                <.td>
+                  <div class="flex justify-end items-center">
+                    {render_slot(@actions, credential)}
+                  </div>
                 </.td>
               </.tr>
             <% end %>
@@ -138,8 +148,13 @@ defmodule LightningWeb.Components.DataTables do
           <:body>
             <%= for client <- @clients do %>
               <.tr id={"#{@id}-#{client.id}"}>
-                <.td class="break-words max-w-[15rem]">
-                  {client.name}
+                <.td class="truncate max-w-[15rem]">
+                  <Common.wrapper_tooltip
+                    id={"oauth-client-name-#{client.id}"}
+                    tooltip={client.name}
+                  >
+                    {client.name}
+                  </Common.wrapper_tooltip>
                 </.td>
                 <.td :if={@show_owner} class="break-words max-w-[15rem]">
                   {if client.global, do: "GLOBAL", else: client.user.email}
@@ -151,11 +166,18 @@ defmodule LightningWeb.Components.DataTables do
                     </span>
                   <% end %>
                 </.td>
-                <.td class="break-words max-w-[21rem]">
-                  {client.authorization_endpoint}
+                <.td class="break-words max-w-[18rem]">
+                  <Common.wrapper_tooltip
+                    id={"oauth-client-endpoint-#{client.id}"}
+                    tooltip={client.authorization_endpoint}
+                  >
+                    {client.authorization_endpoint}
+                  </Common.wrapper_tooltip>
                 </.td>
-                <.td class="flex justify-end py-0.5">
-                  {render_slot(@actions, client)}
+                <.td>
+                  <div class="flex justify-end items-center">
+                    {render_slot(@actions, client)}
+                  </div>
                 </.td>
               </.tr>
             <% end %>
