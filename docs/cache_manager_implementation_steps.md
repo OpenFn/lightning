@@ -34,19 +34,19 @@ The key insight is that CacheManager should **own** Cachex rather than try to co
 
 ---
 
-## Step 1: Create FileWarmer Module
+## Step 1: Create CacheRestorer Module
 
 **Objective**: Create a Cachex warmer that restores cache from disk file.
 
 **What to do**:
-- Create new module `Lightning.Adaptors.FileWarmer` 
+- Create new module `Lightning.Adaptors.CacheRestorer` 
 - Implement `Cachex.Warmer` behaviour with single `execute/1` callback
 - Read binary file from `config.persist_path`
 - Deserialize with `:erlang.binary_to_term/1`
 - Return `{:ok, pairs}` on success or `:ignore` on failure
 - Add warning log on failure to read file
 
-**Verify**: Module compiles and `FileWarmer.execute(%{persist_path: "test.bin"})` returns either `{:ok, pairs}` or `:ignore`.
+**Verify**: Module compiles and `CacheRestorer.execute(%{persist_path: "test.bin"})` returns either `{:ok, pairs}` or `:ignore`.
 
 ---
 
@@ -86,7 +86,7 @@ The key insight is that CacheManager should **own** Cachex rather than try to co
 
 **What to do**:
 - In `determine_warmers/1`, check if cache file exists
-- If file exists: return FileWarmer (required) + StrategyWarmer (optional)
+- If file exists: return CacheRestorer (required) + StrategyWarmer (optional)
 - If no file: return only StrategyWarmer (required)
 - Use Cachex warmer spec format with module, state, and required flag
 - Pass full config as warmer state
@@ -149,7 +149,7 @@ The key insight is that CacheManager should **own** Cachex rather than try to co
 - Test that Cachex starts as child process
 - Test warmer selection logic with and without cache file
 - Remove tests for offline scenarios
-- Add tests for FileWarmer and enhanced StrategyWarmer
+- Add tests for CacheRestorer and enhanced StrategyWarmer
 
 **Verify**: All CacheManager tests pass with new architecture.
 
@@ -187,15 +187,15 @@ The key insight is that CacheManager should **own** Cachex rather than try to co
 
 ## Final Checklist
 
-- [x] FileWarmer created and tested
+- [x] CacheRestorer created and tested
 - [x] StrategyWarmer saves cache to disk
-- [ ] CacheManager is now a Supervisor
-- [ ] Warmer selection logic works correctly
-- [ ] Supervisor simplified
+- [x] CacheManager is now a Supervisor
+- [x] Warmer selection logic works correctly
+- [x] Supervisor simplified
 - [ ] Offline mode completely removed
 - [ ] Code significantly simplified
-- [ ] All tests updated and passing
-- [ ] Integration tests confirm both scenarios work
+- [x] All tests updated and passing
+- [x] Integration tests confirm both scenarios work
 - [ ] Performance validated
 
 ## Success Criteria

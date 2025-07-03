@@ -2,12 +2,11 @@ defmodule Lightning.Adaptors.Supervisor do
   @moduledoc """
   Supervisor for Lightning.Adaptors instances.
 
-  This module handles the supervision tree setup for the Adaptors system,
-  including the cache process and cache manager.
+  This module handles the supervision tree setup for the Adaptors system.
+  The CacheManager child manages its own Cachex cache internally.
   """
 
   use Supervisor
-  import Cachex.Spec
   require Logger
 
   @typedoc """
@@ -34,29 +33,12 @@ defmodule Lightning.Adaptors.Supervisor do
 
   @impl Supervisor
   def init(config) do
-    # Determine if we should enable the Cachex warmer
-    warmers =
-      if enable_cachex_warmer?(config) do
-        [
-          warmer(
-            state: config,
-            module: Lightning.Adaptors.Warmer,
-            # CacheManager handles blocking
-            required: false
-          )
-        ]
-      else
-        []
-      end
-
     children = [
-      # Start the cache process
-      {Cachex, [config.cache, [warmers: warmers]]},
-      # Start the cache manager for complex startup logic
+      # CacheManager now owns and manages Cachex internally
       {Lightning.Adaptors.CacheManager, config}
     ]
 
-    Supervisor.init(children, strategy: :rest_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 
   @doc """
@@ -109,9 +91,4 @@ defmodule Lightning.Adaptors.Supervisor do
     )
   end
 
-  # Private helper to determine if Cachex warmer should be enabled
-  defp enable_cachex_warmer?(config) do
-    # Enable warmer unless in offline mode
-    not Map.get(config, :offline_mode, false)
-  end
 end

@@ -1,22 +1,22 @@
-defmodule Lightning.Adaptors.FileWarmerTest do
+defmodule Lightning.Adaptors.CacheRestorerTest do
   use ExUnit.Case, async: true
 
-  alias Lightning.Adaptors.FileWarmer
+  alias Lightning.Adaptors.CacheRestorer
 
   describe "execute/1" do
     test "returns :ignore when persist_path is not configured" do
       config = %{}
-      assert FileWarmer.execute(config) == :ignore
+      assert CacheRestorer.execute(config) == :ignore
     end
 
     test "returns :ignore when persist_path is nil" do
       config = %{persist_path: nil}
-      assert FileWarmer.execute(config) == :ignore
+      assert CacheRestorer.execute(config) == :ignore
     end
 
     test "returns :ignore when cache file does not exist" do
       config = %{persist_path: "/tmp/nonexistent_cache.bin"}
-      assert FileWarmer.execute(config) == :ignore
+      assert CacheRestorer.execute(config) == :ignore
     end
 
     test "successfully restores cache from valid binary file" do
@@ -35,7 +35,7 @@ defmodule Lightning.Adaptors.FileWarmerTest do
 
       config = %{persist_path: persist_path}
 
-      assert {:ok, restored_pairs} = FileWarmer.execute(config)
+      assert {:ok, restored_pairs} = CacheRestorer.execute(config)
       assert restored_pairs == test_pairs
 
       # Clean up
@@ -50,7 +50,7 @@ defmodule Lightning.Adaptors.FileWarmerTest do
 
       config = %{persist_path: persist_path}
 
-      assert FileWarmer.execute(config) == :ignore
+      assert CacheRestorer.execute(config) == :ignore
 
       # Clean up (restore permissions first)
       File.chmod!(persist_path, 0o644)
@@ -65,7 +65,7 @@ defmodule Lightning.Adaptors.FileWarmerTest do
 
       config = %{persist_path: persist_path}
 
-      assert FileWarmer.execute(config) == :ignore
+      assert CacheRestorer.execute(config) == :ignore
 
       # Clean up
       File.rm(persist_path)
@@ -80,7 +80,7 @@ defmodule Lightning.Adaptors.FileWarmerTest do
 
       config = %{persist_path: persist_path}
 
-      assert {:ok, []} = FileWarmer.execute(config)
+      assert {:ok, []} = CacheRestorer.execute(config)
 
       # Clean up
       File.rm(persist_path)
@@ -104,7 +104,7 @@ defmodule Lightning.Adaptors.FileWarmerTest do
 
       config = %{persist_path: persist_path}
 
-      # Start cache with FileWarmer
+      # Start cache with CacheRestorer
       cache_name = :"file_warmer_integration_#{:rand.uniform(10000)}"
 
       start_supervised!(
@@ -115,7 +115,7 @@ defmodule Lightning.Adaptors.FileWarmerTest do
              warmers: [
                warmer(
                  state: config,
-                 module: Lightning.Adaptors.FileWarmer,
+                 module: Lightning.Adaptors.CacheRestorer,
                  required: true
                )
              ]
@@ -134,12 +134,12 @@ defmodule Lightning.Adaptors.FileWarmerTest do
       File.rm(persist_path)
     end
 
-    test "cache remains empty when FileWarmer returns :ignore" do
+    test "cache remains empty when CacheRestorer returns :ignore" do
       import Cachex.Spec
 
       config = %{persist_path: "/tmp/nonexistent_file.bin"}
 
-      # Start cache with FileWarmer pointing to non-existent file
+      # Start cache with CacheRestorer pointing to non-existent file
       cache_name = :"file_warmer_ignore_#{:rand.uniform(10000)}"
 
       start_supervised!(
@@ -150,7 +150,7 @@ defmodule Lightning.Adaptors.FileWarmerTest do
              warmers: [
                warmer(
                  state: config,
-                 module: Lightning.Adaptors.FileWarmer,
+                 module: Lightning.Adaptors.CacheRestorer,
                  required: false
                )
              ]

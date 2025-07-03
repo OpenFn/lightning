@@ -1,8 +1,8 @@
-defmodule Lightning.Adaptors.FileWarmer do
+defmodule Lightning.Adaptors.CacheRestorer do
   @moduledoc """
-  Cachex warmer that restores cache from a persisted binary file.
+  Cache restorer that restores cache from a persisted binary file.
 
-  This warmer attempts to read and deserialize a cache file from disk to restore
+  This restorer attempts to read and deserialize a cache file from disk to restore
   previously cached adaptor data. This allows for fast application startup when
   a cache file exists, as the cache can be restored without needing to fetch
   fresh data from external sources.
@@ -17,18 +17,18 @@ defmodule Lightning.Adaptors.FileWarmer do
         cache: :my_adaptors_cache
       }
 
-      # Start cache with file warmer
+      # Start cache with cache restorer
       Cachex.start_link(:my_adaptors_cache, [
         warmers: [
           warmer(
             state: config,
-            module: Lightning.Adaptors.FileWarmer,
+            module: Lightning.Adaptors.CacheRestorer,
             required: true  # Block startup until file is read
           )
         ]
       ])
 
-  The warmer will:
+  The restorer will:
   1. Check if the persist_path file exists
   2. Read and deserialize the binary file if present
   3. Return the cached pairs for immediate cache population
@@ -42,7 +42,7 @@ defmodule Lightning.Adaptors.FileWarmer do
   require Logger
 
   @doc """
-  Executes the file warmer with the provided config.
+  Executes the cache restorer with the provided config.
 
   Attempts to read and restore cache data from a binary file on disk.
 
