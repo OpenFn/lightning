@@ -255,7 +255,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                     </span>
                   </div>
                   <div className="text-xs truncate ml-2">
-                    {formatDate(new Date(clip.updated_at))}
+                    {formatDate(new Date(clip.inserted_at))}
                   </div>
                 </div>
               );
