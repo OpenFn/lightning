@@ -162,7 +162,7 @@ defmodule LightningWeb.ProjectLive.Index do
 
   def delete_action(assigns) do
     ~H"""
-    <%= if assigns.project.scheduled_deletion do %>
+    <%= if @project.scheduled_deletion do %>
       <.link
         id={"cancel-deletion-#{@project.id}"}
         href="#"
