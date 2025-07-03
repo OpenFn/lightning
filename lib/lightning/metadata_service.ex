@@ -116,7 +116,7 @@ defmodule Lightning.MetadataService do
       |> List.last()
 
     cond do
-      path ->
+      File.exists?(path) ->
         {:ok, path}
 
       should_have_metadata(result) ->
