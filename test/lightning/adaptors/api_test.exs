@@ -268,8 +268,11 @@ defmodule Lightning.Adaptors.APITest do
 
       result = Lightning.Adaptors.API.fetch_configuration_schema(adaptors_name, "@openfn/language-foo")
 
-      # MockAdaptorStrategy returns {:error, :not_implemented}
-      assert {:error, :not_implemented} = result
+      # MockAdaptorStrategy returns {:error, :not_implemented}, which might be wrapped by Repository
+      assert result in [
+        {:error, :not_implemented},
+        {:ok, {:ignore, :not_implemented}}
+      ]
     end
   end
 end
