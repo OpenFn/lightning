@@ -1,5 +1,5 @@
 defmodule Lightning.Adaptors.NPMTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
   import Mox

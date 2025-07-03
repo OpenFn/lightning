@@ -1,5 +1,5 @@
 defmodule Lightning.Adaptors.RepositoryTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Lightning.Adaptors.Repository
 

@@ -14,7 +14,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]}
@@ -33,7 +33,7 @@ defmodule Lightning.Adaptors.APITest do
       temp_name = Lightning.Adaptors
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: temp_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]}
@@ -57,7 +57,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_versions_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]}
@@ -84,7 +84,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_versions_not_found_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]}
@@ -110,7 +110,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_latest_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]}
@@ -132,7 +132,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_latest_not_found_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]}
@@ -162,7 +162,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_persistence_save_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]},
@@ -192,7 +192,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_persistence_restore_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]},
@@ -202,7 +202,7 @@ defmodule Lightning.Adaptors.APITest do
 
       # First, populate and save cache
       Lightning.Adaptors.API.all(adaptors_name)
-      config = Lightning.Adaptors.config(adaptors_name)
+      config = Lightning.Adaptors.Registry.config(adaptors_name)
       Lightning.Adaptors.API.save_cache(adaptors_name)
 
       # Clear the cache
@@ -231,7 +231,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_persistence_clear_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]},
@@ -259,7 +259,7 @@ defmodule Lightning.Adaptors.APITest do
       adaptors_name = :"api_config_schema_test_#{:rand.uniform(10000)}"
 
       start_supervised!(
-        {Lightning.Adaptors,
+        {Lightning.Adaptors.Supervisor,
          [
            name: adaptors_name,
            strategy: {MockAdaptorStrategy, [config: "foo"]}

@@ -1,5 +1,5 @@
 defmodule Lightning.Adaptors.WarmerTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Cachex.Spec
   alias Lightning.Adaptors.Warmer
