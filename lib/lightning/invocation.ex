@@ -218,6 +218,86 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
+  Gets the next cron run dataclip for a job.
+
+  Returns the most recent output dataclip from a successful step for the given job,
+  filtered by the provided database filters.
+  """
+  @spec get_next_cron_run_dataclip(
+          job_id :: Ecto.UUID.t(),
+          db_filters :: Ecto.Query.dynamic_expr()
+        ) ::
+          map() | nil
+  def get_next_cron_run_dataclip(job_id, db_filters) do
+    from(d in Dataclip,
+      join: s in Step,
+      on: s.output_dataclip_id == d.id,
+      where:
+        s.job_id == ^job_id and s.exit_reason == "success" and
+          is_nil(d.wiped_at),
+      where: ^db_filters,
+      select: %{
+        id: d.id,
+        type: d.type,
+        inserted_at: d.inserted_at,
+        project_id: d.project_id,
+        wiped_at: d.wiped_at,
+        is_next_cron_run: true
+      },
+      order_by: [desc: s.finished_at],
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Checks if a job is triggered by a cron trigger.
+  """
+  @spec cron_triggered_job?(job_id :: Ecto.UUID.t()) :: boolean()
+  def cron_triggered_job?(job_id) do
+    alias Lightning.Workflows.Edge
+    alias Lightning.Workflows.Trigger
+
+    from(e in Edge,
+      join: t in Trigger,
+      on: e.source_trigger_id == t.id,
+      where: e.target_job_id == ^job_id and t.type == :cron,
+      select: count(e.id)
+    )
+    |> Repo.one()
+    |> case do
+      count when count > 0 -> true
+      _ -> false
+    end
+  end
+
+  @doc """
+  Lists dataclips for a job, including next cron run state if cron-triggered.
+
+  For cron-triggered jobs, this function will include the next run state dataclip
+  and return its ID even if it doesn't match the filters.
+
+  Returns a tuple of {dataclips, next_cron_run_id}.
+  """
+  @spec list_dataclips_for_job_with_cron_state(
+          Job.t(),
+          user_filters :: map(),
+          opts :: Keyword.t()
+        ) :: {[Dataclip.t()], Ecto.UUID.t() | nil}
+  def list_dataclips_for_job_with_cron_state(
+        %Job{id: job_id} = job,
+        user_filters,
+        opts
+      ) do
+    if cron_triggered_job?(job_id) do
+      list_dataclips_with_cron_state(job_id, user_filters, opts)
+    else
+      dataclips = list_dataclips_for_job(job, user_filters, opts)
+      {dataclips, nil}
+    end
+  end
+
+  @doc """
   Creates a dataclip.
 
   ## Examples
@@ -763,6 +843,139 @@ defmodule Lightning.Invocation do
       )
     end)
     |> Repo.transaction()
+  end
+
+  # Query dataclips for cron-triggered jobs, including the next run state
+  defp list_dataclips_with_cron_state(job_id, user_filters, opts) do
+    limit = Keyword.fetch!(opts, :limit)
+    offset = Keyword.get(opts, :offset)
+
+    # Build filters for database queries
+    db_filters = build_db_filters(user_filters)
+
+    # Get the next cron run dataclip WITHOUT filters to get the true next run ID
+    unfiltered_next_cron_dataclip =
+      get_next_cron_run_dataclip(job_id, dynamic(true))
+
+    next_cron_run_id =
+      if unfiltered_next_cron_dataclip,
+        do: unfiltered_next_cron_dataclip.id,
+        else: nil
+
+    # Get the next cron run dataclip WITH filters to decide if it should be included in results
+    filtered_next_cron_dataclip = get_next_cron_run_dataclip(job_id, db_filters)
+
+    # Apply UUID prefix filtering to the filtered dataclip
+    filtered_next_cron_dataclip =
+      if filtered_next_cron_dataclip do
+        case maybe_filter_uuid_prefix(
+               [filtered_next_cron_dataclip],
+               user_filters
+             ) do
+          [filtered_clip] -> filtered_clip
+          [] -> nil
+        end
+      else
+        nil
+      end
+
+    # Build filters for input dataclips (excluding the filtered next cron run to avoid duplication)
+    input_db_filters =
+      if filtered_next_cron_dataclip do
+        dynamic([d], ^db_filters and d.id != ^filtered_next_cron_dataclip.id)
+      else
+        db_filters
+      end
+
+    # Get filtered input dataclips
+    input_dataclips =
+      build_input_dataclips_query(job_id, input_db_filters)
+      |> apply_pagination(limit, offset)
+      |> Repo.all()
+
+    # Apply UUID prefix filtering to input dataclips
+    input_dataclips = maybe_filter_uuid_prefix(input_dataclips, user_filters)
+
+    # Combine results - filtered next cron run first (if it exists and matches filters), then input dataclips
+    all_dataclips =
+      if filtered_next_cron_dataclip do
+        [filtered_next_cron_dataclip | input_dataclips]
+      else
+        input_dataclips
+      end
+
+    # Convert to proper dataclip structs
+    dataclips = convert_to_dataclip_structs(all_dataclips)
+
+    {dataclips, next_cron_run_id}
+  end
+
+  # Build dynamic filters for the database queries
+  defp build_db_filters(user_filters) do
+    Enum.reduce(user_filters, dynamic(true), &build_single_filter/2)
+  end
+
+  # Build a single filter condition
+  defp build_single_filter({:id, uuid}, dynamic) do
+    dynamic([d], ^dynamic and d.id == ^uuid)
+  end
+
+  defp build_single_filter({:id_prefix, id_prefix}, dynamic) do
+    {id_prefix_start, id_prefix_end} = id_prefix_interval(id_prefix)
+    dynamic([d], ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end)
+  end
+
+  defp build_single_filter({:type, type}, dynamic) do
+    dynamic([d], ^dynamic and d.type == ^type)
+  end
+
+  defp build_single_filter({:after, ts}, dynamic) do
+    dynamic([d], ^dynamic and d.inserted_at >= ^ts)
+  end
+
+  defp build_single_filter({:before, ts}, dynamic) do
+    dynamic([d], ^dynamic and d.inserted_at <= ^ts)
+  end
+
+  # Build query for regular input dataclips
+  defp build_input_dataclips_query(job_id, db_filters) do
+    from(d in Dataclip,
+      join: s in Step,
+      on: s.input_dataclip_id == d.id,
+      where: s.job_id == ^job_id and is_nil(d.wiped_at),
+      where: ^db_filters,
+      select: %{
+        id: d.id,
+        type: d.type,
+        inserted_at: d.inserted_at,
+        project_id: d.project_id,
+        wiped_at: d.wiped_at
+      },
+      distinct: [desc: d.inserted_at],
+      order_by: [desc: d.inserted_at]
+    )
+  end
+
+  # Apply pagination to the query
+  defp apply_pagination(query, limit, offset) do
+    query
+    |> limit(^limit)
+    |> then(fn q -> if offset, do: offset(q, ^offset), else: q end)
+  end
+
+  # Convert the result data back to proper Dataclip structs
+  defp convert_to_dataclip_structs(dataclips_data) do
+    Enum.map(dataclips_data, fn data ->
+      %Dataclip{
+        id: data.id,
+        type: data.type,
+        inserted_at: data.inserted_at,
+        project_id: data.project_id,
+        wiped_at: data.wiped_at,
+        body: nil,
+        request: nil
+      }
+    end)
   end
 
   defp id_prefix_interval(id_prefix) do
