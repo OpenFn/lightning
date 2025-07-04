@@ -6,12 +6,18 @@ defmodule FakeRambo do
   """
   defmodule Helpers do
     def stub_run(res) do
-      Process.put(:res, res)
+      Cachex.start_link(:fake_rambo_cache)
+      Cachex.put(:fake_rambo_cache, :res, res)
     end
   end
 
   def run(command, args, opts) do
     send(self(), {command, args, opts})
-    Process.get(:res, {:ok, %{out: "", status: 0}})
+
+    case Cachex.get(:fake_rambo_cache, :res) do
+      {:ok, nil} -> {:ok, %{out: "", status: 0}}
+      {:ok, res} -> res
+      {:error, _} -> {:ok, %{out: "", status: 0}}
+    end
   end
 end
