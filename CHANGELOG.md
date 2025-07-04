@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.13.4-pre] - 2025-07-04
+
+### Added
+
 - New buttons to run a workflow directly from the canvas, both from the start of
   the workflow [#3290](https://github.com/OpenFn/lightning/issues/3290) and from
   an individual step [#3294](https://github.com/OpenFn/lightning/issues/3294)
@@ -41,9 +49,9 @@ and this project adheres to
 - Fixes import of workflow YML for a manual laid out workflow.
   [#3360](https://github.com/OpenFn/lightning/pull/3360)
 
-## [2.13.3] 2025-06-26
+## [v2.13.3] 2025-06-26
 
-## [2.13.3-pre1] 2025-06-26
+## [v2.13.3-pre1] 2025-06-26
 
 ### Fixed
 
@@ -57,7 +65,7 @@ and this project adheres to
   debugging and reauthorizing Oauth credentials.
   [#3326](https://github.com/OpenFn/lightning/issues/3326)
 
-## [2.13.3-pre]
+## [v2.13.3-pre]
 
 ### Added
 
