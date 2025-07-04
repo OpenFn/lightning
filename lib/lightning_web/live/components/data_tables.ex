@@ -143,20 +143,20 @@ defmodule LightningWeb.Components.DataTables do
           <:body>
             <%= for client <- @clients do %>
               <.tr id={"#{@id}-#{client.id}"}>
-                <.td class="max-w-[15rem]">
+                <.td class="wrap-break-word max-w-[15rem]">
                   {client.name}
                 </.td>
-                <.td :if={@show_owner} class="break-words max-w-[15rem]">
+                <.td :if={@show_owner} class="wrap-break-word max-w-[15rem]">
                   {if client.global, do: "GLOBAL", else: client.user.email}
                 </.td>
-                <.td class="break-words max-w-[20rem]">
+                <.td class="wrap-break-word max-w-[20rem]">
                   <%= for project_name <- client.project_names do %>
                     <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
                       {project_name}
                     </span>
                   <% end %>
                 </.td>
-                <.td class="break-words max-w-[18rem]">
+                <.td class="wrap-break-word max-w-[18rem]">
                   {client.authorization_endpoint}
                 </.td>
                 <.td>
