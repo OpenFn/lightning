@@ -2111,13 +2111,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:workflow_component_event, action, payload}, socket) do
     case action do
-      :toggle_workflow_panel ->
-        {:noreply,
-         socket
-         |> assign(selected_template: nil)
-         |> update(:show_new_workflow_panel, fn val -> !val end)
-         |> maybe_disable_canvas()}
-
       :canvas_state_changed ->
         {:noreply,
          socket
@@ -2142,7 +2135,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket.assigns.workflow_params,
             payload["workflow"]
           )
-          |> dbg()
 
         if equivalent? do
           {:noreply, socket}
@@ -2164,6 +2156,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
             )
             |> trigger_yaml_generation()
           }
+        end
+
+      :save_workflow ->
+        case save_workflow(socket, socket.assigns.workflow_params) do
+          {:ok, socket} ->
+            {:noreply,
+             socket
+             |> assign(:selected_template, nil)
+             |> update(:show_new_workflow_panel, fn val -> !val end)
+             |> maybe_disable_canvas()
+             |> push_patch(
+               to:
+                 ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}?#{payload.query_params}"
+             )}
+
+          {:noreply, socket} ->
+            {:noreply, socket}
         end
     end
   end

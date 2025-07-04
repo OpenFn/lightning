@@ -78,19 +78,25 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   end
 
   def handle_event("create_workflow", _, socket) do
-    case create_disabled?(socket.assigns) do
-      true ->
-        {:noreply,
-         socket
-         |> put_flash(:error, error_flash_message(socket.assigns))
-         |> push_patch(
-           to:
-             "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
-         )}
+    if create_disabled?(socket.assigns) do
+      {:noreply,
+       socket
+       |> put_flash(:error, error_flash_message(socket.assigns))
+       |> push_patch(
+         to:
+           "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
+       )}
+    else
+      query_params =
+        if socket.assigns.selected_method == "ai" do
+          %{chat: socket.assigns.chat_session_id, method: "ai"}
+        else
+          %{}
+        end
 
-      false ->
-        notify_parent(:toggle_workflow_panel, %{})
-        {:noreply, socket}
+      notify_parent(:save_workflow, %{query_params: query_params})
+
+      {:noreply, socket}
     end
   end
 
