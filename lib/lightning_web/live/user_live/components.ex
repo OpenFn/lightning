@@ -104,19 +104,13 @@ defmodule LightningWeb.UserLive.Components do
       <:body>
         <%= for user <- @users do %>
           <.tr id={"user-#{user.id}"}>
-            <.td
-              class="overflow-hidden text-ellipsis max-w-40"
-              title={user.first_name}
-            >
+            <.td class="max-w-40 wrap-break-word" title={user.first_name}>
               {user.first_name}
             </.td>
-            <.td
-              class="overflow-hidden text-ellipsis max-w-40"
-              title={user.last_name}
-            >
+            <.td class="max-w-40 wrap-break-word" title={user.last_name}>
               {user.last_name}
             </.td>
-            <.td class="max-w-48 overflow-hidden text-ellipsis" title={user.email}>
+            <.td class="max-w-48 wrap-break-word" title={user.email}>
               {user.email}
             </.td>
             <.td>{user.role}</.td>

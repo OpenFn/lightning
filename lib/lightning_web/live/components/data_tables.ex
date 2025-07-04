@@ -50,13 +50,8 @@ defmodule LightningWeb.Components.DataTables do
             <%= for credential <- @credentials do %>
               <.tr id={"#{@id}-#{credential.id}"}>
                 <.td class="max-w-[15rem]">
-                  <div class="flex items-center truncate">
-                    <Common.wrapper_tooltip
-                      id={"credential-name-#{credential.id}"}
-                      tooltip={credential.name}
-                    >
-                      {credential.name}
-                    </Common.wrapper_tooltip>
+                  <div class="flex items-center">
+                    {credential.name}
 
                     <%= if missing_oauth_client?(credential) do %>
                       <span
@@ -148,13 +143,8 @@ defmodule LightningWeb.Components.DataTables do
           <:body>
             <%= for client <- @clients do %>
               <.tr id={"#{@id}-#{client.id}"}>
-                <.td class="truncate max-w-[15rem]">
-                  <Common.wrapper_tooltip
-                    id={"oauth-client-name-#{client.id}"}
-                    tooltip={client.name}
-                  >
-                    {client.name}
-                  </Common.wrapper_tooltip>
+                <.td class="max-w-[15rem]">
+                  {client.name}
                 </.td>
                 <.td :if={@show_owner} class="break-words max-w-[15rem]">
                   {if client.global, do: "GLOBAL", else: client.user.email}
@@ -167,12 +157,7 @@ defmodule LightningWeb.Components.DataTables do
                   <% end %>
                 </.td>
                 <.td class="break-words max-w-[18rem]">
-                  <Common.wrapper_tooltip
-                    id={"oauth-client-endpoint-#{client.id}"}
-                    tooltip={client.authorization_endpoint}
-                  >
-                    {client.authorization_endpoint}
-                  </Common.wrapper_tooltip>
+                  {client.authorization_endpoint}
                 </.td>
                 <.td>
                   <div class="flex justify-end items-center">
