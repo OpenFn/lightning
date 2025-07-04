@@ -65,22 +65,22 @@ defmodule LightningWeb.Components.DataTables do
                     <% end %>
                   </div>
                 </.td>
-                <.td class="break-words max-w-[10rem] border-">
+                <.td class="wrap-break-word max-w-[10rem] border-">
                   {credential_type(credential)}
                 </.td>
-                <.td :if={@show_owner} class="break-words max-w-[15rem]">
+                <.td :if={@show_owner} class="wrap-break-word max-w-[15rem]">
                   <div class="flex-auto items-center">
                     {credential.user.email}
                   </div>
                 </.td>
-                <.td class="break-words max-w-[25rem]">
+                <.td class="wrap-break-word max-w-[25rem]">
                   <%= for project_name <- credential.project_names do %>
                     <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
                       {project_name}
                     </span>
                   <% end %>
                 </.td>
-                <.td class="break-words max-w-[5rem]">
+                <.td class="wrap-break-word max-w-[5rem]">
                   <%= if credential.production do %>
                     <div class="flex">
                       <.icon

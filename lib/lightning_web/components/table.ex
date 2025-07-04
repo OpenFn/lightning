@@ -250,7 +250,7 @@ defmodule LightningWeb.Components.Table do
   ## Example
 
   ```elixir
-  <.td class="break-words max-w-[25rem]">
+  <.td class="wrap-break-word max-w-[25rem]">
     {user.name}
   </.td>
   ```

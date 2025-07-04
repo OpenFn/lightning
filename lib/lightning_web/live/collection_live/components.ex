@@ -98,13 +98,13 @@ defmodule LightningWeb.CollectionLive.Components do
           <:body>
             <%= for collection <- @collections do %>
               <.tr id={"collections-table-row-#{collection.id}"}>
-                <.td class="break-words max-w-[15rem] text-gray-800">
+                <.td class="wrap-break-word max-w-[15rem] text-gray-800">
                   {collection.name}
                 </.td>
-                <.td class="break-words max-w-[25rem]">
+                <.td class="wrap-break-word max-w-[25rem]">
                   {collection.project.name}
                 </.td>
-                <.td class="break-words max-w-[25rem]">
+                <.td class="wrap-break-word max-w-[25rem]">
                   {div(collection.byte_size_sum, 1_000_000)}
                 </.td>
                 <.td>
