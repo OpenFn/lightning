@@ -607,7 +607,8 @@ defmodule LightningWeb.UserLiveTest do
 
       # Clear filter
       index_live
-      |> render_click("clear_filter")
+      |> element("#clear_filter_button")
+      |> render_click()
 
       html = render(index_live)
       assert html =~ "alice@example.com"

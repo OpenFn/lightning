@@ -1420,6 +1420,370 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "generic oauth credential offline_access handling" do
+    setup do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "test_token",
+                   "refresh_token" => "refresh_token",
+                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
+                   "token_type" => "Bearer",
+                   "scope" => env.opts[:test_scope] || "read write"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "name" => "Test User",
+                   "picture" => "image.png"
+                 })
+             }}
+        end
+      end)
+
+      :ok
+    end
+
+    test "ignores offline_access in selected scopes when validating", %{
+      conn: conn,
+      user: user
+    } do
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "read,write",
+          optional_scopes: "offline_access"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      view
+      |> element("#scope_selection_new_offline_access")
+      |> render_change(%{"_target" => ["offline_access"]})
+
+      view
+      |> fill_credential(%{name: "Test Credential"})
+
+      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn env,
+                                                                            _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "test_token",
+                   "refresh_token" => "refresh_token",
+                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
+                   "token_type" => "Bearer",
+                   "scope" => "read write"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "name" => "Test User",
+                   "picture" => "image.png"
+                 })
+             }}
+
+          _ ->
+            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+        end
+      end)
+
+      view |> element("#authorize-button") |> render_click()
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new",
+        code: "auth_code"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :complete === assigns[:oauth_progress]
+      end)
+
+      assert view |> has_element?("h3", "Test User")
+      refute view |> submit_disabled("save-credential-button-new")
+
+      {:ok, _view, _html} =
+        view
+        |> form("#credential-form-new")
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      assert_redirect(view, ~p"/credentials")
+    end
+
+    test "validates other missing scopes while ignoring offline_access", %{
+      conn: conn,
+      user: user
+    } do
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "read,write",
+          optional_scopes: "admin,offline_access"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      view
+      |> element("#scope_selection_new_admin")
+      |> render_change(%{"_target" => ["admin"]})
+
+      view
+      |> element("#scope_selection_new_offline_access")
+      |> render_change(%{"_target" => ["offline_access"]})
+
+      view
+      |> fill_credential(%{name: "Test Credential"})
+
+      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                         _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "test_token",
+                   "refresh_token" => "refresh_token",
+                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
+                   "token_type" => "Bearer",
+                   "scope" => "read"
+                 })
+             }}
+
+          _ ->
+            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+        end
+      end)
+
+      view |> element("#authorize-button") |> render_click()
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new",
+        code: "auth_code"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :error === assigns[:oauth_progress]
+      end)
+
+      html = render(view)
+
+      assert html =~ "Missing permissions:"
+
+      assert html =~ "&#39;write&#39;"
+      assert html =~ "&#39;admin&#39;"
+
+      refute html =~ "&#39;offline_access&#39;"
+
+      assert view |> submit_disabled("#save-credential-button-new")
+    end
+
+    test "handles offline_access with different casing", %{
+      conn: conn,
+      user: user
+    } do
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "read",
+          optional_scopes: "OFFLINE_ACCESS"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      assert view |> has_element?("#scope_selection_new_offline_access")
+
+      view
+      |> element("#scope_selection_new_offline_access")
+      |> render_change(%{"_target" => ["offline_access"]})
+
+      view
+      |> fill_credential(%{name: "Test Credential"})
+
+      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn env,
+                                                                            _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "test_token",
+                   "refresh_token" => "refresh_token",
+                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
+                   "token_type" => "Bearer",
+                   "scope" => "read"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "name" => "Test User",
+                   "picture" => "image.png"
+                 })
+             }}
+
+          _ ->
+            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+        end
+      end)
+
+      view |> element("#authorize-button") |> render_click()
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new",
+        code: "auth_code"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :complete === assigns[:oauth_progress]
+      end)
+
+      assert view |> has_element?("h3", "Test User")
+      refute view |> submit_disabled("save-credential-button-new")
+    end
+
+    test "handles case where offline_access is in granted scopes", %{
+      conn: conn,
+      user: user
+    } do
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "read,write",
+          optional_scopes: "offline_access"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+
+      view
+      |> element("#scope_selection_new_offline_access")
+      |> render_change(%{"_target" => ["offline_access"]})
+
+      view
+      |> fill_credential(%{name: "Test Credential"})
+
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %{url: "http://example.com/oauth2/revoke"}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+      end)
+
+      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn env,
+                                                                            _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "test_token",
+                   "refresh_token" => "refresh_token",
+                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
+                   "token_type" => "Bearer",
+                   "scope" => "read write offline_access"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "name" => "Test User",
+                   "picture" => "image.png"
+                 })
+             }}
+        end
+      end)
+
+      view |> element("#authorize-button") |> render_click()
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new",
+        code: "auth_code"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new"
+          )
+
+        :complete === assigns[:oauth_progress]
+      end)
+
+      assert view |> has_element?("h3", "Test User")
+      refute view |> submit_disabled("save-credential-button-new")
+    end
+  end
+
   describe "transfer credential modal" do
     setup %{conn: conn} do
       owner = insert(:user)

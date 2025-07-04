@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.13.4-pre] - 2025-07-04
+
+### Added
+
 - New buttons to run a workflow directly from the canvas, both from the start of
   the workflow [#3290](https://github.com/OpenFn/lightning/issues/3290) and from
   an individual step [#3294](https://github.com/OpenFn/lightning/issues/3294)
@@ -34,6 +42,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix OAuth scope validation error caused by `offline_access`
+  [#3363](https://github.com/OpenFn/lightning/issues/3363)
 - Cannot send message in old ai chat sessions
   [#3347](https://github.com/OpenFn/lightning/issues/3347)
 - Fixes brief flash of previously viewed diagram when switching workflows
@@ -45,9 +55,9 @@ and this project adheres to
 - Fix tables UI broken
   [#3324](https://github.com/OpenFn/lightning/issues/3324)
 
-## [2.13.3] 2025-06-26
+## [v2.13.3] 2025-06-26
 
-## [2.13.3-pre1] 2025-06-26
+## [v2.13.3-pre1] 2025-06-26
 
 ### Fixed
 
@@ -61,7 +71,7 @@ and this project adheres to
   debugging and reauthorizing Oauth credentials.
   [#3326](https://github.com/OpenFn/lightning/issues/3326)
 
-## [2.13.3-pre]
+## [v2.13.3-pre]
 
 ### Added
 
