@@ -9,6 +9,11 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
   alias Phoenix.LiveView.JS
 
   @impl true
+  def mount(socket) do
+    {:ok, assign(socket, project_auth_methods: [])}
+  end
+
+  @impl true
   def update(assigns, socket) do
     {:ok, apply_action(socket, assigns.action, assigns)}
   end
@@ -84,19 +89,15 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
     selections = Map.merge(project_selections, trigger_selections)
 
-    auth_method = %WebhookAuthMethod{project_id: project.id}
-
     socket
     |> assign(assigns)
     |> assign(
       action: if(project_auth_methods == [], do: :new, else: :index),
       trigger: trigger,
       selections: selections,
-      webhook_auth_method: auth_method,
-      auth_type_changeset: WebhookAuthMethod.changeset(auth_method, %{}),
-      project_auth_methods: project_auth_methods,
-      is_form_valid: false
+      project_auth_methods: project_auth_methods
     )
+    |> assign_new_auth_method_form(project)
   end
 
   def handle_info({:form_validity, is_valid}, socket) do
@@ -179,18 +180,28 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
   end
 
   def handle_event("close_webhook_modal", _, socket) do
-    view = socket.assigns.return_to |> String.split("/") |> List.last()
+    %{
+      action: action,
+      return_to: return_to,
+      project_auth_methods: auth_methods,
+      project: project
+    } =
+      socket.assigns
 
-    if view == "settings#webhook_security" do
+    current_page = return_to |> String.split("/") |> List.last()
+
+    if current_page == "settings#webhook_security" do
       {:noreply,
        socket
        |> push_navigate(to: socket.assigns.return_to)}
     else
-      case socket.assigns.action do
-        :index ->
+      case {action, auth_methods} do
+        {:index, _} ->
+          {:noreply, push_patch(socket, to: return_to)}
+
+        {:new, []} ->
           {:noreply,
-           socket
-           |> push_navigate(to: socket.assigns.return_to)}
+           socket |> assign(action: :new) |> assign_new_auth_method_form(project)}
 
         _ ->
           {:noreply, socket |> assign(action: :index)}
@@ -280,7 +291,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
             <button
               phx-click={
-                JS.hide(to: "#webhooks_auth_method_modal")
+                hide_modal(@id)
                 |> JS.push("close_webhook_modal")
               }
               phx-target={@myself}
@@ -338,6 +349,16 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       </.modal>
     </div>
     """
+  end
+
+  defp assign_new_auth_method_form(socket, project) do
+    auth_method = %WebhookAuthMethod{project_id: project.id}
+
+    assign(socket,
+      webhook_auth_method: auth_method,
+      auth_type_changeset: WebhookAuthMethod.changeset(auth_method, %{}),
+      is_form_valid: false
+    )
   end
 
   defp linked_triggers_list(assigns) do
@@ -476,7 +497,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           </.button>
           <.button
             type="button"
-            phx-click="close_webhook_modal"
+            phx-click={
+              hide_modal(@id)
+              |> JS.push("close_webhook_modal")
+            }
             phx-target={@myself}
             theme="secondary"
           >

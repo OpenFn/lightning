@@ -291,26 +291,24 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
             </small>
           </div>
         </div>
-        <.modal_footer class="mt-6">
-          <div class="sm:flex sm:flex-row-reverse gap-3">
-            <.button
-              id={"submit-btn-#{@id}"}
-              type="submit"
-              theme="primary"
-              disabled={!@changeset.valid?}
-            >
-              Save
-            </.button>
-            <.button
-              id={"cancel-btn-#{@id}"}
-              type="button"
-              phx-click="reset_action"
-              phx-target={@myself}
-              theme="secondary"
-            >
-              Cancel
-            </.button>
-          </div>
+        <.modal_footer>
+          <.button
+            id={"submit-btn-#{@id}"}
+            type="submit"
+            theme="primary"
+            disabled={!@changeset.valid?}
+          >
+            Save
+          </.button>
+          <.button
+            id={"cancel-btn-#{@id}"}
+            type="button"
+            phx-click="reset_action"
+            phx-target={@myself}
+            theme="secondary"
+          >
+            Cancel
+          </.button>
         </.modal_footer>
       </.form>
     </.modal>
@@ -350,7 +348,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           If you wish to proceed with this action, click on the delete button. To cancel click on the cancel button.<br /><br />
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mt-2">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -370,7 +368,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         >
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end

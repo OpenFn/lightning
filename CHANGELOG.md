@@ -19,7 +19,15 @@ and this project adheres to
 
 ### Changed
 
+- Standardize modal footers and paddings
+  [#3277](https://github.com/OpenFn/lightning/issues/3277)
+
 ### Fixed
+
+- Fix text content overflowing in credential modal
+  [#3280](https://github.com/OpenFn/lightning/pull/3280)
+- Fix tables UI broken
+  [#3324](https://github.com/OpenFn/lightning/issues/3324)
 
 ## [v2.13.4-pre] - 2025-07-04
 

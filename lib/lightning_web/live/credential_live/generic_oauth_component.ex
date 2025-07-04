@@ -561,7 +561,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <div class="bg-white px-4">
+        <div class="bg-white">
           <div class="space-y-4">
             <div>
               <NewInputs.input
@@ -647,31 +647,25 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           </div>
         </div>
 
-        <.modal_footer class="mt-6 mx-4">
-          <div class="flex justify-between items-center">
-            <div class="flex-1 w-1/2">
-              <div class="sm:flex sm:flex-row-reverse gap-3">
-                <.button
-                  id={"save-credential-button-#{@credential.id || "new"}"}
-                  type="submit"
-                  theme="primary"
-                  disabled={
-                    !@changeset.valid? || @scopes_changed ||
-                      @oauth_progress == :error
-                  }
-                >
-                  Save
-                </.button>
-                <.button
-                  type="button"
-                  phx-click={JS.navigate(@return_to)}
-                  theme="secondary"
-                >
-                  Cancel
-                </.button>
-              </div>
-            </div>
-          </div>
+        <.modal_footer>
+          <.button
+            id={"save-credential-button-#{@credential.id || "new"}"}
+            type="submit"
+            theme="primary"
+            disabled={
+              !@changeset.valid? || @scopes_changed ||
+                @oauth_progress == :error
+            }
+          >
+            Save
+          </.button>
+          <.button
+            type="button"
+            phx-click={JS.navigate(@return_to)}
+            theme="secondary"
+          >
+            Cancel
+          </.button>
         </.modal_footer>
       </.form>
     </div>
