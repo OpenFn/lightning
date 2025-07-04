@@ -11,6 +11,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
+  alias Lightning.Jobs
   alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -1501,15 +1502,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_event("get-initial-state", _params, socket) do
-    {:noreply,
-     socket
-     |> push_event("current-workflow-params", %{
-       workflow_params: socket.assigns.workflow_params
-     })}
-  end
-
-  @impl true
   def handle_event("workflow_editor_metrics_report", params, socket) do
     UiMetrics.log_workflow_editor_metrics(
       socket.assigns.workflow,
@@ -1520,7 +1512,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("get-current-state", _params, socket) do
-    {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
+    %{workflow_params: workflow_params, current_user: current_user} =
+      socket.assigns
+
+    {:reply,
+     %{
+       workflow_params: update_jobs_with_chat_info(workflow_params, current_user)
+     }, socket}
   end
 
   def handle_event(
@@ -3316,5 +3314,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </div>
     </div>
     """
+  end
+
+  defp update_jobs_with_chat_info(
+         %{"jobs" => jobs} = workflow_params,
+         current_user
+       ) do
+    jobs_with_chat =
+      jobs
+      |> Enum.map(& &1["id"])
+      |> Jobs.filter_with_chat_user(current_user)
+      |> MapSet.new(& &1.id)
+
+    Map.update(workflow_params, "jobs", [], fn jobs ->
+      Enum.map(jobs, fn job ->
+        has_ai_chat = MapSet.member?(jobs_with_chat, job["id"])
+        Map.put(job, "has_ai_chat", has_ai_chat)
+      end)
+    end)
   end
 end
