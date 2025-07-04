@@ -32,6 +32,7 @@ interface ExistingViewProps {
   onSubmit: () => void;
   fixedHeight: boolean;
   currentRunDataclip?: Dataclip | null;
+  nextCronRunId?: string | null;
 }
 
 const ExistingView: React.FC<ExistingViewProps> = ({
@@ -48,6 +49,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   onSubmit,
   fixedHeight,
   currentRunDataclip,
+  nextCronRunId,
 }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
@@ -222,6 +224,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
             dataclips.map(clip => {
               const isCurrent =
                 currentRunDataclip && clip.id === currentRunDataclip.id;
+              const isNextCronRun = nextCronRunId && clip.id === nextCronRunId;
               return (
                 <div
                   key={clip.id}
@@ -236,6 +239,11 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                         className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
                         title="Current dataclip for this step"
                       />
+                    ) : isNextCronRun ? (
+                      <span
+                        className="hero-clock-solid size-4 text-primary-400 group-hover:text-primary-600"
+                        title="Next state that will be used for cron execution"
+                      />
                     ) : (
                       <span className="hero-document-text align-middle size-4 group-hover:text-primary-600" />
                     )}
@@ -247,7 +255,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                     </span>
                   </div>
                   <div className="text-xs truncate ml-2">
-                    {formatDate(new Date(clip.updated_at))}
+                    {formatDate(new Date(clip.inserted_at))}
                   </div>
                 </div>
               );
