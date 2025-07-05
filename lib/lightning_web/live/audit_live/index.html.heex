@@ -18,7 +18,7 @@
         <%= for audit <- @page.entries do %>
           <.tr class="border-t border-gray-200">
             <.td>
-              {audit.inserted_at |> Lightning.Helpers.format_date()}
+              <Common.datetime datetime={audit.inserted_at} />
             </.td>
             <.td>
               <.badge color="success" label={audit.event} />

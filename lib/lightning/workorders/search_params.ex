@@ -16,7 +16,9 @@ defmodule Lightning.WorkOrders.SearchParams do
              :date_after,
              :date_before,
              :wo_date_after,
-             :wo_date_before
+             :wo_date_before,
+             :sort_by,
+             :sort_direction
            ]}
 
   @statuses ~w(pending running success failed crashed killed cancelled lost exception rejected)
@@ -37,7 +39,9 @@ defmodule Lightning.WorkOrders.SearchParams do
           date_after: DateTime.t(),
           date_before: DateTime.t(),
           wo_date_after: DateTime.t(),
-          wo_date_before: DateTime.t()
+          wo_date_before: DateTime.t(),
+          sort_by: String.t(),
+          sort_direction: String.t()
         }
 
   @primary_key false
@@ -51,6 +55,8 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:date_before, :utc_datetime_usec)
     field(:wo_date_after, :utc_datetime_usec)
     field(:wo_date_before, :utc_datetime_usec)
+    field(:sort_by, :string)
+    field(:sort_direction, :string)
   end
 
   def new(params) do
@@ -66,10 +72,16 @@ defmodule Lightning.WorkOrders.SearchParams do
       :date_after,
       :date_before,
       :wo_date_after,
-      :wo_date_before
+      :wo_date_before,
+      :sort_by,
+      :sort_direction
     ])
     |> validate_subset(:status, @statuses)
     |> validate_subset(:search_fields, @search_fields)
+    |> validate_inclusion(:sort_by, ["inserted_at", "last_activity"],
+      allow_nil: true
+    )
+    |> validate_inclusion(:sort_direction, ["asc", "desc"], allow_nil: true)
     |> apply_action!(:validate)
     |> Map.update!(:status, fn statuses ->
       Enum.map(statuses, fn status -> String.to_existing_atom(status) end)
@@ -134,6 +146,8 @@ defmodule Lightning.WorkOrders.SearchParams do
     end)
     |> Enum.into(%{})
     |> Map.merge(search_params, fn _key, v1, _v2 -> v1 end)
+    |> Map.put("sort_by", Map.get(search_params, "sort_by"))
+    |> Map.put("sort_direction", Map.get(search_params, "sort_direction"))
   end
 
   def from_map(map) do
@@ -146,6 +160,8 @@ defmodule Lightning.WorkOrders.SearchParams do
       |> Map.update!(:date_before, &parse_datetime/1)
       |> Map.update!(:wo_date_after, &parse_datetime/1)
       |> Map.update!(:wo_date_before, &parse_datetime/1)
+      |> Map.put_new(:sort_by, nil)
+      |> Map.put_new(:sort_direction, nil)
 
     struct(__MODULE__, updated_map)
   end

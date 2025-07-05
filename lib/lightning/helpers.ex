@@ -64,8 +64,23 @@ defmodule Lightning.Helpers do
     Crontab.Scheduler.get_next_run_date!(cron_expression, due_date)
   end
 
-  def format_date(date, formatter \\ "%F %T") do
-    Strftime.format!(date, formatter)
+  @doc """
+  Formats a datetime in a user-friendly relative format (e.g., "2 hours ago").
+  Falls back to absolute format if relative formatting fails.
+
+  For absolute formatting, you can pass a strftime formatter string.
+  """
+  def format_date(date, formatter \\ :relative) do
+    case formatter do
+      :relative ->
+        case Timex.Format.DateTime.Formatters.Relative.format(date, "{relative}") do
+          {:ok, relative_time} -> relative_time
+          {:error, _} -> Strftime.format!(date, "%F %T")
+        end
+
+      formatter_string when is_binary(formatter_string) ->
+        Strftime.format!(date, formatter_string)
+    end
   end
 
   def format_date_long(date) do
