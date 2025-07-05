@@ -21,9 +21,9 @@ and this project adheres to
 
 ### Fixed
 
-## [v2.13.4-pre1] - 2025-07-04
+## [v2.13.4] - 2025-07-05
 
-### Added
+## [v2.13.4-pre1] - 2025-07-04
 
 ### Changed
 
@@ -2407,7 +2407,7 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
   [#1610](https://github.com/OpenFn/Lightning/issues/1610) and
   [#1608](https://github.com/OpenFn/Lightning/issues/1608)
 
-## [2.0.0-rc2] - 2024-01-08
+## [v2.0.0-rc2] - 2024-01-08
 
 ### Fixed
 
@@ -2421,7 +2421,7 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
   getting overridden when user focuses on the Monaco editor
   [#1596](https://github.com/OpenFn/Lightning/issues/1596)
 
-## [2.0.0-rc1] - 2024-01-05
+## [v2.0.0-rc1] - 2024-01-05
 
 ### Why does this repo go from `v0` to `v2.0`?
 
