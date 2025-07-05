@@ -28,12 +28,13 @@ export const JobEditor: WithActionProps<JobEditorProps> = (props) => {
 
   // init hook - getting metadata
   React.useEffect(() => {
-    props.handleEvent('metadata_ready', (payload) => {
+    const cleanup = props.handleEvent('metadata_ready', (payload) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const sortedMetadata = sortMetadata(payload);
       setMetadata(sortedMetadata as object);
     })
     props.pushEventTo('request_metadata', {});
+    return cleanup;
   }, [props])
 
   React.useEffect(() => {

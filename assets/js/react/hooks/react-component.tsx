@@ -71,7 +71,10 @@ export const ReactComponent = {
       this._getPortals,
       {
         pushEvent: this.pushEvent.bind(this),
-        handleEvent: this.handleEvent.bind(this),
+        handleEvent: (name, callback) => {
+          const ref = this.handleEvent(name, callback);
+          return () => { this.removeHandleEvent(ref); }
+        },
         pushEventTo: this.pushEventTo.bind(this, this.el),
         el: this.el,
         containerEl: this._containerEl,

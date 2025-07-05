@@ -82,6 +82,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     positions: fixedPositions,
     updatePositions,
     updatePosition,
+    undo,
+    redo
   } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
@@ -353,6 +355,27 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   );
   // Set up tooltips for control buttons
   useTippyForControls(isManualLayout);
+
+  // undo/redo keyboard shortcuts
+  React.useEffect(() => {
+    const keyHandler = (e: KeyboardEvent) => {
+      const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z';
+      const isRedo = ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z');
+
+      if (isUndo) {
+        e.preventDefault();
+        undo();
+      }
+      if (isRedo) {
+        e.preventDefault();
+        redo();
+      }
+    }
+    window.addEventListener('keydown', keyHandler);
+    return () => { window.removeEventListener('keydown', keyHandler); }
+  }, [redo, undo]);
+
   return (
     <ReactFlowProvider>
       <ReactFlow
@@ -404,6 +427,19 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           >
             <span className="text-black hero-squares-2x2 w-4 h-4" />
           </ControlButton>
+          <ControlButton
+            onClick={undo}
+            data-tooltip="Undo"
+          >
+            <span className="text-black hero-arrow-uturn-left w-4 h-4" />
+          </ControlButton>
+          <ControlButton
+            onClick={redo}
+            data-tooltip="Redo"
+          >
+            <span className="text-black hero-arrow-uturn-right w-4 h-4" />
+          </ControlButton>
+
         </Controls>
         <Background />
         <MiniMap
