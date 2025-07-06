@@ -24,7 +24,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
 
   @impl true
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
-    notify_parent(:form_changed, %{
+    notify_parent(:workflow_params_changed, %{
       "workflow" => params,
       "opts" => [push_patches: false]
     })
@@ -36,7 +36,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   end
 
   defp notify_parent(action, payload) do
-    send(self(), {:workflow_component_event, action, payload})
+    send(self(), {:workflow_assistant, action, payload})
   end
 
   @impl true
@@ -45,6 +45,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     <div
       id={@id}
       phx-hook="TemplateToWorkflow"
+      phx-mounted={fade_in()}
+      phx-remove={fade_out()}
       class="w-1/3 bg-white h-full border-r border-gray-200 flex flex-col"
     >
       <div class="flex-1 min-h-0">

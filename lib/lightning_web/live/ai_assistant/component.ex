@@ -221,8 +221,8 @@ defmodule LightningWeb.AiAssistant.Component do
           send_update(
             socket.assigns.parent_module,
             id: socket.assigns.parent_id,
-            action: :template_selected,
-            template: nil
+            action: :workflow_updated,
+            workflow_code: nil
           )
 
         _ ->

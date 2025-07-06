@@ -27,13 +27,12 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   def create_session(
         %{
           project: project,
-          current_user: current_user,
-          workflow_code: workflow_code
-        },
+          current_user: current_user
+        } = assigns,
         content
       ) do
     AiAssistant.create_workflow_session(project, current_user, content,
-      workflow_code: workflow_code
+      workflow_code: assigns[:workflow_code]
     )
   end
 

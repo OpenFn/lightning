@@ -106,7 +106,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :project_concurrency_disabled, :boolean, required: true
   attr :project_id, :string, required: true
   attr :max_concurrency, :integer, required: true
-  attr :base_url, :string, required: true
+  attr :code_view_url, :string, required: true
 
   def workflow_settings(assigns) do
     ~H"""
@@ -121,7 +121,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           </span>
           <.link
             id="view-workflow-as-yaml-link"
-            patch={@base_url <> "?m=code"}
+            patch={@code_view_url}
             class="text-xs link"
           >
             View your workflow as YAML code
