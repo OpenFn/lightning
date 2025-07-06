@@ -800,7 +800,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  def run_buttons(assigns) do
+  defp run_buttons(assigns) do
     ~H"""
     <div id="run-buttons" class="inline-flex rounded-md shadow-xs">
       <.save_and_run_button {assigns} />
@@ -843,29 +843,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp save_and_run_attributes(assigns) do
-    if step_retryable?(assigns) do
-      [
-        type: "button",
-        "phx-click": "rerun",
-        "phx-value-run_id": assigns.follow_run.id,
-        "phx-value-step_id": assigns.step.id
-      ]
-    else
-      [type: "submit", form: assigns.manual_run_form.id]
-    end
-  end
-
-  defp save_and_run_classes(assigns) do
-    base_class = "relative inline-flex items-center"
-
-    if step_retryable?(assigns) do
-      [base_class, "rounded-r-none"]
-    else
-      [base_class]
-    end
-  end
-
   defp create_new_work_order_dropdown(assigns) do
     ~H"""
     <div class="relative -ml-px block">
@@ -903,108 +880,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </div>
     </div>
     """
-  end
-
-  defp banner_message(current_user_presence, prior_user_presence) do
-    prior_user_name =
-      "#{prior_user_presence.user.first_name} #{prior_user_presence.user.last_name}"
-
-    cond do
-      current_user_presence.active_sessions > 1 ->
-        "You have this workflow open in #{current_user_presence.active_sessions} tabs and can't edit until you close the other#{if current_user_presence.active_sessions > 2, do: "s", else: ""}."
-
-      current_user_presence.user.id != prior_user_presence.user.id ->
-        "#{prior_user_name} is currently active and you can't edit this workflow until they close the editor and canvas."
-
-      true ->
-        nil
-    end
-  end
-
-  @spec close_url(map(), atom(), atom()) :: String.t()
-  defp close_url(assigns, type, selection) do
-    opts = [
-      include_run: true,
-      include_version: true
-    ]
-
-    opts =
-      case selection do
-        :select when not is_nil(type) ->
-          Keyword.put(opts, :selection, assigns[type] && assigns[type].id)
-
-        _ ->
-          opts
-      end
-
-    Helpers.build_url(assigns, opts)
-  end
-
-  defp display_switcher(snapshot, workflow) do
-    snapshot && snapshot.lock_version != workflow.lock_version
-  end
-
-  defp step_retryable?(assigns),
-    do:
-      step_retryable?(
-        assigns.step,
-        assigns.manual_run_form,
-        assigns.selectable_dataclips
-      )
-
-  defp step_retryable?(step, form, selectable_dataclips) do
-    step_dataclip_id = step && step.input_dataclip_id
-
-    selected_dataclip =
-      Enum.find(selectable_dataclips, fn dataclip ->
-        dataclip.id == form[:dataclip_id].value
-      end)
-
-    selected_dataclip && selected_dataclip.id == step_dataclip_id &&
-      is_nil(selected_dataclip.wiped_at)
-  end
-
-  defp selected_dataclip_wiped?(form, selectable_dataclips) do
-    selected_dataclip =
-      Enum.find(selectable_dataclips, fn dataclip ->
-        dataclip.id == form[:dataclip_id].value
-      end)
-
-    selected_dataclip && !is_nil(selected_dataclip.wiped_at)
-  end
-
-  defp processing(%{state: state}) do
-    !(state in Lightning.Run.final_states())
-  end
-
-  defp processing(_run), do: false
-
-  defp job_deletion_tooltip_message(
-         workflow_deleted,
-         can_edit_job,
-         has_child_edges,
-         is_first_job
-       ) do
-    cond do
-      workflow_deleted ->
-        "You cannot modify a deleted workflow"
-
-      !can_edit_job ->
-        "You are not authorized to delete this step."
-
-      has_child_edges ->
-        "You can't delete a step that other downstream steps depend on."
-
-      is_first_job ->
-        "You can't delete the first step in a workflow."
-
-      true ->
-        nil
-    end
-  end
-
-  defp job_deleted?(selected_job, workflow) do
-    not Enum.any?(workflow.jobs, fn job -> job.id == selected_job.id end)
   end
 
   defp version_switcher_toggle(assigns) do
@@ -1157,61 +1032,199 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  def authorize(%{assigns: %{live_action: :new}} = socket) do
-    %{project_user: project_user, current_user: current_user, project: project} =
-      socket.assigns
-
-    Permissions.can(ProjectUsers, :create_workflow, current_user, project_user)
-    |> then(fn
-      :ok ->
-        assign_permissions(socket, current_user, project_user)
-
-      {:error, _} ->
-        socket
-        |> put_flash(:error, "You are not authorized to perform this action.")
-        |> push_navigate(to: ~p"/projects/#{project.id}/w")
-    end)
+  defp with_changes_indicator(assigns) do
+    ~H"""
+    <div class="relative">
+      <div
+        :if={@changeset.changes |> Enum.any?()}
+        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0 z-10"
+        data-is-dirty="true"
+      >
+      </div>
+      {render_slot(@inner_block)}
+    </div>
+    """
   end
 
-  def authorize(%{assigns: %{live_action: :edit}} = socket) do
-    %{project_user: project_user, current_user: current_user} = socket.assigns
-    assign_permissions(socket, current_user, project_user)
+  attr :id, :string, required: true
+  attr :can_edit_workflow, :boolean, required: true
+  attr :changeset, Ecto.Changeset, required: true
+  attr :snapshot_version_tag, :string, required: true
+  attr :has_presence_priority, :boolean, required: true
+  attr :project_repo_connection, :map, required: true
+  attr :dropdown_position, :atom, values: [:top, :bottom], required: true
+
+  defp save_workflow_button(assigns) do
+    {disabled, tooltip} =
+      case assigns do
+        %{
+          changeset: %{valid?: true, data: %{deleted_at: nil}},
+          can_edit_workflow: true,
+          snapshot_version_tag: "latest",
+          has_presence_priority: true
+        } ->
+          {false, nil}
+
+        %{changeset: %{data: %{deleted_at: deleted_at}}}
+        when is_struct(deleted_at) ->
+          {true, "Workflow has been deleted"}
+
+        %{can_edit_workflow: false} ->
+          {true, "You do not have permission to edit this workflow"}
+
+        %{changeset: %{valid?: false}} ->
+          {true, "You have unresolved errors in your workflow"}
+
+        %{snapshot_version_tag: tag} when tag != "latest" ->
+          {true, "You cannot edit an old snapshot of a workflow"}
+
+        _other ->
+          {true, nil}
+      end
+
+    assigns =
+      assigns
+      |> assign(disabled: disabled, tooltip: tooltip)
+
+    ~H"""
+    <div class="inline-flex rounded-md shadow-xs z-5">
+      <.button
+        id={@id}
+        phx-disable-with
+        disabled={@disabled}
+        phx-hook="InspectorSaveViaCtrlS"
+        phx-click={JS.push("save")}
+        phx-disconnected={JS.set_attribute({"disabled", ""})}
+        tooltip={@tooltip}
+        class={
+          ["focus:ring-transparent"] ++
+            if @project_repo_connection, do: ["rounded-r-none"], else: []
+        }
+        phx-connected={!@disabled && JS.remove_attribute("disabled")}
+        theme="primary"
+      >
+        Save
+      </.button>
+      <div :if={@project_repo_connection} class="relative -ml-px block">
+        <.button
+          type="button"
+          class="h-full rounded-l-none pr-1 pl-1"
+          id={"#{@id}-save-and-sync-option-menu-button"}
+          aria-expanded="true"
+          aria-haspopup="true"
+          disabled={@disabled}
+          phx-click={show_dropdown("#{@id}-save-and-sync")}
+          phx-disconnected={JS.set_attribute({"disabled", ""})}
+          phx-connected={!@disabled && JS.remove_attribute("disabled")}
+          theme="primary"
+        >
+          <span class="sr-only">Open options</span>
+          <.icon name="hero-chevron-down" class="w-4 h-4" />
+        </.button>
+        <div
+          role="menu"
+          aria-orientation="vertical"
+          aria-labelledby={"#{@id}-save-and-sync-option-menu-button"}
+          tabindex="-1"
+        >
+          <.button
+            phx-click-away={hide_dropdown("#{@id}-save-and-sync")}
+            id={"#{@id}-save-and-sync"}
+            type="button"
+            phx-click="toggle_github_sync_modal"
+            theme="secondary"
+            class={[
+              "hidden absolute right-0 z-10 w-max",
+              if(@dropdown_position == :top, do: "bottom-9 mb-2"),
+              if(@dropdown_position == :bottom, do: "top-9 mt-2")
+            ]}
+            disabled={@disabled}
+            phx-hook="OpenSyncModalViaCtrlShiftS"
+          >
+            Save & Sync
+          </.button>
+        </div>
+      </div>
+    </div>
+    """
   end
 
-  defp assign_permissions(socket, current_user, project_user) do
-    socket
-    |> assign(
-      can_write_webhook_auth_method:
-        Permissions.can?(
-          ProjectUsers,
-          :write_webhook_auth_method,
-          current_user,
-          project_user
-        ),
-      can_edit_workflow:
-        Permissions.can?(
-          ProjectUsers,
-          :edit_workflow,
-          current_user,
-          project_user
-        ),
-      can_run_workflow:
-        Permissions.can?(ProjectUsers, :run_workflow, current_user, project_user),
-      can_edit_data_retention:
-        Permissions.can?(
-          ProjectUsers,
-          :edit_data_retention,
-          current_user,
-          project_user
-        ),
-      can_edit_run_settings:
-        Permissions.can?(
-          ProjectUsers,
-          :edit_run_settings,
-          current_user,
-          project_user
-        )
-    )
+  defp settings_icon(assigns) do
+    base_icon_class = "w-5 h-5 place-self-center cursor-pointer"
+
+    class =
+      if workflow_settings_errors?(assigns.changeset) do
+        base_icon_class <> " text-danger-500 hover:text-danger-400"
+      else
+        base_icon_class <> " text-slate-500 hover:text-slate-400"
+      end
+
+    url =
+      if assigns.selection_mode == "settings" do
+        Helpers.build_url(assigns)
+      else
+        Helpers.build_url(assigns, mode: "settings")
+      end
+
+    assigns = assigns |> assign(:class, class) |> assign(:url, url)
+
+    ~H"""
+    <.link patch={@url} class={@class} id="toggle-settings">
+      <.icon name="hero-adjustments-vertical" />
+    </.link>
+    """
+  end
+
+  defp selected_template_label(assigns) do
+    ~H"""
+    <div
+      id={"selected-template-label-#{@template.id}"}
+      phx-mounted={fade_in()}
+      class="absolute z-[9999] m-4 opacity-75 bg-white/100 border border-gray-200 rounded-lg p-6"
+    >
+      <div class="flex items-start gap-3 opacity-100">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 rounded-lg ai-bg-gradient flex items-center justify-center">
+            <.icon name="hero-document-text" class="w-5 h-5 text-white" />
+          </div>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <h3 class="text-sm font-medium text-gray-900 tracking-tight leading-tight mb-2">
+            {@template.name}
+          </h3>
+          <p class="text-sm text-gray-600 leading-relaxed">
+            {@template.description}
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp canvas_placeholder_card(assigns) do
+    ~H"""
+    <div class="flex items-center justify-center w-full h-full p-8">
+      <div class="max-w-md text-center space-y-6">
+        <div class="relative mx-auto w-24 h-24 mb-8">
+          <div class="relative ai-bg-gradient rounded-2xl p-6">
+            <.icon name="hero-bolt" class="w-12 h-12 text-white" />
+          </div>
+        </div>
+        <div class="space-y-3">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            Ready for a new workflow?
+          </h3>
+          <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
+            Get started by selecting a template, importing a workflow, or opening a chat with the AI assistant.
+          </p>
+        </div>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-6">
+          Not sure where to start? Try browsing our template library first.
+        </p>
+      </div>
+    </div>
+    """
   end
 
   @impl true
@@ -1298,7 +1311,64 @@ defmodule LightningWeb.WorkflowLive.Edit do
      end)}
   end
 
-  def apply_action(socket, :new, _params) do
+  defp authorize(%{assigns: %{live_action: :new}} = socket) do
+    %{project_user: project_user, current_user: current_user, project: project} =
+      socket.assigns
+
+    Permissions.can(ProjectUsers, :create_workflow, current_user, project_user)
+    |> then(fn
+      :ok ->
+        assign_permissions(socket, current_user, project_user)
+
+      {:error, _} ->
+        socket
+        |> put_flash(:error, "You are not authorized to perform this action.")
+        |> push_navigate(to: ~p"/projects/#{project.id}/w")
+    end)
+  end
+
+  defp authorize(%{assigns: %{live_action: :edit}} = socket) do
+    %{project_user: project_user, current_user: current_user} = socket.assigns
+    assign_permissions(socket, current_user, project_user)
+  end
+
+  defp assign_permissions(socket, current_user, project_user) do
+    socket
+    |> assign(
+      can_write_webhook_auth_method:
+        Permissions.can?(
+          ProjectUsers,
+          :write_webhook_auth_method,
+          current_user,
+          project_user
+        ),
+      can_edit_workflow:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_workflow,
+          current_user,
+          project_user
+        ),
+      can_run_workflow:
+        Permissions.can?(ProjectUsers, :run_workflow, current_user, project_user),
+      can_edit_data_retention:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_data_retention,
+          current_user,
+          project_user
+        ),
+      can_edit_run_settings:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_run_settings,
+          current_user,
+          project_user
+        )
+    )
+  end
+
+  defp apply_action(socket, :new, _params) do
     if socket.assigns.workflow do
       socket
     else
@@ -1312,7 +1382,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(base_url: ~p"/projects/#{socket.assigns.project}/w/new")
   end
 
-  def apply_action(socket, :edit, %{"id" => workflow_id} = params) do
+  defp apply_action(socket, :edit, %{"id" => workflow_id} = params) do
     case socket.assigns.workflow do
       %{id: ^workflow_id} ->
         socket
@@ -1346,108 +1416,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp track_user_presence(socket) do
-    if connected?(socket) && socket.assigns.snapshot_version_tag == "latest" do
-      Presence.track_user_presence(
-        socket.assigns.current_user,
-        socket.assigns.workflow,
-        self()
-      )
-    end
-
-    socket
-  end
-
-  defp view_only_users(project) do
-    Lightning.Repo.preload(project, project_users: [:user])
-    |> Map.get(:project_users)
-    |> Enum.filter(fn pu -> pu.role == :viewer end)
-  end
-
-  defp snapshot_by_version(workflow_id, version),
-    do: Snapshot.get_by_version(workflow_id, version)
-
-  defp remove_edges_from_params(initial_params, edges_to_delete, id) do
-    Map.update!(initial_params, "edges", fn edges ->
-      edges
-      |> Enum.reject(fn edge ->
-        edge["id"] in Enum.map(edges_to_delete, & &1.id)
-      end)
-    end)
-    |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
-  end
-
-  defp toggle_latest_version(socket) do
-    %{
-      changeset: prev_changeset,
-      workflow: workflow,
-      selected_job: selected_job
-    } =
-      socket.assigns
-
-    if job_deleted?(selected_job, workflow) do
-      put_flash(
-        socket,
-        :info,
-        "Can't switch to the latest version, the job has been deleted from the workflow."
-      )
-    else
-      {next_changeset, version} = switch_changeset(socket)
-
-      prev_params = WorkflowParams.to_map(prev_changeset)
-      next_params = WorkflowParams.to_map(next_changeset)
-
-      patches = WorkflowParams.to_patches(prev_params, next_params)
-
-      query_params =
-        Helpers.clean_query_params(socket.assigns.query_params,
-          drop_version: true
-        )
-
-      if version != "latest" do
-        Presence.untrack_user_presence(
-          socket.assigns.current_user,
-          socket.assigns.workflow,
-          self()
-        )
-      end
-
-      socket
-      |> assign(changeset: next_changeset)
-      |> assign(workflow_params: next_params)
-      |> assign(snapshot_version_tag: version)
-      |> push_event("patches-applied", %{patches: patches})
-      |> maybe_disable_canvas()
-      |> push_patch(
-        to: Helpers.build_url(socket.assigns, query_params: query_params)
-      )
-    end
-  end
-
-  defp commit_latest_version(socket) do
-    %{changeset: prev_changeset, workflow: workflow} =
-      socket.assigns
-
-    snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
-
-    next_changeset = Ecto.Changeset.change(workflow)
-
-    prev_params = WorkflowParams.to_map(prev_changeset)
-    next_params = WorkflowParams.to_map(next_changeset)
-
-    patches = WorkflowParams.to_patches(prev_params, next_params)
-
-    query_params =
-      Helpers.clean_query_params(socket.assigns.query_params, drop_version: true)
-
-    socket
-    |> assign_workflow(workflow, snapshot)
-    |> push_event("patches-applied", %{patches: patches})
-    |> push_patch(
-      to: Helpers.build_url(socket.assigns, query_params: query_params)
-    )
-  end
-
   @impl true
   def handle_event("get-initial-state", _params, socket) do
     {:noreply,
@@ -1457,7 +1425,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
      })}
   end
 
-  @impl true
   def handle_event("workflow_editor_metrics_report", params, socket) do
     UiMetrics.log_workflow_editor_metrics(
       socket.assigns.workflow,
@@ -1653,7 +1620,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  @impl true
   def handle_event("validate", %{"workflow_template" => template_params}, socket) do
     tags =
       template_params["tags"]
@@ -1673,7 +1639,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, assign(socket, :workflow_template_changeset, changeset)}
   end
 
-  @impl true
   def handle_event("save", %{"workflow_template" => template_params}, socket) do
     %{workflow: workflow, workflow_code: code} = socket.assigns
 
@@ -1755,8 +1720,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
-    # Apply the incoming patches to the current workflow params producing a new
-    # set of params.
     {:ok, params} =
       WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
@@ -1974,12 +1937,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, assign(socket, publish_template: true)}
   end
 
-  def handle_event("workflow_code_generated", %{"code" => code}, socket) do
-    {:noreply, assign(socket, workflow_code: code)}
-  end
-
   def handle_event("cancel_publish_template", _params, socket) do
     {:noreply, assign(socket, publish_template: false)}
+  end
+
+  def handle_event("workflow_code_generated", %{"code" => code}, socket) do
+    {:noreply, assign(socket, workflow_code: code)}
   end
 
   def handle_event("close_template_tooltip", _params, socket) do
@@ -2095,55 +2058,118 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  defp trigger_yaml_generation(socket) do
-    push_event(socket, "generate_workflow_code", %{})
+  defp assign_workflow(socket, workflow) do
+    workflow = Lightning.Repo.preload(workflow, :project)
+
+    alloted_concurrency =
+      workflow.project_id
+      |> Workflows.list_project_workflows()
+      |> Enum.map(fn %{id: workflow_id, concurrency: concurrency} ->
+        if workflow_id == workflow.id, do: 0, else: concurrency || 0
+      end)
+      |> Enum.sum()
+
+    project_concurrency = workflow.project.concurrency || 0
+
+    socket
+    |> assign(
+      workflow: workflow,
+      max_concurrency: max(0, project_concurrency - alloted_concurrency)
+    )
+    |> apply_params(socket.assigns.workflow_params, :workflow)
   end
 
-  defp update_canvas_state(socket, payload) do
-    {:noreply,
-     socket
-     |> assign(
-       show_canvas_placeholder:
-         Map.get(
-           payload,
-           :show_canvas_placeholder,
-           socket.assigns.show_canvas_placeholder
-         ),
-       selected_template:
-         Map.get(
-           payload,
-           :show_template_tooltip,
-           socket.assigns.selected_template
-         )
-     )}
+  defp assign_workflow(socket, workflow, snapshot) do
+    {changeset, version} =
+      if snapshot.lock_version == workflow.lock_version do
+        {Ecto.Changeset.change(workflow), "latest"}
+      else
+        {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
+      end
+
+    socket
+    |> assign(workflow: workflow)
+    |> assign(snapshot: snapshot)
+    |> assign(snapshot_version_tag: version)
+    |> assign_changeset(changeset)
+    |> maybe_disable_canvas()
   end
 
-  defp handle_workflow_params_change(socket, %{"workflow" => params} = payload) do
-    if Lightning.Workflows.Comparison.equivalent?(
-         socket.assigns.workflow_params,
-         params
-       ) do
-      {:noreply, socket}
+  defp get_workflow_by_id(workflow_id) do
+    Workflows.get_workflow(workflow_id)
+    |> Lightning.Repo.preload([
+      :project,
+      :edges,
+      triggers: Trigger.with_auth_methods_query(),
+      jobs:
+        {Workflows.jobs_ordered_subquery(),
+         [:credential, steps: Invocation.Query.any_step()]}
+    ])
+  end
+
+  defp snapshot_by_version(workflow_id, version),
+    do: Snapshot.get_by_version(workflow_id, version)
+
+  defp assign_changeset(socket, changeset) do
+    workflow_params = WorkflowParams.to_map(changeset)
+
+    socket
+    |> assign(
+      changeset: changeset,
+      workflow_params: workflow_params
+    )
+  end
+
+  defp apply_params(socket, params, type) do
+    changeset =
+      case type do
+        :snapshot ->
+          Ecto.Changeset.change(socket.assigns.snapshot)
+
+        :workflow ->
+          socket.assigns.workflow
+          |> Workflow.changeset(
+            params
+            |> set_default_adaptors()
+            |> Map.put("project_id", socket.assigns.project.id)
+          )
+      end
+
+    assign_changeset(socket, changeset)
+  end
+
+  defp handle_new_params(socket, params, type, opts \\ []) do
+    %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
+      socket.assigns
+
+    if can_edit_workflow do
+      next_params =
+        WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+
+      socket
+      |> apply_params(next_params, type)
+      |> mark_validated()
+      |> maybe_push_patches_applied(initial_params, opts)
+      |> trigger_yaml_generation()
     else
-      opts = Map.get(payload, "opts", [])
-      {:noreply, handle_new_params(socket, params, :workflow, opts)}
+      put_flash(socket, :error, "You are not authorized to perform this action.")
     end
   end
 
-  defp handle_workflow_save_request(socket, %{query_params: query_params}) do
-    case save_workflow(socket, socket.assigns.workflow_params) do
-      {:ok, updated_socket} ->
-        {:noreply,
-         updated_socket
-         |> assign(:selected_template, nil)
-         |> update(:show_new_workflow_panel, &(!&1))
-         |> maybe_disable_canvas()
-         |> push_patch(
-           to: Helpers.build_url(socket.assigns, query_params: query_params)
-         )}
+  defp push_patches_applied(socket, initial_params) do
+    next_params = socket.assigns.workflow_params
 
-      _ ->
-        {:noreply, socket}
+    patches =
+      WorkflowParams.to_patches(initial_params, next_params)
+
+    push_event(socket, "patches-applied", %{patches: patches})
+  end
+
+  defp maybe_push_patches_applied(socket, initial_params, opts) do
+    if Keyword.get(opts, :push_patches, true) do
+      push_patches_applied(socket, initial_params)
+    else
+      socket
     end
   end
 
@@ -2204,32 +2230,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp check_user_can_manual_run_workflow(socket) do
-    case socket.assigns do
-      %{
-        can_edit_workflow: true,
-        can_run_workflow: true,
-        snapshot_version_tag: "latest"
-      } ->
-        :ok
-
-      %{can_edit_workflow: false} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "You are not authorized to perform this action.")}
-
-      %{can_run_workflow: false} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "You are not authorized to perform this action.")}
-
-      _snapshot_not_latest ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
-    end
-  end
-
   defp check_user_can_save_workflow(socket) do
     case socket.assigns do
       %{
@@ -2262,54 +2262,114 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp sync_to_github(socket, %{
-         "github_sync" => %{"commit_message" => commit_message}
-       }) do
-    case VersionControl.initiate_sync(
-           socket.assigns.project_repo_connection,
-           commit_message
-         ) do
-      :ok ->
-        link_to_actions =
-          "https://www.github.com/" <>
-            socket.assigns.project_repo_connection.repo <> "/actions"
+  defp check_user_can_manual_run_workflow(socket) do
+    case socket.assigns do
+      %{
+        can_edit_workflow: true,
+        can_run_workflow: true,
+        snapshot_version_tag: "latest"
+      } ->
+        :ok
 
-        socket
-        |> assign(show_github_sync_modal: false)
-        |> put_flash(
-          :info,
-          %DynamicComponent{
-            function: &github_sync_successfull_flash/1,
-            args: %{link_to_actions: link_to_actions}
-          }
-        )
+      %{can_edit_workflow: false} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
 
-      {:error, _github_error} ->
-        put_flash(
-          socket,
-          :error,
-          "Workflow saved but not synced to GitHub. Check the project GitHub connection settings"
-        )
+      %{can_run_workflow: false} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      _snapshot_not_latest ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
     end
   end
 
-  defp maybe_disable_canvas(socket) do
+  defp switch_changeset(socket) do
+    %{changeset: changeset, workflow: workflow, snapshot: snapshot} =
+      socket.assigns
+
+    case changeset do
+      %Ecto.Changeset{data: %Snapshot{}} ->
+        {Ecto.Changeset.change(workflow), "latest"}
+
+      %Ecto.Changeset{data: %Workflow{}} ->
+        {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
+    end
+  end
+
+  defp toggle_latest_version(socket) do
     %{
-      has_presence_edit_priority: has_edit_priority,
-      snapshot_version_tag: version,
-      can_edit_workflow: can_edit_workflow,
+      changeset: prev_changeset,
       workflow: workflow,
-      show_new_workflow_panel: show_new_workflow_panel,
-      show_workflow_ai_chat: show_workflow_ai_chat
-    } = socket.assigns
+      selected_job: selected_job
+    } =
+      socket.assigns
 
-    disabled =
-      !(is_nil(workflow.deleted_at) && has_edit_priority && version == "latest" &&
-          can_edit_workflow)
+    if job_deleted?(selected_job, workflow) do
+      put_flash(
+        socket,
+        :info,
+        "Can't switch to the latest version, the job has been deleted from the workflow."
+      )
+    else
+      {next_changeset, version} = switch_changeset(socket)
 
-    push_event(socket, "set-disabled", %{
-      disabled: show_new_workflow_panel || show_workflow_ai_chat || disabled
-    })
+      prev_params = WorkflowParams.to_map(prev_changeset)
+      next_params = WorkflowParams.to_map(next_changeset)
+
+      patches = WorkflowParams.to_patches(prev_params, next_params)
+
+      query_params =
+        Helpers.clean_query_params(socket.assigns.query_params,
+          drop_version: true
+        )
+
+      if version != "latest" do
+        Presence.untrack_user_presence(
+          socket.assigns.current_user,
+          socket.assigns.workflow,
+          self()
+        )
+      end
+
+      socket
+      |> assign(changeset: next_changeset)
+      |> assign(workflow_params: next_params)
+      |> assign(snapshot_version_tag: version)
+      |> push_event("patches-applied", %{patches: patches})
+      |> maybe_disable_canvas()
+      |> push_patch(
+        to: Helpers.build_url(socket.assigns, query_params: query_params)
+      )
+    end
+  end
+
+  defp commit_latest_version(socket) do
+    %{changeset: prev_changeset, workflow: workflow} =
+      socket.assigns
+
+    snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
+
+    next_changeset = Ecto.Changeset.change(workflow)
+
+    prev_params = WorkflowParams.to_map(prev_changeset)
+    next_params = WorkflowParams.to_map(next_changeset)
+
+    patches = WorkflowParams.to_patches(prev_params, next_params)
+
+    query_params =
+      Helpers.clean_query_params(socket.assigns.query_params, drop_version: true)
+
+    socket
+    |> assign_workflow(workflow, snapshot)
+    |> push_event("patches-applied", %{patches: patches})
+    |> push_patch(
+      to: Helpers.build_url(socket.assigns, query_params: query_params)
+    )
   end
 
   defp maybe_switch_workflow_version(socket) do
@@ -2334,291 +2394,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       socket
     end
-  end
-
-  defp get_workflow_by_id(workflow_id) do
-    Workflows.get_workflow(workflow_id)
-    |> Lightning.Repo.preload([
-      :project,
-      :edges,
-      triggers: Trigger.with_auth_methods_query(),
-      jobs:
-        {Workflows.jobs_ordered_subquery(),
-         [:credential, steps: Invocation.Query.any_step()]}
-    ])
-  end
-
-  defp initial_presence_summary(current_user) do
-    init_user_presence = %Presence{
-      user: current_user,
-      active_sessions: 1
-    }
-
-    %{
-      presences: [],
-      prior_user_presence: init_user_presence,
-      current_user_presence: init_user_presence,
-      has_presence_edit_priority: true
-    }
-  end
-
-  defp maybe_show_manual_run(socket) do
-    case socket.assigns do
-      %{selected_job: nil} ->
-        socket
-        |> assign(
-          manual_run_form: nil,
-          selectable_dataclips: []
-        )
-
-      %{selected_job: job, selection_mode: "expand"} = assigns
-      when not is_nil(job) ->
-        dataclip =
-          assigns[:follow_run] &&
-            get_selected_dataclip(assigns[:follow_run], job.id)
-
-        body =
-          new_manual_run_form_body(
-            assigns.manual_run_form,
-            job,
-            dataclip
-          )
-
-        changeset =
-          WorkOrders.Manual.new(
-            %{dataclip_id: dataclip && dataclip.id, body: body},
-            project: socket.assigns.project,
-            workflow: socket.assigns.workflow,
-            job: socket.assigns.selected_job,
-            created_by: socket.assigns.current_user
-          )
-
-        selectable_dataclips =
-          Invocation.list_dataclips_for_job(%Job{id: job.id})
-
-        step =
-          assigns[:follow_run] &&
-            Invocation.get_first_step_for_run_and_job(
-              assigns[:follow_run].id,
-              job.id
-            )
-
-        socket
-        |> assign_manual_run_form(changeset)
-        |> assign(step: step)
-        |> assign_dataclips(selectable_dataclips, dataclip)
-
-      _ ->
-        socket
-    end
-  end
-
-  defp new_manual_run_form_body(
-         prev_manual_run_form,
-         selected_job,
-         selected_dataclip
-       ) do
-    prev_job =
-      prev_manual_run_form &&
-        Ecto.Changeset.get_embed(
-          prev_manual_run_form.source,
-          :job,
-          :struct
-        )
-
-    if is_nil(selected_dataclip) and is_struct(prev_job) and
-         prev_job.id == selected_job.id do
-      Ecto.Changeset.get_change(prev_manual_run_form.source, :body)
-    end
-  end
-
-  defp assign_dataclips(socket, selectable_dataclips, step_dataclip) do
-    socket
-    |> assign(
-      selectable_dataclips:
-        maybe_add_selected_dataclip(selectable_dataclips, step_dataclip)
-    )
-    |> assign(show_missing_dataclip_selector: is_map(step_dataclip))
-  end
-
-  defp get_selected_dataclip(run, job_id) do
-    dataclip = Invocation.get_first_dataclip_for_run_and_job(run.id, job_id)
-
-    if is_nil(dataclip) and
-         (run.starting_job_id == job_id ||
-            Invocation.get_step_count_for_run(run.id) == 0) do
-      Invocation.get_dataclip_for_run(run.id)
-    else
-      dataclip
-    end
-  end
-
-  defp maybe_add_selected_dataclip(selectable_dataclips, nil) do
-    selectable_dataclips
-  end
-
-  defp maybe_add_selected_dataclip(selectable_dataclips, dataclip) do
-    existing_index =
-      Enum.find_index(selectable_dataclips, fn dc -> dc.id == dataclip.id end)
-
-    if existing_index do
-      List.replace_at(selectable_dataclips, existing_index, dataclip)
-    else
-      [dataclip | selectable_dataclips]
-    end
-  end
-
-  defp assign_manual_run_form(socket, changeset) do
-    assign(socket, manual_run_form: to_form(changeset, id: "manual_run_form"))
-  end
-
-  defp save_and_run_disabled?(attrs) do
-    case attrs do
-      %{manual_run_form: nil} ->
-        true
-
-      %{workflow: %{deleted_at: deleted_at}} when is_struct(deleted_at) ->
-        true
-
-      %{
-        manual_run_form: manual_run_form,
-        changeset: changeset,
-        can_edit_workflow: can_edit_workflow,
-        can_run_workflow: can_run_workflow
-      } ->
-        form_valid = manual_run_form.source.valid?
-
-        !form_valid or
-          !changeset.valid? or
-          !(can_edit_workflow or can_run_workflow)
-    end
-  end
-
-  defp editor_is_empty(form, job) do
-    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[:jobs]
-
-    found_job =
-      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
-      |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
-
-    if found_job do
-      errors =
-        found_job
-        |> Map.get(:source)
-        |> Map.get(:errors)
-
-      error_message = LightningWeb.CoreComponents.translate_errors(errors, :body)
-
-      is_empty? = Keyword.has_key?(errors, :body)
-
-      {is_empty?, error_message}
-    else
-      {false, nil}
-    end
-  end
-
-  defp has_child_edges?(workflow_changeset, job_id) do
-    workflow_changeset
-    |> get_filtered_edges(&(&1.source_job_id == job_id))
-    |> Enum.any?()
-  end
-
-  defp first_job?(workflow_changeset, job_id) do
-    workflow_changeset
-    |> get_filtered_edges(&(&1.source_trigger_id && &1.target_job_id == job_id))
-    |> Enum.any?()
-  end
-
-  defp get_filtered_edges(workflow_changeset, filter_func) do
-    workflow_changeset
-    |> Ecto.Changeset.get_assoc(:edges, :struct)
-    |> Enum.filter(filter_func)
-  end
-
-  defp handle_new_params(socket, params, type, opts \\ []) do
-    %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
-      socket.assigns
-
-    if can_edit_workflow do
-      next_params =
-        WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
-
-      socket
-      |> apply_params(next_params, type)
-      |> mark_validated()
-      |> maybe_push_patches_applied(initial_params, opts)
-      |> trigger_yaml_generation()
-    else
-      socket
-      |> put_flash(:error, "You are not authorized to perform this action.")
-    end
-  end
-
-  defp maybe_push_patches_applied(socket, initial_params, opts) do
-    if Keyword.get(opts, :push_patches, true) do
-      push_patches_applied(socket, initial_params)
-    else
-      socket
-    end
-  end
-
-  defp send_form_changed(params) do
-    send(self(), {:form_changed, params})
-  end
-
-  defp assign_workflow(socket, workflow) do
-    workflow = Lightning.Repo.preload(workflow, :project)
-
-    alloted_concurrency =
-      workflow.project_id
-      |> Workflows.list_project_workflows()
-      |> Enum.map(fn %{id: workflow_id, concurrency: concurrency} ->
-        if workflow_id == workflow.id, do: 0, else: concurrency || 0
-      end)
-      |> Enum.sum()
-
-    project_concurrency = workflow.project.concurrency || 0
-
-    socket
-    |> assign(
-      workflow: workflow,
-      max_concurrency: max(0, project_concurrency - alloted_concurrency)
-    )
-    |> apply_params(socket.assigns.workflow_params, :workflow)
-  end
-
-  defp assign_workflow(socket, workflow, snapshot) do
-    {changeset, version} =
-      if snapshot.lock_version == workflow.lock_version do
-        {Ecto.Changeset.change(workflow), "latest"}
-      else
-        {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
-      end
-
-    socket
-    |> assign(workflow: workflow)
-    |> assign(snapshot: snapshot)
-    |> assign(snapshot_version_tag: version)
-    |> assign_changeset(changeset)
-    |> maybe_disable_canvas()
-  end
-
-  defp apply_params(socket, params, type) do
-    changeset =
-      case type do
-        :snapshot ->
-          Ecto.Changeset.change(socket.assigns.snapshot)
-
-        :workflow ->
-          socket.assigns.workflow
-          |> Workflow.changeset(
-            params
-            |> set_default_adaptors()
-            |> Map.put("project_id", socket.assigns.project.id)
-          )
-      end
-
-    assign_changeset(socket, changeset)
   end
 
   defp apply_query_params(socket, params) do
@@ -2708,93 +2483,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp assign_chat_session_id(socket, %{"chat" => session_id})
-       when is_binary(session_id) do
-    socket
-    |> assign(chat_session_id: session_id)
-  end
-
-  defp assign_chat_session_id(socket, _params) do
-    socket
-    |> assign(chat_session_id: nil)
-  end
-
-  defp assign_show_workflow_ai_chat(socket) do
-    show_chat =
-      socket.assigns.live_action == :edit &&
-        socket.assigns.query_params["method"] == "ai"
-
-    assign(socket, show_workflow_ai_chat: show_chat)
-  end
-
-  defp switch_changeset(socket) do
-    %{changeset: changeset, workflow: workflow, snapshot: snapshot} =
-      socket.assigns
-
-    case changeset do
-      %Ecto.Changeset{data: %Snapshot{}} ->
-        {Ecto.Changeset.change(workflow), "latest"}
-
-      %Ecto.Changeset{data: %Workflow{}} ->
-        {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
-    end
-  end
-
-  defp assign_changeset(socket, changeset) do
-    workflow_params = WorkflowParams.to_map(changeset)
-
-    socket
-    |> assign(
-      changeset: changeset,
-      workflow_params: workflow_params
-    )
-  end
-
-  defp push_patches_applied(socket, initial_params) do
-    next_params = socket.assigns.workflow_params
-
-    patches =
-      WorkflowParams.to_patches(initial_params, next_params)
-
-    socket
-    |> push_event("patches-applied", %{patches: patches})
-  end
-
-  defp maybe_push_workflow_created(socket, workflow) do
-    if socket.assigns.live_action == :new do
-      push_event(socket, "workflow_created", %{id: workflow.id})
-    else
-      socket
-    end
-  end
-
-  # In situations where a new job is added, specifically by the WorkflowDiagram
-  # component, the job will not have an adaptor set. This function will set the
-  # adaptor to the current latest version of the adaptor, instead of the
-  # `@latest` version.
-  defp set_default_adaptors(params) do
-    case params do
-      %{"jobs" => job_params} ->
-        params
-        |> Map.put("jobs", job_params |> Enum.map(&maybe_add_default_adaptor/1))
-
-      _ ->
-        params
-    end
-  end
-
-  defp maybe_add_default_adaptor(job_param) do
-    if Map.keys(job_param) == ["id"] do
-      job_param
-      |> Map.put(
-        "adaptor",
-        Lightning.AdaptorRegistry.resolve_adaptor(%Job{}.adaptor)
-      )
-    else
-      job_param
-    end
-  end
-
   defp unselect_all(socket) do
     socket
     |> assign(
@@ -2844,43 +2532,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp follow_run(socket, run) do
-    version = Ecto.Changeset.get_field(socket.assigns.changeset, :lock_version)
-
-    url =
-      Helpers.build_url(
-        socket.assigns,
-        query_params: %{
-          "a" => run.id,
-          "v" => if(socket.assigns.lock_version != version, do: version)
-        }
-      )
-
-    push_patch(socket, to: url)
-  end
-
-  defp assign_follow_run(socket, %{"a" => run_id}) when is_binary(run_id) do
-    assign_follow_run(socket, run_id)
-  end
-
-  defp assign_follow_run(socket, query_params) when is_map(query_params) do
-    assign(socket, follow_run: nil)
-  end
-
-  defp assign_follow_run(%{assigns: %{selected_job: nil}} = socket, _run_id) do
-    assign(socket, follow_run: nil)
-  end
-
-  defp assign_follow_run(%{assigns: %{selected_job: job}} = socket, run_id)
-       when is_binary(run_id) do
-    run = Runs.get(run_id)
-    step = Invocation.get_first_step_for_run_and_job(run_id, job.id)
-
-    Runs.subscribe(run)
-
-    assign(socket, follow_run: run, step: step)
-  end
-
   defp find_item(%Ecto.Changeset{} = changeset, id) do
     find_item_helper(changeset, id, fn data, field ->
       Ecto.Changeset.get_assoc(data, field, :struct)
@@ -2917,126 +2568,326 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end)
   end
 
-  defp mark_validated(socket) do
-    socket
-    |> assign(changeset: socket.assigns.changeset |> Map.put(:action, :validate))
-  end
+  @spec close_url(map(), atom(), atom()) :: String.t()
+  defp close_url(assigns, type, selection) do
+    opts = [
+      include_run: true,
+      include_version: true
+    ]
 
-  defp with_changes_indicator(assigns) do
-    ~H"""
-    <div class="relative">
-      <div
-        :if={@changeset.changes |> Enum.any?()}
-        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0 z-10"
-        data-is-dirty="true"
-      >
-      </div>
-      {render_slot(@inner_block)}
-    </div>
-    """
-  end
+    opts =
+      case selection do
+        :select when not is_nil(type) ->
+          Keyword.put(opts, :selection, assigns[type] && assigns[type].id)
 
-  attr :id, :string, required: true
-  attr :can_edit_workflow, :boolean, required: true
-  attr :changeset, Ecto.Changeset, required: true
-  attr :snapshot_version_tag, :string, required: true
-  attr :has_presence_priority, :boolean, required: true
-  attr :project_repo_connection, :map, required: true
-  attr :dropdown_position, :atom, values: [:top, :bottom], required: true
-
-  defp save_workflow_button(assigns) do
-    {disabled, tooltip} =
-      case assigns do
-        %{
-          changeset: %{valid?: true, data: %{deleted_at: nil}},
-          can_edit_workflow: true,
-          snapshot_version_tag: "latest",
-          has_presence_priority: true
-        } ->
-          {false, nil}
-
-        %{changeset: %{data: %{deleted_at: deleted_at}}}
-        when is_struct(deleted_at) ->
-          {true, "Workflow has been deleted"}
-
-        %{can_edit_workflow: false} ->
-          {true, "You do not have permission to edit this workflow"}
-
-        %{changeset: %{valid?: false}} ->
-          {true, "You have unresolved errors in your workflow"}
-
-        %{snapshot_version_tag: tag} when tag != "latest" ->
-          {true, "You cannot edit an old snapshot of a workflow"}
-
-        _other ->
-          {true, nil}
+        _ ->
+          opts
       end
 
-    assigns =
-      assigns
-      |> assign(disabled: disabled, tooltip: tooltip)
+    Helpers.build_url(assigns, opts)
+  end
 
-    ~H"""
-    <div class="inline-flex rounded-md shadow-xs z-5">
-      <.button
-        id={@id}
-        phx-disable-with
-        disabled={@disabled}
-        phx-hook="InspectorSaveViaCtrlS"
-        phx-click={JS.push("save")}
-        phx-disconnected={JS.set_attribute({"disabled", ""})}
-        tooltip={@tooltip}
-        class={
-          ["focus:ring-transparent"] ++
-            if @project_repo_connection, do: ["rounded-r-none"], else: []
+  defp display_switcher(snapshot, workflow) do
+    snapshot && snapshot.lock_version != workflow.lock_version
+  end
+
+  defp banner_message(current_user_presence, prior_user_presence) do
+    prior_user_name =
+      "#{prior_user_presence.user.first_name} #{prior_user_presence.user.last_name}"
+
+    cond do
+      current_user_presence.active_sessions > 1 ->
+        "You have this workflow open in #{current_user_presence.active_sessions} tabs and can't edit until you close the other#{if current_user_presence.active_sessions > 2, do: "s", else: ""}."
+
+      current_user_presence.user.id != prior_user_presence.user.id ->
+        "#{prior_user_name} is currently active and you can't edit this workflow until they close the editor and canvas."
+
+      true ->
+        nil
+    end
+  end
+
+  defp save_and_run_disabled?(attrs) do
+    case attrs do
+      %{manual_run_form: nil} ->
+        true
+
+      %{workflow: %{deleted_at: deleted_at}} when is_struct(deleted_at) ->
+        true
+
+      %{
+        manual_run_form: manual_run_form,
+        changeset: changeset,
+        can_edit_workflow: can_edit_workflow,
+        can_run_workflow: can_run_workflow
+      } ->
+        form_valid = manual_run_form.source.valid?
+
+        !form_valid or
+          !changeset.valid? or
+          !(can_edit_workflow or can_run_workflow)
+    end
+  end
+
+  defp editor_is_empty(form, job) do
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[:jobs]
+
+    found_job =
+      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
+      |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
+
+    if found_job do
+      errors =
+        found_job
+        |> Map.get(:source)
+        |> Map.get(:errors)
+
+      error_message = LightningWeb.CoreComponents.translate_errors(errors, :body)
+
+      is_empty? = Keyword.has_key?(errors, :body)
+
+      {is_empty?, error_message}
+    else
+      {false, nil}
+    end
+  end
+
+  defp workflow_settings_errors?(changeset) do
+    errors_keys = Keyword.keys(changeset.errors)
+    Enum.any?([:name, :concurrency], &(&1 in errors_keys))
+  end
+
+  defp track_user_presence(socket) do
+    if connected?(socket) && socket.assigns.snapshot_version_tag == "latest" do
+      Presence.track_user_presence(
+        socket.assigns.current_user,
+        socket.assigns.workflow,
+        self()
+      )
+    end
+
+    socket
+  end
+
+  defp initial_presence_summary(current_user) do
+    init_user_presence = %Presence{
+      user: current_user,
+      active_sessions: 1
+    }
+
+    %{
+      presences: [],
+      prior_user_presence: init_user_presence,
+      current_user_presence: init_user_presence,
+      has_presence_edit_priority: true
+    }
+  end
+
+  defp view_only_users(project) do
+    Lightning.Repo.preload(project, project_users: [:user])
+    |> Map.get(:project_users)
+    |> Enum.filter(fn pu -> pu.role == :viewer end)
+  end
+
+  defp maybe_disable_canvas(socket) do
+    %{
+      has_presence_edit_priority: has_edit_priority,
+      snapshot_version_tag: version,
+      can_edit_workflow: can_edit_workflow,
+      workflow: workflow,
+      show_new_workflow_panel: show_new_workflow_panel,
+      show_workflow_ai_chat: show_workflow_ai_chat
+    } = socket.assigns
+
+    disabled =
+      !(is_nil(workflow.deleted_at) && has_edit_priority && version == "latest" &&
+          can_edit_workflow)
+
+    push_event(socket, "set-disabled", %{
+      disabled: show_new_workflow_panel || show_workflow_ai_chat || disabled
+    })
+  end
+
+  defp maybe_show_manual_run(socket) do
+    case socket.assigns do
+      %{selected_job: nil} ->
+        socket
+        |> assign(
+          manual_run_form: nil,
+          selectable_dataclips: []
+        )
+
+      %{selected_job: job, selection_mode: "expand"} = assigns
+      when not is_nil(job) ->
+        dataclip =
+          assigns[:follow_run] &&
+            get_selected_dataclip(assigns[:follow_run], job.id)
+
+        body =
+          new_manual_run_form_body(
+            assigns.manual_run_form,
+            job,
+            dataclip
+          )
+
+        changeset =
+          WorkOrders.Manual.new(
+            %{dataclip_id: dataclip && dataclip.id, body: body},
+            project: socket.assigns.project,
+            workflow: socket.assigns.workflow,
+            job: socket.assigns.selected_job,
+            created_by: socket.assigns.current_user
+          )
+
+        selectable_dataclips =
+          Invocation.list_dataclips_for_job(%Job{id: job.id})
+
+        step =
+          assigns[:follow_run] &&
+            Invocation.get_first_step_for_run_and_job(
+              assigns[:follow_run].id,
+              job.id
+            )
+
+        socket
+        |> assign_manual_run_form(changeset)
+        |> assign(step: step)
+        |> assign_dataclips(selectable_dataclips, dataclip)
+
+      _ ->
+        socket
+    end
+  end
+
+  defp assign_manual_run_form(socket, changeset) do
+    assign(socket, manual_run_form: to_form(changeset, id: "manual_run_form"))
+  end
+
+  defp new_manual_run_form_body(
+         prev_manual_run_form,
+         selected_job,
+         selected_dataclip
+       ) do
+    prev_job =
+      prev_manual_run_form &&
+        Ecto.Changeset.get_embed(
+          prev_manual_run_form.source,
+          :job,
+          :struct
+        )
+
+    if is_nil(selected_dataclip) and is_struct(prev_job) and
+         prev_job.id == selected_job.id do
+      Ecto.Changeset.get_change(prev_manual_run_form.source, :body)
+    end
+  end
+
+  defp assign_dataclips(socket, selectable_dataclips, step_dataclip) do
+    socket
+    |> assign(
+      selectable_dataclips:
+        maybe_add_selected_dataclip(selectable_dataclips, step_dataclip)
+    )
+    |> assign(show_missing_dataclip_selector: is_map(step_dataclip))
+  end
+
+  defp get_selected_dataclip(run, job_id) do
+    dataclip = Invocation.get_first_dataclip_for_run_and_job(run.id, job_id)
+
+    if is_nil(dataclip) and
+         (run.starting_job_id == job_id ||
+            Invocation.get_step_count_for_run(run.id) == 0) do
+      Invocation.get_dataclip_for_run(run.id)
+    else
+      dataclip
+    end
+  end
+
+  defp maybe_add_selected_dataclip(selectable_dataclips, nil) do
+    selectable_dataclips
+  end
+
+  defp maybe_add_selected_dataclip(selectable_dataclips, dataclip) do
+    existing_index =
+      Enum.find_index(selectable_dataclips, fn dc -> dc.id == dataclip.id end)
+
+    if existing_index do
+      List.replace_at(selectable_dataclips, existing_index, dataclip)
+    else
+      [dataclip | selectable_dataclips]
+    end
+  end
+
+  defp step_retryable?(assigns),
+    do:
+      step_retryable?(
+        assigns.step,
+        assigns.manual_run_form,
+        assigns.selectable_dataclips
+      )
+
+  defp step_retryable?(step, form, selectable_dataclips) do
+    step_dataclip_id = step && step.input_dataclip_id
+
+    selected_dataclip =
+      Enum.find(selectable_dataclips, fn dataclip ->
+        dataclip.id == form[:dataclip_id].value
+      end)
+
+    selected_dataclip && selected_dataclip.id == step_dataclip_id &&
+      is_nil(selected_dataclip.wiped_at)
+  end
+
+  defp selected_dataclip_wiped?(form, selectable_dataclips) do
+    selected_dataclip =
+      Enum.find(selectable_dataclips, fn dataclip ->
+        dataclip.id == form[:dataclip_id].value
+      end)
+
+    selected_dataclip && !is_nil(selected_dataclip.wiped_at)
+  end
+
+  defp processing(%{state: state}) do
+    !(state in Lightning.Run.final_states())
+  end
+
+  defp processing(_run), do: false
+
+  defp follow_run(socket, run) do
+    version = Ecto.Changeset.get_field(socket.assigns.changeset, :lock_version)
+
+    url =
+      Helpers.build_url(
+        socket.assigns,
+        query_params: %{
+          "a" => run.id,
+          "v" => if(socket.assigns.lock_version != version, do: version)
         }
-        phx-connected={!@disabled && JS.remove_attribute("disabled")}
-        theme="primary"
-      >
-        Save
-      </.button>
-      <div :if={@project_repo_connection} class="relative -ml-px block">
-        <.button
-          type="button"
-          class="h-full rounded-l-none pr-1 pl-1"
-          id={"#{@id}-save-and-sync-option-menu-button"}
-          aria-expanded="true"
-          aria-haspopup="true"
-          disabled={@disabled}
-          phx-click={show_dropdown("#{@id}-save-and-sync")}
-          phx-disconnected={JS.set_attribute({"disabled", ""})}
-          phx-connected={!@disabled && JS.remove_attribute("disabled")}
-          theme="primary"
-        >
-          <span class="sr-only">Open options</span>
-          <.icon name="hero-chevron-down" class="w-4 h-4" />
-        </.button>
-        <div
-          role="menu"
-          aria-orientation="vertical"
-          aria-labelledby={"#{@id}-save-and-sync-option-menu-button"}
-          tabindex="-1"
-        >
-          <.button
-            phx-click-away={hide_dropdown("#{@id}-save-and-sync")}
-            id={"#{@id}-save-and-sync"}
-            type="button"
-            phx-click="toggle_github_sync_modal"
-            theme="secondary"
-            class={[
-              "hidden absolute right-0 z-10 w-max",
-              if(@dropdown_position == :top, do: "bottom-9 mb-2"),
-              if(@dropdown_position == :bottom, do: "top-9 mt-2")
-            ]}
-            disabled={@disabled}
-            phx-hook="OpenSyncModalViaCtrlShiftS"
-          >
-            Save & Sync
-          </.button>
-        </div>
-      </div>
-    </div>
-    """
+      )
+
+    push_patch(socket, to: url)
+  end
+
+  defp assign_follow_run(socket, %{"a" => run_id}) when is_binary(run_id) do
+    assign_follow_run(socket, run_id)
+  end
+
+  defp assign_follow_run(socket, query_params) when is_map(query_params) do
+    assign(socket, follow_run: nil)
+  end
+
+  defp assign_follow_run(%{assigns: %{selected_job: nil}} = socket, _run_id) do
+    assign(socket, follow_run: nil)
+  end
+
+  defp assign_follow_run(%{assigns: %{selected_job: job}} = socket, run_id)
+       when is_binary(run_id) do
+    run = Runs.get(run_id)
+    step = Invocation.get_first_step_for_run_and_job(run_id, job.id)
+
+    Runs.subscribe(run)
+
+    assign(socket, follow_run: run, step: step)
   end
 
   defp rerun(socket, run_id, step_id) do
@@ -3078,22 +2929,157 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp render_trigger_title(trigger_type) do
-    case trigger_type do
-      "" ->
-        "New Trigger"
+  defp has_child_edges?(workflow_changeset, job_id) do
+    workflow_changeset
+    |> get_filtered_edges(&(&1.source_job_id == job_id))
+    |> Enum.any?()
+  end
 
-      "webhook" ->
-        "Webhook Trigger"
+  defp first_job?(workflow_changeset, job_id) do
+    workflow_changeset
+    |> get_filtered_edges(&(&1.source_trigger_id && &1.target_job_id == job_id))
+    |> Enum.any?()
+  end
 
-      "cron" ->
-        "Cron Trigger"
+  defp get_filtered_edges(workflow_changeset, filter_func) do
+    workflow_changeset
+    |> Ecto.Changeset.get_assoc(:edges, :struct)
+    |> Enum.filter(filter_func)
+  end
 
-      "kafka" ->
-        kafka_trigger_title(%{id: "kafka-trigger-title"})
+  defp job_deleted?(selected_job, workflow) do
+    not Enum.any?(workflow.jobs, fn job -> job.id == selected_job.id end)
+  end
+
+  defp job_deletion_tooltip_message(
+         workflow_deleted,
+         can_edit_job,
+         has_child_edges,
+         is_first_job
+       ) do
+    cond do
+      workflow_deleted ->
+        "You cannot modify a deleted workflow"
+
+      !can_edit_job ->
+        "You are not authorized to delete this step."
+
+      has_child_edges ->
+        "You can't delete a step that other downstream steps depend on."
+
+      is_first_job ->
+        "You can't delete the first step in a workflow."
+
+      true ->
+        nil
+    end
+  end
+
+  defp remove_edges_from_params(initial_params, edges_to_delete, id) do
+    Map.update!(initial_params, "edges", fn edges ->
+      edges
+      |> Enum.reject(fn edge ->
+        edge["id"] in Enum.map(edges_to_delete, & &1.id)
+      end)
+    end)
+    |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+  end
+
+  defp assign_chat_session_id(socket, %{"chat" => session_id})
+       when is_binary(session_id) do
+    socket
+    |> assign(chat_session_id: session_id)
+  end
+
+  defp assign_chat_session_id(socket, _params) do
+    socket
+    |> assign(chat_session_id: nil)
+  end
+
+  defp assign_show_workflow_ai_chat(socket) do
+    show_chat =
+      socket.assigns.live_action == :edit &&
+        socket.assigns.query_params["method"] == "ai"
+
+    assign(socket, show_workflow_ai_chat: show_chat)
+  end
+
+  defp update_canvas_state(socket, payload) do
+    {:noreply,
+     socket
+     |> assign(
+       show_canvas_placeholder:
+         Map.get(
+           payload,
+           :show_canvas_placeholder,
+           socket.assigns.show_canvas_placeholder
+         ),
+       selected_template:
+         Map.get(
+           payload,
+           :show_template_tooltip,
+           socket.assigns.selected_template
+         )
+     )}
+  end
+
+  defp handle_workflow_params_change(socket, %{"workflow" => params} = payload) do
+    if Lightning.Workflows.Comparison.equivalent?(
+         socket.assigns.workflow_params,
+         params
+       ) do
+      {:noreply, socket}
+    else
+      opts = Map.get(payload, "opts", [])
+      {:noreply, handle_new_params(socket, params, :workflow, opts)}
+    end
+  end
+
+  defp handle_workflow_save_request(socket, %{query_params: query_params}) do
+    case save_workflow(socket, socket.assigns.workflow_params) do
+      {:ok, updated_socket} ->
+        {:noreply,
+         updated_socket
+         |> assign(:selected_template, nil)
+         |> update(:show_new_workflow_panel, &(!&1))
+         |> maybe_disable_canvas()
+         |> push_patch(
+           to: Helpers.build_url(socket.assigns, query_params: query_params)
+         )}
 
       _ ->
-        "Unknown Trigger"
+        {:noreply, socket}
+    end
+  end
+
+  defp sync_to_github(socket, %{
+         "github_sync" => %{"commit_message" => commit_message}
+       }) do
+    case VersionControl.initiate_sync(
+           socket.assigns.project_repo_connection,
+           commit_message
+         ) do
+      :ok ->
+        link_to_actions =
+          "https://www.github.com/" <>
+            socket.assigns.project_repo_connection.repo <> "/actions"
+
+        socket
+        |> assign(show_github_sync_modal: false)
+        |> put_flash(
+          :info,
+          %DynamicComponent{
+            function: &github_sync_successfull_flash/1,
+            args: %{link_to_actions: link_to_actions}
+          }
+        )
+
+      {:error, _github_error} ->
+        put_flash(
+          socket,
+          :error,
+          "Workflow saved but not synced to GitHub. Check the project GitHub connection settings"
+        )
     end
   end
 
@@ -3122,86 +3108,93 @@ defmodule LightningWeb.WorkflowLive.Edit do
     )
   end
 
-  defp workflow_settings_errors?(changeset) do
-    errors_keys = Keyword.keys(changeset.errors)
-    Enum.any?([:name, :concurrency], &(&1 in errors_keys))
+  defp mark_validated(socket) do
+    socket
+    |> assign(changeset: socket.assigns.changeset |> Map.put(:action, :validate))
   end
 
-  defp settings_icon(assigns) do
-    base_icon_class = "w-5 h-5 place-self-center cursor-pointer"
+  # In situations where a new job is added, specifically by the WorkflowDiagram
+  # component, the job will not have an adaptor set. This function will set the
+  # adaptor to the current latest version of the adaptor, instead of the
+  # `@latest` version.
+  defp set_default_adaptors(params) do
+    case params do
+      %{"jobs" => job_params} ->
+        params
+        |> Map.put("jobs", job_params |> Enum.map(&maybe_add_default_adaptor/1))
 
-    class =
-      if workflow_settings_errors?(assigns.changeset) do
-        base_icon_class <> " text-danger-500 hover:text-danger-400"
-      else
-        base_icon_class <> " text-slate-500 hover:text-slate-400"
-      end
-
-    url =
-      if assigns.selection_mode == "settings" do
-        Helpers.build_url(assigns)
-      else
-        Helpers.build_url(assigns, mode: "settings")
-      end
-
-    assigns = assigns |> assign(:class, class) |> assign(:url, url)
-
-    ~H"""
-    <.link patch={@url} class={@class} id="toggle-settings">
-      <.icon name="hero-adjustments-vertical" />
-    </.link>
-    """
+      _ ->
+        params
+    end
   end
 
-  defp selected_template_label(assigns) do
-    ~H"""
-    <div
-      id={"selected-template-label-#{@template.id}"}
-      phx-mounted={fade_in()}
-      class="absolute z-[9999] m-4 opacity-75 bg-white/100 border border-gray-200 rounded-lg p-6"
-    >
-      <div class="flex items-start gap-3 opacity-100">
-        <div class="flex-shrink-0">
-          <div class="w-10 h-10 rounded-lg ai-bg-gradient flex items-center justify-center">
-            <.icon name="hero-document-text" class="w-5 h-5 text-white" />
-          </div>
-        </div>
-
-        <div class="flex-1 min-w-0">
-          <h3 class="text-sm font-medium text-gray-900 tracking-tight leading-tight mb-2">
-            {@template.name}
-          </h3>
-          <p class="text-sm text-gray-600 leading-relaxed">
-            {@template.description}
-          </p>
-        </div>
-      </div>
-    </div>
-    """
+  defp maybe_add_default_adaptor(job_param) do
+    if Map.keys(job_param) == ["id"] do
+      job_param
+      |> Map.put(
+        "adaptor",
+        Lightning.AdaptorRegistry.resolve_adaptor(%Job{}.adaptor)
+      )
+    else
+      job_param
+    end
   end
 
-  defp canvas_placeholder_card(assigns) do
-    ~H"""
-    <div class="flex items-center justify-center w-full h-full p-8">
-      <div class="max-w-md text-center space-y-6">
-        <div class="relative mx-auto w-24 h-24 mb-8">
-          <div class="relative ai-bg-gradient rounded-2xl p-6">
-            <.icon name="hero-bolt" class="w-12 h-12 text-white" />
-          </div>
-        </div>
-        <div class="space-y-3">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            Ready for a new workflow?
-          </h3>
-          <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
-            Get started by selecting a template, importing a workflow, or opening a chat with the AI assistant.
-          </p>
-        </div>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-6">
-          Not sure where to start? Try browsing our template library first.
-        </p>
-      </div>
-    </div>
-    """
+  defp send_form_changed(params) do
+    send(self(), {:form_changed, params})
+  end
+
+  defp maybe_push_workflow_created(socket, workflow) do
+    if socket.assigns.live_action == :new do
+      push_event(socket, "workflow_created", %{id: workflow.id})
+    else
+      socket
+    end
+  end
+
+  defp render_trigger_title(trigger_type) do
+    case trigger_type do
+      "" ->
+        "New Trigger"
+
+      "webhook" ->
+        "Webhook Trigger"
+
+      "cron" ->
+        "Cron Trigger"
+
+      "kafka" ->
+        kafka_trigger_title(%{id: "kafka-trigger-title"})
+
+      _ ->
+        "Unknown Trigger"
+    end
+  end
+
+  defp trigger_yaml_generation(socket) do
+    push_event(socket, "generate_workflow_code", %{})
+  end
+
+  defp save_and_run_attributes(assigns) do
+    if step_retryable?(assigns) do
+      [
+        type: "button",
+        "phx-click": "rerun",
+        "phx-value-run_id": assigns.follow_run.id,
+        "phx-value-step_id": assigns.step.id
+      ]
+    else
+      [type: "submit", form: assigns.manual_run_form.id]
+    end
+  end
+
+  defp save_and_run_classes(assigns) do
+    base_class = "relative inline-flex items-center"
+
+    if step_retryable?(assigns) do
+      [base_class, "rounded-r-none"]
+    else
+      [base_class]
+    end
   end
 end
