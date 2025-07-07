@@ -67,44 +67,39 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
+    db_filters =
+      Enum.reduce(user_filters, dynamic(true), fn
+        {:id, uuid}, dynamic ->
+          dynamic([d], ^dynamic and d.id == ^uuid)
+
+        {:id_prefix, id_prefix}, dynamic ->
+          {id_prefix_start, id_prefix_end} =
+            id_prefix_interval(id_prefix)
+
+          dynamic(
+            [d],
+            ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
+          )
+
+        {:type, type}, dynamic ->
+          dynamic([d], ^dynamic and d.type == ^type)
+
+        {:after, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at >= ^ts)
+
+        {:before, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at <= ^ts)
+
+        {:exclude_id, exclude_id}, dynamic ->
+          dynamic([d], ^dynamic and d.id != ^exclude_id)
+      end)
+
     Query.last_n_for_job(job_id, limit)
     |> where([d], is_nil(d.wiped_at))
-    |> where([d], ^dataclips_where_filter(user_filters))
+    |> where([d], ^db_filters)
     |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
     |> Repo.all()
     |> maybe_filter_uuid_prefix(user_filters)
-  end
-
-  defp dataclips_where_filter(params) do
-    Enum.reduce(params, dynamic(true), fn
-      {:id, uuid}, dynamic ->
-        dynamic([d], ^dynamic and d.id == ^uuid)
-
-      {:id_prefix, id_prefix}, dynamic ->
-        {id_prefix_start, id_prefix_end} =
-          id_prefix_interval(id_prefix)
-
-        dynamic(
-          [d],
-          ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
-        )
-
-      {:type, type}, dynamic ->
-        dynamic([d], ^dynamic and d.type == ^type)
-
-      {:after, ts}, dynamic ->
-        dynamic([d], ^dynamic and d.inserted_at >= ^ts)
-
-      {:before, ts}, dynamic ->
-        dynamic([d], ^dynamic and d.inserted_at <= ^ts)
-
-      {:exclude_id, exclude_id}, dynamic ->
-        dynamic([d], ^dynamic and d.id != ^exclude_id)
-
-      {_, _}, dynamic ->
-        # Not a where parameter
-        dynamic
-    end)
   end
 
   @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
@@ -235,29 +230,21 @@ defmodule Lightning.Invocation do
   """
   @spec get_next_cron_run_dataclip(
           job_id :: Ecto.UUID.t(),
-          user_filters :: map()
+          db_filters :: Ecto.Query.dynamic_expr()
         ) ::
           map() | nil
-  def get_next_cron_run_dataclip(job_id, user_filters) do
+  def get_next_cron_run_dataclip(job_id, db_filters) do
     from(d in Dataclip,
       join: s in Step,
       on: s.output_dataclip_id == d.id,
       where:
         s.job_id == ^job_id and s.exit_reason == "success" and
           is_nil(d.wiped_at),
-      where: ^dataclips_where_filter(user_filters),
+      where: ^db_filters,
       order_by: [desc: s.finished_at],
       limit: 1
     )
-    |> Repo.all()
-    |> maybe_filter_uuid_prefix(user_filters)
-    |> case do
-      [dataclip] ->
-        dataclip
-
-      [] ->
-        nil
-    end
+    |> Repo.one()
   end
 
   @doc """
@@ -849,21 +836,18 @@ defmodule Lightning.Invocation do
 
   # Query dataclips for cron-triggered jobs, including the next run state
   defp list_dataclips_with_cron_state(job_id, user_filters, opts) do
-    # Get the next cron run dataclip
-    next_cron_dataclip = get_next_cron_run_dataclip(job_id, user_filters)
+    # Get the next cron run dataclip (always needed for the ID)
+    next_cron_dataclip = get_next_cron_run_dataclip(job_id, dynamic(true))
+    next_cron_run_dataclip_id = next_cron_dataclip && next_cron_dataclip.id
 
-    # ID is always needed
-    next_cron_run_dataclip_id =
-      if next_cron_dataclip do
-        next_cron_dataclip.id
-      else
-        dataclip = get_next_cron_run_dataclip(job_id, %{})
-        dataclip && dataclip.id
-      end
+    # Check if next cron dataclip matches user filters
+    include_next_cron? =
+      next_cron_dataclip &&
+        dataclip_matches_filters?(next_cron_dataclip, user_filters)
 
     # Get regular dataclips, excluding next cron if it will be included to avoid duplication
     filters =
-      if next_cron_dataclip,
+      if include_next_cron?,
         do: Map.put(user_filters, :exclude_id, next_cron_dataclip.id),
         else: user_filters
 
@@ -871,11 +855,23 @@ defmodule Lightning.Invocation do
 
     # Combine results with next cron dataclip first if it matches filters
     dataclips =
-      if next_cron_dataclip,
+      if include_next_cron?,
         do: [next_cron_dataclip | regular_dataclips],
         else: regular_dataclips
 
     {dataclips, next_cron_run_dataclip_id}
+  end
+
+  # Check if a dataclip matches the user filters (applied in Elixir)
+  defp dataclip_matches_filters?(dataclip, user_filters) do
+    Enum.all?(user_filters, fn
+      {:id, uuid} -> dataclip.id == uuid
+      {:id_prefix, id_prefix} -> String.starts_with?(dataclip.id, id_prefix)
+      {:type, type} -> dataclip.type == type
+      {:after, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :lt
+      {:before, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :gt
+      {:exclude_id, exclude_id} -> dataclip.id != exclude_id
+    end)
   end
 
   defp id_prefix_interval(id_prefix) do
