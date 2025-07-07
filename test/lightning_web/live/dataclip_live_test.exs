@@ -14,6 +14,49 @@ defmodule LightningWeb.DataclipLiveTest do
   describe "Show" do
     setup [:create_dataclip]
 
+    test "displays basic dataclip information on show page", %{
+      conn: conn,
+      dataclip: dataclip,
+      project: project_scoped
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_dataclip_show_path(
+            conn,
+            :show,
+            project_scoped.id,
+            dataclip.id
+          ),
+          on_error: :raise
+        )
+
+      # Check page title appears
+      dataclip_id_short = String.slice(dataclip.id, 0..7)
+      assert html =~ "Dataclip #{dataclip_id_short}"
+
+      # Check dataclip ID appears in the metadata section
+      assert html =~ dataclip.id
+
+      # Check "Dataclip Details" section header appears
+      assert html =~ "Dataclip Details"
+
+      # Check metadata fields are present
+      assert html =~ "ID"
+      assert html =~ "Type"
+      assert html =~ "Created"
+      assert html =~ "Updated"
+
+      # Check copy button appears (since dataclip is not wiped)
+      assert html =~ "Click to copy JSON body"
+      assert html =~ "copy-dataclip-#{dataclip.id}"
+
+      # Check dataclip viewer component is rendered (not wiped message)
+      assert html =~ "dataclip-viewer-#{dataclip.id}"
+      refute html =~ "No Data Available"
+      refute html =~ "wiped in accordance"
+    end
+
     test "no access to project on show", %{
       conn: conn,
       dataclip: dataclip,
@@ -32,15 +75,6 @@ defmodule LightningWeb.DataclipLiveTest do
         )
 
       assert html =~ dataclip.id
-
-      dataclip_text =
-        element(view, "textarea[name='dataclip[body]']")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.text()
-        |> String.replace("&quot;", "\"")
-
-      assert dataclip_text =~ ~S("foo":"bar")
 
       project_unscoped = Lightning.ProjectsFixtures.project_fixture()
 
