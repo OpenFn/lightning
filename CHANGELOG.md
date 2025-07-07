@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Fixed
 
+- Isolate failed to refresh token errors from other oauth errros
+  [#3332](https://github.com/OpenFn/lightning/issues/3332)
+
 ## [v2.13.4] - 2025-07-05
 
 ## [v2.13.4-pre1] - 2025-07-04
