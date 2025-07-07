@@ -89,6 +89,13 @@ defmodule LightningWeb.AiAssistant.Component do
         |> check_limit()
 
       if socket.assigns.ai_limit_result == :ok do
+        send_update(
+          socket.assigns.parent_module,
+          id: socket.assigns.parent_id,
+          action: :sending_ai_message,
+          content: content
+        )
+
         {:noreply,
          save_message(socket, action, content)
          |> assign(:form, to_form(%{"content" => nil}))}
@@ -162,7 +169,7 @@ defmodule LightningWeb.AiAssistant.Component do
         %{assigns: assigns} = socket
       ) do
     message = Enum.find(assigns.session.messages, &(&1.id == message_id))
-    {:noreply, maybe_push_workflow_code(socket, message)}
+    {:noreply, maybe_push_workflow_code(socket, message, context: :restore)}
   end
 
   def handle_event("retry_load_sessions", _params, socket) do
@@ -222,6 +229,7 @@ defmodule LightningWeb.AiAssistant.Component do
             socket.assigns.parent_module,
             id: socket.assigns.parent_id,
             action: :workflow_updated,
+            context: nil,
             workflow_code: nil
           )
 
@@ -247,7 +255,7 @@ defmodule LightningWeb.AiAssistant.Component do
         socket.assigns
       )
 
-    # socket = maybe_push_workflow_code(socket, session)
+    maybe_push_workflow_code(socket, session)
     pending_message = find_pending_user_message(session)
 
     if pending_message do
@@ -361,7 +369,9 @@ defmodule LightningWeb.AiAssistant.Component do
     end)
   end
 
-  defp maybe_push_workflow_code(socket, session_or_message) do
+  defp maybe_push_workflow_code(socket, session_or_message, opts \\ []) do
+    context = Keyword.get(opts, :context)
+
     case socket.assigns.handler.extract_generated_code(session_or_message) do
       nil ->
         socket
@@ -371,6 +381,7 @@ defmodule LightningWeb.AiAssistant.Component do
           socket.assigns.parent_module,
           id: socket.assigns.parent_id,
           action: :workflow_updated,
+          context: context,
           workflow_code: yaml
         )
 

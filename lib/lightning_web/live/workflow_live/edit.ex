@@ -38,6 +38,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Phoenix.LiveView.JS
 
   require Lightning.Run
+  require Logger
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -2051,6 +2052,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :save_workflow ->
         handle_workflow_save_request(socket, payload)
+
+      :sending_ai_message ->
+        {:noreply, socket |> push_event("set-disabled", %{disabled: true})}
     end
   end
 
@@ -2127,8 +2131,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           Ecto.Changeset.change(socket.assigns.snapshot)
 
         :workflow ->
-          socket.assigns.workflow
-          |> Workflow.changeset(
+          Workflow.changeset(
+            socket.assigns.workflow,
             params
             |> set_default_adaptors()
             |> Map.put("project_id", socket.assigns.project.id)
@@ -2139,7 +2143,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp handle_new_params(socket, params, type, opts \\ []) do
-    %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
+    %{workflow_params: _initial_params, can_edit_workflow: can_edit_workflow} =
       socket.assigns
 
     if can_edit_workflow do
@@ -2149,8 +2153,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket
       |> apply_params(next_params, type)
       |> mark_validated()
-      |> maybe_push_patches_applied(initial_params, opts)
-      |> trigger_yaml_generation()
+      |> trigger_yaml_generation(opts)
     else
       put_flash(socket, :error, "You are not authorized to perform this action.")
     end
@@ -2163,14 +2166,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       WorkflowParams.to_patches(initial_params, next_params)
 
     push_event(socket, "patches-applied", %{patches: patches})
-  end
-
-  defp maybe_push_patches_applied(socket, initial_params, opts) do
-    if Keyword.get(opts, :push_patches, true) do
-      push_patches_applied(socket, initial_params)
-    else
-      socket
-    end
   end
 
   defp save_workflow(socket, submitted_params) do
@@ -2191,11 +2186,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
           %{} ->
             initial_params
         end
+        |> ensure_connected_triggers()
+        |> dbg()
 
       %{assigns: %{changeset: changeset}} =
         socket = socket |> apply_params(next_params, :workflow)
 
-      case Helpers.save_workflow(changeset, current_user) do
+      case Helpers.save_workflow(changeset, current_user) |> dbg() do
         {:ok, workflow} ->
           snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
@@ -2695,8 +2692,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       snapshot_version_tag: version,
       can_edit_workflow: can_edit_workflow,
       workflow: workflow,
-      show_new_workflow_panel: show_new_workflow_panel,
-      show_workflow_ai_chat: show_workflow_ai_chat
+      show_new_workflow_panel: show_new_workflow_panel
     } = socket.assigns
 
     disabled =
@@ -2704,7 +2700,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_workflow)
 
     push_event(socket, "set-disabled", %{
-      disabled: show_new_workflow_panel || show_workflow_ai_chat || disabled
+      disabled: show_new_workflow_panel || disabled
     })
   end
 
@@ -3024,15 +3020,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp handle_workflow_params_change(socket, %{"workflow" => params} = payload) do
-    if Lightning.Workflows.Comparison.equivalent?(
-         socket.assigns.workflow_params,
-         params
-       ) do
-      {:noreply, socket}
-    else
-      opts = Map.get(payload, "opts", [])
-      {:noreply, handle_new_params(socket, params, :workflow, opts)}
-    end
+    opts = Map.get(payload, "opts", [])
+
+    dbg(params)
+
+    {:noreply,
+     socket
+     |> handle_new_params(params, :workflow, opts)
+     |> push_event("set-disabled", %{
+       disabled: false
+     })}
   end
 
   defp handle_workflow_save_request(socket, %{query_params: query_params}) do
@@ -3044,7 +3041,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
          |> update(:show_new_workflow_panel, &(!&1))
          |> maybe_disable_canvas()
          |> push_patch(
-           to: Helpers.build_url(socket.assigns, query_params: query_params)
+           to:
+             Helpers.build_url(
+               updated_socket.assigns
+               |> update(:base_url, fn _url ->
+                 ~p"/projects/#{updated_socket.assigns.project}/w/#{updated_socket.assigns.workflow}"
+               end),
+               query_params: query_params
+             )
          )}
 
       _ ->
@@ -3171,8 +3175,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp trigger_yaml_generation(socket) do
-    push_event(socket, "generate_workflow_code", %{})
+  defp trigger_yaml_generation(socket, opts \\ []) do
+    context = Keyword.get(opts, :context)
+
+    if context && context == :restore do
+      socket
+    else
+      push_event(socket, "generate_workflow_code", %{})
+    end
   end
 
   defp save_and_run_attributes(assigns) do
@@ -3196,5 +3206,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       [base_class]
     end
+  end
+
+  defp ensure_connected_triggers(params) do
+    dbg(params)
+    triggers = Map.get(params, "triggers", [])
+    edges = Map.get(params, "edges", [])
+
+    connected_trigger_ids =
+      edges
+      |> Enum.map(&Map.get(&1, "source_trigger_id"))
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    connected_triggers =
+      triggers
+      |> Enum.filter(fn trigger ->
+        Map.get(trigger, "id") in connected_trigger_ids
+      end)
+
+    Map.put(params, "triggers", connected_triggers)
   end
 end

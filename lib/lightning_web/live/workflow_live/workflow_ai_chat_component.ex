@@ -10,12 +10,23 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, workflow_code: nil, workflow_checksum: nil)}
+    {:ok, assign(socket, workflow_code: nil, context: nil)}
   end
 
   @impl true
-  def update(%{action: :workflow_updated, workflow_code: code}, socket) do
-    {:ok, push_event(socket, "template_selected", %{template: code})}
+  def update(
+        %{action: :workflow_updated, context: context, workflow_code: code},
+        socket
+      ) do
+    {:ok,
+     socket
+     |> assign(context: context)
+     |> push_event("template_selected", %{template: code})}
+  end
+
+  def update(%{action: :sending_ai_message}, socket) do
+    notify_parent(:sending_ai_message, %{})
+    {:ok, socket}
   end
 
   def update(assigns, socket) do
@@ -26,7 +37,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
     notify_parent(:workflow_params_changed, %{
       "workflow" => params,
-      "opts" => [push_patches: false]
+      "opts" => [push_patches: false, context: socket.assigns.context]
     })
 
     {:noreply,

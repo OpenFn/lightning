@@ -82,7 +82,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
            "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
        )}
     else
-      notify_parent(:save_workflow, build_ai_query_params(socket.assigns))
+      notify_parent(:save_workflow, %{
+        query_params: build_ai_query_params(socket.assigns)
+      })
 
       {:noreply, socket}
     end
