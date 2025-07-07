@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Allow users to see & _use_ the "next input" state that would be used by a cron
+  trigger when inspecting and running cron-triggered jobs
+  [3335](https://github.com/OpenFn/lightning/issues/3335)
+
 ### Changed
 
 ### Fixed
