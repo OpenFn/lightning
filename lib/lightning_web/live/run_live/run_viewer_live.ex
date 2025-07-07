@@ -87,7 +87,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                   <.list_item>
                     <:label>Duration</:label>
                     <:value>
-                      <.elapsed_indicator item={run} />
+                      <.elapsed_indicator item={run} context="viewer" />
                     </:value>
                   </.list_item>
                   <.list_item>
@@ -117,6 +117,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     selected={step.id == @selected_step_id}
                     class="cursor-pointer"
                     project_id={@project}
+                    context="run-tab"
                   />
                 </.step_list>
               </:panel>
@@ -142,6 +143,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                         selected={step.id == @selected_step_id}
                         class="cursor-pointer"
                         project_id={@project}
+                        context="log-tab"
                       />
                     </.step_list>
                   </div>
@@ -188,6 +190,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                           selected={step.id == @selected_step_id}
                           class="cursor-pointer"
                           project_id={@project}
+                          context="input-tab"
                         />
                       </.step_list>
                     </div>
@@ -237,6 +240,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                           selected={step.id == @selected_step_id}
                           class="cursor-pointer"
                           project_id={@project}
+                          context="output-tab"
                         />
                       </.step_list>
                     </div>

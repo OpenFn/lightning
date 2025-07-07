@@ -25,9 +25,20 @@ defmodule LightningWeb.RunLive.Components do
       phx-hook="ElapsedIndicator"
       data-start-time={as_timestamp(@item.started_at)}
       data-finish-time={as_timestamp(@item.finished_at)}
-      id={"elapsed-indicator#{if @context != "", do: "-#{@context}"}-#{@item.id}"}
+      id={build_elapsed_indicator_id(@item, @context)}
     />
     """
+  end
+
+  defp build_elapsed_indicator_id(item, context) do
+    base_id = "elapsed-indicator"
+
+    context_part = if context != "", do: "-#{context}", else: ""
+
+    case Map.get(item, :run_id) do
+      nil -> "#{base_id}#{context_part}-#{item.id}"
+      run_id -> "#{base_id}#{context_part}-#{run_id}-#{item.id}"
+    end
   end
 
   defp as_timestamp(datetime) do
@@ -152,6 +163,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :job_id, :string, default: nil
   attr :selected, :boolean, default: false
   attr :class, :string, default: ""
+  attr :context, :string, default: ""
   attr :rest, :global
 
   def step_item(assigns) do
@@ -222,7 +234,7 @@ defmodule LightningWeb.RunLive.Components do
           <% end %>
         </div>
         <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
-          <.elapsed_indicator item={@step} />
+          <.elapsed_indicator item={@step} context={@context} />
         </div>
       </div>
     </div>
@@ -414,7 +426,7 @@ defmodule LightningWeb.RunLive.Components do
         role="cell"
         class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right"
       >
-        <.elapsed_indicator item={@step} />
+        <.elapsed_indicator item={@step} context="list" />
       </div>
       <div
         role="cell"
