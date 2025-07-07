@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-6F46125A.js"></script>
+    <script defer src="dist/sidebar_items-0826CE3A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -150,7 +150,7 @@ It implements the backend API for the React frontend.</p>
       <h1 class="signature" translate="no">get_dataclips_filters(query_string)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_manual_run.ex#L33" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_manual_run.ex#L42" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -178,7 +178,7 @@ It implements the backend API for the React frontend.</p>
       <h1 class="signature" translate="no">search_selectable_dataclips(job_id, search_text, limit, offset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_manual_run.ex#L17" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/new_manual_run.ex#L22" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -194,7 +194,13 @@ It implements the backend API for the React frontend.</p>
   search_text :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   limit :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(),
   offset :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()
-) :: {:ok, [<a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()]} | {:error, <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+) ::
+  {:ok,
+   %{
+     dataclips: [<a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()],
+     next_cron_run_dataclip_id: <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil
+   }}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 

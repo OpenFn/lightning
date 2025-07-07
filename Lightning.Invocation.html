@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-6F46125A.js"></script>
+    <script defer src="dist/sidebar_items-0826CE3A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -169,6 +169,16 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#cron_triggered_job?/1" data-no-tooltip="" translate="no">cron_triggered_job?(job_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Checks if a job is triggered by a cron trigger.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#delete_dataclip/1" data-no-tooltip="" translate="no">delete_dataclip(dataclip)</a>
 
       </div>
@@ -246,6 +256,16 @@ Lightning
         <a href="#get_first_step_for_run_and_job/2" data-no-tooltip="" translate="no">get_first_step_for_run_and_job(run_id, job_id)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_next_cron_run_dataclip/2" data-no-tooltip="" translate="no">get_next_cron_run_dataclip(job_id, db_filters)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gets the next cron run dataclip for a job.</p></div>
 
     </div>
 
@@ -334,6 +354,16 @@ Lightning
         <a href="#list_dataclips_for_job/3" data-no-tooltip="" translate="no">list_dataclips_for_job(job, user_filters, opts)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_dataclips_for_job_with_cron_state/3" data-no-tooltip="" translate="no">list_dataclips_for_job_with_cron_state(job, user_filters, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Lists dataclips for a job, including next cron run state if cron-triggered.</p></div>
 
     </div>
 
@@ -456,7 +486,7 @@ Lightning
       <h1 class="signature" translate="no">assemble_logs_for_job_and_run(job_id, run_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L688" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L757" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -484,7 +514,7 @@ Lightning
       <h1 class="signature" translate="no">assemble_logs_for_step(step)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L702" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L771" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -515,7 +545,7 @@ Lightning
       <h1 class="signature" translate="no">change_dataclip(dataclip, attrs \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L287" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L356" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -524,8 +554,8 @@ Lightning
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking dataclip changes.</p><h2 id="change_dataclip/2-examples" class="section-heading"><a href="#change_dataclip/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="7741683699-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="7741683699-1">)</span><span class="w">
-</span><span class="p" data-group-id="7741683699-2">%</span><span class="nc" data-group-id="7741683699-2">Ecto.Changeset</span><span class="p" data-group-id="7741683699-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7741683699-3">%</span><span class="nc" data-group-id="7741683699-3">Dataclip</span><span class="p" data-group-id="7741683699-3">{</span><span class="p" data-group-id="7741683699-3">}</span><span class="p" data-group-id="7741683699-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking dataclip changes.</p><h2 id="change_dataclip/2-examples" class="section-heading"><a href="#change_dataclip/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="6414364872-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="6414364872-1">)</span><span class="w">
+</span><span class="p" data-group-id="6414364872-2">%</span><span class="nc" data-group-id="6414364872-2">Ecto.Changeset</span><span class="p" data-group-id="6414364872-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6414364872-3">%</span><span class="nc" data-group-id="6414364872-3">Dataclip</span><span class="p" data-group-id="6414364872-3">{</span><span class="p" data-group-id="6414364872-3">}</span><span class="p" data-group-id="6414364872-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_step/2">
@@ -540,7 +570,7 @@ Lightning
       <h1 class="signature" translate="no">change_step(step, attrs \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L355" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L424" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -549,8 +579,8 @@ Lightning
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking step changes.</p><h2 id="change_step/2-examples" class="section-heading"><a href="#change_step/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_step</span><span class="p" data-group-id="2277875185-1">(</span><span class="n">step</span><span class="p" data-group-id="2277875185-1">)</span><span class="w">
-</span><span class="p" data-group-id="2277875185-2">%</span><span class="nc" data-group-id="2277875185-2">Ecto.Changeset</span><span class="p" data-group-id="2277875185-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2277875185-3">%</span><span class="nc" data-group-id="2277875185-3">Step</span><span class="p" data-group-id="2277875185-3">{</span><span class="p" data-group-id="2277875185-3">}</span><span class="p" data-group-id="2277875185-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking step changes.</p><h2 id="change_step/2-examples" class="section-heading"><a href="#change_step/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_step</span><span class="p" data-group-id="7486726162-1">(</span><span class="n">step</span><span class="p" data-group-id="7486726162-1">)</span><span class="w">
+</span><span class="p" data-group-id="7486726162-2">%</span><span class="nc" data-group-id="7486726162-2">Ecto.Changeset</span><span class="p" data-group-id="7486726162-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7486726162-3">%</span><span class="nc" data-group-id="7486726162-3">Step</span><span class="p" data-group-id="7486726162-3">{</span><span class="p" data-group-id="7486726162-3">}</span><span class="p" data-group-id="7486726162-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="count_workorders/2">
@@ -563,7 +593,7 @@ Lightning
       <h1 class="signature" translate="no">count_workorders(project, search_params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L427" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L496" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -587,7 +617,7 @@ Lightning
       <h1 class="signature" translate="no">create_dataclip(attrs \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L234" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L303" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -604,11 +634,39 @@ Lightning
 
       </div>
 
-<p>Creates a dataclip.</p><h2 id="create_dataclip/1-examples" class="section-heading"><a href="#create_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="4233989982-1">(</span><span class="p" data-group-id="4233989982-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="4233989982-2">}</span><span class="p" data-group-id="4233989982-1">)</span><span class="w">
-</span><span class="p" data-group-id="4233989982-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4233989982-4">%</span><span class="nc" data-group-id="4233989982-4">Dataclip</span><span class="p" data-group-id="4233989982-4">{</span><span class="p" data-group-id="4233989982-4">}</span><span class="p" data-group-id="4233989982-3">}</span><span class="w">
+<p>Creates a dataclip.</p><h2 id="create_dataclip/1-examples" class="section-heading"><a href="#create_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="8165189538-1">(</span><span class="p" data-group-id="8165189538-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="8165189538-2">}</span><span class="p" data-group-id="8165189538-1">)</span><span class="w">
+</span><span class="p" data-group-id="8165189538-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8165189538-4">%</span><span class="nc" data-group-id="8165189538-4">Dataclip</span><span class="p" data-group-id="8165189538-4">{</span><span class="p" data-group-id="8165189538-4">}</span><span class="p" data-group-id="8165189538-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="4233989982-5">(</span><span class="p" data-group-id="4233989982-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4233989982-6">}</span><span class="p" data-group-id="4233989982-5">)</span><span class="w">
-</span><span class="p" data-group-id="4233989982-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4233989982-8">%</span><span class="nc" data-group-id="4233989982-8">Ecto.Changeset</span><span class="p" data-group-id="4233989982-8">{</span><span class="p" data-group-id="4233989982-8">}</span><span class="p" data-group-id="4233989982-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="8165189538-5">(</span><span class="p" data-group-id="8165189538-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8165189538-6">}</span><span class="p" data-group-id="8165189538-5">)</span><span class="w">
+</span><span class="p" data-group-id="8165189538-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8165189538-8">%</span><span class="nc" data-group-id="8165189538-8">Ecto.Changeset</span><span class="p" data-group-id="8165189538-8">{</span><span class="p" data-group-id="8165189538-8">}</span><span class="p" data-group-id="8165189538-7">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="cron_triggered_job?/1">
+
+  <div class="detail-header">
+    <a href="#cron_triggered_job?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">cron_triggered_job?(job_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L254" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> cron_triggered_job?(job_id :: <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Checks if a job is triggered by a cron trigger.</p>
   </section>
 </section>
 <section class="detail" id="delete_dataclip/1">
@@ -621,7 +679,7 @@ Lightning
       <h1 class="signature" translate="no">delete_dataclip(dataclip)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L270" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L339" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -630,11 +688,11 @@ Lightning
 
   <section class="docstring">
 
-<p>Deletes a dataclip.</p><h2 id="delete_dataclip/1-examples" class="section-heading"><a href="#delete_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="3688463364-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="3688463364-1">)</span><span class="w">
-</span><span class="p" data-group-id="3688463364-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3688463364-3">%</span><span class="nc" data-group-id="3688463364-3">Dataclip</span><span class="p" data-group-id="3688463364-3">{</span><span class="p" data-group-id="3688463364-3">}</span><span class="p" data-group-id="3688463364-2">}</span><span class="w">
+<p>Deletes a dataclip.</p><h2 id="delete_dataclip/1-examples" class="section-heading"><a href="#delete_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="5333734050-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="5333734050-1">)</span><span class="w">
+</span><span class="p" data-group-id="5333734050-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5333734050-3">%</span><span class="nc" data-group-id="5333734050-3">Dataclip</span><span class="p" data-group-id="5333734050-3">{</span><span class="p" data-group-id="5333734050-3">}</span><span class="p" data-group-id="5333734050-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="3688463364-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="3688463364-4">)</span><span class="w">
-</span><span class="p" data-group-id="3688463364-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3688463364-6">%</span><span class="nc" data-group-id="3688463364-6">Ecto.Changeset</span><span class="p" data-group-id="3688463364-6">{</span><span class="p" data-group-id="3688463364-6">}</span><span class="p" data-group-id="3688463364-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="5333734050-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="5333734050-4">)</span><span class="w">
+</span><span class="p" data-group-id="5333734050-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5333734050-6">%</span><span class="nc" data-group-id="5333734050-6">Ecto.Changeset</span><span class="p" data-group-id="5333734050-6">{</span><span class="p" data-group-id="5333734050-6">}</span><span class="p" data-group-id="5333734050-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="export_workorders/3">
@@ -647,7 +705,7 @@ Lightning
       <h1 class="signature" translate="no">export_workorders(project, user, search_params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L737" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L806" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -670,7 +728,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_dataclip(step)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L200" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L205" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -686,14 +744,14 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
       </div>
 
-<p>Gets a single dataclip given one of:</p><ul><li>a Dataclip uuid</li><li>a Step model</li></ul><p>Returns <code class="inline">nil</code> if the Dataclip does not exist.</p><h2 id="get_dataclip/1-examples" class="section-heading"><a href="#get_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="4188016141-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="4188016141-1">)</span><span class="w">
-</span><span class="p" data-group-id="4188016141-2">%</span><span class="nc" data-group-id="4188016141-2">Dataclip</span><span class="p" data-group-id="4188016141-2">{</span><span class="p" data-group-id="4188016141-2">}</span><span class="w">
+<p>Gets a single dataclip given one of:</p><ul><li>a Dataclip uuid</li><li>a Step model</li></ul><p>Returns <code class="inline">nil</code> if the Dataclip does not exist.</p><h2 id="get_dataclip/1-examples" class="section-heading"><a href="#get_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="2776093962-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="2776093962-1">)</span><span class="w">
+</span><span class="p" data-group-id="2776093962-2">%</span><span class="nc" data-group-id="2776093962-2">Dataclip</span><span class="p" data-group-id="2776093962-2">{</span><span class="p" data-group-id="2776093962-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="4188016141-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="4188016141-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="2776093962-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="2776093962-3">)</span><span class="w">
 </span><span class="no">nil</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="4188016141-4">(</span><span class="p" data-group-id="4188016141-5">%</span><span class="nc" data-group-id="4188016141-5">Step</span><span class="p" data-group-id="4188016141-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="4188016141-5">}</span><span class="p" data-group-id="4188016141-4">)</span><span class="w">
-</span><span class="p" data-group-id="4188016141-6">%</span><span class="nc" data-group-id="4188016141-6">Dataclip</span><span class="p" data-group-id="4188016141-6">{</span><span class="p" data-group-id="4188016141-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="2776093962-4">(</span><span class="p" data-group-id="2776093962-5">%</span><span class="nc" data-group-id="2776093962-5">Step</span><span class="p" data-group-id="2776093962-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="2776093962-5">}</span><span class="p" data-group-id="2776093962-4">)</span><span class="w">
+</span><span class="p" data-group-id="2776093962-6">%</span><span class="nc" data-group-id="2776093962-6">Dataclip</span><span class="p" data-group-id="2776093962-6">{</span><span class="p" data-group-id="2776093962-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip!/1">
@@ -706,7 +764,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_dataclip!(id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L176" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L181" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -721,10 +779,10 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
       </div>
 
-<p>Gets a single dataclip.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Dataclip does not exist.</p><h2 id="get_dataclip!/1-examples" class="section-heading"><a href="#get_dataclip!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="5101831190-1">(</span><span class="mi">123</span><span class="p" data-group-id="5101831190-1">)</span><span class="w">
-</span><span class="p" data-group-id="5101831190-2">%</span><span class="nc" data-group-id="5101831190-2">Dataclip</span><span class="p" data-group-id="5101831190-2">{</span><span class="p" data-group-id="5101831190-2">}</span><span class="w">
+<p>Gets a single dataclip.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Dataclip does not exist.</p><h2 id="get_dataclip!/1-examples" class="section-heading"><a href="#get_dataclip!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="6194058505-1">(</span><span class="mi">123</span><span class="p" data-group-id="6194058505-1">)</span><span class="w">
+</span><span class="p" data-group-id="6194058505-2">%</span><span class="nc" data-group-id="6194058505-2">Dataclip</span><span class="p" data-group-id="6194058505-2">{</span><span class="p" data-group-id="6194058505-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="5101831190-3">(</span><span class="mi">456</span><span class="p" data-group-id="5101831190-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="6194058505-3">(</span><span class="mi">456</span><span class="p" data-group-id="6194058505-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -738,7 +796,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_dataclip_details!(id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L101" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L106" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -766,7 +824,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_dataclip_for_run(run_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L106" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L111" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -795,7 +853,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_dataclip_query(step)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L216" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L221" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -817,7 +875,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_first_dataclip_for_run_and_job(run_id, job_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L120" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L125" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -848,7 +906,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_first_step_for_run_and_job(run_id, job_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L138" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L143" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -869,6 +927,38 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
   </section>
 </section>
+<section class="detail" id="get_next_cron_run_dataclip/2">
+
+  <div class="detail-header">
+    <a href="#get_next_cron_run_dataclip/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_next_cron_run_dataclip(job_id, db_filters)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L236" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_next_cron_run_dataclip(
+  job_id :: <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  db_filters :: <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Query.html#t:dynamic_expr/0">Ecto.Query.dynamic_expr</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil</pre>
+
+      </div>
+
+<p>Gets the next cron run dataclip for a job.</p><p>Returns the most recent output dataclip from a successful step for the given job,
+filtered by the provided database filters.</p>
+  </section>
+</section>
 <section class="detail" id="get_output_dataclip_query/1">
 
   <div class="detail-header">
@@ -879,7 +969,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_output_dataclip_query(step)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L209" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L214" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -901,7 +991,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_step!(id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L338" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L407" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -916,10 +1006,10 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
       </div>
 
-<p>Gets a single step.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Step does not exist.</p><h2 id="get_step!/1-examples" class="section-heading"><a href="#get_step!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="8442729310-1">(</span><span class="mi">123</span><span class="p" data-group-id="8442729310-1">)</span><span class="w">
-</span><span class="p" data-group-id="8442729310-2">%</span><span class="nc" data-group-id="8442729310-2">Step</span><span class="p" data-group-id="8442729310-2">{</span><span class="p" data-group-id="8442729310-2">}</span><span class="w">
+<p>Gets a single step.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Step does not exist.</p><h2 id="get_step!/1-examples" class="section-heading"><a href="#get_step!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="1145076926-1">(</span><span class="mi">123</span><span class="p" data-group-id="1145076926-1">)</span><span class="w">
+</span><span class="p" data-group-id="1145076926-2">%</span><span class="nc" data-group-id="1145076926-2">Step</span><span class="p" data-group-id="1145076926-2">{</span><span class="p" data-group-id="1145076926-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="8442729310-3">(</span><span class="mi">456</span><span class="p" data-group-id="8442729310-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="1145076926-3">(</span><span class="mi">456</span><span class="p" data-group-id="1145076926-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -933,7 +1023,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_step_count_for_run(run_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L152" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L157" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -961,7 +1051,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_step_with_job!(id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L343" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L412" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -983,7 +1073,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_workorders_by_ids(ids)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L639" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L708" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1005,7 +1095,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">get_workorders_count_limit()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L23" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L25" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1027,7 +1117,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">list_dataclips()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L35" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L37" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1042,8 +1132,8 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
       </div>
 
-<p>Returns the list of dataclips.</p><h2 id="list_dataclips/0-examples" class="section-heading"><a href="#list_dataclips/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="0536202913-1">(</span><span class="p" data-group-id="0536202913-1">)</span><span class="w">
-</span><span class="p" data-group-id="0536202913-2">[</span><span class="p" data-group-id="0536202913-3">%</span><span class="nc" data-group-id="0536202913-3">Dataclip</span><span class="p" data-group-id="0536202913-3">{</span><span class="p" data-group-id="0536202913-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0536202913-2">]</span></code></pre>
+<p>Returns the list of dataclips.</p><h2 id="list_dataclips/0-examples" class="section-heading"><a href="#list_dataclips/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="0308473524-1">(</span><span class="p" data-group-id="0308473524-1">)</span><span class="w">
+</span><span class="p" data-group-id="0308473524-2">[</span><span class="p" data-group-id="0308473524-3">%</span><span class="nc" data-group-id="0308473524-3">Dataclip</span><span class="p" data-group-id="0308473524-3">{</span><span class="p" data-group-id="0308473524-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0308473524-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_dataclips/1">
@@ -1056,7 +1146,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">list_dataclips(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L48" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L50" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1088,7 +1178,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">list_dataclips_for_job(job, limit \\ 5)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L53" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L55" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1118,7 +1208,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">list_dataclips_for_job(job, user_filters, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L64" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L66" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1140,6 +1230,39 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
   </section>
 </section>
+<section class="detail" id="list_dataclips_for_job_with_cron_state/3">
+
+  <div class="detail-header">
+    <a href="#list_dataclips_for_job_with_cron_state/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_dataclips_for_job_with_cron_state(job, user_filters, opts)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L276" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_dataclips_for_job_with_cron_state(
+  <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>(),
+  user_filters :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  opts :: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()
+) :: {[<a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()], <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil}</pre>
+
+      </div>
+
+<p>Lists dataclips for a job, including next cron run state if cron-triggered.</p><p>For cron-triggered jobs, this function will include the next run state dataclip
+and return its ID even if it doesn't match the filters.</p><p>Returns a tuple of {dataclips, next_cron_run_dataclip_id}.</p>
+  </section>
+</section>
 <section class="detail" id="list_dataclips_query/1">
 
   <div class="detail-header">
@@ -1150,7 +1273,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">list_dataclips_query(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L40" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L42" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1178,7 +1301,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">list_steps()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L300" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L369" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1187,8 +1310,8 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
   <section class="docstring">
 
-<p>Returns the list of steps.</p><h2 id="list_steps/0-examples" class="section-heading"><a href="#list_steps/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_steps</span><span class="p" data-group-id="1777444132-1">(</span><span class="p" data-group-id="1777444132-1">)</span><span class="w">
-</span><span class="p" data-group-id="1777444132-2">[</span><span class="p" data-group-id="1777444132-3">%</span><span class="nc" data-group-id="1777444132-3">Step</span><span class="p" data-group-id="1777444132-3">{</span><span class="p" data-group-id="1777444132-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1777444132-2">]</span></code></pre>
+<p>Returns the list of steps.</p><h2 id="list_steps/0-examples" class="section-heading"><a href="#list_steps/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_steps</span><span class="p" data-group-id="9651212808-1">(</span><span class="p" data-group-id="9651212808-1">)</span><span class="w">
+</span><span class="p" data-group-id="9651212808-2">[</span><span class="p" data-group-id="9651212808-3">%</span><span class="nc" data-group-id="9651212808-3">Step</span><span class="p" data-group-id="9651212808-3">{</span><span class="p" data-group-id="9651212808-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9651212808-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_steps_for_project/2">
@@ -1203,7 +1326,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">list_steps_for_project(project, params \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L318" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L387" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1232,7 +1355,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">list_steps_for_project_query(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L306" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L375" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1260,7 +1383,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">logs_for_step(step)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L681" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L750" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1288,7 +1411,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">search_workorders(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L372" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L441" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1297,7 +1420,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
   <section class="docstring">
 
-<p>Searches for work orders based on project and search parameters.</p><h2 id="search_workorders/1-parameters" class="section-heading"><a href="#search_workorders/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters:</span></h2><ul><li><code class="inline">project</code>: The project to filter the work orders by.</li><li><code class="inline">search_params</code>: The parameters to guide the search.</li></ul><h2 id="search_workorders/1-returns" class="section-heading"><a href="#search_workorders/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns:</span></h2><p>A paginated list of work orders that match the criteria.</p><h2 id="search_workorders/1-example" class="section-heading"><a href="#search_workorders/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example:</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">search_workorders</span><span class="p" data-group-id="4916154595-1">(</span><span class="p" data-group-id="4916154595-2">%</span><span class="nc" data-group-id="4916154595-2">Project</span><span class="p" data-group-id="4916154595-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="4916154595-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4916154595-3">%</span><span class="nc" data-group-id="4916154595-3">SearchParams</span><span class="p" data-group-id="4916154595-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4916154595-4">[</span><span class="s">&quot;completed&quot;</span><span class="p" data-group-id="4916154595-4">]</span><span class="p" data-group-id="4916154595-3">}</span><span class="p" data-group-id="4916154595-1">)</span></code></pre>
+<p>Searches for work orders based on project and search parameters.</p><h2 id="search_workorders/1-parameters" class="section-heading"><a href="#search_workorders/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters:</span></h2><ul><li><code class="inline">project</code>: The project to filter the work orders by.</li><li><code class="inline">search_params</code>: The parameters to guide the search.</li></ul><h2 id="search_workorders/1-returns" class="section-heading"><a href="#search_workorders/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns:</span></h2><p>A paginated list of work orders that match the criteria.</p><h2 id="search_workorders/1-example" class="section-heading"><a href="#search_workorders/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example:</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">search_workorders</span><span class="p" data-group-id="2936088654-1">(</span><span class="p" data-group-id="2936088654-2">%</span><span class="nc" data-group-id="2936088654-2">Project</span><span class="p" data-group-id="2936088654-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="2936088654-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2936088654-3">%</span><span class="nc" data-group-id="2936088654-3">SearchParams</span><span class="p" data-group-id="2936088654-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2936088654-4">[</span><span class="s">&quot;completed&quot;</span><span class="p" data-group-id="2936088654-4">]</span><span class="p" data-group-id="2936088654-3">}</span><span class="p" data-group-id="2936088654-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="search_workorders/3">
@@ -1312,7 +1435,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">search_workorders(project, search_params, params \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L382" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L451" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1344,7 +1467,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">search_workorders_for_export_query(project, search_params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L421" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L490" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1366,7 +1489,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">search_workorders_for_retry(project, search_params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L410" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L479" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1388,7 +1511,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">update_dataclip(dataclip, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L252" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L321" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1397,11 +1520,11 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
 
   <section class="docstring">
 
-<p>Updates a dataclip.</p><h2 id="update_dataclip/2-examples" class="section-heading"><a href="#update_dataclip/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="6930831819-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6930831819-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="6930831819-2">}</span><span class="p" data-group-id="6930831819-1">)</span><span class="w">
-</span><span class="p" data-group-id="6930831819-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6930831819-4">%</span><span class="nc" data-group-id="6930831819-4">Dataclip</span><span class="p" data-group-id="6930831819-4">{</span><span class="p" data-group-id="6930831819-4">}</span><span class="p" data-group-id="6930831819-3">}</span><span class="w">
+<p>Updates a dataclip.</p><h2 id="update_dataclip/2-examples" class="section-heading"><a href="#update_dataclip/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3262501941-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3262501941-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="3262501941-2">}</span><span class="p" data-group-id="3262501941-1">)</span><span class="w">
+</span><span class="p" data-group-id="3262501941-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3262501941-4">%</span><span class="nc" data-group-id="3262501941-4">Dataclip</span><span class="p" data-group-id="3262501941-4">{</span><span class="p" data-group-id="3262501941-4">}</span><span class="p" data-group-id="3262501941-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="6930831819-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6930831819-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6930831819-6">}</span><span class="p" data-group-id="6930831819-5">)</span><span class="w">
-</span><span class="p" data-group-id="6930831819-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6930831819-8">%</span><span class="nc" data-group-id="6930831819-8">Ecto.Changeset</span><span class="p" data-group-id="6930831819-8">{</span><span class="p" data-group-id="6930831819-8">}</span><span class="p" data-group-id="6930831819-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3262501941-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3262501941-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3262501941-6">}</span><span class="p" data-group-id="3262501941-5">)</span><span class="w">
+</span><span class="p" data-group-id="3262501941-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3262501941-8">%</span><span class="nc" data-group-id="3262501941-8">Ecto.Changeset</span><span class="p" data-group-id="3262501941-8">{</span><span class="p" data-group-id="3262501941-8">}</span><span class="p" data-group-id="3262501941-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="with_runs/1">
@@ -1414,7 +1537,7 @@ Each step is executed as part of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto
       <h1 class="signature" translate="no">with_runs(query)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L643" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L712" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
