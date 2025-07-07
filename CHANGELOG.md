@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Allow users to see & _use_ the "next input" state that would be used by a cron
+  trigger when inspecting and running cron-triggered jobs
+  [3335](https://github.com/OpenFn/lightning/issues/3335)
+
 ### Changed
 
 ### Fixed
@@ -45,9 +49,6 @@ and this project adheres to
   an individual step [#3294](https://github.com/OpenFn/lightning/issues/3294)
 - Sorting & filtering superuser interfaces for Projects, Project, and Users
   [#3354](https://github.com/OpenFn/lightning/pull/3354)
-- Allow users to see & _use_ the "next input" state that would be used by a cron
-  trigger when inspecting and running cron-triggered jobs
-  [3335](https://github.com/OpenFn/lightning/issues/3335)
 
 ### Changed
 

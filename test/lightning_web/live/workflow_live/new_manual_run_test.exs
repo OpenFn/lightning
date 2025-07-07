@@ -92,8 +92,12 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(job_id, "query=+", 10, 0)
 
-      assert %{dataclips: dataclips, next_cron_run_id: next_cron_run_id} = result
-      assert next_cron_run_id == output_dataclip.id
+      assert %{
+               dataclips: dataclips,
+               next_cron_run_dataclip_id: next_cron_run_dataclip_id
+             } = result
+
+      assert next_cron_run_dataclip_id == output_dataclip.id
       assert List.first(dataclips).id == output_dataclip.id
     end
 
@@ -136,10 +140,13 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(job_id, "query=+", 10, 0)
 
-      assert %{dataclips: _dataclips, next_cron_run_id: next_cron_run_id} =
+      assert %{
+               dataclips: _dataclips,
+               next_cron_run_dataclip_id: next_cron_run_dataclip_id
+             } =
                result
 
-      assert next_cron_run_id == nil
+      assert next_cron_run_dataclip_id == nil
     end
 
     test "does not return next cron run for cron-triggered workflows with no runs" do
@@ -162,10 +169,13 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(job_id, "query=+", 10, 0)
 
-      assert %{dataclips: _dataclips, next_cron_run_id: next_cron_run_id} =
+      assert %{
+               dataclips: _dataclips,
+               next_cron_run_dataclip_id: next_cron_run_dataclip_id
+             } =
                result
 
-      assert next_cron_run_id == nil
+      assert next_cron_run_dataclip_id == nil
     end
 
     test "does not return next cron run for cron-triggered workflows with only failed runs" do
@@ -200,10 +210,13 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(job_id, "query=+", 10, 0)
 
-      assert %{dataclips: _dataclips, next_cron_run_id: next_cron_run_id} =
+      assert %{
+               dataclips: _dataclips,
+               next_cron_run_dataclip_id: next_cron_run_dataclip_id
+             } =
                result
 
-      assert next_cron_run_id == nil
+      assert next_cron_run_dataclip_id == nil
     end
 
     test "does not return next cron run for cron-triggered workflows with failed runs after successful ones" do
@@ -260,8 +273,12 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
 
       # Should still return the successful run's output as next cron run
       # because last_successful_step_for_job looks for the most recent successful step
-      assert %{dataclips: dataclips, next_cron_run_id: next_cron_run_id} = result
-      assert next_cron_run_id == output_dataclip1.id
+      assert %{
+               dataclips: dataclips,
+               next_cron_run_dataclip_id: next_cron_run_dataclip_id
+             } = result
+
+      assert next_cron_run_dataclip_id == output_dataclip1.id
       assert List.first(dataclips).id == output_dataclip1.id
     end
   end

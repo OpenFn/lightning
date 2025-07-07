@@ -17,7 +17,7 @@ import useQuery from '../hooks/useQuery';
 
 interface ManualRunPanelProps {
   job_id: string;
-  fixedHeight: boolean
+  fixedHeight: boolean;
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
@@ -29,7 +29,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     query: urlQuery,
     a: runId,
   } = useQuery(['active_panel', 'type', 'before', 'after', 'query', 'a']);
-  const { pushEvent, pushEventTo, job_id, navigate, fixedHeight = false } = props;
+  const {
+    pushEvent,
+    pushEventTo,
+    job_id,
+    navigate,
+    fixedHeight = false,
+  } = props;
 
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
     active_panel
@@ -39,7 +45,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
   const [currentRunDataclip, setCurrentRunDataclip] =
     React.useState<Dataclip | null>(null);
-  const [nextCronRunId, setNextCronRunId] = React.useState<string | null>(null);
+  const [nextCronRunDataclipId, setNextCronRunDataclipId] = React.useState<
+    string | null
+  >(null);
   const [query, setQuery] = React.useState(urlQuery ? urlQuery : '');
   const [selectedDataclip, setSelectedDataclip] =
     React.useState<Dataclip | null>();
@@ -172,14 +180,17 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       'search-selectable-dataclips',
       { job_id: job_id, search_text: '', limit: 10 },
       (response: unknown) => {
-        const typedResponse = response as { dataclips: Dataclip[]; next_cron_run_id: string | null };
+        const typedResponse = response as {
+          dataclips: Dataclip[];
+          next_cron_run_dataclip_id: string | null;
+        };
         setRecentClips(typedResponse.dataclips);
-        setNextCronRunId(typedResponse.next_cron_run_id);
-        
+        setNextCronRunDataclipId(typedResponse.next_cron_run_dataclip_id);
+
         // Auto-select the next cron run dataclip if it exists (for cron jobs)
-        if (typedResponse.next_cron_run_id && !runId) {
+        if (typedResponse.next_cron_run_dataclip_id && !runId) {
           const nextCronDataclip = typedResponse.dataclips.find(
-            clip => clip.id === typedResponse.next_cron_run_id
+            clip => clip.id === typedResponse.next_cron_run_dataclip_id
           );
           if (nextCronDataclip) {
             selectDataclipForManualRun(nextCronDataclip);
@@ -204,10 +215,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       'search-selectable-dataclips',
       { job_id: job_id, search_text: q, limit: 10 },
       (response: unknown) => {
-        const typedResponse = response as { dataclips: Dataclip[]; next_cron_run_id: string | null };
+        const typedResponse = response as {
+          dataclips: Dataclip[];
+          next_cron_run_dataclip_id: string | null;
+        };
         setRecentClips(typedResponse.dataclips);
-        setNextCronRunId(typedResponse.next_cron_run_id);
-        
+        setNextCronRunDataclipId(typedResponse.next_cron_run_dataclip_id);
+
         // Note: Auto-selection of next cron run is handled in the initial useEffect only
         // We don't auto-select here to avoid re-selecting when filters are cleared
       }
@@ -243,7 +257,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     }
 
     // If we have a next cron run, the backend already put it at the top, so just use as-is
-    if (nextCronRunId) {
+    if (nextCronRunDataclipId) {
       return recentclips;
     }
 
@@ -260,7 +274,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
 
     // Default: just show recent clips
     return recentclips;
-  }, [recentclips, currentRunDataclip, nextCronRunId, query]);
+  }, [recentclips, currentRunDataclip, nextCronRunDataclipId, query]);
 
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
@@ -280,7 +294,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             setSelectedDates={setSelectedDates}
             fixedHeight={fixedHeight}
             currentRunDataclip={currentRunDataclip}
-            nextCronRunId={nextCronRunId}
+            nextCronRunDataclipId={nextCronRunDataclipId}
           />
         );
       case SeletableOptions.CUSTOM:
@@ -304,53 +318,54 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     pushEvent,
     handleSearchSumbit,
     currentRunDataclip,
-    nextCronRunId,
+    nextCronRunDataclipId,
     fixedHeight,
   ]);
 
   return (
     <>
       <form ref={formRef} id="manual_run_form" className="hidden"></form>
-      {selectedDataclip ? <div className='grow overflow-hidden'>
-        <SelectedClipView
-          dataclip={selectedDataclip}
-          onUnselect={() => {
-            selectDataclipForManualRun(null);
-          }}
-          isNextCronRun={nextCronRunId === selectedDataclip.id}
-        />
-      </div>
-        : (
-          <div className="grow overflow-visible no-scrollbar">
-            <div className="flex flex-col h-full">
-              <div className="flex justify-center flex-wrap mb-1">
-                <Tabs
-                  options={[
-                    {
-                      label: 'Empty',
-                      id: SeletableOptions.EMPTY.toString(),
-                      icon: DocumentIcon,
-                    },
-                    {
-                      label: 'Custom',
-                      id: SeletableOptions.CUSTOM.toString(),
-                      icon: PencilSquareIcon,
-                    },
-                    {
-                      label: 'Existing',
-                      id: SeletableOptions.EXISTING.toString(),
-                      icon: QueueListIcon,
-                    },
-                  ]}
-                  initialSelection={selectedOption.toString()}
-                  onSelectionChange={handleTabSelectionChange}
-                  collapsedVertical={false}
-                />
-              </div>
-              {innerView}
+      {selectedDataclip ? (
+        <div className="grow overflow-hidden">
+          <SelectedClipView
+            dataclip={selectedDataclip}
+            onUnselect={() => {
+              selectDataclipForManualRun(null);
+            }}
+            isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+          />
+        </div>
+      ) : (
+        <div className="grow overflow-visible no-scrollbar">
+          <div className="flex flex-col h-full">
+            <div className="flex justify-center flex-wrap mb-1">
+              <Tabs
+                options={[
+                  {
+                    label: 'Empty',
+                    id: SeletableOptions.EMPTY.toString(),
+                    icon: DocumentIcon,
+                  },
+                  {
+                    label: 'Custom',
+                    id: SeletableOptions.CUSTOM.toString(),
+                    icon: PencilSquareIcon,
+                  },
+                  {
+                    label: 'Existing',
+                    id: SeletableOptions.EXISTING.toString(),
+                    icon: QueueListIcon,
+                  },
+                ]}
+                initialSelection={selectedOption.toString()}
+                onSelectionChange={handleTabSelectionChange}
+                collapsedVertical={false}
+              />
             </div>
+            {innerView}
           </div>
-        )}
+        </div>
+      )}
     </>
   );
 };

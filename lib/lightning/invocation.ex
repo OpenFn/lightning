@@ -11,7 +11,9 @@ defmodule Lightning.Invocation do
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.ExportAudit
   alias Lightning.WorkOrders.ExportWorker
@@ -250,9 +252,6 @@ defmodule Lightning.Invocation do
   """
   @spec cron_triggered_job?(job_id :: Ecto.UUID.t()) :: boolean()
   def cron_triggered_job?(job_id) do
-    alias Lightning.Workflows.Edge
-    alias Lightning.Workflows.Trigger
-
     from(e in Edge,
       join: t in Trigger,
       on: e.source_trigger_id == t.id,
@@ -267,7 +266,7 @@ defmodule Lightning.Invocation do
   For cron-triggered jobs, this function will include the next run state dataclip
   and return its ID even if it doesn't match the filters.
 
-  Returns a tuple of {dataclips, next_cron_run_id}.
+  Returns a tuple of {dataclips, next_cron_run_dataclip_id}.
   """
   @spec list_dataclips_for_job_with_cron_state(
           Job.t(),
@@ -839,7 +838,7 @@ defmodule Lightning.Invocation do
   defp list_dataclips_with_cron_state(job_id, user_filters, opts) do
     # Get the next cron run dataclip (always needed for the ID)
     next_cron_dataclip = get_next_cron_run_dataclip(job_id, dynamic(true))
-    next_cron_run_id = next_cron_dataclip && next_cron_dataclip.id
+    next_cron_run_dataclip_id = next_cron_dataclip && next_cron_dataclip.id
 
     # Check if next cron dataclip matches user filters
     include_next_cron? =
@@ -860,7 +859,7 @@ defmodule Lightning.Invocation do
         do: [next_cron_dataclip | regular_dataclips],
         else: regular_dataclips
 
-    {dataclips, next_cron_run_id}
+    {dataclips, next_cron_run_dataclip_id}
   end
 
   # Check if a dataclip matches the user filters (applied in Elixir)

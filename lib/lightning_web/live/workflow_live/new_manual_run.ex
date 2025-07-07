@@ -14,19 +14,26 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
           offset :: integer()
         ) ::
           {:ok,
-           %{dataclips: [Dataclip.t()], next_cron_run_id: Ecto.UUID.t() | nil}}
+           %{
+             dataclips: [Dataclip.t()],
+             next_cron_run_dataclip_id: Ecto.UUID.t() | nil
+           }}
           | {:error, Ecto.Changeset.t()}
   def search_selectable_dataclips(job_id, search_text, limit, offset) do
     with {:ok, filters} <-
            get_dataclips_filters(search_text),
-         {dataclips, next_cron_run_id} <-
+         {dataclips, next_cron_run_dataclip_id} <-
            Invocation.list_dataclips_for_job_with_cron_state(
              %Job{id: job_id},
              filters,
              limit: limit,
              offset: offset
            ) do
-      {:ok, %{dataclips: dataclips, next_cron_run_id: next_cron_run_id}}
+      {:ok,
+       %{
+         dataclips: dataclips,
+         next_cron_run_dataclip_id: next_cron_run_dataclip_id
+       }}
     end
   end
 
