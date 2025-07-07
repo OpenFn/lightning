@@ -77,5 +77,41 @@ defmodule Lightning.MetadataServiceTest do
                }
              }
     end
+
+    test "returns an error when the credential URL is not valid" do
+      stdout = """
+      {"level":"error","name":"CLI","message":["Exception while generating metadata"],"time":"1751622145724855949"}
+      {"level":"error","name":"CLI","message":[{"request":{"transitional":{"silentJSONParsing":true,"forcedJSONParsing":true,"clarifyTimeoutError":false},"adapter":["xhr","http","fetch"],"transformRequest":[null],"transformResponse":[null],"timeout":0,"xsrfCookieName":"XSRF-TOKEN","xsrfHeaderName":"X-XSRF-TOKEN","maxContentLength":-1,"maxBodyLength":-1,"env":{},"headers":{"Accept":"application/json, text/plain, */*","Content-Type":"application/json","User-Agent":"axios/1.10.0","Accept-Encoding":"gzip, compress, deflate, br"},"url":"https://play.im.dhis2.org/stble-2-42-0/api/organisationUnits","responseType":"json","auth":"--REDACTED--","params":{"paging":false},"allowAbsoluteUrls":true,"method":"get"},"message":"Request failed with status code 404","response":"<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx</center>\\r\\n</body>\\r\\n</html>\\r\\n"}],"time":"1751622145725163375"}
+      """
+
+      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
+      credential = credential_fixture()
+
+      assert MetadataService.fetch("@openfn/language-common", credential) == {
+               :error,
+               %Lightning.MetadataService.Error{
+                 type: "no_metadata_result",
+                 __exception__: true
+               }
+             }
+    end
+
+    test "returns an error when the credentials are not valid" do
+      stdout = """
+      {"level":"error","name":"CLI","message":["Exception while generating metadata"],"time":"1751895555813622303"}
+      {"level":"error","name":"CLI","message":[{"request":{"transitional":{"silentJSONParsing":true,"forcedJSONParsing":true,"clarifyTimeoutError":false},"adapter":["xhr","http","fetch"],"transformRequest":[null],"transformResponse":[null],"timeout":0,"xsrfCookieName":"XSRF-TOKEN","xsrfHeaderName":"X-XSRF-TOKEN","maxContentLength":-1,"maxBodyLength":-1,"env":{},"headers":{"Accept":"application/json, text/plain, */*","Conteient-Type":"application/json","User-Agent":"axios/1.10.0","Accept-Encoding":"gzip, compress, deflate, br"},"url":"https://play.im.dhis2.org/stable-2-42-0/api/organisationUnits","responseType":"json","auth":"--REDACTED--","params":{"paging":false},"allowAbsoluteUrls":true,"method":"get"},"message":"Request failed with status code 401","response":{"httpStatus":"Unauthorized","httpStatusCode":401,"status":"ERROR","message":"Unauthorized"}}],"time":"1751895555813789521"}
+      """
+
+      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
+      credential = credential_fixture()
+
+      assert MetadataService.fetch("@openfn/language-common", credential) == {
+               :error,
+               %Lightning.MetadataService.Error{
+                 type: "no_metadata_result",
+                 __exception__: true
+               }
+             }
+    end
   end
 end
