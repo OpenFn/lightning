@@ -126,7 +126,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
           </div>
         </:title>
         <:subtitle>
-          <span class="text-xs text-left text-wrap">
+          <span class="text-xs">
             <.modal_subtitle {assigns} />
           </span>
         </:subtitle>
@@ -191,7 +191,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
 
   defp form_footer(assigns) do
     ~H"""
-    <.modal_footer class="mt-6">
+    <.modal_footer>
       <.footer_buttons {assigns} />
     </.modal_footer>
     """
@@ -216,52 +216,48 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
 
   defp footer_buttons(%{revoke_transfer: true} = assigns) do
     ~H"""
-    <div class="flex flex-row-reverse gap-4">
-      <.button
-        id={"#{@id}-revoke-button"}
-        type="button"
-        theme="primary"
-        phx-click="revoke-transfer"
-        phx-target={@myself}
-        phx-disable-with="Revoking..."
-      >
-        Revoke
-      </.button>
-      <.button
-        id={"#{@id}-cancel-button"}
-        type="button"
-        phx-target={@myself}
-        phx-click="close-modal"
-        theme="secondary"
-      >
-        Cancel
-      </.button>
-    </div>
+    <.button
+      id={"#{@id}-revoke-button"}
+      type="button"
+      theme="primary"
+      phx-click="revoke-transfer"
+      phx-target={@myself}
+      phx-disable-with="Revoking..."
+    >
+      Revoke
+    </.button>
+    <.button
+      id={"#{@id}-cancel-button"}
+      type="button"
+      phx-target={@myself}
+      phx-click="close-modal"
+      theme="secondary"
+    >
+      Cancel
+    </.button>
     """
   end
 
   defp footer_buttons(assigns) do
     ~H"""
-    <div class="flex flex-row-reverse gap-4">
-      <.button
-        id={"#{@id}-submit-button"}
-        type="submit"
-        theme="primary"
-        phx-disable-with="Transferring..."
-        disabled={!@changeset.valid?}
-      >
-        Transfer
-      </.button>
-      <.button
-        id={"#{@id}-cancel-button"}
-        type="button"
-        phx-target={@myself}
-        phx-click="close-modal"
-        theme="secondary"
-      >
-        Cancel
-      </.button>
-    </div>
+    <.button
+      id={"#{@id}-submit-button"}
+      type="submit"
+      theme="primary"
+      phx-disable-with="Transferring..."
+      disabled={!@changeset.valid?}
+    >
+      Transfer
+    </.button>
+    <.button
+      id={"#{@id}-cancel-button"}
+      type="button"
+      phx-target={@myself}
+      phx-click="close-modal"
+      theme="secondary"
+    >
+      Cancel
+    </.button>
     """
   end
 

@@ -131,8 +131,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
             <.input type="hidden" field={f[:id]} />
             <.input type="hidden" field={f[:name]} />
           </div>
-          <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-          <div class="flex flex-row-reverse gap-4">
+          <.modal_footer>
             <.button
               id={"project-#{@id}_confirm_button"}
               type="submit"
@@ -150,7 +149,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
             >
               Cancel
             </.button>
-          </div>
+          </.modal_footer>
         </.form>
       </.modal>
     </div>

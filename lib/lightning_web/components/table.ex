@@ -92,10 +92,7 @@ defmodule LightningWeb.Components.Table do
 
   def table(assigns) do
     ~H"""
-    <div
-      id={@id}
-      class="overflow-hidden shadow ring-1 ring-black/5 sm:rounded-lg bg-gray-50"
-    >
+    <div id={@id} class="shadow ring-1 ring-black/5 sm:rounded-lg bg-gray-50">
       <table class={["min-w-full", @divide && "divide-y divide-gray-200"]}>
         <thead>{render_slot(@header)}</thead>
         <tbody class={[
@@ -253,7 +250,7 @@ defmodule LightningWeb.Components.Table do
   ## Example
 
   ```elixir
-  <.td class="break-words max-w-[25rem]">
+  <.td class="wrap-break-word max-w-[25rem]">
     {user.name}
   </.td>
   ```
@@ -261,17 +258,11 @@ defmodule LightningWeb.Components.Table do
   slot :inner_block, required: true
   attr :class, :string, default: nil
   attr :id, :string, default: nil
-  attr :colspan, :integer, default: nil
-  attr :rowspan, :integer, default: nil
+  attr :rest, :global, include: ~w(colspan rowspan)
 
   def td(assigns) do
     ~H"""
-    <td
-      id={@id}
-      colspan={@colspan}
-      rowspan={@rowspan}
-      class={["text-sm text-gray-500 whitespace-nowrap", @class]}
-    >
+    <td id={@id} class={["text-sm text-gray-500", @class]} {@rest}>
       {render_slot(@inner_block)}
     </td>
     """

@@ -224,7 +224,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </button>
           </div>
         </:title>
-        <div class="container mx-auto px-4">
+        <div class="container mx-auto">
           <.form
             id="credential-schema-picker"
             for={@schema_selection_form}
@@ -256,26 +256,24 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </div>
           </.form>
         </div>
-        <.modal_footer class="mt-6 mx-6">
-          <div class="sm:flex sm:flex-row-reverse gap-3">
-            <.button
-              type="submit"
-              theme="primary"
-              disabled={!@schema}
-              phx-click="change_page"
-              phx-target={@myself}
-            >
-              Configure credential
-            </.button>
-            <.button
-              id="cancel-credential-type-picker"
-              type="button"
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
-              theme="secondary"
-            >
-              Cancel
-            </.button>
-          </div>
+        <.modal_footer>
+          <.button
+            type="submit"
+            theme="primary"
+            disabled={!@schema}
+            phx-click="change_page"
+            phx-target={@myself}
+          >
+            Configure credential
+          </.button>
+          <.button
+            id="cancel-credential-type-picker"
+            type="button"
+            phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+            theme="secondary"
+          >
+            Cancel
+          </.button>
         </.modal_footer>
       </.modal>
     </div>
@@ -355,7 +353,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             form={f}
             type={@schema}
           >
-            <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
+            <div class="space-y-6 bg-white py-5">
               <fieldset>
                 <div class="space-y-4">
                   <div>
@@ -411,26 +409,22 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               </div>
             </div>
           </LightningWeb.Components.Credentials.form_component>
-          <.modal_footer class="mt-6 mx-6">
-            <div class="sm:flex sm:flex-row-reverse gap-3">
-              <.button
-                id={"save-credential-button-#{@credential.id || "new"}"}
-                type="submit"
-                theme="primary"
-                disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
-              >
-                Save
-              </.button>
-              <.button
-                type="button"
-                phx-click={
-                  hide_modal(@id) |> JS.push("reset_state", target: @myself)
-                }
-                theme="secondary"
-              >
-                Cancel
-              </.button>
-            </div>
+          <.modal_footer>
+            <.button
+              id={"save-credential-button-#{@credential.id || "new"}"}
+              type="submit"
+              theme="primary"
+              disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
+            >
+              Save
+            </.button>
+            <.button
+              type="button"
+              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+              theme="secondary"
+            >
+              Cancel
+            </.button>
           </.modal_footer>
         </.form>
       </.modal>

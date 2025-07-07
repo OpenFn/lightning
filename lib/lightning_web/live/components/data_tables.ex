@@ -49,9 +49,10 @@ defmodule LightningWeb.Components.DataTables do
           <:body>
             <%= for credential <- @credentials do %>
               <.tr id={"#{@id}-#{credential.id}"}>
-                <.td class="break-words max-w-[15rem]">
-                  <div class="flex-auto items-center">
+                <.td class="max-w-[15rem]">
+                  <div class="flex items-center">
                     {credential.name}
+
                     <%= if missing_oauth_client?(credential) do %>
                       <span
                         id={"#{credential.id}-client-not-found-tooltip"}
@@ -64,31 +65,35 @@ defmodule LightningWeb.Components.DataTables do
                     <% end %>
                   </div>
                 </.td>
-                <.td class="break-words max-w-[10rem] border-">
+                <.td class="wrap-break-word max-w-[10rem] border-">
                   {credential_type(credential)}
                 </.td>
-                <.td :if={@show_owner} class="break-words max-w-[15rem]">
+                <.td :if={@show_owner} class="wrap-break-word max-w-[15rem]">
                   <div class="flex-auto items-center">
                     {credential.user.email}
                   </div>
                 </.td>
-                <.td class="break-words max-w-[25rem]">
+                <.td class="wrap-break-word max-w-[25rem]">
                   <%= for project_name <- credential.project_names do %>
                     <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
                       {project_name}
                     </span>
                   <% end %>
                 </.td>
-                <.td class="break-words max-w-[5rem]">
+                <.td class="wrap-break-word max-w-[5rem]">
                   <%= if credential.production do %>
                     <div class="flex">
-                      <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
-                      &nbsp;Production
+                      <.icon
+                        name="hero-exclamation-triangle"
+                        class="w-5 h-5 text-secondary-500"
+                      /> &nbsp;Production
                     </div>
                   <% end %>
                 </.td>
-                <.td class="text-right py-0.5">
-                  {render_slot(@actions, credential)}
+                <.td>
+                  <div class="flex justify-end items-center">
+                    {render_slot(@actions, credential)}
+                  </div>
                 </.td>
               </.tr>
             <% end %>
@@ -138,24 +143,26 @@ defmodule LightningWeb.Components.DataTables do
           <:body>
             <%= for client <- @clients do %>
               <.tr id={"#{@id}-#{client.id}"}>
-                <.td class="break-words max-w-[15rem]">
+                <.td class="wrap-break-word max-w-[15rem]">
                   {client.name}
                 </.td>
-                <.td :if={@show_owner} class="break-words max-w-[15rem]">
+                <.td :if={@show_owner} class="wrap-break-word max-w-[15rem]">
                   {if client.global, do: "GLOBAL", else: client.user.email}
                 </.td>
-                <.td class="break-words max-w-[20rem]">
+                <.td class="wrap-break-word max-w-[20rem]">
                   <%= for project_name <- client.project_names do %>
                     <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
                       {project_name}
                     </span>
                   <% end %>
                 </.td>
-                <.td class="break-words max-w-[21rem]">
+                <.td class="wrap-break-word max-w-[18rem]">
                   {client.authorization_endpoint}
                 </.td>
-                <.td class="text-right py-0.5">
-                  {render_slot(@actions, client)}
+                <.td>
+                  <div class="flex justify-end items-center">
+                    {render_slot(@actions, client)}
+                  </div>
                 </.td>
               </.tr>
             <% end %>
@@ -224,7 +231,7 @@ defmodule LightningWeb.Components.DataTables do
                   {file.created_by.first_name <> " " <> file.created_by.last_name}
                 </.td>
                 <.td>{format_export_status(file.status)}</.td>
-                <.td class="text-right py-0.5">
+                <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, file)}
                 </.td>
               </.tr>
@@ -271,7 +278,7 @@ defmodule LightningWeb.Components.DataTables do
               <.tr id={"collection-row-#{collection.id}"}>
                 <.td>{collection.name}</.td>
                 <.td>{div(collection.byte_size_sum, 1_000_000)}</.td>
-                <.td class="text-right py-0.5">
+                <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, collection)}
                 </.td>
               </.tr>
@@ -334,7 +341,7 @@ defmodule LightningWeb.Components.DataTables do
                 <.td>
                   <.digest current_user={@current_user} project_user={project_user} />
                 </.td>
-                <.td class="text-right py-0.5">
+                <.td class="flex justify-end py-0.5">
                   {render_slot(@actions, project_user)}
                 </.td>
               </.tr>

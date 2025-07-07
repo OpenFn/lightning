@@ -145,10 +145,15 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def handle_async(:token, {:ok, {:ok, token}}, socket) do
+    expected_scopes =
+      socket.assigns.selected_scopes
+      |> Enum.map(&String.downcase/1)
+      |> Enum.reject(&(&1 == "offline_access"))
+
     params =
       socket.assigns.changeset.params
       |> Map.put("oauth_token", token)
-      |> Map.put("expected_scopes", socket.assigns.selected_scopes)
+      |> Map.put("expected_scopes", expected_scopes)
 
     changeset = Credentials.change_credential(socket.assigns.credential, params)
 
@@ -157,7 +162,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> assign(:scopes_changed, false)
       |> assign(:changeset, changeset)
 
-    case validate_token(token, updated_socket.assigns.selected_scopes) do
+    case validate_token(token, expected_scopes) do
       :ok ->
         Logger.info(
           "Received valid token from #{updated_socket.assigns.selected_client.name}"
@@ -556,7 +561,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <div class="bg-white px-4">
+        <div class="bg-white">
           <div class="space-y-4">
             <div>
               <NewInputs.input
@@ -642,31 +647,25 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           </div>
         </div>
 
-        <.modal_footer class="mt-6 mx-4">
-          <div class="flex justify-between items-center">
-            <div class="flex-1 w-1/2">
-              <div class="sm:flex sm:flex-row-reverse gap-3">
-                <.button
-                  id={"save-credential-button-#{@credential.id || "new"}"}
-                  type="submit"
-                  theme="primary"
-                  disabled={
-                    !@changeset.valid? || @scopes_changed ||
-                      @oauth_progress == :error
-                  }
-                >
-                  Save
-                </.button>
-                <.button
-                  type="button"
-                  phx-click={JS.navigate(@return_to)}
-                  theme="secondary"
-                >
-                  Cancel
-                </.button>
-              </div>
-            </div>
-          </div>
+        <.modal_footer>
+          <.button
+            id={"save-credential-button-#{@credential.id || "new"}"}
+            type="submit"
+            theme="primary"
+            disabled={
+              !@changeset.valid? || @scopes_changed ||
+                @oauth_progress == :error
+            }
+          >
+            Save
+          </.button>
+          <.button
+            type="button"
+            phx-click={JS.navigate(@return_to)}
+            theme="secondary"
+          >
+            Cancel
+          </.button>
         </.modal_footer>
       </.form>
     </div>

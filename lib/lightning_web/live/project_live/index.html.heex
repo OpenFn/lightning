@@ -88,30 +88,43 @@
         <:body>
           <%= for project <- @projects do %>
             <.tr id={"project-row-#{project.id}"}>
-              <.td>{project.name}</.td>
-              <.td>{project.inserted_at}</.td>
-              <.td>{project.description}</.td>
-              <.td>
+              <.td class="max-w-80">{project.name}</.td>
+              <.td>{Calendar.strftime(project.inserted_at, "%d %b  %H:%M")}</.td>
+              <.td class="max-w-80">
+                {project.description}
+              </.td>
+              <.td class="max-w-64 wrap-break-word">
                 <%= case get_project_owner_name(project) do %>
                   <% "" -> %>
-                    <span class="text-gray-400">No owner</span>
+                    <span>No owner</span>
                   <% owner_name -> %>
-                    {owner_name}
+                    <span>{owner_name}</span>
                 <% end %>
               </.td>
-              <.td>{project.scheduled_deletion}</.td>
-              <.td class="text-right py-0.5">
-                <span>
-                  <.link
-                    class="table-action"
-                    navigate={
-                      Routes.project_index_path(@socket, :edit, project.id)
-                    }
+              <.td>
+                {project.scheduled_deletion &&
+                  Calendar.strftime(project.scheduled_deletion, "%d %b  %H:%M")}
+              </.td>
+              <.td class="py-0.5">
+                <div class="flex justify-end">
+                  <Common.simple_dropdown
+                    id={"project-actions-#{project.id}-dropdown"}
+                    button_theme="secondary"
                   >
-                    Edit
-                  </.link>
-                  <.delete_action socket={@socket} project={project} />
-                </span>
+                    <:button>
+                      Actions
+                    </:button>
+
+                    <:options>
+                      <.link navigate={
+                        Routes.project_index_path(@socket, :edit, project.id)
+                      }>
+                        Edit
+                      </.link>
+                      <.delete_action socket={@socket} project={project} />
+                    </:options>
+                  </Common.simple_dropdown>
+                </div>
               </.td>
             </.tr>
           <% end %>
