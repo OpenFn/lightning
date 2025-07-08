@@ -208,13 +208,19 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     ~H"""
     <div class="text-xs text-left">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
+      <.modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 max-w-full"
+        on_close={LightningWeb.ModalPortal.close_modal_js()}
+      >
         <:title>
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               id="close-credential-modal-type-picker"
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+              phx-click={
+                hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()
+              }
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}
@@ -258,7 +264,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         </div>
         <.modal_footer>
           <.button
-            type="submit"
+            type="button"
             theme="primary"
             disabled={!@schema}
             phx-click="change_page"
@@ -269,7 +275,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           <.button
             id="cancel-credential-type-picker"
             type="button"
-            phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+            phx-click={hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()}
             theme="secondary"
           >
             Cancel
@@ -283,13 +289,19 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second, schema: "oauth"} = assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
+      <.modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 w-[300px]"
+        on_close={LightningWeb.ModalPortal.close_modal_js()}
+      >
         <:title>
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+              phx-click={
+                hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()
+              }
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}
@@ -323,7 +335,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second} = assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
+      <.modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 w-[300px]"
+        on_close={LightningWeb.ModalPortal.close_modal_js()}
+      >
         <:title>
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
@@ -420,7 +436,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </.button>
             <.button
               type="button"
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+              phx-click={
+                hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()
+              }
               theme="secondary"
             >
               Cancel

@@ -661,7 +661,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           </.button>
           <.button
             type="button"
-            phx-click={JS.navigate(@return_to)}
+            phx-click={LightningWeb.ModalPortal.close_modal_js()}
             theme="secondary"
           >
             Cancel
