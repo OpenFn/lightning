@@ -23,6 +23,8 @@ and this project adheres to
 
 ### Changed
 
+- Bump CLI to 1.13.1 [#3351](https://github.com/OpenFn/lightning/issues/3351)
+
 ### Fixed
 
 ## [v2.13.4] - 2025-07-05
