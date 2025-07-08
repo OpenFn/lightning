@@ -2043,6 +2043,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_info({:workflow_assistant, action, payload}, socket) do
+    dbg(action)
+    dbg(payload)
     case action do
       :canvas_state_changed ->
         update_canvas_state(socket, payload)
@@ -2143,7 +2145,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp handle_new_params(socket, params, type, opts \\ []) do
-    %{workflow_params: _initial_params, can_edit_workflow: can_edit_workflow} =
+    %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
       socket.assigns
 
     if can_edit_workflow do
@@ -2153,9 +2155,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket
       |> apply_params(next_params, type)
       |> mark_validated()
+      |> maybe_push_patches_applied(initial_params, opts)
       |> trigger_yaml_generation(opts)
     else
       put_flash(socket, :error, "You are not authorized to perform this action.")
+    end
+  end
+
+  defp maybe_push_patches_applied(socket, initial_params, opts) do
+    if Keyword.get(opts, :push_patches, true) do
+      push_patches_applied(socket, initial_params)
+    else
+      socket
     end
   end
 
@@ -2187,12 +2198,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
             initial_params
         end
         |> ensure_connected_triggers()
-        |> dbg()
 
       %{assigns: %{changeset: changeset}} =
         socket = socket |> apply_params(next_params, :workflow)
 
-      case Helpers.save_workflow(changeset, current_user) |> dbg() do
+      case Helpers.save_workflow(changeset, current_user) do
         {:ok, workflow} ->
           snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
@@ -3019,18 +3029,173 @@ defmodule LightningWeb.WorkflowLive.Edit do
      )}
   end
 
-  defp handle_workflow_params_change(socket, %{"workflow" => params} = payload) do
-    opts = Map.get(payload, "opts", [])
+  defp handle_workflow_params_change(socket, %{
+         "workflow" => params,
+         "opts" => opts
+       }) do
+    id_mapping =
+      LightningWeb.WorkflowLive.WorkflowPatchFilter.build_id_mapping_from_params(
+        params,
+        socket.assigns.workflow_params
+      )
 
-    dbg(params)
+    # DETECT FAILURES HERE
+    case detect_mapping_failures(
+           params,
+           socket.assigns.workflow_params,
+           id_mapping
+         ) do
+      :ok ->
+        # Proceed normally
+        corrected_params =
+          params
+          |> preserve_original_ids(socket.assigns.workflow_params, id_mapping)
+          |> adjust_all_references(id_mapping)
+          |> remove_root_id()
 
-    {:noreply,
-     socket
-     |> handle_new_params(params, :workflow, opts)
-     |> push_event("set-disabled", %{
-       disabled: false
-     })}
+        {:noreply,
+         socket
+         |> handle_new_params(corrected_params, :workflow, opts)
+         |> push_event("state-applied", %{"state" => corrected_params})
+         |> push_event("set-disabled", %{disabled: false})}
+
+      {:error, failure_info} ->
+        IO.puts(format_mapping_failure(failure_info))
+        {:noreply,
+         socket
+         |> put_flash(:error, "Error while applying AI changes.")
+         |> push_event("set-disabled", %{disabled: false})}
+    end
   end
+
+  defp detect_mapping_failures(ai_params, original_params, id_mapping) do
+    original_jobs = Map.get(original_params, "jobs", [])
+    ai_jobs = Map.get(ai_params, "jobs", [])
+
+    # Find originals that weren't mapped
+    mapped_original_ids = Map.values(id_mapping) |> MapSet.new()
+
+    unmapped_originals =
+      Enum.filter(original_jobs, fn job ->
+        !MapSet.member?(mapped_original_ids, job["id"])
+      end)
+
+    # Find AI jobs without mapping (potential new or failed matches)
+    unmapped_ai =
+      Enum.filter(ai_jobs, fn job ->
+        !Map.has_key?(id_mapping, job["id"])
+      end)
+
+    cond do
+      # Clear case: Pure additions (all originals mapped)
+      length(unmapped_originals) == 0 and length(unmapped_ai) > 0 ->
+        :ok
+
+      # Clear case: Pure deletions (no new AI jobs)
+      length(unmapped_originals) > 0 and length(unmapped_ai) == 0 ->
+        :ok
+
+      # DANGER: Both unmapped originals AND new jobs = possible failed mapping
+      length(unmapped_originals) > 0 and length(unmapped_ai) > 0 ->
+        {:error,
+         %{
+           potentially_lost: unmapped_originals,
+           potentially_new: unmapped_ai
+         }}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp format_mapping_failure(%{
+         potentially_lost: lost,
+         potentially_new: new
+       }) do
+    lost_names = Enum.map(lost, & &1["name"]) |> Enum.join(", ")
+    new_names = Enum.map(new, & &1["name"]) |> Enum.join(", ")
+
+    """
+    Cannot safely apply changes. Some jobs might lose their IDs:
+
+    Missing from mapping: #{lost_names}
+    New jobs detected: #{new_names}
+
+    This might be renames that would break job history.
+    Please ensure job names remain the same or make changes one at a time.
+    """
+  end
+
+  defp preserve_original_ids(ai_params, original_params, id_mapping) do
+    ai_params
+    |> preserve_entity_ids("triggers", original_params, id_mapping)
+    |> preserve_entity_ids("jobs", original_params, id_mapping)
+    |> preserve_entity_ids("edges", original_params, id_mapping)
+  end
+
+  defp preserve_entity_ids(params, entity_type, _original_params, id_mapping) do
+    # original_entities = Map.get(original_params, entity_type, [])
+
+    Map.update(params, entity_type, [], fn ai_entities ->
+      ai_entities
+      |> Enum.map(fn ai_entity ->
+        # Check if this entity's ID is in our mapping
+        case Map.get(id_mapping, ai_entity["id"]) do
+          nil ->
+            # New entity - keep as is
+            ai_entity
+
+          original_id ->
+            # Existing entity - restore original ID (Rule 1: DROP ID replacements)
+            Map.put(ai_entity, "id", original_id)
+        end
+      end)
+    end)
+  end
+
+  defp adjust_all_references(params, id_mapping) do
+    # Rule 2: ADJUST reference IDs
+    Map.update(params, "edges", [], fn edges ->
+      Enum.map(edges, fn edge ->
+        edge
+        |> adjust_reference_field("source_trigger_id", id_mapping)
+        |> adjust_reference_field("source_job_id", id_mapping)
+        |> adjust_reference_field("target_job_id", id_mapping)
+        |> adjust_reference_field("target_trigger_id", id_mapping)
+      end)
+    end)
+  end
+
+  defp adjust_reference_field(entity, field_name, id_mapping) do
+    case Map.get(entity, field_name) do
+      nil ->
+        entity
+
+      value ->
+        # Same logic as adjust_reference_id in process_patch
+        adjusted_value = Map.get(id_mapping, value, value)
+        Map.put(entity, field_name, adjusted_value)
+    end
+  end
+
+  defp remove_root_id(params) do
+    # Rule 1: DROP root ID removal
+    Map.delete(params, "id")
+  end
+
+  # defp format_patch_errors(errors) do
+  #   case length(errors) do
+  #     1 ->
+  #       "Note: #{hd(errors)}"
+
+  #     n when n <= 3 ->
+  #       "Note: Some operations couldn't be applied:\n• " <>
+  #         Enum.join(errors, "\n• ")
+
+  #     n ->
+  #       "Note: #{n} operations couldn't be applied. The workflow may not reflect all requested changes."
+  #   end
+  # end
 
   defp handle_workflow_save_request(socket, %{query_params: query_params}) do
     case save_workflow(socket, socket.assigns.workflow_params) do
@@ -3209,7 +3374,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp ensure_connected_triggers(params) do
-    dbg(params)
     triggers = Map.get(params, "triggers", [])
     edges = Map.get(params, "edges", [])
 

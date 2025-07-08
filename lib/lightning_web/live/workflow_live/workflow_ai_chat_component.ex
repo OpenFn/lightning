@@ -40,10 +40,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
       "opts" => [push_patches: false, context: socket.assigns.context]
     })
 
-    {:noreply,
-     socket
-     |> push_event("state-applied", %{"state" => params})
-     |> push_event("force-fit", %{})}
+    {:noreply, socket}
   end
 
   defp notify_parent(action, payload) do
