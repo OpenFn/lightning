@@ -4,6 +4,7 @@ import {
   useWorkflowStore,
   type ChangeArgs,
   type PendingAction,
+  type ReplayAction,
   type WorkflowProps,
 } from './store';
 import { randomUUID } from '../common';
@@ -58,7 +59,7 @@ export const WorkflowStore: WithActionProps = props => {
         props.pushEventTo('push-change', pendingChange, response => {
           console.debug('push-change response', response);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          if (response && response.patches) applyPatches(response.patches);
+          if (response && response.patches) applyPatches({ patches: response.patches || [], inverse: response.inverse || [] });
           resolve(true);
         });
       });
@@ -82,15 +83,15 @@ export const WorkflowStore: WithActionProps = props => {
   }, [processPendingChanges, subscribe]);
 
   React.useEffect(() => {
-    props.handleEvent('patches-applied', (response: { patches: Patch[] }) => {
-      console.debug('patches-applied', response.patches);
+    return props.handleEvent('patches-applied', (response: Partial<ReplayAction>) => {
+      console.debug('patches-applied', response);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response.patches) applyPatches(response.patches);
+      if (response && response.patches && response.patches.length) applyPatches({ patches: response.patches || [], inverse: response.inverse || [] });
     });
   }, [applyPatches, props]);
 
   React.useEffect(() => {
-    props.handleEvent('state-applied', (response: { state: WorkflowProps }) => {
+    return props.handleEvent('state-applied', (response: { state: WorkflowProps }) => {
       console.log('state-applied', response.state);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
       if (response.state) setState({ ...response.state, positions: response.state.positions ?? null });
@@ -98,16 +99,20 @@ export const WorkflowStore: WithActionProps = props => {
   }, [setState, props]);
 
   React.useEffect(() => {
-    props.handleEvent('navigate', (e: any) => {
+    const navigateCleanup = props.handleEvent('navigate', (e: any) => {
       const id = new URL(window.location.href).searchParams.get('s');
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (e.patch) setSelection(id);
     });
     // force fitting
-    props.handleEvent('force-fit', () => {
+    const forcefitCleanup = props.handleEvent('force-fit', () => {
       setForceFit(true);
     });
+    return () => {
+      navigateCleanup()
+      forcefitCleanup()
+    }
   }, [add, props.handleEvent, setSelection, setForceFit]);
 
   // Fetch initial state once on mount
@@ -149,7 +154,7 @@ export const WorkflowStore: WithActionProps = props => {
   }, [props.pushEventTo, setState, add]);
 
   React.useEffect(() => {
-    props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
+    return props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
       setDisabled(response.disabled);
     });
   }, [props, setDisabled]);

@@ -101,7 +101,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   );
 
   React.useEffect(() => {
-    props.handleEvent('manual_run_created', (payload: unknown) => {
+    return props.handleEvent('manual_run_created', (payload: unknown) => {
       const typedPayload = payload as { dataclip?: Dataclip };
       if (typedPayload.dataclip) {
         // Update currentRunDataclip since this is now the active run's dataclip
