@@ -7,6 +7,11 @@ defmodule FakeRambo do
   defmodule Helpers do
     def stub_run(res) do
       Cachex.start_link(:fake_rambo_cache)
+
+      if :ets.whereis(:fake_rambo_cache) == :undefined do
+        Process.sleep(100)
+      end
+
       Cachex.put(:fake_rambo_cache, :res, res)
     end
   end
