@@ -5,6 +5,7 @@
  * This is supposed to make changing simple styles easier. Nore sure
  * if it's going to help yet
  */
+import type { RunSteps } from '#/workflow-store/store';
 import type { Flow } from './types';
 
 export const EDGE_COLOR = '#b1b1b7';
@@ -146,9 +147,24 @@ export const styleEdge = (edge: Flow.Edge) => {
   return edge;
 };
 
-export const nodeIconStyles = (selected?: boolean, hasErrors?: boolean) => {
+const BG_GREEN_100 = '#dcfce7';
+const BG_RED_100 = '#ffe2e2';
+const BORDER_GREEN_600 = '#00a63e';
+const BORDER_RED_600 = '#e7000b';
+
+export const nodeIconStyles = (
+  selected?: boolean,
+  hasErrors?: boolean,
+  runReason: RunSteps['exit_reason'] = null
+) => {
   const size = 100;
-  const primaryColor = selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+  const primaryColor = selected
+    ? EDGE_COLOR_SELECTED
+    : runReason
+    ? runReason === 'fail'
+      ? BORDER_RED_600
+      : BORDER_GREEN_600
+    : EDGE_COLOR;
   return {
     width: size,
     height: size,
@@ -156,7 +172,11 @@ export const nodeIconStyles = (selected?: boolean, hasErrors?: boolean) => {
     strokeWidth: 2,
     style: {
       stroke: hasErrors ? ERROR_COLOR : primaryColor,
-      fill: 'white',
+      fill: runReason
+        ? runReason === 'fail'
+          ? BG_RED_100
+          : BG_GREEN_100
+        : 'white',
     },
   };
 };

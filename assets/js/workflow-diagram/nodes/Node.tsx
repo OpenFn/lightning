@@ -4,6 +4,7 @@ import { Handle, type NodeProps } from '@xyflow/react';
 import Shape from '../components/Shape';
 import ErrorMessage from '../components/ErrorMessage';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
+import type { RunSteps } from '#/workflow-store/store';
 
 type NodeData = any;
 
@@ -84,12 +85,16 @@ const Node = ({
 
   errors,
 }: BaseNodeProps) => {
+  const runData = data?.runData as RunSteps | undefined;
+  const isErrorRun = runData?.exit_reason === "fail";
   const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
     selected,
-    hasErrors(errors)
+    hasErrors(errors),
+    runData?.exit_reason
   );
 
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
+
   return (
     <div className="group" data-a-node>
       <div className="flex flex-row cursor-pointer">
@@ -144,6 +149,7 @@ const Node = ({
               maxWidth: '110px',
               maxHeight: '110px',
               opacity: nodeOpacity,
+              overflow: "visible"
             }}
           >
             <Shape
@@ -153,7 +159,17 @@ const Node = ({
               strokeWidth={strokeWidth}
               styles={style}
             />
+            {/* {runData ? <>
+              <circle cx="5" cy="5" r="10" strokeWidth={2} stroke={runData.exit_reason == "fail" ? "red" : "green"} fill="white" />
+              <text x="5" y="8" textAnchor="middle" fontSize="10" fill="black">1</text>
+            </> : null} */}
           </svg>
+          {runData ? <div className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}>
+            {isErrorRun ?
+              <span className='hero-exclamation-circle w-3 h-3'></span> :
+              <span className='hero-check w-3 h-3'></span>
+            }
+          </div> : null}
           {primaryIcon && (
             <div
               style={{
@@ -246,10 +262,9 @@ const Node = ({
             justifyContent: 'center',
           }}
           className={`flex flex-row items-center
-                    opacity-0  ${
-                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-                      ''
-                    }
+                    opacity-0  ${(!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+            ''
+            }
                     transition duration-150 ease-in-out`}
         >
           {toolbar()}

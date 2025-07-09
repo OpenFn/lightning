@@ -3,6 +3,7 @@ import React from 'react';
 import {
   useWorkflowStore,
   type ChangeArgs,
+  type RunSteps,
   type PendingAction,
   type ReplayAction,
   type WorkflowProps,
@@ -128,9 +129,9 @@ export const WorkflowStore: WithActionProps = props => {
     props.pushEventTo(
       'get-current-state',
       {},
-      (response: { workflow_params: WorkflowProps }) => {
-        const { workflow_params } = response;
-        setState(workflow_params);
+      (response: { workflow_params: WorkflowProps, run_steps: RunSteps[], run_id: string | null }) => {
+        const { workflow_params, run_steps, run_id } = response;
+        setState({ ...workflow_params, runSteps: run_id ? run_steps : [] });
         if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
           const diff = createNewWorkflow();
           add(diff);

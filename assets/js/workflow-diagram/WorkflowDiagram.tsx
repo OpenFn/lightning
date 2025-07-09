@@ -83,7 +83,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updatePositions,
     updatePosition,
     undo,
-    redo
+    redo,
+    runSteps
   } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
@@ -164,6 +165,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         workflow,
         positions,
         placeholders,
+        runSteps,
         // Re-render the model based on whatever was last selected
         // This handles first load and new node safely
         lastSelection
@@ -222,7 +224,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection]);
+  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection, runSteps]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {

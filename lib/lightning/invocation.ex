@@ -915,4 +915,25 @@ defmodule Lightning.Invocation do
         dataclips
     end
   end
+
+  def latest_workflow_runs_steps(workflow_id) do
+    WorkOrder
+    |> where([w], w.workflow_id == ^workflow_id)
+    |> order_by([w], desc: w.last_activity)
+    |> limit(1)
+    |> preload(
+      runs:
+        ^from(r in Lightning.Run,
+          order_by: [desc: r.started_at],
+          limit: 1,
+          preload: [:steps]
+        )
+    )
+    |> Repo.one()
+    |> case do
+      nil -> []
+      %{runs: [last_run]} -> last_run.steps
+      _ -> []
+    end
+  end
 end
