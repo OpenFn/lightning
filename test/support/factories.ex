@@ -215,6 +215,16 @@ defmodule Lightning.Factories do
     }
   end
 
+  def keychain_credential_factory do
+    %Lightning.Credentials.KeychainCredential{
+      name: sequence(:keychain_credential_name, &"keychain-credential-#{&1}"),
+      path: sequence(:keychain_path, &"$.user_id_#{&1}"),
+      created_by: build(:user),
+      project: build(:project),
+      default_credential: nil
+    }
+  end
+
   def oauth_client_factory do
     %Lightning.Credentials.OauthClient{
       name: sequence(:oauth_client_name, &"oauth-client#{&1}"),
