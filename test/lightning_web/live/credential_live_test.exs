@@ -16,12 +16,14 @@ defmodule LightningWeb.CredentialLiveTest do
 
   @create_attrs %{
     name: "some credential",
-    body: Jason.encode!(%{"a" => 1})
+    body: Jason.encode!(%{"a" => 1}),
+    external_id: "test-external-id"
   }
 
   @update_attrs %{
     name: "some updated name",
-    body: "{\"a\":\"new_secret\"}"
+    body: "{\"a\":\"new_secret\"}",
+    external_id: "updated-external-id"
   }
 
   @invalid_attrs %{name: "this won't work", body: nil}
@@ -676,6 +678,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert inputs_in_position == ~w(
                credential[name]
+               credential[external_id]
                credential[production]
                credential[production]
                credential[body][username]
@@ -740,6 +743,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert inputs_in_position == [
                "credential[name]",
+               "credential[external_id]",
                "credential[production]",
                "credential[production]",
                "credential[body][host]",
@@ -945,6 +949,19 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential updated successfully"}
 
       assert html =~ "some updated name"
+    end
+
+    test "displays external_id in credentials table", %{
+      conn: conn,
+      credential: credential
+    } do
+      # Update credential with external_id
+      Credentials.update_credential(credential, %{external_id: "display-test-id"})
+
+      {:ok, _index_live, html} = live(conn, ~p"/credentials")
+
+      # Verify external_id is displayed in the table
+      assert html =~ "display-test-id"
     end
 
     test "Edit adds new project with access", %{

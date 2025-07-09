@@ -40,6 +40,7 @@ defmodule LightningWeb.Components.DataTables do
               <.th>
                 Projects with access
               </.th>
+              <.th>External ID</.th>
               <.th>Production</.th>
               <.th>
                 <span class="sr-only">Actions</span>
@@ -78,6 +79,18 @@ defmodule LightningWeb.Components.DataTables do
                     <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
                       {project_name}
                     </span>
+                  <% end %>
+                </.td>
+                <.td class="wrap-break-word max-w-[12rem]">
+                  <%= if credential.external_id do %>
+                    <code
+                      class="text-xs bg-gray-100 px-1 py-0.5 rounded truncate inline-block max-w-full"
+                      title={credential.external_id}
+                    >
+                      {credential.external_id}
+                    </code>
+                  <% else %>
+                    <span class="text-gray-400 text-sm">-</span>
                   <% end %>
                 </.td>
                 <.td class="wrap-break-word max-w-[5rem]">
