@@ -336,14 +336,18 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   def render(assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal id={@id} width="w-[32rem] lg:w-[44rem]">
+      <.modal
+        id={@id}
+        width="w-[32rem] lg:w-[44rem]"
+        show={true}
+        on_close={LightningWeb.ModalPortal.close_modal_js()}
+      >
         <:title>
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               id={"close-oauth-client-modal-form-#{@oauth_client.id || "new"}"}
-              phx-click="close_modal"
-              phx-target={@myself}
+              phx-click={LightningWeb.ModalPortal.close_modal_js()}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}
@@ -518,9 +522,13 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   Add OAuth Client
               <% end %>
             </.button>
-            <.button_link type="button" navigate={@return_to} theme="secondary">
+            <.button
+              type="button"
+              phx-click={LightningWeb.ModalPortal.close_modal_js()}
+              theme="secondary"
+            >
               Cancel
-            </.button_link>
+            </.button>
           </.modal_footer>
         </.form>
       </.modal>

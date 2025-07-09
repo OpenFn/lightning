@@ -10,8 +10,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   alias LightningWeb.CredentialLive.GenericOauthComponent
   alias LightningWeb.CredentialLive.Helpers
 
-  alias Phoenix.LiveView.JS
-
   @impl true
   def mount(%{assigns: init_assigns} = socket) do
     allow_credential_transfer =
@@ -212,6 +210,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 max-w-full"
         on_close={LightningWeb.ModalPortal.close_modal_js()}
+        show={true}
       >
         <:title>
           <div class="flex justify-between">
@@ -293,6 +292,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
         on_close={LightningWeb.ModalPortal.close_modal_js()}
+        show={true}
       >
         <:title>
           <div class="flex justify-between">
@@ -339,13 +339,16 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
         on_close={LightningWeb.ModalPortal.close_modal_js()}
+        show={true}
       >
         <:title>
           <div class="flex justify-between">
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+              phx-click={
+                hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()
+              }
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}

@@ -10,7 +10,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   alias Lightning.Credentials.OauthValidation
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.Helpers
-  alias Phoenix.LiveView.JS
 
   require Logger
 

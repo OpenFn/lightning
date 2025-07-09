@@ -57,6 +57,119 @@ defmodule LightningWeb.CredentialLive.Index do
   end
 
   @impl true
+  def handle_event("create_credential", _params, socket) do
+    %{
+      projects: projects,
+      current_user: current_user,
+      oauth_clients: oauth_clients
+    } = socket.assigns
+
+    LightningWeb.ModalPortal.open_modal(
+      LightningWeb.CredentialLive.CredentialFormComponent,
+      %{
+        id: "new-credential-modal",
+        action: :new,
+        credential_type: nil,
+        credential: %Lightning.Credentials.Credential{
+          user_id: current_user.id
+        },
+        oauth_client: nil,
+        oauth_clients: oauth_clients,
+        project: nil,
+        projects: projects,
+        current_user: current_user,
+        show_project_credentials: true,
+        can_create_project_credential: true,
+        return_to: ~p"/credentials"
+      }
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("create_oauth_client", _params, socket) do
+    %{projects: projects, current_user: current_user} = socket.assigns
+
+    LightningWeb.ModalPortal.open_modal(
+      LightningWeb.CredentialLive.OauthClientFormComponent,
+      %{
+        id: "new-oauth-client-modal",
+        action: :new,
+        oauth_client: %Lightning.Credentials.OauthClient{
+          user_id: current_user.id
+        },
+        projects: projects,
+        project: nil,
+        allow_global: current_user.role === :superuser,
+        can_create_oauth_client: true,
+        return_to: ~p"/credentials"
+      }
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("edit_oauth_client", %{"id" => client_id}, socket) do
+    %{
+      projects: projects,
+      current_user: current_user,
+      oauth_clients: oauth_clients
+    } = socket.assigns
+
+    client = Enum.find(oauth_clients, fn client -> client.id == client_id end)
+
+    if can_edit?(client, current_user) do
+      LightningWeb.ModalPortal.open_modal(
+        LightningWeb.CredentialLive.OauthClientFormComponent,
+        %{
+          id: "edit-oauth-client-#{client.id}-modal",
+          action: :edit,
+          oauth_client: client,
+          projects: projects,
+          project: nil,
+          allow_global: current_user.role === :superuser,
+          can_create_oauth_client: true,
+          return_to: ~p"/credentials"
+        }
+      )
+
+      {:noreply, socket}
+    else
+      {:noreply, socket |> put_flash(:error, "You can't perform this action")}
+    end
+  end
+
+  def handle_event("edit_credential", %{"id" => credential_id}, socket) do
+    %{projects: projects, current_user: current_user, credentials: credentials} =
+      socket.assigns
+
+    credential = Enum.find(credentials, fn cred -> cred.id == credential_id end)
+
+    if can_edit?(credential, current_user) do
+      LightningWeb.ModalPortal.open_modal(
+        LightningWeb.CredentialLive.CredentialFormComponent,
+        %{
+          id: "edit-credential-#{credential.id}-modal",
+          action: :edit,
+          credential_type: nil,
+          credential: credential,
+          oauth_client:
+            credential.oauth_token && credential.oauth_token.oauth_client,
+          project: nil,
+          projects: projects,
+          current_user: current_user,
+          show_project_credentials: true,
+          can_create_project_credential: true,
+          return_to: ~p"/credentials"
+        }
+      )
+
+      {:noreply, socket}
+    else
+      {:noreply, socket |> put_flash(:error, "You can't perform this action")}
+    end
+  end
+
   def handle_event(
         "cancel_deletion",
         %{"id" => credential_id},

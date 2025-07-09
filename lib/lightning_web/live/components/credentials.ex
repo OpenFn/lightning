@@ -247,7 +247,7 @@ defmodule LightningWeb.Components.Credentials do
           role="menuitem"
           tabindex="-1"
           id={id}
-          phx-click={show_modal(target)}
+          phx-click={target}
           disabled={@disabled}
         >
           {name}<span

@@ -9,8 +9,8 @@ defmodule LightningWeb.ModalPortal do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class={if !@show, do: "hidden"}>
-      <.live_component :if={@show} module={@show.module} {@show} />
+    <div id={@id}>
+      <.live_component :if={@show} id={@show.id} module={@show.module} {@show} />
     </div>
     """
   end
