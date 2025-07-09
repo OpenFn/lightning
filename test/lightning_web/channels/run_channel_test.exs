@@ -587,7 +587,7 @@ defmodule LightningWeb.RunChannelTest do
           {:ok,
            %Tesla.Env{
              env
-             | status: 401,
+             | status: 400,
                body: %{"error" => "invalid_grant"}
            }}
       end)
