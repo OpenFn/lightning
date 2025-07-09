@@ -112,10 +112,17 @@ const fromWorkflow = (
           width: 32,
           height: 32,
         };
+
+        let goodRun = undefined;
+        if (edge.source_job_id && edge.target_job_id && runStepsObj[edge.source_job_id] && runStepsObj[edge.target_job_id]) {
+          if (runStepsObj[edge.source_job_id]?.exit_reason === "fail") goodRun = false;
+          else goodRun = true;
+        }
         model.data = {
           condition_type: edge.condition_type,
           // TODO something is up here - ?? true is a hack
           // without it, new edges are marked as disabled
+          goodRun,
           errors: edge.errors,
           enabled: edge.enabled ?? true,
           label,
