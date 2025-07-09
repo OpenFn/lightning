@@ -13,6 +13,10 @@ export const EDGE_COLOR_DISABLED = '#E1E1E1';
 export const EDGE_COLOR_SELECTED = '#4f46e5';
 export const EDGE_COLOR_NEIGHBOUR = '#807CCE';
 export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
+const BG_GREEN_100 = '#dcfce7';
+const BG_RED_100 = '#ffe2e2';
+const BORDER_GREEN_600 = '#00a63e';
+const BORDER_RED_600 = '#e7000b';
 
 export const ERROR_COLOR = '#ef4444';
 
@@ -49,18 +53,24 @@ export const edgeLabelTextStyles = {
 export const edgeLabelStyles = (
   selected: boolean | undefined,
   neighbour: boolean | undefined,
-  data?: { enabled?: boolean; errors?: object }
+  data?: { enabled?: boolean; errors?: object; goodRun?: boolean }
 ) => {
-  const { enabled, errors } = data ?? {};
+  const { enabled, errors, goodRun } = data ?? {};
   const primaryColor = (
     selected?: boolean,
     neighbour?: boolean,
-    enabled?: boolean
+    enabled?: boolean,
+    goodRun?: boolean
   ) => {
     if (enabled) {
       if (neighbour) return EDGE_COLOR_NEIGHBOUR;
-      return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+      else if (selected) return EDGE_COLOR_SELECTED;
+      else if (goodRun == true) return BORDER_GREEN_600;
+      else if (goodRun == false) return BORDER_RED_600;
+      return EDGE_COLOR;
     }
+    if (goodRun === true) return BORDER_GREEN_600;
+    if (goodRun === false) return BORDER_RED_600;
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
   };
 
@@ -75,10 +85,10 @@ export const edgeLabelStyles = (
   return {
     borderColor: hasErrors(errors)
       ? ERROR_COLOR
-      : primaryColor(selected, neighbour, enabled),
+      : primaryColor(selected, neighbour, enabled, goodRun),
     color: hasErrors(errors)
       ? ERROR_COLOR
-      : primaryColor(selected, neighbour, enabled),
+      : primaryColor(selected, neighbour, enabled, goodRun),
     backgroundColor: 'transparent',
     display: 'flex',
     alignItems: 'center',
@@ -111,6 +121,10 @@ export const styleEdge = (edge: Flow.Edge) => {
     ? EDGE_COLOR_SELECTED
     : edge.data?.neighbour
     ? EDGE_COLOR_NEIGHBOUR
+    : edge.data.goodRun !== undefined
+    ? edge.data.goodRun === true
+      ? BORDER_GREEN_600
+      : BORDER_RED_600
     : EDGE_COLOR;
   const hasErrors =
     typeof edge.data?.errors === 'object' &&
@@ -146,11 +160,6 @@ export const styleEdge = (edge: Flow.Edge) => {
   }
   return edge;
 };
-
-const BG_GREEN_100 = '#dcfce7';
-const BG_RED_100 = '#ffe2e2';
-const BORDER_GREEN_600 = '#00a63e';
-const BORDER_RED_600 = '#e7000b';
 
 export const nodeIconStyles = (
   selected?: boolean,
