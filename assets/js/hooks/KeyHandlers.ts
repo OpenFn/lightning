@@ -429,13 +429,15 @@ const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
 /**
  * Hook to open the Run panel when "Ctrl+Enter" (or "Cmd+Enter" on macOS) is pressed.
  *
- * This hook listens globally and navigates to the run panel URL, which opens the 
+ * This hook is scoped to the workflow editor and navigates to the run panel URL, which opens the 
  * workflow input interface for running the workflow.
  *
- * Priority: `PRIORITY.HIGH`, ensuring it takes precedence over the default run handlers.
+ * Priority: `PRIORITY.HIGH` within its scope, ensuring it takes precedence over other handlers in the workflow editor.
+ * Scope: `"workflow-editor"`, meaning this hook only applies within the workflow editor context.
  */
 export const OpenRunPanelViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
   openRunPanelAction,
-  PRIORITY.HIGH
+  PRIORITY.HIGH,
+  'workflow-editor'
 );

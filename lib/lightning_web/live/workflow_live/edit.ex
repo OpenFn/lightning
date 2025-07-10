@@ -213,9 +213,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
           class="transition-all duration-300 ease-in-out"
         />
         <div
-          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "w-2/3", else: ""}"}
+          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "w-2/3", else: ""} focus:outline-none"}
           id={"workflow-edit-#{@workflow.id}"}
           phx-hook="OpenRunPanelViaCtrlEnter"
+          data-keybinding-scope="workflow-editor"
+          tabindex="0"
         >
           <.selected_template_label
             :if={@selected_template && @show_new_workflow_panel}

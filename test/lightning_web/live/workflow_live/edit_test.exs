@@ -3580,6 +3580,82 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
+    describe "keyboard shortcuts" do
+    setup %{project: project} do
+      workflow =
+        insert(:simple_workflow, project: project)
+        |> with_snapshot()
+      {:ok, workflow: workflow}
+    end
+
+    test "OpenRunPanelViaCtrlEnter hook is attached to workflow editor", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
+
+      # Check that the OpenRunPanelViaCtrlEnter hook is present on the workflow container
+      workflow_container = view |> element("#workflow-edit-#{workflow.id}")
+      assert has_element?(workflow_container)
+      assert render(workflow_container) =~ "phx-hook=\"OpenRunPanelViaCtrlEnter\""
+      assert render(workflow_container) =~ "data-keybinding-scope=\"workflow-editor\""
+    end
+
+    test "OpenRunPanelViaCtrlEnter hook is present with job selected", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      # Use the first job from the workflow that was created with snapshot
+      job = workflow.jobs |> List.first()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}",
+          on_error: :raise
+        )
+
+      # Hook should still be present when a job is selected
+      workflow_container = view |> element("#workflow-edit-#{workflow.id}")
+      assert has_element?(workflow_container)
+      assert render(workflow_container) =~ "phx-hook=\"OpenRunPanelViaCtrlEnter\""
+      assert render(workflow_container) =~ "data-keybinding-scope=\"workflow-editor\""
+
+      # Run button should be present for step-aware behavior
+      run_button = view |> element("#run-from-step-#{job.id}")
+      assert has_element?(run_button)
+    end
+
+    test "OpenRunPanelViaCtrlEnter hook is present in expand mode", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      # Use the first job from the workflow that was created with snapshot
+      job = workflow.jobs |> List.first()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand",
+          on_error: :raise
+        )
+
+      # Hook should be present even in expand mode
+      workflow_container = view |> element("#workflow-edit-#{workflow.id}")
+      assert has_element?(workflow_container)
+      assert render(workflow_container) =~ "phx-hook=\"OpenRunPanelViaCtrlEnter\""
+      assert render(workflow_container) =~ "data-keybinding-scope=\"workflow-editor\""
+    end
+  end
+
   defp log_viewer_selected_level(log_viewer) do
     log_viewer
     |> render()
