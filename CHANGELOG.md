@@ -20,6 +20,8 @@ and this project adheres to
 - Allow users to see & _use_ the "next input" state that would be used by a cron
   trigger when inspecting and running cron-triggered jobs
   [3335](https://github.com/OpenFn/lightning/issues/3335)
+- Enable Undo and Redo in the Workflow Editor
+  [#3358](https://github.com/OpenFn/lightning/pull/3358)
 
 ### Changed
 

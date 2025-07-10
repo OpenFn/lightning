@@ -2856,10 +2856,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     patches =
       WorkflowParams.to_patches(initial_params, next_params)
+
     inverse_patches = WorkflowParams.to_patches(next_params, initial_params)
 
     socket
-    |> push_event("patches-applied", %{patches: patches, inverse: inverse_patches})
+    |> push_event("patches-applied", %{
+      patches: patches,
+      inverse: inverse_patches
+    })
   end
 
   defp maybe_push_workflow_created(socket, workflow) do
