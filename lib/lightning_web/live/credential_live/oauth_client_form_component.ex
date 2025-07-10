@@ -200,10 +200,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     end
   end
 
-  def handle_event("close_modal", _, socket) do
-    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
-  end
-
   defp update_scopes(socket, scope_key, scope_value, action) do
     scopes = socket.assigns[scope_key]
 
@@ -336,26 +332,12 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   def render(assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal
+      <LightningWeb.Components.Credentials.credential_modal
         id={@id}
         width="w-[32rem] lg:w-[44rem]"
-        show={true}
-        on_close={LightningWeb.ModalPortal.close_modal_js()}
       >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title action={@action} /></span>
-            <button
-              id={"close-oauth-client-modal-form-#{@oauth_client.id || "new"}"}
-              phx-click={LightningWeb.ModalPortal.close_modal_js()}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          <.modal_title action={@action} />
         </:title>
         <.form
           :let={f}
@@ -522,16 +504,12 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   Add OAuth Client
               <% end %>
             </.button>
-            <.button
-              type="button"
-              phx-click={LightningWeb.ModalPortal.close_modal_js()}
-              theme="secondary"
-            >
-              Cancel
-            </.button>
+            <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={
+              @id
+            } />
           </.modal_footer>
         </.form>
-      </.modal>
+      </LightningWeb.Components.Credentials.credential_modal>
     </div>
     """
   end

@@ -15,12 +15,12 @@
           %{
             name: "Credential",
             id: "option-menu-item-1",
-            target: "create_credential"
+            target: "new_credential"
           },
           %{
             name: "OAuth client",
             id: "option-menu-item-0",
-            target: "create_oauth_client",
+            target: "new_oauth_client",
             badge: "Advanced"
           }
         ]}
@@ -30,117 +30,12 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
-    <div class="space-y-4">
-      <LightningWeb.Components.DataTables.oauth_clients_table
-        id="oauth-clients"
-        title="OAuth Clients"
-        clients={@oauth_clients}
-      >
-        <:empty_state>
-          <.empty_state
-            icon="hero-plus-circle"
-            message="No OAuth clients found."
-            button_text="Create a new OAuth client"
-            button_id="open-create-oauth-client-modal-big-buttton"
-            button_click="create_oauth_client"
-            button_disabled={false}
-          />
-        </:empty_state>
-        <:actions :let={client}>
-          <div :if={can_edit?(client, @current_user)}>
-            <Common.simple_dropdown
-              id={"oauth-client-actions-#{client.id}-dropdown"}
-              button_theme="secondary"
-            >
-              <:button>
-                Actions
-              </:button>
-
-              <:options>
-                <.link phx-click="edit_oauth_client" phx-value-id={client.id}>
-                  Edit
-                </.link>
-                <.link
-                  id={"delete-oauth-client-#{client.id}-button"}
-                  phx-click={
-                    show_modal("delete_oauth_client_#{client.id}_modal")
-                  }
-                >
-                  Delete
-                </.link>
-              </:options>
-            </Common.simple_dropdown>
-
-            <LightningWeb.Components.Credentials.delete_oauth_client_modal
-              :if={can_edit?(client, @current_user)}
-              id={"delete_oauth_client_#{client.id}_modal"}
-              client={client}
-            />
-          </div>
-        </:actions>
-      </LightningWeb.Components.DataTables.oauth_clients_table>
-      <LightningWeb.Components.DataTables.credentials_table
-        id="credentials"
-        title="Credentials"
-        credentials={@credentials}
-      >
-        <:empty_state>
-          <.empty_state
-            icon="hero-plus-circle"
-            message="No credentials found."
-            button_text="Create a new Credential"
-            button_id="open-create-credential-modal-big-buttton"
-            button_click="create_credential"
-            button_disabled={false}
-          />
-        </:empty_state>
-        <:actions :let={credential}>
-          <div :if={can_edit?(credential, @current_user)}>
-            <Common.simple_dropdown
-              id={"credential-actions-#{credential.id}-dropdown"}
-              button_theme="secondary"
-            >
-              <:button>
-                Actions
-              </:button>
-              <:options>
-                <.link phx-click={
-                  show_modal("transfer-credential-#{credential.id}-modal")
-                }>
-                  <%= case credential.transfer_status do %>
-                    <% :pending -> %>
-                      Revoke Transfer
-                    <% :completed -> %>
-                      Transfer
-                    <% nil -> %>
-                      Transfer
-                  <% end %>
-                </.link>
-                <.link phx-click="edit_credential" phx-value-id={credential.id}>
-                  Edit
-                </.link>
-                <.delete_action socket={@socket} credential={credential} />
-              </:options>
-            </Common.simple_dropdown>
-
-            <.live_component
-              id={"transfer-credential-#{credential.id}-modal"}
-              module={LightningWeb.CredentialLive.TransferCredentialModal}
-              credential={credential}
-              current_user={@current_user}
-              return_to={~p"/credentials"}
-            />
-          </div>
-        </:actions>
-      </LightningWeb.Components.DataTables.credentials_table>
-      <%= if @live_action == :delete do %>
-        <.live_component
-          module={LightningWeb.Components.CredentialDeletionModal}
-          id={@credential.id}
-          credential={@credential}
-          return_to={~p"/credentials"}
-        />
-      <% end %>
-    </div>
+    <LightningWeb.Components.Credentials.credentials_index_live_component
+      current_user={@current_user}
+      projects={@projects}
+      can_create_project_credential={true}
+      show_owner_in_tables={false}
+      return_to={~p"/credentials"}
+    />
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

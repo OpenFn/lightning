@@ -9,7 +9,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
 
   @impl true
   def update(
-        %{credential: credential} = assigns,
+        %{credential: credential, return_to: _} = assigns,
         socket
       ) do
     {:ok,
@@ -33,7 +33,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
             {:noreply,
              socket
              |> put_flash(:info, "Credential scheduled for deletion")
-             |> push_navigate(to: ~p"/credentials")}
+             |> push_navigate(to: socket.assigns.return_to)}
 
           {:error, %Ecto.Changeset{} = _changeset} ->
             {:noreply, socket}
@@ -46,7 +46,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
            :error,
            "Cannot delete a credential that has activities in projects"
          )
-         |> push_patch(to: ~p"/credentials")}
+         |> push_patch(to: socket.assigns.return_to)}
 
       true ->
         Credentials.delete_credential(credential)
@@ -54,37 +54,17 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
         {:noreply,
          socket
          |> put_flash(:info, "Credential deleted successfully")
-         |> push_navigate(to: ~p"/credentials")}
+         |> push_navigate(to: socket.assigns.return_to)}
     end
-  end
-
-  @impl true
-  def handle_event("close_modal", _, socket) do
-    {:noreply, push_navigate(socket, to: ~p"/credentials")}
   end
 
   @impl true
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do
     ~H"""
     <div>
-      <.modal id={"credential-#{@id}"} width="max-w-md" show={true}>
+      <LightningWeb.Components.Credentials.credential_modal id={"credential-#{@id}"}>
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold">
-              Credential marked for deletion
-            </span>
-
-            <button
-              phx-click="close_modal"
-              phx-target={@myself}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          Credential marked for deletion
         </:title>
         <div class="text-sm text-gray-500">
           <p>
@@ -100,16 +80,11 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
           </p>
         </div>
         <.modal_footer>
-          <.button
-            type="button"
-            phx-click="close_modal"
-            phx-target={@myself}
-            theme="secondary"
-          >
+          <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={"credential-#{@id}"}>
             Ok, understood
-          </.button>
+          </LightningWeb.Components.Credentials.credential_modal_cancel_button>
         </.modal_footer>
-      </.modal>
+      </LightningWeb.Components.Credentials.credential_modal>
     </div>
     """
   end

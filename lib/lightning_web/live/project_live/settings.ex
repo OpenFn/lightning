@@ -4,15 +4,11 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
-  import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
-
   import LightningWeb.LayoutComponents
 
   alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Credentials
-  alias Lightning.Credentials.Credential
-  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
@@ -40,8 +36,6 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     project_user = Projects.get_project_user(project, current_user)
 
-    credentials = list_credentials(project)
-    oauth_clients = list_clients(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
     project_files = Projects.list_project_files(project)
     collections = Collections.list_project_collections(project)
@@ -138,8 +132,6 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> assign(
        active_menu_item: :settings,
        webhook_auth_methods: auth_methods,
-       credentials: credentials,
-       oauth_clients: oauth_clients,
        project_files: project_files,
        collections: collections,
        project_users: [],
@@ -164,31 +156,6 @@ defmodule LightningWeb.ProjectLive.Settings do
        collaborators_to_invite: [],
        projects: projects
      )}
-  end
-
-  defp list_credentials(project) do
-    Credentials.list_credentials(project)
-    |> Enum.map(fn c ->
-      project_names =
-        Map.get(c, :projects, [])
-        |> Enum.map(fn p -> p.name end)
-
-      Map.put(c, :project_names, project_names)
-    end)
-  end
-
-  defp list_clients(project) do
-    OauthClients.list_clients(project)
-    |> Enum.map(fn c ->
-      project_names =
-        if c.global,
-          do: ["GLOBAL"],
-          else:
-            Map.get(c, :projects, [])
-            |> Enum.map(fn p -> p.name end)
-
-      Map.put(c, :project_names, project_names)
-    end)
   end
 
   @impl true
@@ -407,44 +374,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       digest ->
         Projects.update_project_user(project_user, %{digest: digest})
         |> dispatch_flash(socket)
-    end
-  end
-
-  def handle_event(
-        "delete_oauth_client",
-        %{"oauth_client_id" => oauth_client_id},
-        %{assigns: assigns} = socket
-      ) do
-    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
-
-    {:noreply,
-     socket
-     |> put_flash(:info, "Oauth client deleted")
-     |> assign(
-       :oauth_clients,
-       list_clients(assigns.project)
-     )}
-  end
-
-  def handle_event(
-        "delete_credential",
-        %{"credential_id" => credential_id},
-        %{assigns: assigns} = socket
-      ) do
-    credential = Credentials.get_credential!(credential_id)
-
-    case Credentials.schedule_credential_deletion(credential) do
-      {:ok, %Credential{}} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Credential deleted")
-         |> assign(
-           :credentials,
-           list_credentials(assigns.project)
-         )}
-
-      {:error, %Ecto.Changeset{} = _changeset} ->
-        {:noreply, socket}
     end
   end
 

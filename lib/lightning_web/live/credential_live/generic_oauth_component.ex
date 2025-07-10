@@ -29,7 +29,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        selected_projects: [],
        oauth_progress: :idle,
        oauth_error: nil,
-       previous_oauth_state: nil
+       previous_oauth_state: nil,
+       on_modal_close: nil
      )}
   end
 
@@ -658,13 +659,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           >
             Save
           </.button>
-          <.button
-            type="button"
-            phx-click={LightningWeb.ModalPortal.close_modal_js()}
-            theme="secondary"
-          >
-            Cancel
-          </.button>
+          <LightningWeb.Components.Credentials.credential_modal_cancel_button
+            modal_id={assigns[:modal_id]}
+            {@on_modal_close && %{on_modal_close: @on_modal_close}}
+          />
         </.modal_footer>
       </.form>
     </div>

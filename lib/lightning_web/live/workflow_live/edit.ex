@@ -372,48 +372,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 else: nil
             }
           />
-          <.live_component
-            :if={@selected_job}
-            id="new-credential-modal"
-            module={LightningWeb.CredentialLive.CredentialFormComponent}
-            action={:new}
-            credential_type={@selected_credential_type}
-            credential={
-              %Lightning.Credentials.Credential{
-                user_id: @current_user.id,
-                project_credentials: [
-                  %Lightning.Projects.ProjectCredential{
-                    project_id: @project.id
-                  }
-                ]
-              }
-            }
-            current_user={@current_user}
-            oauth_client={nil}
-            oauth_clients={@oauth_clients}
-            projects={[]}
-            project={@project}
-            show_project_credentials={false}
-            on_save={
-              fn credential ->
-                form =
-                  single_inputs_for(@workflow_form, :jobs, @selected_job.id)
-
-                params =
-                  LightningWeb.Utils.build_params_for_field(
-                    form,
-                    :project_credential_id,
-                    credential.project_credentials |> Enum.at(0) |> Map.get(:id)
-                  )
-
-                send_form_changed(params)
-              end
-            }
-            can_create_project_credential={@can_edit_workflow}
-            return_to={
-              ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
-            }
-          />
           <Common.banner
             :if={@display_banner}
             type="warning"
@@ -487,8 +445,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       @has_presence_edit_priority
                   }
                   form={jf}
-                  project_user={@project_user}
+                  current_user={@current_user}
                   project={@project}
+                  workflow_id={@workflow.id}
+                  oauth_clients={@oauth_clients}
                 />
                 <:footer>
                   <div class="flex flex-row">

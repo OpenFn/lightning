@@ -18,6 +18,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     mount_assigns = %{
       on_save: nil,
+      on_modal_close: nil,
       scopes: [],
       scopes_changed: false,
       sandbox_changed: false,
@@ -175,27 +176,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     end
   end
 
-  def handle_event("reset_state", _, socket) do
-    reset_assigns =
-      Map.take(socket.assigns, [
-        :init_assigns,
-        :mount_assigns,
-        :component_assigns
-      ])
-
-    assigns =
-      reset_assigns.init_assigns
-      |> Map.merge(reset_assigns.mount_assigns)
-      |> Map.merge(reset_assigns.component_assigns)
-
-    socket =
-      %{socket | assigns: assigns}
-      |> assign(reset_assigns)
-      |> assigns_for_action(reset: true)
-
-    {:noreply, socket}
-  end
-
   @impl true
   def render(%{page: :first} = assigns) do
     assigns =
@@ -206,28 +186,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     ~H"""
     <div class="text-xs text-left">
-      <.modal
+      <LightningWeb.Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 max-w-full"
-        on_close={LightningWeb.ModalPortal.close_modal_js()}
-        show={true}
+        {@on_modal_close && %{on_modal_close: @on_modal_close}}
       >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title action={@action} /></span>
-            <button
-              id="close-credential-modal-type-picker"
-              phx-click={
-                hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()
-              }
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          <.modal_title action={@action} />
         </:title>
         <div class="container mx-auto">
           <.form
@@ -271,16 +236,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           >
             Configure credential
           </.button>
-          <.button
+          <LightningWeb.Components.Credentials.credential_modal_cancel_button
             id="cancel-credential-type-picker"
-            type="button"
-            phx-click={hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()}
-            theme="secondary"
-          >
-            Cancel
-          </.button>
+            modal_id={@id}
+            {@on_modal_close && %{on_modal_close: @on_modal_close}}
+          />
         </.modal_footer>
-      </.modal>
+      </LightningWeb.Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -288,28 +250,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second, schema: "oauth"} = assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal
+      <LightningWeb.Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
-        on_close={LightningWeb.ModalPortal.close_modal_js()}
-        show={true}
+        {@on_modal_close && %{on_modal_close: @on_modal_close}}
       >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title action={@action} /></span>
-            <button
-              id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click={
-                hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()
-              }
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          <.modal_title action={@action} />
         </:title>
         <LightningWeb.Components.Oauth.missing_client_warning :if={
           !@selected_oauth_client
@@ -326,8 +273,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           on_save={@on_save}
           allow_credential_transfer={@allow_credential_transfer}
           return_to={@return_to}
+          modal_id={@id}
+          on_modal_close={@on_modal_close}
         />
-      </.modal>
+      </LightningWeb.Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -335,28 +284,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second} = assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal
+      <LightningWeb.Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
-        on_close={LightningWeb.ModalPortal.close_modal_js()}
-        show={true}
+        {@on_modal_close && %{on_modal_close: @on_modal_close}}
       >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title action={@action} /></span>
-            <button
-              id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click={
-                hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()
-              }
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          <.modal_title action={@action} />
         </:title>
         <.form
           :let={f}
@@ -437,18 +371,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             >
               Save
             </.button>
-            <.button
-              type="button"
-              phx-click={
-                hide_modal(@id) |> LightningWeb.ModalPortal.close_modal_js()
-              }
-              theme="secondary"
-            >
-              Cancel
-            </.button>
+            <LightningWeb.Components.Credentials.credential_modal_cancel_button
+              modal_id={@id}
+              {@on_modal_close && %{on_modal_close: @on_modal_close}}
+            />
           </.modal_footer>
         </.form>
-      </.modal>
+      </LightningWeb.Components.Credentials.credential_modal>
     </div>
     """
   end
