@@ -264,17 +264,280 @@
           return_to={~p"/projects/#{@project.id}/settings#credentials"}
         />
 
-        <.live_component
-          id="new-keychain-credential-modal"
-          module={LightningWeb.CredentialLive.KeychainCredentialFormComponent}
-          action={:new}
-          keychain_credential={@new_keychain_credential}
-          project={@project}
-          credentials={@credentials}
-          current_user={@current_user}
-          can_create_keychain_credential={@can_create_project_credential}
-          return_to={~p"/projects/#{@project.id}/settings#credentials"}
-        />
+        <div class="space-y-4">
+          <LightningWeb.Components.DataTables.oauth_clients_table
+            id="oauth-clients"
+            title="OAuth Clients"
+            clients={@oauth_clients}
+            show_owner={true}
+          >
+            <:empty_state>
+              <.empty_state
+                icon="hero-plus-circle"
+                message="No OAuth clients found."
+                button_text="Create a new OAuth client"
+                button_id="open-create-oauth-client-modal-big-buttton"
+                button_click={show_modal("new-oauth-client-modal")}
+                button_disabled={!@can_create_project_credential}
+              />
+            </:empty_state>
+            <:actions :let={client}>
+              <div :if={can_edit?(client, @current_user)}>
+                <Common.simple_dropdown
+                  id={"oauth-client-actions-#{client.id}-dropdown"}
+                  button_theme="secondary"
+                >
+                  <:button>
+                    Actions
+                  </:button>
+
+                  <:options>
+                    <.link phx-click={
+                      show_modal("edit-oauth-client-#{client.id}-modal")
+                    }>
+                      Edit
+                    </.link>
+                    <.link
+                      id={"delete-oauth-client-#{client.id}-button"}
+                      phx-click={
+                        show_modal("delete_oauth_client_#{client.id}_modal")
+                      }
+                    >
+                      Delete
+                    </.link>
+                  </:options>
+                </Common.simple_dropdown>
+              </div>
+              <.live_component
+                id={"edit-oauth-client-#{client.id}-modal"}
+                module={LightningWeb.CredentialLive.OauthClientFormComponent}
+                action={:edit}
+                oauth_client={client}
+                projects={@projects}
+                project={@project}
+                allow_global={@current_user.role === :superuser}
+                can_create_oauth_client={@can_create_project_credential}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
+              <LightningWeb.Components.Credentials.delete_oauth_client_modal
+                :if={client.user_id == @current_user.id}
+                id={"delete_oauth_client_#{client.id}_modal"}
+                client={client}
+              />
+            </:actions>
+          </LightningWeb.Components.DataTables.oauth_clients_table>
+          <LightningWeb.Components.DataTables.credentials_table
+            id="credentials"
+            title="Credentials"
+            credentials={@credentials}
+            show_owner={true}
+          >
+            <:empty_state>
+              <.empty_state
+                icon="hero-plus-circle"
+                message="No credentials found."
+                button_text="Create a new Credential"
+                button_id="open-create-credential-modal-big-buttton"
+                button_click={show_modal("new-credential-modal")}
+                button_disabled={!@can_create_project_credential}
+              />
+            </:empty_state>
+            <:actions :let={credential}>
+              <div :if={can_edit?(credential, @current_user)}>
+                <Common.simple_dropdown
+                  id={"credential-actions-#{credential.id}-dropdown"}
+                  button_theme="secondary"
+                >
+                  <:button>
+                    Actions
+                  </:button>
+                  <:options>
+                    <.link phx-click={
+                      show_modal("transfer-credential-#{credential.id}-modal")
+                    }>
+                      <%= case credential.transfer_status do %>
+                        <% :pending -> %>
+                          Revoke Transfer
+                        <% :completed -> %>
+                          Transfer
+                        <% nil -> %>
+                          Transfer
+                      <% end %>
+                    </.link>
+                    <.link phx-click={
+                      show_modal("edit-credential-#{credential.id}-modal")
+                    }>
+                      Edit
+                    </.link>
+                    <.link phx-click={
+                      show_modal("delete_credential_#{credential.id}_modal")
+                    }>
+                      Delete
+                    </.link>
+                  </:options>
+                </Common.simple_dropdown>
+
+                <.live_component
+                  id={"edit-credential-#{credential.id}-modal"}
+                  module={LightningWeb.CredentialLive.CredentialFormComponent}
+                  action={:edit}
+                  credential_type={nil}
+                  credential={credential}
+                  oauth_client={
+                    credential.oauth_token && credential.oauth_token.oauth_client
+                  }
+                  projects={@projects}
+                  project={@project}
+                  can_create_project_credential={@can_create_project_credential}
+                  current_user={@current_user}
+                  return_to={~p"/projects/#{@project.id}/settings#credentials"}
+                />
+                <LightningWeb.Components.Credentials.delete_credential_modal
+                  :if={can_edit?(credential, @current_user)}
+                  id={"delete_credential_#{credential.id}_modal"}
+                  credential={credential}
+                />
+                <.live_component
+                  id={"transfer-credential-#{credential.id}-modal"}
+                  module={LightningWeb.CredentialLive.TransferCredentialModal}
+                  credential={credential}
+                  current_user={@current_user}
+                  return_to={~p"/projects/#{@project.id}/settings#credentials"}
+                />
+              </div>
+            </:actions>
+          </LightningWeb.Components.DataTables.credentials_table>
+
+          <LightningWeb.Components.DataTables.keychain_credentials_table
+            id="keychain-credentials"
+            title="Keychain Credentials"
+            keychain_credentials={@keychain_credentials}
+            show_owner={true}
+          >
+            <:empty_state>
+              <.empty_state
+                icon="hero-plus-circle"
+                message="No keychain credentials found."
+                button_text="Create a new keychain credential"
+                button_id="open-create-keychain-credential-modal-big-button"
+                button_click={show_modal("new-keychain-credential-modal")}
+                button_disabled={!@can_edit_keychain_credential}
+              />
+            </:empty_state>
+            <:actions :let={keychain_credential}>
+              <div :if={
+                can_edit?(keychain_credential, @current_user) or
+                  can_delete?(keychain_credential, @current_user)
+              }>
+                <Common.simple_dropdown
+                  id={"keychain-credential-actions-#{keychain_credential.id}-dropdown"}
+                  button_theme="secondary"
+                >
+                  <:button>
+                    Actions
+                  </:button>
+
+                  <:options>
+                    <.link
+                      :if={can_edit?(keychain_credential, @current_user)}
+                      phx-click={
+                        show_modal(
+                          "edit-keychain-credential-#{keychain_credential.id}-modal"
+                        )
+                      }
+                    >
+                      Edit
+                    </.link>
+                    <.link
+                      :if={can_delete?(keychain_credential, @current_user)}
+                      id={"delete-keychain-credential-#{keychain_credential.id}-button"}
+                      phx-click={
+                        show_modal(
+                          "delete_keychain_credential_#{keychain_credential.id}_modal"
+                        )
+                      }
+                    >
+                      Delete
+                    </.link>
+                  </:options>
+                </Common.simple_dropdown>
+              </div>
+              <.live_component
+                id={"edit-keychain-credential-#{keychain_credential.id}-modal"}
+                module={
+                  LightningWeb.CredentialLive.KeychainCredentialFormComponent
+                }
+                action={:edit}
+                keychain_credential={keychain_credential}
+                project={@project}
+                credentials={@credentials}
+                current_user={@current_user}
+                can_create_keychain_credential={@can_edit_keychain_credential}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
+              />
+              <LightningWeb.Components.Credentials.delete_keychain_credential_modal
+                :if={can_delete?(keychain_credential, @current_user)}
+                id={"delete_keychain_credential_#{keychain_credential.id}_modal"}
+                keychain_credential={keychain_credential}
+              />
+            </:actions>
+          </LightningWeb.Components.DataTables.keychain_credentials_table>
+
+          <.live_component
+            id="new-credential-modal"
+            module={LightningWeb.CredentialLive.CredentialFormComponent}
+            action={:new}
+            credential_type={@selected_credential_type}
+            credential={
+              %Lightning.Credentials.Credential{
+                user_id: @current_user.id,
+                project_credentials: [
+                  %Lightning.Projects.ProjectCredential{
+                    project_id: @project.id
+                  }
+                ]
+              }
+            }
+            oauth_client={nil}
+            oauth_clients={@oauth_clients}
+            projects={@projects}
+            project={@project}
+            current_user={@current_user}
+            can_create_project_credential={@can_create_project_credential}
+            return_to={~p"/projects/#{@project.id}/settings#credentials"}
+          />
+          <.live_component
+            id="new-oauth-client-modal"
+            module={LightningWeb.CredentialLive.OauthClientFormComponent}
+            action={:new}
+            oauth_client={
+              %Lightning.Credentials.OauthClient{
+                user_id: @current_user.id,
+                project_oauth_clients: [
+                  %Lightning.Projects.ProjectOauthClient{
+                    project_id: @project.id
+                  }
+                ]
+              }
+            }
+            projects={@projects}
+            project={@project}
+            allow_global={@current_user.role === :superuser}
+            can_create_oauth_client={@can_create_project_credential}
+            return_to={~p"/projects/#{@project.id}/settings#credentials"}
+          />
+          <.live_component
+            id="new-keychain-credential-modal"
+            module={LightningWeb.CredentialLive.KeychainCredentialFormComponent}
+            action={:new}
+            keychain_credential={@new_keychain_credential}
+            project={@project}
+            credentials={@credentials}
+            current_user={@current_user}
+            can_create_keychain_credential={@can_edit_keychain_credential}
+            return_to={~p"/projects/#{@project.id}/settings#credentials"}
+          />
+        </div>
       </:panel>
       <:panel hash="collections" class="space-y-4">
         <.live_component

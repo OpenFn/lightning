@@ -74,6 +74,51 @@ defmodule LightningWeb.Components.Credentials do
     """
   end
 
+  def delete_keychain_credential_modal(assigns) do
+    ~H"""
+    <.modal id={@id} width="max-w-md">
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Delete Keychain Credential
+          </span>
+
+          <button
+            phx-click={hide_modal(@id)}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <div>
+        <p class="text-sm text-gray-500">
+          You are about the delete the keychain credential "{@keychain_credential.name}" which may be used in jobs. All jobs using this keychain credential will fail.
+          <br /><br />Do you want to proceed with this action?
+        </p>
+      </div>
+      <.modal_footer>
+        <.button
+          id={"#{@id}_confirm_button"}
+          type="button"
+          phx-value-keychain_credential_id={@keychain_credential.id}
+          phx-click="delete_keychain_credential"
+          phx-disable-with="Deleting..."
+          theme="danger"
+        >
+          Delete
+        </.button>
+        <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
+          Cancel
+        </.button>
+      </.modal_footer>
+    </.modal>
+    """
+  end
+
   attr :id, :string, required: false
   attr :type, :string, required: true
   attr :form, :map, required: true

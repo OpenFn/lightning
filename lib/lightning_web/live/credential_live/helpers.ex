@@ -156,11 +156,51 @@ defmodule LightningWeb.CredentialLive.Helpers do
     end
   end
 
+  # For keychain credentials, check project-level permissions (owner/admin only)
+  def can_edit?(
+        %Lightning.Credentials.KeychainCredential{project: project},
+        current_user
+      ) do
+    alias Lightning.Projects
+    alias Lightning.Policies.Permissions
+    alias Lightning.Policies.ProjectUsers
+
+    project_user = Projects.get_project_user(project, current_user)
+
+    project_user &&
+      Permissions.can?(
+        ProjectUsers,
+        :edit_keychain_credential,
+        current_user,
+        project_user
+      )
+  end
+
   # if we want support users to view oauth clients or credentials just extend this condition
   def can_edit?(
         %{user_id: user_id},
         current_user
       ) do
     user_id == current_user.id
+  end
+
+  # For keychain credentials, check project-level permissions (owner/admin only)
+  def can_delete?(
+        %Lightning.Credentials.KeychainCredential{project: project},
+        current_user
+      ) do
+    alias Lightning.Projects
+    alias Lightning.Policies.Permissions
+    alias Lightning.Policies.ProjectUsers
+
+    project_user = Projects.get_project_user(project, current_user)
+
+    project_user &&
+      Permissions.can?(
+        ProjectUsers,
+        :delete_keychain_credential,
+        current_user,
+        project_user
+      )
   end
 end

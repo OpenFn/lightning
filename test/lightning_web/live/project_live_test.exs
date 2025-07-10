@@ -1154,6 +1154,229 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "option-menu-item-2"
     end
 
+    test "project admin can view keychain credentials table", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: user
+        )
+
+      # Create another project and keychain credential that should NOT be visible
+      other_project =
+        insert(:project,
+          name: "other-project",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      other_keychain_credential =
+        insert(:keychain_credential,
+          name: "Other Project Keychain",
+          path: "$.user.department",
+          project: other_project,
+          created_by: user
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ "Keychain Credentials"
+      # Should see the keychain credential for this project
+      assert html =~ keychain_credential.name
+      assert html =~ keychain_credential.path
+      # Should NOT see the keychain credential from the other project
+      refute html =~ other_keychain_credential.name
+      refute html =~ other_keychain_credential.path
+    end
+
+    test "project admin can edit keychain credentials", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: user
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Verify the keychain credential appears with edit actions
+      assert html =~ "Test Keychain"
+      assert html =~ "$.organization.id"
+      assert html =~ "Actions"
+
+      # Verify that edit modal component is present in the page
+      assert html =~ "edit-keychain-credential-#{keychain_credential.id}-modal"
+    end
+
+    test "project viewer cannot edit keychain credentials", %{
+      conn: conn,
+      user: user
+    } do
+      admin_user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [
+            %{user_id: user.id, role: :viewer},
+            %{user_id: admin_user.id, role: :admin}
+          ]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: admin_user
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ "Keychain Credentials"
+      assert html =~ keychain_credential.name
+      # Verify the actions dropdown is not present for viewers
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+    end
+
+    test "project admin can delete keychain credentials", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: user
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Verify the keychain credential appears with delete actions
+      assert html =~ keychain_credential.name
+      assert html =~ "Actions"
+
+      # Verify that delete modal component is present in the page
+      assert html =~ "delete_keychain_credential_#{keychain_credential.id}_modal"
+    end
+
+    test "project editor cannot edit keychain credentials", %{
+      conn: conn,
+      user: user
+    } do
+      admin_user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [
+            %{user_id: user.id, role: :editor},
+            %{user_id: admin_user.id, role: :admin}
+          ]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: admin_user
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ "Keychain Credentials"
+      assert html =~ keychain_credential.name
+
+      # Verify the actions dropdown is not present for editors (only owners/admins)
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+    end
+
+    test "keychain credential delete permissions by role", %{
+      conn: _conn,
+      user: user
+    } do
+      import LightningWeb.CredentialLive.Helpers
+
+      admin_user = insert(:user)
+      editor_user = insert(:user)
+      viewer_user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [
+            %{user_id: user.id, role: :owner},
+            %{user_id: admin_user.id, role: :admin},
+            %{user_id: editor_user.id, role: :editor},
+            %{user_id: viewer_user.id, role: :viewer}
+          ]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: admin_user
+        )
+
+      # Owner should be able to delete keychain credentials
+      assert can_delete?(keychain_credential, user)
+
+      # Admin should be able to delete keychain credentials
+      assert can_delete?(keychain_credential, admin_user)
+
+      # Editor should NOT be able to delete keychain credentials
+      refute can_delete?(keychain_credential, editor_user)
+
+      # Viewer should NOT be able to delete keychain credentials
+      refute can_delete?(keychain_credential, viewer_user)
+    end
+
     test "project admin can't edit project name and description with invalid data",
          %{
            conn: conn,

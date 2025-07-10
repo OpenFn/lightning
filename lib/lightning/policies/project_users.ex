@@ -22,6 +22,8 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_digest_alerts
           | :edit_failure_alerts
           | :create_project_credential
+          | :edit_keychain_credential
+          | :delete_keychain_credential
           | :edit_data_retention
           | :write_webhook_auth_method
           | :write_github_connection
@@ -75,7 +77,9 @@ defmodule Lightning.Policies.ProjectUsers do
              :add_project_user,
              :remove_project_user,
              :edit_run_settings,
-             :create_collection
+             :create_collection,
+             :edit_keychain_credential,
+             :delete_keychain_credential
            ],
       do: project_user.role in [:owner, :admin]
 
@@ -88,7 +92,9 @@ defmodule Lightning.Policies.ProjectUsers do
              :add_project_user,
              :remove_project_user,
              :edit_run_settings,
-             :create_collection
+             :create_collection,
+             :edit_keychain_credential,
+             :delete_keychain_credential
            ],
       do: false
 

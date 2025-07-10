@@ -4,11 +4,14 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
+  import LightningWeb.CredentialLive.Helpers,
+    only: [can_edit?: 2, can_delete?: 2]
   import LightningWeb.LayoutComponents
 
   alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Credentials
+  alias Lightning.Credentials.{Credential, OauthClients}
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
@@ -36,6 +39,11 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     project_user = Projects.get_project_user(project, current_user)
 
+    credentials = list_credentials(project)
+    oauth_clients = list_clients(project)
+
+    keychain_credentials =
+      Credentials.list_keychain_credentials_for_project(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
     project_files = Projects.list_project_files(project)
     collections = Collections.list_project_collections(project)
@@ -114,6 +122,22 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
+    can_edit_keychain_credential =
+      Permissions.can?(
+        ProjectUsers,
+        :edit_keychain_credential,
+        current_user,
+        project_user
+      )
+
+    can_delete_keychain_credential =
+      Permissions.can?(
+        ProjectUsers,
+        :delete_keychain_credential,
+        current_user,
+        project_user
+      )
+
     can_create_collection =
       Permissions.can?(
         ProjectUsers,
@@ -132,6 +156,9 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> assign(
        active_menu_item: :settings,
        webhook_auth_methods: auth_methods,
+       credentials: credentials,
+       oauth_clients: oauth_clients,
+       keychain_credentials: keychain_credentials,
        project_files: project_files,
        collections: collections,
        project_users: [],
@@ -144,6 +171,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_edit_data_retention: can_edit_data_retention,
        can_write_webhook_auth_method: can_write_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
+       can_edit_keychain_credential: can_edit_keychain_credential,
+       can_delete_keychain_credential: can_delete_keychain_credential,
        project_repo_connection: repo_connection,
        github_enabled: VersionControl.github_enabled?(),
        can_install_github: can_write_github_connection,
@@ -383,6 +412,67 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event(
+        "delete_oauth_client",
+        %{"oauth_client_id" => oauth_client_id},
+        %{assigns: assigns} = socket
+      ) do
+    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Oauth client deleted")
+     |> assign(
+       :oauth_clients,
+       list_clients(assigns.project)
+     )}
+  end
+
+  def handle_event(
+        "delete_credential",
+        %{"credential_id" => credential_id},
+        %{assigns: assigns} = socket
+      ) do
+    credential = Credentials.get_credential!(credential_id)
+
+    case Credentials.schedule_credential_deletion(credential) do
+      {:ok, %Credential{}} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Credential deleted")
+         |> assign(
+           :credentials,
+           list_credentials(assigns.project)
+         )}
+
+      {:error, %Ecto.Changeset{} = _changeset} ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event(
+        "delete_keychain_credential",
+        %{"keychain_credential_id" => keychain_credential_id},
+        %{assigns: assigns} = socket
+      ) do
+    keychain_credential =
+      Credentials.get_keychain_credential!(keychain_credential_id)
+
+    case Credentials.delete_keychain_credential(keychain_credential) do
+      {:ok, _keychain_credential} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Keychain credential deleted")
+         |> assign(
+           :keychain_credentials,
+           Credentials.list_keychain_credentials_for_project(assigns.project)
+         )}
+
+      {:error, %Ecto.Changeset{} = _changeset} ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event(
         "remove_project_user",
         %{"project_user_id" => project_user_id},
         %{assigns: assigns} = socket
@@ -605,6 +695,14 @@ defmodule LightningWeb.ProjectLive.Settings do
          %Projects.Project{} = project
        ) do
     Credentials.list_user_credentials_in_project(user, project)
+  end
+
+  defp list_credentials(project) do
+    Lightning.Credentials.list_credentials_for_project(project)
+  end
+
+  defp list_clients(project) do
+    OauthClients.list_clients_for_project(project)
   end
 
   attr :can_edit_project, :boolean, required: true

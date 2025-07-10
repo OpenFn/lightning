@@ -1342,7 +1342,8 @@ defmodule Lightning.Credentials do
   def list_keychain_credentials_for_project(%Project{id: project_id}) do
     from(kc in KeychainCredential,
       where: kc.project_id == ^project_id,
-      order_by: [asc: fragment("lower(?)", kc.name)]
+      order_by: [asc: fragment("lower(?)", kc.name)],
+      preload: [:project, :created_by, :default_credential]
     )
     |> Repo.all()
   end
