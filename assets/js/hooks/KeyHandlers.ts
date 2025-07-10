@@ -126,11 +126,6 @@ function createKeyCombinationHook(
 ): PhoenixHook {
   return {
     mounted() {
-      // Debug logging for OpenRunPanelViaCtrlEnter hook
-      if (action === openRunPanelAction) {
-        console.log('🔧 OpenRunPanelViaCtrlEnter hook mounted successfully!');
-      }
-      
       const handler = { hook: this, keyCheck, action, priority, bindingScope };
       keyHandlers.add(handler);
 
@@ -138,11 +133,6 @@ function createKeyCombinationHook(
 
       this.callback = (e: KeyboardEvent) => {
         if (!keyCheck(e)) return;
-
-        // Debug logging for Ctrl+Enter
-        if (action === openRunPanelAction && keyCheck === isCtrlOrMetaEnter) {
-          console.log('⌨️ Ctrl+Enter detected by OpenRunPanelViaCtrlEnter hook');
-        }
 
         e.preventDefault();
 
@@ -378,26 +368,52 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
 );
 
 /**
- * Navigates to the run panel by clicking the existing run button.
+ * Handles Ctrl+Enter to either open run panel or execute workflow.
  *
  * @param e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
 const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
-  console.log('🚀 OpenRunPanelViaCtrlEnter action triggered!');
+  // Check if run panel is already open by looking at the URL
+  const isRunPanelOpen = window.location.href.includes('m=workflow_input');
   
-  // Find the existing run button and click it
-  const runButton = document.querySelector('a[href*="m=workflow_input"]') as HTMLAnchorElement;
-  console.log('🔍 Found run button:', runButton);
-  
-  if (runButton) {
-    console.log('✅ Clicking run button with href:', runButton.href);
-    runButton.click();
+  if (isRunPanelOpen) {
+    // Panel is open, try to click the "Run Workflow Now" button
+    // Look for various possible selectors for the run button
+    const selectors = [
+      'button[type="submit"][form*="manual_run"]',
+      'button[id*="save-and-run"]',
+      'button[phx-click*="manual_run"]',
+      'input[type="submit"][form*="manual"]'
+    ];
+    
+    let foundButton: HTMLElement | null = null;
+    
+    // Try CSS selectors first
+    for (const selector of selectors) {
+      const element = document.querySelector(selector) as HTMLElement;
+      if (element && !element.hasAttribute('disabled')) {
+        foundButton = element;
+        break;
+      }
+    }
+    
+    // If no specific selector worked, search for buttons containing "Run"
+    if (!foundButton) {
+      const buttons = document.querySelectorAll('button, input[type="submit"]');
+      foundButton = Array.from(buttons).find(btn => {
+        const text = btn.textContent?.toLowerCase() || '';
+        return text.includes('run') && !btn.hasAttribute('disabled');
+      }) as HTMLElement | undefined || null;
+    }
+    
+    if (foundButton) {
+      foundButton.click();
+    }
   } else {
-    console.log('❌ No run button found');
-    // Let's also check for other run-related buttons
-    const allRunButtons = document.querySelectorAll('a[href*="workflow_input"], button[type="button"]');
-    console.log('📋 All potential run buttons:', allRunButtons);
+    // Panel is not open, open it by clicking the run link
+    const runButton = document.querySelector('a[href*="m=workflow_input"]') as HTMLAnchorElement;
+    runButton?.click();
   }
 };
 
