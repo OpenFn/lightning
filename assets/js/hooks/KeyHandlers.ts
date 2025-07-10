@@ -126,6 +126,11 @@ function createKeyCombinationHook(
 ): PhoenixHook {
   return {
     mounted() {
+      // Debug logging for OpenRunPanelViaCtrlEnter hook
+      if (action === openRunPanelAction) {
+        console.log('🔧 OpenRunPanelViaCtrlEnter hook mounted successfully!');
+      }
+      
       const handler = { hook: this, keyCheck, action, priority, bindingScope };
       keyHandlers.add(handler);
 
@@ -133,6 +138,11 @@ function createKeyCombinationHook(
 
       this.callback = (e: KeyboardEvent) => {
         if (!keyCheck(e)) return;
+
+        // Debug logging for Ctrl+Enter
+        if (action === openRunPanelAction && keyCheck === isCtrlOrMetaEnter) {
+          console.log('⌨️ Ctrl+Enter detected by OpenRunPanelViaCtrlEnter hook');
+        }
 
         e.preventDefault();
 
@@ -365,4 +375,42 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
   isEscape,
   closeAction,
   PRIORITY.NORMAL
+);
+
+/**
+ * Navigates to the run panel by clicking the existing run button.
+ *
+ * @param e - The keyboard event that triggered the action.
+ * @param el - The DOM element associated with the hook.
+ */
+const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
+  console.log('🚀 OpenRunPanelViaCtrlEnter action triggered!');
+  
+  // Find the existing run button and click it
+  const runButton = document.querySelector('a[href*="m=workflow_input"]') as HTMLAnchorElement;
+  console.log('🔍 Found run button:', runButton);
+  
+  if (runButton) {
+    console.log('✅ Clicking run button with href:', runButton.href);
+    runButton.click();
+  } else {
+    console.log('❌ No run button found');
+    // Let's also check for other run-related buttons
+    const allRunButtons = document.querySelectorAll('a[href*="workflow_input"], button[type="button"]');
+    console.log('📋 All potential run buttons:', allRunButtons);
+  }
+};
+
+/**
+ * Hook to open the Run panel when "Ctrl+Enter" (or "Cmd+Enter" on macOS) is pressed.
+ *
+ * This hook listens globally and navigates to the run panel URL, which opens the 
+ * workflow input interface for running the workflow.
+ *
+ * Priority: `PRIORITY.HIGH`, ensuring it takes precedence over the default run handlers.
+ */
+export const OpenRunPanelViaCtrlEnter = createKeyCombinationHook(
+  isCtrlOrMetaEnter,
+  openRunPanelAction,
+  PRIORITY.HIGH
 );
