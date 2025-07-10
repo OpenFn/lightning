@@ -411,9 +411,18 @@ const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
       foundButton.click();
     }
   } else {
-    // Panel is not open, open it by clicking the run link
-    const runButton = document.querySelector('a[href*="m=workflow_input"]') as HTMLAnchorElement;
-    runButton?.click();
+    // Check if a step is already selected by looking at the URL
+    const isStepSelected = window.location.href.includes('s=');
+    
+    if (isStepSelected) {
+      // Step is selected, click the "Run" button on the step panel
+      const stepRunButton = document.querySelector('[id^="run-from-step-"]') as HTMLAnchorElement;
+      stepRunButton?.click();
+    } else {
+      // No step selected, open it by clicking the run link
+      const runButton = document.querySelector('a[href*="m=workflow_input"]') as HTMLAnchorElement;
+      runButton?.click();
+    }
   }
 };
 
