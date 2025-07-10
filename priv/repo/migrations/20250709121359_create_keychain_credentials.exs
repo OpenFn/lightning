@@ -20,7 +20,5 @@ defmodule Lightning.Repo.Migrations.CreateKeychainCredentials do
 
     create unique_index(:keychain_credentials, [:name, :project_id])
     create index(:keychain_credentials, [:project_id])
-    create index(:keychain_credentials, [:created_by_id])
-    create index(:keychain_credentials, [:default_credential_id])
   end
 end

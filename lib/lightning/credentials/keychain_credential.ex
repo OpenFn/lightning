@@ -31,11 +31,9 @@ defmodule Lightning.Credentials.KeychainCredential do
     |> cast(attrs, [
       :name,
       :path,
-      :created_by_id,
-      :default_credential_id,
-      :project_id
+      :default_credential_id
     ])
-    |> validate_required([:name, :path, :created_by_id, :project_id])
+    |> validate_required([:name, :path])
     |> validate_length(:name, min: 1, max: 255)
     |> validate_length(:path, min: 1, max: 500)
     |> validate_jsonpath(:path)
@@ -70,8 +68,10 @@ defmodule Lightning.Credentials.KeychainCredential do
   end
 
   defp validate_default_credential_belongs_to_project(changeset) do
-    project_id = get_field(changeset, :project_id)
+    project = get_field(changeset, :project)
     default_credential_id = get_field(changeset, :default_credential_id)
+
+    project_id = if project, do: project.id, else: nil
 
     if project_id && default_credential_id do
       case Lightning.Repo.get_by(

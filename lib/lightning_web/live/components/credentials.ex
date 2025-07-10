@@ -220,6 +220,11 @@ defmodule LightningWeb.Components.Credentials do
             target: "new_credential"
           },
           %{
+            name: "Keychain credential",
+            id: "new-keychain-credential-option-menu-item",
+            target: "new_keychain_credential"
+          },
+          %{
             name: "OAuth client",
             id: "new-oauth-client-option-menu-item",
             target: "new_oauth_client",

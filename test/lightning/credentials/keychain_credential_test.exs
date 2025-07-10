@@ -6,26 +6,32 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
   alias Lightning.Credentials.KeychainCredential
 
   describe "changeset/2" do
-    test "name, path, created_by_id, and project_id can't be blank" do
+    test "name and path can't be blank" do
       errors =
         KeychainCredential.changeset(%KeychainCredential{}, %{}) |> errors_on()
 
       assert errors[:name] == ["can't be blank"]
       assert errors[:path] == ["can't be blank"]
-      assert errors[:created_by_id] == ["can't be blank"]
-      assert errors[:project_id] == ["can't be blank"]
+      # created_by_id and project_id should be set via associations, not params
+      refute errors[:created_by_id]
+      refute errors[:project_id]
     end
 
     test "validates required fields with valid data" do
       project = insert(:project)
       user = insert(:user)
 
+      keychain_credential =
+        %KeychainCredential{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:created_by, user)
+        |> Ecto.Changeset.put_assoc(:project, project)
+        |> Ecto.Changeset.apply_changes()
+
       changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
+        KeychainCredential.changeset(keychain_credential, %{
           name: "Test Keychain",
-          path: "$.user_id",
-          created_by_id: user.id,
-          project_id: project.id
+          path: "$.user_id"
         })
 
       assert changeset.valid?
@@ -40,12 +46,17 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
         project: project
       })
 
+      keychain_credential =
+        %KeychainCredential{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:created_by, user)
+        |> Ecto.Changeset.put_assoc(:project, project)
+        |> Ecto.Changeset.apply_changes()
+
       changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
+        KeychainCredential.changeset(keychain_credential, %{
           name: "Unique Name",
-          path: "$.user_id",
-          created_by_id: user.id,
-          project_id: project.id
+          path: "$.user_id"
         })
 
       assert {:error, changeset} = Repo.insert(changeset)
@@ -83,15 +94,19 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
 
     test "validates path length" do
       project = insert(:project)
-
       user = insert(:user)
 
+      keychain_credential =
+        %KeychainCredential{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:created_by, user)
+        |> Ecto.Changeset.put_assoc(:project, project)
+        |> Ecto.Changeset.apply_changes()
+
       changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
+        KeychainCredential.changeset(keychain_credential, %{
           name: "Test",
-          path: "",
-          created_by_id: user.id,
-          project_id: project.id
+          path: ""
         })
 
       assert errors_on(changeset)[:path] == ["can't be blank"]
@@ -99,11 +114,9 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
       long_path = "$.a" <> String.duplicate("b", 500)
 
       changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
+        KeychainCredential.changeset(keychain_credential, %{
           name: "Test",
-          path: long_path,
-          created_by_id: user.id,
-          project_id: project.id
+          path: long_path
         })
 
       errors = errors_on(changeset)[:path]
@@ -113,6 +126,13 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
     test "validates JSONPath format" do
       project = insert(:project)
       user = insert(:user)
+
+      keychain_credential =
+        %KeychainCredential{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:created_by, user)
+        |> Ecto.Changeset.put_assoc(:project, project)
+        |> Ecto.Changeset.apply_changes()
 
       # Valid JSONPath expressions
       valid_paths = [
@@ -126,11 +146,9 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
 
       for path <- valid_paths do
         changeset =
-          KeychainCredential.changeset(%KeychainCredential{}, %{
+          KeychainCredential.changeset(keychain_credential, %{
             name: "Test",
-            path: path,
-            created_by_id: user.id,
-            project_id: project.id
+            path: path
           })
 
         assert changeset.valid?, "Expected #{path} to be valid"
@@ -150,11 +168,9 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
 
       for path <- invalid_paths do
         changeset =
-          KeychainCredential.changeset(%KeychainCredential{}, %{
+          KeychainCredential.changeset(keychain_credential, %{
             name: "Test",
-            path: path,
-            created_by_id: user.id,
-            project_id: project.id
+            path: path
           })
 
         refute changeset.valid?, "Expected #{path} to be invalid"
@@ -183,23 +199,34 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
       insert(:project_credential, project: project2, credential: credential2)
 
       # Valid: default credential belongs to same project
+      keychain_credential1 =
+        %KeychainCredential{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:created_by, user)
+        |> Ecto.Changeset.put_assoc(:project, project1)
+        |> Ecto.Changeset.apply_changes()
+
       changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
+        KeychainCredential.changeset(keychain_credential1, %{
           name: "Test",
           path: "$.user_id",
-          created_by_id: user.id,
-          project_id: project1.id,
           default_credential_id: credential1.id
         })
 
       assert changeset.valid?
 
       # Invalid: default credential belongs to different project
+      keychain_credential2 =
+        %KeychainCredential{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:created_by, user)
+        |> Ecto.Changeset.put_assoc(:project, project1)
+        |> Ecto.Changeset.apply_changes()
+
       changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
+        KeychainCredential.changeset(keychain_credential2, %{
           name: "Test",
           path: "$.user_id",
-          project_id: project1.id,
           default_credential_id: credential2.id
         })
 
@@ -214,51 +241,140 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
       project = insert(:project)
       user = insert(:user)
 
+      keychain_credential =
+        %KeychainCredential{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:created_by, user)
+        |> Ecto.Changeset.put_assoc(:project, project)
+        |> Ecto.Changeset.apply_changes()
+
       changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
+        KeychainCredential.changeset(keychain_credential, %{
           name: "Test",
           path: "$.user_id",
-          created_by_id: user.id,
-          project_id: project.id,
           default_credential_id: nil
         })
 
       assert changeset.valid?
     end
 
-    test "validates foreign key constraints" do
+    # Foreign key constraints are now enforced by proper association handling
+    # through the context functions rather than accepting raw IDs from params
+  end
+
+  describe "context functions" do
+    test "new_keychain_credential/2 creates struct with proper associations" do
       user = insert(:user)
-
-      # Invalid project_id
-      changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
-          name: "Test",
-          path: "$.user_id",
-          created_by_id: user.id,
-          project_id: Ecto.UUID.generate()
-        })
-
-      assert {:error, changeset} = Repo.insert(changeset)
-      assert errors_on(changeset)[:project_id] == ["does not exist"]
-
-      # Invalid default_credential_id (non-existent credential)
       project = insert(:project)
 
-      changeset =
-        KeychainCredential.changeset(%KeychainCredential{}, %{
-          name: "Test",
+      keychain = Lightning.Credentials.new_keychain_credential(user, project)
+
+      assert keychain.created_by_id == user.id
+      assert keychain.project_id == project.id
+      assert keychain.created_by == user
+      assert keychain.project == project
+    end
+
+    test "create_keychain_credential/2 with valid params" do
+      user = insert(:user)
+      project = insert(:project)
+      credential = insert(:credential, user: user)
+      insert(:project_credential, project: project, credential: credential)
+
+      new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
+
+      {:ok, keychain_credential} =
+        Lightning.Credentials.create_keychain_credential(new_keychain, %{
+          name: "Test Keychain",
           path: "$.user_id",
-          created_by_id: user.id,
-          project_id: project.id,
-          default_credential_id: Ecto.UUID.generate()
+          default_credential_id: credential.id
         })
 
-      # This will fail due to the custom validation that checks project association
-      refute changeset.valid?
+      assert keychain_credential.name == "Test Keychain"
+      assert keychain_credential.path == "$.user_id"
+      assert keychain_credential.default_credential_id == credential.id
+      assert keychain_credential.created_by_id == user.id
+      assert keychain_credential.project_id == project.id
+    end
 
-      assert errors_on(changeset)[:default_credential_id] == [
-               "must belong to the same project"
+    test "create_keychain_credential/2 with validation errors" do
+      user = insert(:user)
+      project = insert(:project)
+
+      new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
+
+      {:error, changeset} =
+        Lightning.Credentials.create_keychain_credential(new_keychain, %{
+          name: "",
+          path: "invalid jsonpath",
+          default_credential_id: ""
+        })
+
+      assert "can't be blank" in errors_on(changeset)[:name]
+      assert "JSONPath must start with '$'" in errors_on(changeset)[:path]
+    end
+
+    test "create_keychain_credential/2 with nil default credential" do
+      user = insert(:user)
+      project = insert(:project)
+
+      new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
+
+      {:ok, keychain_credential} =
+        Lightning.Credentials.create_keychain_credential(new_keychain, %{
+          name: "Test Keychain No Default",
+          path: "$.org_id",
+          default_credential_id: nil
+        })
+
+      assert keychain_credential.name == "Test Keychain No Default"
+      assert keychain_credential.path == "$.org_id"
+      assert keychain_credential.default_credential_id == nil
+      assert keychain_credential.created_by_id == user.id
+      assert keychain_credential.project_id == project.id
+    end
+
+    test "validates default credential belongs to same project in context" do
+      user = insert(:user)
+      project = insert(:project)
+      other_project = insert(:project)
+      other_credential = insert(:credential, user: user)
+
+      insert(:project_credential,
+        project: other_project,
+        credential: other_credential
+      )
+
+      new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
+
+      {:error, changeset} =
+        Lightning.Credentials.create_keychain_credential(new_keychain, %{
+          name: "Test Keychain",
+          path: "$.user_id",
+          default_credential_id: other_credential.id
+        })
+
+      assert "must belong to the same project" in errors_on(changeset)[
+               :default_credential_id
              ]
+    end
+
+    test "change_keychain_credential/2 validates properly" do
+      user = insert(:user)
+      project = insert(:project)
+
+      new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
+
+      changeset =
+        Lightning.Credentials.change_keychain_credential(new_keychain, %{
+          name: "",
+          path: "invalid jsonpath",
+          default_credential_id: ""
+        })
+        |> Map.put(:action, :validate)
+
+      assert "can't be blank" in errors_on(changeset)[:name]
+      assert "JSONPath must start with '$'" in errors_on(changeset)[:path]
     end
   end
 

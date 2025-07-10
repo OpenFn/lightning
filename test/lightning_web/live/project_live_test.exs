@@ -1133,6 +1133,27 @@ defmodule LightningWeb.ProjectLiveTest do
       refute has_element?(view, "#new-credential-modal")
     end
 
+    test "project admin can see keychain credential option in dropdown menu",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Verify the keychain credential option is in the page
+      assert html =~ "Keychain credential"
+      assert html =~ "option-menu-item-2"
+    end
+
     test "project admin can't edit project name and description with invalid data",
          %{
            conn: conn,

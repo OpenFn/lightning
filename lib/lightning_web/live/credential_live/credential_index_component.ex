@@ -5,6 +5,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
 
   alias Lightning.Credentials
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.OauthClients
 
   @impl true
@@ -13,6 +14,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
      assign(socket,
        active_modal: nil,
        credential: nil,
+       keychain_credential: nil,
        oauth_client: nil,
        current_user: nil,
        project: nil,
@@ -48,7 +50,12 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   @impl true
   def handle_event("close_active_modal", _params, socket) do
     {:noreply,
-     assign(socket, active_modal: nil, credential: nil, oauth_client: nil)}
+     assign(socket,
+       active_modal: nil,
+       credential: nil,
+       keychain_credential: nil,
+       oauth_client: nil
+     )}
   end
 
   def handle_event("new_credential", _params, socket) do
@@ -70,6 +77,21 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
          credential: %Lightning.Credentials.Credential{
            user_id: socket.assigns.current_user.id,
            project_credentials: project_credentials
+         },
+         oauth_client: nil
+       )}
+    end
+  end
+
+  def handle_event("new_keychain_credential", _params, socket) do
+    with :ok <- can_create_project_credential(socket) do
+      {:noreply,
+       assign(socket,
+         active_modal: :new_keychain_credential,
+         credential: nil,
+         keychain_credential: %KeychainCredential{
+           created_by_id: socket.assigns.current_user.id,
+           project_id: socket.assigns.project && socket.assigns.project.id
          },
          oauth_client: nil
        )}

@@ -154,7 +154,12 @@ defmodule LightningWeb.ProjectLive.Settings do
        show_collaborators_modal: false,
        show_invite_collaborators_modal: false,
        collaborators_to_invite: [],
-       projects: projects
+       projects: projects,
+       new_keychain_credential:
+         Credentials.new_keychain_credential(
+           socket.assigns.current_user,
+           socket.assigns.project
+         )
      )}
   end
 
