@@ -212,9 +212,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <.state_pill state={@work_order.state} />
           </div>
         </.td>
-        <.td class="text-right pr-2">
+        <.td class="text-right">
           <%= if @work_order.runs !== [] do %>
-            <div class="flex items-center justify-end gap-2">
+            <div class="flex items-center justify-end gap-2 pr-2 -mr-3">
               <%= if Enum.count(@work_order.runs) > 1 do %>
                 <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                   {Enum.count(@work_order.runs)}
