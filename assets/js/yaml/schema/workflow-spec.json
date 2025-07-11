@@ -3,6 +3,9 @@
   "title": "WorkflowSpec",
   "type": "object",
   "properties": {
+    "id": {
+      "type": ["string", "null"]
+    },
     "name": {
       "type": ["string", "null"]
     },
@@ -12,6 +15,7 @@
         "^.*$": {
           "type": "object",
           "properties": {
+            "id": { "type": ["string", "null"] },
             "name": { "type": "string" },
             "adaptor": { "type": "string" },
             "body": { "type": "string" },
@@ -29,6 +33,7 @@
         "^.*$": {
           "type": "object",
           "properties": {
+            "id": { "type": ["string", "null"] },
             "type": {
               "type": "string",
               "enum": ["cron", "webhook", "kafka"]
@@ -67,6 +72,7 @@
         "^.*$": {
           "type": "object",
           "properties": {
+            "id": { "type": ["string", "null"] },
             "source_trigger": { "type": "string" },
             "source_job": { "type": "string" },
             "target_job": { "type": "string" },

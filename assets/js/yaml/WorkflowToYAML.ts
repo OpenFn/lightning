@@ -45,7 +45,7 @@ const WorkflowToYAML = {
 } as PhoenixHook<{
   generateWorkflowCode(): void;
   debouncedGenerate(): void;
-  generateTimeout?: ReturnType<typeof setTimeout>;  // Fix: Use ReturnType
+  generateTimeout?: ReturnType<typeof setTimeout>;
 }>;
 
 export default WorkflowToYAML;

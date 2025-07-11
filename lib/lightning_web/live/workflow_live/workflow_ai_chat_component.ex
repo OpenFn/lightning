@@ -65,7 +65,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
           project={@project}
           current_user={@current_user}
           chat_session_id={@chat_session_id}
-          workflow_code={@workflow_code}
+          workflow_code={@workflow_code |> dbg()}
           query_params={%{"method" => "ai"}}
           base_url={@base_url}
           action={if(@chat_session_id, do: :show, else: :new)}
