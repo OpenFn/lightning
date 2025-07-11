@@ -2165,10 +2165,31 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_disable_canvas()}
   end
 
-    def handle_info({:run_selected, run_id}, socket) do
+        def handle_info({:run_selected, run_id}, socket) do
     run = Runs.get(run_id)
 
     if run do
+      # Subscribe to run events for real-time updates
+      Runs.subscribe(run)
+
+      # Get run steps to show execution state on canvas
+      run_steps = WorkOrders.get_run_steps(run_id)
+      |> Enum.map(fn step -> %{
+        job_id: step.job_id,
+        error_type: step.error_type,
+        exit_reason: step.exit_reason
+      } end)
+
+      # Push events to notify canvas about run selection
+      socket = socket
+      |> assign(follow_run: run)
+      |> push_event("run-selected-from-history", %{
+        run_id: run_id,
+        run_steps: run_steps
+      })
+      |> push_event("push-hash", %{"hash" => "log"})
+
+      # Update URL to reflect run selection (follow_run handles URL changes)
       {:noreply, follow_run(socket, run)}
     else
       {:noreply, socket}
