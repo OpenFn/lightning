@@ -5,9 +5,11 @@
     <div class="flex items-center gap-2">
       <h3 class="text-sm font-medium text-gray-700">Recent Activity</h3>
       <.link
-        navigate={~p"/projects/#{@project_id}/history"}
+        navigate={
+          ~p"/projects/#{@project_id}/history?#{%{filters: %{workflow_id: @workflow_id}}}"
+        }
         class="text-gray-400 hover:text-gray-600 transition-colors"
-        title="View full history"
+        title="View full history for this workflow"
       >
         <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" />
       </.link>
