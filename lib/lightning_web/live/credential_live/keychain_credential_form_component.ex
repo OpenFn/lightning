@@ -5,9 +5,9 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Credentials
-  alias LightningWeb.Components.NewInputs
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias LightningWeb.Components.NewInputs
 
   @valid_assigns [
     :id,

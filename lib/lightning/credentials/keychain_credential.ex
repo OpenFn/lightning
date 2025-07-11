@@ -14,6 +14,19 @@ defmodule Lightning.Credentials.KeychainCredential do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
+  @type t :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          name: String.t() | nil,
+          path: String.t() | nil,
+          created_by: User.t() | Ecto.Association.NotLoaded.t() | nil,
+          default_credential:
+            Credential.t() | Ecto.Association.NotLoaded.t() | nil,
+          project: Project.t() | Ecto.Association.NotLoaded.t() | nil,
+          inserted_at: NaiveDateTime.t() | nil,
+          updated_at: NaiveDateTime.t() | nil
+        }
+
   schema "keychain_credentials" do
     field :name, :string
     field :path, :string

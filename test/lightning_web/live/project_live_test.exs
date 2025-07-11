@@ -1300,11 +1300,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # Test actual deletion by directly triggering the delete event
       # Simulate clicking the delete confirmation button
-      html = view
-             |> element(
-               "#delete_keychain_credential_#{keychain_credential.id}_modal_confirm_button"
-             )
-             |> render_click()
+      html =
+        view
+        |> element(
+          "#delete_keychain_credential_#{keychain_credential.id}_modal_confirm_button"
+        )
+        |> render_click()
 
       # Verify the flash message appears
       assert html =~ "Keychain credential deleted"

@@ -18,7 +18,9 @@ defmodule Lightning.Workflows.Job do
   use Lightning.Schema
 
   alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Validators
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -28,6 +30,8 @@ defmodule Lightning.Workflows.Job do
           name: String.t() | nil,
           adaptor: String.t() | nil,
           credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
+          keychain_credential:
+            nil | KeychainCredential.t() | Ecto.Association.NotLoaded.t(),
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
@@ -46,6 +50,8 @@ defmodule Lightning.Workflows.Job do
 
     belongs_to :project_credential, ProjectCredential
     has_one :credential, through: [:project_credential, :credential]
+
+    belongs_to :keychain_credential, KeychainCredential
 
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
@@ -72,6 +78,7 @@ defmodule Lightning.Workflows.Job do
       :body,
       :adaptor,
       :project_credential_id,
+      :keychain_credential_id,
       :workflow_id
     ])
     |> validate()
@@ -88,8 +95,16 @@ defmodule Lightning.Workflows.Job do
     |> validate_required(:name, message: "job name can't be blank")
     |> validate_required(:body, message: "job body can't be blank")
     |> validate_required(:adaptor, message: "job adaptor can't be blank")
+    |> Validators.validate_exclusive(
+      [:project_credential_id, :keychain_credential_id],
+      "cannot be set when the other credential type is also set"
+    )
+    |> validate_keychain_credential_project_membership()
     |> foreign_key_constraint(:project_credential_id,
       message: "credential doesn't exist or isn't available in this project"
+    )
+    |> foreign_key_constraint(:keychain_credential_id,
+      message: "keychain credential doesn't exist"
     )
     |> assoc_constraint(:workflow)
     |> validate_length(:name,
@@ -99,6 +114,42 @@ defmodule Lightning.Workflows.Job do
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
       message: "job name has invalid format"
     )
+  end
+
+  defp validate_keychain_credential_project_membership(changeset) do
+    keychain_credential_id = get_field(changeset, :keychain_credential_id)
+    workflow = get_field(changeset, :workflow)
+
+    if keychain_credential_id && workflow do
+      project_id =
+        case workflow do
+          %{project: %{id: id}} -> id
+          %{project_id: id} -> id
+          _ -> nil
+        end
+
+      if project_id do
+        case Lightning.Repo.get_by(
+               Lightning.Credentials.KeychainCredential,
+               id: keychain_credential_id,
+               project_id: project_id
+             ) do
+          nil ->
+            add_error(
+              changeset,
+              :keychain_credential_id,
+              "must belong to the same project as the job"
+            )
+
+          _ ->
+            changeset
+        end
+      else
+        changeset
+      end
+    else
+      changeset
+    end
   end
 
   @doc """
