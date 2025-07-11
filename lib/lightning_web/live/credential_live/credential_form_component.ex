@@ -189,7 +189,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       <LightningWeb.Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 max-w-full"
-        {@on_modal_close && %{on_modal_close: @on_modal_close}}
+        {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
           <.modal_title action={@action} />
@@ -239,7 +239,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           <LightningWeb.Components.Credentials.credential_modal_cancel_button
             id="cancel-credential-type-picker"
             modal_id={@id}
-            {@on_modal_close && %{on_modal_close: @on_modal_close}}
+            {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
           />
         </.modal_footer>
       </LightningWeb.Components.Credentials.credential_modal>
@@ -253,7 +253,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       <LightningWeb.Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
-        {@on_modal_close && %{on_modal_close: @on_modal_close}}
+        {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
           <.modal_title action={@action} />
@@ -287,7 +287,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       <LightningWeb.Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
-        {@on_modal_close && %{on_modal_close: @on_modal_close}}
+        {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
           <.modal_title action={@action} />
@@ -373,7 +373,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </.button>
             <LightningWeb.Components.Credentials.credential_modal_cancel_button
               modal_id={@id}
-              {@on_modal_close && %{on_modal_close: @on_modal_close}}
+              {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
             />
           </.modal_footer>
         </.form>

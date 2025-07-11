@@ -210,6 +210,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :options, :list, required: true
   attr :disabled, :boolean, default: false
   attr :badge, :any, default: false
+  attr :phx_target, :any, default: "##{@credentials_index_live_component}"
   slot :inner_block, required: true
 
   def options_menu_button(assigns) do
@@ -226,6 +227,7 @@ defmodule LightningWeb.Components.Credentials do
           tabindex="-1"
           id={id}
           phx-click={target}
+          phx-target={@phx_target}
           disabled={@disabled}
         >
           {name}<span

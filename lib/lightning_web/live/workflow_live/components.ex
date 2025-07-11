@@ -234,10 +234,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :on_change, :any, required: true
   attr :editable, :boolean, default: false
-  attr :oauth_clients, :list, required: true
-  attr :current_user, :map, required: true
   attr :project, :map
-  attr :workflow_id, :string, required: true
 
   def job_form(assigns) do
     ~H"""
@@ -269,11 +266,6 @@ defmodule LightningWeb.WorkflowLive.Components do
           project={@project}
           on_change={@on_change}
           form={@form}
-          current_user={@current_user}
-          oauth_clients={@oauth_clients}
-          credential_modal_return_to={
-            ~p"/projects/#{@project.id}/w/#{@workflow_id}?s=#{Phoenix.HTML.Form.input_value(@form, :id)}"
-          }
         />
       </div>
     </div>
