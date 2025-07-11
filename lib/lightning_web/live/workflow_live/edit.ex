@@ -373,11 +373,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
           />
           <.live_component
-            :if={@selected_job}
+            :if={@selected_job && @can_edit_workflow && @show_job_credential_modal}
             id="new-credential-modal"
             module={LightningWeb.CredentialLive.CredentialFormComponent}
             action={:new}
-            credential_type={@selected_credential_type}
+            credential_type={nil}
             credential={
               %Lightning.Credentials.Credential{
                 user_id: @current_user.id,
@@ -393,11 +393,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
             oauth_clients={@oauth_clients}
             projects={[]}
             project={@project}
-            show_project_credentials={false}
             on_save={
               fn credential ->
-                form =
-                  single_inputs_for(@workflow_form, :jobs, @selected_job.id)
+                form = single_inputs_for(@workflow_form, :jobs, @selected_job.id)
 
                 params =
                   LightningWeb.Utils.build_params_for_field(
@@ -409,6 +407,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 send_form_changed(params)
               end
             }
+            on_modal_close={JS.push("toggle_job_credential_modal")}
             can_create_project_credential={@can_edit_workflow}
             return_to={
               ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
@@ -487,7 +486,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       @has_presence_edit_priority
                   }
                   form={jf}
-                  project_user={@project_user}
                   project={@project}
                 />
                 <:footer>
@@ -1320,6 +1318,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        show_missing_dataclip_selector: false,
        show_new_workflow_panel: assigns.live_action == :new,
        show_canvas_placeholder: assigns.live_action == :new,
+       show_job_credential_modal: false,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        publish_template: false,
@@ -1824,6 +1823,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
      assign(socket,
        show_github_sync_modal: !socket.assigns.show_github_sync_modal
      )}
+  end
+
+  def handle_event("toggle_job_credential_modal", _params, socket) do
+    {:noreply, update(socket, :show_job_credential_modal, fn show -> !show end)}
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do

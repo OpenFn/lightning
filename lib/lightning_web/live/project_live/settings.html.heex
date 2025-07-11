@@ -246,211 +246,23 @@
           subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
           permissions_message="available credentials."
           can_perform_action={@can_create_project_credential}
-          action_button_text="Add new"
-          action_button_id="options-menu-button"
-          action_button_disabled={!@can_create_project_credential}
-          options={[
-            %{
-              name: "Credential",
-              id: "option-menu-item-1",
-              target: "new-credential-modal"
-            },
-            %{
-              name: "OAuth client",
-              id: "option-menu-item-0",
-              target: "new-oauth-client-modal",
-              badge: "Advanced"
-            }
-          ]}
+        >
+          <:action_button>
+            <LightningWeb.Components.Credentials.new_credential_menu_button
+              id="project-credential-options-menu-button"
+              disabled={!@can_create_project_credential}
+            />
+          </:action_button>
+        </.section_header>
+
+        <LightningWeb.Components.Credentials.credentials_index_live_component
+          current_user={@current_user}
+          project={@project}
+          projects={@projects}
+          can_create_project_credential={@can_create_project_credential}
+          show_owner_in_tables={true}
+          return_to={~p"/projects/#{@project.id}/settings#credentials"}
         />
-        <div class="space-y-4">
-          <LightningWeb.Components.DataTables.oauth_clients_table
-            id="oauth-clients"
-            title="OAuth Clients"
-            clients={@oauth_clients}
-            show_owner={true}
-          >
-            <:empty_state>
-              <.empty_state
-                icon="hero-plus-circle"
-                message="No OAuth clients found."
-                button_text="Create a new OAuth client"
-                button_id="open-create-oauth-client-modal-big-buttton"
-                button_click={show_modal("new-oauth-client-modal")}
-                button_disabled={!@can_create_project_credential}
-              />
-            </:empty_state>
-            <:actions :let={client}>
-              <div :if={can_edit?(client, @current_user)}>
-                <Common.simple_dropdown
-                  id={"oauth-client-actions-#{client.id}-dropdown"}
-                  button_theme="secondary"
-                >
-                  <:button>
-                    Actions
-                  </:button>
-
-                  <:options>
-                    <.link phx-click={
-                      show_modal("edit-oauth-client-#{client.id}-modal")
-                    }>
-                      Edit
-                    </.link>
-                    <.link
-                      id={"delete-oauth-client-#{client.id}-button"}
-                      phx-click={
-                        show_modal("delete_oauth_client_#{client.id}_modal")
-                      }
-                    >
-                      Delete
-                    </.link>
-                  </:options>
-                </Common.simple_dropdown>
-              </div>
-              <.live_component
-                id={"edit-oauth-client-#{client.id}-modal"}
-                module={LightningWeb.CredentialLive.OauthClientFormComponent}
-                action={:edit}
-                oauth_client={client}
-                projects={@projects}
-                project={@project}
-                allow_global={@current_user.role === :superuser}
-                can_create_oauth_client={@can_create_project_credential}
-                return_to={~p"/projects/#{@project.id}/settings#credentials"}
-              />
-              <LightningWeb.Components.Credentials.delete_oauth_client_modal
-                :if={client.user_id == @current_user.id}
-                id={"delete_oauth_client_#{client.id}_modal"}
-                client={client}
-              />
-            </:actions>
-          </LightningWeb.Components.DataTables.oauth_clients_table>
-          <LightningWeb.Components.DataTables.credentials_table
-            id="credentials"
-            title="Credentials"
-            credentials={@credentials}
-            show_owner={true}
-          >
-            <:empty_state>
-              <.empty_state
-                icon="hero-plus-circle"
-                message="No credentials found."
-                button_text="Create a new Credential"
-                button_id="open-create-credential-modal-big-buttton"
-                button_click={show_modal("new-credential-modal")}
-                button_disabled={!@can_create_project_credential}
-              />
-            </:empty_state>
-            <:actions :let={credential}>
-              <div :if={can_edit?(credential, @current_user)}>
-                <Common.simple_dropdown
-                  id={"credential-actions-#{credential.id}-dropdown"}
-                  button_theme="secondary"
-                >
-                  <:button>
-                    Actions
-                  </:button>
-                  <:options>
-                    <.link phx-click={
-                      show_modal("transfer-credential-#{credential.id}-modal")
-                    }>
-                      <%= case credential.transfer_status do %>
-                        <% :pending -> %>
-                          Revoke Transfer
-                        <% :completed -> %>
-                          Transfer
-                        <% nil -> %>
-                          Transfer
-                      <% end %>
-                    </.link>
-                    <.link phx-click={
-                      show_modal("edit-credential-#{credential.id}-modal")
-                    }>
-                      Edit
-                    </.link>
-                    <.link phx-click={
-                      show_modal("delete_credential_#{credential.id}_modal")
-                    }>
-                      Delete
-                    </.link>
-                  </:options>
-                </Common.simple_dropdown>
-
-                <.live_component
-                  id={"edit-credential-#{credential.id}-modal"}
-                  module={LightningWeb.CredentialLive.CredentialFormComponent}
-                  action={:edit}
-                  credential_type={nil}
-                  credential={credential}
-                  oauth_client={
-                    credential.oauth_token && credential.oauth_token.oauth_client
-                  }
-                  projects={@projects}
-                  project={@project}
-                  can_create_project_credential={@can_create_project_credential}
-                  current_user={@current_user}
-                  return_to={~p"/projects/#{@project.id}/settings#credentials"}
-                />
-                <LightningWeb.Components.Credentials.delete_credential_modal
-                  :if={can_edit?(credential, @current_user)}
-                  id={"delete_credential_#{credential.id}_modal"}
-                  credential={credential}
-                />
-                <.live_component
-                  id={"transfer-credential-#{credential.id}-modal"}
-                  module={LightningWeb.CredentialLive.TransferCredentialModal}
-                  credential={credential}
-                  current_user={@current_user}
-                  return_to={~p"/projects/#{@project.id}/settings#credentials"}
-                />
-              </div>
-            </:actions>
-          </LightningWeb.Components.DataTables.credentials_table>
-
-          <.live_component
-            id="new-credential-modal"
-            module={LightningWeb.CredentialLive.CredentialFormComponent}
-            action={:new}
-            credential_type={@selected_credential_type}
-            credential={
-              %Lightning.Credentials.Credential{
-                user_id: @current_user.id,
-                project_credentials: [
-                  %Lightning.Projects.ProjectCredential{
-                    project_id: @project.id
-                  }
-                ]
-              }
-            }
-            oauth_client={nil}
-            oauth_clients={@oauth_clients}
-            projects={@projects}
-            project={@project}
-            current_user={@current_user}
-            can_create_project_credential={@can_create_project_credential}
-            return_to={~p"/projects/#{@project.id}/settings#credentials"}
-          />
-          <.live_component
-            id="new-oauth-client-modal"
-            module={LightningWeb.CredentialLive.OauthClientFormComponent}
-            action={:new}
-            oauth_client={
-              %Lightning.Credentials.OauthClient{
-                user_id: @current_user.id,
-                project_oauth_clients: [
-                  %Lightning.Projects.ProjectOauthClient{
-                    project_id: @project.id
-                  }
-                ]
-              }
-            }
-            projects={@projects}
-            project={@project}
-            allow_global={@current_user.role === :superuser}
-            can_create_oauth_client={@can_create_project_credential}
-            return_to={~p"/projects/#{@project.id}/settings#credentials"}
-          />
-        </div>
       </:panel>
       <:panel hash="collections" class="space-y-4">
         <.live_component

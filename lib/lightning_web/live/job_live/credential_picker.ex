@@ -44,8 +44,7 @@ defmodule LightningWeb.JobLive.CredentialPicker do
           id="new-credential-button"
           type="button"
           class="link text-xs"
-          phx-click={show_modal("new-credential-modal")}
-          phx-target={@myself}
+          phx-click="toggle_job_credential_modal"
         >
           New credential
         </button>
@@ -56,7 +55,12 @@ defmodule LightningWeb.JobLive.CredentialPicker do
 
   @impl true
   def mount(socket) do
-    {:ok, socket |> assign(credentials: [], selected_project_credential_id: nil)}
+    {:ok,
+     socket
+     |> assign(
+       credentials: [],
+       selected_project_credential_id: nil
+     )}
   end
 
   @impl true
