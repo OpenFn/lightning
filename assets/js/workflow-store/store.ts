@@ -33,6 +33,13 @@ export type WorkflowProps = {
   disabled: boolean;
   selection: string | null;
   positions: Positions | null;
+  runSteps: RunSteps[] | [];
+};
+
+export type RunSteps = {
+  job_id: Lightning.Job['id'];
+  error_type: string;
+  exit_reason: 'fail' | 'success' | null;
 };
 
 export interface WorkflowState extends WorkflowProps {
@@ -162,6 +169,7 @@ const DEFAULT_PROPS: WorkflowProps = {
   disabled: false,
   selection: null,
   positions: null,
+  runSteps: [],
 };
 
 export type WorkflowStore = StoreApi<WorkflowState>;

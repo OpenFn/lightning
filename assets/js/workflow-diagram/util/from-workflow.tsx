@@ -7,6 +7,7 @@ import {
   edgeLabelTextStyles,
 } from '../styles';
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
+import type { RunSteps } from '#/workflow-store/store';
 
 function getEdgeLabel(edge: Lightning.Edge) {
   let label: string | JSX.Element = '{ }';
@@ -52,10 +53,13 @@ const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
   placeholders: Flow.Model = { nodes: [], edges: [] },
+  runSteps: RunSteps[],
   selectedId: string | null
 ): Flow.Model => {
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
+
+  const runStepsObj = runSteps.reduce((a, b) => { a[b.job_id] = b; return a }, {} as Record<string, RunSteps>)
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
@@ -87,6 +91,7 @@ const fromWorkflow = (
         model.height = NODE_HEIGHT;
 
         model.data.allowPlaceholder = allowPlaceholder;
+        model.data.runData = runStepsObj[node.id];
 
         if (type === 'trigger') {
           model.data.trigger = {
