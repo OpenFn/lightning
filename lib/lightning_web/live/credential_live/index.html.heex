@@ -10,16 +10,16 @@
     <LayoutComponents.header current_user={@current_user}>
       <:title>{@page_title}</:title>
       <LightningWeb.Components.Credentials.options_menu_button
-        id="options-menu-button"
+        id="credential-options-menu-button"
         options={[
           %{
             name: "Credential",
-            id: "option-menu-item-1",
+            id: "new-credential-option-menu-item",
             target: "new_credential"
           },
           %{
             name: "OAuth client",
-            id: "option-menu-item-0",
+            id: "new-oauth-client-option-menu-item",
             target: "new_oauth_client",
             badge: "Advanced"
           }

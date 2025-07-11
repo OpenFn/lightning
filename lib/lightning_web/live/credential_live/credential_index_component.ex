@@ -52,58 +52,80 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   end
 
   def handle_event("new_credential", _params, socket) do
-    {:noreply,
-     assign(socket,
-       active_modal: :new_credential,
-       credential: %Lightning.Credentials.Credential{
-         user_id: socket.assigns.current_user.id
-       },
-       oauth_client: nil
-     )}
+    with :ok <- can_create_project_credential(socket) do
+      project_credentials =
+        if socket.assigns.project do
+          [
+            %Lightning.Projects.ProjectCredential{
+              project_id: socket.assigns.project.id
+            }
+          ]
+        else
+          []
+        end
+
+      {:noreply,
+       assign(socket,
+         active_modal: :new_credential,
+         credential: %Lightning.Credentials.Credential{
+           user_id: socket.assigns.current_user.id,
+           project_credentials: project_credentials
+         },
+         oauth_client: nil
+       )}
+    end
   end
 
   def handle_event("new_oauth_client", _params, socket) do
-    {:noreply,
-     assign(socket,
-       active_modal: :new_oauth_client,
-       credential: nil,
-       oauth_client: %Lightning.Credentials.OauthClient{
-         user_id: socket.assigns.current_user.id
-       }
-     )}
+    with :ok <- can_create_project_credential(socket) do
+      project_oauth_clients =
+        if socket.assigns.project do
+          [
+            %Lightning.Projects.ProjectOauthClient{
+              project_id: socket.assigns.project.id
+            }
+          ]
+        else
+          []
+        end
+
+      {:noreply,
+       assign(socket,
+         active_modal: :new_oauth_client,
+         credential: nil,
+         oauth_client: %Lightning.Credentials.OauthClient{
+           user_id: socket.assigns.current_user.id,
+           project_oauth_clients: project_oauth_clients
+         }
+       )}
+    end
   end
 
   def handle_event("edit_oauth_client", %{"id" => client_id}, socket) do
-    %{current_user: current_user, oauth_clients: oauth_clients} = socket.assigns
-
+    %{oauth_clients: oauth_clients} = socket.assigns
     client = Enum.find(oauth_clients, fn client -> client.id == client_id end)
 
-    if can_edit?(client, current_user) do
+    with :ok <- can_edit_credential(socket, client) do
       {:noreply,
        assign(socket,
          active_modal: :edit_oauth_client,
          credential: nil,
          oauth_client: client
        )}
-    else
-      {:noreply, socket |> put_flash(:error, "You can't perform this action")}
     end
   end
 
   def handle_event("request_oauth_client_deletion", %{"id" => client_id}, socket) do
-    %{current_user: current_user, oauth_clients: oauth_clients} = socket.assigns
-
+    %{oauth_clients: oauth_clients} = socket.assigns
     client = Enum.find(oauth_clients, fn client -> client.id == client_id end)
 
-    if can_edit?(client, current_user) do
+    with :ok <- can_edit_credential(socket, client) do
       {:noreply,
        assign(socket,
          active_modal: :delete_oauth_client,
          credential: nil,
          oauth_client: client
        )}
-    else
-      {:noreply, socket |> put_flash(:error, "You can't perform this action")}
     end
   end
 
@@ -112,21 +134,23 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"oauth_client_id" => oauth_client_id},
         socket
       ) do
-    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
+    client = OauthClients.get_client!(oauth_client_id)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Oauth client deleted")
-     |> assign(:oauth_clients, list_clients(socket.assigns.current_user))
-     |> push_patch(to: ~p"/credentials")}
+    with :ok <- can_edit_credential(socket, client) do
+      OauthClients.delete_client(client)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "Oauth client deleted")
+       |> push_patch(to: socket.assigns.return_to)}
+    end
   end
 
   def handle_event("edit_credential", %{"id" => credential_id}, socket) do
-    %{current_user: current_user, credentials: credentials} = socket.assigns
-
+    %{credentials: credentials} = socket.assigns
     credential = Enum.find(credentials, fn cred -> cred.id == credential_id end)
 
-    if can_edit?(credential, current_user) do
+    with :ok <- can_edit_credential(socket, credential) do
       {:noreply,
        assign(socket,
          active_modal: :edit_credential,
@@ -134,8 +158,6 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
          oauth_client:
            credential.oauth_token && credential.oauth_token.oauth_client
        )}
-    else
-      {:noreply, socket |> put_flash(:error, "You can't perform this action")}
     end
   end
 
@@ -144,23 +166,12 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => credential_id},
         socket
       ) do
-    %{current_user: current_user, credentials: credentials} = socket.assigns
-
+    %{credentials: credentials} = socket.assigns
     credential = Enum.find(credentials, fn cred -> cred.id == credential_id end)
 
-    can_delete_credential =
-      Lightning.Policies.Permissions.can?(
-        Lightning.Policies.Users,
-        :delete_credential,
-        current_user,
-        credential
-      )
-
-    if can_delete_credential do
+    with :ok <- can_delete_credential(socket, credential) do
       {:noreply,
        assign(socket, active_modal: :delete_credential, credential: credential)}
-    else
-      {:noreply, put_flash(socket, :error, "You can't perform this action")}
     end
   end
 
@@ -169,15 +180,13 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => credential_id},
         socket
       ) do
-    %{current_user: current_user, credentials: credentials} = socket.assigns
+    %{credentials: credentials} = socket.assigns
 
     credential = Enum.find(credentials, fn cred -> cred.id == credential_id end)
 
-    if can_edit?(credential, current_user) do
+    with :ok <- can_edit_credential(socket, credential) do
       {:noreply,
        assign(socket, active_modal: :transfer_credential, credential: credential)}
-    else
-      {:noreply, put_flash(socket, :error, "You can't perform this action")}
     end
   end
 
@@ -191,8 +200,46 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     {:noreply,
      socket
      |> put_flash(:info, "Credential deletion canceled")
-     |> push_patch(to: ~p"/credentials")
-     |> assign(credentials: list_credentials(socket.assigns.current_user))}
+     |> push_patch(to: socket.assigns.return_to)}
+  end
+
+  defp can_delete_credential(socket, credential) do
+    can_delete_credential =
+      Lightning.Policies.Permissions.can?(
+        Lightning.Policies.Users,
+        :delete_credential,
+        socket.assigns.current_user,
+        credential
+      )
+
+    if can_delete_credential do
+      :ok
+    else
+      noreply_error(socket)
+    end
+  end
+
+  defp can_edit_credential(socket, credential) do
+    if can_edit?(credential, socket.assigns.current_user) do
+      :ok
+    else
+      noreply_error(socket)
+    end
+  end
+
+  defp can_create_project_credential(socket) do
+    if socket.assigns.can_create_project_credential do
+      :ok
+    else
+      noreply_error(socket)
+    end
+  end
+
+  defp noreply_error(socket) do
+    {:noreply,
+     socket
+     |> put_flash(:error, "You are not authorized to perform this action")
+     |> push_patch(to: socket.assigns.return_to)}
   end
 
   defp list_credentials(user_or_project) do
