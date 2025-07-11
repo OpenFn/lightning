@@ -281,6 +281,7 @@ defmodule LightningWeb.LayoutComponents do
   attr :action_button_id, :string, default: nil
   attr :options, :list, default: nil
   attr :role, :string, default: nil
+  slot :action_button
 
   def section_header(assigns) do
     ~H"""
@@ -294,16 +295,10 @@ defmodule LightningWeb.LayoutComponents do
           <.permissions_message section={@permissions_message} />
         <% end %>
       </div>
-      <%= if @action_button_text || @options do %>
+      <%= if @action_button_text || @action_button != [] do %>
         <div class="sm:block" aria-hidden="true">
-          <%= if @options do %>
-            <LightningWeb.Components.Credentials.options_menu_button
-              id={@action_button_id}
-              options={@options}
-              disabled={@action_button_disabled}
-            >
-              {@action_button_text || "Add new"}
-            </LightningWeb.Components.Credentials.options_menu_button>
+          <%= if @action_button != [] do %>
+            {render_slot(@action_button)}
           <% else %>
             <.button
               :if={@action_button_id}

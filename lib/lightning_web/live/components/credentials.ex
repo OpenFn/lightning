@@ -207,17 +207,31 @@ defmodule LightningWeb.Components.Credentials do
   end
 
   attr :id, :string, required: true
-  attr :options, :list, required: true
   attr :disabled, :boolean, default: false
-  attr :badge, :any, default: false
   attr :phx_target, :any, default: "##{@credentials_index_live_component}"
-  slot :inner_block, required: true
 
-  def options_menu_button(assigns) do
+  def new_credential_menu_button(assigns) do
+    assigns =
+      assign_new(assigns, :options, fn ->
+        [
+          %{
+            name: "Credential",
+            id: "new-credential-option-menu-item",
+            target: "new_credential"
+          },
+          %{
+            name: "OAuth client",
+            id: "new-oauth-client-option-menu-item",
+            target: "new_oauth_client",
+            badge: "Advanced"
+          }
+        ]
+      end)
+
     ~H"""
     <Common.simple_dropdown id={@id}>
       <:button>
-        {render_slot(@inner_block)}
+        Add new
       </:button>
       <:options>
         <a

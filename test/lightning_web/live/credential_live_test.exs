@@ -147,8 +147,30 @@ defmodule LightningWeb.CredentialLiveTest do
            conn: conn,
            credential: credential
          } do
-      {:ok, index_live, html} =
-        live(conn, ~p"/credentials/#{credential.id}/delete", on_error: :raise)
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      # modal doesn't exist
+      refute has_element?(index_live, "#credential-#{credential.id}")
+
+      # delete now button doesn't exist
+      refute has_element?(
+               index_live,
+               "#credential-actions-#{credential.id}-delete-now"
+             )
+
+      # cancel delete button doesn't exists
+      refute has_element?(
+               index_live,
+               "#credential-actions-#{credential.id}-cancel-deletion"
+             )
+
+      html =
+        index_live
+        |> element("#credential-actions-#{credential.id}-delete")
+        |> render_click()
+
+      # modal now exists
+      assert has_element?(index_live, "#credential-#{credential.id}")
 
       assert html =~ "Delete credential"
 
@@ -158,20 +180,38 @@ defmodule LightningWeb.CredentialLiveTest do
       refute html =~ "credential has been used in workflow runs"
 
       assert index_live
-             |> element("button", "Delete credential")
+             |> element(
+               "#credential-#{credential.id} button",
+               "Delete credential"
+             )
              |> has_element?()
 
-      {:ok, view, html} =
+      {:ok, view, _html} =
         index_live
-        |> element("button", "Delete credential")
+        |> element("#credential-#{credential.id} button", "Delete credential")
         |> render_click()
         |> follow_redirect(conn, ~p"/credentials")
 
-      assert html =~ "Credential scheduled for deletion"
-      assert html =~ "Cancel deletion"
-      assert html =~ "Delete now"
+      # delete button doesn't exist
+      refute has_element?(
+               view,
+               "#credential-actions-#{credential.id}-delete"
+             )
 
-      assert has_element?(view, "#credentials-#{credential.id}")
+      # delete now button  exists
+      assert has_element?(
+               view,
+               "#credential-actions-#{credential.id}-delete-now"
+             )
+
+      # cancel delete button  exists
+      assert has_element?(
+               view,
+               "#credential-actions-#{credential.id}-cancel-deletion"
+             )
+
+      # modal doesn't exist. It was closed on redirect
+      refute has_element?(view, "#credential-#{credential.id}")
     end
 
     test "can schedule for deletion a credential that is associated to activities",
@@ -181,29 +221,41 @@ defmodule LightningWeb.CredentialLiveTest do
          } do
       insert(:step, credential: credential)
 
-      {:ok, index_live, html} =
-        live(conn, ~p"/credentials/#{credential.id}/delete", on_error: :raise)
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      html =
+        index_live
+        |> element("#credential-actions-#{credential.id}-delete")
+        |> render_click()
 
       assert html =~ "Delete credential"
 
       assert html =~ "Deleting this credential will immediately"
       assert html =~ "*This credential has been used in workflow runs"
 
-      assert index_live
-             |> element("button", "Delete credential")
-             |> has_element?()
-
-      {:ok, view, html} =
+      {:ok, view, _html} =
         index_live
-        |> element("button", "Delete credential")
+        |> element("#credential-#{credential.id} button", "Delete credential")
         |> render_click()
         |> follow_redirect(conn, ~p"/credentials")
 
-      assert html =~ "Credential scheduled for deletion"
-      assert html =~ "Cancel deletion"
-      assert html =~ "Delete now"
+      # delete button doesn't exist
+      refute has_element?(
+               view,
+               "#credential-actions-#{credential.id}-delete"
+             )
 
-      assert has_element?(view, "#credentials-#{credential.id}")
+      # delete now button  exists
+      assert has_element?(
+               view,
+               "#credential-actions-#{credential.id}-delete-now"
+             )
+
+      # cancel delete button  exists
+      assert has_element?(
+               view,
+               "#credential-actions-#{credential.id}-cancel-deletion"
+             )
     end
 
     test "cancel a scheduled for deletion credential", %{
@@ -213,25 +265,35 @@ defmodule LightningWeb.CredentialLiveTest do
       insert(:step, credential: credential)
       {:ok, credential} = Credentials.schedule_credential_deletion(credential)
 
-      {:ok, index_live, _html} =
-        live(conn, ~p"/credentials", on_error: :raise)
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      assert index_live
-             |> element("#credentials-#{credential.id} a", "Cancel deletion")
-             |> has_element?()
+      assert has_element?(
+               index_live,
+               "#credential-actions-#{credential.id}-cancel-deletion",
+               "Cancel deletion"
+             )
 
       index_live
-      |> element("#credentials-#{credential.id} a", "Cancel deletion")
+      |> element(
+        "#credential-actions-#{credential.id}-cancel-deletion",
+        "Cancel deletion"
+      )
       |> render_click()
 
-      {:ok, index_live, html} = live(conn, ~p"/credentials", on_error: :raise)
+      assert_patched(index_live, ~p"/credentials")
 
-      refute html =~ "Cancel deletion"
-      refute html =~ "Delete now"
+      assert render(index_live) =~ "Credential deletion canceled"
 
-      assert html =~ "Delete"
+      refute has_element?(
+               index_live,
+               "#credential-actions-#{credential.id}-cancel-deletion",
+               "Cancel deletion"
+             )
 
-      assert has_element?(index_live, "#credentials-#{credential.id}")
+      refute has_element?(
+               index_live,
+               "#credential-actions-#{credential.id}-delete-now"
+             )
     end
 
     test "can delete credential that has no activity in projects", %{
@@ -240,8 +302,12 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, credential} = Credentials.schedule_credential_deletion(credential)
 
-      {:ok, index_live, html} =
-        live(conn, ~p"/credentials/#{credential.id}/delete", on_error: :raise)
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      html =
+        index_live
+        |> element("#credential-actions-#{credential.id}-delete-now")
+        |> render_click()
 
       assert html =~
                "Deleting this credential will immediately remove it from all jobs"
@@ -249,16 +315,19 @@ defmodule LightningWeb.CredentialLiveTest do
       refute html =~ "credential has been used in workflow runs"
 
       assert index_live
-             |> element("button", "Delete credential")
+             |> element(
+               "#credential-#{credential.id} button",
+               "Delete credential"
+             )
              |> has_element?()
 
-      index_live |> element("button", "Delete credential") |> render_click()
+      index_live
+      |> element("#credential-#{credential.id} button", "Delete credential")
+      |> render_click()
 
-      assert_redirected(index_live, ~p"/credentials")
+      flash = assert_redirected(index_live, ~p"/credentials")
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      refute has_element?(index_live, "#credential-#{credential.id}")
+      assert flash["info"] == "Credential deleted successfully"
     end
 
     test "cannot delete credential that has activity in projects", %{
@@ -268,41 +337,91 @@ defmodule LightningWeb.CredentialLiveTest do
       insert(:step, credential: credential)
       {:ok, credential} = Credentials.schedule_credential_deletion(credential)
 
-      {:ok, index_live, html} =
-        live(conn, ~p"/credentials/#{credential.id}/delete", on_error: :raise)
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      html =
+        index_live
+        |> element("#credential-actions-#{credential.id}-delete-now")
+        |> render_click()
 
       assert html =~ "This credential has been used in workflow runs"
       assert html =~ "will be made unavailable for future use immediately"
 
-      assert index_live |> element("button", "Ok, understood") |> has_element?()
+      assert has_element?(
+               index_live,
+               "#credential-#{credential.id} button",
+               "Ok, understood"
+             )
 
-      index_live |> element("button", "Ok, understood") |> render_click()
+      # forcing the event results in error
+      index_live
+      |> with_target("#credential-#{credential.id}")
+      |> render_click("delete", %{id: credential.id})
 
-      assert_redirected(index_live, ~p"/credentials")
+      flash = assert_redirected(index_live, ~p"/credentials")
 
-      {:ok, index_live, _html} =
-        live(conn, ~p"/credentials", on_error: :raise)
-
-      assert has_element?(index_live, "#credentials-#{credential.id}")
+      assert flash["error"] ==
+               "Cannot delete a credential that has activities in projects"
     end
 
-    test "user can only delete their own credential", %{
-      conn: conn
-    } do
-      credential = credential_fixture()
+    test "non credential owner cannot delete credentials in project settings page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      credential_owner = insert(:user)
 
-      {:ok, _index_live, html} =
-        live(conn, ~p"/credentials/#{credential.id}/delete", on_error: :raise)
-        |> follow_redirect(conn, ~p"/credentials")
+      project =
+        insert(:project,
+          project_users: [
+            %{user: user, role: :owner},
+            %{user: credential_owner, role: :admin}
+          ]
+        )
 
-      assert html =~ "You can&#39;t perform this action"
+      credential =
+        insert(:credential,
+          user: credential_owner,
+          project_credentials: [%{project: project}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ credential.name
+
+      refute has_element?(
+               view,
+               "#credential-actions-#{credential.id}-delete"
+             )
+
+      # send the event anyway
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("request_credential_deletion", %{id: credential.id})
+
+      assert_patched(view, ~p"/projects/#{project}/settings")
+
+      assert render(view) =~ "You are not authorized to perform this action"
+
+      credential =
+        Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
+
+      refute credential.scheduled_deletion
     end
 
     test "delete credentials in project settings page", %{
       conn: conn,
       user: user
     } do
-      project = insert(:project, project_users: [%{user: user, role: :owner}])
+      project =
+        insert(:project,
+          project_users: [
+            %{user: user, role: :owner}
+          ]
+        )
 
       credential =
         insert(:credential,
@@ -317,16 +436,22 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert html =~ credential.name
 
+      html =
+        view
+        |> element("#credential-actions-#{credential.id}-delete")
+        |> render_click()
+
+      assert html =~
+               "Deleting this credential will immediately remove it from all jobs"
+
       view
-      |> element("#delete_credential_#{credential.id}_modal_confirm_button")
-      |> render_click() =~ "Credential deleted"
+      |> element("#credential-#{credential.id} button", "Delete credential")
+      |> render_click()
 
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      flash =
+        assert_redirected(view, ~p"/projects/#{project}/settings#credentials")
 
-      refute html =~ credential.name
+      assert flash["info"] == "Credential scheduled for deletion"
 
       credential =
         Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
@@ -359,10 +484,19 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert html =~ credential.name
 
-      refute view
-             |> has_element?(
-               "#delete_credential_#{credential.id}_modal_confirm_button"
+      refute has_element?(
+               view,
+               "#credential-actions-#{credential.id}-delete"
              )
+
+      # send the event anyway
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("request_credential_deletion", %{id: credential.id})
+
+      assert_patched(view, ~p"/projects/#{project}/settings")
+
+      assert render(view) =~ "You are not authorized to perform this action"
     end
   end
 
@@ -375,6 +509,10 @@ defmodule LightningWeb.CredentialLiveTest do
       project2 = insert(:project, project_users: [%{user: user, role: :admin}])
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      index_live
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       index_live |> select_credential_type("raw")
       index_live |> click_continue()
@@ -456,6 +594,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
+      index_live
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
+
       index_live |> select_credential_type("raw")
       index_live |> click_continue()
 
@@ -508,6 +650,10 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      index_live
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       # Pick a type
 
@@ -572,6 +718,10 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      index_live
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       index_live |> select_credential_type("postgresql")
       index_live |> click_continue()
@@ -664,6 +814,10 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
+      index_live
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
+
       index_live |> select_credential_type("http")
       index_live |> click_continue()
 
@@ -712,6 +866,10 @@ defmodule LightningWeb.CredentialLiveTest do
            conn: conn
          } do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       select_credential_type(view, "godata")
       click_continue(view)
@@ -762,6 +920,10 @@ defmodule LightningWeb.CredentialLiveTest do
     test "updates a credential", %{conn: conn, credential: credential} do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
+      index_live
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
+
       assert index_live
              |> fill_credential(
                @invalid_attrs,
@@ -809,6 +971,10 @@ defmodule LightningWeb.CredentialLiveTest do
       assert Lightning.Repo.all(audit_events_query) == []
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
 
       view
       |> element("#project-credentials-list-#{credential.id}")
@@ -867,7 +1033,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      refute has_element?(view, "#project-credentials-list-#{credential.id}")
+      refute has_element?(view, "#credential-actions-#{credential.id}-edit")
     end
 
     test "removes project with access", %{
@@ -896,6 +1062,10 @@ defmodule LightningWeb.CredentialLiveTest do
       assert Lightning.Repo.all(audit_events_query) == []
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
 
       view
       |> delete_credential_button(project.id)
@@ -938,6 +1108,10 @@ defmodule LightningWeb.CredentialLiveTest do
       insert(:project_credential, project: project, credential: credential)
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
 
       # Try adding an existing project credential
       view
@@ -985,6 +1159,10 @@ defmodule LightningWeb.CredentialLiveTest do
       credential: credential
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      index_live
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
 
       {:ok, _index_live, html} =
         index_live
@@ -1214,6 +1392,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
+
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
 
@@ -1295,6 +1477,10 @@ defmodule LightningWeb.CredentialLiveTest do
       oauth_client = insert(:oauth_client, user: user)
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1379,6 +1565,10 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1471,6 +1661,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
+
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
 
@@ -1557,6 +1751,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
+
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
 
@@ -1635,6 +1833,10 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1715,6 +1917,10 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1797,6 +2003,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       conn = log_in_user(conn, owner)
       {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> element("#credential-actions-#{credential.id}-transfer")
+      |> render_click()
 
       %{
         owner: owner,
@@ -2012,6 +2222,10 @@ defmodule LightningWeb.CredentialLiveTest do
       conn = log_in_user(conn, owner)
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
+      view
+      |> element("#credential-actions-#{credential.id}-transfer")
+      |> render_click()
+
       %{
         owner: owner,
         project: project,
@@ -2086,6 +2300,11 @@ defmodule LightningWeb.CredentialLiveTest do
   describe "credential type picker modal" do
     test "displays credential type modal with icons", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/credentials")
+
+      html =
+        view
+        |> element("#new-credential-option-menu-item")
+        |> render_click()
 
       html_tree = Floki.parse_document!(html)
 
@@ -2162,6 +2381,10 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -2297,6 +2520,10 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
+
+      view
       |> fill_credential(
         %{
           name: "My Generic OAuth Credential"
@@ -2346,6 +2573,10 @@ defmodule LightningWeb.CredentialLiveTest do
       oauth_client = insert(:oauth_client, user: user)
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -2404,6 +2635,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
+      index_live
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
+
       refute index_live |> has_element?("#scope-change-action")
 
       oauth_client.optional_scopes
@@ -2447,6 +2682,10 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      edit_live
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
 
       Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
         {_, assigns} =
@@ -2496,6 +2735,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
+      edit_live
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
+
       Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
         {_, assigns} =
           Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
@@ -2535,6 +2778,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, html} = live(conn, ~p"/credentials", on_error: :raise)
 
+      view
+      |> element("#credential-actions-#{credential.id}-edit")
+      |> render_click()
+
       assert html =~ credential.name
       refute view |> has_element?("h3", "OAuth client not found")
 
@@ -2562,6 +2809,10 @@ defmodule LightningWeb.CredentialLiveTest do
       oauth_client = insert(:oauth_client, user: user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       index_live |> select_credential_type(oauth_client.id)
       index_live |> click_continue()
@@ -2646,6 +2897,10 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      index_live
+      |> element("#new-credential-option-menu-item")
+      |> render_click()
 
       index_live |> select_credential_type(oauth_client.id)
       index_live |> click_continue()

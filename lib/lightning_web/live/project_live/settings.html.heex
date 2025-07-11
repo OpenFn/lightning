@@ -246,23 +246,15 @@
           subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
           permissions_message="available credentials."
           can_perform_action={@can_create_project_credential}
-          action_button_text="Add new"
-          action_button_id="options-menu-button"
-          action_button_disabled={!@can_create_project_credential}
-          options={[
-            %{
-              name: "Credential",
-              id: "new-credential-option-menu-item",
-              target: "new_credential"
-            },
-            %{
-              name: "OAuth client",
-              id: "new-oauth-client-option-menu-item",
-              target: "new_oauth_client",
-              badge: "Advanced"
-            }
-          ]}
-        />
+        >
+          <:action_button>
+            <LightningWeb.Components.Credentials.new_credential_menu_button
+              id="project-credential-options-menu-button"
+              disabled={!@can_create_project_credential}
+            />
+          </:action_button>
+        </.section_header>
+
         <LightningWeb.Components.Credentials.credentials_index_live_component
           current_user={@current_user}
           project={@project}

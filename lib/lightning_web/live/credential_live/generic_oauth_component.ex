@@ -46,7 +46,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        optional_scopes: [],
        scopes: selected_scopes,
        allow_credential_transfer: assigns.allow_credential_transfer,
-       return_to: assigns.return_to
+       return_to: assigns.return_to,
+       modal_id: assigns.modal_id
      )}
   end
 
@@ -84,7 +85,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        scopes: scopes,
        authorize_url: authorize_url,
        allow_credential_transfer: assigns.allow_credential_transfer,
-       return_to: assigns.return_to
+       return_to: assigns.return_to,
+       modal_id: assigns.modal_id
      )}
   end
 
@@ -112,7 +114,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        scopes: mandatory_scopes ++ optional_scopes,
        authorize_url: authorize_url,
        allow_credential_transfer: assigns.allow_credential_transfer,
-       return_to: assigns.return_to
+       return_to: assigns.return_to,
+       modal_id: assigns.modal_id
      )}
   end
 
@@ -660,8 +663,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             Save
           </.button>
           <LightningWeb.Components.Credentials.credential_modal_cancel_button
-            modal_id={assigns[:modal_id]}
-            {@on_modal_close && %{on_modal_close: @on_modal_close}}
+            modal_id={@modal_id}
+            {if(@on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{})}
           />
         </.modal_footer>
       </.form>
