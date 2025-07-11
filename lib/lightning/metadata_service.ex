@@ -110,13 +110,17 @@ defmodule Lightning.MetadataService do
   end
 
   defp get_output_path(result) do
-    path =
+    last_message =
       result
       |> CLI.Result.get_messages()
       |> List.last()
 
     cond do
-      path ->
+      is_map(last_message) ->
+        {:error, Error.new("no_metadata_result")}
+
+      Regex.match?(~r"^[/a-zA-z0-9\-_\.]+\.json$", last_message) ->
+        path = last_message
         {:ok, path}
 
       should_have_metadata(result) ->
