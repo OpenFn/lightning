@@ -1,0 +1,122 @@
+<%!-- Mini History Component Template --%>
+<div class="h-96 max-h-96 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+  <%!-- Header --%>
+  <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
+    <div class="flex items-center gap-2">
+      <h3 class="text-sm font-medium text-gray-700">Recent Activity</h3>
+      <.link
+        navigate={~p"/projects/#{@project_id}/history"}
+        class="text-gray-400 hover:text-gray-600 transition-colors"
+        title="View full history"
+      >
+        <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" />
+      </.link>
+    </div>
+
+    <div
+      class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+      title="Collapse panel"
+    >
+      <.icon name="hero-chevron-left" class="w-4 h-4" />
+    </div>
+  </div>
+
+  <%!-- Content Area --%>
+  <div class="overflow-y-auto h-full">
+    <%= if @loading do %>
+      <div class="flex items-center justify-center py-8">
+        <div class="text-sm text-gray-500">Loading recent activity...</div>
+      </div>
+    <% else %>
+      <%= if @workorders_with_runs == [] do %>
+        <div class="flex flex-col items-center justify-center py-8 text-gray-500">
+          <.icon name="hero-clock" class="w-8 h-8 mb-2 opacity-50" />
+          <p class="text-sm font-medium">No recent activity</p>
+          <p class="text-xs text-gray-400 mt-1">
+            Run your workflow to see execution history
+          </p>
+        </div>
+      <% else %>
+        <div class="divide-y divide-gray-100">
+          <%= for workorder <- @workorders_with_runs do %>
+            <%!-- Work Order Row --%>
+            <div class="px-3 py-2 hover:bg-gray-50 transition-colors">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <.link
+                      phx-click="toggle_workorder"
+                      phx-value-workorder_id={workorder.id}
+                      phx-target={@myself}
+                      class="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <%= if MapSet.member?(@expanded_workorders, workorder.id) do %>
+                        <.icon name="hero-chevron-down" class="w-4 h-4" />
+                      <% else %>
+                        <.icon name="hero-chevron-right" class="w-4 h-4" />
+                      <% end %>
+                    </.link>
+
+                    <span class="text-xs text-gray-500 font-mono">
+                      {format_compact_date(workorder.inserted_at)}
+                    </span>
+                  </div>
+
+                  <span class="text-xs text-gray-500 truncate">
+                    {display_short_uuid(workorder.id)}
+                  </span>
+                </div>
+
+                <div class="flex items-center">
+                  <Components.state_pill state={workorder.state} size={:mini} />
+                </div>
+              </div>
+            </div>
+
+            <%!-- Runs (when expanded) --%>
+            <%= if MapSet.member?(@expanded_workorders, workorder.id) do %>
+              <%= for run <- workorder.runs do %>
+                <div class={[
+                  "pl-8 pr-3 py-1.5 text-xs hover:bg-gray-50 transition-colors cursor-pointer",
+                  if(@selected_run_id == run.id,
+                    do: "bg-indigo-50 border-l-2 border-l-indigo-500",
+                    else: ""
+                  )
+                ]}>
+                  <.link
+                    phx-click="select_run"
+                    phx-value-run_id={run.id}
+                    phx-target={@myself}
+                    class="flex items-center justify-between w-full"
+                  >
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                      <span class="text-gray-500 font-mono">
+                        <%= if run.started_at do %>
+                          {format_compact_date(run.started_at)}
+                        <% else %>
+                          {format_compact_date(run.inserted_at)}
+                        <% end %>
+                      </span>
+
+                      <span class="text-gray-500 truncate">
+                        {display_short_uuid(run.id)}
+                      </span>
+
+                      <span class="text-gray-400 text-xs">
+                        {format_duration(run.started_at, run.finished_at)}
+                      </span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <Components.state_pill state={run.state} size={:mini} />
+                    </div>
+                  </.link>
+                </div>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>
