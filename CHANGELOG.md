@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Keystrokes for `⌘+Enter` or `Ctrl+Enter` to run a workflow from the canvas
+  [3320](https://github.com/OpenFn/lightning/issues/3320)
+
 ### Changed
 
 ### Fixed
