@@ -199,7 +199,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </.td>
         <.td>
           <Common.datetime datetime={@work_order.last_activity} />
-          ({@work_order.runs |> Enum.count()})
+
         </.td>
         <.td class="text-right">
           <LightningWeb.RunLive.Components.elapsed_indicator
@@ -212,14 +212,21 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <.state_pill state={@work_order.state} />
           </div>
         </.td>
-        <.td>
+        <.td class="text-right pr-2">
           <%= if @work_order.runs !== [] do %>
-            <.icon
-              name={
-                if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
-              }
-              class="size-4 text-gray-400"
-            />
+            <div class="flex items-center justify-end gap-2">
+              <%= if Enum.count(@work_order.runs) > 1 do %>
+                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                  {Enum.count(@work_order.runs)}
+                </span>
+              <% end %>
+              <.icon
+                name={
+                  if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
+                }
+                class="size-4 text-gray-400"
+              />
+            </div>
           <% end %>
         </.td>
       </.tr>
