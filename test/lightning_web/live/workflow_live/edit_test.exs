@@ -3580,11 +3580,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
-    describe "keyboard shortcuts" do
+  describe "keyboard shortcuts" do
     setup %{project: project} do
       workflow =
         insert(:simple_workflow, project: project)
         |> with_snapshot()
+
       {:ok, workflow: workflow}
     end
 
@@ -3603,8 +3604,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Check that the OpenRunPanelViaCtrlEnter hook is present on the workflow container
       workflow_container = view |> element("#workflow-edit-#{workflow.id}")
       assert has_element?(workflow_container)
-      assert render(workflow_container) =~ "phx-hook=\"OpenRunPanelViaCtrlEnter\""
-      assert render(workflow_container) =~ "data-keybinding-scope=\"workflow-editor\""
+
+      assert render(workflow_container) =~
+               "phx-hook=\"OpenRunPanelViaCtrlEnter\""
+
+      assert render(workflow_container) =~
+               "data-keybinding-scope=\"workflow-editor\""
     end
 
     test "OpenRunPanelViaCtrlEnter hook is present with job selected", %{
@@ -3625,8 +3630,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Hook should still be present when a job is selected
       workflow_container = view |> element("#workflow-edit-#{workflow.id}")
       assert has_element?(workflow_container)
-      assert render(workflow_container) =~ "phx-hook=\"OpenRunPanelViaCtrlEnter\""
-      assert render(workflow_container) =~ "data-keybinding-scope=\"workflow-editor\""
+
+      assert render(workflow_container) =~
+               "phx-hook=\"OpenRunPanelViaCtrlEnter\""
+
+      assert render(workflow_container) =~
+               "data-keybinding-scope=\"workflow-editor\""
 
       # Run button should be present for step-aware behavior
       run_button = view |> element("#run-from-step-#{job.id}")
@@ -3651,8 +3660,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Hook should be present even in expand mode
       workflow_container = view |> element("#workflow-edit-#{workflow.id}")
       assert has_element?(workflow_container)
-      assert render(workflow_container) =~ "phx-hook=\"OpenRunPanelViaCtrlEnter\""
-      assert render(workflow_container) =~ "data-keybinding-scope=\"workflow-editor\""
+
+      assert render(workflow_container) =~
+               "phx-hook=\"OpenRunPanelViaCtrlEnter\""
+
+      assert render(workflow_container) =~
+               "data-keybinding-scope=\"workflow-editor\""
     end
   end
 
