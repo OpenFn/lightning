@@ -64,6 +64,7 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   attr :state, :atom, required: true
+  attr :size, :atom, default: :normal, values: [:normal, :mini]
 
   @spec state_pill(%{:state => any(), optional(any()) => any()}) ::
           Phoenix.LiveView.Rendered.t()
@@ -87,16 +88,45 @@ defmodule LightningWeb.RunLive.Components do
       lost: "bg-gray-800 text-white"
     }
 
+    state_icons = %{
+      rejected: "hero-x-circle",
+      pending: "hero-clock",
+      running: "hero-play-circle",
+      available: "hero-clock",
+      claimed: "hero-arrow-right-circle",
+      started: "hero-play-circle",
+      success: "hero-check-circle",
+      failed: "hero-x-circle",
+      crashed: "hero-exclamation-triangle",
+      cancelled: "hero-no-symbol",
+      killed: "hero-shield-exclamation",
+      exception: "hero-exclamation-circle",
+      lost: "hero-question-mark-circle"
+    }
+
+    {size_classes, content} = case assigns[:size] do
+      :mini ->
+        {"w-5 h-5 p-0.5 rounded-full flex items-center justify-center", :icon}
+      _ ->
+        {"py-2 px-4 text-xs font-medium rounded-full", :text}
+    end
+
     assigns =
       assign(assigns,
         text: display_text_from_state(state),
-        classes: Map.get(chip_styles, state)
+        classes: Map.get(chip_styles, state),
+        size_classes: size_classes,
+        content_type: content,
+        icon_name: Map.get(state_icons, state, "hero-question-mark-circle")
       )
 
     ~H"""
-    <span class={["my-auto whitespace-nowrap rounded-full
-    py-2 px-4 text-center align-baseline text-xs font-medium leading-none", @classes]}>
-      {@text}
+    <span class={["my-auto whitespace-nowrap text-center align-baseline leading-none", @classes, @size_classes]}>
+      <%= if @content_type == :icon do %>
+        <.icon name={@icon_name} class="h-3 w-3" />
+      <% else %>
+        {@text}
+      <% end %>
     </span>
     """
   end
