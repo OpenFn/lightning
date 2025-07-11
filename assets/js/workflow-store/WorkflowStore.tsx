@@ -160,6 +160,15 @@ export const WorkflowStore: WithActionProps = props => {
     });
   }, [props, setDisabled]);
 
+  React.useEffect(() => {
+    return props.handleEvent('run-selected-from-history', (payload: unknown) => {
+      console.debug('run-selected-from-history', payload);
+      const response = payload as { run_id: string; run_steps: RunSteps[] };
+      const { run_steps } = response;
+      setState((prevState) => ({ ...prevState, runSteps: run_steps }));
+    });
+  }, [props, setState]);
+
   // clear store when store-component unmounted
   React.useEffect(() => {
     return () => {

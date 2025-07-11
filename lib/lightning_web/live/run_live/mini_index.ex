@@ -55,29 +55,40 @@ defmodule LightningWeb.RunLive.MiniIndex do
     {:noreply, assign(socket, selected_run_id: run_id)}
   end
 
-    defp load_data(socket) do
-    %{workflow_id: workflow_id} = socket.assigns
+        defp load_data(socket) do
+    case socket.assigns do
+      %{workflow_id: workflow_id} when not is_nil(workflow_id) ->
+        # Get last 7 days of activity, limit to 20 items for the CURRENT workflow only
+        from_date = DateTime.utc_now() |> DateTime.add(-7, :day)
 
-    # Get last 7 days of activity, limit to 20 items
-    from_date = DateTime.utc_now() |> DateTime.add(-7, :day)
+        workorders_with_runs =
+          from(wo in WorkOrder,
+            where: wo.workflow_id == ^workflow_id
+                   and wo.inserted_at >= ^from_date,
+            order_by: [desc: wo.inserted_at],
+            limit: 20,
+            preload: [runs: [:work_order]]
+          )
+          |> Repo.all()
 
-    workorders_with_runs =
-      from(wo in WorkOrder,
-        where: wo.workflow_id == ^workflow_id
-               and wo.inserted_at >= ^from_date,
-        order_by: [desc: wo.inserted_at],
-        limit: 20,
-        preload: [runs: [:work_order]]
-      )
-      |> Repo.all()
+        socket
+        |> assign(
+          workorders_with_runs: workorders_with_runs,
+          expanded_workorders: socket.assigns[:expanded_workorders] || MapSet.new(),
+          selected_run_id: socket.assigns[:selected_run_id],
+          loading: false
+        )
 
-    socket
-    |> assign(
-      workorders_with_runs: workorders_with_runs,
-      expanded_workorders: socket.assigns[:expanded_workorders] || MapSet.new(),
-      selected_run_id: socket.assigns[:selected_run_id],
-      loading: false
-    )
+      _ ->
+        # No workflow_id available, show empty state
+        socket
+        |> assign(
+          workorders_with_runs: [],
+          expanded_workorders: MapSet.new(),
+          selected_run_id: nil,
+          loading: false
+        )
+    end
   end
 
   defp format_compact_date(datetime) do

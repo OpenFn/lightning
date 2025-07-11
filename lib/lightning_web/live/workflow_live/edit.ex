@@ -2165,7 +2165,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_disable_canvas()}
   end
 
-        def handle_info({:run_selected, run_id}, socket) do
+          def handle_info({:run_selected, run_id}, socket) do
     run = Runs.get(run_id)
 
     if run do
@@ -2179,6 +2179,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
         error_type: step.error_type,
         exit_reason: step.exit_reason
       } end)
+
+      # Update mini history component to show selected state
+      send_update(LightningWeb.RunLive.MiniIndex,
+        id: "canvas-mini-history",
+        selected_run_id: run_id
+      )
 
       # Push events to notify canvas about run selection
       socket = socket
