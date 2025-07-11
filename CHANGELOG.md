@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Handling of CLI error messages when fetching metadata via an adaptor
+  [#3367](https://github.com/OpenFn/lightning/issues/3367)
+
 ## [v2.13.5-pre] 2025-07-11
 
 ### Added
@@ -39,8 +42,6 @@ and this project adheres to
 
 - Isolate failed to refresh token errors from other oauth errros
   [#3332](https://github.com/OpenFn/lightning/issues/3332)
-- Handling of CLI error messages when fetching metadata via an adaptor
-  [#3367](https://github.com/OpenFn/lightning/issues/3367)
 
 ## [v2.13.4] - 2025-07-05
 
