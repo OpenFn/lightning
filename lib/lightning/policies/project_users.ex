@@ -22,6 +22,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_digest_alerts
           | :edit_failure_alerts
           | :create_project_credential
+          | :create_keychain_credential
           | :edit_keychain_credential
           | :delete_keychain_credential
           | :edit_data_retention
@@ -78,6 +79,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :remove_project_user,
              :edit_run_settings,
              :create_collection,
+             :create_keychain_credential,
              :edit_keychain_credential,
              :delete_keychain_credential
            ],
@@ -93,6 +95,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :remove_project_user,
              :edit_run_settings,
              :create_collection,
+             :create_keychain_credential,
              :edit_keychain_credential,
              :delete_keychain_credential
            ],

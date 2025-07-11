@@ -142,7 +142,7 @@ defmodule LightningWeb.Components.DataTables do
           <:header>
             <.tr>
               <.th>Name</.th>
-              <.th>JSONPath</.th>
+              <.th>Path</.th>
               <.th>Default Credential</.th>
               <.th :if={@show_owner}>
                 Owner

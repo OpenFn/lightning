@@ -290,13 +290,18 @@ defmodule LightningWeb.Components.Credentials do
           role="menuitem"
           tabindex="-1"
           id={id}
-          phx-click={target}
-          phx-target={@phx_target}
-          disabled={@disabled}
+          phx-click={Map.get(option, :disabled, false) || show_modal(target)}
+          class={
+            Map.get(option, :disabled, false) && "text-gray-400 cursor-not-allowed"
+          }
         >
           {name}<span
             :if={Map.get(option, :badge)}
-            class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
+            class={[
+              "ml-2 inline-flex items-center rounded-md bg-gray-50",
+              "px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1",
+              "ring-inset ring-gray-500/10"
+            ]}
           ><%= Map.get(option, :badge) %></span>
         </a>
       </:options>

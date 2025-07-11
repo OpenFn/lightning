@@ -246,14 +246,33 @@
           subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
           permissions_message="available credentials."
           can_perform_action={@can_create_project_credential}
-        >
-          <:action_button>
-            <LightningWeb.Components.Credentials.new_credential_menu_button
-              id="project-credential-options-menu-button"
-              disabled={!@can_create_project_credential}
-            />
-          </:action_button>
-        </.section_header>
+          action_button_text="Add new"
+          action_button_id="options-menu-button"
+          action_button_disabled={
+            !@can_create_project_credential and !@can_create_keychain_credential
+          }
+          options={[
+            %{
+              name: "Credential",
+              id: "option-menu-item-1",
+              target: "new-credential-modal",
+              disabled: !@can_create_project_credential
+            },
+            %{
+              name: "Keychain credential",
+              id: "option-menu-item-2",
+              target: "new-keychain-credential-modal",
+              disabled: !@can_create_keychain_credential
+            },
+            %{
+              name: "OAuth client",
+              id: "option-menu-item-0",
+              target: "new-oauth-client-modal",
+              badge: "Advanced",
+              disabled: !@can_create_project_credential
+            }
+          ]}
+        />
 
         <LightningWeb.Components.Credentials.credentials_index_live_component
           current_user={@current_user}
@@ -421,13 +440,12 @@
                 button_text="Create a new keychain credential"
                 button_id="open-create-keychain-credential-modal-big-button"
                 button_click={show_modal("new-keychain-credential-modal")}
-                button_disabled={!@can_edit_keychain_credential}
+                button_disabled={!@can_create_keychain_credential}
               />
             </:empty_state>
             <:actions :let={keychain_credential}>
               <div :if={
-                can_edit?(keychain_credential, @current_user) or
-                  can_delete?(keychain_credential, @current_user)
+                @can_edit_keychain_credential or @can_delete_keychain_credential
               }>
                 <Common.simple_dropdown
                   id={"keychain-credential-actions-#{keychain_credential.id}-dropdown"}
@@ -439,7 +457,7 @@
 
                   <:options>
                     <.link
-                      :if={can_edit?(keychain_credential, @current_user)}
+                      :if={@can_edit_keychain_credential}
                       phx-click={
                         show_modal(
                           "edit-keychain-credential-#{keychain_credential.id}-modal"
@@ -449,7 +467,7 @@
                       Edit
                     </.link>
                     <.link
-                      :if={can_delete?(keychain_credential, @current_user)}
+                      :if={@can_delete_keychain_credential}
                       id={"delete-keychain-credential-#{keychain_credential.id}-button"}
                       phx-click={
                         show_modal(
@@ -463,6 +481,7 @@
                 </Common.simple_dropdown>
               </div>
               <.live_component
+                :if={@can_edit_keychain_credential}
                 id={"edit-keychain-credential-#{keychain_credential.id}-modal"}
                 module={
                   LightningWeb.CredentialLive.KeychainCredentialFormComponent
@@ -472,11 +491,11 @@
                 project={@project}
                 credentials={@credentials}
                 current_user={@current_user}
-                can_create_keychain_credential={@can_edit_keychain_credential}
+                project_user={@project_user}
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
               <LightningWeb.Components.Credentials.delete_keychain_credential_modal
-                :if={can_delete?(keychain_credential, @current_user)}
+                :if={@can_delete_keychain_credential}
                 id={"delete_keychain_credential_#{keychain_credential.id}_modal"}
                 keychain_credential={keychain_credential}
               />
@@ -527,6 +546,7 @@
             return_to={~p"/projects/#{@project.id}/settings#credentials"}
           />
           <.live_component
+            :if={@can_create_keychain_credential}
             id="new-keychain-credential-modal"
             module={LightningWeb.CredentialLive.KeychainCredentialFormComponent}
             action={:new}
@@ -534,7 +554,7 @@
             project={@project}
             credentials={@credentials}
             current_user={@current_user}
-            can_create_keychain_credential={@can_edit_keychain_credential}
+            project_user={@project_user}
             return_to={~p"/projects/#{@project.id}/settings#credentials"}
           />
         </div>

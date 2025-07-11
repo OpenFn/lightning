@@ -1335,12 +1335,10 @@ defmodule LightningWeb.ProjectLiveTest do
                "keychain-credential-actions-#{keychain_credential.id}-dropdown"
     end
 
-    test "keychain credential delete permissions by role", %{
-      conn: _conn,
+    test "keychain credential delete permissions by role via UI", %{
+      conn: conn,
       user: user
     } do
-      import LightningWeb.CredentialLive.Helpers
-
       admin_user = insert(:user)
       editor_user = insert(:user)
       viewer_user = insert(:user)
@@ -1364,17 +1362,79 @@ defmodule LightningWeb.ProjectLiveTest do
           created_by: admin_user
         )
 
-      # Owner should be able to delete keychain credentials
-      assert can_delete?(keychain_credential, user)
+      # Test as owner - should see actions dropdown
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials")
 
-      # Admin should be able to delete keychain credentials
-      assert can_delete?(keychain_credential, admin_user)
+      assert html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
 
-      # Editor should NOT be able to delete keychain credentials
-      refute can_delete?(keychain_credential, editor_user)
+      # Test as admin - should see actions dropdown
+      admin_conn = log_in_user(build_conn(), admin_user)
 
-      # Viewer should NOT be able to delete keychain credentials
-      refute can_delete?(keychain_credential, viewer_user)
+      {:ok, _view, html} =
+        live(admin_conn, ~p"/projects/#{project}/settings#credentials")
+
+      assert html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+
+      # Test as editor - should NOT see actions dropdown
+      editor_conn = log_in_user(build_conn(), editor_user)
+
+      {:ok, _view, html} =
+        live(editor_conn, ~p"/projects/#{project}/settings#credentials")
+
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+
+      # Test as viewer - should NOT see actions dropdown
+      viewer_conn = log_in_user(build_conn(), viewer_user)
+
+      {:ok, _view, html} =
+        live(viewer_conn, ~p"/projects/#{project}/settings#credentials")
+
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+    end
+
+    test "project editor cannot create keychain credentials", %{
+      conn: _conn,
+      user: user
+    } do
+      alias Lightning.Policies.Permissions
+      alias Lightning.Policies.ProjectUsers
+
+      admin_user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [
+            %{user_id: user.id, role: :editor},
+            %{user_id: admin_user.id, role: :admin}
+          ]
+        )
+
+      project_user = Lightning.Projects.get_project_user(project, user)
+
+      # Editor should NOT be able to create keychain credentials
+      refute Permissions.can?(
+               ProjectUsers,
+               :create_keychain_credential,
+               user,
+               project_user
+             )
+
+      # Admin should be able to create keychain credentials for comparison
+      admin_project_user =
+        Lightning.Projects.get_project_user(project, admin_user)
+
+      assert Permissions.can?(
+               ProjectUsers,
+               :create_keychain_credential,
+               admin_user,
+               admin_project_user
+             )
     end
 
     test "project admin can't edit project name and description with invalid data",

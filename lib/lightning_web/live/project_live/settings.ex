@@ -4,8 +4,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
-  import LightningWeb.CredentialLive.Helpers,
-    only: [can_edit?: 2, can_delete?: 2]
+  import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
   import LightningWeb.LayoutComponents
 
   alias Lightning.Accounts.User
@@ -138,6 +137,14 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
+    can_create_keychain_credential =
+      Permissions.can?(
+        ProjectUsers,
+        :create_keychain_credential,
+        current_user,
+        project_user
+      )
+
     can_create_collection =
       Permissions.can?(
         ProjectUsers,
@@ -171,6 +178,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_edit_data_retention: can_edit_data_retention,
        can_write_webhook_auth_method: can_write_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
+       can_create_keychain_credential: can_create_keychain_credential,
        can_edit_keychain_credential: can_edit_keychain_credential,
        can_delete_keychain_credential: can_delete_keychain_credential,
        project_repo_connection: repo_connection,
@@ -184,6 +192,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        show_invite_collaborators_modal: false,
        collaborators_to_invite: [],
        projects: projects,
+       project_user: project_user,
        new_keychain_credential:
          Credentials.new_keychain_credential(
            socket.assigns.current_user,

@@ -6,6 +6,8 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
 
   alias Lightning.Credentials
   alias LightningWeb.Components.NewInputs
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
 
   @valid_assigns [
     :id,
@@ -13,8 +15,8 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
     :keychain_credential,
     :project,
     :credentials,
+    :project_user,
     :current_user,
-    :can_create_keychain_credential,
     :return_to
   ]
 
@@ -37,12 +39,30 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
         []
       end
 
+    can_create =
+      Permissions.can?(
+        ProjectUsers,
+        :create_keychain_credential,
+        assigns.current_user,
+        assigns.project_user
+      )
+
+    can_edit =
+      Permissions.can?(
+        ProjectUsers,
+        :edit_keychain_credential,
+        assigns.current_user,
+        assigns.project_user
+      )
+
     {:ok,
      socket
      |> assign(initial_assigns)
      |> assign(
        changeset: changeset,
-       available_credentials: available_credentials
+       available_credentials: available_credentials,
+       can_create: can_create,
+       can_edit: can_edit
      )}
   end
 
@@ -59,6 +79,16 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
   def handle_event("save", %{"keychain_credential" => params}, socket) do
     save_keychain_credential(socket, socket.assigns.action, params)
   end
+
+  attr :id, :string
+  attr :action, :atom
+  attr :keychain_credential, Lightning.Credentials.KeychainCredential
+  attr :project, Lightning.Projects.Project
+  attr :credentials, :list, default: []
+  attr :project_user, Lightning.Projects.ProjectUser
+  attr :return_to, :string
+  attr :can_edit, :boolean
+  attr :can_create, :boolean
 
   @impl true
   def render(assigns) do
@@ -160,34 +190,54 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
   end
 
   defp save_keychain_credential(socket, :edit, params) do
-    case Credentials.update_keychain_credential(
-           socket.assigns.keychain_credential,
-           params
-         ) do
-      {:ok, _keychain_credential} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Keychain credential updated successfully")
-         |> push_navigate(to: socket.assigns.return_to)}
+    if socket.assigns.can_edit do
+      case Credentials.update_keychain_credential(
+             socket.assigns.keychain_credential,
+             params
+           ) do
+        {:ok, _keychain_credential} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Keychain credential updated successfully")
+           |> push_navigate(to: socket.assigns.return_to)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :changeset, changeset)}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(
+         :error,
+         "You are not authorized to edit this keychain credential"
+       )
+       |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 
   defp save_keychain_credential(socket, :new, params) do
-    case Credentials.create_keychain_credential(
-           socket.assigns.keychain_credential,
-           params
-         ) do
-      {:ok, _keychain_credential} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Keychain credential created successfully")
-         |> push_navigate(to: socket.assigns.return_to)}
+    if socket.assigns.can_create do
+      case Credentials.create_keychain_credential(
+             socket.assigns.keychain_credential,
+             params
+           ) do
+        {:ok, _keychain_credential} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Keychain credential created successfully")
+           |> push_navigate(to: socket.assigns.return_to)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :changeset, changeset)}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(
+         :error,
+         "You are not authorized to create keychain credentials"
+       )
+       |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 end
