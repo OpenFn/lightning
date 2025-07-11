@@ -371,7 +371,7 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
  * Handles Ctrl+Enter to either open run panel or execute workflow.
  *
  * BEHAVIOR:
- * 1. If run panel is open (URL contains 'm=workflow_input'):
+ * 1. If run panel is open (URL contains 'm=workflow_input' or 'm=expand'):
  *    → Try to click "Run Workflow Now" button using multiple selector strategies
  * 2. If step is selected (URL contains 's=') but no run panel:
  *    → Click the step's "Run" button to open run panel for that step
@@ -388,7 +388,8 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
  */
 const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
   // Check if run panel is already open by looking at the URL
-  const isRunPanelOpen = window.location.href.includes('m=workflow_input');
+  const isRunPanelOpen = window.location.href.includes('m=workflow_input') || 
+                         window.location.href.includes('m=expand');
 
   if (isRunPanelOpen) {
     // Panel is open, try to click the "Run Workflow Now" button

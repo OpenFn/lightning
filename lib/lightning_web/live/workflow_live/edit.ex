@@ -229,13 +229,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div class="flex-none" id="job-editor-pane">
             <div
               :if={@selected_job && @selection_mode == "expand"}
+              id={"inspector-panel-#{@selected_job.id}"}
               class={[
                 "fixed left-0 top-0 right-0 bottom-0 flex-wrap",
                 "hidden opacity-0",
-                "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
+                "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)] focus:outline-none"
               ]}
               phx-mounted={fade_in()}
-              phx-remove={fade_out()}
+              phx-remove={fade_out() |> JS.focus(to: "#workflow-edit-#{@workflow.id}")}
+              data-keybinding-scope="workflow-editor"
+              tabindex="0"
+              phx-hook="AutoFocusOnMount"
             >
               <LightningWeb.WorkflowLive.JobView.job_edit_view
                 job={@selected_job}
