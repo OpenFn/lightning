@@ -277,6 +277,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         href="#"
         phx-click="cancel_credential_deletion"
         phx-value-id={@credential.id}
+        phx-target={@myself}
       >
         Cancel deletion
       </.link>
@@ -284,6 +285,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         id={"delete-now-#{@credential.id}"}
         phx-click="request_credential_deletion"
         phx-value-id={@credential.id}
+        phx-target={@myself}
       >
         Delete now
       </.link>
@@ -292,6 +294,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         id={"delete-#{@credential.id}"}
         phx-click="request_credential_deletion"
         phx-value-id={@credential.id}
+        phx-target={@myself}
       >
         Delete
       </.link>
