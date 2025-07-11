@@ -1286,7 +1286,7 @@ defmodule LightningWeb.ProjectLiveTest do
           created_by: user
         )
 
-      {:ok, _view, html} =
+      {:ok, view, html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
@@ -1297,6 +1297,20 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # Verify that delete modal component is present in the page
       assert html =~ "delete_keychain_credential_#{keychain_credential.id}_modal"
+
+      # Test actual deletion by directly triggering the delete event
+      # Simulate clicking the delete confirmation button
+      html = view
+             |> element(
+               "#delete_keychain_credential_#{keychain_credential.id}_modal_confirm_button"
+             )
+             |> render_click()
+
+      # Verify the flash message appears
+      assert html =~ "Keychain credential deleted"
+
+      # Verify the keychain credential is removed from the UI
+      refute render(view) =~ keychain_credential.name
     end
 
     test "project editor cannot edit keychain credentials", %{
