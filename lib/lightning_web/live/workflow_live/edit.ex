@@ -218,6 +218,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-hook="OpenRunPanelViaCtrlEnter"
           data-keybinding-scope="workflow-editor"
           tabindex="0"
+          phx-mounted={JS.focus()}
         >
           <.selected_template_label
             :if={@selected_template && @show_new_workflow_panel}

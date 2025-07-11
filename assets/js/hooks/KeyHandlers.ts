@@ -370,13 +370,26 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
 /**
  * Handles Ctrl+Enter to either open run panel or execute workflow.
  *
- * @param e - The keyboard event that triggered the action.
- * @param el - The DOM element associated with the hook.
+ * BEHAVIOR:
+ * 1. If run panel is open (URL contains 'm=workflow_input'):
+ *    → Try to click "Run Workflow Now" button using multiple selector strategies
+ * 2. If step is selected (URL contains 's=') but no run panel:
+ *    → Click the step's "Run" button to open run panel for that step
+ * 3. If no step selected and no run panel:
+ *    → Click main "Run" link to open run panel from workflow start
+ *
+ * BUTTON FINDING STRATEGY (when run panel is open):
+ * 1. Try specific CSS selectors for known button patterns
+ * 2. Fall back to text search for any button containing "run"
+ * 3. Only click if button is not disabled
+ *
+ * @param _e - The keyboard event (unused but required by hook signature)
+ * @param _el - The DOM element (unused but required by hook signature)
  */
 const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
   // Check if run panel is already open by looking at the URL
   const isRunPanelOpen = window.location.href.includes('m=workflow_input');
-  
+
   if (isRunPanelOpen) {
     // Panel is open, try to click the "Run Workflow Now" button
     // Look for various possible selectors for the run button
@@ -384,11 +397,11 @@ const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
       'button[type="submit"][form*="manual_run"]',
       'button[id*="save-and-run"]',
       'button[phx-click*="manual_run"]',
-      'input[type="submit"][form*="manual"]'
+      'input[type="submit"][form*="manual"]',
     ];
-    
+
     let foundButton: HTMLElement | null = null;
-    
+
     // Try CSS selectors first
     for (const selector of selectors) {
       const element = document.querySelector(selector) as HTMLElement;
@@ -397,30 +410,35 @@ const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
         break;
       }
     }
-    
+
     // If no specific selector worked, search for buttons containing "Run"
     if (!foundButton) {
       const buttons = document.querySelectorAll('button, input[type="submit"]');
-      foundButton = Array.from(buttons).find(btn => {
-        const text = btn.textContent?.toLowerCase() || '';
-        return text.includes('run') && !btn.hasAttribute('disabled');
-      }) as HTMLElement | undefined || null;
+      foundButton =
+        (Array.from(buttons).find(btn => {
+          const text = btn.textContent?.toLowerCase() || '';
+          return text.includes('run') && !btn.hasAttribute('disabled');
+        }) as HTMLElement | undefined) || null;
     }
-    
+
     if (foundButton) {
       foundButton.click();
     }
   } else {
     // Check if a step is already selected by looking at the URL
     const isStepSelected = window.location.href.includes('s=');
-    
+
     if (isStepSelected) {
       // Step is selected, click the "Run" button on the step panel
-      const stepRunButton = document.querySelector('[id^="run-from-step-"]') as HTMLAnchorElement;
+      const stepRunButton = document.querySelector(
+        '[id^="run-from-step-"]'
+      ) as HTMLAnchorElement;
       stepRunButton?.click();
     } else {
       // No step selected, open it by clicking the run link
-      const runButton = document.querySelector('a[href*="m=workflow_input"]') as HTMLAnchorElement;
+      const runButton = document.querySelector(
+        'a[href*="m=workflow_input"]'
+      ) as HTMLAnchorElement;
       runButton?.click();
     }
   }
@@ -429,7 +447,7 @@ const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
 /**
  * Hook to open the Run panel when "Ctrl+Enter" (or "Cmd+Enter" on macOS) is pressed.
  *
- * This hook is scoped to the workflow editor and navigates to the run panel URL, which opens the 
+ * This hook is scoped to the workflow editor and navigates to the run panel URL, which opens the
  * workflow input interface for running the workflow.
  *
  * Priority: `PRIORITY.HIGH` within its scope, ensuring it takes precedence over other handlers in the workflow editor.
