@@ -24,6 +24,8 @@ and this project adheres to
 - Handling of CLI error messages when fetching metadata via an adaptor
   [#3367](https://github.com/OpenFn/lightning/issues/3367)
 
+## [v2.13.5] 2025-07-11
+
 ## [v2.13.5-pre] 2025-07-11
 
 ### Added
