@@ -372,6 +372,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 else: nil
             }
           />
+          <%!-- Mini History Panel - Floating on Canvas --%>
+          <div
+            :if={@workflow && @workflow.id && !@show_canvas_placeholder && !@show_new_workflow_panel}
+            class="absolute top-4 left-4 z-20 w-80"
+          >
+            <.live_component
+              module={LightningWeb.RunLive.MiniIndex}
+              id="canvas-mini-history"
+              workflow_id={@workflow.id}
+              project_id={@project.id}
+              selected_run_id={@follow_run && @follow_run.id}
+            />
+          </div>
           <.live_component
             :if={@selected_job}
             id="new-credential-modal"
@@ -1344,6 +1357,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
        if connected?(socket) do
          Workflows.Events.subscribe(socket.assigns.project.id)
 
+         # Subscribe to workorder events for mini history updates
+         Lightning.WorkOrders.Events.subscribe(socket.assigns.project.id)
+
          if changed?(socket, :selected_job) do
            Helpers.broadcast_updated_params(socket, %{
              job_id:
@@ -2120,7 +2136,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
       when run.id === follow_run_id do
     {:noreply,
      socket
-     |> assign(follow_run: run)}
+     |> assign(follow_run: run)
+     |> refresh_mini_history()}
+  end
+
+  def handle_info(%Lightning.WorkOrders.Events.WorkOrderCreated{}, socket) do
+    {:noreply, refresh_mini_history(socket)}
+  end
+
+  def handle_info(%Lightning.WorkOrders.Events.WorkOrderUpdated{}, socket) do
+    {:noreply, refresh_mini_history(socket)}
+  end
+
+  def handle_info(%Lightning.WorkOrders.Events.RunCreated{}, socket) do
+    {:noreply, refresh_mini_history(socket)}
   end
 
   def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
@@ -2134,6 +2163,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(summary)
      |> maybe_switch_workflow_version()
      |> maybe_disable_canvas()}
+  end
+
+    def handle_info({:run_selected, run_id}, socket) do
+    run = Runs.get(run_id)
+
+    if run do
+      {:noreply, follow_run(socket, run)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_info({:workflow_component_event, action, payload}, socket) do
@@ -3044,6 +3083,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp mark_validated(socket) do
     socket
     |> assign(changeset: socket.assigns.changeset |> Map.put(:action, :validate))
+  end
+
+  defp refresh_mini_history(socket) do
+    send_update(LightningWeb.RunLive.MiniIndex,
+      id: "canvas-mini-history",
+      action: :refresh
+    )
+    socket
   end
 
   defp with_changes_indicator(assigns) do
