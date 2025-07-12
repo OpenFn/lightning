@@ -139,7 +139,7 @@ function createKeyCombinationHook(
         const target = e.target as HTMLElement;
         const focusedScope =
           target
-            ?.closest('[data-keybinding-scope]')
+            .closest('[data-keybinding-scope]')
             ?.getAttribute('data-keybinding-scope') || null;
 
         const keyMatchingHandlers = Array.from(keyHandlers).filter(h =>
@@ -259,10 +259,12 @@ const submitAction = (_e: KeyboardEvent, el: HTMLElement) => {
 /**
  * Simulates a "close" action, used to close modals, panels, or other UI components.
  *
- * @param e - The keyboard event that triggered the action.
+ * @param _e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const closeAction = (_e: KeyboardEvent, el: HTMLElement) => el.click();
+const closeAction = (_e: KeyboardEvent, el: HTMLElement) => {
+  el.click();
+};
 
 /**
  * Hook to trigger a form submission when "Ctrl+S" (or "Cmd+S" on macOS) is pressed.
@@ -368,17 +370,17 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
 );
 
 /**
- * Handles Ctrl+Enter to either open run panel or execute workflow.
+ * Handles Ctrl+Enter to directly click the appropriate run button based on URL state.
  *
-  * BEHAVIOR (based purely on URL state):
- * 1a. If in inspector (URL contains 'm=expand'):
- *     → Click #save-and-run button to execute the workflow
- * 1b. If in run panel (URL contains 'm=workflow_input'): 
- *     → Click "Run Workflow Now" button to execute the workflow
- * 2. If step selected but not in panel (URL contains 's=' but no 'm='):
- *    → Navigate to run panel while preserving step selection in URL  
- * 3. If no step selected and no panel:
- *    → Click main "Run" link to open run panel from workflow start
+ * BEHAVIOR (based purely on URL state):
+ * 1. If in inspector (URL contains 'm=expand'):
+ *    → Click #save-and-run button to execute the workflow
+ * 2. If in run panel (URL contains 'm=workflow_input'):
+ *    → Click #run-from-input-selector button to execute the workflow
+ * 3. If step selected but not in inspector (URL contains 's=' but no 'm=expand'):
+ *    → Click #run-from-step or #run-from-trigger button based on what's available
+ * 4. If no step selected and no panel:
+ *    → Click #run-from-top button to open run panel from workflow start
  *
  * @param _e - The keyboard event (unused but required by hook signature)
  * @param _el - The DOM element (unused but required by hook signature)
@@ -392,37 +394,32 @@ const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
   const isInRunPanel = url.includes('m=workflow_input');
   
   if (isInInspector) {
-    // Inspector mode - look for the save-and-run button
-    const runButton = document.querySelector('#save-and-run:not([disabled])') as HTMLElement;
-    if (runButton) {
+    // Inspector mode - click the save-and-run button
+    const runButton = document.querySelector('#save-and-run:not([disabled])');
+    if (runButton instanceof HTMLElement) {
       runButton.click();
     }
   } else if (isInRunPanel) {
-    // Run panel mode - look for "Run Workflow Now" button or form submission
-    const runButton = Array.from(document.querySelectorAll('button')).find(btn => 
-      btn.textContent?.includes('Run Workflow Now')
-    ) as HTMLElement;
-    
-    if (runButton && !runButton.hasAttribute('disabled')) {
+    // Run panel mode - click the run-from-input-selector button
+    const runButton = document.querySelector('#run-from-input-selector:not([disabled])');
+    if (runButton instanceof HTMLElement) {
       runButton.click();
-    } else {
-      // Fallback: try to submit manual run form
-      const form = document.querySelector('form[id*="manual_run"]');
-      if (form) {
-        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-        form.dispatchEvent(submitEvent);
-      }
     }
   } else if (hasStepSelected) {
-    // Step selected but not in panel - navigate to run panel while preserving step selection
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('m', 'workflow_input');
-    // Keep the existing 's=' parameter to preserve step selection
-    window.location.href = currentUrl.toString();
+    // Step selected but not in inspector - click the appropriate run button
+    const runFromStepButton = document.querySelector('#run-from-step:not([disabled])');
+    const runFromTriggerButton = document.querySelector('#run-from-trigger:not([disabled])');
+    
+    // Prefer run-from-step if available, otherwise run-from-trigger
+    if (runFromStepButton instanceof HTMLElement) {
+      runFromStepButton.click();
+    } else if (runFromTriggerButton instanceof HTMLElement) {
+      runFromTriggerButton.click();
+    }
   } else {
-    // No step selected - open main run panel
-    const mainRunButton = document.querySelector('a[href*="m=workflow_input"]') as HTMLElement;
-    if (mainRunButton) {
+    // No step selected - click the main run button
+    const mainRunButton = document.querySelector('#run-from-top:not([disabled])');
+    if (mainRunButton instanceof HTMLElement) {
       mainRunButton.click();
     }
   }

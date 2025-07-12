@@ -513,7 +513,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         patch={"#{@base_url}?s=#{@selected_job.id}&m=workflow_input"}
                         type="button"
                         theme="primary"
-                        id={"run-from-step-#{@selected_job.id}"}
+                        id={"run-from-step"}
                       >
                         Run
                       </.button_link>
