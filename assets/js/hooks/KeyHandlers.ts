@@ -370,77 +370,60 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
 /**
  * Handles Ctrl+Enter to either open run panel or execute workflow.
  *
- * BEHAVIOR:
- * 1. If run panel is open (URL contains 'm=workflow_input' or 'm=expand'):
- *    → Try to click "Run Workflow Now" button using multiple selector strategies
- * 2. If step is selected (URL contains 's=') but no run panel:
- *    → Click the step's "Run" button to open run panel for that step
- * 3. If no step selected and no run panel:
+  * BEHAVIOR (based purely on URL state):
+ * 1a. If in inspector (URL contains 'm=expand'):
+ *     → Click #save-and-run button to execute the workflow
+ * 1b. If in run panel (URL contains 'm=workflow_input'): 
+ *     → Click "Run Workflow Now" button to execute the workflow
+ * 2. If step selected but not in panel (URL contains 's=' but no 'm='):
+ *    → Navigate to run panel while preserving step selection in URL  
+ * 3. If no step selected and no panel:
  *    → Click main "Run" link to open run panel from workflow start
- *
- * BUTTON FINDING STRATEGY (when run panel is open):
- * 1. Try specific CSS selectors for known button patterns
- * 2. Fall back to text search for any button containing "run"
- * 3. Only click if button is not disabled
  *
  * @param _e - The keyboard event (unused but required by hook signature)
  * @param _el - The DOM element (unused but required by hook signature)
  */
 const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
-  // Check if run panel is already open by looking at the URL
-  const isRunPanelOpen = window.location.href.includes('m=workflow_input') || 
-                         window.location.href.includes('m=expand');
-
-  if (isRunPanelOpen) {
-    // Panel is open, try to click the "Run Workflow Now" button
-    // Look for various possible selectors for the run button
-    const selectors = [
-      'button[type="submit"][form*="manual_run"]',
-      'button[id*="save-and-run"]',
-      'button[phx-click*="manual_run"]',
-      'input[type="submit"][form*="manual"]',
-    ];
-
-    let foundButton: HTMLElement | null = null;
-
-    // Try CSS selectors first
-    for (const selector of selectors) {
-      const element = document.querySelector(selector) as HTMLElement;
-      if (element && !element.hasAttribute('disabled')) {
-        foundButton = element;
-        break;
+  const url = window.location.href;
+  
+  // Parse URL state
+  const hasStepSelected = url.includes('s=');
+  const isInInspector = url.includes('m=expand');
+  const isInRunPanel = url.includes('m=workflow_input');
+  
+  if (isInInspector) {
+    // Inspector mode - look for the save-and-run button
+    const runButton = document.querySelector('#save-and-run:not([disabled])') as HTMLElement;
+    if (runButton) {
+      runButton.click();
+    }
+  } else if (isInRunPanel) {
+    // Run panel mode - look for "Run Workflow Now" button or form submission
+    const runButton = Array.from(document.querySelectorAll('button')).find(btn => 
+      btn.textContent?.includes('Run Workflow Now')
+    ) as HTMLElement;
+    
+    if (runButton && !runButton.hasAttribute('disabled')) {
+      runButton.click();
+    } else {
+      // Fallback: try to submit manual run form
+      const form = document.querySelector('form[id*="manual_run"]');
+      if (form) {
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(submitEvent);
       }
     }
-
-    // If no specific selector worked, search for buttons containing "Run"
-    if (!foundButton) {
-      const buttons = document.querySelectorAll('button, input[type="submit"]');
-      foundButton =
-        (Array.from(buttons).find(btn => {
-          const text = btn.textContent?.toLowerCase() || '';
-          return text.includes('run') && !btn.hasAttribute('disabled');
-        }) as HTMLElement | undefined) || null;
-    }
-
-    if (foundButton) {
-      foundButton.click();
-    }
+  } else if (hasStepSelected) {
+    // Step selected but not in panel - navigate to run panel while preserving step selection
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('m', 'workflow_input');
+    // Keep the existing 's=' parameter to preserve step selection
+    window.location.href = currentUrl.toString();
   } else {
-    // Check if a step is already selected by looking at the URL
-    const isStepSelected = window.location.href.includes('s=');
-
-    if (isStepSelected) {
-      // Step is selected, click the "Run" button on the step panel
-      const stepRunButton = document.querySelector(
-        '[id^="run-from-step-"]'
-      ) as HTMLAnchorElement;
-      stepRunButton?.click();
-    } else {
-      // No step selected, open it by clicking the run link
-      const runButton = document.querySelector(
-        'a[href*="m=workflow_input"]'
-      ) as HTMLAnchorElement;
-      runButton?.click();
+    // No step selected - open main run panel
+    const mainRunButton = document.querySelector('a[href*="m=workflow_input"]') as HTMLElement;
+    if (mainRunButton) {
+      mainRunButton.click();
     }
   }
 };

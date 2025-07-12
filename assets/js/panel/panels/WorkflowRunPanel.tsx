@@ -65,6 +65,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = (props) => {
             className="rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 px-3 py-2 flex items-center gap-1"
             disabled={is_edge ? true : runDisabled}
             onClick={startRun}
+            id="run-from-input-selector"
           >
             <span className="hero-play-solid w-4 h-4"></span>  Run Workflow Now
           </button>

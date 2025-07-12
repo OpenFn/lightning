@@ -236,7 +236,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)] focus:outline-none"
               ]}
               phx-mounted={fade_in()}
-              phx-remove={fade_out() |> JS.focus(to: "#workflow-edit-#{@workflow.id}")}
+              phx-remove={fade_out()}
               data-keybinding-scope="workflow-editor"
               tabindex="0"
               phx-hook="AutoFocusOnMount"
@@ -599,6 +599,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       patch={"#{@base_url}?s=#{@selected_trigger.id}&m=workflow_input"}
                       type="button"
                       theme="primary"
+                      id="run-from-trigger"
                     >
                       <.icon name="hero-play-solid" class="w-4 h-4" /> Run
                     </.button_link>
@@ -3172,6 +3173,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       patch={"#{@base_url}?s=#{@trigger_id}&m=workflow_input"}
       type="button"
       theme="primary"
+      id="run-from-top"
     >
       Run
     </.button_link>
