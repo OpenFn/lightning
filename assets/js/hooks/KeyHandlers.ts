@@ -160,7 +160,7 @@ function createKeyCombinationHook(
 
         const maxPriority = Math.max(...matchingHandlers.map(h => h.priority));
         const topPriorityHandlers = matchingHandlers.filter(
-          h => h.priority === maxPriority
+          h => h.priority === maxPriority as PriorityLevel
         );
 
         // Take the last handler if there are more than one with the same priority.
@@ -370,7 +370,7 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
 );
 
 /**
- * Handles Ctrl+Enter to directly click the appropriate run button based on URL state.
+ * Handles Ctrl+Enter to trigger run actions directly based on current state.
  *
  * BEHAVIOR (based purely on URL state):
  * 1. If in inspector (URL contains 'm=expand'):
@@ -378,72 +378,52 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
  * 2. If in run panel (URL contains 'm=workflow_input'):
  *    → Click #run-from-input-selector button to execute the workflow
  * 3. If step selected but not in inspector (URL contains 's=' but no 'm=expand'):
- *    → Click #run-from-step or #run-from-trigger button based on what's available
+ *    → Click the appropriate run button (#run-from-step or #run-from-trigger)
  * 4. If no step selected and no panel:
- *    → Click #run-from-top button to open run panel from workflow start
- *
- * @param _e - The keyboard event (unused but required by hook signature)
- * @param _el - The DOM element (unused but required by hook signature)
+ *    → Click #run-from-top button to run from trigger
  */
-const openRunPanelAction = (_e: KeyboardEvent, _el: HTMLElement) => {
+const openRunPanelAction = () => {
   const url = window.location.href;
   
   // Only work on workflow pages
   if (!url.includes('/w/')) {
-    console.log('GlobalWorkflowRunViaCtrlEnter: Not a workflow page, ignoring');
     return;
   }
-  
-  console.log('GlobalWorkflowRunViaCtrlEnter: Processing Ctrl+Enter on workflow page');
   
   // Parse URL state
   const hasStepSelected = url.includes('s=');
   const isInInspector = url.includes('m=expand');
   const isInRunPanel = url.includes('m=workflow_input');
   
-  console.log('GlobalWorkflowRunViaCtrlEnter: URL state:', { hasStepSelected, isInInspector, isInRunPanel });
-  
   if (isInInspector) {
     // Inspector mode - click the save-and-run button
     const runButton = document.querySelector('#save-and-run:not([disabled])');
     if (runButton instanceof HTMLElement) {
-      console.log('GlobalWorkflowRunViaCtrlEnter: Clicking save-and-run button');
       runButton.click();
-    } else {
-      console.log('GlobalWorkflowRunViaCtrlEnter: save-and-run button not found or disabled');
     }
   } else if (isInRunPanel) {
     // Run panel mode - click the run-from-input-selector button
     const runButton = document.querySelector('#run-from-input-selector:not([disabled])');
     if (runButton instanceof HTMLElement) {
-      console.log('GlobalWorkflowRunViaCtrlEnter: Clicking run-from-input-selector button');
       runButton.click();
-    } else {
-      console.log('GlobalWorkflowRunViaCtrlEnter: run-from-input-selector button not found or disabled');
     }
   } else if (hasStepSelected) {
     // Step selected but not in inspector - click the appropriate run button
+    // Try run-from-step first (for jobs), then run-from-trigger (for triggers)
     const runFromStepButton = document.querySelector('#run-from-step:not([disabled])');
-    const runFromTriggerButton = document.querySelector('#run-from-trigger:not([disabled])');
-    
-    // Prefer run-from-step if available, otherwise run-from-trigger
     if (runFromStepButton instanceof HTMLElement) {
-      console.log('GlobalWorkflowRunViaCtrlEnter: Clicking run-from-step button');
       runFromStepButton.click();
-    } else if (runFromTriggerButton instanceof HTMLElement) {
-      console.log('GlobalWorkflowRunViaCtrlEnter: Clicking run-from-trigger button');
-      runFromTriggerButton.click();
     } else {
-      console.log('GlobalWorkflowRunViaCtrlEnter: No run buttons found');
+      const runFromTriggerButton = document.querySelector('#run-from-trigger:not([disabled])');
+      if (runFromTriggerButton instanceof HTMLElement) {
+        runFromTriggerButton.click();
+      }
     }
   } else {
-    // No step selected - click the main run button
-    const mainRunButton = document.querySelector('#run-from-top:not([disabled])');
-    if (mainRunButton instanceof HTMLElement) {
-      console.log('GlobalWorkflowRunViaCtrlEnter: Clicking run-from-top button');
-      mainRunButton.click();
-    } else {
-      console.log('GlobalWorkflowRunViaCtrlEnter: run-from-top button not found or disabled');
+    // No step selected - trigger the same navigation as the run button
+    const runButton = document.querySelector('#run-from-top:not([disabled])');
+    if (runButton instanceof HTMLElement) {
+      runButton.click();
     }
   }
 };
@@ -462,9 +442,10 @@ export const OpenRunPanelViaCtrlEnter = createKeyCombinationHook(
     console.log('OpenRunPanelViaCtrlEnter: Key check triggered');
     return isCtrlOrMetaEnter(e);
   },
-  (e, el) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  (_e, _el) => {
     console.log('OpenRunPanelViaCtrlEnter: Action triggered');
-    openRunPanelAction(e, el);
+    openRunPanelAction();
   },
   PRIORITY.HIGH
 );
