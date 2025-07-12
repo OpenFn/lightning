@@ -213,8 +213,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
           class="transition-all duration-300 ease-in-out"
         />
         <div
-          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "w-2/3", else: ""}"}
+          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel, do: "w-2/3", else: ""} focus:outline-none"}
           id={"workflow-edit-#{@workflow.id}"}
+          phx-hook="OpenRunPanelViaCtrlEnter"
+          data-keybinding-scope="workflow-editor"
+          tabindex="0"
+          phx-mounted={JS.focus()}
         >
           <.selected_template_label
             :if={@selected_template && @show_new_workflow_panel}
@@ -225,13 +229,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div class="flex-none" id="job-editor-pane">
             <div
               :if={@selected_job && @selection_mode == "expand"}
+              id={"inspector-panel-#{@selected_job.id}"}
               class={[
                 "fixed left-0 top-0 right-0 bottom-0 flex-wrap",
                 "hidden opacity-0",
-                "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
+                "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)] focus:outline-none"
               ]}
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
+              data-keybinding-scope="workflow-editor"
+              tabindex="0"
+              phx-hook="AutoFocusOnMount"
             >
               <LightningWeb.WorkflowLive.JobView.job_edit_view
                 job={@selected_job}
@@ -505,6 +513,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         patch={"#{@base_url}?s=#{@selected_job.id}&m=workflow_input"}
                         type="button"
                         theme="primary"
+                        id={"run-from-step"}
                       >
                         Run
                       </.button_link>
@@ -590,6 +599,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       patch={"#{@base_url}?s=#{@selected_trigger.id}&m=workflow_input"}
                       type="button"
                       theme="primary"
+                      id="run-from-trigger"
                     >
                       <.icon name="hero-play-solid" class="w-4 h-4" /> Run
                     </.button_link>
@@ -3163,6 +3173,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       patch={"#{@base_url}?s=#{@trigger_id}&m=workflow_input"}
       type="button"
       theme="primary"
+      id="run-from-top"
     >
       Run
     </.button_link>
