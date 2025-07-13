@@ -6,21 +6,34 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   modify workflows using natural language descriptions while preserving existing
   job code.
   """
+  alias Phoenix.LiveView.JS
   use LightningWeb, :live_component
+  require Logger
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, workflow_code: nil, context: nil)}
+    {:ok,
+     assign(socket,
+       workflow_code: nil,
+       context: nil,
+       session_or_message: nil
+     )}
   end
 
   @impl true
   def update(
-        %{action: :workflow_updated, context: context, workflow_code: code},
+        %{
+          action: :workflow_updated,
+          context: context,
+          workflow_code: code,
+          session_or_message: session_or_message
+        },
         socket
       ) do
     {:ok,
      socket
      |> assign(context: context)
+     |> assign(session_or_message: session_or_message)
      |> push_event("template_selected", %{template: code})}
   end
 
@@ -34,6 +47,11 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   end
 
   @impl true
+  def handle_event("close-ai-chat", _params, socket) do
+    notify_parent(:close_ai_chat, %{})
+    {:noreply, socket}
+  end
+
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
     notify_parent(:workflow_params_changed, %{
       "workflow" => params,
@@ -41,6 +59,58 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     })
 
     {:noreply, socket}
+  end
+
+  def handle_event(
+        "template-parse-error",
+        %{
+          "error" => error_details,
+          "formattedMessage" => formatted_message,
+          "template" => _template
+        },
+        socket
+      ) do
+    Logger.error("Workflow template parsing failed #{inspect(error_details)}")
+
+    send_update(
+      LightningWeb.AiAssistant.Component,
+      id: "workflow-ai-assistant-persistent",
+      action: :fix_workflow_code,
+      error_message: error_for_ai(error_details, formatted_message),
+      session_or_message: socket.assigns.session_or_message
+    )
+
+    {:noreply, socket}
+  end
+
+  defp error_for_ai(error_details, formatted_message) do
+    base_message =
+      case error_details["code"] do
+        "JOB_NOT_FOUND" ->
+          reference = error_details["reference"] || "unknown"
+          edge = error_details["edgeKey"] || "unknown"
+
+          "YAML parsing error in edge '#{edge}': Job reference '#{reference}' contains invalid characters (likely a trailing quote). Please regenerate the workflow ensuring all job names in edges are properly formatted without special characters."
+
+        "TRIGGER_NOT_FOUND" ->
+          reference = error_details["reference"] || "unknown"
+          edge = error_details["edgeKey"] || "unknown"
+
+          "YAML parsing error in edge '#{edge}': Trigger '#{reference}' not found. Please ensure all trigger references in edges match the defined triggers."
+
+        "DUPLICATE_JOB_NAME" ->
+          name = error_details["duplicateName"] || "unknown"
+
+          "YAML parsing error: Duplicate job name '#{name}'. Each job must have a unique name."
+
+        "YAML_SYNTAX_ERROR" ->
+          "YAML syntax error: #{formatted_message}. Please check the YAML formatting and ensure proper indentation."
+
+        _ ->
+          formatted_message
+      end
+
+    "#{base_message}\n\nPlease fix this specific error and regenerate the workflow YAML."
   end
 
   defp notify_parent(action, payload) do
@@ -53,26 +123,62 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     <div
       id={@id}
       phx-hook="TemplateToWorkflow"
-      phx-mounted={fade_in()}
-      phx-remove={fade_out()}
-      class="w-1/3 bg-white h-full border-r border-gray-200 flex flex-col"
+      class="absolute inset-y-0 left-0 w-[30%] max-w-[30%] z-20 -translate-x-full"
+      phx-mounted={
+        JS.remove_class("opacity-0")
+        |> JS.transition(
+          {"transform transition-transform duration-500 ease-in-out",
+           "-translate-x-full", "translate-x-0"},
+          time: 500
+        )
+      }
+      phx-remove={
+        JS.transition(
+          {"transform transition-transform duration-500 ease-in-out",
+           "translate-x-0", "-translate-x-full"},
+          time: 500
+        )
+      }
     >
-      <div class="flex-1 min-h-0">
-        <.live_component
-          module={LightningWeb.AiAssistant.Component}
-          mode={:workflow}
-          can_edit_workflow={@can_edit_workflow}
-          project={@project}
-          current_user={@current_user}
-          chat_session_id={@chat_session_id}
-          workflow_code={@workflow_code |> dbg()}
-          query_params={%{"method" => "ai"}}
-          base_url={@base_url}
-          action={if(@chat_session_id, do: :show, else: :new)}
-          parent_id={@id}
-          parent_module={__MODULE__}
-          id="workflow-ai-assistant-persistent"
-        />
+      <div
+        class="absolute top-5 -right-8 z-30 opacity-0"
+        phx-mounted={
+          JS.transition(
+            {"transition-opacity duration-300 ease-in-out delay-300", "opacity-0",
+             "opacity-100"},
+            time: 300
+          )
+        }
+      >
+        <button
+          type="button"
+          phx-click="close-ai-chat"
+          phx-target={@myself}
+          class="rounded-md text-gray-500 hover:text-gray-700 transition-colors duration-200"
+        >
+          <span class="sr-only">Close panel</span>
+          <.icon name="hero-x-mark" class="h-5 w-5" />
+        </button>
+      </div>
+
+      <div class="flex h-full flex-col bg-white shadow-xl border-r border-gray-200 overflow-hidden">
+        <div class="flex-1 min-h-0">
+          <.live_component
+            module={LightningWeb.AiAssistant.Component}
+            mode={:workflow}
+            can_edit_workflow={@can_edit_workflow}
+            project={@project}
+            current_user={@current_user}
+            chat_session_id={@chat_session_id}
+            workflow_code={@workflow_code}
+            query_params={%{"method" => "ai"}}
+            base_url={@base_url}
+            action={if(@chat_session_id, do: :show, else: :new)}
+            parent_id={@id}
+            parent_module={__MODULE__}
+            id="workflow-ai-assistant-persistent"
+          />
+        </div>
       </div>
     </div>
     """

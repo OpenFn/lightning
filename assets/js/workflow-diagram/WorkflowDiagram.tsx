@@ -6,7 +6,7 @@ import ReactFlow, {
   getRectOfNodes,
   type NodeChange,
   type ReactFlowInstance,
-  type Rect
+  type Rect,
 } from 'reactflow';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
@@ -30,6 +30,8 @@ type WorkflowDiagramProps = {
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   forceFit?: boolean;
+  showAiAssistant?: boolean;
+  aiAssistantId?: string;
 };
 
 type ChartCache = {
@@ -46,7 +48,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
-  const workflowDiagramRef = useRef<HTMLDivElement>(null)
+  const [drawerWidth, setDrawerWidth] = useState(0);
+  const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -64,13 +67,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     cancel: cancelPlaceholder,
   } = usePlaceholders(el, updateSelection);
 
-
-  const workflow = React.useMemo(() => ({
-    jobs,
-    triggers,
-    edges,
-    disabled,
-  }), [jobs, triggers, edges, disabled])
+  const workflow = React.useMemo(
+    () => ({
+      jobs,
+      triggers,
+      edges,
+      disabled,
+    }),
+    [jobs, triggers, edges, disabled]
+  );
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
@@ -133,6 +138,43 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     const updatedModel = updateSelectionStyles(model, selection);
     setModel(updatedModel);
   }, [selection]);
+
+  useEffect(() => {
+    if (!props.showAiAssistant) {
+      setDrawerWidth(0);
+      return;
+    }
+
+    if (!props.aiAssistantId) {
+      return;
+    }
+
+    const aiAssistantId = props.aiAssistantId;
+
+    let observer: ResizeObserver | null = null;
+
+    const timer = setTimeout(() => {
+      const drawer = document.getElementById(aiAssistantId);
+      if (drawer) {
+        observer = new ResizeObserver(entries => {
+          const entry = entries[0];
+          if (entry) {
+            const width = entry.contentRect.width;
+            setDrawerWidth(width);
+          }
+        });
+        observer.observe(drawer);
+        setDrawerWidth(drawer.getBoundingClientRect().width);
+      }
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [props.showAiAssistant, props.aiAssistantId]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -254,8 +296,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         minZoom={0.2}
         {...connectHandlers}
       >
-        <Controls showInteractive={false} position="bottom-left" />
+        <Controls
+          showInteractive={false}
+          position="bottom-left"
+          style={{
+            transform: `translateX(${drawerWidth}px)`,
+            transition: 'transform 500ms ease-in-out',
+          }}
+        />
       </ReactFlow>
     </ReactFlowProvider>
   );
-};
+}

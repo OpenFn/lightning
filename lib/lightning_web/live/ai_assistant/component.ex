@@ -34,7 +34,8 @@ defmodule LightningWeb.AiAssistant.Component do
        form: to_form(%{"content" => nil}),
        pending_message: AsyncResult.ok(nil),
        ai_enabled?: AiAssistant.enabled?(),
-       workflow_code: nil
+       workflow_code: nil,
+       requires_fix: nil
      })
      |> assign_async(:endpoint_available?, fn ->
        {:ok, %{endpoint_available?: AiAssistant.endpoint_available?()}}
@@ -54,6 +55,26 @@ defmodule LightningWeb.AiAssistant.Component do
      |> assign(:handler, ModeRegistry.get_handler(mode))
      |> maybe_check_limit()
      |> apply_action(action, mode)}
+  end
+
+  def update(
+        %{
+          action: :fix_workflow_code,
+          session_or_message: session_or_message,
+          error_message: error_message
+        },
+        socket
+      ) do
+    message =
+      case session_or_message do
+        %AiAssistant.ChatSession{messages: messages} ->
+          List.last(messages)
+
+        %AiAssistant.ChatMessage{} ->
+          session_or_message
+      end
+
+    {:ok, assign(socket, requires_fix: message, fix_prompt: error_message)}
   end
 
   def render(assigns) do
@@ -382,7 +403,8 @@ defmodule LightningWeb.AiAssistant.Component do
           id: socket.assigns.parent_id,
           action: :workflow_updated,
           context: context,
-          workflow_code: yaml
+          workflow_code: yaml,
+          session_or_message: session_or_message
         )
 
         socket
@@ -452,6 +474,7 @@ defmodule LightningWeb.AiAssistant.Component do
             base_url={@base_url}
             target={@myself}
             handler={@handler}
+            requires_fix={@requires_fix}
           />
       <% end %>
 
@@ -1074,6 +1097,7 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :base_url, :string, required: true
   attr :target, :any, required: true
   attr :handler, :any, required: true
+  attr :requires_fix, :any, required: true
 
   defp render_individual_session(assigns) do
     assigns = assign(assigns, ai_feedback: ai_feedback())
@@ -1114,7 +1138,8 @@ defmodule LightningWeb.AiAssistant.Component do
 
       <div
         id={"ai-session-#{@session.id}-messages"}
-        phx-hook="ScrollToBottom"
+        phx-hook="ScrollToMessage"
+        data-scroll-to-message={if @requires_fix, do: @requires_fix.id, else: nil}
         class="flex-1 overflow-y-auto px-6 py-4 space-y-6"
       >
         <%= for message <- @session.messages do %>
@@ -1127,6 +1152,8 @@ defmodule LightningWeb.AiAssistant.Component do
               session={@session}
               target={@target}
               ai_feedback={@ai_feedback}
+              requires_fix={@requires_fix}
+              data-message-id={message.id}
             />
           <% end %>
         <% end %>
@@ -1231,32 +1258,78 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp assistant_message(assigns) do
+    needs_fix =
+      assigns[:requires_fix] && assigns.message.id == assigns.requires_fix.id
+
+    assigns = assign(assigns, needs_fix: needs_fix)
+
     ~H"""
-    <div class="text-sm flex justify-start">
+    <div class="text-sm flex justify-start" data-message-id={@message.id}>
       <div class="flex items-start gap-4 max-w-[85%]">
         <div class="flex-shrink-0 mt-1">
-          <div class="w-8 h-8 rounded-full ai-bg-gradient flex items-center justify-center">
-            <.icon name={@handler.metadata().icon} class="w-6 h-6 text-white" />
+          <div class={[
+            "w-8 h-8 rounded-full flex items-center justify-center",
+            if(@needs_fix,
+              do: "bg-red-100",
+              else: "ai-bg-gradient"
+            )
+          ]}>
+            <.icon
+              name={@handler.metadata().icon}
+              class={[
+                if(@needs_fix,
+                  do: "w-6 h-6 text-red-600",
+                  else: "w-6 h-6 text-white"
+                )
+              ]}
+            />
           </div>
         </div>
 
         <div
           class={[
-            "flex-1 bg-white rounded-2xl border border-gray-200 overflow-hidden",
-            if(@message.workflow_code && @handler.supports_template_generation?(),
-              do:
-                "cursor-pointer hover:border-indigo-200 transition-all duration-200 group",
-              else: ""
-            )
+            "flex-1 bg-white rounded-2xl border overflow-hidden",
+            cond do
+              @needs_fix ->
+                "border-red-300"
+
+              @message.workflow_code && @handler.supports_template_generation?() ->
+                "border-gray-200 cursor-pointer hover:border-indigo-200 transition-all duration-200 group"
+
+              true ->
+                "border-gray-200"
+            end
           ]}
-          {if @message.workflow_code && @handler.supports_template_generation?(), do: [
+          {if @message.workflow_code && @handler.supports_template_generation?() && !@needs_fix, do: [
             "phx-click": "select_assistant_message",
             "phx-value-message-id": @message.id,
             "phx-target": @target
           ], else: []}
         >
           <div
-            :if={@message.workflow_code && @handler.supports_template_generation?()}
+            :if={@needs_fix && @message.workflow_code}
+            class="px-4 py-2 bg-red-50 border-b border-red-200"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-red-700 font-medium text-xs">
+                Failed rendering workflow
+              </div>
+              <button
+                phx-click="retry_fix_workflow"
+                phx-value-message-id={@message.id}
+                phx-target={@target}
+                class="text-xs bg-red-600 text-white hover:bg-red-700 px-3 py-1 rounded-md transition-colors flex items-center gap-1 flex-shrink-0"
+              >
+                <.icon name="hero-arrow-path" class="w-3 h-3" />Fix & Retry
+              </button>
+            </div>
+          </div>
+
+          <div
+            :if={
+              @message.workflow_code && @handler.supports_template_generation?() &&
+                !@needs_fix
+            }
             class="px-4 py-2 ai-bg-gradient-light border-b border-gray-100"
           >
             <div class="flex items-center gap-2 text-sm">
@@ -1274,9 +1347,11 @@ defmodule LightningWeb.AiAssistant.Component do
             />
 
             <div class="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between">
-              <span class="text-xs text-gray-500">
-                {format_message_time(@message.inserted_at)}
-              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">
+                  {format_message_time(@message.inserted_at)}
+                </span>
+              </div>
 
               <button
                 id={"copy-message-#{@message.id}-content-btn"}
@@ -1290,7 +1365,7 @@ defmodule LightningWeb.AiAssistant.Component do
             </div>
           </div>
 
-          <div :if={@ai_feedback} class="px-4 pb-4">
+          <div :if={@ai_feedback && !@needs_fix} class="px-4 pb-4">
             {Phoenix.LiveView.TagEngine.component(
               @ai_feedback.component,
               %{session_id: @session.id, message_id: @message.id},

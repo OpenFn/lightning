@@ -134,24 +134,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
               name="hero-lock-closed"
               class="w-5 h-5 place-self-center text-gray-300"
             />
-            <.icon
-              :if={
-                @snapshot_version_tag == "latest" && @can_edit_workflow &&
-                  @ai_assistant_enabled && @live_action == :edit
-              }
-              name="hero-chat-bubble-left-right"
-              phx-click="toggle-workflow-ai-chat"
-              id="workflow-ai-chat-toggle"
-              phx-hook="Tooltip"
-              aria-label={"Click to #{if @show_workflow_ai_chat, do: "close", else: "open"} the AI Assistant"}
-              class={[
-                "w-5 h-5 place-self-center cursor-pointer",
-                if(@show_workflow_ai_chat,
-                  do: "text-indigo-600 hover:text-indigo-500",
-                  else: "text-slate-500 hover:text-slate-400"
-                )
-              ]}
-            />
             <div class="flex flex-row m-auto gap-2">
               <.input
                 id="workflow"
@@ -203,23 +185,49 @@ defmodule LightningWeb.WorkflowLive.Edit do
           current_user={@current_user}
           class="transition-all duration-300 ease-in-out"
         />
-        <.live_component
-          :if={@show_workflow_ai_chat}
-          id="workflow-ai-chat-panel"
-          module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
-          workflow={@workflow}
-          workflow_code={@workflow_code}
-          project={@project}
-          base_url={@base_url}
-          chat_session_id={@chat_session_id}
-          current_user={@current_user}
-          can_edit_workflow={@can_edit_workflow}
-          class="transition-all duration-300 ease-in-out"
-        />
         <div
-          class={"relative h-full flex grow transition-all duration-300 ease-in-out #{if @show_new_workflow_panel or @show_workflow_ai_chat, do: "w-2/3", else: ""}"}
+          class={"relative h-full flex grow transition-all duration-300 ease-in-out overflow-hidden #{if @show_workflow_ai_chat, do: "w-[30%]", else: ""}"}
           id={"workflow-edit-#{@workflow.id}"}
         >
+          <.live_component
+            :if={@show_workflow_ai_chat}
+            id="workflow-ai-chat-panel"
+            module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
+            workflow={@workflow}
+            workflow_code={@workflow_code}
+            project={@project}
+            base_url={@base_url}
+            chat_session_id={@chat_session_id}
+            current_user={@current_user}
+            can_edit_workflow={@can_edit_workflow}
+            class="transition-all duration-300 ease-in-out"
+          />
+          <div
+            :if={
+              @snapshot_version_tag == "latest" && @can_edit_workflow &&
+                @ai_assistant_enabled && @live_action == :edit &&
+                !@show_workflow_ai_chat
+            }
+            phx-hook="Tooltip"
+            aria-label="Click to open the AI Assistant"
+            class="absolute top-4 left-4 z-30"
+            id="workflow-ai-chat-toggle-floating"
+            phx-mounted={
+              JS.transition(
+                {"transition-opacity duration-300 delay-500", "opacity-0",
+                 "opacity-100"},
+                time: 500
+              )
+            }
+          >
+            <button
+              type="button"
+              phx-click="toggle-workflow-ai-chat"
+              class="p-2 rounded-full transition-all duration-200 text-white ai-bg-gradient shadow-md"
+            >
+              <.icon name="hero-cpu-chip" class="w-8 h-8" />
+            </button>
+          </div>
           <.selected_template_label
             :if={@selected_template && @show_new_workflow_panel}
             template={@selected_template}
@@ -1418,14 +1426,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_event("get-initial-state", _params, socket) do
-    {:noreply,
-     socket
-     |> push_event("current-workflow-params", %{
-       workflow_params: socket.assigns.workflow_params
-     })}
-  end
-
   def handle_event("workflow_editor_metrics_report", params, socket) do
     UiMetrics.log_workflow_editor_metrics(
       socket.assigns.workflow,
@@ -1436,7 +1436,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("get-current-state", _params, socket) do
-    {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
+    {:reply, %{workflow_params: socket.assigns.workflow_params},
+     sync_ai_assistant_visibility(socket)}
   end
 
   def handle_event(
@@ -1771,6 +1772,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     {:noreply,
      socket
+     |> sync_ai_assistant_visibility()
      |> push_patch(
        to: Helpers.build_url(socket.assigns, query_params: query_params)
      )}
@@ -1943,7 +1945,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
-    dbg(code)
     {:noreply, assign(socket, workflow_code: code)}
   end
 
@@ -2056,6 +2057,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :sending_ai_message ->
         handle_sending_ai_message(socket)
+
+      :close_ai_chat ->
+        query_params =
+          socket.assigns.query_params
+          |> Map.delete("method")
+          |> Map.delete("chat")
+
+        socket = assign(socket, show_workflow_ai_chat: false)
+
+        {:noreply,
+         socket
+         |> sync_ai_assistant_visibility()
+         |> push_patch(
+           to: Helpers.build_url(socket.assigns, query_params: query_params)
+         )}
     end
   end
 
@@ -2712,6 +2728,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     })
   end
 
+  defp sync_ai_assistant_visibility(socket) do
+    push_event(socket, "set-ai-assistant-visibility", %{
+      showAiAssistant: socket.assigns.show_workflow_ai_chat,
+      aiAssistantId: "workflow-ai-chat-panel"
+    })
+  end
+
   defp maybe_show_manual_run(socket) do
     case socket.assigns do
       %{selected_job: nil} ->
@@ -3054,11 +3077,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp handle_workflow_save_request(socket, %{query_params: query_params}) do
     case save_workflow(socket, socket.assigns.workflow_params) do
       {:ok, updated_socket} ->
+        flash_msg =
+          "Workflow saved successfully." <>
+            if updated_socket.assigns.live_action == :new and
+                 not Helpers.workflow_enabled?(updated_socket.assigns.workflow) do
+              " Remember to enable your workflow to run it automatically."
+            else
+              ""
+            end
+
         {:noreply,
          updated_socket
          |> assign(:selected_template, nil)
          |> update(:show_new_workflow_panel, &(!&1))
          |> maybe_disable_canvas()
+         |> put_flash(:info, flash_msg)
          |> push_patch(
            to:
              Helpers.build_url(

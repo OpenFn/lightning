@@ -32,6 +32,10 @@ export type WorkflowProps = {
 export interface WorkflowState extends WorkflowProps {
   forceFit: boolean;
   setForceFit: (v: boolean) => void;
+  showAiAssistant: boolean;
+  setShowAiAssistant: (v: boolean) => void;
+  aiAssistantId: string;
+  setAiAssistantId: (v: string) => void;
   setState: (
     partial:
       | WorkflowState
@@ -126,6 +130,14 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
     forceFit: false,
     setForceFit(v) {
       set({ forceFit: v });
+    },
+    showAiAssistant: false,
+    setShowAiAssistant(v) {
+      set({ showAiAssistant: v });
+    },
+    aiAssistantId: "",
+    setAiAssistantId(v) {
+      set({ aiAssistantId: v })
     },
     observer: null,
     subscribe: cb => {

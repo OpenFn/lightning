@@ -12,6 +12,14 @@ import { randomUUID } from '../common';
 import workflowV1Schema from './schema/workflow-spec.json';
 import YAML from 'yaml';
 import Ajv, { type ErrorObject } from 'ajv';
+import {
+  YamlSyntaxError,
+  JobNotFoundError,
+  TriggerNotFoundError,
+  DuplicateJobNameError,
+  SchemaValidationError,
+  createWorkflowError
+} from './workflow-errors';
 
 const hyphenate = (str: string) => {
   return str.replace(/\s+/g, '-');
@@ -125,8 +133,6 @@ export const convertWorkflowSpecToState = (
       trigger.cron_expression = specTrigger.cron_expression;
     }
 
-    // TODO: handle kafka config
-
     stateTriggers[key] = trigger;
   });
 
@@ -134,9 +140,7 @@ export const convertWorkflowSpecToState = (
   Object.entries(workflowSpec.edges).forEach(([key, specEdge]) => {
     const targetJob = stateJobs[specEdge.target_job];
     if (!targetJob) {
-      throw new Error(
-        `TargetJob: '${specEdge.target_job}' specified by edge '${key}' not found in spec`
-      );
+      throw new JobNotFoundError(specEdge.target_job, key, false);
     }
 
     const edge: StateEdge = {
@@ -149,9 +153,7 @@ export const convertWorkflowSpecToState = (
     if (specEdge.source_trigger) {
       const trigger = stateTriggers[specEdge.source_trigger];
       if (!trigger) {
-        throw new Error(
-          `SourceTrigger: '${specEdge.source_trigger}' specified by edge '${key}' not found in spec`
-        );
+        throw new TriggerNotFoundError(specEdge.source_trigger, key);
       }
       edge.source_trigger_id = trigger.id;
     }
@@ -159,9 +161,7 @@ export const convertWorkflowSpecToState = (
     if (specEdge.source_job) {
       const job = stateJobs[specEdge.source_job];
       if (!job) {
-        throw new Error(
-          `SourceJob: '${specEdge.source_job}' specified by edge '${key}' not found in spec`
-        );
+        throw new JobNotFoundError(specEdge.source_job, key, true);
       }
       edge.source_job_id = job.id;
     }
@@ -189,41 +189,58 @@ export const convertWorkflowSpecToState = (
 };
 
 export const parseWorkflowYAML = (yamlString: string): WorkflowSpec => {
-  const ajv = new Ajv({ allErrors: true });
-  const validate = ajv.compile(workflowV1Schema);
+  try {
+    const parsedYAML = YAML.parse(yamlString);
+    
+    const ajv = new Ajv({ allErrors: true });
+    const validate = ajv.compile(workflowV1Schema);
+    const isSchemaValid = validate(parsedYAML);
 
-  // throw error one at a time
-  const parsedYAML = YAML.parse(yamlString);
-
-  const isSchemaValid = validate(parsedYAML);
-
-  if (!isSchemaValid) {
-    const error = findActionableAjvError(validate.errors);
-
-    throw new Error(humanizeAjvError(error));
-  }
-
-  // Validate job names
-  Object.entries(parsedYAML['jobs']).reduce(
-    (acc, [key, specJob]: [string, object]) => {
-      if (acc[specJob.name]) {
-        throw new Error(
-          `Duplicate job name '${specJob.name}' found at 'jobs/${key}'`
-        );
+    if (!isSchemaValid && validate.errors) {
+      const error = findActionableAjvError(validate.errors);
+      if (error) {
+        throw new SchemaValidationError(error);
       }
-      acc[specJob.name] = true;
-      return acc;
-    },
-    {}
-  );
+    }
 
-  return parsedYAML as WorkflowSpec;
+    // Validate job names
+    const seenNames: Record<string, boolean> = {};
+    Object.entries(parsedYAML['jobs']).forEach(
+      ([key, specJob]: [string, any]) => {
+        if (seenNames[specJob.name]) {
+          throw new DuplicateJobNameError(specJob.name, key);
+        }
+        seenNames[specJob.name] = true;
+      }
+    );
+
+    return parsedYAML as WorkflowSpec;
+  } catch (error) {
+    // If it's already one of our errors, re-throw it
+    if (error instanceof WorkflowError) {
+      throw error;
+    }
+    
+    // If it's a YAML parsing error
+    if (error instanceof Error && error.name === 'YAMLParseError') {
+      throw new YamlSyntaxError(error.message, error);
+    }
+    
+    // For any other error, create a workflow error
+    throw createWorkflowError(error);
+  }
 };
 
 export const parseWorkflowTemplate = (code: string): WorkflowSpec => {
-  const parsedYAML = YAML.parse(code);
-
-  return parsedYAML as WorkflowSpec;
+  try {
+    const parsedYAML = YAML.parse(code);
+    return parsedYAML as WorkflowSpec;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'YAMLParseError') {
+      throw new YamlSyntaxError(error.message, error);
+    }
+    throw createWorkflowError(error);
+  }
 };
 
 const humanizeAjvError = (error: ErrorObject): string => {

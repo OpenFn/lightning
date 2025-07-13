@@ -654,21 +654,52 @@ export const BlurDataclipEditor = {
   },
 } as PhoenixHook;
 
-export const ScrollToBottom = {
+export const ScrollToMessage = {
   mounted() {
-    this.scrollToLastElement();
+    this.handleScroll();
   },
+  
   updated() {
-    this.scrollToLastElement();
+    this.handleScroll();
   },
-  scrollToLastElement() {
-    this.el.lastElementChild &&
-      this.el.lastElementChild.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
+  
+  handleScroll() {
+    const targetMessageId = this.el.dataset['scrollToMessage'];
+    
+    if (targetMessageId) {
+      this.scrollToSpecificMessage(targetMessageId);
+    } else {
+      this.scrollToBottom();
+    }
+  },
+  
+  scrollToSpecificMessage(messageId: string) {
+    const targetMessage = this.el.querySelector(`[data-message-id="${messageId}"]`);
+    
+    if (targetMessage) {
+      const relativeTop = (targetMessage as HTMLElement).offsetTop;
+      const scrollPosition = relativeTop - 100;
+      
+      this.el.scrollTo({
+        top: scrollPosition,
+        behavior: 'smooth'
       });
+    }
   },
-} as PhoenixHook<{ scrollToLastElement: () => void }>;
+  
+  scrollToBottom() {
+    setTimeout(() => {
+      this.el.scrollTo({
+        top: this.el.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 300);
+  }
+} as PhoenixHook<{ 
+  handleScroll: () => void;
+  scrollToSpecificMessage: (messageId: string) => void;
+  scrollToBottom: () => void;
+}>;
 
 export const Copy = {
   mounted() {

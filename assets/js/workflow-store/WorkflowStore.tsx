@@ -47,6 +47,8 @@ export const WorkflowStore: WithActionProps = props => {
     subscribe,
     setDisabled,
     setForceFit,
+    setShowAiAssistant,
+    setAiAssistantId
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -151,7 +153,12 @@ export const WorkflowStore: WithActionProps = props => {
     props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
       setDisabled(response.disabled);
     });
-  }, [props, setDisabled]);
+
+    props.handleEvent('set-ai-assistant-visibility', (response: { showAiAssistant: boolean, aiAssistantId: string }) => {
+      setShowAiAssistant(response.showAiAssistant);
+      setAiAssistantId(response.aiAssistantId);
+    });
+  }, [props, setDisabled, setShowAiAssistant, setAiAssistantId]);
 
   return <>{props.children}</>;
 };
