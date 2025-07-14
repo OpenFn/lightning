@@ -17,13 +17,33 @@ and this project adheres to
 
 ### Added
 
-- Allow users to see & _use_ the "next input" state that would be used by a cron
-  trigger when inspecting and running cron-triggered jobs
-  [3335](https://github.com/OpenFn/lightning/issues/3335)
-
 ### Changed
 
 ### Fixed
+
+- Handling of CLI error messages when fetching metadata via an adaptor
+  [#3367](https://github.com/OpenFn/lightning/issues/3367)
+
+## [v2.13.5] 2025-07-11
+
+## [v2.13.5-pre] 2025-07-11
+
+### Added
+
+- Allow users to see & _use_ the "next input" state that would be used by a cron
+  trigger when inspecting and running cron-triggered jobs
+  [3335](https://github.com/OpenFn/lightning/issues/3335)
+- Enable Undo and Redo in the Workflow Editor
+  [#3358](https://github.com/OpenFn/lightning/pull/3358)
+
+### Changed
+
+- Bump CLI to 1.13.1 [#3351](https://github.com/OpenFn/lightning/issues/3351)
+
+### Fixed
+
+- Isolate failed to refresh token errors from other oauth errros
+  [#3332](https://github.com/OpenFn/lightning/issues/3332)
 
 ## [v2.13.4] - 2025-07-05
 
