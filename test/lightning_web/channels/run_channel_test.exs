@@ -10,7 +10,6 @@ defmodule LightningWeb.RunChannelTest do
   import Ecto.Query
   import Lightning.TestUtils
   import Lightning.Factories
-  import Lightning.BypassHelpers
 
   setup do
     Mox.verify_on_exit!()
@@ -371,41 +370,53 @@ defmodule LightningWeb.RunChannelTest do
     end
 
     test "fetch:credential", %{socket: socket, credential: credential} do
-      bypass = Bypass.open()
+      credential = Repo.preload(credential, oauth_token: [:oauth_client])
+      oauth_client = credential.oauth_client
 
-      wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
+      current_expires_at = credential.oauth_token.body["expires_at"]
+      new_expiry = current_expires_at + 3600
 
-      Mox.stub(Lightning.MockConfig, :oauth_provider, fn :google ->
-        [
-          client_id: "foo",
-          client_secret: "bar",
-          wellknown_url: wellknown_url
-        ]
+      endpoint = oauth_client.token_endpoint
+
+      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        %Tesla.Env{
+          method: :post,
+          url: ^endpoint
+        } = env,
+        _opts ->
+          {:ok,
+           %Tesla.Env{
+             env
+             | status: 200,
+               body: %{
+                 "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+                 "expires_at" => new_expiry,
+                 "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+                 "scope" => "https://www.googleapis.com/auth/spreadsheets",
+                 "token_type" => "Bearer"
+               }
+           }}
       end)
-
-      expect_wellknown(bypass)
-
-      new_expiry = credential.body["expires_at"] + 3600
-
-      expect_token(
-        bypass,
-        Lightning.AuthProviders.Common.get_wellknown!(wellknown_url),
-        Map.put(credential.body, "expires_at", new_expiry)
-      )
 
       ref = push(socket, "fetch:credential", %{"id" => credential.id})
 
-      assert_reply ref, :ok, %{
-        "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-        "expires_at" => ^new_expiry,
-        "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-        "sandbox" => false,
-        "scope" => "https://www.googleapis.com/auth/spreadsheets"
+      assert_receive %Phoenix.Socket.Reply{
+        ref: ^ref,
+        status: :ok,
+        payload: %{
+          "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+          "expires_at" => ^new_expiry,
+          "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+          "sandbox" => false,
+          "scope" => "https://www.googleapis.com/auth/spreadsheets"
+        }
       }
     end
   end
 
   describe "fetch:credential" do
+    setup :set_google_credential
+
     test "doesn't cast credential body fields" do
       user = insert(:user)
 
@@ -555,6 +566,65 @@ defmodule LightningWeb.RunChannelTest do
       assert response["access_token"] == "test_access_token"
       assert response["refresh_token"] == "test_refresh_token"
       assert Map.has_key?(response, "expires_at")
+    end
+
+    test "translates error messages properly", %{
+      credential: credential,
+      user: user
+    } do
+      credential = Repo.preload(credential, oauth_token: [:oauth_client])
+      oauth_client = credential.oauth_client
+
+      endpoint = oauth_client.token_endpoint
+
+      Lightning.AuthProviders.OauthHTTPClient.Mock
+      |> Mox.expect(:call, fn
+        %Tesla.Env{
+          method: :post,
+          url: ^endpoint
+        } = env,
+        _opts ->
+          {:ok,
+           %Tesla.Env{
+             env
+             | status: 400,
+               body: %{"error" => "invalid_grant"}
+           }}
+      end)
+      |> Mox.expect(:call, fn
+        %Tesla.Env{
+          method: :post,
+          url: ^endpoint
+        } = env,
+        _opts ->
+          {:ok,
+           %Tesla.Env{
+             env
+             | status: 429,
+               body: %{"error" => "rate limit"}
+           }}
+      end)
+
+      %{socket: socket} =
+        create_socket_and_run(%{credential: credential, user: user})
+
+      # token expiry
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      assert_reply ref, :error, error_msg
+
+      assert error_msg =~ credential.name
+      assert error_msg =~ "Reauthorize with your external system"
+
+      assert error_msg =~
+               "If this is not your credential, send this link to the owner and ask them to reauthorize"
+
+      # temporary failure
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      assert_reply ref,
+                   :error,
+                   "Could not reach the oauth provider. Try again later"
     end
   end
 
@@ -1469,21 +1539,30 @@ defmodule LightningWeb.RunChannelTest do
       |> DateTime.add(-299, :second)
       |> DateTime.to_unix()
 
-    credential_body = %{
+    user = insert(:user)
+    oauth_client = insert(:oauth_client)
+
+    oauth_token_body = %{
       "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
       "expires_at" => expires_at,
       "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-      "scope" => "https://www.googleapis.com/auth/spreadsheets"
+      "scope" => "https://www.googleapis.com/auth/spreadsheets",
+      "token_type" => "Bearer"
     }
-
-    user = insert(:user)
 
     credential =
       insert(:credential,
         name: "Test Googlesheets Credential",
         user: user,
-        body: credential_body,
-        schema: "googlesheets"
+        body: %{"sandbox" => false},
+        schema: "oauth",
+        oauth_client: oauth_client,
+        oauth_token:
+          build(:oauth_token,
+            body: oauth_token_body,
+            user: user,
+            oauth_client: oauth_client
+          )
       )
 
     {:ok, credential: credential, user: user}

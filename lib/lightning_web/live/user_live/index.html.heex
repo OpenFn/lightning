@@ -13,11 +13,12 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
-    <.users_table
-      socket={@socket}
-      live_action={@live_action}
+    <.live_component
+      id="users-table-live-component"
+      module={LightningWeb.UserLive.TableComponent}
       delete_user={assigns[:delete_user]}
-      users={@users}
+      live_action={@live_action}
+      user_deletion_modal={LightningWeb.Components.UserDeletionModal}
     />
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

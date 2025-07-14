@@ -79,40 +79,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
      |> assign(selected_project: nil)}
   end
 
-  def handle_event("scopes_changed", %{"_target" => [scope]}, socket) do
-    selected_scopes =
-      if Enum.member?(socket.assigns.scopes, scope) do
-        Enum.reject(socket.assigns.scopes, fn value -> value == scope end)
-      else
-        [scope | socket.assigns.scopes]
-      end
-
-    send_update(LightningWeb.CredentialLive.OauthComponent,
-      id: "inner-form-#{socket.assigns.credential.id || "new"}",
-      scopes: selected_scopes
-    )
-
-    saved_scopes = get_scopes(socket.assigns.credential)
-    diff_scopes = Enum.sort(selected_scopes) == Enum.sort(saved_scopes)
-
-    {:noreply,
-     socket
-     |> assign(scopes: selected_scopes)
-     |> assign(scopes_changed: !diff_scopes)}
-  end
-
-  def handle_event("check_sandbox", %{"sandbox" => value}, socket) do
-    sandbox_value = String.to_existing_atom(value)
-
-    send_update(LightningWeb.CredentialLive.OauthComponent,
-      id: "inner-form-#{socket.assigns.credential.id || "new"}",
-      sandbox: sandbox_value
-    )
-
-    {:noreply,
-     assign(socket, sandbox_value: sandbox_value, sandbox_changed: true)}
-  end
-
   def handle_event("api_version", %{"api_version" => version}, socket) do
     {:noreply, assign(socket, api_version: version)}
   end
@@ -187,9 +153,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def handle_event("save", %{"credential" => credential_params}, socket) do
-    credential_params =
-      maybe_add_oauth_specific_fields(socket, credential_params)
-
     if socket.assigns.can_create_project_credential do
       project_credentials =
         Helpers.prepare_projects_associations(
@@ -261,7 +224,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </button>
           </div>
         </:title>
-        <div class="container mx-auto px-4">
+        <div class="container mx-auto">
           <.form
             id="credential-schema-picker"
             for={@schema_selection_form}
@@ -293,26 +256,24 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </div>
           </.form>
         </div>
-        <.modal_footer class="mt-6 mx-6">
-          <div class="sm:flex sm:flex-row-reverse gap-3">
-            <.button
-              type="submit"
-              theme="primary"
-              disabled={!@schema}
-              phx-click="change_page"
-              phx-target={@myself}
-            >
-              Configure credential
-            </.button>
-            <.button
-              id="cancel-credential-type-picker"
-              type="button"
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
-              theme="secondary"
-            >
-              Cancel
-            </.button>
-          </div>
+        <.modal_footer>
+          <.button
+            type="submit"
+            theme="primary"
+            disabled={!@schema}
+            phx-click="change_page"
+            phx-target={@myself}
+          >
+            Configure credential
+          </.button>
+          <.button
+            id="cancel-credential-type-picker"
+            type="button"
+            phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+            theme="secondary"
+          >
+            Cancel
+          </.button>
         </.modal_footer>
       </.modal>
     </div>
@@ -389,16 +350,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           <LightningWeb.Components.Credentials.form_component
             :let={{fieldset, _valid?}}
             id={@credential.id || "new"}
-            schema={@schema}
             form={f}
             type={@schema}
-            action={@action}
-            update_body={@update_body}
-            oauth_clients={@oauth_clients}
-            scopes_changed={@scopes_changed}
-            sandbox_changed={@sandbox_changed}
           >
-            <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
+            <div class="space-y-6 bg-white py-5">
               <fieldset>
                 <div class="space-y-4">
                   <div>
@@ -416,37 +371,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                 <div class="hidden sm:block" aria-hidden="true">
                   <div class="border-t border-secondary-200"></div>
                 </div>
-                <!-- # TODO: Make this part of the fieldset to avoid the if block -->
-                <LightningWeb.CredentialLive.Scopes.scopes_picklist
-                  :if={@schema in ["salesforce_oauth", "googlesheets"]}
-                  id={"scope_selection_#{@credential.id || "new"}"}
-                  target={@myself}
-                  on_change="scopes_changed"
-                  selected_scopes={@scopes}
-                  schema={@schema}
-                />
-                <.input
-                  :if={@schema in ["salesforce_oauth"]}
-                  class="mb-2"
-                  name="sandbox"
-                  type="checkbox"
-                  value={@sandbox_value}
-                  label="Sandbox instance?"
-                  phx-change="check_sandbox"
-                  phx-target={@myself}
-                  id={"salesforce_sandbox_instance_checkbox_#{@credential.id || "new"}"}
-                />
-                <.input
-                  :if={@schema in ["salesforce_oauth"]}
-                  type="text"
-                  class="mb-2"
-                  name="api_version"
-                  label="API Version"
-                  value={@api_version}
-                  phx-change="api_version"
-                  phx-target={@myself}
-                  id={"salesforce_api_version_input_#{@credential.id || "new"}"}
-                />
                 {fieldset}
               </div>
 
@@ -485,44 +409,27 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               </div>
             </div>
           </LightningWeb.Components.Credentials.form_component>
-          <.modal_footer class="mt-6 mx-6">
-            <div class="sm:flex sm:flex-row-reverse gap-3">
-              <.button
-                id={"save-credential-button-#{@credential.id || "new"}"}
-                type="submit"
-                theme="primary"
-                disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
-              >
-                Save
-              </.button>
-              <.button
-                type="button"
-                phx-click={
-                  hide_modal(@id) |> JS.push("reset_state", target: @myself)
-                }
-                theme="secondary"
-              >
-                Cancel
-              </.button>
-            </div>
+          <.modal_footer>
+            <.button
+              id={"save-credential-button-#{@credential.id || "new"}"}
+              type="submit"
+              theme="primary"
+              disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
+            >
+              Save
+            </.button>
+            <.button
+              type="button"
+              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
+              theme="secondary"
+            >
+              Cancel
+            </.button>
           </.modal_footer>
         </.form>
       </.modal>
     </div>
     """
-  end
-
-  defp maybe_add_oauth_specific_fields(socket, params) do
-    if socket.assigns.schema in ["salesforce_oauth", "googlesheets"] do
-      updated_body =
-        params["body"]
-        |> Map.put("sandbox", socket.assigns.sandbox_value)
-        |> Map.put("apiVersion", socket.assigns.api_version)
-
-      %{params | "body" => updated_body}
-    else
-      params
-    end
   end
 
   defp get_type_options(schemas_path) do

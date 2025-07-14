@@ -4,8 +4,6 @@ defmodule LightningWeb.UserLive.Index do
   """
   use LightningWeb, :live_view
 
-  import LightningWeb.UserLive.Components
-
   alias Lightning.Accounts
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
@@ -19,7 +17,6 @@ defmodule LightningWeb.UserLive.Index do
     if can_access_admin_space do
       socket =
         assign(socket,
-          users: list_users(),
           active_menu_item: :users
         )
 
@@ -66,9 +63,5 @@ defmodule LightningWeb.UserLive.Index do
          socket
          |> put_flash(:error, "Cancel user deletion failed")}
     end
-  end
-
-  defp list_users do
-    Accounts.list_users()
   end
 end

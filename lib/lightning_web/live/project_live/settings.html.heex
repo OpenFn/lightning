@@ -282,27 +282,30 @@
             </:empty_state>
             <:actions :let={client}>
               <div :if={can_edit?(client, @current_user)}>
-                <span>
-                  <.link
-                    class="table-action"
-                    phx-click={
+                <Common.simple_dropdown
+                  id={"oauth-client-actions-#{client.id}-dropdown"}
+                  button_theme="secondary"
+                >
+                  <:button>
+                    Actions
+                  </:button>
+
+                  <:options>
+                    <.link phx-click={
                       show_modal("edit-oauth-client-#{client.id}-modal")
-                    }
-                  >
-                    Edit
-                  </.link>
-                </span>
-                <span>
-                  <.link
-                    id={"delete-oauth-client-#{client.id}-button"}
-                    class="table-action"
-                    phx-click={
-                      show_modal("delete_oauth_client_#{client.id}_modal")
-                    }
-                  >
-                    Delete
-                  </.link>
-                </span>
+                    }>
+                      Edit
+                    </.link>
+                    <.link
+                      id={"delete-oauth-client-#{client.id}-button"}
+                      phx-click={
+                        show_modal("delete_oauth_client_#{client.id}_modal")
+                      }
+                    >
+                      Delete
+                    </.link>
+                  </:options>
+                </Common.simple_dropdown>
               </div>
               <.live_component
                 id={"edit-oauth-client-#{client.id}-modal"}
@@ -340,43 +343,39 @@
             </:empty_state>
             <:actions :let={credential}>
               <div :if={can_edit?(credential, @current_user)}>
-                <span>
-                  <.link
-                    class="table-action"
-                    phx-click={
+                <Common.simple_dropdown
+                  id={"credential-actions-#{credential.id}-dropdown"}
+                  button_theme="secondary"
+                >
+                  <:button>
+                    Actions
+                  </:button>
+                  <:options>
+                    <.link phx-click={
                       show_modal("transfer-credential-#{credential.id}-modal")
-                    }
-                  >
-                    <%= case credential.transfer_status do %>
-                      <% :pending -> %>
-                        Revoke Transfer
-                      <% :completed -> %>
-                        Transfer
-                      <% nil -> %>
-                        Transfer
-                    <% end %>
-                  </.link>
-                </span>
-                <span>
-                  <.link
-                    class="table-action"
-                    phx-click={
+                    }>
+                      <%= case credential.transfer_status do %>
+                        <% :pending -> %>
+                          Revoke Transfer
+                        <% :completed -> %>
+                          Transfer
+                        <% nil -> %>
+                          Transfer
+                      <% end %>
+                    </.link>
+                    <.link phx-click={
                       show_modal("edit-credential-#{credential.id}-modal")
-                    }
-                  >
-                    Edit
-                  </.link>
-                </span>
-                <span>
-                  <.link
-                    class="table-action"
-                    phx-click={
+                    }>
+                      Edit
+                    </.link>
+                    <.link phx-click={
                       show_modal("delete_credential_#{credential.id}_modal")
-                    }
-                  >
-                    Delete
-                  </.link>
-                </span>
+                    }>
+                      Delete
+                    </.link>
+                  </:options>
+                </Common.simple_dropdown>
+
                 <.live_component
                   id={"edit-credential-#{credential.id}-modal"}
                   module={LightningWeb.CredentialLive.CredentialFormComponent}

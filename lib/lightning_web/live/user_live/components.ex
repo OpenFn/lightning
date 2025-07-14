@@ -4,6 +4,10 @@ defmodule LightningWeb.UserLive.Components do
   attr :socket, :map, required: true
   attr :users, :list, required: true
   attr :live_action, :atom, required: true
+  attr :sort_key, :string, default: "email"
+  attr :sort_direction, :string, default: "asc"
+  attr :target, :any, default: nil
+  attr :filter, :string, default: ""
 
   attr :user_deletion_modal, :atom,
     default: LightningWeb.Components.UserDeletionModal
@@ -21,52 +25,132 @@ defmodule LightningWeb.UserLive.Components do
       logout={false}
       return_to={Routes.user_index_path(@socket, :index)}
     />
+
+    <LightningWeb.Live.Helpers.TableHelpers.filter_input
+      filter={@filter}
+      placeholder="Filter users..."
+      target={@target}
+    />
+
     <.table>
       <:header>
         <.tr>
-          <.th>First name</.th>
-          <.th>Last name</.th>
-          <.th>Email</.th>
-          <.th>Role*</.th>
-          <.th>Enabled?</.th>
-          <.th>Support?</.th>
-          <.th>Scheduled Deletion</.th>
+          <.th
+            sortable={true}
+            sort_by="first_name"
+            active={@sort_key == "first_name"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            First name
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="last_name"
+            active={@sort_key == "last_name"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Last name
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="email"
+            active={@sort_key == "email"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Email
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="role"
+            active={@sort_key == "role"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Role*
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="enabled"
+            active={@sort_key == "enabled"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Enabled?
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="support_user"
+            active={@sort_key == "support_user"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Support?
+          </.th>
+          <.th
+            sortable={true}
+            sort_by="scheduled_deletion"
+            active={@sort_key == "scheduled_deletion"}
+            sort_direction={@sort_direction}
+            {if @target, do: [phx_target: @target], else: []}
+          >
+            Scheduled Deletion
+          </.th>
           <.th>Actions</.th>
         </.tr>
       </:header>
       <:body>
         <%= for user <- @users do %>
           <.tr id={"user-#{user.id}"}>
-            <.td>{user.first_name}</.td>
-            <.td>{user.last_name}</.td>
-            <.td>{user.email}</.td>
+            <.td class="max-w-40 wrap-break-word" title={user.first_name}>
+              {user.first_name}
+            </.td>
+            <.td class="max-w-40 wrap-break-word" title={user.last_name}>
+              {user.last_name}
+            </.td>
+            <.td class="max-w-48 wrap-break-word" title={user.email}>
+              {user.email}
+            </.td>
             <.td>{user.role}</.td>
             <.td>
-              <%= if !user.disabled do %>
-                <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
-              <% end %>
+              <.icon
+                :if={!user.disabled}
+                name="hero-check-circle-solid"
+                class="w-6 h-6 text-gray-500"
+              />
             </.td>
             <.td>
-              <%= if user.support_user do %>
-                <div class="content-center">
-                  <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
-                </div>
-              <% end %>
-            </.td>
-            <.td>{user.scheduled_deletion}</.td>
-            <.td class="py-0.5">
-              <span>
-                <.link
-                  class="table-action"
-                  navigate={Routes.user_edit_path(@socket, :edit, user)}
-                >
-                  Edit
-                </.link>
-              </span>
-              <.delete_action
-                user={user}
-                delete_url={Routes.user_index_path(@socket, :delete, user)}
+              <.icon
+                :if={user.support_user}
+                name="hero-check-circle-solid"
+                class="w-6 h-6 text-gray-500"
               />
+            </.td>
+            <.td>
+              {user.scheduled_deletion &&
+                Calendar.strftime(user.scheduled_deletion, "%d %b  %H:%M")}
+            </.td>
+            <.td class="py-0.5">
+              <Common.simple_dropdown
+                id={"user-actions-#{user.id}-dropdown"}
+                button_theme="secondary"
+              >
+                <:button>
+                  Actions
+                </:button>
+
+                <:options>
+                  <.link navigate={Routes.user_edit_path(@socket, :edit, user)}>
+                    Edit
+                  </.link>
+                  <.delete_action
+                    user={user}
+                    delete_url={Routes.user_index_path(@socket, :delete, user)}
+                  />
+                </:options>
+              </Common.simple_dropdown>
             </.td>
           </.tr>
         <% end %>
@@ -88,14 +172,14 @@ defmodule LightningWeb.UserLive.Components do
   defp delete_action(%{user: %{role: :superuser}} = assigns) do
     if assigns.user.scheduled_deletion do
       ~H"""
-      <.cancel_deletion user={@user} /> |
-      <span id={"delete-now-#{@user.id}"} class="table-action-disabled">
+      <.cancel_deletion user={@user} />
+      <span id={"delete-now-#{@user.id}"} class="cursor-not-allowed">
         Delete now
       </span>
       """
     else
       ~H"""
-      <span id={"delete-#{@user.id}"} class="table-action-disabled">
+      <span id={"delete-#{@user.id}"} class="cursor-not-allowed">
         Delete
       </span>
       """
@@ -105,41 +189,30 @@ defmodule LightningWeb.UserLive.Components do
   defp delete_action(%{user: %{role: :user}} = assigns) do
     if assigns.user.scheduled_deletion do
       ~H"""
-      <.cancel_deletion user={@user} /> |
-      <span>
-        <.link
-          id={"delete-now-#{@user.id}"}
-          class="table-action"
-          navigate={@delete_url}
-        >
-          Delete now
-        </.link>
-      </span>
+      <.cancel_deletion user={@user} />
+      <.link id={"delete-now-#{@user.id}"} navigate={@delete_url}>
+        Delete now
+      </.link>
       """
     else
       ~H"""
-      <span>
-        <.link id={"delete-#{@user.id}"} class="table-action" navigate={@delete_url}>
-          Delete
-        </.link>
-      </span>
+      <.link id={"delete-#{@user.id}"} navigate={@delete_url}>
+        Delete
+      </.link>
       """
     end
   end
 
   defp cancel_deletion(assigns) do
     ~H"""
-    <span>
-      <.link
-        id={"cancel-deletion-#{@user.id}"}
-        href="#"
-        phx-click="cancel_deletion"
-        phx-value-id={@user.id}
-        class="table-action"
-      >
-        Cancel deletion
-      </.link>
-    </span>
+    <.link
+      id={"cancel-deletion-#{@user.id}"}
+      href="#"
+      phx-click="cancel_deletion"
+      phx-value-id={@user.id}
+    >
+      Cancel deletion
+    </.link>
     """
   end
 end

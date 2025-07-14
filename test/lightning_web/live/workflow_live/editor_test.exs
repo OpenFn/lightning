@@ -413,7 +413,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert render(element) =~ "selected"
 
       refute view
-             |> element("save-and-run", "Create New Work Order")
+             |> element("save-and-run", "Run")
              |> has_element?()
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -649,7 +649,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       html =
         view
-        |> element("#save-and-run", "Retry from here")
+        |> element("#save-and-run", "Run (retry)")
         |> render_click()
 
       assert html =~ error_msg
@@ -669,7 +669,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       )
 
       view
-      |> element("#save-and-run", "Retry from here")
+      |> element("#save-and-run", "Run (retry)")
       |> render_click()
 
       assert_patch(view)
@@ -950,7 +950,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # retry workorder
       view
-      |> element("#save-and-run", "Retry from here")
+      |> element("#save-and-run", "Run (retry)")
       |> render_click()
 
       path = assert_patch(view)
@@ -1230,16 +1230,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # user gets option to rerun
-      assert has_element?(view, "button", "Retry from here")
-      assert has_element?(view, "button", "Create New Work Order")
+      assert has_element?(view, "button", "Run (retry)")
+      assert has_element?(view, "button", "Run (New Work Order)")
 
       # if we choose a different dataclip, the retry button disappears
       render_change(view, "manual_run_change",
         manual: %{dataclip_id: hd(dataclips).id}
       )
 
-      refute has_element?(view, "button", "Retry from here")
-      assert has_element?(view, "button", "Create New Work Order")
+      refute has_element?(view, "button", "Run (retry)")
+      assert has_element?(view, "button", "Run")
 
       # if we choose the step input dataclip, the retry button becomes available
       step = Enum.find(run.steps, fn step -> step.job_id == job_2.id end)
@@ -1248,10 +1248,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         manual: %{dataclip_id: step.input_dataclip_id}
       )
 
-      assert has_element?(view, "button", "Retry from here")
-      assert has_element?(view, "button", "Create New Work Order")
+      assert has_element?(view, "button", "Run (retry)")
+      assert has_element?(view, "button", "Run (New Work Order)")
 
-      view |> element("button", "Retry from here") |> render_click()
+      view |> element("button", "Run (retry)") |> render_click()
 
       all_runs =
         Lightning.Repo.preload(workorder, [:runs], force: true).runs
@@ -1285,10 +1285,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # user gets option to rerun
-      assert has_element?(view, "button", "Retry from here")
-      assert has_element?(view, "button", "Create New Work Order")
+      assert has_element?(view, "button", "Run (retry)")
+      assert has_element?(view, "button", "Run (New Work Order)")
 
-      view |> element("button", "Retry from here") |> render_click()
+      view |> element("button", "Run (retry)") |> render_click()
 
       all_runs =
         Lightning.Repo.preload(workorder, [:runs], force: true).runs
@@ -1326,12 +1326,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
 
       # user gets no option to rerun
-      assert has_element?(view, "button[disabled='disabled']", "Retry from here")
+      assert has_element?(view, "button[disabled='disabled']", "Run (retry)")
 
       assert has_element?(
                view,
                "button[disabled='disabled']",
-               "Create New Work Order"
+               "Run"
              )
 
       # submit event regardless
@@ -1400,9 +1400,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # user cannot rerun
-      refute has_element?(view, "button", "Retry from here")
+      refute has_element?(view, "button", "Run (retry)")
 
-      assert has_element?(view, "button:disabled", "Create New Work Order"),
+      assert has_element?(view, "button:disabled", "Run"),
              "create new workorder button is disabled"
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -1584,10 +1584,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # user cannot rerun
-      refute has_element?(view, "button", "Retry from here")
+      refute has_element?(view, "button", "Run (retry)")
 
       # user can create new work order
-      assert has_element?(view, "button", "Create New Work Order")
+      assert has_element?(view, "button", "Run")
 
       run_view = find_live_child(view, "run-viewer-#{run.id}")
 
@@ -1616,9 +1616,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # action button is rendered correctly
-      refute has_element?(view, "button", "Retry from here")
+      refute has_element?(view, "button", "Run (retry)")
       refute has_element?(view, "button", "Processing")
-      assert has_element?(view, "button", "Create New Work Order")
+      assert has_element?(view, "button", "Run")
 
       # submit the manual run form
       render_submit(view, "manual_run_submit", %{
@@ -1633,12 +1633,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       run_view = find_live_child(view, "run-viewer-#{run.id}")
 
       # action button is rendered correctly
-      refute has_element?(view, "button", "Retry from here")
+      refute has_element?(view, "button", "Run (retry)")
 
       assert has_element?(view, "button:disabled", "Processing"),
              "currently processing"
 
-      refute has_element?(view, "button", "Create New Work Order")
+      refute has_element?(view, "button", "Run")
 
       render_async(run_view)
       # input panel shows correct information
@@ -1682,9 +1682,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       render(view)
 
       # action button is rendered correctly.
-      refute has_element?(view, "button", "Retry from here")
+      refute has_element?(view, "button", "Run (retry)")
       refute has_element?(view, "button", "Processing"), "no longer processing"
-      assert has_element?(view, "button", "Create New Work Order")
+      assert has_element?(view, "button", "Run")
 
       # make sure event is processed by the run viewer
       render_async(run_view)
@@ -1707,6 +1707,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: project,
       workflow: workflow
     } do
+      cli_stdout = """
+      {"level":"error","name":"CLI","message":["No metadata helper found"],"time":"1751556807394005966"}
+      """
+
+      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: cli_stdout, err: ""}})
+
       project_credential =
         insert(:project_credential,
           project: project,

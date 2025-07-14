@@ -1,4 +1,4 @@
-import type * as ReactFlow from 'reactflow';
+import type * as ReactFlow from '@xyflow/react';
 
 // This all describes the lightning view of a workflow
 export namespace Lightning {
@@ -57,6 +57,7 @@ export namespace Lightning {
     jobs: JobNode[];
     edges: Edge[];
     disabled: boolean;
+    positions: Positions;
   };
 }
 
@@ -71,14 +72,13 @@ export type EdgeData = {
   placeholder?: boolean;
   condition_type?: string;
   errors?: object;
+  neighbour?: boolean;
 };
 
 export namespace Flow {
   export type Node = ReactFlow.Node<NodeData>;
 
-  export type Edge = ReactFlow.Edge<EdgeData> & {
-    neighbour?: boolean; // temporary flag for styling
-  };
+  export type Edge = ReactFlow.Edge<EdgeData>;
 
   export type Model = {
     nodes: Node[];

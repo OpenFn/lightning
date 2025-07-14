@@ -80,17 +80,6 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 # Set OAuth2 to use Hackney for HTTP calls
 config :oauth2, adapter: Tesla.Adapter.Hackney
 
-config :lightning, :oauth_clients,
-  google: [
-    wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
-  ],
-  salesforce: [
-    prod_wellknown_url:
-      "https://login.salesforce.com/.well-known/openid-configuration",
-    sandbox_wellknown_url:
-      "https://test.salesforce.com/.well-known/openid-configuration"
-  ]
-
 # Configure esbuild (the version is required)
 # TODO: work out how to _NOT_ have this set of entry points try and build
 # monaco-editor, since we already have a separate esbuild task for that.
@@ -120,6 +109,7 @@ config :esbuild,
          js/workflow-editor/WorkflowEditor.tsx
          js/workflow-store/WorkflowStore.tsx
          js/manual-run-panel/ManualRunPanel.tsx
+         js/panel/panels/WorkflowRunPanel.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js
@@ -160,7 +150,7 @@ config :tailwind,
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id, :session_id, :prompt_size]
+  metadata: [:request_id, :session_id, :prompt_size, :credential_id]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

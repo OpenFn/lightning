@@ -443,7 +443,7 @@ defmodule LightningWeb.RunLive.Components do
         id={@step.id}
         phx-hook="Tooltip"
         {if not @deleted do
-            ["phx-click": "rerun", "phx-value-run_id": @run.id, "phx-value-step_id": @step.id, "aria-label": "Rerun from this step with the latest version of this workflow"]
+            ["phx-click": "rerun", "phx-value-run_id": @run.id, "phx-value-step_id": @step.id, "aria-label": "Run this step with the latest version of this workflow"]
         else
           ["aria-label": "This step has been deleted and cannot be retried. Try running from other steps"]
         end}

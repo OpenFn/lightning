@@ -269,8 +269,10 @@ defmodule LightningWeb.UserLiveTest do
 
       assert html =~ "Users"
 
-      refute html =~
-               "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
+      formated_deletion_date =
+        DateTime.utc_now() |> Timex.shift(days: 7) |> Calendar.strftime("%d %b")
+
+      refute html =~ formated_deletion_date
 
       {:ok, form_live, _} =
         index_live
@@ -302,8 +304,7 @@ defmodule LightningWeb.UserLiveTest do
         to: Swoosh.Email.Recipient.format(user)
       )
 
-      assert html =~
-               "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
+      assert html =~ formated_deletion_date
     end
 
     test "disables the delete link for listed superusers", %{
@@ -315,14 +316,14 @@ defmodule LightningWeb.UserLiveTest do
       assert(
         index_live
         |> has_element?(
-          "span#delete-#{user.id}.table-action-disabled",
+          "span#delete-#{user.id}.cursor-not-allowed",
           "Delete"
         )
       )
 
       refute(
         index_live
-        |> has_element?("a#delete-#{user.id}.table-action", "Delete")
+        |> has_element?("a#delete-#{user.id}", "Delete")
       )
     end
 
@@ -382,7 +383,7 @@ defmodule LightningWeb.UserLiveTest do
 
       assert index_live
              |> has_element?(
-               "a#cancel-deletion-#{user.id}.table-action",
+               "a#cancel-deletion-#{user.id}",
                "Cancel deletion"
              )
     end
@@ -429,7 +430,7 @@ defmodule LightningWeb.UserLiveTest do
       assert(
         index_live
         |> has_element?(
-          "span#delete-now-#{user.id}.table-action-disabled",
+          "span#delete-now-#{user.id}.cursor-not-allowed",
           "Delete now"
         )
       )
@@ -437,7 +438,7 @@ defmodule LightningWeb.UserLiveTest do
       refute(
         index_live
         |> has_element?(
-          "a#delete-now-#{user.id}.table-action",
+          "a#delete-now-#{user.id}",
           "Delete now"
         )
       )
@@ -480,6 +481,157 @@ defmodule LightningWeb.UserLiveTest do
       assert html =~
                "This user cannot be deleted until their auditable activities have also been purged."
     end
+
+    test "sorting by email column works correctly", %{conn: conn} do
+      _user_a = user_fixture(email: "alpha@example.com", first_name: "Alpha")
+      _user_b = user_fixture(email: "beta@example.com", first_name: "Beta")
+      _user_c = user_fixture(email: "charlie@example.com", first_name: "Charlie")
+
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Check initial state (should be sorted by email ascending by default)
+      assert assert_elements_in_order(html, [
+               "alpha@example.com",
+               "beta@example.com",
+               "charlie@example.com"
+             ])
+
+      # Click email header to toggle to descending
+      index_live
+      |> element("a[phx-click='sort'][phx-value-by='email']")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check reverse order
+      assert assert_elements_in_order(html, [
+               "charlie@example.com",
+               "beta@example.com",
+               "alpha@example.com"
+             ])
+    end
+
+    test "sorting by first name column works correctly", %{conn: conn} do
+      _user_a = user_fixture(first_name: "Alice", email: "alice@example.com")
+      _user_b = user_fixture(first_name: "Bob", email: "bob@example.com")
+      _user_c = user_fixture(first_name: "Charlie", email: "charlie@example.com")
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Click first name header to sort ascending
+      index_live
+      |> element("a[phx-click='sort'][phx-value-by='first_name']")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check that first names are in alphabetical order
+      assert assert_elements_in_order(html, ["Alice", "Bob", "Charlie"])
+    end
+
+    test "sorting by role column works correctly", %{conn: conn} do
+      _user_a = user_fixture(role: :user, email: "user@example.com")
+      _user_b = user_fixture(role: :superuser, email: "super@example.com")
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Click role header to sort
+      index_live
+      |> element("a[phx-click='sort'][phx-value-by='role']")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check that superuser appears before user (alphabetical order)
+      assert assert_elements_in_order(html, ["superuser", "user@example.com"])
+    end
+
+    test "sorting by enabled status works correctly", %{conn: conn} do
+      _user_enabled = user_fixture(disabled: false, email: "enabled@example.com")
+
+      _user_disabled =
+        user_fixture(disabled: true, email: "disabled@example.com")
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Click enabled header to sort (enabled users should appear first)
+      index_live
+      |> element("a[phx-click='sort'][phx-value-by='enabled']")
+      |> render_click()
+
+      html = render(index_live)
+
+      # Check that disabled user appears before enabled user (false < true)
+      assert assert_elements_in_order(html, [
+               "disabled@example.com",
+               "enabled@example.com"
+             ])
+    end
+
+    test "filtering users by search term works correctly", %{conn: conn} do
+      _user_a =
+        user_fixture(
+          first_name: "Alice",
+          last_name: "Smith",
+          email: "alice@example.com",
+          role: :user
+        )
+
+      _user_b =
+        user_fixture(
+          first_name: "Bob",
+          last_name: "Johnson",
+          email: "bob@example.com",
+          role: :superuser
+        )
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Filter by first name
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "a", "value" => "alice"})
+
+      html = render(index_live)
+      assert html =~ "alice@example.com"
+      refute html =~ "bob@example.com"
+
+      # Filter by role
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "s", "value" => "superuser"})
+
+      html = render(index_live)
+      assert html =~ "bob@example.com"
+      refute html =~ "alice@example.com"
+
+      # Clear filter
+      index_live
+      |> element("#clear_filter_button")
+      |> render_click()
+
+      html = render(index_live)
+      assert html =~ "alice@example.com"
+      assert html =~ "bob@example.com"
+    end
+
+    test "filter input shows clear button when text is entered", %{conn: conn} do
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+
+      # Initially clear button should be hidden (check CSS class)
+      assert html =~ "class=\"hidden\""
+
+      # Type in filter
+      index_live
+      |> element("input[name=filter]")
+      |> render_keyup(%{"key" => "a", "value" => "test"})
+
+      html = render(index_live)
+
+      # Clear button should now be visible (no longer hidden)
+      refute html =~ "class=\"hidden\""
+      assert has_element?(index_live, "a[phx-click='clear_filter']")
+    end
   end
 
   describe "Index and edit for user" do
@@ -516,5 +668,28 @@ defmodule LightningWeb.UserLiveTest do
       {key, value} ->
         Map.get(user, key) == value
     end)
+  end
+
+  # Helper to check element order in rendered HTML using proper parsing
+  defp assert_elements_in_order(
+         html,
+         elements,
+         table_selector \\ "table tbody tr"
+       ) do
+    parsed_html = Floki.parse_fragment!(html)
+    rows = Floki.find(parsed_html, table_selector)
+
+    row_texts = Enum.map(rows, fn row -> Floki.text(row) end)
+
+    # Find positions of each element in the row texts
+    positions =
+      Enum.map(elements, fn element ->
+        Enum.find_index(row_texts, fn row_text ->
+          String.contains?(row_text, element)
+        end)
+      end)
+
+    # Check if positions are in ascending order
+    positions == Enum.sort(positions)
   end
 end

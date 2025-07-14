@@ -41,10 +41,18 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   Loads the complete session including all messages, generated templates,
   and conversation history for template generation continuation.
+  <<<<<<< HEAD
+  =======
+
+  ## Examples
+
+      session = WorkflowTemplate.get_session!(%{chat_session_id: session_id})
+      # Session includes all messages and any generated workflow YAML
+  >>>>>>> origin/main
   """
   @impl true
-  @spec get_session!(String.t(), map()) :: map()
-  def get_session!(session_id, _assigns) do
+  @spec get_session!(map()) :: map()
+  def get_session!(%{chat_session_id: session_id}) do
     AiAssistant.get_session!(session_id)
   end
 
@@ -110,6 +118,11 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   @impl true
   def query(session, content, opts \\ []) do
     AiAssistant.query_workflow(session, content, opts)
+  end
+
+  @impl true
+  def query_options(%{workflow_code: workflow_code}) do
+    [workflow_code: workflow_code]
   end
 
   @doc """

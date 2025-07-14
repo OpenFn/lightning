@@ -1,17 +1,7 @@
-import type {
-  WorkflowState,
-  SpecJob,
-  SpecTrigger,
-  SpecEdge,
-  StateJob,
-  StateTrigger,
-  StateEdge,
-  WorkflowSpec,
-} from './types';
+import Ajv, { type ErrorObject } from 'ajv';
+import YAML from 'yaml';
 import { randomUUID } from '../common';
 import workflowV1Schema from './schema/workflow-spec.json';
-import YAML from 'yaml';
-import Ajv, { type ErrorObject } from 'ajv';
 import {
   YamlSyntaxError,
   JobNotFoundError,
@@ -21,8 +11,27 @@ import {
   createWorkflowError
 } from './workflow-errors';
 
+import type {
+  Position,
+  SpecEdge,
+  SpecJob,
+  SpecTrigger,
+  StateEdge,
+  StateJob,
+  StateTrigger,
+  WorkflowSpec,
+  WorkflowState,
+} from './types';
+
 const hyphenate = (str: string) => {
   return str.replace(/\s+/g, '-');
+};
+
+const roundPosition = (pos: Position): Position => {
+  return {
+    x: Math.round(pos.x),
+    y: Math.round(pos.y),
+  };
 };
 
 export const convertWorkflowStateToSpec = (
@@ -30,26 +39,28 @@ export const convertWorkflowStateToSpec = (
 ): WorkflowSpec => {
   const jobs: { [key: string]: SpecJob } = {};
   workflowState.jobs.forEach(job => {
+    const pos = workflowState.positions?.[job.id]
     const jobDetails: SpecJob = {
       id: job.id,
       name: job.name,
       adaptor: job.adaptor,
-      body: job.body
+      body: job.body,
+      pos: pos ? roundPosition(pos): undefined
     };
     jobs[hyphenate(job.name)] = jobDetails;
   });
 
   const triggers: { [key: string]: SpecTrigger } = {};
   workflowState.triggers.forEach(trigger => {
+    const pos = workflowState.positions?.[trigger.id];
     const triggerDetails: SpecTrigger = {
       id: trigger.id,
       type: trigger.type,
-      enabled: trigger.enabled
+      enabled: trigger.enabled,
+      pos: trigger.type !== 'kafka' && pos ? roundPosition(pos) : undefined,
+      cron_expression: trigger.type === 'cron' && 'cron_expression' in trigger ? trigger.cron_expression : undefined
     } as SpecTrigger;
-    
-    if (trigger.type === 'cron' && 'cron_expression' in trigger) {
-      (triggerDetails as any).cron_expression = trigger.cron_expression;
-    }
+
     // TODO: handle kafka config
     triggers[trigger.type] = triggerDetails;
   });
@@ -111,28 +122,38 @@ export const convertWorkflowStateToSpec = (
 export const convertWorkflowSpecToState = (
   workflowSpec: WorkflowSpec
 ): WorkflowState => {
+  const positions: Record<string, Position> = {};
   const stateJobs: Record<string, StateJob> = {};
   Object.entries(workflowSpec.jobs).forEach(([key, specJob]) => {
+    const uId = specJob.id || randomUUID();
     stateJobs[key] = {
-      id: specJob.id || randomUUID(),
+      id: uId,
       name: specJob.name,
       adaptor: specJob.adaptor,
       body: specJob.body,
     };
+    if (specJob.pos) positions[uId] = specJob.pos;
   });
 
   const stateTriggers: Record<string, StateTrigger> = {};
   Object.entries(workflowSpec.triggers).forEach(([key, specTrigger]) => {
+    const uId = specTrigger.id || randomUUID();
     const trigger = {
-      id: specTrigger.id || randomUUID(),
+      id: uId,
       type: specTrigger.type,
       enabled: specTrigger.enabled !== undefined ? specTrigger.enabled : true,
     };
 
-    if (specTrigger.type === 'cron') {
-      trigger.cron_expression = specTrigger.cron_expression;
+    if (specTrigger.type !== 'kafka' && specTrigger.pos) {
+      positions[uId] = specTrigger.pos;
     }
 
+    if (specTrigger)
+      if (specTrigger.type === 'cron') {
+        trigger.cron_expression = specTrigger.cron_expression;
+      }
+
+    // TODO: handle kafka config
     stateTriggers[key] = trigger;
   });
 
@@ -183,6 +204,7 @@ export const convertWorkflowSpecToState = (
     jobs: Object.values(stateJobs),
     edges: Object.values(stateEdges),
     triggers: Object.values(stateTriggers),
+    positions: Object.keys(positions).length ? positions : null, // null here is super important - don't mess with it
   };
 
   return workflowState;

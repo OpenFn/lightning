@@ -2,8 +2,8 @@ defmodule LightningWeb.Components.Credentials do
   @moduledoc false
   use LightningWeb, :component
 
+  alias LightningWeb.Components.Common
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
-  alias LightningWeb.CredentialLive.OauthComponent
   alias LightningWeb.CredentialLive.RawBodyComponent
 
   def delete_credential_modal(assigns) do
@@ -26,14 +26,13 @@ defmodule LightningWeb.Components.Credentials do
           </button>
         </div>
       </:title>
-      <div class="text-left text-wrap">
+      <div>
         <p class="text-sm text-gray-500">
           You are about the delete the credential "{@credential.name}" which may be used in other projects. All jobs using this credential will fail.
-          <br />Do you want to proceed with this action?
+          <br /><br />Do you want to proceed with this action?
         </p>
       </div>
-      <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-      <div class="flex flex-row-reverse gap-4">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -47,7 +46,7 @@ defmodule LightningWeb.Components.Credentials do
         <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end
@@ -72,14 +71,13 @@ defmodule LightningWeb.Components.Credentials do
           </button>
         </div>
       </:title>
-      <div class="text-left text-wrap">
+      <div>
         <p class="text-sm text-gray-500">
           You are about the delete the Oauth client "{@client.name}" which may be used in other projects. All jobs dependent on this client will fail.
           <br /><br />Do you want to proceed with this action?
         </p>
       </div>
-      <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-      <div class="flex flex-row-reverse gap-4">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -93,7 +91,7 @@ defmodule LightningWeb.Components.Credentials do
         <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end
@@ -101,46 +99,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :id, :string, required: false
   attr :type, :string, required: true
   attr :form, :map, required: true
-  attr :action, :any, required: false
-  attr :phx_target, :any, default: nil
-  attr :schema, :string, required: false
-  attr :update_body, :any, required: false
-  attr :scopes_changed, :boolean, required: false
-  attr :sandbox_changed, :boolean, required: false
-  attr :oauth_clients, :list, required: false
   slot :inner_block
-
-  def form_component(%{type: "googlesheets"} = assigns) do
-    ~H"""
-    <OauthComponent.fieldset
-      :let={l}
-      id={@id}
-      form={@form}
-      action={@action}
-      schema={@schema}
-      update_body={@update_body}
-    >
-      {render_slot(@inner_block, l)}
-    </OauthComponent.fieldset>
-    """
-  end
-
-  def form_component(%{type: "salesforce_oauth"} = assigns) do
-    ~H"""
-    <OauthComponent.fieldset
-      :let={l}
-      id={@id}
-      form={@form}
-      action={@action}
-      schema={@schema}
-      update_body={@update_body}
-      scopes_changed={@scopes_changed}
-      sandbox_changed={@sandbox_changed}
-    >
-      {render_slot(@inner_block, l)}
-    </OauthComponent.fieldset>
-    """
-  end
 
   def form_component(%{type: "raw"} = assigns) do
     ~H"""
@@ -277,49 +236,27 @@ defmodule LightningWeb.Components.Credentials do
 
   def options_menu_button(assigns) do
     ~H"""
-    <div id={@id} class="inline-flex rounded-md shadow-xs">
-      <.button
-        type="button"
-        theme="primary"
-        phx-click={show_dropdown("menu")}
-        class="relative inline-flex items-center"
-        aria-expanded="true"
-        aria-haspopup="true"
-        disabled={@disabled}
-      >
+    <Common.simple_dropdown id={@id}>
+      <:button>
         {render_slot(@inner_block)}
-        <.icon name="hero-chevron-down" class="ml-1 h-5 w-5" />
-      </.button>
-      <div class="relative -ml-px block">
-        <div
-          class="hidden absolute right-0 z-10 -mr-1 mt-12 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
-          role="menu"
-          aria-orientation="vertical"
-          aria-labelledby="option-menu-button"
+      </:button>
+      <:options>
+        <a
+          :for={%{name: name, id: id, target: target} = option <- @options}
+          href="#"
+          role="menuitem"
           tabindex="-1"
-          phx-click-away={hide_dropdown("menu")}
-          id="menu"
+          id={id}
+          phx-click={show_modal(target)}
+          disabled={@disabled}
         >
-          <div class="py-1" role="none">
-            <a
-              :for={%{name: name, id: id, target: target} = option <- @options}
-              href="#"
-              class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100"
-              role="menuitem"
-              tabindex="-1"
-              id={id}
-              phx-click={show_modal(target)}
-              disabled={@disabled}
-            >
-              {name}<span
-                :if={Map.get(option, :badge)}
-                class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
-              ><%= Map.get(option, :badge) %></span>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+          {name}<span
+            :if={Map.get(option, :badge)}
+            class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
+          ><%= Map.get(option, :badge) %></span>
+        </a>
+      </:options>
+    </Common.simple_dropdown>
     """
   end
 end

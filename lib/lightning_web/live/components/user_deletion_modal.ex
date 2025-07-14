@@ -111,8 +111,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
             <br /><br />Audit trails are removed on a project-basis and may be controlled by the project owner or a superuser.
           </p>
         </div>
-        <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-        <div class="flex flex-row-reverse gap-4">
+        <.modal_footer>
           <button
             type="button"
             phx-click="close_modal"
@@ -121,7 +120,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
           >
             Cancel
           </button>
-        </div>
+        </.modal_footer>
       </.modal>
     </div>
     """

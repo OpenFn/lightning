@@ -63,7 +63,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     else
       notify_parent(:workflow_params_changed, %{
         "workflow" => params,
-        "opts" => [push_patches: false, context: socket.assigns.context]
+        "opts" => [push_patches: true, context: socket.assigns.context]
       })
 
       {:noreply, assign(socket, :workflow_params, params)}

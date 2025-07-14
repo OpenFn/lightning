@@ -17,6 +17,134 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+- Handling of CLI error messages when fetching metadata via an adaptor
+  [#3367](https://github.com/OpenFn/lightning/issues/3367)
+
+## [v2.13.5] 2025-07-11
+
+## [v2.13.5-pre] 2025-07-11
+
+### Added
+
+- Allow users to see & _use_ the "next input" state that would be used by a cron
+  trigger when inspecting and running cron-triggered jobs
+  [3335](https://github.com/OpenFn/lightning/issues/3335)
+- Enable Undo and Redo in the Workflow Editor
+  [#3358](https://github.com/OpenFn/lightning/pull/3358)
+
+### Changed
+
+- Bump CLI to 1.13.1 [#3351](https://github.com/OpenFn/lightning/issues/3351)
+
+### Fixed
+
+- Isolate failed to refresh token errors from other oauth errros
+  [#3332](https://github.com/OpenFn/lightning/issues/3332)
+
+## [v2.13.4] - 2025-07-05
+
+## [v2.13.4-pre1] - 2025-07-04
+
+### Changed
+
+- Standardize modal footers and paddings
+  [#3277](https://github.com/OpenFn/lightning/issues/3277)
+
+### Fixed
+
+- Fix text content overflowing in credential modal
+  [#3280](https://github.com/OpenFn/lightning/pull/3280)
+- Fix tables UI broken [#3324](https://github.com/OpenFn/lightning/issues/3324)
+
+## [v2.13.4-pre] - 2025-07-04
+
+### Added
+
+- New buttons to run a workflow directly from the canvas, both from the start of
+  the workflow [#3290](https://github.com/OpenFn/lightning/issues/3290) and from
+  an individual step [#3294](https://github.com/OpenFn/lightning/issues/3294)
+- Sorting & filtering superuser interfaces for Projects, Project, and Users
+  [#3354](https://github.com/OpenFn/lightning/pull/3354)
+
+### Changed
+
+- Dont send oauth token expiry errors to Sentry
+  [#3334](https://github.com/OpenFn/lightning/issues/3334)
+- Improve error message when credential fails during runs
+  [#3332](https://github.com/OpenFn/lightning/issues/3332)
+
+### Fixed
+
+- Fix OAuth scope validation error caused by `offline_access`
+  [#3363](https://github.com/OpenFn/lightning/issues/3363)
+- Cannot send message in old ai chat sessions
+  [#3347](https://github.com/OpenFn/lightning/issues/3347)
+- Fixes brief flash of previously viewed diagram when switching workflows
+  [#3352](https://github.com/OpenFn/lightning/pull/3352)
+- Fixes import of workflow YML for a manual laid out workflow.
+  [#3360](https://github.com/OpenFn/lightning/pull/3360)
+
+## [v2.13.3] 2025-06-26
+
+## [v2.13.3-pre1] 2025-06-26
+
+### Fixed
+
+- ⚠️️ **Security patch for cases when a single user creates multiple Oauth
+  credentials for the same Oauth client.** This fix prevents credential token
+  sharing for users with _multiple_ Oauth credentials linked to a single OpenFn
+  username, a single Oauth Client, and the _same_ set of scopes. Previously,
+  these credentials would be considered the unique (`user_id`, `client_id`,
+  `scopes`) and only the _last_ issued token would be persisted. This fix binds
+  oauth_tokens to credentials 1:1 and provides a number of enhancements for
+  debugging and reauthorizing Oauth credentials.
+  [#3326](https://github.com/OpenFn/lightning/issues/3326)
+
+## [v2.13.3-pre]
+
+### Added
+
+- Give users the option to attach job code and logs to AI Assistant
+  [#2935](https://github.com/OpenFn/lightning/issues/2935)
+- Allow users to edit position of nodes in the workflow
+  [#3123](https://github.com/OpenFn/lightning/issues/3123)
+- Minimap for easier workflow navigation
+  [#3125](https://github.com/OpenFn/lightning/issues/3125)
+- Added icons to control layout in the workflow
+  [PR #3242](https://github.com/OpenFn/lightning/pull/3242)
+
+### Changed
+
+- Update React Flow to version 12
+  [PR #3242](https://github.com/OpenFn/lightning/pull/3242)
+- Create nodes and edges with the same button in the workflow
+  [#2175](https://github.com/OpenFn/lightning/issues/2175)
+
+### Fixed
+
+- AI Assistant fails to send job context in subsequent messages
+  [#3329](https://github.com/OpenFn/lightning/issues/3329)
+- Fix snapshot cleanup incorrectly deleting runs via cascade deletion
+  [#3313](https://github.com/OpenFn/lightning/issues/3313)
+- `Lightning.Demo.reset_demo()` was broken by an ordering issue between
+  Credentials and Oauth tokens.
+
+## [v2.13.2] - 2025-06-18
+
+⚠️️ Please note that **this version fixes an issue that caused premature run
+history deletion** when snapshots were cleaned. Certain additional runs related
+to pre-existing work orders were being deleted before their retention period.
+This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
+`latest` you'd see this bug come out in `v2.13.0` on June 4th.
+
+## [v2.13.2-pre] - 2025-06-18
+
+### Added
+
 - Show who started each run
   [#3309](https://github.com/OpenFn/lightning/issues/3309)
 
@@ -39,6 +167,8 @@ and this project adheres to
 
 - Report AI Assistant errors to Sentry
   [#3010](https://github.com/OpenFn/lightning/issues/3010)
+- Do not validate edge js condition expression
+  [#3028](https://github.com/OpenFn/lightning/issues/3028)
 
 ### Fixed
 
@@ -2301,7 +2431,7 @@ and this project adheres to
   [#1610](https://github.com/OpenFn/Lightning/issues/1610) and
   [#1608](https://github.com/OpenFn/Lightning/issues/1608)
 
-## [2.0.0-rc2] - 2024-01-08
+## [v2.0.0-rc2] - 2024-01-08
 
 ### Fixed
 
@@ -2315,7 +2445,7 @@ and this project adheres to
   getting overridden when user focuses on the Monaco editor
   [#1596](https://github.com/OpenFn/Lightning/issues/1596)
 
-## [2.0.0-rc1] - 2024-01-05
+## [v2.0.0-rc1] - 2024-01-05
 
 ### Why does this repo go from `v0` to `v2.0`?
 

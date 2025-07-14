@@ -19,7 +19,18 @@
             "name": { "type": "string" },
             "adaptor": { "type": "string" },
             "body": { "type": "string" },
-            "credential": { "type": ["string", "null"] }
+            "credential": { "type": ["string", "null"] },
+            "pos": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              }
+            }
           },
           "required": ["name", "adaptor", "body"],
           "additionalProperties": false
@@ -43,6 +54,17 @@
             },
             "cron_expression": {
               "type": "string"
+            },
+            "pos": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              }
             }
           },
           "required": ["type", "enabled"],

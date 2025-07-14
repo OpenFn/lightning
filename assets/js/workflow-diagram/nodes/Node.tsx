@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Handle, type NodeProps } from 'reactflow';
+import React, { memo } from 'react';
+import { Handle, type NodeProps } from '@xyflow/react';
 
 import Shape from '../components/Shape';
 import ErrorMessage from '../components/ErrorMessage';
@@ -45,7 +45,7 @@ const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
   if (children && (children as any).length) {
     return (
       <p
-        className={`line-clamp-2 align-left text-m max-w-[275px] text-ellipsis overflow-hidden ${textColorClass}`}
+        className={`line-clamp-2 align-left text-m max-w-[120px] text-ellipsis overflow-hidden ${textColorClass}`}
       >
         {children}
       </p>
@@ -91,9 +91,9 @@ const Node = ({
 
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
   return (
-    <div className="group">
+    <div className="group" data-a-node>
       <div className="flex flex-row cursor-pointer">
-        <div>
+        <div className="relative">
           {targetPosition && (
             <>
               {/*
@@ -124,9 +124,10 @@ const Node = ({
 
                   // abuse the handle style to make the whole node the drop target
                   left: '52px',
-                  top: '-12px',
+                  top: '52px',
                   width: '128px',
                   height: '128px',
+                  zIndex: 1000,
                   backgroundColor: data.isActiveDropTarget
                     ? 'rgba(79, 70, 229, 0.2)'
                     : 'transparent',
@@ -224,7 +225,7 @@ const Node = ({
             }}
           />
         )}
-        <div className="flex flex-col flex-1 ml-2 mt-8">
+        <div className="flex flex-col mt-8 ml-2 absolute left-[116px] top-0 pointer-events-none min-w-[275px]">
           <Label hasErrors={hasErrors(errors)}>{label}</Label>
           <SubLabel>{sublabel}</SubLabel>
           {data.isActiveDropTarget &&

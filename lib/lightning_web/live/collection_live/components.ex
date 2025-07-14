@@ -22,7 +22,7 @@ defmodule LightningWeb.CollectionLive.Components do
           </button>
         </div>
       </:title>
-      <div class="text-left text-wrap">
+      <div>
         <p class="text-sm text-gray-500">
           Are you sure you want to delete the collection
           <span class="font-medium">{@collection.name}</span>
@@ -30,7 +30,7 @@ defmodule LightningWeb.CollectionLive.Components do
           If you wish to proceed with this action, click on the delete button. To cancel click on the cancel button.<br /><br />
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mt-2">
+      <.modal_footer>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -44,7 +44,7 @@ defmodule LightningWeb.CollectionLive.Components do
         <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
         </.button>
-      </div>
+      </.modal_footer>
     </.modal>
     """
   end
@@ -98,13 +98,13 @@ defmodule LightningWeb.CollectionLive.Components do
           <:body>
             <%= for collection <- @collections do %>
               <.tr id={"collections-table-row-#{collection.id}"}>
-                <.td class="break-words max-w-[15rem] text-gray-800">
+                <.td class="wrap-break-word max-w-[15rem] text-gray-800">
                   {collection.name}
                 </.td>
-                <.td class="break-words max-w-[25rem]">
+                <.td class="wrap-break-word max-w-[25rem]">
                   {collection.project.name}
                 </.td>
-                <.td class="break-words max-w-[25rem]">
+                <.td class="wrap-break-word max-w-[25rem]">
                   {div(collection.byte_size_sum, 1_000_000)}
                 </.td>
                 <.td>

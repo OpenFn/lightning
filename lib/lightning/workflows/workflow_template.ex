@@ -13,7 +13,7 @@ defmodule Lightning.Workflows.WorkflowTemplate do
     field :name, :string
     field :description, :string
     field :code, :string
-    field :positions, :string
+    field :positions, :map
     field :tags, {:array, :string}, default: []
 
     belongs_to :workflow, Workflow
