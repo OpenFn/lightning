@@ -2,6 +2,30 @@ defmodule LightningWeb.CredentialLiveHelpers do
   import Phoenix.LiveViewTest
   import ExUnit.Assertions
 
+  def open_create_credential_modal(view) do
+    view
+    |> element("#new-credential-option-menu-item")
+    |> render_click()
+  end
+
+  def open_edit_credential_modal(view, credential_id) do
+    view
+    |> element("#credential-actions-#{credential_id}-edit")
+    |> render_click()
+  end
+
+  def open_delete_credential_modal(view, credential_id) do
+    view
+    |> element("#credential-actions-#{credential_id}-delete")
+    |> render_click()
+  end
+
+  def open_transfer_credential_modal(view, credential_id) do
+    view
+    |> element("#credential-actions-#{credential_id}-transfer")
+    |> render_click()
+  end
+
   def delete_credential_button(live, id) do
     live
     |> element(

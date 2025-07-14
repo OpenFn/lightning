@@ -165,9 +165,7 @@ defmodule LightningWeb.CredentialLiveTest do
              )
 
       html =
-        index_live
-        |> element("#credential-actions-#{credential.id}-delete")
-        |> render_click()
+        open_delete_credential_modal(index_live, credential.id)
 
       # modal now exists
       assert has_element?(
@@ -229,10 +227,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      html =
-        index_live
-        |> element("#credential-actions-#{credential.id}-delete")
-        |> render_click()
+      html = open_delete_credential_modal(index_live, credential.id)
 
       assert html =~ "Delete credential"
 
@@ -441,10 +436,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert html =~ credential.name
 
-      html =
-        view
-        |> element("#credential-actions-#{credential.id}-delete")
-        |> render_click()
+      html = open_delete_credential_modal(view, credential.id)
 
       assert html =~
                "Deleting this credential will immediately remove it from all jobs"
@@ -518,9 +510,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      index_live
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(index_live)
 
       index_live |> select_credential_type("raw")
       index_live |> click_continue()
@@ -602,9 +592,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      index_live
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(index_live)
 
       index_live |> select_credential_type("raw")
       index_live |> click_continue()
@@ -659,9 +647,7 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      index_live
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(index_live)
 
       # Pick a type
 
@@ -727,9 +713,7 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      index_live
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(index_live)
 
       index_live |> select_credential_type("postgresql")
       index_live |> click_continue()
@@ -822,9 +806,7 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      index_live
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(index_live)
 
       index_live |> select_credential_type("http")
       index_live |> click_continue()
@@ -875,9 +857,7 @@ defmodule LightningWeb.CredentialLiveTest do
          } do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       select_credential_type(view, "godata")
       click_continue(view)
@@ -928,9 +908,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "updates a credential", %{conn: conn, credential: credential} do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      index_live
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(index_live, credential.id)
 
       assert index_live
              |> fill_credential(
@@ -980,9 +958,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(view, credential.id)
 
       view
       |> element("#project-credentials-list-#{credential.id}")
@@ -1071,9 +1047,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(view, credential.id)
 
       view
       |> delete_credential_button(project.id)
@@ -1117,9 +1091,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(view, credential.id)
 
       # Try adding an existing project credential
       view
@@ -1168,9 +1140,7 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      index_live
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(index_live, credential.id)
 
       {:ok, _index_live, html} =
         index_live
@@ -1251,9 +1221,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(view, credential.id)
 
       # Wait for the refresh attempt to complete
       Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
@@ -1339,9 +1307,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1408,9 +1374,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1494,9 +1458,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1582,9 +1544,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1677,9 +1637,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1767,9 +1725,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1850,9 +1806,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -1934,9 +1888,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -2020,9 +1972,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn = log_in_user(conn, owner)
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#credential-actions-#{credential.id}-transfer")
-      |> render_click()
+      open_transfer_credential_modal(view, credential.id)
 
       %{
         owner: owner,
@@ -2240,9 +2190,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn = log_in_user(conn, owner)
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      view
-      |> element("#credential-actions-#{credential.id}-transfer")
-      |> render_click()
+      open_transfer_credential_modal(view, credential.id)
 
       %{
         owner: owner,
@@ -2321,10 +2269,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "displays credential type modal with icons", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      html =
-        view
-        |> element("#new-credential-option-menu-item")
-        |> render_click()
+      html = open_create_credential_modal(view)
 
       html_tree = Floki.parse_document!(html)
 
@@ -2402,9 +2347,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -2539,9 +2482,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(view, credential.id)
 
       view
       |> fill_credential(
@@ -2594,9 +2535,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      view
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(view)
 
       view |> select_credential_type(oauth_client.id)
       view |> click_continue()
@@ -2655,9 +2594,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      index_live
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(index_live, credential.id)
 
       refute index_live |> has_element?("#scope-change-action")
 
@@ -2703,9 +2640,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      edit_live
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(edit_live, credential.id)
 
       Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
         {_, assigns} =
@@ -2755,9 +2690,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      edit_live
-      |> element("#credential-actions-#{credential.id}-edit")
-      |> render_click()
+      open_edit_credential_modal(edit_live, credential.id)
 
       Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
         {_, assigns} =
@@ -2798,10 +2731,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      html =
-        view
-        |> element("#credential-actions-#{credential.id}-edit")
-        |> render_click()
+      html = open_edit_credential_modal(view, credential.id)
 
       assert html =~ credential.name
       refute view |> has_element?("h3", "OAuth client not found")
@@ -2816,10 +2746,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
-      html =
-        view
-        |> element("#credential-actions-#{credential.id}-edit")
-        |> render_click()
+      html = open_edit_credential_modal(view, credential.id)
 
       assert html =~ credential.name
       assert view |> has_element?("h3", "OAuth client not found")
@@ -2836,9 +2763,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      index_live
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(index_live)
 
       index_live |> select_credential_type(oauth_client.id)
       index_live |> click_continue()
@@ -2924,9 +2849,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
-      index_live
-      |> element("#new-credential-option-menu-item")
-      |> render_click()
+      open_create_credential_modal(index_live)
 
       index_live |> select_credential_type(oauth_client.id)
       index_live |> click_continue()
