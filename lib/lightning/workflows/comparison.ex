@@ -27,7 +27,13 @@ defmodule Lightning.Workflows.Comparison do
       - `triggers: :all` - Ignore all trigger fields
       - `edges: :all` - Ignore all edge fields
   """
-  def equivalent?(workflow1, workflow2, opts \\ []) do
+  def equivalent?(workflow1, workflow2, opts \\ [])
+
+  def equivalent?(nil, nil, _opts), do: true
+  def equivalent?(nil, _workflow2, _opts), do: false
+  def equivalent?(_workflow1, nil, _opts), do: false
+
+  def equivalent?(workflow1, workflow2, opts) do
     checksum(workflow1, opts) == checksum(workflow2, opts)
   end
 
@@ -672,6 +678,8 @@ defmodule Lightning.Workflows.Comparison do
       Map.put(map, key, value)
     end
   end
+
+  defp get_field(nil, _field), do: nil
 
   defp get_field(data, field) when is_map(data) do
     Map.get(data, field) || Map.get(data, String.to_atom(field))

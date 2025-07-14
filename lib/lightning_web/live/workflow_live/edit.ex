@@ -3051,27 +3051,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp handle_workflow_params_change(
-         %{assigns: %{workflow_params: _current_params}} = socket,
+         socket,
          %{
            "workflow" => incoming_params,
            "opts" => opts
          }
        ) do
-    # Lightning.Workflows.Comparison.equivalent?(
-    #   current_params,
-    #   incoming_params
-    # )
-    # |> dbg()
-    # |> if do
-    #   {:noreply, socket}
-    # else
     {:noreply,
      socket
      |> handle_new_params(incoming_params, :workflow, opts)
      |> push_event("state-applied", %{"state" => incoming_params})
-     |> push_event("set-disabled", %{disabled: false})}
-
-    # end
+     |> push_event("set-disabled", %{disabled: false})
+     |> push_event("force-fit", %{})}
   end
 
   defp handle_workflow_save_request(socket, %{query_params: query_params}) do

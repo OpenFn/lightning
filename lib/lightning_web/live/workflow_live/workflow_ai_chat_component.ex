@@ -15,6 +15,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     {:ok,
      assign(socket,
        workflow_code: nil,
+       workflow_params: nil,
        context: nil,
        session_or_message: nil
      )}
@@ -53,12 +54,20 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   end
 
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
-    notify_parent(:workflow_params_changed, %{
-      "workflow" => params,
-      "opts" => [push_patches: false, context: socket.assigns.context]
-    })
+    Lightning.Workflows.Comparison.equivalent?(
+      socket.assigns.workflow_params,
+      params
+    )
+    |> if do
+      {:noreply, socket}
+    else
+      notify_parent(:workflow_params_changed, %{
+        "workflow" => params,
+        "opts" => [push_patches: false, context: socket.assigns.context]
+      })
 
-    {:noreply, socket}
+      {:noreply, assign(socket, :workflow_params, params)}
+    end
   end
 
   def handle_event(
@@ -70,47 +79,19 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
         },
         socket
       ) do
-    Logger.error("Workflow template parsing failed #{inspect(error_details)}")
+    Logger.error(
+      "Workflow template parsing failed #{inspect(error_details)} \n\n #{formatted_message}"
+    )
 
     send_update(
       LightningWeb.AiAssistant.Component,
       id: "workflow-ai-assistant-persistent",
-      action: :fix_workflow_code,
-      error_message: error_for_ai(error_details, formatted_message),
+      action: :workflow_parse_error,
+      error_details: formatted_message,
       session_or_message: socket.assigns.session_or_message
     )
 
     {:noreply, socket}
-  end
-
-  defp error_for_ai(error_details, formatted_message) do
-    base_message =
-      case error_details["code"] do
-        "JOB_NOT_FOUND" ->
-          reference = error_details["reference"] || "unknown"
-          edge = error_details["edgeKey"] || "unknown"
-
-          "YAML parsing error in edge '#{edge}': Job reference '#{reference}' contains invalid characters (likely a trailing quote). Please regenerate the workflow ensuring all job names in edges are properly formatted without special characters."
-
-        "TRIGGER_NOT_FOUND" ->
-          reference = error_details["reference"] || "unknown"
-          edge = error_details["edgeKey"] || "unknown"
-
-          "YAML parsing error in edge '#{edge}': Trigger '#{reference}' not found. Please ensure all trigger references in edges match the defined triggers."
-
-        "DUPLICATE_JOB_NAME" ->
-          name = error_details["duplicateName"] || "unknown"
-
-          "YAML parsing error: Duplicate job name '#{name}'. Each job must have a unique name."
-
-        "YAML_SYNTAX_ERROR" ->
-          "YAML syntax error: #{formatted_message}. Please check the YAML formatting and ensure proper indentation."
-
-        _ ->
-          formatted_message
-      end
-
-    "#{base_message}\n\nPlease fix this specific error and regenerate the workflow YAML."
   end
 
   defp notify_parent(action, payload) do
@@ -141,7 +122,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
       }
     >
       <div
-        class="absolute top-5 -right-8 z-30 opacity-0"
+        id="close-ai-assistant-panel"
+        class="absolute top-4 -right-8 z-30 opacity-0"
         phx-mounted={
           JS.transition(
             {"transition-opacity duration-300 ease-in-out delay-300", "opacity-0",
@@ -149,6 +131,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
             time: 300
           )
         }
+        phx-hook="Tooltip"
+        aria-label="Click to close the AI Assistant panel"
       >
         <button
           type="button"
@@ -157,7 +141,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
           class="rounded-md text-gray-500 hover:text-gray-700 transition-colors duration-200"
         >
           <span class="sr-only">Close panel</span>
-          <.icon name="hero-x-mark" class="h-5 w-5" />
+          <.icon name="hero-chevron-double-left" class="h-5 w-5" />
         </button>
       </div>
 
