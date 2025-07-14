@@ -19,7 +19,8 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
        has_activity_in_projects?:
          Credentials.has_activity_in_projects?(credential)
      )
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign_new(:modal_id, fn %{id: id} -> "#{id}-modal" end)}
   end
 
   @impl true
@@ -61,8 +62,8 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
   @impl true
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do
     ~H"""
-    <div>
-      <LightningWeb.Components.Credentials.credential_modal id={"credential-#{@id}"}>
+    <div id={@id}>
+      <LightningWeb.Components.Credentials.credential_modal id={@modal_id}>
         <:title>
           Credential marked for deletion
         </:title>
@@ -80,7 +81,9 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
           </p>
         </div>
         <.modal_footer>
-          <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={"credential-#{@id}"}>
+          <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={
+            @modal_id
+          }>
             Ok, understood
           </LightningWeb.Components.Credentials.credential_modal_cancel_button>
         </.modal_footer>
@@ -91,9 +94,9 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
 
   def render(assigns) do
     ~H"""
-    <div>
+    <div id={@id}>
       <LightningWeb.Components.Credentials.credential_modal
-        id={"credential-#{@id}"}
+        id={@modal_id}
         width="max-w-md"
       >
         <:title>
@@ -117,7 +120,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
         </div>
         <.modal_footer>
           <.button
-            id={"user-#{@id}_confirm_button"}
+            id={"#{@modal_id}_confirm_button"}
             type="button"
             phx-click="delete"
             phx-value-id={@credential.id}
@@ -127,7 +130,9 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
           >
             Delete credential
           </.button>
-          <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={"credential-#{@id}"} />
+          <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={
+            @modal_id
+          } />
         </.modal_footer>
       </LightningWeb.Components.Credentials.credential_modal>
     </div>

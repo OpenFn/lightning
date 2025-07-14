@@ -200,7 +200,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     {:noreply,
      socket
      |> put_flash(:info, "Credential deletion canceled")
-     |> push_patch(to: socket.assigns.return_to)}
+     |> push_navigate(to: socket.assigns.return_to)}
   end
 
   defp can_delete_credential(socket, credential) do

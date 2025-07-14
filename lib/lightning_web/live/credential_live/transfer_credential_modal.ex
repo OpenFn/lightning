@@ -15,7 +15,8 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
      socket
      |> assign(assigns)
      |> assign(:revoke_transfer, revoke_transfer)
-     |> assign(:changeset, Credentials.credential_transfer_changeset())}
+     |> assign(:changeset, Credentials.credential_transfer_changeset())
+     |> assign_new(:modal_id, fn %{id: id} -> "#{id}-modal" end)}
   end
 
   @impl true
@@ -113,9 +114,9 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="text-left mt-10 sm:mt-0">
+    <div id={@id} class="text-left mt-10 sm:mt-0">
       <LightningWeb.Components.Credentials.credential_modal
-        id={@id}
+        id={@modal_id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
       >
         <:title>
@@ -134,7 +135,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     ~H"""
     <.form
       :let={f}
-      id={"#{@id}-form"}
+      id={"#{@modal_id}-form"}
       as={:receiver}
       for={@changeset}
       phx-target={@myself}
@@ -142,7 +143,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       phx-submit="transfer-credential"
     >
       <.form_fields f={f} myself={@myself} />
-      <.form_footer id={@id} myself={@myself} changeset={@changeset} />
+      <.form_footer modal_id={@modal_id} myself={@myself} changeset={@changeset} />
     </.form>
     """
   end
@@ -188,14 +189,14 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
 
   defp modal_content(assigns) do
     ~H"""
-    <.form_component id={@id} changeset={@changeset} myself={@myself} />
+    <.form_component modal_id={@modal_id} changeset={@changeset} myself={@myself} />
     """
   end
 
   defp footer_buttons(%{revoke_transfer: true} = assigns) do
     ~H"""
     <.button
-      id={"#{@id}-revoke-button"}
+      id={"#{@modal_id}-revoke-button"}
       type="button"
       theme="primary"
       phx-click="revoke-transfer"
@@ -205,8 +206,8 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       Revoke
     </.button>
     <LightningWeb.Components.Credentials.credential_modal_cancel_button
-      id={"#{@id}-cancel-button"}
-      modal_id={@id}
+      id={"#{@modal_id}-cancel-button"}
+      modal_id={@modal_id}
     />
     """
   end
@@ -214,7 +215,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
   defp footer_buttons(assigns) do
     ~H"""
     <.button
-      id={"#{@id}-submit-button"}
+      id={"#{@modal_id}-submit-button"}
       type="submit"
       theme="primary"
       phx-disable-with="Transferring..."
@@ -223,8 +224,8 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       Transfer
     </.button>
     <LightningWeb.Components.Credentials.credential_modal_cancel_button
-      id={"#{@id}-cancel-button"}
-      modal_id={@id}
+      id={"#{@modal_id}-cancel-button"}
+      modal_id={@modal_id}
     />
     """
   end
