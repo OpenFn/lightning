@@ -159,8 +159,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
 
   @callback enable_attachment_options_component?() :: boolean()
 
-  @callback query_options(Ecto.Changeset.t()) :: map()
-
+  @callback query_options(map()) :: Keyword.t()
   @doc """
   Determines if the chat input should be disabled based on mode conditions.
 
@@ -351,7 +350,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
         |> Ecto.Changeset.cast(params, Map.keys(types))
       end
 
-      def query_options(_changeset), do: []
+      def query_options(_assigns), do: []
 
       def enable_attachment_options_component?, do: false
 
