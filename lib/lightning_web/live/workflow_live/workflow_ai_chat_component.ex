@@ -6,8 +6,10 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   modify workflows using natural language descriptions while preserving existing
   job code.
   """
-  alias Phoenix.LiveView.JS
   use LightningWeb, :live_component
+
+  alias Phoenix.LiveView.JS
+
   require Logger
 
   @impl true

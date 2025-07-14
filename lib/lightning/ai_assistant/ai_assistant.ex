@@ -266,7 +266,7 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  defp session_messages_query() do
+  defp session_messages_query do
     from(m in ChatMessage,
       where: m.status != :cancelled,
       order_by: [asc: :inserted_at]

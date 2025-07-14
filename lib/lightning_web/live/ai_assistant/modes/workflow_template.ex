@@ -10,10 +10,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
-  require Logger
-
   alias Lightning.AiAssistant
   alias LightningWeb.Live.AiAssistant.ErrorHandler
+
+  require Logger
 
   @doc """
   Creates a new workflow template generation session.
