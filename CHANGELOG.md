@@ -26,6 +26,8 @@ and this project adheres to
 
 - Handling of CLI error messages when fetching metadata via an adaptor
   [#3367](https://github.com/OpenFn/lightning/issues/3367)
+- Error messages in forms not appearing when LastPass enabled
+  [#3402](https://github.com/OpenFn/lightning/issues/3402)
 
 ## [v2.13.5] 2025-07-11
 
