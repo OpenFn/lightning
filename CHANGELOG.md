@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Don't render credential modals inside table cells
+  [#1588](https://github.com/OpenFn/lightning/issues/1588)
+
 ### Fixed
 
 - Handling of CLI error messages when fetching metadata via an adaptor
