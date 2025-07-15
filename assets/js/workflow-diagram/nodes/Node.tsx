@@ -1,10 +1,9 @@
-import React, { memo } from 'react';
-import { Handle, type NodeProps } from '@xyflow/react';
-
-import Shape from '../components/Shape';
-import ErrorMessage from '../components/ErrorMessage';
-import { nodeIconStyles, nodeLabelStyles } from '../styles';
 import { SparklesIcon } from '@heroicons/react/24/outline';
+import { Handle, type NodeProps } from '@xyflow/react';
+import React, { memo } from 'react';
+import ErrorMessage from '../components/ErrorMessage';
+import Shape from '../components/Shape';
+import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
 
@@ -41,18 +40,28 @@ const hasErrors = (errors: ErrorObject | null | undefined): boolean => {
   return Object.values(errors).some(errorArray => errorArray.length > 0);
 };
 
-const Label: React.FC<LabelProps> = ({ children, hasErrors = false, hasAi = false }) => {
+const Label: React.FC<LabelProps> = ({
+  children,
+  hasErrors = false,
+  hasAi = false,
+}) => {
   const textColorClass = hasErrors ? 'text-red-500' : '';
 
   if (children && (children as any).length) {
     return (
-      <div className='inline-flex'>
+      <div className="inline-flex">
         <p
           className={`flex line-clamp-2 align-left text-m max-w-[275px] text-ellipsis overflow-hidden ${textColorClass}`}
         >
           {children}
         </p>
-        {hasAi ? <SparklesIcon title='AI chat was used in this job' className='w-5 h-5 ml-1' color="#FF5722" /> : null}
+        {hasAi ? (
+          <SparklesIcon
+            title="AI chat was used in this job"
+            className="w-5 h-5 ml-1"
+            color="#FF5722"
+          />
+        ) : null}
       </div>
     );
   }
@@ -231,7 +240,9 @@ const Node = ({
           />
         )}
         <div className="flex flex-col flex-1 ml-2 mt-8">
-          <Label hasErrors={hasErrors(errors)} hasAi={!!data.has_ai_chat}>{label} </Label>
+          <Label hasErrors={hasErrors(errors)} hasAi={!!data.has_ai_chat}>
+            {label}{' '}
+          </Label>
           <SubLabel>{sublabel}</SubLabel>
           {data.isActiveDropTarget &&
             typeof data.dropTargetError === 'string' && (
@@ -251,9 +262,10 @@ const Node = ({
             justifyContent: 'center',
           }}
           className={`flex flex-row items-center
-                    opacity-0  ${(!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-            ''
-            }
+                    opacity-0  ${
+                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+                      ''
+                    }
                     transition duration-150 ease-in-out`}
         >
           {toolbar()}
