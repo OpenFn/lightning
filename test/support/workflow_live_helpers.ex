@@ -327,7 +327,7 @@ defmodule Lightning.WorkflowLive.Helpers do
 
     view
     |> element(
-      ~s{input[name='workflow[jobs][#{idx}][#{field}]'] ~ .error-space [data-tag="error_message"]},
+      ~s{div[phx-feedback-for="workflow[jobs][#{idx}][#{field}]"] .error-space [data-tag="error_message"]},
       error
     )
     |> has_element?()
