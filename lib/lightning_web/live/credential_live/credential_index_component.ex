@@ -304,7 +304,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
 
   defp delete_oauth_client_modal(assigns) do
     ~H"""
-    <LightningWeb.Components.Credentials.credential_modal id={@id}>
+    <Components.Credentials.credential_modal id={@id}>
       <:title>
         Delete Oauth Client
       </:title>
@@ -326,11 +326,9 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         >
           Delete
         </.button>
-        <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={
-          @id
-        } />
+        <Components.Credentials.cancel_button modal_id={@id} />
       </.modal_footer>
-    </LightningWeb.Components.Credentials.credential_modal>
+    </Components.Credentials.credential_modal>
     """
   end
 end

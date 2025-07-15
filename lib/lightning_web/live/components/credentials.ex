@@ -61,7 +61,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :rest, :global
   slot :inner_block
 
-  def credential_modal_cancel_button(assigns) do
+  def cancel_button(assigns) do
     ~H"""
     <.button
       type="button"

@@ -332,7 +332,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   def render(assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <LightningWeb.Components.Credentials.credential_modal
+      <Components.Credentials.credential_modal
         id={@id}
         width="w-[32rem] lg:w-[44rem]"
       >
@@ -481,7 +481,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 </p>
                 <div class="mt-4">
                   <.global_client_checkbox :if={@allow_global} form={f} />
-                  <LightningWeb.Components.Credentials.projects_picker
+                  <Components.Credentials.projects_picker
                     :if={!@is_global}
                     id={@oauth_client.id || "new"}
                     type={:oauth_client}
@@ -504,12 +504,10 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   Add OAuth Client
               <% end %>
             </.button>
-            <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={
-              @id
-            } />
+            <Components.Credentials.cancel_button modal_id={@id} />
           </.modal_footer>
         </.form>
-      </LightningWeb.Components.Credentials.credential_modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end

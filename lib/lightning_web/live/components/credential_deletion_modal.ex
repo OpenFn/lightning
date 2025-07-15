@@ -63,7 +63,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do
     ~H"""
     <div id={@id}>
-      <LightningWeb.Components.Credentials.credential_modal id={@modal_id}>
+      <Components.Credentials.credential_modal id={@modal_id}>
         <:title>
           Credential marked for deletion
         </:title>
@@ -81,13 +81,11 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
           </p>
         </div>
         <.modal_footer>
-          <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={
-            @modal_id
-          }>
+          <Components.Credentials.cancel_button modal_id={@modal_id}>
             Ok, understood
-          </LightningWeb.Components.Credentials.credential_modal_cancel_button>
+          </Components.Credentials.cancel_button>
         </.modal_footer>
-      </LightningWeb.Components.Credentials.credential_modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -95,10 +93,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
   def render(assigns) do
     ~H"""
     <div id={@id}>
-      <LightningWeb.Components.Credentials.credential_modal
-        id={@modal_id}
-        width="max-w-md"
-      >
+      <Components.Credentials.credential_modal id={@modal_id} width="max-w-md">
         <:title>
           Delete credential
         </:title>
@@ -130,11 +125,9 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
           >
             Delete credential
           </.button>
-          <LightningWeb.Components.Credentials.credential_modal_cancel_button modal_id={
-            @modal_id
-          } />
+          <Components.Credentials.cancel_button modal_id={@modal_id} />
         </.modal_footer>
-      </LightningWeb.Components.Credentials.credential_modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end

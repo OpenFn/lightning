@@ -575,7 +575,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               />
             </div>
             <div>
-              <LightningWeb.Components.Form.check_box form={f} field={:production} />
+              <Components.Form.check_box form={f} field={:production} />
             </div>
           </div>
 
@@ -626,7 +626,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                 Control which projects have access to this credentials
               </p>
               <div class="mt-4">
-                <LightningWeb.Components.Credentials.projects_picker
+                <Components.Credentials.projects_picker
                   id={@credential.id || "new"}
                   type={:credential}
                   available_projects={@available_projects}
@@ -643,10 +643,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             :if={@action == :edit and @allow_credential_transfer}
             class="space-y-4"
           >
-            <LightningWeb.Components.Credentials.credential_transfer
-              form={f}
-              users={@users}
-            />
+            <Components.Credentials.credential_transfer form={f} users={@users} />
           </div>
         </div>
 
@@ -662,7 +659,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           >
             Save
           </.button>
-          <LightningWeb.Components.Credentials.credential_modal_cancel_button
+          <Components.Credentials.cancel_button
             modal_id={@modal_id}
             {if(@on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{})}
           />

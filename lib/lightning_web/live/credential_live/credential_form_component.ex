@@ -186,7 +186,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     ~H"""
     <div class="text-xs text-left">
-      <LightningWeb.Components.Credentials.credential_modal
+      <Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 max-w-full"
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
@@ -236,13 +236,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           >
             Configure credential
           </.button>
-          <LightningWeb.Components.Credentials.credential_modal_cancel_button
+          <Components.Credentials.cancel_button
             id="cancel-credential-type-picker"
             modal_id={@id}
             {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
           />
         </.modal_footer>
-      </LightningWeb.Components.Credentials.credential_modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -250,7 +250,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second, schema: "oauth"} = assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <LightningWeb.Components.Credentials.credential_modal
+      <Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
@@ -276,7 +276,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           modal_id={@id}
           on_modal_close={@on_modal_close}
         />
-      </LightningWeb.Components.Credentials.credential_modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -284,7 +284,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second} = assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <LightningWeb.Components.Credentials.credential_modal
+      <Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
@@ -300,7 +300,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           phx-change="validate"
           phx-submit="save"
         >
-          <LightningWeb.Components.Credentials.form_component
+          <Components.Credentials.form_component
             :let={{fieldset, _valid?}}
             id={@credential.id || "new"}
             form={f}
@@ -313,10 +313,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                     <NewInputs.input type="text" field={f[:name]} label="Name" />
                   </div>
                   <div>
-                    <LightningWeb.Components.Form.check_box
-                      form={f}
-                      field={:production}
-                    />
+                    <Components.Form.check_box form={f} field={:production} />
                   </div>
                 </div>
               </fieldset>
@@ -339,7 +336,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                     Control which projects have access to this credentials
                   </p>
                   <div class="mt-4">
-                    <LightningWeb.Components.Credentials.projects_picker
+                    <Components.Credentials.projects_picker
                       id={@credential.id || "new"}
                       type={:credential}
                       available_projects={@available_projects}
@@ -355,13 +352,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                 :if={@action == :edit and @allow_credential_transfer}
                 class="space-y-4"
               >
-                <LightningWeb.Components.Credentials.credential_transfer
-                  form={f}
-                  users={@users}
-                />
+                <Components.Credentials.credential_transfer form={f} users={@users} />
               </div>
             </div>
-          </LightningWeb.Components.Credentials.form_component>
+          </Components.Credentials.form_component>
           <.modal_footer>
             <.button
               id={"save-credential-button-#{@credential.id || "new"}"}
@@ -371,13 +365,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             >
               Save
             </.button>
-            <LightningWeb.Components.Credentials.credential_modal_cancel_button
+            <Components.Credentials.cancel_button
               modal_id={@id}
               {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
             />
           </.modal_footer>
         </.form>
-      </LightningWeb.Components.Credentials.credential_modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end

@@ -115,7 +115,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
   def render(assigns) do
     ~H"""
     <div id={@id} class="text-left mt-10 sm:mt-0">
-      <LightningWeb.Components.Credentials.credential_modal
+      <Components.Credentials.credential_modal
         id={@modal_id}
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
       >
@@ -126,7 +126,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
           <.modal_subtitle {assigns} />
         </div>
         <.modal_content {assigns} />
-      </LightningWeb.Components.Credentials.credential_modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -205,7 +205,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     >
       Revoke
     </.button>
-    <LightningWeb.Components.Credentials.credential_modal_cancel_button
+    <Components.Credentials.cancel_button
       id={"#{@modal_id}-cancel-button"}
       modal_id={@modal_id}
     />
@@ -223,7 +223,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     >
       Transfer
     </.button>
-    <LightningWeb.Components.Credentials.credential_modal_cancel_button
+    <Components.Credentials.cancel_button
       id={"#{@modal_id}-cancel-button"}
       modal_id={@modal_id}
     />
