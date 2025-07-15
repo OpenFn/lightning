@@ -8,11 +8,11 @@
     <meta name="project" content="Lightning v2.13.5">
 
 
-    <title>LightningWeb.ModalPortal — Lightning v2.13.5</title>
+    <title>LightningWeb.LiveComponentPortal — Lightning v2.13.5</title>
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-2B4FACC2.js"></script>
+    <script defer src="dist/sidebar_items-701406CB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -79,12 +79,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">LightningWeb.ModalPortal</span> 
+      <span translate="no">LightningWeb.LiveComponentPortal</span> 
       <small class="app-vsn" translate="no">(Lightning v2.13.5)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/livecomponent_portal.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -93,7 +93,9 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Component for rendering content inside layout without full DOM patch.</p>
+<p>Component for rendering content inside layout without full DOM patch.
+Use this when you want to render a LiveComponent outside of the elements parent,
+maybe because of an existing form</p>
     </section>
 
 </div>
@@ -112,14 +114,6 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#close_modal/0" data-no-tooltip="" translate="no">close_modal()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#handle_event/3" data-no-tooltip="" translate="no">handle_event(binary, _, socket)</a>
 
       </div>
@@ -130,7 +124,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#on_hide/2" data-no-tooltip="" translate="no">on_hide(close_modal_target \\ nil, id \\ &quot;modal&quot;)</a>
+        <a href="#remove_component/0" data-no-tooltip="" translate="no">remove_component()</a>
 
       </div>
 
@@ -138,15 +132,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#on_show/2" data-no-tooltip="" translate="no">on_show(js \\ %JS{}, id)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#open_modal/2" data-no-tooltip="" translate="no">open_modal(module, attrs)</a>
+        <a href="#remove_component_js/1" data-no-tooltip="" translate="no">remove_component_js(js \\ %JS{})</a>
 
       </div>
 
@@ -159,6 +145,14 @@ Lightning
       </div>
 
         <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#show_component/2" data-no-tooltip="" translate="no">show_component(module, attrs)</a>
+
+      </div>
 
     </div>
 
@@ -185,28 +179,6 @@ Lightning
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="close_modal/0">
-
-  <div class="detail-header">
-    <a href="#close_modal/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">close_modal()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L110" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
 <section class="detail" id="handle_event/3">
 
   <div class="detail-header">
@@ -217,7 +189,7 @@ Lightning
       <h1 class="signature" translate="no">handle_event(binary, _, socket)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L30" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/livecomponent_portal.ex#L23" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -229,21 +201,17 @@ Lightning
 <p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/1.0.9/Phoenix.LiveComponent.html#c:handle_event/3"><code class="inline">Phoenix.LiveComponent.handle_event/3</code></a>.</p>
   </section>
 </section>
-<section class="detail" id="on_hide/2">
-
-    <span id="on_hide/0"></span>
-
-    <span id="on_hide/1"></span>
+<section class="detail" id="remove_component/0">
 
   <div class="detail-header">
-    <a href="#on_hide/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#remove_component/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">on_hide(close_modal_target \\ nil, id \\ &quot;modal&quot;)</h1>
+      <h1 class="signature" translate="no">remove_component()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L114" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/livecomponent_portal.ex#L39" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -255,41 +223,19 @@ Lightning
 
   </section>
 </section>
-<section class="detail" id="on_show/2">
+<section class="detail" id="remove_component_js/1">
 
-    <span id="on_show/1"></span>
+    <span id="remove_component_js/0"></span>
 
   <div class="detail-header">
-    <a href="#on_show/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#remove_component_js/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">on_show(js \\ %JS{}, id)</h1>
+      <h1 class="signature" translate="no">remove_component_js(js \\ %JS{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L143" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="open_modal/2">
-
-  <div class="detail-header">
-    <a href="#open_modal/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">open_modal(module, attrs)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L103" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/livecomponent_portal.ex#L43" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -311,7 +257,7 @@ Lightning
       <h1 class="signature" translate="no">render(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L8" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/livecomponent_portal.ex#L10" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -321,6 +267,28 @@ Lightning
   <section class="docstring">
 
 <p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/1.0.9/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="show_component/2">
+
+  <div class="detail-header">
+    <a href="#show_component/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">show_component(module, attrs)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/livecomponent_portal.ex#L32" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 <section class="detail" id="update/2">
@@ -333,7 +301,7 @@ Lightning
       <h1 class="signature" translate="no">update(assigns, socket)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L34" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/livecomponent_portal.ex#L27" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
