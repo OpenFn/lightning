@@ -2,8 +2,13 @@ import type { WithActionProps } from '#/react/lib/with-props';
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
 import { useWorkflowStore } from '../workflow-store/store';
 
-export const WorkflowEditor: WithActionProps<{ showAiAssistant?: boolean, aiAssistantId?: string }> = (props) => {
-  const { getItem, forceFit, showAiAssistant, aiAssistantId } = useWorkflowStore();
+export const WorkflowEditor: WithActionProps<{
+  selection: string;
+  showAiAssistant?: boolean;
+  aiAssistantId?: string;
+}> = props => {
+  const { getItem, forceFit, showAiAssistant, aiAssistantId } =
+    useWorkflowStore();
 
   const onSelectionChange = (id?: string) => {
     console.debug('onSelectionChange', id);
@@ -35,15 +40,17 @@ export const WorkflowEditor: WithActionProps<{ showAiAssistant?: boolean, aiAssi
     ) {
       props.navigate(nextUrl.toString());
     }
-  }
+  };
 
-  return <WorkflowDiagram
-    el={props.el}
-    containerEl={props.containerEl}
-    selection={props.selection}
-    onSelectionChange={onSelectionChange}
-    forceFit={forceFit}
-    showAiAssistant={showAiAssistant}
-    aiAssistantId={aiAssistantId}
-  />
-}
+  return (
+    <WorkflowDiagram
+      el={props.el}
+      containerEl={props.containerEl}
+      selection={props.selection}
+      onSelectionChange={onSelectionChange}
+      forceFit={forceFit}
+      showAiAssistant={showAiAssistant}
+      aiAssistantId={aiAssistantId}
+    />
+  );
+};

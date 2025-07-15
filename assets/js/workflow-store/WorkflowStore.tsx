@@ -50,7 +50,7 @@ export const WorkflowStore: WithActionProps = props => {
     setForceFit,
     setShowAiAssistant,
     setAiAssistantId,
-    reset
+    reset,
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -61,7 +61,11 @@ export const WorkflowStore: WithActionProps = props => {
         props.pushEventTo('push-change', pendingChange, response => {
           console.debug('push-change response', response);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          if (response && response.patches) applyPatches({ patches: response.patches || [], inverse: response.inverse || [] });
+          if (response && response.patches)
+            applyPatches({
+              patches: response.patches || [],
+              inverse: response.inverse || [],
+            });
           resolve(true);
         });
       });
@@ -85,19 +89,33 @@ export const WorkflowStore: WithActionProps = props => {
   }, [processPendingChanges, subscribe]);
 
   React.useEffect(() => {
-    return props.handleEvent('patches-applied', (response: Partial<ReplayAction>) => {
-      console.debug('patches-applied', response);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response && response.patches && response.patches.length) applyPatches({ patches: response.patches || [], inverse: response.inverse || [] });
-    });
+    return props.handleEvent(
+      'patches-applied',
+      (response: Partial<ReplayAction>) => {
+        console.debug('patches-applied', response);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
+        if (response && response.patches && response.patches.length)
+          applyPatches({
+            patches: response.patches || [],
+            inverse: response.inverse || [],
+          });
+      }
+    );
   }, [applyPatches, props]);
 
   React.useEffect(() => {
-    return props.handleEvent('state-applied', (response: { state: WorkflowProps }) => {
-      console.log('state-applied', response.state);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response.state) setState({ ...response.state, positions: response.state.positions ?? null });
-    });
+    return props.handleEvent(
+      'state-applied',
+      (response: { state: WorkflowProps }) => {
+        console.log('state-applied', response.state);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
+        if (response.state)
+          setState({
+            ...response.state,
+            positions: response.state.positions ?? null,
+          });
+      }
+    );
   }, [setState, props]);
 
   React.useEffect(() => {
@@ -112,9 +130,9 @@ export const WorkflowStore: WithActionProps = props => {
       setForceFit(true);
     });
     return () => {
-      navigateCleanup()
-      forcefitCleanup()
-    }
+      navigateCleanup();
+      forcefitCleanup();
+    };
   }, [add, props.handleEvent, setSelection, setForceFit]);
 
   // Fetch initial state once on mount
@@ -156,22 +174,33 @@ export const WorkflowStore: WithActionProps = props => {
   }, [props.pushEventTo, setState, add]);
 
   React.useEffect(() => {
-    props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
-      setDisabled(response.disabled);
-    });
+    const disabledHandler = props.handleEvent(
+      'set-disabled',
+      (response: { disabled: boolean }) => {
+        setDisabled(response.disabled);
+      }
+    );
 
-    props.handleEvent('set-ai-assistant-visibility', (response: { showAiAssistant: boolean, aiAssistantId: string }) => {
-      setShowAiAssistant(response.showAiAssistant);
-      setAiAssistantId(response.aiAssistantId);
-    });
-  }, [props, setDisabled, setShowAiAssistant, setAiAssistantId]);
+    const aiAssistantVisibilityHandler = props.handleEvent(
+      'set-ai-assistant-visibility',
+      (response: { showAiAssistant: boolean; aiAssistantId: string }) => {
+        setShowAiAssistant(response.showAiAssistant);
+        setAiAssistantId(response.aiAssistantId);
+      }
+    );
+
+    return () => {
+      disabledHandler();
+      aiAssistantVisibilityHandler();
+    };
+  }, [props.handleEvent, setDisabled, setShowAiAssistant, setAiAssistantId]);
 
   // clear store when store-component unmounted
   React.useEffect(() => {
     return () => {
       reset();
-    }
-  }, [reset])
+    };
+  }, [reset]);
 
   return <>{props.children}</>;
 };
