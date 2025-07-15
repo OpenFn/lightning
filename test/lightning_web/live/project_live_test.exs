@@ -711,7 +711,7 @@ defmodule LightningWeb.ProjectLiveTest do
           "#project_users_table tbody tr"
         )
 
-      # First click sorts in descending order: Charlie, Bob, Alice  
+      # First click sorts in descending order: Charlie, Bob, Alice
       assert charlie_pos < bob_pos
       assert bob_pos < alice_pos
     end
@@ -995,6 +995,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
         refute html =~ credential_name
 
+        view |> element("#new-credential-option-menu-item") |> render_click()
+
         view |> select_credential_type("http")
         view |> click_continue()
 
@@ -1043,6 +1045,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute html =~ credential_name
 
+      # button is not disabled
+      refute view |> element("#new-credential-option-menu-item") |> render() =~
+               "disabled"
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+
       view |> select_credential_type("http")
       view |> click_continue()
 
@@ -1078,38 +1086,24 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :viewer}]
         )
 
-      {:ok, view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
-      credential_name = "My Credential"
+      # button is disabled
+      assert view |> element("#new-credential-option-menu-item") |> render() =~
+               "disabled"
 
-      refute html =~ credential_name
+      # send event anyway
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("new_credential")
 
-      view |> select_credential_type("http")
-      view |> click_continue()
+      # for some reason the #credentials is not included in the url in tests
+      assert_patched(view, ~p"/projects/#{project}/settings")
 
-      assert view
-             |> fill_credential(%{
-               name: credential_name,
-               body: %{
-                 username: "foo",
-                 password: "bar",
-                 baseUrl: "http://localhost"
-               }
-             })
-
-      {:ok, _view, html} =
-        view
-        |> click_save()
-        |> follow_redirect(
-          conn,
-          ~p"/projects/#{project}/settings#credentials"
-        )
-
-      assert html =~ "You are not authorized to perform this action."
-      refute html =~ credential_name
+      assert render(view) =~ "You are not authorized to perform this action"
     end
 
     test "click on cancel button to close credential creation modal", %{
@@ -1119,21 +1113,24 @@ defmodule LightningWeb.ProjectLiveTest do
       project =
         insert(:project,
           name: "project-1",
-          project_users: [%{user_id: user.id, role: :viewer}]
+          project_users: [%{user_id: user.id, role: :owner}]
         )
 
-      credential_name = "My Credential"
-
-      {:ok, view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
-      refute html =~ credential_name
+      # open modal
+      view |> element("#new-credential-option-menu-item") |> render_click()
 
-      refute view
-             |> element("#cancel-credential-type-picker", "Cancel")
-             |> render_click() =~ credential_name
+      assert has_element?(view, "#new-credential-modal")
+
+      view
+      |> element("#cancel-credential-type-picker", "Cancel")
+      |> render_click()
+
+      refute has_element?(view, "#new-credential-modal")
     end
 
     test "project admin can't edit project name and description with invalid data",

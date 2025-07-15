@@ -234,7 +234,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :on_change, :any, required: true
   attr :editable, :boolean, default: false
-  attr :project_user, :map
   attr :project, :map
 
   def job_form(assigns) do

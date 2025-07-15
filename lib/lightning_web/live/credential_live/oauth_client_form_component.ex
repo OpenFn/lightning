@@ -200,10 +200,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     end
   end
 
-  def handle_event("close_modal", _, socket) do
-    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
-  end
-
   defp update_scopes(socket, scope_key, scope_value, action) do
     scopes = socket.assigns[scope_key]
 
@@ -336,22 +332,12 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   def render(assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal id={@id} width="w-[32rem] lg:w-[44rem]">
+      <Components.Credentials.credential_modal
+        id={@id}
+        width="w-[32rem] lg:w-[44rem]"
+      >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title action={@action} /></span>
-            <button
-              id={"close-oauth-client-modal-form-#{@oauth_client.id || "new"}"}
-              phx-click="close_modal"
-              phx-target={@myself}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          <.modal_title action={@action} />
         </:title>
         <.form
           :let={f}
@@ -495,7 +481,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 </p>
                 <div class="mt-4">
                   <.global_client_checkbox :if={@allow_global} form={f} />
-                  <LightningWeb.Components.Credentials.projects_picker
+                  <Components.Credentials.projects_picker
                     :if={!@is_global}
                     id={@oauth_client.id || "new"}
                     type={:oauth_client}
@@ -518,12 +504,10 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   Add OAuth Client
               <% end %>
             </.button>
-            <.button_link type="button" navigate={@return_to} theme="secondary">
-              Cancel
-            </.button_link>
+            <Components.Credentials.cancel_button modal_id={@id} />
           </.modal_footer>
         </.form>
-      </.modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end

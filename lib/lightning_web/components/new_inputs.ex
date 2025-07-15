@@ -908,14 +908,19 @@ defmodule LightningWeb.Components.NewInputs do
       <small :if={@sublabel} class="mb-2 block text-xs text-gray-600">
         {@sublabel}
       </small>
-      <.input_element
-        type={@type}
-        name={@name}
-        id={@id}
-        class={@class}
-        value={Form.normalize_value(@type, @value)}
-        {@rest}
-      />
+      <div>
+        <%!--  This input is wrapped in a div on its own intentionally because of LastPass  --%>
+        <%!-- LastPass adds it's icon next to inputs and that affects error messages.   --%>
+        <%!-- See: https://github.com/OpenFn/lightning/issues/3402 --%>
+        <.input_element
+          type={@type}
+          name={@name}
+          id={@id}
+          class={@class}
+          value={Form.normalize_value(@type, @value)}
+          {@rest}
+        />
+      </div>
       <div :if={Enum.any?(@errors) and @display_errors} class="error-space">
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>

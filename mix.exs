@@ -70,7 +70,7 @@ defmodule Lightning.MixProject do
   defp deps do
     [
       # {:rexbug, ">= 1.0.0", only: :test},
-      {:bcrypt_elixir, "~> 3.2"},
+      {:bcrypt_elixir, "~> 3.3"},
       {:bodyguard, "~> 2.2"},
       {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
@@ -96,7 +96,7 @@ defmodule Lightning.MixProject do
       {:httpoison, "~> 2.0"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},
-      {:jsonpatch, "~> 1.0.2"},
+      {:jsonpatch, "~> 2.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:libcluster, "~> 3.3"},
       {:mimic, "~> 1.7.2", only: :test},
@@ -104,7 +104,7 @@ defmodule Lightning.MixProject do
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
-      {:oban, "~> 2.18"},
+      {:oban, "~> 2.19"},
       {:petal_components, "~> 3.0"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
@@ -122,7 +122,7 @@ defmodule Lightning.MixProject do
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
       {:sentry, "~> 10.9.0"},
-      {:sobelow, "~> 0.13.0", only: [:test, :dev]},
+      {:sobelow, "~> 0.14.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.17"},
       {:gen_smtp, "~> 1.1"},
@@ -141,7 +141,7 @@ defmodule Lightning.MixProject do
       {:packmatic, "~> 1.2"},
       # MFA
       {:nimble_totp, "~> 1.0"},
-      {:eqrcode, "~> 0.1"},
+      {:eqrcode, "~> 0.2"},
       # Github API Secret Encoding
       {:enacl, github: "aeternity/enacl", branch: "master"},
       {:earmark, "~> 1.4"},

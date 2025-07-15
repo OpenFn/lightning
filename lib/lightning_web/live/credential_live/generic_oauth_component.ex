@@ -10,7 +10,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   alias Lightning.Credentials.OauthValidation
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.Helpers
-  alias Phoenix.LiveView.JS
 
   require Logger
 
@@ -30,7 +29,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        selected_projects: [],
        oauth_progress: :idle,
        oauth_error: nil,
-       previous_oauth_state: nil
+       previous_oauth_state: nil,
+       on_modal_close: nil
      )}
   end
 
@@ -46,7 +46,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        optional_scopes: [],
        scopes: selected_scopes,
        allow_credential_transfer: assigns.allow_credential_transfer,
-       return_to: assigns.return_to
+       return_to: assigns.return_to,
+       modal_id: assigns.modal_id
      )}
   end
 
@@ -84,7 +85,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        scopes: scopes,
        authorize_url: authorize_url,
        allow_credential_transfer: assigns.allow_credential_transfer,
-       return_to: assigns.return_to
+       return_to: assigns.return_to,
+       modal_id: assigns.modal_id
      )}
   end
 
@@ -112,7 +114,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        scopes: mandatory_scopes ++ optional_scopes,
        authorize_url: authorize_url,
        allow_credential_transfer: assigns.allow_credential_transfer,
-       return_to: assigns.return_to
+       return_to: assigns.return_to,
+       modal_id: assigns.modal_id
      )}
   end
 
@@ -572,7 +575,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               />
             </div>
             <div>
-              <LightningWeb.Components.Form.check_box form={f} field={:production} />
+              <Components.Form.check_box form={f} field={:production} />
             </div>
           </div>
 
@@ -623,7 +626,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                 Control which projects have access to this credentials
               </p>
               <div class="mt-4">
-                <LightningWeb.Components.Credentials.projects_picker
+                <Components.Credentials.projects_picker
                   id={@credential.id || "new"}
                   type={:credential}
                   available_projects={@available_projects}
@@ -640,10 +643,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             :if={@action == :edit and @allow_credential_transfer}
             class="space-y-4"
           >
-            <LightningWeb.Components.Credentials.credential_transfer
-              form={f}
-              users={@users}
-            />
+            <Components.Credentials.credential_transfer form={f} users={@users} />
           </div>
         </div>
 
@@ -659,13 +659,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           >
             Save
           </.button>
-          <.button
-            type="button"
-            phx-click={JS.navigate(@return_to)}
-            theme="secondary"
-          >
-            Cancel
-          </.button>
+          <Components.Credentials.cancel_button
+            modal_id={@modal_id}
+            {if(@on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{})}
+          />
         </.modal_footer>
       </.form>
     </div>

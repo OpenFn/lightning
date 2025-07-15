@@ -207,7 +207,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       }
     end
 
-    test "closing the modal redirects to index page", %{
+    test "closing the modal removes it from the DOM", %{
       conn: conn,
       project: project
     } do
@@ -215,9 +215,17 @@ defmodule LightningWeb.OauthClientsLiveTest do
       |> Enum.each(fn url ->
         {:ok, view, _html} = live(conn, url, on_error: :raise)
 
-        view |> element("#close-oauth-client-modal-form-new") |> render_click()
+        refute has_element?(view, "#new-oauth-client-modal")
 
-        assert_redirect(view, url)
+        view |> element("#new-oauth-client-option-menu-item") |> render_click()
+
+        assert has_element?(view, "#new-oauth-client-modal")
+
+        view
+        |> element("#new-oauth-client-modal button", "Cancel")
+        |> render_click()
+
+        refute has_element?(view, "#new-oauth-client-modal")
       end)
     end
 
@@ -231,6 +239,8 @@ defmodule LightningWeb.OauthClientsLiveTest do
         [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
         |> Enum.each(fn url ->
           {:ok, view, _html} = live(conn, url, on_error: :raise)
+
+          view |> element("#new-oauth-client-option-menu-item") |> render_click()
 
           html =
             view

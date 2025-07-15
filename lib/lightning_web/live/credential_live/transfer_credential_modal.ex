@@ -15,14 +15,11 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
      socket
      |> assign(assigns)
      |> assign(:revoke_transfer, revoke_transfer)
-     |> assign(:changeset, Credentials.credential_transfer_changeset())}
+     |> assign(:changeset, Credentials.credential_transfer_changeset())
+     |> assign_new(:modal_id, fn %{id: id} -> "#{id}-modal" end)}
   end
 
   @impl true
-  def handle_event("close-modal", _params, socket) do
-    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
-  end
-
   def handle_event("validate", %{"receiver" => %{"email" => email}}, socket) do
     changeset =
       Credentials.credential_transfer_changeset(email)
@@ -117,38 +114,20 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="text-left mt-10 sm:mt-0">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
+    <div id={@id} class="text-left mt-10 sm:mt-0">
+      <Components.Credentials.credential_modal
+        id={@modal_id}
+        width="xl:min-w-1/3 min-w-1/2 w-[300px]"
+      >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title {assigns} /></span>
-            <.close_button id={@id} myself={@myself} />
-          </div>
+          <.modal_title {assigns} />
         </:title>
-        <:subtitle>
-          <span class="text-xs">
-            <.modal_subtitle {assigns} />
-          </span>
-        </:subtitle>
+        <div class="text-sm leading-4.5 text-zinc-600 mb-4">
+          <.modal_subtitle {assigns} />
+        </div>
         <.modal_content {assigns} />
-      </.modal>
+      </Components.Credentials.credential_modal>
     </div>
-    """
-  end
-
-  defp close_button(assigns) do
-    ~H"""
-    <button
-      id={"close-credential-modal-form-#{@id || "new"}"}
-      phx-click="close-modal"
-      phx-target={@myself}
-      type="button"
-      class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-      aria-label={gettext("close")}
-    >
-      <span class="sr-only">Close</span>
-      <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-    </button>
     """
   end
 
@@ -156,7 +135,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     ~H"""
     <.form
       :let={f}
-      id={"#{@id}-form"}
+      id={"#{@modal_id}-form"}
       as={:receiver}
       for={@changeset}
       phx-target={@myself}
@@ -164,7 +143,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       phx-submit="transfer-credential"
     >
       <.form_fields f={f} myself={@myself} />
-      <.form_footer id={@id} myself={@myself} changeset={@changeset} />
+      <.form_footer modal_id={@modal_id} myself={@myself} changeset={@changeset} />
     </.form>
     """
   end
@@ -210,14 +189,14 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
 
   defp modal_content(assigns) do
     ~H"""
-    <.form_component id={@id} changeset={@changeset} myself={@myself} />
+    <.form_component modal_id={@modal_id} changeset={@changeset} myself={@myself} />
     """
   end
 
   defp footer_buttons(%{revoke_transfer: true} = assigns) do
     ~H"""
     <.button
-      id={"#{@id}-revoke-button"}
+      id={"#{@modal_id}-revoke-button"}
       type="button"
       theme="primary"
       phx-click="revoke-transfer"
@@ -226,22 +205,17 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     >
       Revoke
     </.button>
-    <.button
-      id={"#{@id}-cancel-button"}
-      type="button"
-      phx-target={@myself}
-      phx-click="close-modal"
-      theme="secondary"
-    >
-      Cancel
-    </.button>
+    <Components.Credentials.cancel_button
+      id={"#{@modal_id}-cancel-button"}
+      modal_id={@modal_id}
+    />
     """
   end
 
   defp footer_buttons(assigns) do
     ~H"""
     <.button
-      id={"#{@id}-submit-button"}
+      id={"#{@modal_id}-submit-button"}
       type="submit"
       theme="primary"
       phx-disable-with="Transferring..."
@@ -249,15 +223,10 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     >
       Transfer
     </.button>
-    <.button
-      id={"#{@id}-cancel-button"}
-      type="button"
-      phx-target={@myself}
-      phx-click="close-modal"
-      theme="secondary"
-    >
-      Cancel
-    </.button>
+    <Components.Credentials.cancel_button
+      id={"#{@modal_id}-cancel-button"}
+      modal_id={@modal_id}
+    />
     """
   end
 

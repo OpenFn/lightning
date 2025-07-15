@@ -49,6 +49,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert has_element?(view, "#job-pane-#{job.id}")
 
+      view |> element("#new-credential-button") |> render_click()
+
       assert has_element?(view, "#credential-schema-picker")
       view |> CredentialLiveHelpers.select_credential_type("http")
       view |> CredentialLiveHelpers.click_continue()
@@ -68,6 +70,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}&v=#{workflow.lock_version}",
           on_error: :raise
         )
+
+      view |> element("#new-credential-button") |> render_click()
 
       view |> CredentialLiveHelpers.select_credential_type("raw")
       view |> CredentialLiveHelpers.click_continue()
@@ -219,6 +223,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> selected_adaptor_version_element(job) |> render() =~
                ~r(value="@openfn/[a-z-]+@latest"),
              "should have @latest selected by default"
+
+      view |> element("#new-credential-button") |> render_click()
 
       view |> CredentialLiveHelpers.select_credential_type("dhis2")
 
@@ -525,6 +531,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {job, _, _} = view |> select_first_job()
 
       view |> fill_job_fields(job, %{name: "My Job"})
+
+      view |> element("#new-credential-button") |> render_click()
 
       view |> CredentialLiveHelpers.select_credential_type("dhis2")
 

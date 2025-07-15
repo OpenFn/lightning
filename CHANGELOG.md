@@ -19,10 +19,25 @@ and this project adheres to
 
 ### Changed
 
+- Bump bcrypt_elixir from 3.2.1 to 3.3.2
+  [#3264](https://github.com/OpenFn/lightning/issues/3264)
+- Bump sobelow from 0.13.0 to 0.14.0
+  [#3263](https://github.com/OpenFn/lightning/issues/3263)
+- Bump jsonpatch from 1.0.2 to 2.2.2
+  [#3262](https://github.com/OpenFn/lightning/issues/3262)
+- Bump oban from 2.18.3 to 2.19.4
+  [#3159](https://github.com/OpenFn/lightning/issues/3159)
+- Bump eqrcode from 0.1.10 to 0.2.1
+  [#3116](https://github.com/OpenFn/lightning/issues/3116)
+
 ### Fixed
 
+- Don't render credential modals inside table cells
+  [#1588](https://github.com/OpenFn/lightning/issues/1588)
 - Handling of CLI error messages when fetching metadata via an adaptor
   [#3367](https://github.com/OpenFn/lightning/issues/3367)
+- Error messages in forms not appearing when LastPass enabled
+  [#3402](https://github.com/OpenFn/lightning/issues/3402)
 
 ## [v2.13.5] 2025-07-11
 
