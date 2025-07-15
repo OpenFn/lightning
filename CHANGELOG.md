@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Extended impeded project to take workflow concurrency into account.
+  [#3408](https://github.com/OpenFn/lightning/issues/3408)
+
 ### Changed
 
 - Bump bcrypt_elixir from 3.2.1 to 3.3.2
