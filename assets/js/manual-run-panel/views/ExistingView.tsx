@@ -255,7 +255,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                       <span className="hero-document-text align-middle size-4 group-hover:text-primary-600" />
                     )}
                     <span className="font-mono leading-none align-middle relative top-[1px]">
-                      {truncateUid(clip.id)}
+                      {clip.name || truncateUid(clip.id)}
                     </span>
                     <span className="align-middle">
                       <DataclipTypePill type={clip.type} size="small" />

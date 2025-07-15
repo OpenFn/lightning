@@ -6,6 +6,7 @@ export enum SeletableOptions {
 
 export interface Dataclip {
   id: string;
+  name: string | null;
   body: {
     data: Record<string, unknown>;
     request: {

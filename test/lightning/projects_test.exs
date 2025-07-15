@@ -1066,6 +1066,13 @@ defmodule Lightning.ProjectsTest do
           inserted_at: Timex.shift(now, days: -8)
         )
 
+      orphan_pre_retention_dataclip_having_name =
+        insert(:dataclip,
+          name: "some-name",
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
       orphan_post_retention_dataclip =
         insert(:dataclip,
           project: project,
@@ -1169,6 +1176,8 @@ defmodule Lightning.ProjectsTest do
       assert Repo.get(Dataclip, post_retention_dataclip_4.id)
 
       # Test 5: Orphaned dataclip cleanup
+      # orphan_pre_retention_dataclip_having_name SHOULD NOT be deleted (despite being old it has a name)
+      assert Repo.get(Dataclip, orphan_pre_retention_dataclip_having_name.id)
       # orphan_pre_retention_dataclip SHOULD be deleted (old and not referenced)
       refute Repo.get(Dataclip, orphan_pre_retention_dataclip.id)
       # orphan_post_retention_dataclip should NOT be deleted (recent timestamp)
@@ -1248,6 +1257,32 @@ defmodule Lightning.ProjectsTest do
       refute dataclip.request
       refute dataclip.body
       refute is_nil(dataclip.wiped_at)
+    end
+
+    test "does not wipe dataclips having names" do
+      project =
+        insert(:project,
+          history_retention_period: 14,
+          dataclip_retention_period: 10
+        )
+
+      dataclip =
+        insert(:dataclip,
+          name: "some-name",
+          project: project,
+          request: %{star: "sadio mane"},
+          type: :step_result,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -11)
+        )
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      dataclip = dataclip_with_body_and_request(dataclip)
+
+      assert dataclip.request === %{"star" => "sadio mane"}
+      assert dataclip.body === %{"team" => "senegal"}
+      assert dataclip.wiped_at == nil
     end
 
     test "does not wipe dataclips without a set retention period" do
