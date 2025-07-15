@@ -59,7 +59,8 @@ const fromWorkflow = (
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
 
-  const startNodeId = runSteps.length && runSteps[0] ? runSteps[0].job_id : undefined;
+  const isRun = !!runSteps.length;
+  const startNodeId = isRun && runSteps[0] ? runSteps[0].job_id : undefined;
 
   const runStepsObj = runSteps.reduce((a, b) => {
     const exists = a[b.job_id];
@@ -103,6 +104,7 @@ const fromWorkflow = (
         model.height = NODE_HEIGHT;
 
         model.data.allowPlaceholder = allowPlaceholder;
+        model.data.isRun = isRun;
         model.data.runData = runStepsObj[node.id];
 
         if (type === 'trigger') {
