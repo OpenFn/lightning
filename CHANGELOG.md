@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Indicate chat exists on project, workflow or job
+  [#2922](https://github.com/OpenFn/lightning/issues/2922)
+
 ### Changed
 
 ### Fixed
