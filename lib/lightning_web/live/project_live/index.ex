@@ -161,42 +161,32 @@ defmodule LightningWeb.ProjectLive.Index do
   end
 
   def delete_action(assigns) do
-    if assigns.project.scheduled_deletion do
-      ~H"""
-      <span>
-        <.link
-          id={"cancel-deletion-#{@project.id}"}
-          href="#"
-          class="table-action"
-          phx-click="cancel_deletion"
-          phx-value-id={@project.id}
-        >
-          Cancel deletion
-        </.link>
-      </span>
-      <span>
-        <.link
-          id={"delete-now-#{@project.id}"}
-          class="table-action"
-          navigate={~p"/settings/projects/#{@project.id}/delete"}
-        >
-          Delete now
-        </.link>
-      </span>
-      """
-    else
-      ~H"""
-      <span>
-        <.link
-          id={"delete-#{@project.id}"}
-          class="table-action"
-          navigate={Routes.project_index_path(@socket, :delete, @project)}
-        >
-          Delete
-        </.link>
-      </span>
-      """
-    end
+    ~H"""
+    <%= if @project.scheduled_deletion do %>
+      <.link
+        id={"cancel-deletion-#{@project.id}"}
+        href="#"
+        phx-click="cancel_deletion"
+        phx-value-id={@project.id}
+      >
+        Cancel deletion
+      </.link>
+
+      <.link
+        id={"delete-now-#{@project.id}"}
+        navigate={~p"/settings/projects/#{@project.id}/delete"}
+      >
+        Delete now
+      </.link>
+    <% else %>
+      <.link
+        id={"delete-#{@project.id}"}
+        navigate={Routes.project_index_path(@socket, :delete, @project)}
+      >
+        Delete
+      </.link>
+    <% end %>
+    """
   end
 
   defp list_projects(filter, sort_key, sort_direction) do
@@ -223,7 +213,7 @@ defmodule LightningWeb.ProjectLive.Index do
   def get_project_owner_name(project) do
     case Enum.find(project.project_users, fn pu -> pu.role == :owner end) do
       %{user: user} when not is_nil(user) ->
-        "#{user.first_name || ""} #{user.last_name || ""}" |> String.trim()
+        String.trim("#{user.first_name} #{user.last_name}")
 
       _ ->
         ""

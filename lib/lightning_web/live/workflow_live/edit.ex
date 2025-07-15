@@ -1535,11 +1535,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
            limit,
            offset
          ) do
-      {:ok, dataclips} ->
-        {:reply, %{dataclips: dataclips}, socket}
+      {:ok,
+       %{
+         dataclips: dataclips,
+         next_cron_run_dataclip_id: next_cron_run_dataclip_id
+       }} ->
+        {:reply,
+         %{
+           dataclips: dataclips,
+           next_cron_run_dataclip_id: next_cron_run_dataclip_id
+         }, socket}
 
       {:error, changeset} ->
-        {:reply, %{errors: LightningWeb.ChangesetJSON.errors(changeset)}, socket}
+        {:reply,
+         %{
+           dataclips: [],
+           next_cron_run_dataclip_id: nil,
+           errors: LightningWeb.ChangesetJSON.errors(changeset)
+         }, socket}
     end
   end
 
@@ -2842,8 +2855,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     patches =
       WorkflowParams.to_patches(initial_params, next_params)
 
+    inverse_patches = WorkflowParams.to_patches(next_params, initial_params)
+
     socket
-    |> push_event("patches-applied", %{patches: patches})
+    |> push_event("patches-applied", %{
+      patches: patches,
+      inverse: inverse_patches
+    })
   end
 
   defp maybe_push_workflow_created(socket, workflow) do

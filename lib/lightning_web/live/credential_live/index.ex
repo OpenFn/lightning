@@ -8,6 +8,7 @@ defmodule LightningWeb.CredentialLive.Index do
 
   alias Lightning.Credentials
   alias Lightning.OauthClients
+  alias LightningWeb.Components.Common
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
@@ -119,41 +120,30 @@ defmodule LightningWeb.CredentialLive.Index do
   end
 
   def delete_action(assigns) do
-    if assigns.credential.scheduled_deletion do
-      ~H"""
-      <span>
-        <.link
-          id={"cancel-deletion-#{@credential.id}"}
-          class="table-action"
-          href="#"
-          phx-click="cancel_deletion"
-          phx-value-id={@credential.id}
-        >
-          Cancel deletion
-        </.link>
-      </span>
-      <span>
-        <.link
-          id={"delete-now-#{@credential.id}"}
-          class="table-action"
-          navigate={~p"/credentials/#{@credential.id}/delete"}
-        >
-          Delete now
-        </.link>
-      </span>
-      """
-    else
-      ~H"""
-      <span>
-        <.link
-          id={"delete-#{@credential.id}"}
-          class="table-action"
-          navigate={~p"/credentials/#{@credential.id}/delete"}
-        >
-          Delete
-        </.link>
-      </span>
-      """
-    end
+    ~H"""
+    <%= if @credential.scheduled_deletion do %>
+      <.link
+        id={"cancel-deletion-#{@credential.id}"}
+        href="#"
+        phx-click="cancel_deletion"
+        phx-value-id={@credential.id}
+      >
+        Cancel deletion
+      </.link>
+      <.link
+        id={"delete-now-#{@credential.id}"}
+        navigate={~p"/credentials/#{@credential.id}/delete"}
+      >
+        Delete now
+      </.link>
+    <% else %>
+      <.link
+        id={"delete-#{@credential.id}"}
+        navigate={~p"/credentials/#{@credential.id}/delete"}
+      >
+        Delete
+      </.link>
+    <% end %>
+    """
   end
 end

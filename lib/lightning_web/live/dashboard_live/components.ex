@@ -123,13 +123,13 @@ defmodule LightningWeb.DashboardLive.Components do
                     />
                   </div>
                 </.td>
-                <.td>
+                <.td class="wrap-break-word max-w-[25rem]">
                   {String.capitalize(to_string(project.role))}
                 </.td>
-                <.td>
+                <.td class="wrap-break-word max-w-[10rem]">
                   {project.workflows_count}
                 </.td>
-                <.td>
+                <.td class="wrap-break-word max-w-[5rem]">
                   <.link
                     class="link"
                     href={~p"/projects/#{project.id}/settings#collaboration"}

@@ -17,6 +17,53 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+- Handling of CLI error messages when fetching metadata via an adaptor
+  [#3367](https://github.com/OpenFn/lightning/issues/3367)
+
+## [v2.13.5] 2025-07-11
+
+## [v2.13.5-pre] 2025-07-11
+
+### Added
+
+- Allow users to see & _use_ the "next input" state that would be used by a cron
+  trigger when inspecting and running cron-triggered jobs
+  [3335](https://github.com/OpenFn/lightning/issues/3335)
+- Enable Undo and Redo in the Workflow Editor
+  [#3358](https://github.com/OpenFn/lightning/pull/3358)
+
+### Changed
+
+- Bump CLI to 1.13.1 [#3351](https://github.com/OpenFn/lightning/issues/3351)
+
+### Fixed
+
+- Isolate failed to refresh token errors from other oauth errros
+  [#3332](https://github.com/OpenFn/lightning/issues/3332)
+
+## [v2.13.4] - 2025-07-05
+
+## [v2.13.4-pre1] - 2025-07-04
+
+### Changed
+
+- Standardize modal footers and paddings
+  [#3277](https://github.com/OpenFn/lightning/issues/3277)
+
+### Fixed
+
+- Fix text content overflowing in credential modal
+  [#3280](https://github.com/OpenFn/lightning/pull/3280)
+- Fix tables UI broken [#3324](https://github.com/OpenFn/lightning/issues/3324)
+
+## [v2.13.4-pre] - 2025-07-04
+
+### Added
+
 - New buttons to run a workflow directly from the canvas, both from the start of
   the workflow [#3290](https://github.com/OpenFn/lightning/issues/3290) and from
   an individual step [#3294](https://github.com/OpenFn/lightning/issues/3294)
@@ -41,9 +88,9 @@ and this project adheres to
 - Fixes import of workflow YML for a manual laid out workflow.
   [#3360](https://github.com/OpenFn/lightning/pull/3360)
 
-## [2.13.3] 2025-06-26
+## [v2.13.3] 2025-06-26
 
-## [2.13.3-pre1] 2025-06-26
+## [v2.13.3-pre1] 2025-06-26
 
 ### Fixed
 
@@ -57,7 +104,7 @@ and this project adheres to
   debugging and reauthorizing Oauth credentials.
   [#3326](https://github.com/OpenFn/lightning/issues/3326)
 
-## [2.13.3-pre]
+## [v2.13.3-pre]
 
 ### Added
 
@@ -2388,7 +2435,7 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
   [#1610](https://github.com/OpenFn/Lightning/issues/1610) and
   [#1608](https://github.com/OpenFn/Lightning/issues/1608)
 
-## [2.0.0-rc2] - 2024-01-08
+## [v2.0.0-rc2] - 2024-01-08
 
 ### Fixed
 
@@ -2402,7 +2449,7 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
   getting overridden when user focuses on the Monaco editor
   [#1596](https://github.com/OpenFn/Lightning/issues/1596)
 
-## [2.0.0-rc1] - 2024-01-05
+## [v2.0.0-rc1] - 2024-01-05
 
 ### Why does this repo go from `v0` to `v2.0`?
 

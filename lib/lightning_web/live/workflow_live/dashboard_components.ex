@@ -169,7 +169,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 class="hover:bg-gray-100 transition-colors duration-200"
                 onclick={JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")}
               >
-                <.td class="break-words max-w-[15rem]">
+                <.td class="wrap-break-word max-w-[15rem]">
                   <div
                     phx-click={
                       JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")
@@ -183,14 +183,14 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     />
                   </div>
                 </.td>
-                <.td class="break-words max-w-[15rem]">
+                <.td class="wrap-break-word max-w-[15rem]">
                   <.state_card
                     state={workflow.last_workorder.state}
                     timestamp={workflow.last_workorder.updated_at}
                     period={@period}
                   />
                 </.td>
-                <.td class="break-words max-w-[10rem]">
+                <.td class="wrap-break-word max-w-[10rem]">
                   <div>
                     <%= if workflow.workorders_count > 0 do %>
                       <div class="text-indigo-700 text-lg">
@@ -217,7 +217,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     <% end %>
                   </div>
                 </.td>
-                <.td class="break-words max-w-[15rem]">
+                <.td class="wrap-break-word max-w-[15rem]">
                   <div>
                     <%= if workflow.failed_workorders_count > 0 do %>
                       <div class="text-indigo-700 text-lg">

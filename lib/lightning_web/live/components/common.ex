@@ -506,8 +506,8 @@ defmodule LightningWeb.Components.Common do
 
   def sortable_table_header(assigns) do
     ~H"""
-    <.link class="group inline-flex cursor-pointer" {@rest}>
-      {render_slot(@inner_block)}
+    <.link class="group inline-flex cursor-pointer items-center" {@rest}>
+      <span>{render_slot(@inner_block)}</span>
       <span class={[
         "ml-2 flex-none rounded",
         if(@active,
@@ -522,6 +522,47 @@ defmodule LightningWeb.Components.Common do
         <% end %>
       </span>
     </.link>
+    """
+  end
+
+  attr :id, :string, required: true
+
+  attr :button_theme, :string, default: "primary"
+  slot :button, required: true
+
+  slot :options, required: true
+
+  def simple_dropdown(assigns) do
+    ~H"""
+    <div id={@id} class="relative inline-block">
+      <div>
+        <.button
+          theme={@button_theme}
+          phx-click={show_dropdown("#{@id}-menu")}
+          class="relative inline-flex items-center"
+          aria-expanded="true"
+          aria-haspopup="true"
+        >
+          {render_slot(@button)}
+          <.icon name="hero-chevron-down" class="ml-1 h-5 w-5" />
+        </.button>
+      </div>
+      <div
+        class="hidden absolute right-0 z-40 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
+        role="menu"
+        aria-orientation="vertical"
+        tabindex="-1"
+        phx-click-away={hide_dropdown("#{@id}-menu")}
+        id={"#{@id}-menu"}
+      >
+        <div
+          class="py-1 text-sm text-gray-700 *:block *:px-4 *:py-2 *:hover:bg-gray-100"
+          role="none"
+        >
+          {render_slot(@options)}
+        </div>
+      </div>
+    </div>
     """
   end
 end

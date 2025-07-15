@@ -877,18 +877,11 @@ defmodule Lightning.Credentials do
             audit_changeset
           )
 
-        {:error, %{status: 401} = error_response} ->
-          error_details =
-            Map.take(error_response, [:status, :error, :details])
-            |> Map.put(:error_type, "reauthorization_required")
-            |> Map.put(:client_id, oauth_token.oauth_client_id)
+        {:error, %{error: "invalid_grant"} = error_response} ->
+          handle_oauth_token_refresh_failed(credential, error_response)
 
-          audit_changeset =
-            Audit.oauth_token_refresh_failed_event(credential, error_details)
-
-          save_audit_event(audit_changeset)
-
-          {:error, :reauthorization_required}
+        {:error, %{status: status} = error_response} when status in [400, 401] ->
+          handle_oauth_token_refresh_failed(credential, error_response)
 
         {:error, %{status: status} = error_response} when status in [429, 503] ->
           error_details =
@@ -912,6 +905,20 @@ defmodule Lightning.Credentials do
           {:error, error}
       end
     end
+  end
+
+  defp handle_oauth_token_refresh_failed(credential, error_response) do
+    error_details =
+      Map.take(error_response, [:status, :error, :details])
+      |> Map.put(:error_type, "reauthorization_required")
+      |> Map.put(:client_id, credential.oauth_token.oauth_client_id)
+
+    audit_changeset =
+      Audit.oauth_token_refresh_failed_event(credential, error_details)
+
+    save_audit_event(audit_changeset)
+
+    {:error, :reauthorization_required}
   end
 
   @doc """

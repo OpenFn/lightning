@@ -1707,6 +1707,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: project,
       workflow: workflow
     } do
+      cli_stdout = """
+      {"level":"error","name":"CLI","message":["No metadata helper found"],"time":"1751556807394005966"}
+      """
+
+      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: cli_stdout, err: ""}})
+
       project_credential =
         insert(:project_credential,
           project: project,

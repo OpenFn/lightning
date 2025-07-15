@@ -11,7 +11,9 @@ defmodule Lightning.Invocation do
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.ExportAudit
   alias Lightning.WorkOrders.ExportWorker
@@ -87,6 +89,9 @@ defmodule Lightning.Invocation do
 
         {:before, ts}, dynamic ->
           dynamic([d], ^dynamic and d.inserted_at <= ^ts)
+
+        {:exclude_id, exclude_id}, dynamic ->
+          dynamic([d], ^dynamic and d.id != ^exclude_id)
       end)
 
     Query.last_n_for_job(job_id, limit)
@@ -215,6 +220,70 @@ defmodule Lightning.Invocation do
   """
   def get_dataclip_query(%Step{} = step) do
     Ecto.assoc(step, :input_dataclip)
+  end
+
+  @doc """
+  Gets the next cron run dataclip for a job.
+
+  Returns the most recent output dataclip from a successful step for the given job,
+  filtered by the provided database filters.
+  """
+  @spec get_next_cron_run_dataclip(
+          job_id :: Ecto.UUID.t(),
+          db_filters :: Ecto.Query.dynamic_expr()
+        ) ::
+          map() | nil
+  def get_next_cron_run_dataclip(job_id, db_filters) do
+    from(d in Dataclip,
+      join: s in Step,
+      on: s.output_dataclip_id == d.id,
+      where:
+        s.job_id == ^job_id and s.exit_reason == "success" and
+          is_nil(d.wiped_at),
+      where: ^db_filters,
+      order_by: [desc: s.finished_at],
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Checks if a job is triggered by a cron trigger.
+  """
+  @spec cron_triggered_job?(job_id :: Ecto.UUID.t()) :: boolean()
+  def cron_triggered_job?(job_id) do
+    from(e in Edge,
+      join: t in Trigger,
+      on: e.source_trigger_id == t.id,
+      where: e.target_job_id == ^job_id and t.type == :cron
+    )
+    |> Repo.exists?()
+  end
+
+  @doc """
+  Lists dataclips for a job, including next cron run state if cron-triggered.
+
+  For cron-triggered jobs, this function will include the next run state dataclip
+  and return its ID even if it doesn't match the filters.
+
+  Returns a tuple of {dataclips, next_cron_run_dataclip_id}.
+  """
+  @spec list_dataclips_for_job_with_cron_state(
+          Job.t(),
+          user_filters :: map(),
+          opts :: Keyword.t()
+        ) :: {[Dataclip.t()], Ecto.UUID.t() | nil}
+  def list_dataclips_for_job_with_cron_state(
+        %Job{id: job_id} = job,
+        user_filters,
+        opts
+      ) do
+    if cron_triggered_job?(job_id) do
+      list_dataclips_with_cron_state(job_id, user_filters, opts)
+    else
+      dataclips = list_dataclips_for_job(job, user_filters, opts)
+      {dataclips, nil}
+    end
   end
 
   @doc """
@@ -763,6 +832,46 @@ defmodule Lightning.Invocation do
       )
     end)
     |> Repo.transaction()
+  end
+
+  # Query dataclips for cron-triggered jobs, including the next run state
+  defp list_dataclips_with_cron_state(job_id, user_filters, opts) do
+    # Get the next cron run dataclip (always needed for the ID)
+    next_cron_dataclip = get_next_cron_run_dataclip(job_id, dynamic(true))
+    next_cron_run_dataclip_id = next_cron_dataclip && next_cron_dataclip.id
+
+    # Check if next cron dataclip matches user filters
+    include_next_cron? =
+      next_cron_dataclip &&
+        dataclip_matches_filters?(next_cron_dataclip, user_filters)
+
+    # Get regular dataclips, excluding next cron if it will be included to avoid duplication
+    filters =
+      if include_next_cron?,
+        do: Map.put(user_filters, :exclude_id, next_cron_dataclip.id),
+        else: user_filters
+
+    regular_dataclips = list_dataclips_for_job(%Job{id: job_id}, filters, opts)
+
+    # Combine results with next cron dataclip first if it matches filters
+    dataclips =
+      if include_next_cron?,
+        do: [next_cron_dataclip | regular_dataclips],
+        else: regular_dataclips
+
+    {dataclips, next_cron_run_dataclip_id}
+  end
+
+  # Check if a dataclip matches the user filters (applied in Elixir)
+  defp dataclip_matches_filters?(dataclip, user_filters) do
+    Enum.all?(user_filters, fn
+      {:id, uuid} -> dataclip.id == uuid
+      {:id_prefix, id_prefix} -> String.starts_with?(dataclip.id, id_prefix)
+      {:type, type} -> dataclip.type == type
+      {:after, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :lt
+      {:before, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :gt
+      {:exclude_id, exclude_id} -> dataclip.id != exclude_id
+    end)
   end
 
   defp id_prefix_interval(id_prefix) do
