@@ -40,6 +40,7 @@ export type RunSteps = {
   job_id: Lightning.Job['id'];
   error_type: string;
   exit_reason: 'fail' | 'success' | null;
+  startNode?: boolean;
 };
 
 export interface WorkflowState extends WorkflowProps {

@@ -189,6 +189,14 @@ const Node = ({
               <span className='hero-check w-3 h-3'></span>
             }
           </div> : null}
+          {runData?.startNode ? <div
+            className={`absolute -right-full -top-2 flex gap-2 items-center font-bold`}
+          >
+            <div className='flex justify-center items-center border-2 w-8 h-8 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
+              <span className='hero-play-solid w-3 h-3'></span>
+            </div>
+            started here
+          </div> : null}
           {tooltip.visible && (
             <div
               style={{

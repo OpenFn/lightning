@@ -59,13 +59,17 @@ const fromWorkflow = (
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
 
+  const startNodeId = runSteps.length && runSteps[0] ? runSteps[0].job_id : undefined;
+
   const runStepsObj = runSteps.reduce((a, b) => {
     const exists = a[b.job_id];
     // to make sure that a pre-existing error state pre-empts the sucess. 
     // this is for nodes that run multiple times
-    // TODO: we might want to show a state for the multiple runs of the step later on. 
-    if (b.exit_reason === "success" && exists?.exit_reason === "fail") return a[b.job_id] = exists;
-    else a[b.job_id] = b;
+    // TODO: we might want to show a state for the multiple runs of the step later on.
+    let step_value: RunSteps;
+    if (b.exit_reason === "success" && exists?.exit_reason === "fail") step_value = exists;
+    else step_value = b;
+    a[b.job_id] = { ...step_value, startNode: b.job_id === startNodeId };
     return a;
   }, {} as Record<string, RunSteps>)
 
