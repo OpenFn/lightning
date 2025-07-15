@@ -1522,15 +1522,31 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("get-current-state", _params, socket) do
     run_id = socket.assigns.selected_run
 
-    run_steps = if run_id == nil do
-      Invocation.latest_workflow_runs_steps(socket.assigns.workflow.id)
-    else
-      WorkOrders.get_run_steps(run_id)
-    end
-    |> Enum.map(fn step -> %{job_id: step.job_id, error_type: step.error_type, exit_reason: step.exit_reason} end)
+    run_steps =
+      if run_id == nil do
+        Invocation.latest_workflow_runs_steps(socket.assigns.workflow.id)
+      else
+        WorkOrders.get_run_steps(run_id)
+      end
+      |> Enum.map(fn step ->
+        %{
+          job_id: step.job_id,
+          error_type: step.error_type,
+          exit_reason: step.exit_reason
+        }
+      end)
 
-    IO.inspect(run_steps, label: "run_steps")
-    {:reply, %{workflow_params: socket.assigns.workflow_params, run_steps: run_steps, run_id: run_id}, socket}
+    # don't forget to send update state of disabled
+    socket =
+      socket
+      |> maybe_disable_canvas()
+
+    {:reply,
+     %{
+       workflow_params: socket.assigns.workflow_params,
+       run_steps: run_steps,
+       run_id: run_id
+     }, socket}
   end
 
   def handle_event(
@@ -2866,10 +2882,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     patches =
       WorkflowParams.to_patches(initial_params, next_params)
+
     inverse_patches = WorkflowParams.to_patches(next_params, initial_params)
 
     socket
-    |> push_event("patches-applied", %{patches: patches, inverse: inverse_patches})
+    |> push_event("patches-applied", %{
+      patches: patches,
+      inverse: inverse_patches
+    })
   end
 
   defp maybe_push_workflow_created(socket, workflow) do
