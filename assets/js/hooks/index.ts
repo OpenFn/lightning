@@ -693,7 +693,7 @@ export const ScrollToMessage = {
         top: this.el.scrollHeight,
         behavior: 'smooth'
       });
-    }, 300);
+    }, 600);
   }
 } as PhoenixHook<{ 
   handleScroll: () => void;

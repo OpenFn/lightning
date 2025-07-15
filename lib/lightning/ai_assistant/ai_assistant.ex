@@ -69,7 +69,7 @@ defmodule Lightning.AiAssistant do
   """
   @spec endpoint_available?() :: boolean()
   def endpoint_available? do
-    ApolloClient.test() == :ok
+    ApolloClient.test() |> dbg == :ok
   end
 
   @doc """

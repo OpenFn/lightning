@@ -56,19 +56,39 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   end
 
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
-    Lightning.Workflows.Comparison.equivalent?(
-      socket.assigns.workflow_params,
-      params
-    )
-    |> if do
+    if Lightning.Workflows.Comparison.equivalent?(
+         socket.assigns.workflow_params,
+         params
+       ) do
       {:noreply, socket}
     else
-      notify_parent(:workflow_params_changed, %{
-        "workflow" => params,
-        "opts" => [push_patches: true, context: socket.assigns.context]
-      })
+      changeset =
+        Lightning.Workflows.Workflow.changeset(socket.assigns.workflow, params)
 
-      {:noreply, assign(socket, :workflow_params, params)}
+      if changeset.valid? do
+        notify_parent(:workflow_params_changed, %{
+          "workflow" => params,
+          "opts" => [push_patches: true, context: socket.assigns.context]
+        })
+
+        {:noreply, assign(socket, :workflow_params, params)}
+      else
+        error_details = format_changeset_errors(changeset)
+
+        Logger.error(
+          "Workflow changeset validation failed: #{inspect(error_details)}"
+        )
+
+        send_update(
+          LightningWeb.AiAssistant.Component,
+          id: "workflow-ai-assistant-persistent",
+          action: :workflow_parse_error,
+          error_details: error_details,
+          session_or_message: socket.assigns.session_or_message
+        )
+
+        {:noreply, socket}
+      end
     end
   end
 
@@ -94,10 +114,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     )
 
     {:noreply, socket}
-  end
-
-  defp notify_parent(action, payload) do
-    send(self(), {:workflow_assistant, action, payload})
   end
 
   @impl true
@@ -169,4 +185,108 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     </div>
     """
   end
+
+  defp notify_parent(action, payload) do
+    send(self(), {:workflow_assistant, action, payload})
+  end
+
+  defp format_changeset_errors(changeset) do
+    errors = traverse_changeset_errors(changeset)
+
+    errors
+    |> Enum.map(fn {path, field, message} ->
+      "#{Enum.join(path ++ [field], ".")} - #{message}"
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp traverse_changeset_errors(changeset, path \\ []) do
+    current_errors =
+      changeset.errors
+      |> Enum.map(fn {field, {message, _opts}} ->
+        {path, field, message}
+      end)
+
+    nested_errors =
+      [:jobs, :edges, :triggers]
+      |> Enum.flat_map(fn assoc ->
+        case Map.get(changeset.changes, assoc) do
+          nil ->
+            []
+
+          changesets when is_list(changesets) ->
+            changesets
+            |> Enum.with_index()
+            |> Enum.flat_map(fn {cs, index} ->
+              case cs do
+                %Ecto.Changeset{} ->
+                  identifier = get_changeset_identifier(cs)
+                  new_path = path ++ [assoc, identifier || index]
+                  traverse_changeset_errors(cs, new_path)
+
+                _ ->
+                  []
+              end
+            end)
+
+          %Ecto.Changeset{} = cs ->
+            traverse_changeset_errors(cs, path ++ [assoc])
+
+          _ ->
+            []
+        end
+      end)
+
+    current_errors ++ nested_errors
+  end
+
+  defp get_changeset_identifier(changeset) do
+    data = changeset.data
+
+    cond do
+      Map.has_key?(data, :name) ->
+        case get_in(changeset.changes, [:name]) || Map.get(data, :name) do
+          nil -> nil
+          name -> "\"#{name}\""
+        end
+
+      Map.has_key?(data, :source_job_id) ||
+          Map.has_key?(data, :source_trigger_id) ->
+        source =
+          cond do
+            source_job_id =
+                get_in(changeset.changes, [:source_job_id]) ||
+                  Map.get(data, :source_job_id) ->
+              "job:#{shorten_id(source_job_id)}"
+
+            source_trigger_id =
+                get_in(changeset.changes, [:source_trigger_id]) ||
+                  Map.get(data, :source_trigger_id) ->
+              "trigger:#{shorten_id(source_trigger_id)}"
+
+            true ->
+              "unknown"
+          end
+
+        target =
+          get_in(changeset.changes, [:target_job_id]) ||
+            Map.get(data, :target_job_id)
+
+        target_str = if target, do: "job:#{shorten_id(target)}", else: "unknown"
+
+        "#{source}→#{target_str}"
+
+      true ->
+        case get_in(changeset.changes, [:id]) || Map.get(data, :id) do
+          nil -> nil
+          id -> "id:#{shorten_id(id)}"
+        end
+    end
+  end
+
+  defp shorten_id(id) when is_binary(id) do
+    id
+  end
+
+  defp shorten_id(_), do: "unknown"
 end
