@@ -2430,7 +2430,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       snapshot_version_tag: version,
       can_edit_workflow: can_edit_workflow,
       workflow: workflow,
-      show_new_workflow_panel: show_new_workflow_panel
+      show_new_workflow_panel: show_new_workflow_panel,
+      selected_run: selected_run
     } = socket.assigns
 
     disabled =
@@ -2438,7 +2439,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_workflow)
 
     push_event(socket, "set-disabled", %{
-      disabled: show_new_workflow_panel || disabled
+      disabled: !is_nil(selected_run) || show_new_workflow_panel || disabled
     })
   end
 
