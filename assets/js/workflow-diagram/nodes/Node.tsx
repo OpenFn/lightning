@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, type MouseEvent } from 'react';
 import { Handle, type NodeProps } from '@xyflow/react';
 
 import Shape from '../components/Shape';
@@ -87,6 +87,24 @@ const Node = ({
 }: BaseNodeProps) => {
   const runData = data?.runData as RunSteps | undefined;
   const isErrorRun = runData?.exit_reason === "fail";
+
+  const [tooltip, setTooltip] = React.useState({ visible: false, x: 0, y: 0, content: "" });
+  const wrapperRef = React.useRef(null);
+
+  const handleMouseMove = (e: MouseEvent) => {
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setTooltip({
+      visible: true,
+      x: e.clientX - (rect.left + 16),
+      y: e.clientY - (rect.top + 50),
+      content: isErrorRun ? runData?.error_type : "Successful run",
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltip({ ...tooltip, visible: false });
+  };
+
   const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
     selected,
     hasErrors(errors),
@@ -159,17 +177,35 @@ const Node = ({
               strokeWidth={strokeWidth}
               styles={style}
             />
-            {/* {runData ? <>
-              <circle cx="5" cy="5" r="10" strokeWidth={2} stroke={runData.exit_reason == "fail" ? "red" : "green"} fill="white" />
-              <text x="5" y="8" textAnchor="middle" fontSize="10" fill="black">1</text>
-            </> : null} */}
           </svg>
-          {runData ? <div className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}>
+          {runData ? <div
+            className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}
+            ref={wrapperRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
             {isErrorRun ?
               <span className='hero-exclamation-circle w-3 h-3'></span> :
               <span className='hero-check w-3 h-3'></span>
             }
           </div> : null}
+          {tooltip.visible && (
+            <div
+              style={{
+                position: "absolute",
+                top: tooltip.y,
+                left: tooltip.x,
+                background: "#333",
+                color: "#fff",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                pointerEvents: "none",
+                fontSize: "12px",
+              }}
+            >
+              {tooltip.content}
+            </div>
+          )}
           {primaryIcon && (
             <div
               style={{
