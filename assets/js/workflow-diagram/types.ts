@@ -74,6 +74,7 @@ export type EdgeData = {
   errors?: object;
   neighbour?: boolean;
   didRun?: boolean;
+  isRun?: boolean;
 };
 
 export namespace Flow {

@@ -10,6 +10,8 @@ import type { Flow } from './types';
 
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_DISABLED = '#E1E1E1';
+export const EDGE_COLOR_DIDNT_RUN = '#dfe0e3';
+export const EDGE_COLOR_DIDNT_RUN_SELECTED = '#d0d0ea';
 export const EDGE_COLOR_SELECTED = '#4f46e5';
 export const EDGE_COLOR_NEIGHBOUR = '#807CCE';
 export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
@@ -49,17 +51,27 @@ export const edgeLabelTextStyles = {
 export const edgeLabelStyles = (
   selected: boolean | undefined,
   neighbour: boolean | undefined,
-  data?: { enabled?: boolean; errors?: object }
+  data?: {
+    enabled?: boolean;
+    errors?: object;
+    didRun?: boolean;
+    isRun?: boolean;
+  }
 ) => {
-  const { enabled, errors } = data ?? {};
+  const { enabled, errors, didRun, isRun } = data ?? {};
+  const didntRun = isRun && !didRun;
   const primaryColor = (
     selected?: boolean,
     neighbour?: boolean,
-    enabled?: boolean
+    enabled?: boolean,
+    didntRun?: boolean
   ) => {
     if (enabled) {
-      if (neighbour) return EDGE_COLOR_NEIGHBOUR;
-      return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+      if (neighbour)
+        return didntRun ? EDGE_COLOR_DIDNT_RUN_SELECTED : EDGE_COLOR_NEIGHBOUR;
+      if (selected) return didntRun ? EDGE_COLOR_SELECTED : EDGE_COLOR_SELECTED;
+      if (didntRun) return EDGE_COLOR_DIDNT_RUN;
+      return EDGE_COLOR;
     }
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
   };
@@ -75,10 +87,10 @@ export const edgeLabelStyles = (
   return {
     borderColor: hasErrors(errors)
       ? ERROR_COLOR
-      : primaryColor(selected, neighbour, enabled),
+      : primaryColor(selected, neighbour, enabled, didntRun),
     color: hasErrors(errors)
       ? ERROR_COLOR
-      : primaryColor(selected, neighbour, enabled),
+      : primaryColor(selected, neighbour, enabled, didntRun),
     backgroundColor: 'transparent',
     display: 'flex',
     alignItems: 'center',
@@ -143,6 +155,9 @@ export const styleEdge = (edge: Flow.Edge) => {
       width: 15,
       color: hasErrors ? ERROR_COLOR : primaryColor,
     };
+  }
+  if (edge.data?.isRun && !edge.data.didRun) {
+    edge.style.opacity = 0.3;
   }
   return edge;
 };

@@ -116,7 +116,7 @@ const Node = ({
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
 
   return (
-    <div className={`group ${didRun ? "opacity-100" : "opacity-50"}`} data-a-node>
+    <div className={`group ${didRun ? "opacity-100" : "opacity-30"}`} data-a-node>
       <div className="flex flex-row cursor-pointer">
         <div className="relative">
           {targetPosition && (
