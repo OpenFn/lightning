@@ -4,6 +4,7 @@ import { edgeLabelStyles } from '../styles';
 const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
   const { sourceX, sourceY, targetX, targetY, selected, data } = props;
   const { label, ...stepEdgeProps } = props;
+  console.log(stepEdgeProps)
 
   // Simply label position calculation
   // If this breaks down, use getBezierPath from https://reactflow.dev/docs/examples/edges/custom-edge/
