@@ -87,6 +87,8 @@ const Node = ({
 }: BaseNodeProps) => {
   const runData = data?.runData as RunSteps | undefined;
   const isErrorRun = runData?.exit_reason === "fail";
+  // TODO: remember triggers
+  const didRun = !!runData
 
   const [tooltip, setTooltip] = React.useState({ visible: false, x: 0, y: 0, content: "" });
   const wrapperRef = React.useRef(null);
@@ -113,8 +115,9 @@ const Node = ({
 
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
 
+  console.log(data.name, didRun)
   return (
-    <div className="group" data-a-node>
+    <div className={`group ${didRun ? "" : "opacity-50"}`} data-a-node>
       <div className="flex flex-row cursor-pointer">
         <div className="relative">
           {targetPosition && (
