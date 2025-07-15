@@ -59,7 +59,15 @@ const fromWorkflow = (
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
 
-  const runStepsObj = runSteps.reduce((a, b) => { a[b.job_id] = b; return a }, {} as Record<string, RunSteps>)
+  const runStepsObj = runSteps.reduce((a, b) => {
+    const exists = a[b.job_id];
+    // to make sure that a pre-existing error state pre-empts the sucess. 
+    // this is for nodes that run multiple times
+    // TODO: we might want to show a state for the multiple runs of the step later on. 
+    if (b.exit_reason === "success" && exists?.exit_reason === "fail") return a[b.job_id] = exists;
+    else a[b.job_id] = b;
+    return a;
+  }, {} as Record<string, RunSteps>)
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
