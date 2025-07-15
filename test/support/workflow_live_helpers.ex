@@ -253,7 +253,6 @@ defmodule Lightning.WorkflowLive.Helpers do
       %{jobs: []},
       %{jobs: [%{id: id, name: name}]}
     )
-    |> Jsonpatch.Mapper.to_map()
     |> List.first()
     |> Lightning.Helpers.json_safe()
   end
@@ -316,7 +315,6 @@ defmodule Lightning.WorkflowLive.Helpers do
         "project_id" => project.id
       }
     )
-    |> Jsonpatch.Mapper.to_map()
     |> Enum.map(&Lightning.Helpers.json_safe/1)
   end
 

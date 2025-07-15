@@ -44,7 +44,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   """
   def apply_patches(current_params, patches) do
     Jsonpatch.apply_patch(
-      patches |> Enum.map(&Jsonpatch.Mapper.from_map/1),
+      patches,
       current_params
     )
   end
@@ -58,7 +58,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   """
   def to_patches(initial_params, target_params) do
     Jsonpatch.diff(initial_params, target_params)
-    |> Jsonpatch.Mapper.to_map()
   end
 
   @doc """
