@@ -161,7 +161,9 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
             class="w-full"
             phx-target={@myself}
             phx-blur="check-user-access"
+            display_errors={false}
           />
+          <.errors field={@f[:email]} />
         </div>
       </div>
     </div>
