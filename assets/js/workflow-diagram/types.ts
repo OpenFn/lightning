@@ -73,6 +73,7 @@ export type EdgeData = {
   condition_type?: string;
   errors?: object;
   neighbour?: boolean;
+  didRun?: boolean;
 };
 
 export namespace Flow {

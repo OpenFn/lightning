@@ -134,6 +134,9 @@ const fromWorkflow = (
           enabled: edge.enabled ?? true,
           label,
         };
+        const didRun = !!runStepsObj[edge.source_job_id] && !!runStepsObj[edge.target_job_id]
+        if (isRun && !didRun) model.data.enabled = false;
+
 
         // Note: we don't allow the user to disable the edge that goes from a
         // trigger to a job, but we want to show it as if it were disabled when
