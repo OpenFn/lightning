@@ -131,16 +131,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         show_template_tooltip: template_for_tooltip
       })
 
-      notify_parent(:workflow_params_changed, %{
-        "workflow" => params,
-        "opts" => [push_patches: false]
-      })
-
       {:noreply,
        socket
        |> assign(changeset: changeset)
        |> assign(validation_failed: false)
-       |> push_event("workflow-validated", %{"state" => params})
+       |> push_event("workflow-validated", %{})
        |> push_event("state-applied", %{"state" => params})
        |> push_event("force-fit", %{})}
     else

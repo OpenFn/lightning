@@ -2191,14 +2191,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     assign_changeset(socket, changeset)
   end
 
-  defp maybe_push_patches_applied(socket, initial_params, opts) do
-    if Keyword.get(opts, :push_patches, true) do
-      push_patches_applied(socket, initial_params)
-    else
-      socket
-    end
-  end
-
   defp save_workflow(socket, submitted_params) do
     %{
       workflow_params: initial_params,
@@ -2836,7 +2828,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket
       |> apply_params(next_params, type)
       |> mark_validated()
-      |> maybe_push_patches_applied(initial_params, opts)
+      |> push_patches_applied(initial_params)
       |> trigger_yaml_generation(opts)
     else
       put_flash(socket, :error, "You are not authorized to perform this action.")
@@ -3271,7 +3263,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply,
      socket
      |> handle_new_params(incoming_params, :workflow, opts)
-     |> push_event("state-applied", %{"state" => incoming_params})
      |> push_event("set-disabled", %{disabled: false})
      |> push_event("force-fit", %{})}
   end
@@ -3295,6 +3286,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
               ""
             end
 
+        with %{chat: chat_id} when is_binary(chat_id) <- query_params,
+             {:error, reason} <- assoc_workflow_chat_session(chat_id, workflow) do
+          Logger.warning(
+            "Failed to update chat session #{chat_id}: #{inspect(reason)}"
+          )
+        end
+
         {:noreply,
          updated_socket
          |> assign(:selected_template, nil)
@@ -3315,6 +3313,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       _ ->
         {:noreply, socket}
+    end
+  end
+
+  defp assoc_workflow_chat_session(chat_id, workflow) do
+    with {:ok, session} <- Lightning.AiAssistant.get_session(chat_id) do
+      Lightning.AiAssistant.associate_workflow(session, workflow)
     end
   end
 

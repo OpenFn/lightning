@@ -124,12 +124,14 @@ defmodule LightningWeb.AiAssistant.Component do
         |> check_limit()
 
       if socket.assigns.ai_limit_result == :ok do
-        send_update(
-          socket.assigns.parent_module,
-          id: socket.assigns.parent_id,
-          action: :sending_ai_message,
-          content: content
-        )
+        if handler.supports_template_generation?() do
+          send_update(
+            socket.assigns.parent_module,
+            id: socket.assigns.parent_id,
+            action: :sending_ai_message,
+            content: content
+          )
+        end
 
         {:noreply,
          socket

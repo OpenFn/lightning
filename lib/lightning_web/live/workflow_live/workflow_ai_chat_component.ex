@@ -68,7 +68,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
       if changeset.valid? do
         notify_parent(:workflow_params_changed, %{
           "workflow" => params,
-          "opts" => [push_patches: true, context: socket.assigns.context]
+          "opts" => [context: socket.assigns.context]
         })
 
         {:noreply, assign(socket, :workflow_params, params)}

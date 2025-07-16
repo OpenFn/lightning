@@ -274,6 +274,18 @@ defmodule Lightning.AiAssistant do
     end
   end
 
+  def get_session(id) do
+    case Repo.get(ChatSession, id) do
+      nil ->
+        {:error, :not_found}
+
+      session ->
+        {:ok,
+         session
+         |> Repo.preload([:user, messages: {session_messages_query(), :user}])}
+    end
+  end
+
   defp session_messages_query do
     from(m in ChatMessage,
       where: m.status != :cancelled,

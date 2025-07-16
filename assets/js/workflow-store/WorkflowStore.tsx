@@ -153,7 +153,8 @@ export const WorkflowStore: WithActionProps = props => {
         setState(workflow_params);
         if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
           const diff = createNewWorkflow();
-          add(diff);
+          reset();
+          setState({ jobs: diff.jobs, edges: diff.edges, triggers: diff.triggers })
         }
 
         const end = new Date();
