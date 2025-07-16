@@ -69,7 +69,7 @@ defmodule Lightning.AiAssistant do
   """
   @spec endpoint_available?() :: boolean()
   def endpoint_available? do
-    ApolloClient.test() |> dbg == :ok
+    ApolloClient.test() == :ok
   end
 
   @doc """
@@ -186,13 +186,14 @@ defmodule Lightning.AiAssistant do
   Creates a new chat session for workflow template generation.
 
   Initializes a session specifically for creating workflow templates:
-  - Associates with a project rather than a specific job
+  - Associates with a project and optionally an existing workflow
   - Sets session type to "workflow_template"
   - Includes the initial user message describing the desired workflow
 
   ## Parameters
 
   - `project` - The `%Project{}` struct where the workflow will be created
+  - `workflow` - The `%Workflow{}` struct to associate with the session, or `nil` for new workflows
   - `user` - The `%User{}` requesting the workflow template
   - `content` - Description of the desired workflow functionality
   - `opts` - Keyword list of options:
@@ -204,13 +205,20 @@ defmodule Lightning.AiAssistant do
   - `{:ok, session}` - Successfully created workflow session with initial message
   - `{:error, changeset}` - Validation errors during creation
   """
-  @spec create_workflow_session(Project.t(), User.t(), String.t(), opts()) ::
+  @spec create_workflow_session(
+          Project.t(),
+          Workflow.t() | nil,
+          User.t(),
+          String.t(),
+          opts()
+        ) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def create_workflow_session(project, user, content, opts \\ []) do
+  def create_workflow_session(project, workflow, user, content, opts \\ []) do
     meta = Keyword.get(opts, :meta, %{})
 
     session_attrs = %{
       project_id: project.id,
+      workflow_id: workflow && workflow.id,
       session_type: "workflow_template",
       user_id: user.id,
       title: create_title(content),
@@ -305,8 +313,11 @@ defmodule Lightning.AiAssistant do
     {sessions, total_count} =
       case resource do
         %{__struct__: Lightning.Projects.Project} = project ->
+          workflow = Keyword.get(opts, :workflow)
+
           get_workflow_sessions_with_count(
             project,
+            workflow,
             sort_direction,
             offset,
             limit
@@ -525,9 +536,9 @@ defmodule Lightning.AiAssistant do
   - `{:ok, session}` - AI responded successfully, session updated with response
   - `{:error, reason}` - Query failed, reason is either a string error message or changeset
   """
-  @spec query(ChatSession.t(), String.t(), map()) ::
+  @spec query(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
-  def query(session, content, opts \\ %{}) do
+  def query(session, content, opts \\ []) do
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
     pending_user_message = find_pending_user_message(session, content)
 
@@ -612,27 +623,40 @@ defmodule Lightning.AiAssistant do
     )
   end
 
-  defp get_workflow_sessions_with_count(project, sort_direction, offset, limit) do
-    total_count =
+  defp get_workflow_sessions_with_count(
+         project,
+         workflow,
+         sort_direction,
+         offset,
+         limit
+       ) do
+    base_query =
       from(s in ChatSession,
         where:
-          s.project_id == ^project.id and s.session_type == "workflow_template",
-        select: count(s.id)
+          s.project_id == ^project.id and s.session_type == "workflow_template"
       )
+
+    query =
+      if workflow do
+        where(base_query, [s], s.workflow_id == ^workflow.id)
+      else
+        where(base_query, [s], is_nil(s.workflow_id))
+      end
+
+    total_count =
+      query
+      |> select([s], count(s.id))
       |> Repo.one()
 
     sessions =
-      from(s in ChatSession,
-        where:
-          s.project_id == ^project.id and s.session_type == "workflow_template",
-        left_join: m in assoc(s, :messages),
-        group_by: [s.id, s.title, s.updated_at, s.inserted_at],
-        select: %{s | message_count: count(m.id)},
-        order_by: [{^sort_direction, s.updated_at}],
-        preload: [:user],
-        limit: ^limit,
-        offset: ^offset
-      )
+      query
+      |> join(:left, [s], m in assoc(s, :messages))
+      |> group_by([s, m], [s.id, s.title, s.updated_at, s.inserted_at])
+      |> select([s, m], %{s | message_count: count(m.id)})
+      |> order_by([s, m], [{^sort_direction, s.updated_at}])
+      |> preload([:user])
+      |> limit(^limit)
+      |> offset(^offset)
       |> Repo.all()
 
     {sessions, total_count}

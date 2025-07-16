@@ -8,10 +8,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
+  alias Lightning.Accounts.User
   alias Lightning.AiAssistant
   alias Lightning.Invocation
   alias Lightning.Workflows.Job
-  alias Lightning.Accounts.User
   alias LightningWeb.Live.AiAssistant.ErrorHandler
 
   defmodule Form do

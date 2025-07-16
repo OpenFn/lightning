@@ -153,6 +153,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               />
               <div>
                 <.settings_icon
+                  :if={!@show_new_workflow_panel}
                   changeset={@changeset}
                   selection_mode={@selection_mode}
                   base_url={@base_url}
@@ -162,24 +163,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
               </div>
             </div>
             <.offline_indicator />
-            <.run_workflow_button
-              base_url={@base_url}
-              show_workflow_ai_chat={@show_workflow_ai_chat}
-              chat_session_id={@chat_session_id}
-              trigger_id={
-                if is_list(@workflow_params["triggers"]) and
-                     @workflow_params["triggers"] != [] do
-                  hd(@workflow_params["triggers"])["id"]
-                else
-                  ""
-                end
-              }
-              }
-            />
             <.with_changes_indicator
               :if={@snapshot_version_tag == "latest" && !@show_new_workflow_panel}
               changeset={@changeset}
             >
+              <.run_workflow_button
+                base_url={@base_url}
+                show_workflow_ai_chat={@show_workflow_ai_chat}
+                chat_session_id={@chat_session_id}
+                trigger_id={
+                  if is_list(@workflow_params["triggers"]) and
+                       @workflow_params["triggers"] != [] do
+                    hd(@workflow_params["triggers"])["id"]
+                  else
+                    ""
+                  end
+                }
+                }
+              />
               <.save_workflow_button
                 id="top-bar-save-workflow-btn"
                 changeset={@changeset}

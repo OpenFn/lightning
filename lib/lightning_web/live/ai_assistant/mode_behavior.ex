@@ -6,7 +6,8 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   by implementing the required callbacks and optionally overriding defaults.
   """
 
-  alias Lightning.AiAssistant.{ChatMessage, ChatSession}
+  alias Lightning.AiAssistant.ChatMessage
+  alias Lightning.AiAssistant.ChatSession
   alias LightningWeb.Live.AiAssistant.PaginationMeta
 
   @type assigns :: %{atom() => any()}

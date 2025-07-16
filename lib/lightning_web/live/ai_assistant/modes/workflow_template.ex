@@ -9,7 +9,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
   alias Lightning.AiAssistant
-  alias Lightning.AiAssistant.{ChatSession, ChatMessage}
+  alias Lightning.AiAssistant.ChatMessage
+  alias Lightning.AiAssistant.ChatSession
   alias LightningWeb.Live.AiAssistant.ErrorHandler
 
   require Logger
@@ -24,10 +25,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   """
   @impl true
   def create_session(
-        %{project: project, current_user: user} = assigns,
+        %{project: project, workflow: workflow, current_user: user} = assigns,
         content
       ) do
-    AiAssistant.create_workflow_session(project, user, content,
+    AiAssistant.create_workflow_session(project, workflow, user, content,
       workflow_code: assigns[:workflow_code]
     )
   end
@@ -44,8 +45,10 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
   Lists all workflow sessions for the project.
   """
   @impl true
-  def list_sessions(%{project: project}, sort_direction, opts \\ []) do
-    AiAssistant.list_sessions(project, sort_direction, opts)
+  def list_sessions(%{project: project} = assigns, sort_direction, opts \\ []) do
+    workflow = assigns[:workflow]
+    opts_with_workflow = Keyword.put_new(opts, :workflow, workflow)
+    AiAssistant.list_sessions(project, sort_direction, opts_with_workflow)
   end
 
   @doc """

@@ -170,6 +170,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
             mode={:workflow}
             can_edit_workflow={@can_edit_workflow}
             project={@project}
+            workflow={@workflow}
             current_user={@current_user}
             chat_session_id={@chat_session_id}
             workflow_code={@workflow_code}
@@ -193,11 +194,9 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   defp format_changeset_errors(changeset) do
     errors = traverse_changeset_errors(changeset)
 
-    errors
-    |> Enum.map(fn {path, field, message} ->
+    Enum.map_join(errors, "\n", fn {path, field, message} ->
       "#{Enum.join(path ++ [field], ".")} - #{message}"
     end)
-    |> Enum.join("\n")
   end
 
   defp traverse_changeset_errors(changeset, path \\ []) do
@@ -215,19 +214,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
             []
 
           changesets when is_list(changesets) ->
-            changesets
-            |> Enum.with_index()
-            |> Enum.flat_map(fn {cs, index} ->
-              case cs do
-                %Ecto.Changeset{} ->
-                  identifier = get_changeset_identifier(cs)
-                  new_path = path ++ [assoc, identifier || index]
-                  traverse_changeset_errors(cs, new_path)
-
-                _ ->
-                  []
-              end
-            end)
+            process_changeset_list(changesets, path, assoc)
 
           %Ecto.Changeset{} = cs ->
             traverse_changeset_errors(cs, path ++ [assoc])
@@ -240,47 +227,80 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     current_errors ++ nested_errors
   end
 
+  defp process_changeset_list(changesets, path, assoc) do
+    changesets
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {cs, index} ->
+      case cs do
+        %Ecto.Changeset{} ->
+          identifier = get_changeset_identifier(cs)
+          new_path = path ++ [assoc, identifier || index]
+          traverse_changeset_errors(cs, new_path)
+
+        _ ->
+          []
+      end
+    end)
+  end
+
   defp get_changeset_identifier(changeset) do
     data = changeset.data
 
     cond do
       Map.has_key?(data, :name) ->
-        case get_in(changeset.changes, [:name]) || Map.get(data, :name) do
-          nil -> nil
-          name -> "\"#{name}\""
-        end
+        get_name_identifier(changeset, data)
 
       Map.has_key?(data, :source_job_id) ||
           Map.has_key?(data, :source_trigger_id) ->
-        source =
-          cond do
-            source_job_id =
-                get_in(changeset.changes, [:source_job_id]) ||
-                  Map.get(data, :source_job_id) ->
-              "job:#{shorten_id(source_job_id)}"
-
-            source_trigger_id =
-                get_in(changeset.changes, [:source_trigger_id]) ||
-                  Map.get(data, :source_trigger_id) ->
-              "trigger:#{shorten_id(source_trigger_id)}"
-
-            true ->
-              "unknown"
-          end
-
-        target =
-          get_in(changeset.changes, [:target_job_id]) ||
-            Map.get(data, :target_job_id)
-
-        target_str = if target, do: "job:#{shorten_id(target)}", else: "unknown"
-
-        "#{source}→#{target_str}"
+        get_edge_identifier(changeset, data)
 
       true ->
-        case get_in(changeset.changes, [:id]) || Map.get(data, :id) do
-          nil -> nil
-          id -> "id:#{shorten_id(id)}"
-        end
+        get_id_identifier(changeset, data)
+    end
+  end
+
+  defp get_name_identifier(changeset, data) do
+    case get_in(changeset.changes, [:name]) || Map.get(data, :name) do
+      nil -> nil
+      name -> "\"#{name}\""
+    end
+  end
+
+  defp get_edge_identifier(changeset, data) do
+    source = get_edge_source(changeset, data)
+    target = get_edge_target(changeset, data)
+    "#{source}→#{target}"
+  end
+
+  defp get_edge_source(changeset, data) do
+    cond do
+      source_job_id =
+          get_in(changeset.changes, [:source_job_id]) ||
+            Map.get(data, :source_job_id) ->
+        "job:#{shorten_id(source_job_id)}"
+
+      source_trigger_id =
+          get_in(changeset.changes, [:source_trigger_id]) ||
+            Map.get(data, :source_trigger_id) ->
+        "trigger:#{shorten_id(source_trigger_id)}"
+
+      true ->
+        "unknown"
+    end
+  end
+
+  defp get_edge_target(changeset, data) do
+    target =
+      get_in(changeset.changes, [:target_job_id]) ||
+        Map.get(data, :target_job_id)
+
+    if target, do: "job:#{shorten_id(target)}", else: "unknown"
+  end
+
+  defp get_id_identifier(changeset, data) do
+    case get_in(changeset.changes, [:id]) || Map.get(data, :id) do
+      nil -> nil
+      id -> "id:#{shorten_id(id)}"
     end
   end
 
