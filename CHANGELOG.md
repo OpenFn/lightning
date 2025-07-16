@@ -29,6 +29,8 @@ and this project adheres to
   [#3159](https://github.com/OpenFn/lightning/issues/3159)
 - Bump eqrcode from 0.1.10 to 0.2.1
   [#3116](https://github.com/OpenFn/lightning/issues/3116)
+- Remove unused test as well as puppeteer dependency.
+  [#3404](https://github.com/OpenFn/lightning/issues/3404)
 
 ### Fixed
 
