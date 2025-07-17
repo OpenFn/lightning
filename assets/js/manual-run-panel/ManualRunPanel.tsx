@@ -48,6 +48,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   const [nextCronRunDataclipId, setNextCronRunDataclipId] = React.useState<
     string | null
   >(null);
+  const [canEditDatclip, setCanEditDatclip] = React.useState<boolean>(false);
   const [query, setQuery] = React.useState(urlQuery ? urlQuery : '');
   const [selectedDataclip, setSelectedDataclip] =
     React.useState<Dataclip | null>();
@@ -183,9 +184,11 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         const typedResponse = response as {
           dataclips: Dataclip[];
           next_cron_run_dataclip_id: string | null;
+          can_edit_dataclip: boolean;
         };
         setRecentClips(typedResponse.dataclips);
         setNextCronRunDataclipId(typedResponse.next_cron_run_dataclip_id);
+        setCanEditDatclip(typedResponse.can_edit_dataclip);
 
         // Auto-select the next cron run dataclip if it exists (for cron jobs)
         if (typedResponse.next_cron_run_dataclip_id && !runId) {
@@ -218,9 +221,11 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         const typedResponse = response as {
           dataclips: Dataclip[];
           next_cron_run_dataclip_id: string | null;
+          can_edit_dataclip: boolean;
         };
         setRecentClips(typedResponse.dataclips);
         setNextCronRunDataclipId(typedResponse.next_cron_run_dataclip_id);
+        setCanEditDatclip(typedResponse.can_edit_dataclip);
 
         // Note: Auto-selection of next cron run is handled in the initial useEffect only
         // We don't auto-select here to avoid re-selecting when filters are cleared
@@ -374,6 +379,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             }}
             isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
             onNameChange={handleDataclipNameChange}
+            canEditDataclip={canEditDatclip}
           />
         </div>
       ) : (

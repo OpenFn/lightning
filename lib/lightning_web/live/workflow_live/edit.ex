@@ -1544,7 +1544,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:reply,
          %{
            dataclips: dataclips,
-           next_cron_run_dataclip_id: next_cron_run_dataclip_id
+           next_cron_run_dataclip_id: next_cron_run_dataclip_id,
+           can_edit_dataclip: socket.assigns.can_edit_workflow
          }, socket}
 
       {:error, changeset} ->
@@ -1552,7 +1553,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
          %{
            dataclips: [],
            next_cron_run_dataclip_id: nil,
-           errors: LightningWeb.ChangesetJSON.errors(changeset)
+           errors: LightningWeb.ChangesetJSON.errors(changeset),
+           can_edit_dataclip: socket.assigns.can_edit_workflow
          }, socket}
     end
   end

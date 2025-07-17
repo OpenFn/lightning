@@ -14,6 +14,7 @@ interface SelectedClipViewProps {
   dataclip: Dataclip;
   onUnselect: () => void;
   isNextCronRun?: boolean;
+  canEditDataclip?: boolean;
   onNameChange: (dataclipId: string, name: string) => void;
 }
 
@@ -21,6 +22,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
   dataclip,
   onUnselect,
   isNextCronRun = false,
+  canEditDataclip = false,
   onNameChange,
 }) => {
   const [localName, setLocalName] = React.useState(dataclip.name || '');
@@ -87,21 +89,27 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
             {formatDate(new Date(dataclip.inserted_at))}
           </div>
         </div>
-        <div className="flex flex-row min-h-[28px] items-center mx-1">
-          <div className="basis-1/2 font-medium text-secondary-700 text-sm">
-            Label
+        {(canEditDataclip || dataclip.name) && (
+          <div className="flex flex-row min-h-[28px] items-center mx-1">
+            <div className="basis-1/2 font-medium text-secondary-700 text-sm">
+              Label
+            </div>
+            <div className="basis-1/2 text-right text-sm text-nowrap">
+              {canEditDataclip ? (
+                <input
+                  type="text"
+                  value={localName}
+                  onChange={e => setLocalName(e.target.value)}
+                  onBlur={handleBlur}
+                  className="text-right focus:outline focus:outline-2 focus:outline-offset-1 rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6 border-slate-300 focus:border-slate-400 focus:outline-indigo-600"
+                  placeholder="Enter Label"
+                />
+              ) : (
+                dataclip.name
+              )}
+            </div>
           </div>
-          <div className="basis-1/2 text-right text-sm text-nowrap">
-            <input
-              type="text"
-              value={localName}
-              onChange={e => setLocalName(e.target.value)}
-              onBlur={handleBlur}
-              className="text-right focus:outline focus:outline-2 focus:outline-offset-1 rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6 border-slate-300 focus:border-slate-400 focus:outline-indigo-600"
-              placeholder="Enter Label"
-            />
-          </div>
-        </div>
+        )}
         <div className="flex flex-row min-h-[28px] items-center mx-1">
           <div className="basis-1/2 font-medium text-secondary-700 text-sm">
             UUID
