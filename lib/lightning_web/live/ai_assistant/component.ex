@@ -217,7 +217,7 @@ defmodule LightningWeb.AiAssistant.Component do
         %{assigns: assigns} = socket
       ) do
     message = Enum.find(assigns.session.messages, &(&1.id == message_id))
-    {:noreply, maybe_push_workflow_code(socket, message, context: :restore)}
+    {:noreply, maybe_push_workflow_code(socket, message)}
   end
 
   def handle_event("retry_load_sessions", _params, socket) do
@@ -274,13 +274,18 @@ defmodule LightningWeb.AiAssistant.Component do
     ui_callback = fn event, _data ->
       case event do
         :clear_template ->
-          send_update(
-            socket.assigns.parent_module,
-            id: socket.assigns.parent_id,
-            action: :workflow_updated,
-            context: nil,
-            workflow_code: nil
-          )
+          if socket.assigns[:parent_module] ==
+               LightningWeb.WorkflowLive.NewWorkflowComponent do
+            send_update(
+              socket.assigns.parent_module,
+              id: socket.assigns.parent_id,
+              action: :workflow_updated,
+              workflow_code: nil,
+              session_or_message: nil
+            )
+          else
+            :ok
+          end
 
         _ ->
           :ok
@@ -301,7 +306,10 @@ defmodule LightningWeb.AiAssistant.Component do
     session =
       socket.assigns.handler.get_session!(socket.assigns)
 
-    # maybe_push_workflow_code(socket, session)
+    # if socket.assigns[:parent_module] == LightningWeb.WorkflowLive.NewWorkflowComponent do
+    #   maybe_push_workflow_code(socket, session)
+    # end
+
     pending_message = find_pending_user_message(session)
 
     if pending_message do
@@ -415,9 +423,7 @@ defmodule LightningWeb.AiAssistant.Component do
     end)
   end
 
-  defp maybe_push_workflow_code(socket, session_or_message, opts \\ []) do
-    context = Keyword.get(opts, :context)
-
+  defp maybe_push_workflow_code(socket, session_or_message) do
     case socket.assigns.handler.extract_generated_code(session_or_message) do
       nil ->
         socket
@@ -427,7 +433,6 @@ defmodule LightningWeb.AiAssistant.Component do
           socket.assigns.parent_module,
           id: socket.assigns.parent_id,
           action: :workflow_updated,
-          context: context,
           workflow_code: yaml,
           session_or_message: session_or_message
         )

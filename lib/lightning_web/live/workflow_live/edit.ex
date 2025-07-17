@@ -1607,8 +1607,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:noreply,
        socket
        |> apply_params(next_params, :workflow)
-       |> push_patches_applied(initial_params)
-       |> trigger_yaml_generation()}
+       |> push_patches_applied(initial_params)}
     else
       :not_authorized ->
         {:noreply,
@@ -1823,8 +1822,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
-    {:ok, params} =
+    params =
       WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
+      |> case do
+        {:ok, params} -> params
+        {:error, _} -> socket.assigns.workflow_params
+      end
 
     version_type =
       if socket.assigns.snapshot_version_tag == "latest" do
@@ -1836,7 +1839,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket =
       socket
       |> apply_params(params, version_type)
-      |> trigger_yaml_generation()
+      |> generate_workflow_code()
 
     # Calculate the difference between the new params and changes introduced by
     # the changeset/validation.
@@ -2082,14 +2085,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def handle_info({:form_changed, %{"workflow" => params} = payload}, socket) do
-    {:noreply,
-     handle_new_params(socket, params, :workflow, Map.get(payload, "opts", []))}
+  def handle_info({:form_changed, %{"workflow" => params}}, socket) do
+    {:noreply, handle_new_params(socket, params, :workflow)}
   end
 
-  def handle_info({:form_changed, %{"snapshot" => params} = payload}, socket) do
-    {:noreply,
-     handle_new_params(socket, params, :snapshot, Map.get(payload, "opts", []))}
+  def handle_info({:form_changed, %{"snapshot" => params}}, socket) do
+    {:noreply, handle_new_params(socket, params, :snapshot)}
   end
 
   def handle_info({:forward, mod, opts}, socket) do
@@ -2145,9 +2146,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :save_workflow ->
         handle_workflow_save_request(socket, payload)
-
-      :sending_ai_message ->
-        handle_sending_ai_message(socket)
 
       :close_ai_chat ->
         handle_close_ai_chat(socket)
@@ -2410,8 +2408,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       prev_params = WorkflowParams.to_map(prev_changeset)
       next_params = WorkflowParams.to_map(next_changeset)
 
-      patches = WorkflowParams.to_patches(prev_params, next_params)
-
       query_params =
         Helpers.clean_query_params(socket.assigns.query_params,
           drop_version: true
@@ -2429,7 +2425,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> assign(changeset: next_changeset)
       |> assign(workflow_params: next_params)
       |> assign(snapshot_version_tag: version)
-      |> push_event("patches-applied", %{patches: patches})
+      |> push_patches_applied(prev_params)
       |> maybe_disable_canvas()
       |> push_patch(
         to: Helpers.build_url(socket.assigns, query_params: query_params)
@@ -2443,19 +2439,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
-    next_changeset = Ecto.Changeset.change(workflow)
-
     prev_params = WorkflowParams.to_map(prev_changeset)
-    next_params = WorkflowParams.to_map(next_changeset)
-
-    patches = WorkflowParams.to_patches(prev_params, next_params)
 
     query_params =
       Helpers.clean_query_params(socket.assigns.query_params, drop_version: true)
 
     socket
     |> assign_workflow(workflow, snapshot)
-    |> push_event("patches-applied", %{patches: patches})
+    |> push_patches_applied(prev_params)
     |> push_patch(
       to: Helpers.build_url(socket.assigns, query_params: query_params)
     )
@@ -2817,7 +2808,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp handle_new_params(socket, params, type, opts \\ []) do
+  defp handle_new_params(socket, params, type, push_patches \\ true) do
     %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
       socket.assigns
 
@@ -2825,13 +2816,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
       next_params =
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
-      socket
-      |> apply_params(next_params, type)
-      |> mark_validated()
-      |> push_patches_applied(initial_params)
-      |> trigger_yaml_generation(opts)
+      updated_socket =
+        socket
+        |> apply_params(next_params, type)
+        |> mark_validated()
+
+      if push_patches do
+        push_patches_applied(updated_socket, initial_params)
+      else
+        updated_socket
+      end
     else
-      put_flash(socket, :error, "You are not authorized to perform this action.")
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action.")
     end
   end
 
@@ -2952,7 +2949,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> set_selected_node(type, selected)
         |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
-        |> assign(method: nil)
+
+      # |> assign(method: nil)
 
       nil ->
         socket |> unselect_all()
@@ -3003,6 +3001,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       patches: patches,
       inverse: inverse_patches
     })
+    |> generate_workflow_code()
   end
 
   defp step_retryable?(assigns),
@@ -3253,17 +3252,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
      )}
   end
 
-  defp handle_workflow_params_change(
-         socket,
-         %{
-           "workflow" => incoming_params,
-           "opts" => opts
-         }
-       ) do
+  defp handle_workflow_params_change(socket, %{"workflow" => incoming_params}) do
+    create_action? = socket.assigns.live_action == :new
+
     {:noreply,
      socket
-     |> handle_new_params(incoming_params, :workflow, opts)
-     |> push_event("set-disabled", %{disabled: false})
+     |> handle_new_params(incoming_params, :workflow, !create_action?)
+     |> push_event("set-disabled", %{disabled: create_action?})
      |> push_event("force-fit", %{})}
   end
 
@@ -3320,10 +3315,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     with {:ok, session} <- Lightning.AiAssistant.get_session(chat_id) do
       Lightning.AiAssistant.associate_workflow(session, workflow)
     end
-  end
-
-  defp handle_sending_ai_message(socket) do
-    {:noreply, socket |> push_event("set-disabled", %{disabled: true})}
   end
 
   defp sync_to_github(socket, %{
@@ -3440,14 +3431,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp trigger_yaml_generation(socket, opts \\ []) do
-    context = Keyword.get(opts, :context)
-
-    if context && context == :restore do
-      socket
-    else
-      push_event(socket, "generate_workflow_code", %{})
-    end
+  defp generate_workflow_code(socket) do
+    push_event(socket, "generate_workflow_code", %{})
   end
 
   defp save_and_run_attributes(assigns) do

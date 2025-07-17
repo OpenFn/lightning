@@ -18,7 +18,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
      assign(socket,
        workflow_code: nil,
        workflow_params: nil,
-       context: nil,
        session_or_message: nil
      )}
   end
@@ -27,7 +26,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   def update(
         %{
           action: :workflow_updated,
-          context: context,
           workflow_code: code,
           session_or_message: session_or_message
         },
@@ -35,14 +33,12 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
       ) do
     {:ok,
      socket
-     |> assign(context: context)
      |> assign(session_or_message: session_or_message)
      |> push_event("template_selected", %{template: code})}
   end
 
   def update(%{action: :sending_ai_message}, socket) do
-    notify_parent(:sending_ai_message, %{})
-    {:ok, socket}
+    {:ok, push_event(socket, "set-disabled", %{disabled: true})}
   end
 
   def update(assigns, socket) do
@@ -66,10 +62,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
         Lightning.Workflows.Workflow.changeset(socket.assigns.workflow, params)
 
       if changeset.valid? do
-        notify_parent(:workflow_params_changed, %{
-          "workflow" => params,
-          "opts" => [context: socket.assigns.context]
-        })
+        notify_parent(:workflow_params_changed, %{"workflow" => params})
 
         {:noreply, assign(socket, :workflow_params, params)}
       else
@@ -97,10 +90,12 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
         %{
           "error" => error_details,
           "formattedMessage" => formatted_message,
-          "template" => _template
+          "template" => template
         },
         socket
       ) do
+    Logger.error(template)
+
     Logger.error(
       "Workflow template parsing failed #{inspect(error_details)} \n\n #{formatted_message}"
     )
@@ -173,7 +168,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
             workflow={@workflow}
             current_user={@current_user}
             chat_session_id={@chat_session_id}
-            workflow_code={@workflow_code}
+            workflow_code={@workflow_code |> dbg}
             query_params={%{"method" => "ai"}}
             base_url={@base_url}
             action={if(@chat_session_id, do: :show, else: :new)}

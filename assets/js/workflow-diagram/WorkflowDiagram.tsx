@@ -230,6 +230,18 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   useEffect(() => {
     if (!props.showAiAssistant) {
       setDrawerWidth(0);
+      
+      // Fit view when AI assistant panel closes
+      if (flow && model.nodes.length > 0) {
+        setTimeout(() => {
+          const bounds = getNodesBounds(model.nodes);
+          void flow.fitBounds(bounds, {
+            duration: FIT_DURATION,
+            padding: FIT_PADDING,
+          });
+        }, 510);
+      }
+      
       return;
     }
 
@@ -253,6 +265,17 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         });
         observer.observe(drawer);
         setDrawerWidth(drawer.getBoundingClientRect().width);
+        
+        // Fit view when AI assistant panel opens
+        if (flow && model.nodes.length > 0) {
+          setTimeout(() => {
+            const bounds = getNodesBounds(model.nodes);
+            void flow.fitBounds(bounds, {
+              duration: FIT_DURATION,
+              padding: FIT_PADDING,
+            });
+          }, 510);
+        }
       }
     }, 50);
 
@@ -262,7 +285,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         observer.disconnect();
       }
     };
-  }, [props.showAiAssistant, props.aiAssistantId]);
+  }, [props.showAiAssistant, props.aiAssistantId, flow, model.nodes]);
+
+  useEffect(() => {
+    if (props.forceFit && flow && model.nodes.length > 0) {
+      // Immediately fit to bounds when forceFit becomes true
+      const bounds = getNodesBounds(model.nodes);
+      flow.fitBounds(bounds, {
+        duration: FIT_DURATION,
+        padding: FIT_PADDING,
+      }).catch((error) => {
+        console.error('Failed to fit bounds:', error);
+      });
+    }
+  }, [props.forceFit, flow, model.nodes]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {

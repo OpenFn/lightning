@@ -15,6 +15,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   alias LightningWeb.API.ProvisioningJSON
   alias LightningWeb.Live.AiAssistant.ModeRegistry
 
+  require Logger
+
   @impl true
   def mount(socket) do
     base_templates = base_templates()
@@ -27,6 +29,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> assign(chat_session_id: nil)
      |> assign(selected_template: nil)
      |> assign(workflow_code: nil)
+     |> assign(session_or_message: nil)
      |> assign(validation_failed: true)
      |> assign(selected_method: "template")
      |> assign(base_templates: base_templates)
@@ -36,7 +39,14 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   end
 
   @impl true
-  def update(%{action: :workflow_updated, workflow_code: code}, socket) do
+  def update(
+        %{
+          action: :workflow_updated,
+          workflow_code: code,
+          session_or_message: session_or_message
+        },
+        socket
+      ) do
     notify_parent(:canvas_state_changed, %{
       show_canvas_placeholder: is_nil(code),
       show_template_tooltip: nil
@@ -44,6 +54,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
     {:ok,
      socket
+     |> assign(session_or_message: session_or_message)
      |> assign(workflow_code: code)
      |> then(fn s ->
        if code,
@@ -131,6 +142,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         show_template_tooltip: template_for_tooltip
       })
 
+      notify_parent(:workflow_params_changed, %{"workflow" => params})
+
       {:noreply,
        socket
        |> assign(changeset: changeset)
@@ -153,6 +166,35 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
          ProvisioningJSON.error(%{changeset: changeset})
        )}
     end
+  end
+
+  def handle_event(
+        "template-parse-error",
+        %{
+          "error" => error_details,
+          "formattedMessage" => formatted_message,
+          "template" => _template
+        },
+        socket
+      ) do
+    Logger.error(
+      "Workflow template parsing failed #{inspect(error_details)} \n\n #{formatted_message}"
+    )
+
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: true,
+      show_template_tooltip: nil
+    })
+
+    send_update(
+      LightningWeb.AiAssistant.Component,
+      id: "workflow-ai-assistant",
+      action: :workflow_parse_error,
+      error_details: formatted_message,
+      session_or_message: socket.assigns.session_or_message
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event(
@@ -355,6 +397,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             project={@project}
             current_user={@current_user}
             chat_session_id={@chat_session_id}
+            workflow_code={@workflow_code}
             base_url={@base_url}
             search_term={@search_term}
           />
@@ -634,6 +677,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         project={@project}
         current_user={@current_user}
         chat_session_id={@chat_session_id}
+        workflow_code={@workflow_code}
         query_params={%{"method" => "ai"}}
         base_url={@base_url}
         input_value={@search_term}
