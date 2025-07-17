@@ -3602,42 +3602,30 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       # Create named dataclips
-      named_dataclip =
+      %{id: named_dataclip_id} =
         insert(:dataclip,
           name: "My Test Dataclip",
           body: %{"body-field" => "body-value"},
-          request: %{"headers" => "list"},
-          type: :http_request
+          type: :http_request,
+          project: project
         )
         |> tap(&insert(:step, input_dataclip: &1, job: job))
-        |> then(fn %{body: body, request: request} = dataclip ->
-          dataclip
-          |> Repo.reload!()
-          |> restore_listed(body, request)
-          |> then(&%{&1 | body: nil})
-        end)
 
-      other_named_dataclip =
+      %{id: other_named_dataclip_id} =
         insert(:dataclip,
           name: "Another Dataclip",
           body: %{"body-field" => "body-value2"},
-          request: %{"headers" => "list"},
-          type: :http_request
+          type: :http_request,
+          project: project
         )
         |> tap(&insert(:step, input_dataclip: &1, job: job))
-        |> then(fn %{body: body, request: request} = dataclip ->
-          dataclip
-          |> Repo.reload!()
-          |> restore_listed(body, request)
-          |> then(&%{&1 | body: nil})
-        end)
 
       # Create dataclip without name
       insert(:dataclip,
         name: nil,
         body: %{"body-field" => "body-value3"},
-        request: %{"headers" => "list"},
-        type: :http_request
+        type: :http_request,
+        project: project
       )
       |> tap(&insert(:step, input_dataclip: &1, job: job))
 
@@ -3652,7 +3640,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         }
       )
 
-      assert_reply(view, %{dataclips: [^named_dataclip]})
+      assert_reply(view, %{dataclips: [%{id: ^named_dataclip_id}]})
 
       # Test searching by name prefix "Another"
       render_hook(
@@ -3665,7 +3653,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         }
       )
 
-      assert_reply(view, %{dataclips: [^other_named_dataclip]})
+      assert_reply(view, %{dataclips: [%{id: ^other_named_dataclip_id}]})
 
       # Test case insensitive search
       render_hook(
@@ -3678,7 +3666,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         }
       )
 
-      assert_reply(view, %{dataclips: [^named_dataclip]})
+      assert_reply(view, %{dataclips: [%{id: ^named_dataclip_id}]})
 
       # Test no matches
       render_hook(
@@ -3709,7 +3697,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       # Create named dataclips
-      named_dataclip1 =
+      %{id: named_dataclip1_id} =
         insert(:dataclip,
           name: "First Named",
           body: %{"body-field" => "body-value1"},
@@ -3717,14 +3705,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           type: :http_request
         )
         |> tap(&insert(:step, input_dataclip: &1, job: job))
-        |> then(fn %{body: body, request: request} = dataclip ->
-          dataclip
-          |> Repo.reload!()
-          |> restore_listed(body, request)
-          |> then(&%{&1 | body: nil})
-        end)
 
-      named_dataclip2 =
+      %{id: named_dataclip2_id} =
         insert(:dataclip,
           name: "Second Named",
           body: %{"body-field" => "body-value2"},
@@ -3732,12 +3714,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           type: :http_request
         )
         |> tap(&insert(:step, input_dataclip: &1, job: job))
-        |> then(fn %{body: body, request: request} = dataclip ->
-          dataclip
-          |> Repo.reload!()
-          |> restore_listed(body, request)
-          |> then(&%{&1 | body: nil})
-        end)
 
       # Create dataclips without names
       insert(:dataclip,
@@ -3768,7 +3744,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       )
 
       # Should return only named dataclips, ordered by inserted_at desc
-      assert_reply(view, %{dataclips: [^named_dataclip2, ^named_dataclip1]})
+      assert_reply(view, %{
+        dataclips: [%{id: ^named_dataclip2_id}, %{id: ^named_dataclip1_id}]
+      })
 
       # Test without named_only filter - should return all dataclips
       render_hook(

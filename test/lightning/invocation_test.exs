@@ -448,34 +448,25 @@ defmodule Lightning.InvocationTest do
     end
 
     test "filters dataclips by name prefix case-insensitively" do
-      %{jobs: [job1 | _rest]} = insert(:complex_workflow)
+      project = insert(:project)
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow, project: project)
 
       # Create dataclips with different names
       named_dataclip =
         insert(:dataclip,
           name: "My Test Dataclip",
           body: %{"foo" => "bar"},
-          type: :http_request
+          type: :http_request,
+          project: project
         )
-        |> then(
-          &Map.update(&1, :body, nil, fn body ->
-            %{"data" => body, "request" => &1.request}
-          end)
-        )
-        |> Map.drop([:project, :request])
 
       other_named_dataclip =
         insert(:dataclip,
           name: "Another Dataclip",
           body: %{"baz" => "qux"},
-          type: :http_request
+          type: :http_request,
+          project: project
         )
-        |> then(
-          &Map.update(&1, :body, nil, fn body ->
-            %{"data" => body, "request" => &1.request}
-          end)
-        )
-        |> Map.drop([:project, :request])
 
       # Create dataclip without name
       insert(:dataclip,
@@ -529,34 +520,25 @@ defmodule Lightning.InvocationTest do
     end
 
     test "filters dataclips to only named ones" do
-      %{jobs: [job1 | _rest]} = insert(:complex_workflow)
+      project = insert(:project)
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow, project: project)
 
       # Create named dataclips
       named_dataclip1 =
         insert(:dataclip,
           name: "First Named",
           body: %{"foo" => "bar"},
-          type: :http_request
+          type: :http_request,
+          project: project
         )
-        |> then(
-          &Map.update(&1, :body, nil, fn body ->
-            %{"data" => body, "request" => &1.request}
-          end)
-        )
-        |> Map.drop([:project, :request])
 
       named_dataclip2 =
         insert(:dataclip,
           name: "Second Named",
           body: %{"baz" => "qux"},
-          type: :http_request
+          type: :http_request,
+          project: project
         )
-        |> then(
-          &Map.update(&1, :body, nil, fn body ->
-            %{"data" => body, "request" => &1.request}
-          end)
-        )
-        |> Map.drop([:project, :request])
 
       # Create dataclips without names
       insert(:dataclip,
