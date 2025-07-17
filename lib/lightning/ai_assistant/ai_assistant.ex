@@ -452,8 +452,9 @@ defmodule Lightning.AiAssistant do
 
     message_attrs =
       message_attrs
-      |> Map.put(:chat_session_id, session.id)
-      |> Map.put(:workflow_code, workflow_code)
+      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
+      |> Map.put("chat_session_id", session.id)
+      |> Map.put("workflow_code", workflow_code)
 
     Multi.new()
     |> Multi.put(:usage, usage)

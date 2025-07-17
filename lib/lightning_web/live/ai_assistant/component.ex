@@ -306,9 +306,10 @@ defmodule LightningWeb.AiAssistant.Component do
     session =
       socket.assigns.handler.get_session!(socket.assigns)
 
-    # if socket.assigns[:parent_module] == LightningWeb.WorkflowLive.NewWorkflowComponent do
-    #   maybe_push_workflow_code(socket, session)
-    # end
+    if socket.assigns[:parent_module] ==
+         LightningWeb.WorkflowLive.NewWorkflowComponent do
+      maybe_push_workflow_code(socket, session)
+    end
 
     pending_message = find_pending_user_message(session)
 

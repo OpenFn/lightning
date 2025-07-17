@@ -725,12 +725,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     false
                   end
                 }
-                cancel_url={@base_url}
+                cancel_url={Helpers.build_url(assigns)}
                 back_url={
                   if @selected_job do
-                    "#{@base_url}?s=#{@selected_job.id}"
+                    Helpers.build_url(assigns, selection: @selected_job.id)
                   else
-                    @base_url
+                    Helpers.build_url(assigns)
                   end
                 }
               />
@@ -1029,16 +1029,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp expand_job_editor(assigns) do
     {is_empty, error_message} = editor_is_empty(assigns.form, assigns.job)
 
-    button_base_classes =
-      ~w(
-      inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset hover:bg-gray-50)
-
-    button_classes =
-      button_base_classes ++
-        if is_empty,
-          do: ~w(ring-red-300),
-          else: ~w(ring-0)
-
     url =
       Helpers.build_url(assigns,
         selection: assigns.job.id,
@@ -1050,18 +1040,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     assigns =
       assign(assigns,
         is_empty: is_empty,
-        button_classes: button_classes,
         error_message: error_message,
         url: url
       )
 
     ~H"""
-    <.button_link
-      id={"open-inspector-#{@job.id}"}
-      patch={@url}
-      theme="primary"
-      class={@button_classes}
-    >
+    <.button_link id={"open-inspector-#{@job.id}"} patch={@url} theme="primary">
       Edit
     </.button_link>
 
@@ -3049,15 +3033,30 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp processing(_run), do: false
 
   defp follow_run(socket, run) do
-    version = Ecto.Changeset.get_field(socket.assigns.changeset, :lock_version)
+    %{
+      changeset: changeset,
+      workflow: workflow,
+      selection_mode: current_mode
+    } = socket.assigns
+
+    version = Ecto.Changeset.get_field(changeset, :lock_version)
+    mode = current_mode || "expand"
+
+    selection =
+      case socket.assigns do
+        %{selected_job: %{id: job_id}} -> job_id
+        _ -> nil
+      end
 
     url =
       Helpers.build_url(
         socket.assigns,
         query_params: %{
           "a" => run.id,
-          "v" => if(socket.assigns.lock_version != version, do: version)
-        }
+          "v" => if(workflow.lock_version != version, do: version)
+        },
+        mode: mode,
+        selection: selection
       )
 
     push_patch(socket, to: url)
