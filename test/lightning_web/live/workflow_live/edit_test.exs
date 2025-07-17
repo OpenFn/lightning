@@ -3811,6 +3811,60 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert updated_dataclip.name == "Original Name"
     end
 
+    test "update-dataclip-name event fails when dataclip name is already in use",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create a dataclip
+      dataclip =
+        insert(:dataclip,
+          name: "Original Name",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request,
+          project: project
+        )
+
+      another_dataclip =
+        insert(:dataclip,
+          name: "Another Name",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request,
+          project: project
+        )
+
+      # Try to update the dataclip name
+      render_hook(
+        view,
+        "update-dataclip-name",
+        %{
+          "dataclip_id" => dataclip.id,
+          "name" => another_dataclip.name
+        }
+      )
+
+      # Should return error message
+      assert_reply(view, %{
+        dataclip: %{name: "Original Name"},
+        error: "dataclip name already in use"
+      })
+
+      # Verify dataclip name was not changed in database
+      updated_dataclip = Lightning.Repo.reload!(dataclip)
+      assert updated_dataclip.name == "Original Name"
+    end
+
     test "update-dataclip-name event updates dataclip name successfully",
          %{conn: conn, project: project} do
       %{jobs: [job | _rest]} =

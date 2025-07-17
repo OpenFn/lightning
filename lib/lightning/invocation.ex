@@ -300,6 +300,7 @@ defmodule Lightning.Invocation do
   def update_dataclip_name(%Dataclip{} = dataclip, name) do
     dataclip
     |> Ecto.Changeset.cast(%{name: name}, [:name])
+    |> Ecto.Changeset.unique_constraint([:name, :project_id])
     |> Repo.update()
   end
 

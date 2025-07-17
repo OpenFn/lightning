@@ -1587,7 +1587,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:reply,
            %{
              dataclip: dataclip,
-             error: "An error occured when updating the dataclip"
+             error: "dataclip name already in use"
            }, socket}
       end
     else
