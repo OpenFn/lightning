@@ -907,7 +907,8 @@ defmodule Lightning.Invocation do
       {:named_only, true} ->
         is_binary(dataclip.name)
 
-      _other -> true
+      _other ->
+        true
     end)
   end
 
