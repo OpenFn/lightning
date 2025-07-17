@@ -26,19 +26,14 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
     assert {:ok, %{id: ^uuid}} =
              NewManualRun.get_dataclips_filters("query=#{uuid}")
 
-    assert {:error, changeset} =
-             NewManualRun.get_dataclips_filters(
-               "query=1z&before=2025-05-14T14%3A35"
-             ),
-           "Partial uuids that are not base 16 should be rejected"
+    assert {:ok, %{name_prefix: "1z"}} =
+             NewManualRun.get_dataclips_filters("query=1z")
 
-    assert {:query, {"is invalid", []}} in changeset.errors
+    invalid_uuid = "#{uuid}z"
 
-    assert {:error, changeset} =
-             NewManualRun.get_dataclips_filters("query=#{uuid}z"),
-           "Invalid uuids should be rejected"
-
-    assert {:query, {"is invalid", []}} in changeset.errors
+    assert {:ok, %{name_prefix: ^invalid_uuid}} =
+             NewManualRun.get_dataclips_filters("query=#{invalid_uuid}"),
+           "Invalid uuids are treated as name prefixes"
 
     for type <- Lightning.Invocation.Dataclip.source_types() do
       assert {:ok, %{type: ^type}} =
