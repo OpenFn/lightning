@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow users to name dataclips
+  [#311](https://github.com/OpenFn/lightning/issues/311)
+
 ### Changed
 
 - Bump bcrypt_elixir from 3.2.1 to 3.3.2
