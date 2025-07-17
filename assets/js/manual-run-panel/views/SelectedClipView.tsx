@@ -1,3 +1,4 @@
+import React from 'react';
 import { DataclipViewer } from '../../react/components/DataclipViewer';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import { ClockIcon } from '@heroicons/react/24/solid';
@@ -13,13 +14,28 @@ interface SelectedClipViewProps {
   dataclip: Dataclip;
   onUnselect: () => void;
   isNextCronRun?: boolean;
+  onNameChange: (dataclipId: string, name: string) => void;
 }
 
 const SelectedClipView: React.FC<SelectedClipViewProps> = ({
   dataclip,
   onUnselect,
   isNextCronRun = false,
+  onNameChange,
 }) => {
+  const [localName, setLocalName] = React.useState(dataclip.name || '');
+
+  // Update local state when dataclip changes
+  React.useEffect(() => {
+    setLocalName(dataclip.name || '');
+  }, [dataclip.name]);
+
+  const handleBlur = React.useCallback(() => {
+    if (localName !== (dataclip.name || '')) {
+      onNameChange(dataclip.id, localName);
+    }
+  }, [localName, dataclip.name, dataclip.id, onNameChange]);
+
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
       <div className="flex flex-col flex-0 gap-2">
@@ -69,6 +85,22 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
           </div>
           <div className="basis-1/2 text-right text-sm text-nowrap">
             {formatDate(new Date(dataclip.inserted_at))}
+          </div>
+        </div>
+        <div className="flex flex-row min-h-[28px] items-center mx-1">
+          <div className="basis-1/2 font-medium text-secondary-700 text-sm">
+            Label
+          </div>
+          <div className="basis-1/2 text-right text-sm text-nowrap">
+            <input
+              type="text"
+              value={localName}
+              onChange={e => setLocalName(e.target.value)}
+              onBlur={handleBlur}
+              className="focus:outline focus:outline-2 focus:outline-offset-1 rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6 border-slate-300 focus:border-slate-400 focus:outline-indigo-600
+              "
+              placeholder="Enter Label"
+            />
           </div>
         </div>
         <div className="flex flex-row min-h-[28px] items-center mx-1">

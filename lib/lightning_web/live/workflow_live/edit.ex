@@ -1535,7 +1535,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
            search_text,
            limit,
            offset
-         ) do
+         ) |> dbg do
       {:ok,
        %{
          dataclips: dataclips,
@@ -1566,6 +1566,32 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> case do
       nil -> {:reply, %{dataclip: nil}, socket}
       dataclip -> {:reply, %{dataclip: dataclip}, socket}
+    end
+  end
+
+  def handle_event(
+        "update-dataclip-name",
+        %{"dataclip_id" => dataclip_id, "name" => name},
+        socket
+      ) do
+    if socket.assigns.can_edit_workflow do
+      dataclip = Invocation.get_dataclip!(dataclip_id)
+
+      case Invocation.update_dataclip_name(dataclip, name) do
+        {:ok, dataclip} ->
+          {:reply, %{dataclip: dataclip}, socket}
+
+        {:error, _changeset} ->
+          {:reply,
+           %{
+             dataclip: nil,
+             error: "An error occured when updating the dataclip"
+           }, socket}
+      end
+    else
+      {:reply,
+       %{dataclip: nil, error: "You are not authorized to perform this action"},
+       socket}
     end
   end
 

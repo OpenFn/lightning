@@ -228,6 +228,46 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     );
   }, [job_id, parsedQuery, pushEvent, navigate, selectedOption]);
 
+  const handleDataclipNameChange = React.useCallback(
+    (dataclipId: string, name: string) => {
+      pushEventTo(
+        'update-dataclip-name',
+        {
+          dataclip_id: dataclipId,
+          name: name,
+        },
+        (response: unknown) => {
+          const typedResponse = response as { dataclip: Dataclip | null };
+          if (typedResponse.dataclip) {
+            const updatedDataclip = typedResponse.dataclip;
+
+            // Update selected dataclip
+            setSelectedDataclip(updatedDataclip);
+
+            // Update dataclip in recentclips list
+            setRecentClips(clips =>
+              clips.map(clip =>
+                clip.id === updatedDataclip.id ? updatedDataclip : clip
+              )
+            );
+
+            // Update current run dataclip if it's the same
+            if (currentRunDataclip?.id === updatedDataclip.id) {
+              setCurrentRunDataclip(updatedDataclip);
+            }
+          }
+        }
+      );
+    },
+    [
+      pushEventTo,
+      setSelectedDataclip,
+      setRecentClips,
+      currentRunDataclip,
+      setCurrentRunDataclip,
+    ]
+  );
+
   React.useEffect(() => {
     if (!query.trim()) handleSearchSumbit();
   }, [query, handleSearchSumbit]);
@@ -333,6 +373,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
               selectDataclipForManualRun(null);
             }}
             isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+            onNameChange={handleDataclipNameChange}
           />
         </div>
       ) : (
