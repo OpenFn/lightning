@@ -28,7 +28,16 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     after,
     query: urlQuery,
     a: runId,
-  } = useQuery(['active_panel', 'type', 'before', 'after', 'query', 'a']);
+    named_only,
+  } = useQuery([
+    'active_panel',
+    'type',
+    'before',
+    'after',
+    'query',
+    'named_only',
+    'a',
+  ]);
   const {
     pushEvent,
     pushEventTo,
@@ -59,6 +68,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     before: before ? before : '',
     after: after ? after : '',
   });
+  const [namedOnly, setNamedOnly] = React.useState<boolean>(
+    named_only === 'true'
+  );
   const formRef = React.useRef<HTMLFormElement>(null);
 
   const pushManualChange = React.useCallback(
@@ -133,6 +145,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       type: selectedClipType || undefined,
       before: selectedDates.before || undefined,
       after: selectedDates.after || undefined,
+      named_only: namedOnly || undefined,
     };
 
     const cleanFilters = Object.fromEntries(
@@ -140,7 +153,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     ) as Record<string, string>;
 
     return { query, filters: cleanFilters };
-  }, [query, selectedClipType, selectedDates.before, selectedDates.after]);
+  }, [
+    query,
+    selectedClipType,
+    selectedDates.before,
+    selectedDates.after,
+    namedOnly,
+  ]);
 
   const clearFilter = React.useCallback((type: FilterTypes) => {
     switch (type) {
@@ -152,6 +171,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         break;
       case FilterTypes.AFTER_DATE:
         setSelectedDates(p => ({ before: p.before, after: '' }));
+        break;
+      case FilterTypes.NAMED_ONLY:
+        setNamedOnly(false);
         break;
     }
   }, []);
@@ -337,6 +359,8 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             clearFilter={clearFilter}
             selectedDates={selectedDates}
             setSelectedDates={setSelectedDates}
+            namedOnly={namedOnly}
+            setNamedOnly={setNamedOnly}
             fixedHeight={fixedHeight}
             currentRunDataclip={currentRunDataclip}
             nextCronRunDataclipId={nextCronRunDataclipId}
@@ -356,9 +380,11 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     parsedQuery.filters,
     selectedClipType,
     selectedDates,
+    namedOnly,
     selectDataclipForManualRun,
     setSelectedDates,
     setSelectedClipType,
+    setNamedOnly,
     clearFilter,
     pushEvent,
     handleSearchSumbit,

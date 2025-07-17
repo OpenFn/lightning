@@ -92,6 +92,15 @@ defmodule Lightning.Invocation do
 
         {:exclude_id, exclude_id}, dynamic ->
           dynamic([d], ^dynamic and d.id != ^exclude_id)
+
+        {:name_prefix, name}, dynamic ->
+          dynamic([d], ^dynamic and ilike(d.name, ^"#{name}%"))
+
+        {:named_only, true}, dynamic ->
+          dynamic([d], ^dynamic and not is_nil(d.name))
+
+        _other, dynamic ->
+          dynamic
       end)
 
     Query.last_n_for_job(job_id, limit)
@@ -871,12 +880,34 @@ defmodule Lightning.Invocation do
   # Check if a dataclip matches the user filters (applied in Elixir)
   defp dataclip_matches_filters?(dataclip, user_filters) do
     Enum.all?(user_filters, fn
-      {:id, uuid} -> dataclip.id == uuid
-      {:id_prefix, id_prefix} -> String.starts_with?(dataclip.id, id_prefix)
-      {:type, type} -> dataclip.type == type
-      {:after, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :lt
-      {:before, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :gt
-      {:exclude_id, exclude_id} -> dataclip.id != exclude_id
+      {:id, uuid} ->
+        dataclip.id == uuid
+
+      {:id_prefix, id_prefix} ->
+        String.starts_with?(dataclip.id, id_prefix)
+
+      {:type, type} ->
+        dataclip.type == type
+
+      {:after, ts} ->
+        DateTime.compare(dataclip.inserted_at, ts) != :lt
+
+      {:before, ts} ->
+        DateTime.compare(dataclip.inserted_at, ts) != :gt
+
+      {:exclude_id, exclude_id} ->
+        dataclip.id != exclude_id
+
+      {:name_prefix, name} ->
+        String.starts_with?(
+          String.downcase(dataclip.name),
+          String.downcase(name)
+        )
+
+      {:named_only, true} ->
+        is_binary(dataclip.name)
+
+      _other -> true
     end)
   end
 

@@ -48,6 +48,7 @@ export enum FilterTypes {
   DATACLIP_TYPE = 'type',
   BEFORE_DATE = 'before',
   AFTER_DATE = 'after',
+  NAMED_ONLY = 'named_only',
 }
 
 export type SetDates = React.Dispatch<

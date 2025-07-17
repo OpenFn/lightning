@@ -3586,6 +3586,293 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_redirected(view, ~p"/projects/#{project}/runs/#{created_run}")
     end
+
+    test "searches for dataclips by name prefix",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create named dataclips
+      named_dataclip =
+        insert(:dataclip,
+          name: "My Test Dataclip",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+        |> then(fn %{body: body, request: request} = dataclip ->
+          dataclip
+          |> Repo.reload!()
+          |> restore_listed(body, request)
+          |> then(&%{&1 | body: nil})
+        end)
+
+      other_named_dataclip =
+        insert(:dataclip,
+          name: "Another Dataclip",
+          body: %{"body-field" => "body-value2"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+        |> then(fn %{body: body, request: request} = dataclip ->
+          dataclip
+          |> Repo.reload!()
+          |> restore_listed(body, request)
+          |> then(&%{&1 | body: nil})
+        end)
+
+      # Create dataclip without name
+      insert(:dataclip,
+        name: nil,
+        body: %{"body-field" => "body-value3"},
+        request: %{"headers" => "list"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      # Test searching by name prefix "My"
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=My",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [^named_dataclip]})
+
+      # Test searching by name prefix "Another"
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=Another",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [^other_named_dataclip]})
+
+      # Test case insensitive search
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=my",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [^named_dataclip]})
+
+      # Test no matches
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=nonexistent",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: []})
+    end
+
+    test "searches for dataclips using named_only filter",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create named dataclips
+      named_dataclip1 =
+        insert(:dataclip,
+          name: "First Named",
+          body: %{"body-field" => "body-value1"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+        |> then(fn %{body: body, request: request} = dataclip ->
+          dataclip
+          |> Repo.reload!()
+          |> restore_listed(body, request)
+          |> then(&%{&1 | body: nil})
+        end)
+
+      named_dataclip2 =
+        insert(:dataclip,
+          name: "Second Named",
+          body: %{"body-field" => "body-value2"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+        |> then(fn %{body: body, request: request} = dataclip ->
+          dataclip
+          |> Repo.reload!()
+          |> restore_listed(body, request)
+          |> then(&%{&1 | body: nil})
+        end)
+
+      # Create dataclips without names
+      insert(:dataclip,
+        name: nil,
+        body: %{"body-field" => "body-value3"},
+        request: %{"headers" => "list"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      insert(:dataclip,
+        name: nil,
+        body: %{"body-field" => "body-value4"},
+        request: %{"headers" => "list"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      # Test named_only filter
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "named_only=true",
+          "limit" => 10
+        }
+      )
+
+      # Should return only named dataclips, ordered by inserted_at desc
+      assert_reply(view, %{dataclips: [^named_dataclip2, ^named_dataclip1]})
+
+      # Test without named_only filter - should return all dataclips
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "",
+          "limit" => 10
+        }
+      )
+
+      # Should return all 4 dataclips
+      assert_reply(view, %{dataclips: dataclips})
+      assert length(dataclips) == 4
+    end
+
+    test "update-dataclip-name event fails when user cannot edit workflow",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      # Set up user with viewer permission
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create a dataclip
+      dataclip =
+        insert(:dataclip,
+          name: "Original Name",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+
+      # Try to update the dataclip name
+      render_hook(
+        view,
+        "update-dataclip-name",
+        %{
+          "dataclip_id" => dataclip.id,
+          "name" => "New Name"
+        }
+      )
+
+      # Should return error message
+      assert_reply(view, %{
+        dataclip: %{name: "Original Name"},
+        error: "You are not authorized to perform this action"
+      })
+
+      # Verify dataclip name was not changed in database
+      updated_dataclip = Lightning.Repo.reload!(dataclip)
+      assert updated_dataclip.name == "Original Name"
+    end
+
+    test "update-dataclip-name event updates dataclip name successfully",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create a dataclip
+      dataclip =
+        insert(:dataclip,
+          name: "Original Name",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+
+      # Update the dataclip name
+      render_hook(
+        view,
+        "update-dataclip-name",
+        %{
+          "dataclip_id" => dataclip.id,
+          "name" => "New Name"
+        }
+      )
+
+      # Should return updated dataclip
+      assert_reply(view, %{dataclip: %{name: "New Name"}})
+
+      # Verify dataclip name was changed in database
+      updated_dataclip = Lightning.Repo.reload!(dataclip)
+      assert updated_dataclip.name == "New Name"
+    end
   end
 
   defp log_viewer_selected_level(log_viewer) do
