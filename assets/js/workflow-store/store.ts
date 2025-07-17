@@ -451,7 +451,6 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       }));
     },
     updateRuns(runs, run_id, history) {
-      console.log('call:', runs, run_id, history);
       set(state => {
         const _history = (history || state.history).map(wo => {
           let wselected = false;

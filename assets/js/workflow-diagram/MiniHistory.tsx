@@ -29,7 +29,6 @@ const StatePill: React.FC<{ state: WorkOrderStates, size?: "normal" | "mini" }> 
         return "bg-slate-200 text-slate-500"
     }
   }
-  console.log(size)
   return <span
     className={`inline-flex rounded-full bg-gray-200 justify-center items-center ${colors()} ${size === "normal" ? "w-6 h-6" : "w-4 h-4"}`}>
     <span className={`${icon()} ${size === "normal" ? "w-4 h-4" : "w-3 h-3"}`}></span>
@@ -44,29 +43,34 @@ const formatDuration = (start, end) => {
 };
 
 interface MiniHistoryProps {
+  collapsed: boolean;
   history: WorkflowRunHistory;
   selectRunHandler: (runId: string, version: number) => void
 }
 
 export default function MiniHistory({
   history,
-  selectRunHandler
+  selectRunHandler,
+  collapsed = true
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState("");
+  const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const loading = false;
 
   return (
-    <div className="absolute left-2 top-2 h-96 max-h-96 min-w-88 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div className={`absolute left-2 top-2 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${isCollapsed ? "w-44" : "w-88"}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
+      <div className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 ${isCollapsed ? "border-b-0" : "border-b"}`} onClick={() => setIsCollapsed(p => !p)}>
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-gray-700">Recent Activity</h3>
+          <h3 className="text-sm font-medium text-gray-700">
+            {isCollapsed ? "View history" : "Recent Activities"}
+          </h3>
           <a
             href={`#`}
             className="text-gray-400 hover:text-gray-600 transition-colors"
             title="View full history for this workflow"
           >
-            <span className="hero-arrow-down-on-square w-4 h-4"></span>
+            <span className="hero-arrow-top-right-on-square w-4 h-4"></span>
           </a>
         </div>
 
@@ -74,12 +78,16 @@ export default function MiniHistory({
           className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
           title="Collapse panel"
         >
-          <span className="hero-chevron-left w-4 h-4" ></span>
+          {
+            isCollapsed ?
+              <span className="hero-chevron-right w-4 h-4" ></span> :
+              <span className="hero-chevron-left w-4 h-4" ></span>
+          }
         </div>
       </div>
 
       {/* Content */}
-      <div className="overflow-y-auto h-full">
+      <div className={`overflow-y-auto ${isCollapsed ? "h-0" : "h-82"}`}>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-sm text-gray-500">Loading recent activity...</div>

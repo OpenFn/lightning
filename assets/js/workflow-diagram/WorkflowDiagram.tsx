@@ -455,6 +455,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         />
       </ReactFlow>
       <MiniHistory
+        collapsed={!runSteps.length}
         history={someHistory}
         selectRunHandler={onRunChange}
       ></MiniHistory>

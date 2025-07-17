@@ -121,6 +121,7 @@ export const WorkflowStore: WithActionProps = props => {
   React.useEffect(() => {
     return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunSteps[], snapshot: WorkflowProps }) => {
       updateRuns(response.run_steps, response.run_id);
+      setDisabled(true);
     })
   }, [props.handleEvent, updateRuns])
 
