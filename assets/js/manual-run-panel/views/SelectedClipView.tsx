@@ -97,8 +97,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
               value={localName}
               onChange={e => setLocalName(e.target.value)}
               onBlur={handleBlur}
-              className="focus:outline focus:outline-2 focus:outline-offset-1 rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6 border-slate-300 focus:border-slate-400 focus:outline-indigo-600
-              "
+              className="text-right focus:outline focus:outline-2 focus:outline-offset-1 rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6 border-slate-300 focus:border-slate-400 focus:outline-indigo-600"
               placeholder="Enter Label"
             />
           </div>
