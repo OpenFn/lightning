@@ -67,45 +67,9 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
-    db_filters =
-      Enum.reduce(user_filters, dynamic(true), fn
-        {:id, uuid}, dynamic ->
-          dynamic([d], ^dynamic and d.id == ^uuid)
-
-        {:id_prefix, id_prefix}, dynamic ->
-          {id_prefix_start, id_prefix_end} =
-            id_prefix_interval(id_prefix)
-
-          dynamic(
-            [d],
-            ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
-          )
-
-        {:type, type}, dynamic ->
-          dynamic([d], ^dynamic and d.type == ^type)
-
-        {:after, ts}, dynamic ->
-          dynamic([d], ^dynamic and d.inserted_at >= ^ts)
-
-        {:before, ts}, dynamic ->
-          dynamic([d], ^dynamic and d.inserted_at <= ^ts)
-
-        {:exclude_id, exclude_id}, dynamic ->
-          dynamic([d], ^dynamic and d.id != ^exclude_id)
-
-        {:name_prefix, name}, dynamic ->
-          dynamic([d], ^dynamic and ilike(d.name, ^"#{name}%"))
-
-        {:named_only, true}, dynamic ->
-          dynamic([d], ^dynamic and not is_nil(d.name))
-
-        _other, dynamic ->
-          dynamic
-      end)
-
     Query.last_n_for_job(job_id, limit)
     |> where([d], is_nil(d.wiped_at))
-    |> where([d], ^db_filters)
+    |> where([d], ^dataclip_where_filter(user_filters))
     |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
     |> Repo.all()
     |> maybe_filter_uuid_prefix(user_filters)
@@ -909,6 +873,44 @@ defmodule Lightning.Invocation do
 
       _other ->
         true
+    end)
+  end
+
+  # credo:disable-for-next-line
+  defp dataclip_where_filter(user_filters) do
+    Enum.reduce(user_filters, dynamic(true), fn
+      {:id, uuid}, dynamic ->
+        dynamic([d], ^dynamic and d.id == ^uuid)
+
+      {:id_prefix, id_prefix}, dynamic ->
+        {id_prefix_start, id_prefix_end} =
+          id_prefix_interval(id_prefix)
+
+        dynamic(
+          [d],
+          ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
+        )
+
+      {:type, type}, dynamic ->
+        dynamic([d], ^dynamic and d.type == ^type)
+
+      {:after, ts}, dynamic ->
+        dynamic([d], ^dynamic and d.inserted_at >= ^ts)
+
+      {:before, ts}, dynamic ->
+        dynamic([d], ^dynamic and d.inserted_at <= ^ts)
+
+      {:exclude_id, exclude_id}, dynamic ->
+        dynamic([d], ^dynamic and d.id != ^exclude_id)
+
+      {:name_prefix, name}, dynamic ->
+        dynamic([d], ^dynamic and ilike(d.name, ^"#{name}%"))
+
+      {:named_only, true}, dynamic ->
+        dynamic([d], ^dynamic and not is_nil(d.name))
+
+      _other, dynamic ->
+        dynamic
     end)
   end
 
