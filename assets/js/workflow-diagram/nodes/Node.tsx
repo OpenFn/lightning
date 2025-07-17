@@ -86,7 +86,7 @@ const Node = ({
   errors,
 }: BaseNodeProps) => {
   const runData = data?.runData as RunSteps | undefined;
-  const isErrorRun = runData?.exit_reason === "fail";
+  const isErrorRun = runData?.exit_reason !== "success";
   // TODO: remember triggers
   const didRun = data.isRun ? !!runData : true
 

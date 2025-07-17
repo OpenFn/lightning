@@ -33,15 +33,33 @@ export type WorkflowProps = {
   disabled: boolean;
   selection: string | null;
   positions: Positions | null;
-  runSteps: RunSteps[] | [];
+  runSteps: RunSteps[];
+  history: WorkflowRunHistory;
 };
 
 export type RunSteps = {
   job_id: Lightning.Job['id'];
   error_type: string;
-  exit_reason: 'fail' | 'success' | null;
+  exit_reason: 'fail' | 'success' | 'crash' | null;
   startNode?: boolean;
 };
+
+export type WorkOrderStates = 'failed' | 'success' | 'crashed';
+export type WorkflowRunHistory = Array<{
+  id: string;
+  state: WorkOrderStates;
+  last_activity: string;
+  version: number;
+  runs: Array<{
+    id: string;
+    state: string;
+    error_type: string;
+    started_at: string;
+    finished_at: string;
+    selected?: boolean;
+  }>;
+  selected?: boolean;
+}>;
 
 export interface WorkflowState extends WorkflowProps {
   forceFit: boolean;
@@ -73,6 +91,11 @@ export interface WorkflowState extends WorkflowProps {
   applyPatches: (patches: Partial<ReplayAction>) => void;
   setDisabled: (value: boolean) => void;
   setSelection: (value: string) => void;
+  updateRuns: (
+    runs: RunSteps[],
+    run_id: string | null,
+    history?: WorkflowRunHistory
+  ) => void;
 }
 
 // Immer's Patch type has an array of strings for the path, but RFC 6902
@@ -171,6 +194,7 @@ const DEFAULT_PROPS: WorkflowProps = {
   selection: null,
   positions: null,
   runSteps: [],
+  history: [],
 };
 
 export type WorkflowStore = StoreApi<WorkflowState>;
@@ -425,6 +449,27 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
         ...state,
         selection: value,
       }));
+    },
+    updateRuns(runs, run_id, history) {
+      console.log('call:', runs, run_id, history);
+      set(state => {
+        const _history = (history || state.history).map(wo => {
+          let wselected = false;
+          return {
+            ...wo,
+            runs: wo.runs.map(run => {
+              const rselected = run.id === run_id;
+              if (rselected) wselected = true;
+              return { ...run, selected: rselected };
+            }),
+            selected: wselected,
+          };
+        });
+        return {
+          runSteps: runs,
+          history: _history,
+        };
+      });
     },
   })
 );

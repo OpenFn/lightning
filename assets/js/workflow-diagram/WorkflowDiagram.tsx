@@ -28,6 +28,7 @@ import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 import MiniMapNode from './components/MiniMapNode';
+import MiniHistory from './MiniHistory';
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -35,6 +36,7 @@ type WorkflowDiagramProps = {
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   forceFit?: boolean;
+  onRunChange: (id: string, version: number) => void;
 };
 
 type ChartCache = {
@@ -84,11 +86,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updatePosition,
     undo,
     redo,
-    runSteps
+    runSteps,
+    history: someHistory,
   } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
-  const { selection, onSelectionChange, containerEl: el } = props;
+  const { selection, onSelectionChange, containerEl: el, onRunChange } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
@@ -451,6 +454,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           nodeComponent={MiniMapNode}
         />
       </ReactFlow>
-    </ReactFlowProvider>
+      <MiniHistory
+        history={someHistory}
+        selectRunHandler={onRunChange}
+      ></MiniHistory>
+    </ReactFlowProvider >
   );
 }

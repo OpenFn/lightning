@@ -496,6 +496,27 @@ defmodule Lightning.WorkOrders do
     end
   end
 
+  def get_workorders_with_runs(workflow_id) do
+    from(wo in WorkOrder,
+      where: wo.workflow_id == ^workflow_id,
+      preload: [:snapshot, runs: [:steps]]
+    )
+    |> Repo.all()
+    |> Enum.map(fn worder ->
+      %{
+        runs:
+          worder.runs
+          |> Enum.map(fn run ->
+            Map.take(run, [:id, :state, :error_type, :started_at, :finished_at])
+          end),
+        version: worder.snapshot.lock_version,
+        state: worder.state,
+        last_activity: worder.last_activity,
+        id: worder.id
+      }
+    end)
+  end
+
   def get_last_runs_steps_with_dataclips(workorders, jobs) do
     job_ids = Enum.map(jobs, & &1.id)
 

@@ -164,21 +164,31 @@ export const styleEdge = (edge: Flow.Edge) => {
 
 const BG_GREEN_100 = '#dcfce7';
 const BG_RED_100 = '#ffe2e2';
+const BG_ORANGE_100 = '#ffedd4';
 const BORDER_GREEN_600 = '#00a63e';
 const BORDER_RED_600 = '#e7000b';
+const BORDER_ORANGE_600 = '#f54a00';
 
 export const nodeIconStyles = (
   selected?: boolean,
   hasErrors?: boolean,
   runReason: RunSteps['exit_reason'] = null
 ) => {
+  const getNodeBorderColor = (reasons: RunSteps['exit_reason']) => {
+    if (reasons === 'success') return BORDER_GREEN_600;
+    else if (reasons === 'fail') return BORDER_RED_600;
+    else if (reasons === 'crash') return BORDER_ORANGE_600;
+  };
+  const getNodeColor = (reasons: RunSteps['exit_reason']) => {
+    if (reasons === 'success') return BG_GREEN_100;
+    else if (reasons === 'fail') return BG_RED_100;
+    else if (reasons === 'crash') return BG_ORANGE_100;
+  };
   const size = 100;
   const primaryColor = selected
     ? EDGE_COLOR_SELECTED
     : runReason
-    ? runReason === 'fail'
-      ? BORDER_RED_600
-      : BORDER_GREEN_600
+    ? getNodeBorderColor(runReason)
     : EDGE_COLOR;
   return {
     width: size,
@@ -187,11 +197,7 @@ export const nodeIconStyles = (
     strokeWidth: 2,
     style: {
       stroke: hasErrors ? ERROR_COLOR : primaryColor,
-      fill: runReason
-        ? runReason === 'fail'
-          ? BG_RED_100
-          : BG_GREEN_100
-        : 'white',
+      fill: runReason ? getNodeColor(runReason) : 'white',
     },
   };
 };
