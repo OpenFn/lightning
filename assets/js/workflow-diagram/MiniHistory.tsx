@@ -3,20 +3,24 @@ import type { WorkflowRunHistory, WorkOrderStates } from "#/workflow-store/store
 import formatDate from "../utils/formatDate";
 import { useState } from "react";
 
-const StatePill: React.FC<{ state: WorkOrderStates, size?: "normal" | "mini" }> = ({ state, size = "normal" }) => {
-  const icon = () => {
-    switch (state) {
-      case "success":
-        return "hero-check";
-      case "failed":
-        return "hero-exclamation-circle";
-      case "crashed":
-        return "hero-fire";
-      default:
-        return "hero-information-circle"
-    }
-  }
+// TODO: to be put somewhere else
+const STATE_ICONS = {
+  rejected: "hero-x-circle",
+  pending: "hero-clock",
+  running: "hero-play-circle",
+  available: "hero-clock",
+  claimed: "hero-arrow-right-circle",
+  started: "hero-play-circle",
+  success: "hero-check-circle",
+  failed: "hero-x-circle",
+  crashed: "hero-exclamation-triangle",
+  cancelled: "hero-no-symbol",
+  killed: "hero-shield-exclamation",
+  exception: "hero-exclamation-circle",
+  lost: "hero-question-mark-circle"
+}
 
+const StatePill: React.FC<{ state: WorkOrderStates, size?: "normal" | "mini" }> = ({ state, size = "normal" }) => {
   const colors = () => {
     switch (state) {
       case "success":
@@ -30,8 +34,8 @@ const StatePill: React.FC<{ state: WorkOrderStates, size?: "normal" | "mini" }> 
     }
   }
   return <span
-    className={`inline-flex rounded-full bg-gray-200 justify-center items-center ${colors()} ${size === "normal" ? "w-6 h-6" : "w-4 h-4"}`}>
-    <span className={`${icon()} ${size === "normal" ? "w-4 h-4" : "w-3 h-3"}`}></span>
+    className={`inline-flex rounded-full bg-gray-200 justify-center items-center p-0.5 ${colors()} ${size === "normal" ? "w-5 h-5" : "w-4 h-4"}`}>
+    <span className={`${STATE_ICONS[state]} ${size === "normal" ? "w-4 h-4" : "w-3 h-3"}`}></span>
   </span >
 };
 
@@ -105,20 +109,24 @@ export default function MiniHistory({
             {history.map((workorder) => (
               <div key={workorder.id}>
                 {/* Workorder Row */}
-                <div className={`px-3 py-2 hover:bg-gray-50 transition-colors ${workorder.selected ? "border-l-2 border-l-indigo-500" : ""}`}>
+                <div className={`px-3 py-2 hover:bg-gray-50 transition-colors`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <button
                         onClick={() => setExpandedWorder(prev => prev === workorder.id ? "" : workorder.id)}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                       >
-                        {expandedWorder === workorder.id ? (
-                          <span className="hero-chevron-down w-4 h-4" ></span>
-                        ) : (
-                          <span className="hero-chevron-right w-4 h-4" ></span>
-                        )}
+                        {
+                          workorder.selected ?
+                            <span className="hero-chevron-down w-4 h-4 font-bold text-indigo-600" ></span> :
+                            expandedWorder === workorder.id ? (
+                              <span className="hero-chevron-right w-4 h-4" ></span>
+                            ) : (
+                              <span className="hero-chevron-right w-4 h-4" ></span>
+                            )
+                        }
                       </button>
-                      <span className="text-xs font-semibold text-gray-500 truncate">
+                      <span className="text-xs text-gray-500 truncate">
                         {truncateUid(workorder.id)}
                       </span>
                       <span className="text-xs text-gray-500 font-mono">
@@ -156,7 +164,7 @@ export default function MiniHistory({
                             {formatDuration(run.started_at, run.finished_at)}
                           </span>
                         </div>
-                        <StatePill state={run.state} size="mini" />
+                        <StatePill state={run.state} />
                       </div>
                     </div>
                   ))}
@@ -165,6 +173,6 @@ export default function MiniHistory({
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
