@@ -192,9 +192,12 @@ const Node = ({
             }
           </div> : null}
           {runData?.startNode ? <div
-            className={`absolute -right-full -top-2 flex gap-2 items-center font-bold`}
+            className={`absolute -top-2 flex gap-2 items-center font-bold`}
+            style={{
+              right: "calc(-100% + 2px)"
+            }}
           >
-            <div className='flex justify-center items-center border-2 w-8 h-8 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
+            <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
               <span className='hero-play-solid w-3 h-3'></span>
             </div>
             started here
