@@ -139,7 +139,7 @@ function createKeyCombinationHook(
         const target = e.target as HTMLElement;
         const focusedScope =
           target
-            ?.closest('[data-keybinding-scope]')
+            .closest('[data-keybinding-scope]')
             ?.getAttribute('data-keybinding-scope') || null;
 
         const keyMatchingHandlers = Array.from(keyHandlers).filter(h =>
@@ -160,7 +160,7 @@ function createKeyCombinationHook(
 
         const maxPriority = Math.max(...matchingHandlers.map(h => h.priority));
         const topPriorityHandlers = matchingHandlers.filter(
-          h => h.priority === maxPriority
+          h => h.priority === maxPriority as PriorityLevel
         );
 
         // Take the last handler if there are more than one with the same priority.
@@ -259,10 +259,12 @@ const submitAction = (_e: KeyboardEvent, el: HTMLElement) => {
 /**
  * Simulates a "close" action, used to close modals, panels, or other UI components.
  *
- * @param e - The keyboard event that triggered the action.
+ * @param _e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const closeAction = (_e: KeyboardEvent, el: HTMLElement) => el.click();
+const closeAction = (_e: KeyboardEvent, el: HTMLElement) => {
+  el.click();
+};
 
 /**
  * Hook to trigger a form submission when "Ctrl+S" (or "Cmd+S" on macOS) is pressed.
@@ -365,4 +367,85 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
   isEscape,
   closeAction,
   PRIORITY.NORMAL
+);
+
+/**
+ * Handles Ctrl+Enter to trigger run actions directly based on current state.
+ *
+ * BEHAVIOR (based purely on URL state):
+ * 1. If in inspector (URL contains 'm=expand'):
+ *    → Click #save-and-run button to execute the workflow
+ * 2. If in run panel (URL contains 'm=workflow_input'):
+ *    → Click #run-from-input-selector button to execute the workflow
+ * 3. If step selected but not in inspector (URL contains 's=' but no 'm=expand'):
+ *    → Click the appropriate run button (#run-from-step or #run-from-trigger)
+ * 4. If no step selected and no panel:
+ *    → Click #run-from-top button to run from trigger
+ */
+const openRunPanelAction = () => {
+  const url = window.location.href;
+  
+  // Only work on workflow pages
+  if (!url.includes('/w/')) {
+    return;
+  }
+  
+  // Parse URL state
+  const hasStepSelected = url.includes('s=');
+  const isInInspector = url.includes('m=expand');
+  const isInRunPanel = url.includes('m=workflow_input');
+  
+  if (isInInspector) {
+    // Inspector mode - click the save-and-run button
+    const runButton = document.querySelector('#save-and-run:not([disabled])');
+    if (runButton instanceof HTMLElement) {
+      runButton.click();
+    }
+  } else if (isInRunPanel) {
+    // Run panel mode - click the run-from-input-selector button
+    const runButton = document.querySelector('#run-from-input-selector:not([disabled])');
+    if (runButton instanceof HTMLElement) {
+      runButton.click();
+    }
+  } else if (hasStepSelected) {
+    // Step selected but not in inspector - click the appropriate run button
+    // Try run-from-step first (for jobs), then run-from-trigger (for triggers)
+    const runFromStepButton = document.querySelector('#run-from-step:not([disabled])');
+    if (runFromStepButton instanceof HTMLElement) {
+      runFromStepButton.click();
+    } else {
+      const runFromTriggerButton = document.querySelector('#run-from-trigger:not([disabled])');
+      if (runFromTriggerButton instanceof HTMLElement) {
+        runFromTriggerButton.click();
+      }
+    }
+  } else {
+    // No step selected - trigger the same navigation as the run button
+    const runButton = document.querySelector('#run-from-top:not([disabled])');
+    if (runButton instanceof HTMLElement) {
+      runButton.click();
+    }
+  }
+};
+
+/**
+ * Hook to open the Run panel when "Ctrl+Enter" (or "Cmd+Enter" on macOS) is pressed.
+ *
+ * This hook is scoped to the workflow editor and navigates to the run panel URL, which opens the
+ * workflow input interface for running the workflow.
+ *
+ * Priority: `PRIORITY.HIGH` within its scope, ensuring it takes precedence over other handlers in the workflow editor.
+ * Scope: `"workflow-editor"`, meaning this hook only applies within the workflow editor context.
+ */
+export const OpenRunPanelViaCtrlEnter = createKeyCombinationHook(
+  (e) => {
+    console.log('OpenRunPanelViaCtrlEnter: Key check triggered');
+    return isCtrlOrMetaEnter(e);
+  },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  (_e, _el) => {
+    console.log('OpenRunPanelViaCtrlEnter: Action triggered');
+    openRunPanelAction();
+  },
+  PRIORITY.HIGH
 );
