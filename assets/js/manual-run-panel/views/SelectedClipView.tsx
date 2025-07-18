@@ -58,7 +58,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-3 pt-2">
+      <div className="flex items-center justify-between pt-2">
         <div className="flex gap-2 items-center text-sm text-gray-700">
           {isNextCronRun ? (
             <ClockIcon className="h-4 w-4 text-gray-500" />
@@ -78,7 +78,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-col flex-1 gap-2 p-3">
+      <div className="flex flex-col flex-1 gap-2 py-3">
         {isNextCronRun && (
           <div className="alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border">
             <span className="text-sm font-medium">
@@ -154,7 +154,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
                       onClose={handleClear}
                       className="!p-2 !text-sm !gap-x-1"
                     >
-                      <div className="truncate">{dataclip.name}</div>
+                      <div>{dataclip.name}</div>
                     </Pill>
                   )}
                 </div>

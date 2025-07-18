@@ -262,20 +262,22 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                   className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
                 >
                   <div className="flex gap-2 items-center text-sm max-w-9/10">
-                    {isCurrent ? (
-                      <span
-                        className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
-                        title="Current dataclip for this step"
-                      />
-                    ) : isNextCronRun ? (
-                      <span
-                        className="hero-clock-solid size-4 text-primary-400 group-hover:text-primary-600"
-                        title="Next state that will be used for cron execution"
-                      />
-                    ) : (
-                      <span className="hero-document-text align-middle size-4 group-hover:text-primary-600" />
-                    )}
-                    <span className="font-mono leading-none align-middle  truncate">
+                    <span className="align-middle">
+                      {isCurrent ? (
+                        <span
+                          className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
+                          title="Current dataclip for this step"
+                        />
+                      ) : isNextCronRun ? (
+                        <span
+                          className="hero-clock-solid size-4 text-primary-400 group-hover:text-primary-600"
+                          title="Next state that will be used for cron execution"
+                        />
+                      ) : (
+                        <span className="hero-document-text size-4 group-hover:text-primary-600" />
+                      )}
+                    </span>
+                    <span className="font-mono leading-none align-middle truncate">
                       {clip.name || truncateUid(clip.id)}
                     </span>
                     <span className="align-middle">
