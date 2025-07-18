@@ -262,7 +262,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                   className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
                 >
                   <div className="flex gap-2 items-center text-sm max-w-9/10">
-                    <span className="align-middle">
+                    <span className="flex items-center">
                       {isCurrent ? (
                         <span
                           className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
