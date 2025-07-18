@@ -3,7 +3,7 @@ import React from 'react';
 import {
   useWorkflowStore,
   type ChangeArgs,
-  type RunSteps,
+  type RunInfo,
   type PendingAction,
   type ReplayAction,
   type WorkflowProps,
@@ -119,7 +119,7 @@ export const WorkflowStore: WithActionProps = props => {
   }, [add, props.handleEvent, setSelection, setForceFit]);
 
   React.useEffect(() => {
-    return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunSteps[] }) => {
+    return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunInfo }) => {
       updateRuns(response.run_steps, response.run_id);
     })
   }, [props.handleEvent, updateRuns])
@@ -137,7 +137,7 @@ export const WorkflowStore: WithActionProps = props => {
     props.pushEventTo(
       'get-current-state',
       {},
-      (response: { workflow_params: WorkflowProps, run_steps: RunSteps[], run_id: string | null, history: WorkflowRunHistory }) => {
+      (response: { workflow_params: WorkflowProps, run_steps: RunInfo, run_id: string | null, history: WorkflowRunHistory }) => {
         const { workflow_params, run_steps, run_id, history } = response;
         setState(workflow_params);
         updateRuns(run_steps, run_id, history);

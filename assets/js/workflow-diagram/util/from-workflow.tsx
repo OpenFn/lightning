@@ -7,7 +7,7 @@ import {
   edgeLabelTextStyles,
 } from '../styles';
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
-import type { RunSteps } from '#/workflow-store/store';
+import type { RunInfo, RunStep } from '../../workflow-store/store';
 
 function getEdgeLabel(edge: Lightning.Edge) {
   let label: string | JSX.Element = '{ }';
@@ -53,26 +53,26 @@ const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
   placeholders: Flow.Model = { nodes: [], edges: [] },
-  runSteps: RunSteps[],
+  runSteps: RunInfo,
   selectedId: string | null
 ): Flow.Model => {
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
 
-  const isRun = !!runSteps.length;
-  const startNodeId = isRun && runSteps[0] ? runSteps[0].job_id : undefined;
+  const isRun = !!runSteps.start_from;
+  const startNodeId = runSteps.start_from;
 
-  const runStepsObj = runSteps.reduce((a, b) => {
+  const runStepsObj = runSteps.steps.reduce((a, b) => {
     const exists = a[b.job_id];
     // to make sure that a pre-existing error state pre-empts the sucess. 
     // this is for nodes that run multiple times
     // TODO: we might want to show a state for the multiple runs of the step later on.
-    let step_value: RunSteps;
+    let step_value: RunStep;
     if (b.exit_reason === "success" && exists?.exit_reason === "fail") step_value = exists;
     else step_value = b;
     a[b.job_id] = { ...step_value, startNode: b.job_id === startNodeId };
     return a;
-  }, {} as Record<string, RunSteps>)
+  }, {} as Record<string, RunStep>)
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,

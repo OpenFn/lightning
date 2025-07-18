@@ -33,15 +33,21 @@ export type WorkflowProps = {
   disabled: boolean;
   selection: string | null;
   positions: Positions | null;
-  runSteps: RunSteps[];
+  runSteps: RunInfo;
   history: WorkflowRunHistory;
 };
 
-export type RunSteps = {
+export type RunStep = {
   job_id: Lightning.Job['id'];
   error_type: string;
   exit_reason: 'fail' | 'success' | 'crash' | null;
   startNode?: boolean;
+};
+
+export type RunInfo = {
+  start_from: string | null;
+  isTrigger: boolean;
+  steps: RunStep[];
 };
 
 export type WorkOrderStates = 'failed' | 'success' | 'crashed';
@@ -92,7 +98,7 @@ export interface WorkflowState extends WorkflowProps {
   setDisabled: (value: boolean) => void;
   setSelection: (value: string) => void;
   updateRuns: (
-    runs: RunSteps[],
+    runs: RunInfo,
     run_id: string | null,
     history?: WorkflowRunHistory
   ) => void;
@@ -133,6 +139,8 @@ export type ReplayAction = {
 
 const undos: ReplayAction[] = [];
 let redos: ReplayAction[] = [];
+
+const RUNS_TMP = { steps: [], isTrigger: false, start_from: null };
 
 // simple squash function
 // I think after squashing. we can actually ignore in-between states.
@@ -432,7 +440,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
         pushUndo({ patches: immerPatches, inverse: inverseImmerPatches });
       } else {
         // we believe this isn't actually a patch but a state-applied that isn't well defined on the elixir side
-        get().updateRuns([], null);
+        get().updateRuns(RUNS_TMP, null);
       }
 
       set(state => immerApplyPatches(state, immerPatches));
@@ -448,7 +456,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
     },
     setState(value) {
       set(value);
-      get().updateRuns([], null);
+      get().updateRuns(RUNS_TMP, null);
     },
     setSelection(value) {
       set(state => ({

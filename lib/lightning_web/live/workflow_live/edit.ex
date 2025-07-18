@@ -2192,20 +2192,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp get_run_steps_and_history(workflow_id, run_id) do
     run_steps =
       if run_id == nil do
-        []
+        %{steps: []}
       else
         WorkOrders.get_run_steps(run_id)
       end
-      |> Enum.map(fn step ->
-        %{
-          job_id: step.job_id,
-          error_type: step.error_type,
-          exit_reason: step.exit_reason
-        }
+      |> Map.update!(:steps, fn steps ->
+        Enum.map(steps, fn step ->
+          %{
+            job_id: step.job_id,
+            error_type: step.error_type,
+            exit_reason: step.exit_reason
+          }
+        end)
       end)
 
     history = WorkOrders.get_workorders_with_runs(workflow_id)
 
+    dbg(run_steps)
     %{run_steps: run_steps, history: history}
   end
 

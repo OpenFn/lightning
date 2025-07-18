@@ -4,7 +4,7 @@ import { Handle, type NodeProps } from '@xyflow/react';
 import Shape from '../components/Shape';
 import ErrorMessage from '../components/ErrorMessage';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
-import type { RunSteps } from '#/workflow-store/store';
+import type { RunStep } from '#/workflow-store/store';
 
 type NodeData = any;
 
@@ -85,7 +85,7 @@ const Node = ({
 
   errors,
 }: BaseNodeProps) => {
-  const runData = data?.runData as RunSteps | undefined;
+  const runData = data?.runData as RunStep | undefined;
   const isErrorRun = runData?.exit_reason !== "success";
   // TODO: remember triggers
   const didRun = data.isRun ? !!runData : true
