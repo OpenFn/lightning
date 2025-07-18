@@ -128,7 +128,7 @@ defmodule Lightning.Credentials.SchemaTest do
       assert schema.types == %{
                username: :string,
                password: :string,
-               tls: :string,
+               tls: :map,
                baseUrl: :string,
                access_token: :string
              }

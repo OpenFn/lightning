@@ -134,6 +134,7 @@ defmodule Lightning.Credentials.Schema do
         case validate_json_object(value) do
           :ok ->
             changeset
+
           :error ->
             Changeset.add_error(changeset, field, "invalid JSON")
         end
@@ -150,7 +151,7 @@ defmodule Lightning.Credentials.Schema do
       type =
         properties
         |> Map.get("type", "string")
-        |> then(fn type -> if type == "object", do: "string", else: type end)
+        |> then(fn type -> if type == "object", do: "map", else: type end)
         |> String.to_atom()
 
       {String.to_existing_atom(field), type}
