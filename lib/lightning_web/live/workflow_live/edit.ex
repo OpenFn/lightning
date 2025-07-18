@@ -2807,7 +2807,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
         handle_method_assignment(socket, method)
 
-      %{"a" => run_id, "v" => version_tag} ->
+      %{"m" => "history", "a" => run_id, "v" => version_tag} ->
         handle_run_selection_history(socket, run_id, version_tag)
 
       %{"s" => nil} ->
@@ -2906,6 +2906,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     # pushing the snapshot state before pushing the runs for it
     socket
+    |> set_mode("history")
     |> assign_workflow(socket.assigns.workflow, snapshot)
     |> push_event("state-applied", %{state: fine_snap})
     |> push_event("patch-runs", %{
@@ -3018,7 +3019,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp set_mode(socket, mode) do
-    if mode in [nil, "expand", "settings", "code", "workflow_input"] do
+    if mode in [nil, "expand", "settings", "code", "workflow_input", "history"] do
       socket
       |> assign(selection_mode: mode)
     else
