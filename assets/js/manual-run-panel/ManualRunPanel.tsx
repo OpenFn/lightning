@@ -71,6 +71,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   const [namedOnly, setNamedOnly] = React.useState<boolean>(
     named_only === 'true'
   );
+  const [nameError, setNameError] = React.useState<string>('');
   const formRef = React.useRef<HTMLFormElement>(null);
 
   const pushManualChange = React.useCallback(
@@ -109,6 +110,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         pushManualChange(SeletableOptions.EXISTING);
       }
       setSelectedDataclip(dataclip);
+      setNameError(''); // Clear any existing error when switching dataclips
     },
     [pushEvent, setSelectedOption, pushManualChange, setSelectedDataclip]
   );
@@ -264,9 +266,15 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
           name: name,
         },
         (response: unknown) => {
-          const typedResponse = response as { dataclip: Dataclip | null };
+          const typedResponse = response as {
+            dataclip?: Dataclip;
+            error?: string;
+          };
           if (typedResponse.dataclip) {
             const updatedDataclip = typedResponse.dataclip;
+
+            // Clear any existing error
+            setNameError('');
 
             // Update selected dataclip
             setSelectedDataclip(updatedDataclip);
@@ -282,6 +290,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             if (currentRunDataclip?.id === updatedDataclip.id) {
               setCurrentRunDataclip(updatedDataclip);
             }
+          } else if (typedResponse.error) {
+            // Set error message
+            setNameError(typedResponse.error);
           }
         }
       );
@@ -406,6 +417,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
             onNameChange={handleDataclipNameChange}
             canEditDataclip={canEditDatclip}
+            nameError={nameError}
           />
         </div>
       ) : (

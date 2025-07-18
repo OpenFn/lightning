@@ -3802,7 +3802,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Should return error message
       assert_reply(view, %{
-        dataclip: %{name: "Original Name"},
         error: "You are not authorized to perform this action"
       })
 
@@ -3856,7 +3855,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Should return error message
       assert_reply(view, %{
-        dataclip: %{name: "Original Name"},
         error: "dataclip name already in use"
       })
 

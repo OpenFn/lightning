@@ -16,6 +16,7 @@ interface SelectedClipViewProps {
   isNextCronRun?: boolean;
   canEditDataclip?: boolean;
   onNameChange: (dataclipId: string, name: string) => void;
+  nameError?: string;
 }
 
 const SelectedClipView: React.FC<SelectedClipViewProps> = ({
@@ -24,6 +25,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
   isNextCronRun = false,
   canEditDataclip = false,
   onNameChange,
+  nameError,
 }) => {
   const [localName, setLocalName] = React.useState(dataclip.name || '');
 
@@ -32,11 +34,15 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
     setLocalName(dataclip.name || '');
   }, [dataclip.name]);
 
-  const handleBlur = React.useCallback(() => {
-    if (localName !== (dataclip.name || '')) {
-      onNameChange(dataclip.id, localName);
-    }
-  }, [localName, dataclip.name, dataclip.id, onNameChange]);
+  const handleSubmit = React.useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (localName !== (dataclip.name || '')) {
+        onNameChange(dataclip.id, localName);
+      }
+    },
+    [localName, dataclip.name, dataclip.id, onNameChange]
+  );
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
@@ -96,14 +102,37 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
             </div>
             <div className="basis-1/2 text-right text-sm text-nowrap">
               {canEditDataclip ? (
-                <input
-                  type="text"
-                  value={localName}
-                  onChange={e => setLocalName(e.target.value)}
-                  onBlur={handleBlur}
-                  className="text-right focus:outline focus:outline-2 focus:outline-offset-1 rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6 border-slate-300 focus:border-slate-400 focus:outline-indigo-600"
-                  placeholder="Enter Label"
-                />
+                <div className="flex flex-col">
+                  <form onSubmit={handleSubmit}>
+                    <div
+                      className={`flex rounded-lg bg-white outline-1 -outline-offset-1 focus-within:outline-2 focus-within:-outline-offset-2 ${
+                        nameError
+                          ? 'outline-danger-300 focus-within:outline-danger-400'
+                          : 'outline-slate-300 focus-within:outline-indigo-600'
+                      }`}
+                    >
+                      <input
+                        type="text"
+                        name="credentialName"
+                        autoComplete="off"
+                        value={localName}
+                        onChange={e => setLocalName(e.target.value)}
+                        className="block min-w-0 grow  text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 border-none sm:text-sm text-right"
+                        placeholder="Enter Label"
+                      />
+                      <div className="flex py-1.5 pr-1.5">
+                        <kbd className="inline-flex items-center rounded-sm border border-gray-200 px-1 font-sans text-xs text-gray-400">
+                          ⏎
+                        </kbd>
+                      </div>
+                    </div>
+                  </form>
+                  {nameError && (
+                    <div className="mt-1 inline-flex items-center gap-x-1.5 text-xs text-red-600">
+                      {nameError}
+                    </div>
+                  )}
+                </div>
               ) : (
                 dataclip.name
               )}

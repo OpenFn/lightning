@@ -1576,9 +1576,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         %{"dataclip_id" => dataclip_id, "name" => name},
         socket
       ) do
-    dataclip = Invocation.get_dataclip!(dataclip_id)
-
     if socket.assigns.can_edit_workflow do
+      dataclip = Invocation.get_dataclip!(dataclip_id)
+
       case Invocation.update_dataclip_name(dataclip, name) do
         {:ok, updated_dataclip} ->
           {:reply, %{dataclip: updated_dataclip}, socket}
@@ -1586,14 +1586,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:error, _changeset} ->
           {:reply,
            %{
-             dataclip: dataclip,
              error: "dataclip name already in use"
            }, socket}
       end
     else
       {:reply,
        %{
-         dataclip: dataclip,
          error: "You are not authorized to perform this action"
        }, socket}
     end
