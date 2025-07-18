@@ -1,14 +1,11 @@
 import React from 'react';
 import { DataclipViewer } from '../../react/components/DataclipViewer';
-import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { ClockIcon } from '@heroicons/react/24/solid';
 import Pill from '../Pill';
-import truncateUid from '../../utils/truncateUID';
 import formatDate from '../../utils/formatDate';
 import DataclipTypePill from '../DataclipTypePill';
 import type { Dataclip } from '../types';
-
-const iconStyle = 'h-4 w-4 text-grey-400';
 
 interface SelectedClipViewProps {
   dataclip: Dataclip;
@@ -60,7 +57,28 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
-      <div className="flex flex-col flex-0 gap-2">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-3 pt-2">
+        <div className="flex gap-2 items-center text-sm text-gray-700">
+          {isNextCronRun ? (
+            <ClockIcon className="h-4 w-4 text-gray-500" />
+          ) : (
+            <DocumentTextIcon className="h-4 w-4 text-gray-500" />
+          )}
+          {dataclip.id}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onUnselect}
+            className="relative inline-flex items-center rounded-md bg-white px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset hover:bg-gray-50 hover:text-gray-600 focus:z-10 transition-colors"
+            title="Close"
+          >
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col flex-1 gap-2 p-3">
         {isNextCronRun && (
           <div className="alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border">
             <span className="text-sm font-medium">
@@ -73,26 +91,6 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
             </span>
           </div>
         )}
-        <Pill onClose={onUnselect}>
-          <div className="flex py-1 grow items-center justify-between">
-            <div className="flex gap-1 items-center text-sm">
-              {' '}
-              {isNextCronRun ? (
-                <ClockIcon
-                  className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600`}
-                />
-              ) : (
-                <DocumentTextIcon
-                  className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600`}
-                />
-              )}{' '}
-              {truncateUid(dataclip.id)}{' '}
-            </div>
-            <div className="text-xs truncate ml-2">
-              {formatDate(new Date(dataclip.inserted_at))}
-            </div>
-          </div>
-        </Pill>
         <div className="flex flex-row min-h-[28px] items-center mx-1">
           <div className="basis-1/2 font-medium text-secondary-700 text-sm">
             Type
@@ -131,7 +129,9 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
                           name="credentialName"
                           autoComplete="off"
                           value={localName}
-                          onChange={e => setLocalName(e.target.value)}
+                          onChange={e => {
+                            setLocalName(e.target.value);
+                          }}
                           className="block min-w-0 grow  text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 border-none sm:text-sm text-right"
                           placeholder="Enter Label"
                         />
@@ -146,7 +146,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
                     </form>
                   ) : (
                     <Pill onClose={handleClear}>
-                      <div className="max-w-9/10">{dataclip.name}</div>
+                      <div className="max-w-5/10">{dataclip.name}</div>
                     </Pill>
                   )}
                   {nameError && (
@@ -161,14 +161,6 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
             </div>
           </div>
         )}
-        <div className="flex flex-row min-h-[28px] items-center mx-1">
-          <div className="basis-1/2 font-medium text-secondary-700 text-sm">
-            UUID
-          </div>
-          <div className="basis-1/2 text-right text-sm truncate">
-            {dataclip.id}
-          </div>
-        </div>
       </div>
       <DataclipViewer dataclipId={dataclip.id} />
     </div>
