@@ -493,11 +493,23 @@ defmodule Lightning.WorkOrders do
       nil ->
         %{start_from: nil, steps: [], isTrigger: true}
 
-      %{steps: run_steps, starting_trigger_id: nil, starting_job_id: job_id} ->
-        %{start_from: job_id, steps: run_steps, isTrigger: false}
+      %{steps: run_steps, starting_trigger_id: nil, starting_job_id: job_id} =
+          data ->
+        %{
+          start_from: job_id,
+          steps: run_steps,
+          isTrigger: false,
+          inserted_at: data.inserted_at
+        }
 
-      %{steps: run_steps, starting_trigger_id: trigger_id, starting_job_id: nil} ->
-        %{start_from: trigger_id, steps: run_steps, isTrigger: true}
+      %{steps: run_steps, starting_trigger_id: trigger_id, starting_job_id: nil} =
+          data ->
+        %{
+          start_from: trigger_id,
+          steps: run_steps,
+          isTrigger: true,
+          inserted_at: data.inserted_at
+        }
 
       _ ->
         %{start_from: nil, steps: [], isTrigger: true}

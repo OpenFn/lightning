@@ -115,7 +115,8 @@ const fromWorkflow = (
           if (runSteps.isTrigger && runSteps.start_from === node.id) {
             model.data.runData = {
               ...(model.data.runData || {}),
-              startNode: true
+              startNode: true,
+              started_at: runSteps.inserted_at
             }
           }
         }

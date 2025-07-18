@@ -5,6 +5,7 @@ import Shape from '../components/Shape';
 import ErrorMessage from '../components/ErrorMessage';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 import type { RunStep } from '#/workflow-store/store';
+import formatDate from '../../utils/formatDate';
 
 type NodeData = any;
 
@@ -194,15 +195,22 @@ const Node = ({
             }
           </div> : null}
           {runData?.startNode ? <div
-            className={`absolute -top-2 flex gap-2 items-center font-bold`}
+            className={`absolute -top-2 flex gap-2 items-center`}
             style={{
-              right: "calc(-100% + 2px)"
+              left: "calc(100% - 24px)"
             }}
           >
             <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
               <span className='hero-play-solid w-3 h-3'></span>
             </div>
-            started here
+          </div> : null}
+          {runData?.started_at ? <div
+            className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap`}
+            style={{
+              left: "calc(100% + 6px)"
+            }}
+          >
+            {formatDate(new Date(runData.started_at))}
           </div> : null}
           {tooltip.visible && (
             <div

@@ -41,11 +41,14 @@ export type RunStep = {
   job_id: Lightning.Job['id'];
   error_type: string;
   exit_reason: 'fail' | 'success' | 'crash' | null;
+  started_at: string;
+  // below don't come from backend
   startNode?: boolean;
 };
 
 export type RunInfo = {
   start_from: string | null;
+  inserted_at: string;
   isTrigger: boolean;
   steps: RunStep[];
 };
