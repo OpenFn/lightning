@@ -587,7 +587,7 @@ defmodule LightningWeb.Components.NewInputs do
       <.textarea_element
         id={@id}
         name={@name}
-        class={"rounded-md w-full font-mono bg-slate-800 text-slate-100" <> @class}
+        class={["rounded-md w-full font-mono bg-slate-800 text-slate-100", @class]}
         value={@value}
         placeholder={@placeholder}
         {@rest}
@@ -1010,7 +1010,7 @@ defmodule LightningWeb.Components.NewInputs do
   attr :name, :string, required: true
   attr :value, :any
   attr :errors, :list, default: []
-  attr :class, :string, default: ""
+  attr :class, :any, default: ""
 
   attr :rest, :global,
     include:
