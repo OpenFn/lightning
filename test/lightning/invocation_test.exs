@@ -485,7 +485,7 @@ defmodule Lightning.InvocationTest do
         [named_dataclip],
         Invocation.list_dataclips_for_job(
           job1,
-          %{name_prefix: "my"},
+          %{name_part: "my"},
           limit: 10
         )
       )
@@ -495,7 +495,7 @@ defmodule Lightning.InvocationTest do
         [named_dataclip],
         Invocation.list_dataclips_for_job(
           job1,
-          %{name_prefix: "MY"},
+          %{name_part: "MY"},
           limit: 10
         )
       )
@@ -505,7 +505,7 @@ defmodule Lightning.InvocationTest do
         [other_named_dataclip],
         Invocation.list_dataclips_for_job(
           job1,
-          %{name_prefix: "anoth"},
+          %{name_part: "anoth"},
           limit: 10
         )
       )
@@ -514,7 +514,7 @@ defmodule Lightning.InvocationTest do
       assert [] =
                Invocation.list_dataclips_for_job(
                  job1,
-                 %{name_prefix: "nonexistent"},
+                 %{name_part: "nonexistent"},
                  limit: 10
                )
     end
