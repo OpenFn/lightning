@@ -111,10 +111,10 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
         </div>
         {(canEditDataclip || dataclip.name) && (
           <div className="flex flex-row min-h-[28px] items-center mx-1">
-            <div className="basis-1/2 font-medium text-secondary-700 text-sm">
+            <div className="basis-1/3 font-medium text-secondary-700 text-sm">
               Label
             </div>
-            <div className="basis-1/2 text-right text-sm">
+            <div className="basis-2/3 text-right text-sm">
               {canEditDataclip ? (
                 <div className="flex flex-col">
                   {isEditing ? (
@@ -143,16 +143,9 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
                       </div>
                     </form>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">{dataclip.name}</span>
-                      <button
-                        type="button"
-                        onClick={handleClear}
-                        className="text-xs text-red-600 hover:text-red-800"
-                      >
-                        Clear
-                      </button>
-                    </div>
+                    <Pill onClose={handleClear}>
+                      <div className="max-w-9/10">{dataclip.name}</div>
+                    </Pill>
                   )}
                   {nameError && (
                     <div className="mt-1 inline-flex items-center gap-x-1.5 text-xs text-red-600">
