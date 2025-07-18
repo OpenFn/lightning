@@ -122,6 +122,18 @@ defmodule Lightning.Credentials.SchemaTest do
              )
     end
 
+    test "treats object types as text (TEMP FIX)" do
+      schema = Credentials.get_schema("http")
+
+      assert schema.types == %{
+               username: :string,
+               password: :string,
+               tls: :string,
+               baseUrl: :string,
+               access_token: :string
+             }
+    end
+
     test "returns a changeset with expected email format" do
       schema = Credentials.get_schema("godata")
 

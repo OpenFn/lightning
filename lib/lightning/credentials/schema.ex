@@ -136,7 +136,11 @@ defmodule Lightning.Credentials.Schema do
     |> Map.get("properties", [])
     |> Enum.map(fn {field, properties} ->
       # credo:disable-for-next-line
-      type = properties |> Map.get("type", "string") |> String.to_atom()
+      type =
+        properties
+        |> Map.get("type", "string")
+        |> then(fn type -> if type == "object", do: "string", else: type end)
+        |> String.to_atom()
 
       {String.to_existing_atom(field), type}
     end)
