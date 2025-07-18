@@ -87,7 +87,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         %{"type" => "string", "writeOnly" => true} -> "password"
         %{"type" => "string"} -> "text"
         %{"type" => "integer"} -> "text"
-        %{"type" => "object"} -> "textarea"
+        %{"type" => "object"} -> "codearea"
         %{"type" => "boolean"} -> "checkbox"
         %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> "text"
       end
@@ -128,10 +128,6 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
           type={@type}
           field={@form[@field]}
           value={@value || ""}
-          class={
-            @type == "textarea" &&
-              "rounded-md w-full font-mono bg-slate-800 text-slate-100"
-          }
         />
       </div>
       <div class="error-space h-6">

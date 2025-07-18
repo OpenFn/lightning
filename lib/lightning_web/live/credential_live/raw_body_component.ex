@@ -38,9 +38,8 @@ defmodule LightningWeb.CredentialLive.RawBodyComponent do
       </div>
       <div>
         <.input
-          type="textarea"
+          type="codearea"
           field={@form[:body]}
-          class="rounded-md w-full font-mono bg-slate-800 text-slate-100"
         />
       </div>
     </fieldset>

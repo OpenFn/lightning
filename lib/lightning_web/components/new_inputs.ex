@@ -577,6 +577,25 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
+  def input(%{type: "textarea"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class={@stretch && "h-full"}>
+      <.label :if={@label} for={@id}>
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+      </.label>
+      <.textarea_element
+        id={@id}
+        name={@name}
+        class={["rounded-md w-full font-mono bg-slate-800 text-slate-100", @class]}
+        value={@value}
+        placeholder={@placeholder}
+        {@rest}
+      />
+      <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
+    </div>
+    """
+  end
+
   def input(%{type: "password"} = assigns) do
     assigns =
       assign_new(assigns, :reveal_id, fn ->
