@@ -136,9 +136,11 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
                           placeholder="Enter Label"
                         />
                         <div className="flex py-1.5 pr-1.5">
-                          <kbd className="inline-flex items-center rounded-sm border border-gray-200 px-1 font-sans text-xs text-gray-400">
-                            ⏎
-                          </kbd>
+                          <button type="submit">
+                            <kbd className="inline-flex items-center rounded-sm border border-gray-200 px-1 font-sans text-xs text-gray-400">
+                              ⏎
+                            </kbd>
+                          </button>
                         </div>
                       </div>
                     </form>
