@@ -2858,58 +2858,68 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{run_steps: run_steps} =
       get_run_steps_and_history(workflow_id, run_id)
 
-    fine_snap =
+    snapshot =
       cond do
         version_tag == socket.assigns.workflow.lock_version ->
           nil
 
         true ->
-          snapshot = Snapshot.get_by_version(workflow_id, version_tag)
-
-          # We're doing this because there isn't JSON encoding for fields on a snapshot
-          %{
-            triggers:
-              snapshot.triggers
-              |> Enum.map(fn trigger ->
-                Map.take(trigger, [
-                  :id,
-                  :comment,
-                  :custom_path,
-                  :cron_expression,
-                  :type,
-                  :enabled
-                ])
-              end),
-            jobs:
-              snapshot.jobs
-              |> Enum.map(fn job ->
-                Map.take(job, [:id, :body, :name, :adaptor])
-              end),
-            edges:
-              snapshot.edges
-              |> Enum.map(fn edge ->
-                Map.take(edge, [
-                  :id,
-                  :condition_type,
-                  :condition_expression,
-                  :condition_label,
-                  :enabled,
-                  :source_job_id,
-                  :source_trigger_id,
-                  :target_job_id
-                ])
-              end),
-            positions: Map.get(snapshot, :positions, nil)
-          }
+          Snapshot.get_by_version(workflow_id, version_tag)
       end
+
+    fine_snap =
+      if is_nil(snapshot) do
+        nil
+      else
+        # We're doing this because there isn't JSON encoding for fields on a snapshot
+        %{
+          triggers:
+            snapshot.triggers
+            |> Enum.map(fn trigger ->
+              Map.take(trigger, [
+                :id,
+                :comment,
+                :custom_path,
+                :cron_expression,
+                :type,
+                :enabled
+              ])
+            end),
+          jobs:
+            snapshot.jobs
+            |> Enum.map(fn job ->
+              Map.take(job, [:id, :body, :name, :adaptor])
+            end),
+          edges:
+            snapshot.edges
+            |> Enum.map(fn edge ->
+              Map.take(edge, [
+                :id,
+                :condition_type,
+                :condition_expression,
+                :condition_label,
+                :enabled,
+                :source_job_id,
+                :source_trigger_id,
+                :target_job_id
+              ])
+            end),
+          positions: Map.get(snapshot, :positions, nil)
+        }
+      end
+
+    # trying to update the state on the elixir side!
+    # if !is_nil(snapshot) do
+    #   socket
+    #   |> assign_workflow(socket.assigns.workflow, snapshot)
+    # end
 
     # pushing the snapshot state before pushing the runs for it
     socket
     |> push_event("state-applied", %{state: fine_snap})
     |> push_event("patch-runs", %{
       run_id: run_id,
-      run_steps: run_steps,
-      snapshot: fine_snap
+      run_steps: run_steps
     })
   end
 

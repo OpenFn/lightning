@@ -120,7 +120,7 @@ export default function MiniHistory({
                           workorder.selected ?
                             <span className="hero-chevron-down w-4 h-4 font-bold text-indigo-600" ></span> :
                             expandedWorder === workorder.id ? (
-                              <span className="hero-chevron-right w-4 h-4" ></span>
+                              <span className="hero-chevron-down w-4 h-4" ></span>
                             ) : (
                               <span className="hero-chevron-right w-4 h-4" ></span>
                             )
