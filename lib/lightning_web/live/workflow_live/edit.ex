@@ -2807,8 +2807,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
         handle_method_assignment(socket, method)
 
-      %{"m" => "history", "a" => run_id, "v" => version_tag} ->
-        handle_run_selection_history(socket, run_id, version_tag)
+      %{"m" => "history", "a" => run_id, "v" => version_tag, "s" => selected_id} ->
+        handle_run_selection_history(socket, run_id, version_tag, selected_id)
 
       %{"s" => nil} ->
         handle_no_selection(socket)
@@ -2847,7 +2847,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       [type, selected] ->
         socket
         |> set_selected_node(type, selected)
-        |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
+        |> set_mode(
+          if mode in ["expand", "workflow_input", "history"], do: mode, else: nil
+        )
 
       nil ->
         socket |> unselect_all()
@@ -2855,13 +2857,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   #  This is called when switching to latest
-  defp handle_run_selection_history(socket, _run_id, version_tag)
+  defp handle_run_selection_history(socket, _run_id, version_tag, selected_id)
        when is_nil(version_tag) do
     socket
+    |> handle_selection_with_mode(selected_id, "history")
     |> set_mode(nil)
   end
 
-  defp handle_run_selection_history(socket, run_id, version_tag) do
+  defp handle_run_selection_history(socket, run_id, version_tag, selected_id) do
     workflow_id = socket.assigns.workflow.id
 
     %{run_steps: run_steps} =
@@ -2906,7 +2909,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     # pushing the snapshot state before pushing the runs for it
     socket
-    |> set_mode("history")
+    |> handle_selection_with_mode(selected_id, "history")
     |> assign_workflow(socket.assigns.workflow, snapshot)
     |> push_event("state-applied", %{state: fine_snap})
     |> push_event("patch-runs", %{
