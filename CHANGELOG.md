@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.13.6-pre] 2025-07-18
+
+### Changed
+
 - Bump bcrypt_elixir from 3.2.1 to 3.3.2
   [#3264](https://github.com/OpenFn/lightning/issues/3264)
 - Bump sobelow from 0.13.0 to 0.14.0
