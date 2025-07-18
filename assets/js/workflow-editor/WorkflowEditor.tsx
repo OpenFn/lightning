@@ -39,12 +39,10 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
   }
 
   const onRunChangeHandler = (id: string, version: number) => {
-    console.log("clicked:", version)
     const currentUrl = new URL(window.location.href);
     const nextUrl = new URL(currentUrl);
     nextUrl.searchParams.set('a', id);
     nextUrl.searchParams.set('v', version.toString());
-    nextUrl.searchParams.set('m', 'history')
     props.navigate(nextUrl.toString());
   }
 
