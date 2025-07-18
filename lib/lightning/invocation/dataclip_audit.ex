@@ -10,7 +10,7 @@ defmodule Lightning.Invocation.DataclipAudit do
   @spec save_name_updated(
           Lightning.Invocation.Dataclip.t(),
           Ecto.Changeset.t(Lightning.Invocation.Dataclip.t()),
-          Lightning.User.t()
+          Lightning.Accounts.User.t()
         ) ::
           {:ok, :no_changes}
           | {:ok, Ecto.Schema.t()}
