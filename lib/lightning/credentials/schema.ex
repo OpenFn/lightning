@@ -126,6 +126,17 @@ defmodule Lightning.Credentials.Schema do
 
       %{actual: "null", expected: expected} when is_list(expected) ->
         Changeset.add_error(changeset, field, "can't be blank")
+
+      %{expected: ["object"], actual: "string"} ->
+        # Check if the value is actually a valid JSON object
+        value = Changeset.get_field(changeset, field)
+
+        case validate_json_object(value) do
+          :ok ->
+            changeset
+          :error ->
+            Changeset.add_error(changeset, field, "invalid JSON")
+        end
     end
   end
 
@@ -156,4 +167,14 @@ defmodule Lightning.Credentials.Schema do
         Map.put(acc, key, value)
     end)
   end
+
+  defp validate_json_object(value) when is_binary(value) do
+    case Jason.decode(value) do
+      {:ok, decoded} when is_map(decoded) -> :ok
+      {:ok, _} -> :error
+      {:error, _} -> :error
+    end
+  end
+
+  defp validate_json_object(_), do: :error
 end

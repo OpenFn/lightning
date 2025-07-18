@@ -124,7 +124,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         Required
       </span>
       <div class="col-span-2">
-        <.input type={@type} field={@form[@field]} value={@value || ""} />
+        <.input type={@type} field={@form[@field]} value={@value || ""} class={@type == "textarea" && "rounded-md w-full font-mono bg-slate-800 text-slate-100"}/>
       </div>
       <div class="error-space h-6">
         <LightningWeb.CoreComponents.old_error errors={@errors} />
