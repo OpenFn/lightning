@@ -114,7 +114,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
             </div>
             <div className="basis-2/3 text-right text-sm">
               {canEditDataclip ? (
-                <div className="flex flex-col">
+                <div>
                   {isEditing ? (
                     <form onSubmit={handleSubmit}>
                       <div
@@ -143,16 +143,19 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({
                           </button>
                         </div>
                       </div>
+                      {nameError && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {nameError}
+                        </div>
+                      )}
                     </form>
                   ) : (
-                    <Pill onClose={handleClear}>
-                      <div className="max-w-5/10">{dataclip.name}</div>
+                    <Pill
+                      onClose={handleClear}
+                      className="!p-2 !text-sm !gap-x-1"
+                    >
+                      <div className="truncate">{dataclip.name}</div>
                     </Pill>
-                  )}
-                  {nameError && (
-                    <div className="mt-1 inline-flex items-center gap-x-1.5 text-xs text-red-600">
-                      {nameError}
-                    </div>
                   )}
                 </div>
               ) : (
