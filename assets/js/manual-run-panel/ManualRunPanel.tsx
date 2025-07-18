@@ -258,7 +258,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   }, [job_id, parsedQuery, pushEvent, navigate, selectedOption]);
 
   const handleDataclipNameChange = React.useCallback(
-    (dataclipId: string, name: string) => {
+    (dataclipId: string, name: string, onSuccess?: () => void) => {
       pushEventTo(
         'update-dataclip-name',
         {
@@ -289,6 +289,11 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             // Update current run dataclip if it's the same
             if (currentRunDataclip?.id === updatedDataclip.id) {
               setCurrentRunDataclip(updatedDataclip);
+            }
+
+            // Call success callback if provided
+            if (onSuccess) {
+              onSuccess();
             }
           } else if (typedResponse.error) {
             // Set error message
