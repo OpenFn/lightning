@@ -399,7 +399,7 @@ defmodule Lightning.Credentials do
        when schema_name in ["raw", "salesforce_oauth", "googlesheets", "oauth"],
        do: {:ok, body}
 
-    defp put_typed_body(body, schema_name) do
+  defp put_typed_body(body, schema_name) do
     schema = get_schema(schema_name)
 
     with changeset <- SchemaDocument.changeset(body, schema: schema),
