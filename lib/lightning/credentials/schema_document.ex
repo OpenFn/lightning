@@ -17,9 +17,6 @@ defmodule Lightning.Credentials.SchemaDocument do
   end
 
   defp maybe_convert_to_map(schema, attrs) do
-    IO.inspect(schema, label: "schema")
-    IO.inspect(attrs, label: "attrs")
-
     Enum.reduce(attrs, %{}, fn {key, value}, acc ->
       if Map.get(schema.types, String.to_atom(key)) == :map do
         coerce_json_field(%{key => value}, key)

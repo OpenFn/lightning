@@ -823,13 +823,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> fill_credential(%{
-               name: "My Credential",
+               name: "My Credential with TLS",
                body: %{username: "foo", password: "bar", baseUrl: "baz"}
              }) =~ "expected to be a URI"
 
       assert index_live
              |> fill_credential(%{
-               body: %{baseUrl: "http://localhost"}
+               body: %{baseUrl: "http://localhost", tls: "{\"a\":1}"}
              })
 
       refute index_live |> submit_disabled("save-credential-button-new")
@@ -849,6 +849,20 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential created successfully"}
+
+      body =
+        Repo.get_by(Lightning.Credentials.Credential,
+          name: "My Credential with TLS"
+        )
+        |> Map.get(:body)
+
+      assert body == %{
+               "access_token" => "",
+               "baseUrl" => "",
+               "password" => "bar",
+               "tls" => %{"a" => 1},
+               "username" => "foo"
+             }
     end
 
     test "allows the user to define and save a credential with email (godata)",
