@@ -61,6 +61,13 @@ export default function MiniHistory({
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const loading = false;
 
+  const expandWorkorderHandler = (workorder: WorkflowRunHistory[number]) => {
+    if (workorder.runs.length === 1 && workorder.runs[0]) {
+      selectRunHandler(workorder.runs[0].id, workorder.version)
+    }
+    setExpandedWorder(prev => prev === workorder.id ? "" : workorder.id);
+  }
+
   return (
     <div className={`absolute left-2 top-2 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${isCollapsed ? "w-44" : "w-88"}`}>
       {/* Header */}
@@ -91,7 +98,7 @@ export default function MiniHistory({
       </div>
 
       {/* Content */}
-      <div className={`overflow-y-auto ${isCollapsed ? "h-0" : "h-82"}`}>
+      <div className={`overflow-y-auto no-scrollbar ${isCollapsed ? "h-0" : "h-82"}`}>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-sm text-gray-500">Loading recent activity...</div>
@@ -110,10 +117,10 @@ export default function MiniHistory({
               <div key={workorder.id}>
                 {/* Workorder Row */}
                 <div className={`px-3 py-2 hover:bg-gray-50 transition-colors`}>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between cursor-pointer" onClick={() => expandWorkorderHandler(workorder)}>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <button
-                        onClick={() => setExpandedWorder(prev => prev === workorder.id ? "" : workorder.id)}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpandedWorder(prev => prev === workorder.id ? "" : workorder.id) }}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         {
