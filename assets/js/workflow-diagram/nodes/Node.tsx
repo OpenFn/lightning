@@ -84,7 +84,9 @@ const Node = ({
   secondaryIcon,
 
   errors,
+  type
 }: BaseNodeProps) => {
+  const isTriggerNode = type === "trigger";
   const runData = data?.runData as RunStep | undefined;
   const isErrorRun = runData?.exit_reason !== "success";
   // TODO: remember triggers
@@ -180,7 +182,7 @@ const Node = ({
               styles={style}
             />
           </svg>
-          {runData ? <div
+          {runData && !isTriggerNode ? <div
             className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}
             ref={wrapperRef}
             onMouseMove={handleMouseMove}

@@ -112,6 +112,12 @@ const fromWorkflow = (
             type: (node as Lightning.TriggerNode).type,
             enabled: (node as Lightning.TriggerNode).enabled,
           };
+          if (runSteps.isTrigger && runSteps.start_from === node.id) {
+            model.data.runData = {
+              ...(model.data.runData || {}),
+              startNode: true
+            }
+          }
         }
         styleNode(model);
       } else {
@@ -134,7 +140,7 @@ const fromWorkflow = (
           enabled: edge.enabled ?? true,
           label,
           isRun,
-          didRun: !!(runStepsObj[edge.source_job_id] && runStepsObj[edge.target_job_id])
+          didRun: !!((runStepsObj[edge.source_job_id] || edge.source_trigger_id === runSteps.start_from) && runStepsObj[edge.target_job_id])
         };
 
         // Note: we don't allow the user to disable the edge that goes from a
