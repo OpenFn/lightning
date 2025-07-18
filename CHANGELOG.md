@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed bug that prevented HTTP credentials from loading, now allow JSON objects
+  to be passed as credential form inputs for complex settings like custom TLS
+  options [#3437](https://github.com/OpenFn/lightning/issues/3437)
+
 ## [v2.13.6-pre] 2025-07-18
 
 ### Changed
