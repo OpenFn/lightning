@@ -161,7 +161,7 @@ export const WorkflowStore: WithActionProps = props => {
         });
       }
     );
-  }, [props.pushEventTo, setState, add]);
+  }, [props.pushEventTo, setState, add, updateRuns]);
 
   React.useEffect(() => {
     return props.handleEvent('set-disabled', (response: { disabled: boolean }) => {

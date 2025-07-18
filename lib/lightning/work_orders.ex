@@ -489,7 +489,6 @@ defmodule Lightning.WorkOrders do
     |> where([r], r.id == ^run_id)
     |> preload(:steps)
     |> Repo.one()
-    |> dbg()
     |> case do
       nil ->
         %{start_from: nil, steps: [], isTrigger: true}

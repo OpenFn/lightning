@@ -140,7 +140,7 @@ export type ReplayAction = {
 const undos: ReplayAction[] = [];
 let redos: ReplayAction[] = [];
 
-const RUNS_TMP = { steps: [], isTrigger: false, start_from: null };
+const RUNS_TMP: RunInfo = { steps: [], isTrigger: false, start_from: null };
 
 // simple squash function
 // I think after squashing. we can actually ignore in-between states.
@@ -201,7 +201,7 @@ const DEFAULT_PROPS: WorkflowProps = {
   disabled: false,
   selection: null,
   positions: null,
-  runSteps: [],
+  runSteps: RUNS_TMP,
   history: [],
 };
 
