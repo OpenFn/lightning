@@ -3887,14 +3887,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       # Update the dataclip name
-      render_hook(
-        view,
-        "update-dataclip-name",
-        %{
-          "dataclip_id" => dataclip.id,
-          "name" => "New Name"
-        }
-      )
+      assert render_hook(
+               view,
+               "update-dataclip-name",
+               %{
+                 "dataclip_id" => dataclip.id,
+                 "name" => "New Name"
+               }
+             ) =~ "Label created. Dataclip will be saved permanently"
 
       # Should return updated dataclip
       assert_reply(view, %{dataclip: %{name: "New Name"}})
@@ -3902,6 +3902,45 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Verify dataclip name was changed in database
       updated_dataclip = Lightning.Repo.reload!(dataclip)
       assert updated_dataclip.name == "New Name"
+
+      audit =
+        Lightning.Repo.get_by(Lightning.Auditing.Audit,
+          event: "label_created",
+          item_id: dataclip.id
+        )
+
+      assert match?(
+               %{
+                 before: %{"name" => "Original Name"},
+                 after: %{"name" => "New Name"}
+               },
+               audit.changes
+             )
+
+      # clear the dataclip name
+      assert render_hook(
+               view,
+               "update-dataclip-name",
+               %{
+                 "dataclip_id" => dataclip.id,
+                 "name" => ""
+               }
+             ) =~
+               "Label deleted. Dataclip will be purged when your retention policy limit is reached"
+
+      audit =
+        Lightning.Repo.get_by(Lightning.Auditing.Audit,
+          event: "label_deleted",
+          item_id: dataclip.id
+        )
+
+      assert match?(
+               %{
+                 before: %{"name" => "New Name"},
+                 after: %{"name" => nil}
+               },
+               audit.changes
+             )
     end
   end
 

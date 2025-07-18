@@ -5,7 +5,9 @@ defmodule Lightning.Invocation do
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
+  alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.DataclipAudit
   alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
   alias Lightning.Projects.File, as: ProjectFile
@@ -297,11 +299,21 @@ defmodule Lightning.Invocation do
     |> Repo.update()
   end
 
-  def update_dataclip_name(%Dataclip{} = dataclip, name) do
-    dataclip
-    |> Ecto.Changeset.cast(%{name: name}, [:name])
-    |> Ecto.Changeset.unique_constraint([:name, :project_id])
-    |> Repo.update()
+  @spec update_dataclip_name(Dataclip.t(), String.t() | nil, User.t()) ::
+          {:ok, Dataclip.t()} | {:error, Ecto.Changeset.t()}
+  def update_dataclip_name(%Dataclip{} = dataclip, name, acting_user) do
+    changeset =
+      dataclip
+      |> Ecto.Changeset.cast(%{name: name}, [:name])
+      |> Ecto.Changeset.unique_constraint([:name, :project_id])
+
+    Repo.transact(fn ->
+      with {:ok, updated_dataclip} <- Repo.update(changeset),
+           {:ok, _} <-
+             DataclipAudit.save_name_updated(dataclip, changeset, acting_user) do
+        {:ok, updated_dataclip}
+      end
+    end)
   end
 
   @doc """
