@@ -98,7 +98,7 @@ defmodule LightningWeb.Pagination do
 
   def pagination_bar(assigns) do
     ~H"""
-    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-secondary-200 sm:px-6">
+    <div class="bg-white px-4 py-3 flex items-center justify-between sm:px-6">
       <div class="flex items-center space-x-4">
         <div>
           <%= if @async_page == Phoenix.LiveView.AsyncResult.loading() do %>

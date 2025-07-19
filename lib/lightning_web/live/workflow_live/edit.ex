@@ -103,7 +103,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   if @snapshot_version_tag == "latest",
                     do: "This is the latest version of this workflow",
                     else:
-                      "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
+                      "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
               <LightningWeb.WorkflowLive.Components.online_users

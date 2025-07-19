@@ -80,22 +80,14 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     <:label>Started</:label>
                     <:value>
                       <%= if run.started_at do %>
-                        <Common.wrapper_tooltip
-                          id={run.id <> "start-tip"}
-                          tooltip={DateTime.to_iso8601(run.started_at)}
-                        >
-                          {Timex.Format.DateTime.Formatters.Relative.format!(
-                            run.started_at,
-                            "{relative}"
-                          )}
-                        </Common.wrapper_tooltip>
+                        <Common.datetime datetime={run.started_at} />
                       <% end %>
                     </:value>
                   </.list_item>
                   <.list_item>
                     <:label>Duration</:label>
                     <:value>
-                      <.elapsed_indicator run={run} />
+                      <.elapsed_indicator item={run} context="viewer" />
                     </:value>
                   </.list_item>
                   <.list_item>
@@ -125,12 +117,13 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     selected={step.id == @selected_step_id}
                     class="cursor-pointer"
                     project_id={@project}
+                    context="run-tab"
                   />
                 </.step_list>
               </:panel>
               <:panel hash="log" class="h-full mb-2">
                 <div class="flex flex-col h-full @5xl/viewer:flex-row">
-                  <div class="z-50 min-h-0 max-h-[30%] 0 mb-2 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
+                  <div class="z-50 min-h-0 max-h-[30%] 0 mb-1 overflow-auto flex-none flex @5xl/viewer:flex-row flex-col @5xl/viewer:max-h-[100%]">
                     <.step_list
                       :let={step}
                       id={"log-tab-step-list-#{run.id}"}
@@ -150,6 +143,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                         selected={step.id == @selected_step_id}
                         class="cursor-pointer"
                         project_id={@project}
+                        context="log-tab"
                       />
                     </.step_list>
                   </div>
@@ -196,6 +190,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                           selected={step.id == @selected_step_id}
                           class="cursor-pointer"
                           project_id={@project}
+                          context="input-tab"
                         />
                       </.step_list>
                     </div>
@@ -245,6 +240,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                           selected={step.id == @selected_step_id}
                           class="cursor-pointer"
                           project_id={@project}
+                          context="output-tab"
                         />
                       </.step_list>
                     </div>
