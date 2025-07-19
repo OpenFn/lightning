@@ -860,8 +860,12 @@ defmodule Lightning.Invocation do
       {:id, uuid} ->
         dataclip.id == uuid
 
-      {:id_prefix, id_prefix} ->
-        String.starts_with?(dataclip.id, id_prefix)
+      {:name_or_id_part, query} ->
+        String.starts_with?(dataclip.id, query) or
+          String.contains?(
+            String.downcase(dataclip.name),
+            String.downcase(query)
+          )
 
       {:type, type} ->
         dataclip.type == type
@@ -876,7 +880,7 @@ defmodule Lightning.Invocation do
         dataclip.id != exclude_id
 
       {:name_part, name} ->
-        String.starts_with?(
+        String.contains?(
           String.downcase(dataclip.name),
           String.downcase(name)
         )
@@ -895,13 +899,14 @@ defmodule Lightning.Invocation do
       {:id, uuid}, dynamic ->
         dynamic([d], ^dynamic and d.id == ^uuid)
 
-      {:id_prefix, id_prefix}, dynamic ->
+      {:name_or_id_part, query}, dynamic ->
         {id_prefix_start, id_prefix_end} =
-          id_prefix_interval(id_prefix)
+          id_prefix_interval(query)
 
         dynamic(
           [d],
-          ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
+          (^dynamic and ilike(d.name, ^"%#{query}%")) or
+            (d.id > ^id_prefix_start and d.id < ^id_prefix_end)
         )
 
       {:type, type}, dynamic ->

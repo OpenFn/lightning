@@ -18,7 +18,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
                "query=+&before=2025-05-14T14%3A35&after=2025-05-14T14%3A55"
              )
 
-    assert {:ok, %{id_prefix: "1f"}} =
+    assert {:ok, %{name_or_id_part: "1f"}} =
              NewManualRun.get_dataclips_filters("query=1f")
 
     uuid = "3a80bd03-6f0b-4146-8b23-e5ca9f3176bb"
@@ -26,10 +26,13 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
     assert {:ok, %{id: ^uuid}} =
              NewManualRun.get_dataclips_filters("query=#{uuid}")
 
-    assert {:ok, %{name_part: "1z"}} =
-             NewManualRun.get_dataclips_filters("query=1z")
+    assert {:ok, %{name_or_id_part: "abc"}} =
+             NewManualRun.get_dataclips_filters("query=abc")
 
-    invalid_uuid = "#{uuid}z"
+    assert {:ok, %{name_part: "long"}} =
+             NewManualRun.get_dataclips_filters("query=long")
+
+    invalid_uuid = "123#{uuid}z"
 
     assert {:ok, %{name_part: ^invalid_uuid}} =
              NewManualRun.get_dataclips_filters("query=#{invalid_uuid}"),
@@ -86,6 +89,55 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
 
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(job_id, "query=+", 10, 0)
+
+      assert %{
+               dataclips: dataclips,
+               next_cron_run_dataclip_id: next_cron_run_dataclip_id
+             } = result
+
+      assert next_cron_run_dataclip_id == output_dataclip.id
+      assert List.first(dataclips).id == output_dataclip.id
+    end
+
+    test "returns next cron run for cron-triggered workflows with successful runs that matches name" do
+      project = insert(:project)
+
+      # Create a cron-triggered workflow
+      cron_trigger = build(:trigger, type: :cron, cron_expression: "0 0 * * *")
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(cron_trigger)
+        |> with_job(job)
+        |> with_edge({cron_trigger, job})
+        |> insert()
+        |> with_snapshot()
+
+      # Create a successful step with output dataclip
+      input_dataclip =
+        insert(:dataclip, project: project, body: %{"input" => "data"})
+
+      output_dataclip =
+        insert(:dataclip,
+          name: "123abc246",
+          project: project,
+          body: %{"output" => "result"},
+          type: :step_result
+        )
+
+      insert(:step,
+        job: workflow.jobs |> List.first(),
+        input_dataclip: input_dataclip,
+        output_dataclip: output_dataclip,
+        exit_reason: "success",
+        finished_at: DateTime.utc_now()
+      )
+
+      job_id = workflow.jobs |> List.first() |> Map.get(:id)
+
+      {:ok, result} =
+        NewManualRun.search_selectable_dataclips(job_id, "query=abc", 10, 0)
 
       assert %{
                dataclips: dataclips,

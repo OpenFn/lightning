@@ -53,7 +53,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
            ),
          query: :string,
          id: Ecto.UUID,
-         id_prefix: :string,
+         name_or_id_part: :string,
          name_part: :string,
          named_only: :boolean
        }},
@@ -73,7 +73,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
 
         match?({_num, ""}, Integer.parse(query, 16)) ->
           changeset
-          |> Ecto.Changeset.put_change(:id_prefix, query)
+          |> Ecto.Changeset.put_change(:name_or_id_part, query)
 
         true ->
           Ecto.Changeset.put_change(changeset, :name_part, query)
