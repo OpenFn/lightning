@@ -304,11 +304,11 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   def workflow_card(assigns) do
     ~H"""
     <div class="flex flex-1 items-center truncate">
+        <div class="text-sm">
       <Common.wrapper_tooltip
         id={"workflow-name-#{@workflow.id}"}
         tooltip={@workflow.name}
       >
-        <div class="text-sm">
           <div class="flex items-center">
             <span
               class="flex-shrink truncate text-gray-900 font-medium workflow-name"
@@ -317,6 +317,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               {@workflow.name}
             </span>
           </div>
+      </Common.wrapper_tooltip>
           <%= if @trigger_enabled do %>
             <p class="text-gray-500 text-xs mt-1">
               Updated <Common.datetime datetime={@workflow.updated_at} />
@@ -332,7 +333,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             </div>
           <% end %>
         </div>
-      </Common.wrapper_tooltip>
     </div>
     """
   end
