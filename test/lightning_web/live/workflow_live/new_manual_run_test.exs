@@ -26,12 +26,12 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
     assert {:ok, %{id: ^uuid}} =
              NewManualRun.get_dataclips_filters("query=#{uuid}")
 
-    assert {:ok, %{name_prefix: "1z"}} =
+    assert {:ok, %{name_part: "1z"}} =
              NewManualRun.get_dataclips_filters("query=1z")
 
     invalid_uuid = "#{uuid}z"
 
-    assert {:ok, %{name_prefix: ^invalid_uuid}} =
+    assert {:ok, %{name_part: ^invalid_uuid}} =
              NewManualRun.get_dataclips_filters("query=#{invalid_uuid}"),
            "Invalid uuids are treated as name prefixes"
 

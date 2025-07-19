@@ -875,7 +875,7 @@ defmodule Lightning.Invocation do
       {:exclude_id, exclude_id} ->
         dataclip.id != exclude_id
 
-      {:name_prefix, name} ->
+      {:name_part, name} ->
         String.starts_with?(
           String.downcase(dataclip.name),
           String.downcase(name)
@@ -916,8 +916,8 @@ defmodule Lightning.Invocation do
       {:exclude_id, exclude_id}, dynamic ->
         dynamic([d], ^dynamic and d.id != ^exclude_id)
 
-      {:name_prefix, name}, dynamic ->
-        dynamic([d], ^dynamic and ilike(d.name, ^"#{name}%"))
+      {:name_part, name}, dynamic ->
+        dynamic([d], ^dynamic and ilike(d.name, ^"%#{name}%"))
 
       {:named_only, true}, dynamic ->
         dynamic([d], ^dynamic and not is_nil(d.name))
