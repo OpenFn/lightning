@@ -319,7 +319,8 @@ defmodule LightningWeb.Components.NewInputs do
     default: "text",
     values:
       ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select custom-select tag tel text textarea time url week toggle integer-toggle)
+               range radio search select custom-select tag tel text textarea codearea
+               time url week toggle integer-toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc:
@@ -568,6 +569,25 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={@class}
+        value={@value}
+        placeholder={@placeholder}
+        {@rest}
+      />
+      <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  def input(%{type: "codearea"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class={@stretch && "h-full"}>
+      <.label :if={@label} for={@id}>
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+      </.label>
+      <.textarea_element
+        id={@id}
+        name={@name}
+        class={["rounded-md w-full font-mono bg-slate-800 text-slate-100", @class]}
         value={@value}
         placeholder={@placeholder}
         {@rest}
@@ -990,7 +1010,7 @@ defmodule LightningWeb.Components.NewInputs do
   attr :name, :string, required: true
   attr :value, :any
   attr :errors, :list, default: []
-  attr :class, :string, default: ""
+  attr :class, :any, default: ""
 
   attr :rest, :global,
     include:
