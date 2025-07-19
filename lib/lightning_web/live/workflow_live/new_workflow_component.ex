@@ -9,6 +9,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   """
   use LightningWeb, :live_component
 
+  alias Phoenix.LiveView.JS
   alias Lightning.Projects
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkflowTemplates
@@ -83,23 +84,23 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     end
   end
 
-  def handle_event("create_workflow", _, socket) do
-    if create_disabled?(socket.assigns) do
-      {:noreply,
-       socket
-       |> put_flash(:error, error_flash_message(socket.assigns))
-       |> push_patch(
-         to:
-           "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
-       )}
-    else
-      notify_parent(:save_workflow, %{
-        query_params: build_ai_query_params(socket.assigns)
-      })
+  # def handle_event("create_workflow", _, socket) do
+  #   if create_disabled?(socket.assigns) do
+  #     {:noreply,
+  #      socket
+  #      |> put_flash(:error, error_flash_message(socket.assigns))
+  #      |> push_patch(
+  #        to:
+  #          "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
+  #      )}
+  #   else
+  #     notify_parent(:save_workflow, %{
+  #       query_params: build_ai_query_params(socket.assigns)
+  #     })
 
-      {:noreply, socket}
-    end
-  end
+  #     {:noreply, socket |> JS.push("save")}
+  #   end
+  # end
 
   def handle_event("search-templates", %{"search" => search_term}, socket) do
     filtered_templates =
@@ -159,6 +160,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
       {:noreply,
        socket
+       |> assign(changeset: changeset)
        |> assign(validation_failed: true)
        |> assign_error_changeset(changeset, event_name)
        |> push_event(
@@ -313,7 +315,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
            |> assign(search_term: nil)
            |> push_patch(
              to:
-               "/projects/#{socket.assigns.project.id}/w/new?method=ai&chat=#{session_id}"
+               "/projects/#{socket.assigns.project.id}/w/new?method=ai&w-chat=#{session_id}"
            )}
 
         {:error, reason} ->
@@ -397,6 +399,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             project={@project}
             current_user={@current_user}
             chat_session_id={@chat_session_id}
+            query_params={@query_params}
             workflow_code={@workflow_code}
             base_url={@base_url}
             search_term={@search_term}
@@ -432,8 +435,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             type="button"
             theme="primary"
             class="inline-flex gap-x-1 px-4"
-            phx-click="create_workflow"
-            phx-target={@myself}
+            phx-click={JS.push("save")}
+            phx-disconnected={JS.set_attribute({"disabled", ""})}
+            phx-connected={
+              !create_disabled?(assigns) && JS.remove_attribute("disabled")
+            }
             disabled={create_disabled?(assigns)}
           >
             Create
@@ -678,7 +684,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         current_user={@current_user}
         chat_session_id={@chat_session_id}
         workflow_code={@workflow_code}
-        query_params={%{"method" => "ai"}}
+        query_params={@query_params}
         base_url={@base_url}
         input_value={@search_term}
         action={if(@chat_session_id, do: :show, else: :new)}
@@ -753,29 +759,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     case assigns.selected_method do
       "import" -> !assigns.changeset.valid? or assigns.validation_failed
       "template" -> is_nil(assigns.selected_template)
-      "ai" -> is_nil(assigns.workflow_code)
+      "ai" -> is_nil(assigns.workflow_code) or !assigns.changeset.valid?
     end
   end
-
-  defp error_flash_message(assigns) do
-    case assigns.selected_method do
-      "import" ->
-        "Please fix the validation errors before creating the workflow."
-
-      "template" ->
-        "Please select a template to continue."
-
-      "ai" ->
-        "Please generate a workflow using the AI assistant first."
-    end
-  end
-
-  defp build_ai_query_params(%{
-         selected_method: "ai",
-         chat_session_id: session_id
-       }) do
-    %{chat: session_id, method: "ai"}
-  end
-
-  defp build_ai_query_params(_assigns), do: %{}
 end

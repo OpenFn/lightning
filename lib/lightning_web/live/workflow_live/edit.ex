@@ -157,8 +157,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   changeset={@changeset}
                   selection_mode={@selection_mode}
                   base_url={@base_url}
+                  query_params={@query_params}
                   show_workflow_ai_chat={@show_workflow_ai_chat}
-                  chat_session_id={@chat_session_id}
+                  workflow_chat_session_id={@workflow_chat_session_id}
+                  job_chat_session_id={@job_chat_session_id}
                 />
               </div>
             </div>
@@ -170,7 +172,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <.run_workflow_button
                 base_url={@base_url}
                 show_workflow_ai_chat={@show_workflow_ai_chat}
-                chat_session_id={@chat_session_id}
+                workflow_chat_session_id={@workflow_chat_session_id}
+                job_chat_session_id={@job_chat_session_id}
+                query_params={@query_params}
                 trigger_id={
                   if is_list(@workflow_params["triggers"]) and
                        @workflow_params["triggers"] != [] do
@@ -204,7 +208,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           project={@project}
           selected_method={@method || "template"}
           base_url={@base_url}
-          chat_session_id={@chat_session_id}
+          chat_session_id={@workflow_chat_session_id}
+          query_params={@query_params}
           current_user={@current_user}
           class="transition-all duration-300 ease-in-out"
         />
@@ -220,7 +225,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
             workflow_code={@workflow_code}
             project={@project}
             base_url={@base_url}
-            chat_session_id={@chat_session_id}
+            query_params={@query_params}
+            chat_session_id={@workflow_chat_session_id}
             current_user={@current_user}
             can_edit_workflow={@can_edit_workflow}
             class="transition-all duration-300 ease-in-out"
@@ -324,10 +330,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           current_user={@current_user}
                           selected_job={@selected_job}
                           follow_run={@follow_run}
-                          chat_session_id={@chat_session_id}
+                          chat_session_id={@job_chat_session_id}
                           query_params={@query_params}
                           base_url={@base_url}
-                          action={if(@chat_session_id, do: :show, else: :new)}
+                          action={if(@job_chat_session_id, do: :show, else: :new)}
                           id={"aichat-#{@selected_job.id}"}
                         />
                       </div>
@@ -444,7 +450,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
             on_modal_close={JS.push("toggle_job_credential_modal")}
             can_create_project_credential={@can_edit_workflow}
-            return_to={Helpers.build_url(assigns, selection: @selected_job.id)}
+            return_to={
+              Helpers.build_url(assigns, [
+                Helpers.param("s", @selected_job.id)
+              ])
+            }
           />
           <Common.banner
             :if={@display_banner}
@@ -483,7 +493,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <.workflow_settings
                 can_edit_run_settings={@can_edit_run_settings}
                 project_id={@workflow.project_id}
-                code_view_url={Helpers.build_url(assigns, mode: "code")}
+                code_view_url={
+                  Helpers.build_url(assigns, [
+                    Helpers.param("m", "code"),
+                    Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+                    Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+                    Helpers.param("w-chat", fn a, _ -> a.workflow_chat_session_id end),
+                    Helpers.param("j-chat", fn a, _ -> a.job_chat_session_id end),
+                    Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+                  ])
+                }
                 project_concurrency_disabled={@workflow.project.concurrency == 1}
                 max_concurrency={@max_concurrency}
                 form={@workflow_form}
@@ -530,12 +549,30 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         snapshot_version_tag={@snapshot_version_tag}
                         job={@selected_job}
                         selected_run={@selected_run}
+                        query_params={@query_params}
                         form={@workflow_form}
                         show_workflow_ai_chat={@show_workflow_ai_chat}
-                        chat_session_id={@chat_session_id}
+                        workflow_chat_session_id={@workflow_chat_session_id}
+                        job_chat_session_id={@job_chat_session_id}
                       />
                       <.button_link
-                        patch={"#{@base_url}?s=#{@selected_job.id}&m=workflow_input"}
+                        patch={
+                          Helpers.build_url(assigns, [
+                            Helpers.param("s", @selected_job.id),
+                            Helpers.param("m", "workflow_input"),
+                            Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+                            Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+                            Helpers.param("w-chat", fn a, _ ->
+                              a.workflow_chat_session_id
+                            end),
+                            Helpers.param("j-chat", fn a, _ ->
+                              a.job_chat_session_id
+                            end),
+                            Helpers.param("method", fn a, _ ->
+                              a.query_params["method"]
+                            end)
+                          ])
+                        }
                         type="button"
                         theme="primary"
                       >
@@ -620,7 +657,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       />
                     </div>
                     <.button_link
-                      patch={"#{@base_url}?s=#{@selected_trigger.id}&m=workflow_input"}
+                      patch={
+                        Helpers.build_url(assigns, [
+                          Helpers.param("s", @selected_trigger.id),
+                          Helpers.param("m", "workflow_input"),
+                          Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+                          Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+                          Helpers.param("w-chat", fn a, _ ->
+                            a.workflow_chat_session_id
+                          end),
+                          Helpers.param("j-chat", fn a, _ ->
+                            a.job_chat_session_id
+                          end),
+                          Helpers.param("method", fn a, _ ->
+                            a.query_params["method"]
+                          end)
+                        ])
+                      }
                       type="button"
                       theme="primary"
                     >
@@ -725,12 +778,37 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     false
                   end
                 }
-                cancel_url={Helpers.build_url(assigns)}
+                cancel_url={
+                  Helpers.build_url(assigns, [
+                    Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+                    Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+                    Helpers.param("w-chat", fn a, _ -> a.workflow_chat_session_id end),
+                    Helpers.param("j-chat", fn a, _ -> a.job_chat_session_id end),
+                    Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+                  ])
+                }
                 back_url={
                   if @selected_job do
-                    Helpers.build_url(assigns, selection: @selected_job.id)
+                    Helpers.build_url(assigns, [
+                      Helpers.param("s", @selected_job.id),
+                      Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+                      Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+                      Helpers.param("w-chat", fn a, _ ->
+                        a.workflow_chat_session_id
+                      end),
+                      Helpers.param("j-chat", fn a, _ -> a.job_chat_session_id end),
+                      Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+                    ])
                   else
-                    Helpers.build_url(assigns)
+                    Helpers.build_url(assigns, [
+                      Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+                      Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+                      Helpers.param("w-chat", fn a, _ ->
+                        a.workflow_chat_session_id
+                      end),
+                      Helpers.param("j-chat", fn a, _ -> a.job_chat_session_id end),
+                      Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+                    ])
                   end
                 }
               />
@@ -878,7 +956,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
             trigger={@selected_trigger}
             project={@project}
             current_user={@current_user}
-            return_to={Helpers.build_url(assigns, selection: @selected_trigger.id)}
+            return_to={
+              Helpers.build_url(assigns, [
+                Helpers.param("s", @selected_trigger.id)
+              ])
+            }
           />
         </div>
       </div>
@@ -1029,13 +1111,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp expand_job_editor(assigns) do
     {is_empty, error_message} = editor_is_empty(assigns.form, assigns.job)
 
-    url =
-      Helpers.build_url(assigns,
-        selection: assigns.job.id,
-        mode: "expand",
-        include_version: true,
-        include_run: true
-      )
+    params = [
+      Helpers.param("s", assigns.job.id),
+      Helpers.param("m", "expand"),
+      Helpers.param(
+        "a",
+        fn a, _ -> a.selected_run end,
+        when: fn a, _ -> a.selected_run != nil end
+      ),
+      Helpers.param(
+        "v",
+        fn a, _ -> Ecto.Changeset.get_field(a.changeset, :lock_version) end,
+        when: fn a, _ -> a.snapshot_version_tag != "latest" end
+      ),
+      Helpers.param("w-chat", fn a, _ -> a.query_params["w-chat"] end),
+      Helpers.param("j-chat", fn a, _ -> a.query_params["j-chat"] end),
+      Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+    ]
+
+    url = Helpers.build_url(assigns, params)
 
     assigns =
       assign(assigns,
@@ -1234,13 +1328,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
         base_icon_class <> " text-slate-500 hover:text-slate-400"
       end
 
-    url =
+    orthogonal_params = [
+      Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+      Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+      Helpers.param("w-chat", fn a, _ -> a.query_params["w-chat"] end),
+      Helpers.param("j-chat", fn a, _ -> a.query_params["j-chat"] end),
+      Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+    ]
+
+    params =
       if assigns.selection_mode == "settings" do
-        Helpers.build_url(assigns)
+        [
+          Helpers.param("s", fn a, _ -> a.query_params["s"] end)
+          | orthogonal_params
+        ]
       else
-        Helpers.build_url(assigns, mode: "settings")
+        [Helpers.param("m", "settings") | orthogonal_params]
       end
 
+    url = Helpers.build_url(assigns, params)
     assigns = assigns |> assign(:class, class) |> assign(:url, url)
 
     ~H"""
@@ -1317,7 +1423,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        active_menu_item: :overview,
        expanded_job: nil,
        ai_assistant_enabled: AiAssistant.enabled?(),
-       chat_session_id: nil,
+       workflow_chat_session_id: nil,
+       job_chat_session_id: nil,
        selected_template: nil,
        follow_run: nil,
        step: nil,
@@ -1334,7 +1441,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
          "m" => nil,
          "a" => nil,
          "v" => nil,
-         "chat" => nil,
+         "w-chat" => nil,
+         "j-chat" => nil,
          "method" => nil
        },
        workflow: nil,
@@ -1444,7 +1552,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     )
   end
 
-  defp apply_action(socket, :new, _params) do
+  defp apply_action(socket, :new, params) do
+    method = Map.get(params, "method", "template")
+
     if socket.assigns.workflow do
       socket
     else
@@ -1455,6 +1565,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       })
     end
     |> assign(page_title: "New Workflow")
+    |> assign(method: method)
     |> assign(base_url: ~p"/projects/#{socket.assigns.project}/w/new")
   end
 
@@ -1743,10 +1854,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
             do: "Workflow template updated.",
             else: "Workflow published as template."
 
+        url_params = [Helpers.param("m", "code")]
+
         {:noreply,
          socket
          |> put_flash(:info, flash_msg)
-         |> push_patch(to: Helpers.build_url(socket.assigns, mode: "code"))}
+         |> push_patch(to: Helpers.build_url(socket.assigns, url_params))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :workflow_template_changeset, changeset)}
@@ -1755,10 +1868,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("save", params, socket) do
     with {:ok, %{assigns: assigns} = socket} <- save_workflow(socket, params) do
-      query_params =
-        Helpers.clean_query_params(socket.assigns.query_params,
-          drop_version: true
-        )
+      link_workflow_to_ai_session(assigns)
+
+      url_params = [
+        Helpers.param("m", fn a, _ -> a.query_params["m"] end),
+        Helpers.param("s", fn a, _ -> a.query_params["s"] end),
+        Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+        Helpers.param("w-chat", fn a, _ -> a.query_params["w-chat"] end),
+        Helpers.param("j-chat", fn a, _ -> a.query_params["j-chat"] end),
+        Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+      ]
 
       flash_msg =
         "Workflow saved successfully." <>
@@ -1769,11 +1888,42 @@ defmodule LightningWeb.WorkflowLive.Edit do
             ""
           end
 
+      updated_assigns =
+        if assigns.live_action == :new do
+          Map.put(
+            assigns,
+            :base_url,
+            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+          )
+        else
+          assigns
+        end
+
       {:noreply,
        socket
        |> put_flash(:info, flash_msg)
+       |> then(fn s1 ->
+         if assigns.live_action == :new do
+           s1
+           |> assign(:selected_template, nil)
+           |> update(:show_new_workflow_panel, fn _ -> false end)
+           |> maybe_disable_canvas()
+           |> then(fn s2 ->
+             if assigns.query_params["method"] == "ai" do
+               s2
+               |> update(:show_workflow_ai_chat, fn _ -> true end)
+               |> sync_ai_assistant_visibility()
+             else
+               s2
+             end
+           end)
+           |> push_event("force-fit", %{})
+         else
+           s1
+         end
+       end)
        |> push_patch(
-         to: Helpers.build_url(socket.assigns, query_params: query_params),
+         to: Helpers.build_url(updated_assigns, url_params),
          replace: true
        )}
     end
@@ -1781,14 +1931,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("save-and-sync", %{"github_sync" => _} = params, socket) do
     with {:ok, %{assigns: assigns} = socket} <- save_workflow(socket, params) do
-      query_params =
-        Helpers.clean_query_params(assigns.query_params, drop_version: true)
+      url_params = [
+        Helpers.param("m", fn a, _ -> a.query_params["m"] end),
+        Helpers.param("s", fn a, _ -> a.query_params["s"] end),
+        Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+        Helpers.param("w-chat", fn a, _ -> a.query_params["w-chat"] end),
+        Helpers.param("j-chat", fn a, _ -> a.query_params["j-chat"] end),
+        Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+      ]
 
       {:noreply,
        socket
        |> sync_to_github(params)
        |> push_patch(
-         to: Helpers.build_url(socket.assigns, query_params: query_params),
+         to: Helpers.build_url(assigns, url_params),
          replace: true
        )}
     end
@@ -1844,27 +2000,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("toggle-workflow-ai-chat", _params, socket) do
-    query_params =
-      case socket.assigns.query_params["method"] do
-        "ai" ->
-          socket.assigns.query_params
-          |> Map.delete("method")
-          |> Map.delete("chat")
+    ai_panel_closed = socket.assigns.query_params["method"] != "ai"
 
-        _ ->
-          socket.assigns.query_params
-          |> Map.put("method", "ai")
-          |> Map.put("chat", socket.assigns.chat_session_id)
-      end
-
-    socket = update(socket, :show_workflow_ai_chat, &(!&1))
+    url_params = [
+      Helpers.param("m", fn a, _ -> a.query_params["m"] end),
+      Helpers.param("s", fn a, _ -> a.query_params["s"] end),
+      Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+      Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+      Helpers.param("method", "ai", when: ai_panel_closed),
+      Helpers.param(
+        "w-chat",
+        fn a, _ -> a.workflow_chat_session_id end
+      )
+    ]
 
     {:noreply,
      socket
+     |> update(:show_workflow_ai_chat, &(!&1))
      |> sync_ai_assistant_visibility()
-     |> push_patch(
-       to: Helpers.build_url(socket.assigns, query_params: query_params)
-     )}
+     |> push_patch(to: Helpers.build_url(socket.assigns, url_params))}
   end
 
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
@@ -2127,12 +2281,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :workflow_params_changed ->
         handle_workflow_params_change(socket, payload)
-
-      :save_workflow ->
-        handle_workflow_save_request(socket, payload)
-
-      :close_ai_chat ->
-        handle_close_ai_chat(socket)
     end
   end
 
@@ -2377,8 +2525,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       changeset: prev_changeset,
       workflow: workflow,
       selected_job: selected_job
-    } =
-      socket.assigns
+    } = socket.assigns
 
     if job_deleted?(selected_job, workflow) do
       put_flash(
@@ -2392,10 +2539,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       prev_params = WorkflowParams.to_map(prev_changeset)
       next_params = WorkflowParams.to_map(next_changeset)
 
-      query_params =
-        Helpers.clean_query_params(socket.assigns.query_params,
-          drop_version: true
-        )
+      url_params = [
+        Helpers.param("m", fn a, _ -> a.query_params["m"] end),
+        Helpers.param("s", fn a, _ -> a.query_params["s"] end),
+        Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+        Helpers.param("w-chat", fn a, _ -> a.query_params["w-chat"] end),
+        Helpers.param("j-chat", fn a, _ -> a.query_params["j-chat"] end),
+        Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+      ]
 
       if version != "latest" do
         Presence.untrack_user_presence(
@@ -2411,29 +2562,30 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> assign(snapshot_version_tag: version)
       |> push_patches_applied(prev_params)
       |> maybe_disable_canvas()
-      |> push_patch(
-        to: Helpers.build_url(socket.assigns, query_params: query_params)
-      )
+      |> push_patch(to: Helpers.build_url(socket.assigns, url_params))
     end
   end
 
   defp commit_latest_version(socket) do
-    %{changeset: prev_changeset, workflow: workflow} =
-      socket.assigns
+    %{changeset: prev_changeset, workflow: workflow} = socket.assigns
 
     snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
     prev_params = WorkflowParams.to_map(prev_changeset)
 
-    query_params =
-      Helpers.clean_query_params(socket.assigns.query_params, drop_version: true)
+    url_params = [
+      Helpers.param("m", fn a, _ -> a.query_params["m"] end),
+      Helpers.param("s", fn a, _ -> a.query_params["s"] end),
+      Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+      Helpers.param("w-chat", fn a, _ -> a.query_params["w-chat"] end),
+      Helpers.param("j-chat", fn a, _ -> a.query_params["j-chat"] end),
+      Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+    ]
 
     socket
     |> assign_workflow(workflow, snapshot)
     |> push_patches_applied(prev_params)
-    |> push_patch(
-      to: Helpers.build_url(socket.assigns, query_params: query_params)
-    )
+    |> push_patch(to: Helpers.build_url(socket.assigns, url_params))
   end
 
   defp maybe_switch_workflow_version(socket) do
@@ -2536,23 +2688,31 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end)
   end
 
-  @spec close_url(map(), atom(), atom()) :: String.t()
-  defp close_url(assigns, type, selection) do
-    opts = [
-      include_run: true,
-      include_version: true
-    ]
+  @spec close_url(map(), atom() | nil, :select | :unselect) :: String.t()
+  defp close_url(assigns, selection_type, action) do
+    mode_and_selection_params =
+      case action do
+        :unselect ->
+          IO.puts(">>> Action is :unselect - clearing everything")
+          []
 
-    opts =
-      case selection do
-        :select when not is_nil(type) ->
-          Keyword.put(opts, :selection, assigns[type] && assigns[type].id)
+        :select
+        when selection_type == :selected_job and is_struct(assigns.selected_job) ->
+          [Helpers.param("s", assigns.selected_job.id)]
 
         _ ->
-          opts
+          []
       end
 
-    Helpers.build_url(assigns, opts)
+    orthogonal_params = [
+      Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+      Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+      Helpers.param("w-chat", fn a, _ -> a.workflow_chat_session_id end),
+      Helpers.param("j-chat", fn a, _ -> a.job_chat_session_id end),
+      Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+    ]
+
+    Helpers.build_url(assigns, mode_and_selection_params ++ orthogonal_params)
   end
 
   defp display_switcher(snapshot, workflow) do
@@ -2858,13 +3018,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a", "v", "chat", "code", "method"])
+        |> Map.take(["s", "m", "a", "v", "w-chat", "j-chat", "code", "method"])
         |> Enum.into(%{
           "s" => nil,
           "m" => nil,
           "a" => nil,
           "v" => nil,
-          "chat" => nil,
+          "w-chat" => nil,
+          "j-chat" => nil,
           "code" => nil,
           "method" => nil
         })
@@ -2882,44 +3043,27 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp apply_mode_and_selection(socket) do
-    case socket.assigns.query_params do
-      %{"m" => "settings", "s" => nil, "a" => nil} ->
+    %{query_params: params} = socket.assigns
+
+    cond do
+      params["m"] == "workflow_input" && params["s"] ->
+        handle_selection_with_mode(socket, params["s"], "workflow_input")
+
+      params["m"] == "expand" && params["s"] ->
+        handle_selection_with_mode(socket, params["s"], "expand")
+
+      params["m"] == "settings" ->
         handle_settings_mode(socket)
 
-      %{"m" => "workflow_input", "s" => selected_id, "a" => nil} ->
-        handle_selection_with_mode(socket, selected_id, "workflow_input")
-
-      %{"m" => "code", "s" => nil, "a" => nil} ->
+      params["m"] == "code" ->
         handle_code_mode(socket)
 
-      %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
-        handle_method_assignment(socket, method)
+      params["s"] ->
+        handle_selection_with_mode(socket, params["s"], params["m"])
 
-      %{"s" => nil} ->
+      true ->
         handle_no_selection(socket)
-
-      %{"s" => selected_id, "m" => mode} ->
-        handle_selection_with_mode(socket, selected_id, mode)
     end
-  end
-
-  defp handle_settings_mode(socket) do
-    socket |> unselect_all() |> set_mode("settings")
-  end
-
-  defp handle_code_mode(socket) do
-    socket
-    |> unselect_all()
-    |> set_mode("code")
-    |> assign(publish_template: false)
-  end
-
-  defp handle_method_assignment(socket, method) do
-    socket |> unselect_all() |> assign(method: method)
-  end
-
-  defp handle_no_selection(socket) do
-    socket |> unselect_all() |> set_mode(nil)
   end
 
   defp handle_selection_with_mode(socket, nil, mode) do
@@ -2934,11 +3078,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> set_selected_node(type, selected)
         |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
 
-      # |> assign(method: nil)
-
       nil ->
         socket |> unselect_all()
     end
+  end
+
+  defp handle_settings_mode(socket) do
+    socket |> unselect_all() |> set_mode("settings")
+  end
+
+  defp handle_code_mode(socket) do
+    socket
+    |> unselect_all()
+    |> set_mode("code")
+    |> assign(publish_template: false)
+  end
+
+  defp handle_no_selection(socket) do
+    socket |> unselect_all() |> set_mode(nil)
   end
 
   defp handle_new_workflow_panel(socket) do
@@ -3048,18 +3205,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
         _ -> nil
       end
 
-    url =
-      Helpers.build_url(
-        socket.assigns,
-        query_params: %{
-          "a" => run.id,
-          "v" => if(workflow.lock_version != version, do: version)
-        },
-        mode: mode,
-        selection: selection
-      )
+    params = [
+      Helpers.param("a", run.id),
+      Helpers.param("v", version,
+        when: fn _, _ -> workflow.lock_version != version end
+      ),
+      Helpers.param("m", mode, when: fn _, _ -> mode != nil end),
+      Helpers.param("s", selection, when: fn _, _ -> selection != nil end),
+      Helpers.param("w-chat", fn a, _ -> a.workflow_chat_session_id end),
+      Helpers.param("j-chat", fn a, _ -> a.job_chat_session_id end),
+      Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+    ]
 
-    push_patch(socket, to: url)
+    push_patch(socket, to: Helpers.build_url(socket.assigns, params))
   end
 
   defp assign_follow_run(socket, %{"a" => run_id}) when is_binary(run_id) do
@@ -3090,17 +3248,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp run_workflow_button(assigns) do
+    params = [
+      Helpers.param("s", assigns.trigger_id),
+      Helpers.param("m", "workflow_input"),
+      Helpers.param("a", fn a, _ -> a.query_params["a"] end),
+      Helpers.param("v", fn a, _ -> a.query_params["v"] end),
+      Helpers.param("w-chat", fn a, _ -> a.workflow_chat_session_id end),
+      Helpers.param("j-chat", fn a, _ -> a.job_chat_session_id end),
+      Helpers.param("method", fn a, _ -> a.query_params["method"] end)
+    ]
+
+    url = Helpers.build_url(assigns, params)
+    assigns = assign(assigns, :url, url)
+
     ~H"""
-    <.button_link
-      patch={
-        Helpers.build_url(assigns,
-          selection: assigns.trigger_id,
-          mode: "workflow_input"
-        )
-      }
-      type="button"
-      theme="primary"
-    >
+    <.button_link patch={@url} type="button" theme="primary">
       Run
     </.button_link>
     """
@@ -3201,15 +3363,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
   end
 
-  defp assign_chat_session_id(socket, %{"chat" => session_id})
-       when is_binary(session_id) do
+  defp assign_chat_session_id(socket, params) do
     socket
-    |> assign(chat_session_id: session_id)
-  end
-
-  defp assign_chat_session_id(socket, _params) do
-    socket
-    |> assign(chat_session_id: nil)
+    |> assign(
+      workflow_chat_session_id: params["w-chat"],
+      job_chat_session_id: params["j-chat"]
+    )
   end
 
   defp assign_show_workflow_ai_chat(socket) do
@@ -3239,18 +3398,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
      )}
   end
 
-  defp handle_close_ai_chat(socket) do
-    socket = assign(socket, show_workflow_ai_chat: false)
-    query_params = Map.delete(socket.assigns.query_params, "method")
-
-    {:noreply,
-     socket
-     |> sync_ai_assistant_visibility()
-     |> push_patch(
-       to: Helpers.build_url(socket.assigns, query_params: query_params)
-     )}
-  end
-
   defp handle_workflow_params_change(socket, %{"workflow" => incoming_params}) do
     create_action? = socket.assigns.live_action == :new
 
@@ -3261,60 +3408,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_event("force-fit", %{})}
   end
 
-  defp handle_workflow_save_request(socket, %{query_params: query_params}) do
-    case save_workflow(socket, socket.assigns.workflow_params) do
-      {:ok,
-       %{
-         assigns: %{
-           live_action: live_action,
-           workflow: workflow,
-           project: project
-         }
-       } = updated_socket} ->
-        flash_msg =
-          "Workflow saved successfully." <>
-            if live_action == :new and
-                 not Helpers.workflow_enabled?(workflow) do
-              " Remember to enable your workflow to run it automatically."
-            else
-              ""
-            end
+  defp link_workflow_to_ai_session(%{
+         live_action: :new,
+         query_params: %{"method" => "ai", "w-chat" => chat_id},
+         workflow: workflow
+       })
+       when is_binary(chat_id) do
+    case Lightning.AiAssistant.get_session(chat_id) do
+      {:ok, session} ->
+        Lightning.AiAssistant.associate_workflow(session, workflow)
 
-        with %{chat: chat_id} when is_binary(chat_id) <- query_params,
-             {:error, reason} <- assoc_workflow_chat_session(chat_id, workflow) do
-          Logger.warning(
-            "Failed to update chat session #{chat_id}: #{inspect(reason)}"
-          )
-        end
-
-        {:noreply,
-         updated_socket
-         |> assign(:selected_template, nil)
-         |> update(:show_new_workflow_panel, &(!&1))
-         |> update(:show_workflow_ai_chat, &(&1 || true))
-         |> maybe_disable_canvas()
-         |> put_flash(:info, flash_msg)
-         |> push_patch(
-           to:
-             updated_socket.assigns
-             |> update(:base_url, fn _url ->
-               ~p"/projects/#{project}/w/#{workflow}"
-             end)
-             |> Helpers.build_url(query_params: query_params)
-         )
-         |> sync_ai_assistant_visibility()
-         |> push_event("force-fit", %{})}
-
-      _ ->
-        {:noreply, socket}
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to associate workflow with chat session #{chat_id}: #{inspect(reason)}"
+        )
     end
   end
 
-  defp assoc_workflow_chat_session(chat_id, workflow) do
-    with {:ok, session} <- Lightning.AiAssistant.get_session(chat_id) do
-      Lightning.AiAssistant.associate_workflow(session, workflow)
-    end
-  end
+  defp link_workflow_to_ai_session(_assigns), do: :ok
 
   defp sync_to_github(socket, %{
          "github_sync" => %{"commit_message" => commit_message}

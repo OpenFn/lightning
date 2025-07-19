@@ -42,24 +42,6 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   def update(
-        %{action: action, current_user: current_user, mode: mode} = assigns,
-        socket
-      ) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(
-       has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
-     )
-     |> assign(:handler, ModeRegistry.get_handler(mode))
-     |> assign_new(:changeset, fn %{handler: handler} ->
-       handler.validate_form_changeset(%{"content" => nil})
-     end)
-     |> maybe_check_limit()
-     |> apply_action(action, mode)}
-  end
-
-  def update(
         %{
           action: :workflow_parse_error,
           error_details: error_details,
@@ -80,6 +62,24 @@ defmodule LightningWeb.AiAssistant.Component do
      assign(socket,
        workflow_error: %{message: message, error: error_details}
      )}
+  end
+
+  def update(
+        %{action: action, current_user: current_user, mode: mode} = assigns,
+        socket
+      ) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(
+       has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
+     )
+     |> assign(:handler, ModeRegistry.get_handler(mode))
+     |> assign_new(:changeset, fn %{handler: handler} ->
+       handler.validate_form_changeset(%{"content" => nil})
+     end)
+     |> maybe_check_limit()
+     |> apply_action(action)}
   end
 
   def render(assigns) do
@@ -171,7 +171,7 @@ defmodule LightningWeb.AiAssistant.Component do
     socket =
       socket
       |> assign(:sort_direction, new_direction)
-      |> apply_action(:new, socket.assigns.mode)
+      |> apply_action(:new)
 
     {:noreply, socket}
   end
@@ -221,7 +221,7 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   def handle_event("retry_load_sessions", _params, socket) do
-    {:noreply, apply_action(socket, :new, socket.assigns.mode)}
+    {:noreply, apply_action(socket, :new)}
   end
 
   def handle_event("load_more_sessions", _params, socket) do
@@ -267,7 +267,7 @@ defmodule LightningWeb.AiAssistant.Component do
   def handle_async(:process_message, {:exit, error}, socket),
     do: handle_failed_async({:exit, error}, socket)
 
-  defp apply_action(socket, :new, _mode) do
+  defp apply_action(socket, :new) do
     %{assigns: %{sort_direction: sort_direction, handler: handler} = assigns} =
       socket
 
@@ -302,7 +302,7 @@ defmodule LightningWeb.AiAssistant.Component do
     end)
   end
 
-  defp apply_action(socket, :show, _mode) do
+  defp apply_action(socket, :show) do
     session =
       socket.assigns.handler.get_session!(socket.assigns)
 
@@ -330,7 +330,10 @@ defmodule LightningWeb.AiAssistant.Component do
   defp save_message(socket, :new, content) do
     case socket.assigns.handler.create_session(socket.assigns, content) do
       {:ok, session} ->
-        query_params = Map.put(socket.assigns.query_params, "chat", session.id)
+        chat_param = get_chat_param_for_mode(socket.assigns.mode)
+
+        query_params =
+          Map.put(socket.assigns.query_params, chat_param, session.id)
 
         socket
         |> assign(:session, session)
@@ -442,6 +445,14 @@ defmodule LightningWeb.AiAssistant.Component do
     end
   end
 
+  defp get_chat_param_for_mode(mode) do
+    case mode do
+      :workflow -> "w-chat"
+      :job -> "j-chat"
+      _ -> "chat"
+    end
+  end
+
   defp render_ai_not_configured(assigns) do
     ~H"""
     <div class="flex flex-col items-center justify-center h-full">
@@ -496,6 +507,7 @@ defmodule LightningWeb.AiAssistant.Component do
             sort_direction={@sort_direction}
             pagination_meta={@pagination_meta}
             target={@myself}
+            mode={@mode}
           />
         <% :show -> %>
           <.render_individual_session
@@ -506,6 +518,7 @@ defmodule LightningWeb.AiAssistant.Component do
             target={@myself}
             handler={@handler}
             workflow_error={@workflow_error}
+            mode={@mode}
           />
       <% end %>
 
@@ -661,8 +674,12 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :sort_direction, :atom, required: true
   attr :pagination_meta, :any, default: nil
   attr :target, :string, required: true
+  attr :mode, :atom, required: true
 
   defp render_all_sessions(assigns) do
+    chat_param = get_chat_param_for_mode(assigns.mode)
+    assigns = assign(assigns, :chat_param, chat_param)
+
     ~H"""
     <div class="row-span-full px-4 py-4 mb-2 overflow-y-auto">
       <.async_result :let={all_sessions} assign={@all_sessions}>
@@ -744,7 +761,10 @@ defmodule LightningWeb.AiAssistant.Component do
               <.link
                 id={"session-#{session.id}"}
                 patch={
-                  redirect_url(@base_url, Map.put(@query_params, "chat", session.id))
+                  redirect_url(
+                    @base_url,
+                    Map.put(@query_params, @chat_param, session.id)
+                  )
                 }
                 class="group bg-white block p-3 pb-1 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
                 role="listitem"
@@ -1146,9 +1166,12 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :target, :any, required: true
   attr :handler, :any, required: true
   attr :workflow_error, :any, required: true
+  attr :mode, :atom, required: true
 
   defp render_individual_session(assigns) do
     assigns = assign(assigns, ai_feedback: ai_feedback())
+    chat_param = get_chat_param_for_mode(assigns.mode)
+    assigns = assign(assigns, :chat_param, chat_param)
 
     ~H"""
     <div class="row-span-full flex flex-col bg-gray-50">
@@ -1174,7 +1197,7 @@ defmodule LightningWeb.AiAssistant.Component do
         <div class="flex items-center gap-2">
           <.link
             id="close-chat-session-btn"
-            patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}
+            patch={redirect_url(@base_url, Map.put(@query_params, @chat_param, nil))}
             class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
             phx-hook="Tooltip"
             aria-label="Click to close the current chat session"

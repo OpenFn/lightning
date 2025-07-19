@@ -46,11 +46,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   end
 
   @impl true
-  def handle_event("close-ai-chat", _params, socket) do
-    notify_parent(:close_ai_chat, %{})
-    {:noreply, socket}
-  end
-
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
     if Lightning.Workflows.Comparison.equivalent?(
          socket.assigns.workflow_params,
@@ -149,8 +144,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
       >
         <button
           type="button"
-          phx-click="close-ai-chat"
-          phx-target={@myself}
+          phx-click="toggle-workflow-ai-chat"
           class="rounded-md text-gray-500 hover:text-gray-700 transition-colors duration-200"
         >
           <span class="sr-only">Close panel</span>
@@ -168,8 +162,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
             workflow={@workflow}
             current_user={@current_user}
             chat_session_id={@chat_session_id}
-            workflow_code={@workflow_code |> dbg}
-            query_params={%{"method" => "ai"}}
+            workflow_code={@workflow_code}
+            query_params={@query_params}
             base_url={@base_url}
             action={if(@chat_session_id, do: :show, else: :new)}
             parent_id={@id}

@@ -137,77 +137,211 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   @doc """
-  Builds a URL with the given mode while preserving AI chat state and other params.
-  """
-  def build_url(assigns, opts \\ []) do
-    base_params = build_base_params(assigns, opts)
-    query_params = Keyword.get(opts, :query_params, %{})
+  Builds a URL with query parameters based on parameter definitions.
 
-    all_params =
-      base_params
-      |> Map.merge(query_params)
-      |> add_ai_chat_params(assigns)
-      |> clean_query_params(snapshot_version_tag: assigns[:snapshot_version_tag])
+  ## Parameters
+
+    * `assigns` - The assigns from the LiveView
+    * `params` - List of parameter definitions. Each definition is a keyword list with:
+      * `:name` - The parameter name in the URL (required)
+      * `:value` - The value or a function that receives (assigns, params) (required)
+      * `:when` - Condition as boolean or function that receives (assigns, params) (default: true)
+      * `:transform` - Optional transformation function applied to the value
+
+  ## Examples
+
+      # Simple static parameters
+      build_url(assigns, [
+        [name: "m", value: "edit"],
+        [name: "s", value: "job_1"]
+      ])
+
+      # Dynamic values from assigns
+      build_url(assigns, [
+        [name: "a", value: fn a, _ -> a.selected_run end],
+        [name: "chat", value: fn a, _ -> a.chat_session_id end]
+      ])
+
+      # Conditional parameters
+      build_url(assigns, [
+        [name: "v",
+         value: fn a, _ -> Ecto.Changeset.get_field(a.changeset, :lock_version) end,
+         when: fn a, _ -> a.snapshot_version_tag != "latest" end]
+      ])
+
+      # With transformations
+      build_url(assigns, [
+        [name: "ts",
+         value: fn _, _ -> DateTime.utc_now() end,
+         transform: &DateTime.to_unix/1]
+      ])
+
+      # Complex example with all features
+      build_url(assigns, [
+        [name: "m", value: "edit"],
+        [name: "s", value: fn _, params -> params["node_id"] end],
+        [name: "method", value: "ai", when: fn a, _ -> a.show_workflow_ai_chat end],
+        [name: "chat",
+         value: fn a, _ -> a.chat_session_id end,
+         when: fn a, _ -> a.show_workflow_ai_chat end],
+        [name: "v",
+         value: fn a, _ -> Ecto.Changeset.get_field(a.changeset, :lock_version) end,
+         when: fn a, _ -> a.snapshot_version_tag != "latest" end,
+         transform: &to_string/1]
+      ])
+  """
+  def build_url(assigns, params) when is_list(params) do
+    query_string =
+      params
+      |> Enum.reduce(%{}, fn param_def, acc ->
+        process_param(param_def, assigns, params, acc)
+      end)
+      |> remove_nil_values()
       |> URI.encode_query()
 
-    if byte_size(all_params) > 0 do
-      "#{assigns.base_url}?#{all_params}"
+    if byte_size(query_string) > 0 do
+      "#{assigns.base_url}?#{query_string}"
     else
       assigns.base_url
     end
   end
 
-  def clean_query_params(params, opts \\ []) do
-    drop_version = Keyword.get(opts, :drop_version, false)
-    snapshot_version_tag = Keyword.get(opts, :snapshot_version_tag, "latest")
+  defp process_param(param_def, assigns, all_params, acc) do
+    name = Keyword.fetch!(param_def, :name)
 
+    if should_include?(param_def, assigns, all_params) do
+      value =
+        param_def
+        |> Keyword.fetch!(:value)
+        |> resolve_value(assigns, all_params)
+        |> apply_transform(param_def)
+
+      Map.put(acc, name, value)
+    else
+      acc
+    end
+  end
+
+  defp should_include?(param_def, assigns, all_params) do
+    case Keyword.get(param_def, :when, true) do
+      true -> true
+      false -> false
+      func when is_function(func, 2) -> func.(assigns, all_params)
+      func when is_function(func, 1) -> func.(assigns)
+      func when is_function(func, 0) -> func.()
+    end
+  end
+
+  defp resolve_value(value, assigns, all_params) do
+    case value do
+      func when is_function(func, 2) -> func.(assigns, all_params)
+      func when is_function(func, 1) -> func.(assigns)
+      func when is_function(func, 0) -> func.()
+      value -> value
+    end
+  end
+
+  defp apply_transform(value, param_def) do
+    case Keyword.get(param_def, :transform) do
+      nil -> value
+      transformer -> transformer.(value)
+    end
+  end
+
+  defp remove_nil_values(params) do
     params
-    |> Map.reject(fn {k, v} ->
-      is_nil(v) or (k == "v" and snapshot_version_tag == "latest")
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> Map.new()
+  end
+
+  @doc """
+  Common parameter definitions for workflows.
+
+  These can be used as a starting point and modified as needed:
+
+      params = workflow_params() ++ [
+        [name: "custom", value: "value"]
+      ]
+
+      build_url(assigns, params)
+  """
+  def workflow_params do
+    [
+      [name: "m", value: fn _, params -> params[:mode] end],
+      [name: "s", value: fn _, params -> params[:selection] end],
+      [
+        name: "a",
+        value: fn a, _ -> a.selected_run end,
+        when: fn a, params -> params[:include_run] && a.selected_run end
+      ],
+      [
+        name: "v",
+        value: fn a, _ ->
+          Ecto.Changeset.get_field(a.changeset, :lock_version)
+        end,
+        when: fn a, params ->
+          params[:include_version] && a.snapshot_version_tag != "latest"
+        end
+      ],
+      [
+        name: "method",
+        value: "ai",
+        when: fn a, _ -> a.show_workflow_ai_chat end
+      ],
+      [
+        name: "chat",
+        value: fn a, _ -> a.chat_session_id end,
+        when: fn a, _ -> a.show_workflow_ai_chat end
+      ]
+    ]
+  end
+
+  @doc """
+  Creates a parameter definition with common defaults.
+
+  ## Examples
+
+      param("m", "edit")
+      param("s", fn a, _ -> a.selected_job.id end)
+      param("v", fn a, _ -> a.version end, when: fn a, _ -> a.version != nil end)
+  """
+  def param(name, value, opts \\ []) do
+    [name: name, value: value] ++ opts
+  end
+
+  @doc """
+  Cleans query parameters, removing nil values and optionally specific parameters.
+
+  ## Options
+
+    * `:drop` - List of parameter names to remove
+    * `:keep_if` - Function that receives {name, value} and returns boolean
+
+  ## Examples
+
+      clean_query_params(%{"v" => "1", "chat" => nil})
+      #=> %{"v" => "1"}
+
+      clean_query_params(%{"v" => "1", "m" => "edit"}, drop: ["v"])
+      #=> %{"m" => "edit"}
+
+      clean_query_params(params, keep_if: fn {k, _} -> k != "v" end)
+  """
+  def clean_query_params(params, opts \\ []) do
+    params
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> then(fn params ->
+      case Keyword.get(opts, :drop) do
+        nil -> params
+        drop_list -> Enum.reject(params, fn {k, _} -> k in drop_list end)
+      end
     end)
     |> then(fn params ->
-      if drop_version, do: Map.drop(params, ["v"]), else: params
+      case Keyword.get(opts, :keep_if) do
+        nil -> params
+        keep_func -> Enum.filter(params, keep_func)
+      end
     end)
-  end
-
-  defp build_base_params(assigns, opts) do
-    params = %{}
-
-    params = if mode = opts[:mode], do: Map.put(params, "m", mode), else: params
-
-    params =
-      if selection = opts[:selection],
-        do: Map.put(params, "s", selection),
-        else: params
-
-    params =
-      if opts[:include_run] && assigns[:selected_run] do
-        Map.put(params, "a", assigns.selected_run)
-      else
-        params
-      end
-
-    params =
-      if opts[:include_version] && assigns[:snapshot_version_tag] != "latest" do
-        Map.put(
-          params,
-          "v",
-          Ecto.Changeset.get_field(assigns[:changeset], :lock_version)
-        )
-      else
-        params
-      end
-
-    params
-  end
-
-  defp add_ai_chat_params(params, assigns) do
-    if assigns[:show_workflow_ai_chat] do
-      params
-      |> Map.put("method", "ai")
-      |> Map.put("chat", assigns[:chat_session_id])
-    else
-      params
-    end
+    |> Map.new()
   end
 end
