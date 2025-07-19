@@ -2693,7 +2693,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     mode_and_selection_params =
       case action do
         :unselect ->
-          IO.puts(">>> Action is :unselect - clearing everything")
           []
 
         :select

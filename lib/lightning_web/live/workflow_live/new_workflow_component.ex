@@ -9,12 +9,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   """
   use LightningWeb, :live_component
 
-  alias Phoenix.LiveView.JS
   alias Lightning.Projects
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkflowTemplates
   alias LightningWeb.API.ProvisioningJSON
   alias LightningWeb.Live.AiAssistant.ModeRegistry
+  alias Phoenix.LiveView.JS
 
   require Logger
 
