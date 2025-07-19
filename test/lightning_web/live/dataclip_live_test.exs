@@ -19,7 +19,7 @@ defmodule LightningWeb.DataclipLiveTest do
       dataclip: dataclip,
       project: project_scoped
     } do
-      {:ok, view, html} =
+      {:ok, _view, html} =
         live(
           conn,
           Routes.project_dataclip_show_path(
@@ -62,7 +62,7 @@ defmodule LightningWeb.DataclipLiveTest do
       dataclip: dataclip,
       project: project_scoped
     } do
-      {:ok, view, html} =
+      {:ok, _view, html} =
         live(
           conn,
           Routes.project_dataclip_show_path(
