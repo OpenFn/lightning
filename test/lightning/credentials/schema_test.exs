@@ -168,6 +168,209 @@ defmodule Lightning.Credentials.SchemaTest do
                field == "apiVersion"
              end)
     end
+
+    test "accepts valid JSON object string for object type fields" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "config" => %{"type" => "object"}
+          }
+        })
+
+      changeset =
+        %Ecto.Changeset{
+          data: %{},
+          types: %{config: :map},
+          valid?: true
+        }
+        |> Ecto.Changeset.put_change(
+          :config,
+          ~s({"key": "value", "nested": {"foo": "bar"}})
+        )
+
+      validated = Schema.validate(changeset, schema)
+
+      assert validated.valid?
+      assert validated.errors == []
+    end
+
+    test "adds error for malformed JSON when object type expected" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "settings" => %{"type" => "object"}
+          }
+        })
+
+      changeset =
+        %Ecto.Changeset{
+          data: %{},
+          types: %{settings: :map}
+        }
+        |> Ecto.Changeset.put_change(:settings, "not valid json{")
+
+      validated = Schema.validate(changeset, schema)
+
+      refute validated.valid?
+      assert {:settings, {"invalid JSON", []}} in validated.errors
+    end
+
+    test "adds error when JSON array provided for object type field" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "data" => %{"type" => "object"}
+          }
+        })
+
+      changeset =
+        %Ecto.Changeset{
+          data: %{},
+          types: %{data: :map}
+        }
+        |> Ecto.Changeset.put_change(:data, ~s([1, 2, 3]))
+
+      validated = Schema.validate(changeset, schema)
+
+      refute validated.valid?
+      assert {:data, {"invalid JSON", []}} in validated.errors
+    end
+
+    test "handles various JSON edge cases for object type validation" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "config" => %{"type" => "object"}
+          }
+        })
+
+      changeset_null =
+        %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
+        |> Ecto.Changeset.put_change(:config, "null")
+
+      validated_null = Schema.validate(changeset_null, schema)
+      assert {:config, {"invalid JSON", []}} in validated_null.errors
+
+      changeset_string =
+        %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
+        |> Ecto.Changeset.put_change(:config, ~s("just a string"))
+
+      validated_string = Schema.validate(changeset_string, schema)
+      assert {:config, {"invalid JSON", []}} in validated_string.errors
+
+      changeset_number =
+        %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
+        |> Ecto.Changeset.put_change(:config, "123")
+
+      validated_number = Schema.validate(changeset_number, schema)
+      assert {:config, {"invalid JSON", []}} in validated_number.errors
+
+      changeset_bool =
+        %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
+        |> Ecto.Changeset.put_change(:config, "true")
+
+      validated_bool = Schema.validate(changeset_bool, schema)
+      assert {:config, {"invalid JSON", []}} in validated_bool.errors
+
+      changeset_empty =
+        %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
+        |> Ecto.Changeset.put_change(:config, "{}")
+
+      validated_empty = Schema.validate(changeset_empty, schema)
+      assert validated_empty.valid?
+      assert validated_empty.errors == []
+    end
+
+    test "handles non-string values for object type fields" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "config" => %{"type" => "object"}
+          }
+        })
+
+      changeset =
+        %Ecto.Changeset{
+          data: %{},
+          types: %{config: :map}
+        }
+        |> Ecto.Changeset.put_change(:config, 123)
+
+      validated = Schema.validate(changeset, schema)
+
+      refute validated.valid?
+      assert {:config, {"must be an object", []}} in validated.errors
+    end
+
+    test "accepts valid JSON object string and continues without error" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "metadata" => %{"type" => "object"}
+          }
+        })
+
+      changeset =
+        %Ecto.Changeset{
+          data: %{},
+          types: %{metadata: :map},
+          valid?: true
+        }
+        |> Ecto.Changeset.put_change(
+          :metadata,
+          ~s({"valid": "json", "with": {"nested": "object"}})
+        )
+
+      validated = Schema.validate(changeset, schema)
+
+      assert validated.valid?
+      assert validated.errors == []
+    end
+
+    test "handles non-binary input to validate_json_object" do
+      schema =
+        Schema.new(%{
+          "properties" => %{
+            "settings" => %{"type" => "object"}
+          }
+        })
+
+      changeset_atom =
+        %Ecto.Changeset{
+          data: %{},
+          types: %{settings: :map},
+          valid?: true
+        }
+        |> Ecto.Changeset.put_change(:settings, :not_a_string)
+
+      validated = Schema.validate(changeset_atom, schema)
+      refute validated.valid?
+      assert {:settings, {"must be an object", []}} in validated.errors
+
+      changeset_nil = %Ecto.Changeset{
+        data: %{settings: nil},
+        changes: %{},
+        types: %{settings: :map},
+        valid?: true
+      }
+
+      validated_nil = Schema.validate(changeset_nil, schema)
+      refute validated_nil.valid?
+      assert {:settings, {"can't be blank", []}} in validated_nil.errors
+
+      changeset_map =
+        %Ecto.Changeset{
+          data: %{},
+          types: %{settings: :map},
+          valid?: true
+        }
+        |> Ecto.Changeset.put_change(:settings, %{already: "decoded"})
+
+      validated_map = Schema.validate(changeset_map, schema)
+
+      assert validated_map.valid?
+      assert validated_map.errors == []
+    end
   end
 
   describe "SchemaDocument.changeset/3" do
