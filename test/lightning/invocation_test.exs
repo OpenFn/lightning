@@ -446,6 +446,140 @@ defmodule Lightning.InvocationTest do
         )
       )
     end
+
+    test "filters dataclips by name prefix case-insensitively" do
+      project = insert(:project)
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow, project: project)
+
+      # Create dataclips with different names
+      named_dataclip =
+        insert(:dataclip,
+          name: "My Test Dataclip",
+          body: %{"foo" => "bar"},
+          type: :http_request,
+          project: project
+        )
+
+      other_named_dataclip =
+        insert(:dataclip,
+          name: "Another Dataclip",
+          body: %{"baz" => "qux"},
+          type: :http_request,
+          project: project
+        )
+
+      # Create dataclip without name
+      insert(:dataclip,
+        name: nil,
+        body: %{"without" => "name"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job1))
+
+      # Associate named dataclips with job
+      insert(:step, input_dataclip: named_dataclip, job: job1)
+      insert(:step, input_dataclip: other_named_dataclip, job: job1)
+
+      # Test case-insensitive search for "my"
+      assert_dataclips_list(
+        [named_dataclip],
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{name_part: "my"},
+          limit: 10
+        )
+      )
+
+      # Test case-insensitive search for "MY"
+      assert_dataclips_list(
+        [named_dataclip],
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{name_part: "MY"},
+          limit: 10
+        )
+      )
+
+      # Test partial match "anoth"
+      assert_dataclips_list(
+        [other_named_dataclip],
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{name_part: "anoth"},
+          limit: 10
+        )
+      )
+
+      # Test no matches
+      assert [] =
+               Invocation.list_dataclips_for_job(
+                 job1,
+                 %{name_part: "nonexistent"},
+                 limit: 10
+               )
+    end
+
+    test "filters dataclips to only named ones" do
+      project = insert(:project)
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow, project: project)
+
+      # Create named dataclips
+      named_dataclip1 =
+        insert(:dataclip,
+          name: "First Named",
+          body: %{"foo" => "bar"},
+          type: :http_request,
+          project: project
+        )
+
+      named_dataclip2 =
+        insert(:dataclip,
+          name: "Second Named",
+          body: %{"baz" => "qux"},
+          type: :http_request,
+          project: project
+        )
+
+      # Create dataclips without names
+      insert(:dataclip,
+        name: nil,
+        body: %{"without" => "name1"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job1))
+
+      insert(:dataclip,
+        name: nil,
+        body: %{"without" => "name2"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job1))
+
+      # Associate named dataclips with job
+      insert(:step, input_dataclip: named_dataclip1, job: job1)
+      insert(:step, input_dataclip: named_dataclip2, job: job1)
+
+      # Test named_only filter
+      results =
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{named_only: true},
+          limit: 10
+        )
+
+      assert length(results) == 2
+      assert_dataclips_list([named_dataclip2, named_dataclip1], results)
+
+      # Test without named_only filter - should return all dataclips
+      all_results =
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{},
+          limit: 10
+        )
+
+      assert length(all_results) == 4
+    end
   end
 
   describe "steps" do

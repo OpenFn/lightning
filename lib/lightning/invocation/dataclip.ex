@@ -40,6 +40,7 @@ defmodule Lightning.Invocation.Dataclip do
   @derive {Jason.Encoder,
            only: [
              :id,
+             :name,
              :body,
              :request,
              :type,
@@ -50,6 +51,7 @@ defmodule Lightning.Invocation.Dataclip do
            ]}
 
   schema "dataclips" do
+    field :name, :string
     field :body, :map, load_in_query: false
     field :request, :map, load_in_query: false
     field :type, Ecto.Enum, values: @source_types
@@ -88,7 +90,7 @@ defmodule Lightning.Invocation.Dataclip do
   @doc false
   def changeset(dataclip, attrs) do
     dataclip
-    |> cast(attrs, [:body, :type, :project_id])
+    |> cast(attrs, [:name, :body, :type, :project_id])
     |> case do
       %{action: :delete} = c ->
         c |> validate_required([:type]) |> Map.put(:action, :update)

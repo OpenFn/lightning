@@ -53,10 +53,12 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
            ),
          query: :string,
          id: Ecto.UUID,
-         id_prefix: :string
+         name_or_id_part: :string,
+         name_part: :string,
+         named_only: :boolean
        }},
       params,
-      [:before, :after, :type, :query]
+      [:before, :after, :type, :named_only, :query]
     )
     |> then(fn changeset ->
       query = Ecto.Changeset.get_field(changeset, :query)
@@ -68,17 +70,16 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
         Ecto.UUID.cast(query) != :error ->
           changeset
           |> Ecto.Changeset.put_change(:id, query)
-          |> Ecto.Changeset.delete_change(:query)
 
         match?({_num, ""}, Integer.parse(query, 16)) ->
           changeset
-          |> Ecto.Changeset.put_change(:id_prefix, query)
-          |> Ecto.Changeset.delete_change(:query)
+          |> Ecto.Changeset.put_change(:name_or_id_part, query)
 
         true ->
-          Ecto.Changeset.add_error(changeset, :query, "is invalid")
+          Ecto.Changeset.put_change(changeset, :name_part, query)
       end
     end)
+    |> Ecto.Changeset.delete_change(:query)
     |> Ecto.Changeset.apply_action(:validate)
   end
 end

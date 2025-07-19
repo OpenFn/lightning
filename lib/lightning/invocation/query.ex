@@ -114,6 +114,7 @@ defmodule Lightning.Invocation.Query do
   def wipe_dataclips(query \\ Dataclip) do
     from(d in query,
       where: d.type in [:http_request, :step_result, :saved_input],
+      where: is_nil(d.name),
       update: [
         set: [request: nil, body: nil, wiped_at: ^Lightning.current_time()]
       ]
