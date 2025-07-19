@@ -5,37 +5,6 @@ defmodule Lightning.AiAssistant.ChatSession do
   This module defines the schema and changeset for chat sessions, including
   relationships to users, jobs, projects, and workflows. It also includes custom
   validation logic to ensure that the correct fields are populated based on the session type.
-
-  ## Session Types
-
-  * `"job_code"` - Sessions focused on generating or modifying code for specific jobs
-  * `"workflow_template"` - Sessions for creating workflow templates within a project
-
-  ## Schema Fields
-
-  ### Core Fields
-  * `title` - Human-readable title for the session (required)
-  * `session_type` - Type of session, defaults to "job_code"
-  * `meta` - Additional metadata stored as a map
-  * `is_public` - Whether the session is publicly visible (defaults to false)
-  * `is_deleted` - Soft deletion flag (defaults to false)
-
-  ### Associations
-  * `user_id` - The user who owns this session (required)
-  * `job_id` - Associated job (required for "job_code" sessions)
-  * `project_id` - Associated project (required for "workflow_template" sessions)
-  * `workflow_id` - Associated workflow (optional)
-
-  ### Virtual Fields (Runtime Only)
-  * `expression` - Current job expression for context
-  * `adaptor` - Current job adaptor for context
-  * `message_count` - Number of messages in the session
-
-  ## Validation Rules
-
-  ### Session Type Requirements
-  * **job_code sessions**: Must have a `job_id`
-  * **workflow_template sessions**: Must have a `project_id`
   """
 
   use Lightning.Schema
@@ -88,58 +57,7 @@ defmodule Lightning.AiAssistant.ChatSession do
     timestamps()
   end
 
-  @doc """
-  Creates a changeset for a chat session.
-
-  ## Parameters
-
-  * `chat_session` - The ChatSession struct to update (typically `%ChatSession{}`)
-  * `attrs` - Map of attributes to set/update
-
-  ## Validation Rules
-
-  * `title` and `user_id` are required
-  * `session_type` must be one of: # {inspect(@valid_session_types)}
-  * **job_code sessions** require `job_id`
-  * **workflow_template sessions** require `project_id`
-  * Associated messages are cast and validated
-
-  ## Examples
-
-      # Valid job code session
-      ChatSession.changeset(%ChatSession{}, %{
-        title: "Fix data transformation",
-        session_type: "job_code",
-        user_id: user.id,
-        job_id: job.id
-      })
-
-      # Valid workflow template session
-      ChatSession.changeset(%ChatSession{}, %{
-        title: "Customer onboarding flow",
-        session_type: "workflow_template",
-        user_id: user.id,
-        project_id: project.id,
-        is_public: true
-      })
-
-      # With nested messages
-      ChatSession.changeset(%ChatSession{}, %{
-        title: "Debug session",
-        user_id: user.id,
-        job_id: job.id,
-        messages: [
-          %{content: "Help me fix this error", role: :user}
-        ]
-      })
-
-  ## Errors
-
-  Returns a changeset with errors if:
-  * Required fields are missing
-  * Invalid session_type is provided
-  * Session type requirements aren't met (e.g., job_code without job_id)
-  """
+  @doc false
   def changeset(chat_session, attrs) do
     chat_session
     |> cast(attrs, [
