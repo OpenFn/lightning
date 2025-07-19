@@ -99,6 +99,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             true -> "bg-white"
           end
         }
+        id={"toggle_details_for_#{@work_order.id}"}
         onclick={
           if @work_order.runs !== [] do
             JS.push("toggle_details", target: @myself)
