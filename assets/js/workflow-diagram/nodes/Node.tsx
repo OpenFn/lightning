@@ -1,9 +1,11 @@
-import React, { memo } from 'react';
+import React, { memo, type MouseEvent } from 'react';
 import { Handle, type NodeProps } from '@xyflow/react';
 
 import Shape from '../components/Shape';
 import ErrorMessage from '../components/ErrorMessage';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
+import type { RunStep } from '#/workflow-store/store';
+import formatDate from '../../utils/formatDate';
 
 type NodeData = any;
 
@@ -83,15 +85,41 @@ const Node = ({
   secondaryIcon,
 
   errors,
+  type
 }: BaseNodeProps) => {
+  const isTriggerNode = type === "trigger";
+  const runData = data?.runData as RunStep | undefined;
+  const isErrorRun = runData?.exit_reason !== "success";
+  // TODO: remember triggers
+  const didRun = data.isRun ? !!runData : true
+
+  const [tooltip, setTooltip] = React.useState({ visible: false, x: 0, y: 0, content: "" });
+  const wrapperRef = React.useRef(null);
+
+  const handleMouseMove = (e: MouseEvent) => {
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setTooltip({
+      visible: true,
+      x: e.clientX - (rect.left + 16),
+      y: e.clientY - (rect.top + 50),
+      content: isErrorRun ? runData?.error_type : "Successful run",
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltip({ ...tooltip, visible: false });
+  };
+
   const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
     selected,
-    hasErrors(errors)
+    hasErrors(errors),
+    runData?.exit_reason
   );
 
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
+
   return (
-    <div className="group" data-a-node>
+    <div className={`group ${didRun ? "opacity-100" : "opacity-30"}`} data-a-node>
       <div className="flex flex-row cursor-pointer">
         <div className="relative">
           {targetPosition && (
@@ -144,6 +172,7 @@ const Node = ({
               maxWidth: '110px',
               maxHeight: '110px',
               opacity: nodeOpacity,
+              overflow: "visible"
             }}
           >
             <Shape
@@ -154,6 +183,52 @@ const Node = ({
               styles={style}
             />
           </svg>
+          {runData && !isTriggerNode ? <div
+            className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}
+            ref={wrapperRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
+            {isErrorRun ?
+              <span className='hero-exclamation-circle w-3 h-3'></span> :
+              <span className='hero-check w-3 h-3'></span>
+            }
+          </div> : null}
+          {runData?.startNode ? <div
+            className={`absolute -top-2 flex gap-2 items-center`}
+            style={{
+              left: "calc(100% - 24px)"
+            }}
+          >
+            <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
+              <span className='hero-play-solid w-3 h-3'></span>
+            </div>
+          </div> : null}
+          {runData?.started_at ? <div
+            className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap`}
+            style={{
+              left: "calc(100% + 6px)"
+            }}
+          >
+            {formatDate(new Date(runData.started_at))}
+          </div> : null}
+          {tooltip.visible && (
+            <div
+              style={{
+                position: "absolute",
+                top: tooltip.y,
+                left: tooltip.x,
+                background: "#333",
+                color: "#fff",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                pointerEvents: "none",
+                fontSize: "12px",
+              }}
+            >
+              {tooltip.content}
+            </div>
+          )}
           {primaryIcon && (
             <div
               style={{
@@ -246,10 +321,9 @@ const Node = ({
             justifyContent: 'center',
           }}
           className={`flex flex-row items-center
-                    opacity-0  ${
-                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-                      ''
-                    }
+                    opacity-0  ${(!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+            ''
+            }
                     transition duration-150 ease-in-out`}
         >
           {toolbar()}
