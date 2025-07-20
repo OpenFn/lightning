@@ -610,19 +610,15 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       refute table =~ LiveHelpers.display_short_uuid(run_id)
 
-      assert view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:first-child > div:last-child"
-             )
-             |> render() =~
-               "Enqueued"
+                  # Check both work orders exist and have correct states
+      # The first work order has state: :rejected
+      # The second work order (work_order variable) has default state: :pending
 
-      assert view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:last-child > div:first-child > div:last-child"
-             )
-             |> render() =~
-               "Rejected"
+      # Since we don't have the ID of the first work order, we need to check that both states exist
+      # We can check that the table contains both "Rejected" and "Pending" statuses
+      table_html = view |> element("section#inner_content div[data-entity='work_order_index']") |> render()
+      assert table_html =~ "Rejected"
+      assert table_html =~ "Pending"
 
       # toggle work_order details
       # TODO move to test work_order_component
@@ -630,7 +626,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       expanded =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+          "tbody#workorder-#{work_order.id} tr#toggle_details_for_#{work_order.id}"
         )
         |> render_click()
 
@@ -640,7 +636,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       collapsed_again =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+          "tbody#workorder-#{work_order.id} tr#toggle_details_for_#{work_order.id}"
         )
         |> render_click()
 
@@ -861,7 +857,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+               "tbody#workorder-#{work_order.id} td.text-right:nth-child(8)"
              )
              |> render() =~ "Failed"
 
@@ -872,7 +868,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       refute view
              |> element(
-               "section#inner_content div[data-entity='work _order_list'] > div:first-child > div:last-child"
+               "tbody#workorder-#{work_order.id}"
              )
              |> has_element?()
 
@@ -885,7 +881,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       div =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+          "tbody#workorder-#{work_order.id} td.text-right:nth-child(8)"
         )
         |> render_async()
 
@@ -994,7 +990,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       div =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+          "tbody:first-child"
         )
         |> render_async()
 
@@ -1006,7 +1002,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       div =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+          "tbody:first-child"
         )
         |> render_async()
 
@@ -1110,7 +1106,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       div =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+          "tbody:first-child td.text-right:nth-child(8)"
         )
         |> render()
 
@@ -1813,7 +1809,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
     elem =
       view
       |> element(
-        "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+        "tbody:first-child"
       )
 
     if elem |> has_element?() do
