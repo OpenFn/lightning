@@ -134,7 +134,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                 %{
                   "body" => ["Code editor cannot be empty."],
                   "name" => ["Job name can't be blank."]
-                }
+                },
+                %{}
               ]
             }
           ]
@@ -149,13 +150,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
-      select_template(view, "base-webhook-template")
-
-      assert view |> push_patches_to_view(initial_workflow_patchset(project))
+      {view, parsed_template} = select_template(view, "base-webhook-template")
 
       workflow_name = view |> get_workflow_params() |> Map.get("name")
 
-      assert workflow_name == ""
+      assert workflow_name == parsed_template["name"]
 
       # save button is not present
       refute view
@@ -186,7 +185,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "form#choose-workflow-template-form")
 
       # click continue
-      view |> element("button#create_workflow_btn") |> render_click()
+      view |> render_click("save")
+
+      workflow = get_assigns(view) |> Map.get(:workflow)
 
       # now let's fill in the name
       workflow_name = "My Workflow"
@@ -212,7 +213,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # selecting a job now opens the panel
       {job, _, _} = select_first_job(view)
       path = assert_patch(view)
-      assert path == ~p"/projects/#{project.id}/w/new?s=#{job.id}&v=0"
+      assert path == ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}"
       assert render(view) =~ "Job Name"
       assert has_element?(view, "input[name='workflow[jobs][0][name]']")
 
@@ -515,12 +516,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new")
 
-      select_template(view, "base-cron-template")
+      {view, _parsed_workflow} = select_template(view, "base-cron-template")
 
-      assert view |> push_patches_to_view(initial_workflow_patchset(project))
-
-      # click continue
-      view |> element("button#create_workflow_btn") |> render_click()
+      view |> render_click("save")
 
       workflow_name = "My Workflow"
 
@@ -552,7 +550,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> change_editor_text("some body")
 
-      trigger_save(view)
+      view |> render_click("save")
 
       assert %{id: workflow_id} =
                Lightning.Repo.one(
@@ -564,13 +562,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       audit_query = from(a in Audit, where: a.event == "snapshot_created")
 
-      audit_event = Lightning.Repo.one(audit_query)
+      audit_events = Lightning.Repo.all(audit_query)
 
-      assert %{
-               actor_id: ^user_id,
-               item_id: ^workflow_id,
-               item_type: "workflow"
-             } = audit_event
+      # There should be 2 audit events - one for initial creation, one for save-and-sync
+      assert length(audit_events) == 2
+
+      Enum.each(audit_events, fn audit_event ->
+        assert %{
+                 actor_id: ^user_id,
+                 item_id: ^workflow_id,
+                 item_type: "workflow"
+               } = audit_event
+      end)
     end
 
     @tag role: :viewer
@@ -2498,12 +2501,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
-      select_template(view, "base-webhook-template")
+      {view, _parsed_workflow} = select_template(view, "base-webhook-template")
 
-      assert view |> push_patches_to_view(initial_workflow_patchset(project))
+      view |> render_click("save")
 
-      # click continue
-      view |> element("button#create_workflow_btn") |> render_click()
+      workflow = get_assigns(view) |> Map.get(:workflow)
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}"
+      )
 
       workflow_name = "My Workflow"
 

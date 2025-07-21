@@ -1121,7 +1121,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       ),
       Helpers.param(
         "v",
-        fn a, _ -> Ecto.Changeset.get_field(a.changeset, :lock_version) end,
+        fn a, _ -> a.snapshot_lock_version end,
         when: fn a, _ -> a.snapshot_version_tag != "latest" end
       ),
       Helpers.param("w-chat", fn a, _ -> a.query_params["w-chat"] end),
@@ -1888,44 +1888,36 @@ defmodule LightningWeb.WorkflowLive.Edit do
             ""
           end
 
-      updated_assigns =
+      updated_socket =
         if assigns.live_action == :new do
-          Map.put(
-            assigns,
-            :base_url,
-            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
-          )
+          base_url = ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+
+          socket
+          |> assign(:base_url, base_url)
+          |> assign(:live_action, :edit)
+          |> assign(:selected_template, nil)
+          |> update(:show_new_workflow_panel, fn _ -> false end)
+          |> maybe_disable_canvas()
+          |> then(fn s ->
+            if assigns.query_params["method"] == "ai" do
+              s
+              |> update(:show_workflow_ai_chat, fn _ -> true end)
+              |> sync_ai_assistant_visibility()
+            else
+              s
+            end
+          end)
+          |> push_event("force-fit", %{})
         else
-          assigns
+          socket
         end
 
+      patch_url = Helpers.build_url(updated_socket.assigns, url_params)
+
       {:noreply,
-       socket
+       updated_socket
        |> put_flash(:info, flash_msg)
-       |> then(fn s1 ->
-         if assigns.live_action == :new do
-           s1
-           |> assign(:selected_template, nil)
-           |> update(:show_new_workflow_panel, fn _ -> false end)
-           |> maybe_disable_canvas()
-           |> then(fn s2 ->
-             if assigns.query_params["method"] == "ai" do
-               s2
-               |> update(:show_workflow_ai_chat, fn _ -> true end)
-               |> sync_ai_assistant_visibility()
-             else
-               s2
-             end
-           end)
-           |> push_event("force-fit", %{})
-         else
-           s1
-         end
-       end)
-       |> push_patch(
-         to: Helpers.build_url(updated_assigns, url_params),
-         replace: true
-       )}
+       |> push_patch(to: patch_url, replace: true)}
     end
   end
 
@@ -1940,11 +1932,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Helpers.param("method", fn a, _ -> a.query_params["method"] end)
       ]
 
+      update_socket =
+        if assigns.live_action == :new do
+          base_url = ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+
+          socket
+          |> assign(:base_url, base_url)
+          |> assign(:live_action, :edit)
+        else
+          socket
+        end
+
       {:noreply,
-       socket
+       update_socket
        |> sync_to_github(params)
        |> push_patch(
-         to: Helpers.build_url(assigns, url_params),
+         to: Helpers.build_url(update_socket.assigns, url_params),
          replace: true
        )}
     end

@@ -1109,7 +1109,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
           on_error: :raise
         )
 
@@ -1200,7 +1200,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
           on_error: :raise
         )
 
@@ -1254,7 +1254,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: single_message_session.id]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": single_message_session.id]}",
           on_error: :raise
         )
 
@@ -1872,6 +1872,42 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       assert_push_event(view, "template_selected", %{template: template_code})
 
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_hook("template-parsed", %{
+        "workflow" => %{
+          "name" => "Salesforce Sync Workflow",
+          "jobs" => [
+            %{
+              "id" => job_id,
+              "name" => "Fetch Salesforce data",
+              "adaptor" => "@openfn/language-salesforce@latest",
+              "body" =>
+                "getRecords('Contact', {\n  fields: ['Id', 'Name', 'Email'],\n  limit: 100\n});"
+            }
+          ],
+          "triggers" => [
+            %{
+              "id" => trigger_id,
+              "type" => "webhook",
+              "enabled" => true
+            }
+          ],
+          "edges" => [
+            %{
+              "id" => Ecto.UUID.generate(),
+              "source_trigger_id" => trigger_id,
+              "target_job_id" => job_id,
+              "condition_type" => "always",
+              "enabled" => true
+            }
+          ]
+        }
+      })
+
       assert template_code == workflow_yaml
       assert template_code =~ "Salesforce Sync Workflow"
       assert template_code =~ "fetch-data"
@@ -1879,7 +1915,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert template_code =~ "getRecords"
       assert template_code =~ "webhook"
 
-      render(view)
+      render_async(view)
+
       create_btn_after = element(view, "#create_workflow_btn")
       create_btn_html_after = render(create_btn_after)
 
@@ -2098,7 +2135,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/new?method=ai&chat=#{session_with_title.id}"
+          ~p"/projects/#{project.id}/w/new?method=ai&w-chat=#{session_with_title.id}"
         )
 
       render_async(view)

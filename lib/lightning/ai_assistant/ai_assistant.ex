@@ -667,7 +667,7 @@ defmodule Lightning.AiAssistant do
       |> group_by([s, m], [s.id, s.title, s.updated_at, s.inserted_at])
       |> select([s, m], %{s | message_count: count(m.id)})
       |> order_by([s, m], [{^sort_direction, s.updated_at}])
-      |> preload([:user])
+      |> preload([:user, :project])
       |> limit(^limit)
       |> offset(^offset)
       |> Repo.all()

@@ -506,6 +506,7 @@ defmodule LightningWeb.AiAssistant.Component do
             base_url={@base_url}
             sort_direction={@sort_direction}
             pagination_meta={@pagination_meta}
+            handler={@handler}
             target={@myself}
             mode={@mode}
           />
@@ -675,6 +676,7 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :pagination_meta, :any, default: nil
   attr :target, :string, required: true
   attr :mode, :atom, required: true
+  attr :handler, :any, required: true
 
   defp render_all_sessions(assigns) do
     chat_param = get_chat_param_for_mode(assigns.mode)
@@ -777,7 +779,7 @@ defmodule LightningWeb.AiAssistant.Component do
                     </div>
                     <div class="min-w-0 flex-1">
                       <p class="text-sm font-medium text-gray-900 truncate group-hover:text-gray-700">
-                        {maybe_show_ellipsis(session.title)}
+                        {maybe_show_ellipsis(@handler.chat_title(session))}
                       </p>
                       <p class="text-xs text-gray-500 mt-1">
                         {format_session_preview(session)}
