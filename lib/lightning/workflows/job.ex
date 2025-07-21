@@ -118,34 +118,29 @@ defmodule Lightning.Workflows.Job do
 
   defp validate_keychain_credential_project_membership(changeset) do
     keychain_credential_id = get_field(changeset, :keychain_credential_id)
-    workflow = get_field(changeset, :workflow)
+    workflow_id = get_field(changeset, :workflow_id)
 
-    if keychain_credential_id && workflow do
-      project_id =
-        case workflow do
-          %{project: %{id: id}} -> id
-          %{project_id: id} -> id
-          _ -> nil
-        end
+    if keychain_credential_id && workflow_id do
+      case Lightning.Repo.get(Lightning.Workflows.Workflow, workflow_id) do
+        %{project_id: project_id} ->
+          case Lightning.Repo.get_by(
+                 Lightning.Credentials.KeychainCredential,
+                 id: keychain_credential_id,
+                 project_id: project_id
+               ) do
+            nil ->
+              add_error(
+                changeset,
+                :keychain_credential_id,
+                "must belong to the same project as the job"
+              )
 
-      if project_id do
-        case Lightning.Repo.get_by(
-               Lightning.Credentials.KeychainCredential,
-               id: keychain_credential_id,
-               project_id: project_id
-             ) do
-          nil ->
-            add_error(
-              changeset,
-              :keychain_credential_id,
-              "must belong to the same project as the job"
-            )
+            _ ->
+              changeset
+          end
 
-          _ ->
-            changeset
-        end
-      else
-        changeset
+        nil ->
+          changeset
       end
     else
       changeset

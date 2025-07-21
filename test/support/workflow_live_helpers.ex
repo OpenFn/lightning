@@ -355,10 +355,17 @@ defmodule Lightning.WorkflowLive.Helpers do
   def input_is_disabled?(view, %Job{} = job, field) do
     idx = get_index_of_job(view, job)
 
+    selector =
+      case field do
+        "project_credential_id" ->
+          "#job-pane-#{job.id} [name='credential_selector']"
+
+        _ ->
+          "#job-pane-#{job.id} [name='workflow[jobs][#{idx}][#{field}]']"
+      end
+
     view
-    |> input_is_disabled?(
-      "#job-pane-#{job.id} [name='workflow[jobs][#{idx}][#{field}]']"
-    )
+    |> input_is_disabled?(selector)
   end
 
   def input_is_disabled?(view, selector) do
@@ -421,9 +428,41 @@ defmodule Lightning.WorkflowLive.Helpers do
   end
 
   def selected_credential(view, job) do
-    view
-    |> element("#job-pane-#{job.id} select[id$=credential_id] option[selected]")
-    |> render()
+    # Check hidden field value since the JavaScript populates it
+    project_credential_value =
+      view
+      |> element("#job-pane-#{job.id} input[name='job[project_credential_id]']")
+      |> render()
+
+    keychain_credential_value =
+      view
+      |> element("#job-pane-#{job.id} input[name='job[keychain_credential_id]']")
+      |> render()
+
+    # Get the credential ID from the hidden field
+    credential_id =
+      cond do
+        project_credential_value =~ ~r/value="([^"]+)"/ ->
+          Regex.run(~r/value="([^"]+)"/, project_credential_value) |> List.last()
+
+        keychain_credential_value =~ ~r/value="([^"]+)"/ ->
+          Regex.run(~r/value="([^"]+)"/, keychain_credential_value)
+          |> List.last()
+
+        true ->
+          nil
+      end
+
+    if credential_id do
+      # Find the option with this value and return its text
+      view
+      |> element(
+        "#job-pane-#{job.id} select[name='credential_selector'] option[value='#{credential_id}']"
+      )
+      |> render()
+    else
+      ""
+    end
   end
 
   def job_panel_element(view, job) do

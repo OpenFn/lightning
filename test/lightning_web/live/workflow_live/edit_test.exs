@@ -15,6 +15,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Helpers
   alias Lightning.Repo
+
+  setup :stub_apollo_unavailable
   alias Lightning.Workflows
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Snapshot
@@ -88,11 +90,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute has_element?(view, "#credential-form")
 
       assert view
-             |> element(
-               ~S{[name='workflow[jobs][0][project_credential_id]'] option[selected="selected"]}
-             )
-             |> render() =~ "newly created credential",
-             "Should have the project credential selected"
+             |> has_element?(
+               ~S{select[name='credential_selector'] option},
+               "newly created credential"
+             ),
+             "Should have the project credential available"
     end
   end
 
@@ -806,9 +808,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         assert view |> has_element?("[id='adaptor-version'][disabled]")
 
         assert view
-               |> has_element?(
-                 "select[name='snapshot[jobs][#{idx}][project_credential_id]'][disabled]"
-               )
+               |> has_element?("select[name='credential_selector'][disabled]")
 
         view |> click_edit(job)
 
@@ -3632,5 +3632,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     dataclip
     |> Map.put(:body, body)
     |> Map.put(:request, nil)
+  end
+
+  defp stub_apollo_unavailable(_context) do
+    stub(Lightning.MockConfig, :apollo, fn key ->
+      case key do
+        :endpoint -> "http://localhost:3000"
+        :ai_assistant_api_key -> "test_api_key"
+      end
+    end)
+
+    stub(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
+      {:error, :econnrefused}
+    end)
+
+    :ok
   end
 end
