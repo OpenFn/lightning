@@ -200,7 +200,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </.td>
         <.td>
           <Common.datetime datetime={@work_order.last_activity} />
-
         </.td>
         <.td class="text-right">
           <LightningWeb.RunLive.Components.elapsed_indicator

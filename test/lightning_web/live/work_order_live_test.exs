@@ -610,13 +610,17 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       refute table =~ LiveHelpers.display_short_uuid(run_id)
 
-                  # Check both work orders exist and have correct states
+      # Check both work orders exist and have correct states
       # The first work order has state: :rejected
       # The second work order (work_order variable) has default state: :pending
 
       # Since we don't have the ID of the first work order, we need to check that both states exist
       # We can check that the table contains both "Rejected" and "Pending" statuses
-      table_html = view |> element("section#inner_content div[data-entity='work_order_index']") |> render()
+      table_html =
+        view
+        |> element("section#inner_content div[data-entity='work_order_index']")
+        |> render()
+
       assert table_html =~ "Rejected"
       assert table_html =~ "Pending"
 
@@ -867,9 +871,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       |> render_submit()
 
       refute view
-             |> element(
-               "tbody#workorder-#{work_order.id}"
-             )
+             |> element("tbody#workorder-#{work_order.id}")
              |> has_element?()
 
       # recheck failure
@@ -880,9 +882,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element(
-          "tbody#workorder-#{work_order.id} td.text-right:nth-child(8)"
-        )
+        |> element("tbody#workorder-#{work_order.id} td.text-right:nth-child(8)")
         |> render_async()
 
       assert div =~ "Failed"
@@ -989,9 +989,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element(
-          "tbody:first-child"
-        )
+        |> element("tbody:first-child")
         |> render_async()
 
       refute div =~ "workflow 1"
@@ -1001,9 +999,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element(
-          "tbody:first-child"
-        )
+        |> element("tbody:first-child")
         |> render_async()
 
       assert div =~ "workflow 1"
@@ -1105,9 +1101,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element(
-          "tbody:first-child td.text-right:nth-child(8)"
-        )
+        |> element("tbody:first-child td.text-right:nth-child(8)")
         |> render()
 
       assert div =~ "Failed"
@@ -1808,9 +1802,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   def workflow_displayed(view, name) do
     elem =
       view
-      |> element(
-        "tbody:first-child"
-      )
+      |> element("tbody:first-child")
 
     if elem |> has_element?() do
       elem |> render() =~ name

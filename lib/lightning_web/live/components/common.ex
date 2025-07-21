@@ -288,6 +288,7 @@ defmodule LightningWeb.Components.Common do
       phx-hook="Tooltip"
       aria-label={@tooltip}
       data-allow-html="true"
+      data-hide-on-click="false"
     >
       {render_slot(@inner_block)}
     </span>
@@ -300,8 +301,8 @@ defmodule LightningWeb.Components.Common do
   attr :show_tooltip, :boolean, default: true
 
   attr :format, :atom,
-    default: :standard,
-    values: [:standard, :relative, :detailed]
+    default: :relative,
+    values: [:relative, :detailed]
 
   @doc """
   Renders a datetime with click-to-copy functionality and optional hover tooltip.
@@ -320,7 +321,15 @@ defmodule LightningWeb.Components.Common do
   def datetime(assigns) do
     clean_timestamp =
       assigns.datetime &&
-        Calendar.strftime(assigns.datetime, "%Y-%m-%d %H:%M:%S UTC")
+        case assigns.datetime do
+          %DateTime{microsecond: {microseconds, _precision}}
+          when microseconds > 0 ->
+            Calendar.strftime(assigns.datetime, "%Y-%m-%d %H:%M:%S.%f UTC")
+            |> String.replace(~r/\.(\d{3})\d+/, ".\\1")
+
+          _ ->
+            Calendar.strftime(assigns.datetime, "%Y-%m-%d %H:%M:%S UTC")
+        end
 
     assigns =
       assigns
