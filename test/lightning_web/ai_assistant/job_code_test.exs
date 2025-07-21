@@ -135,22 +135,7 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
       assert meta.description ==
                "Get help with job code, debugging, and OpenFn adaptors"
 
-      assert meta.icon == "hero-cpu-chip"
-    end
-  end
-
-  describe "handle_response_generated/3" do
-    test "returns assigns unchanged (job mode doesn't generate templates)" do
-      assigns = %{some: "data"}
-      session = %{messages: []}
-
-      ui_callback = fn _event, _data ->
-        flunk("UI callback should not be called in job mode")
-      end
-
-      result = JobCode.handle_response_generated(assigns, session, ui_callback)
-
-      assert result == assigns
+      assert meta.icon == "hero-code-bracket"
     end
   end
 

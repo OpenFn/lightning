@@ -1892,22 +1892,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
         if assigns.live_action == :new do
           base_url = ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
 
-          socket
-          |> assign(:base_url, base_url)
-          |> assign(:live_action, :edit)
-          |> assign(:selected_template, nil)
-          |> update(:show_new_workflow_panel, fn _ -> false end)
-          |> maybe_disable_canvas()
-          |> then(fn s ->
+          base_socket =
+            socket
+            |> assign(:base_url, base_url)
+            |> assign(:live_action, :edit)
+            |> assign(:selected_template, nil)
+            |> update(:show_new_workflow_panel, fn _ -> false end)
+            |> maybe_disable_canvas()
+
+          final_socket =
             if assigns.query_params["method"] == "ai" do
-              s
+              base_socket
               |> update(:show_workflow_ai_chat, fn _ -> true end)
               |> sync_ai_assistant_visibility()
             else
-              s
+              base_socket
             end
-          end)
-          |> push_event("force-fit", %{})
+
+          push_event(final_socket, "force-fit", %{})
         else
           socket
         end
@@ -2375,9 +2377,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
            socket
            |> assign_changeset(changeset)
            |> mark_validated()
-           |> put_flash(:error, "Workflow could not be saved")
+           |> put_flash(:error, get_error_message(socket))
            |> push_patches_applied(initial_params)}
       end
+    end
+  end
+
+  defp get_error_message(socket) do
+    base_message = "Workflow could not be saved"
+
+    if socket.assigns.live_action == :new &&
+         socket.assigns.show_canvas_placeholder do
+      "#{base_message}. Please make sure you select a template, or import one, or use the AI assistant to build your workflow"
+    else
+      base_message
     end
   end
 
@@ -3382,22 +3395,33 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp update_canvas_state(socket, payload) do
+    show_canvas_placeholder =
+      Map.get(
+        payload,
+        :show_canvas_placeholder,
+        socket.assigns.show_canvas_placeholder
+      )
+
+    selected_template =
+      Map.get(
+        payload,
+        :show_template_tooltip,
+        socket.assigns.selected_template
+      )
+
     {:noreply,
      socket
      |> assign(
-       show_canvas_placeholder:
-         Map.get(
-           payload,
-           :show_canvas_placeholder,
-           socket.assigns.show_canvas_placeholder
-         ),
-       selected_template:
-         Map.get(
-           payload,
-           :show_template_tooltip,
-           socket.assigns.selected_template
-         )
-     )}
+       show_canvas_placeholder: show_canvas_placeholder,
+       selected_template: selected_template
+     )
+     |> then(fn socket ->
+       if show_canvas_placeholder do
+         assign(socket, :workflow_params, %{})
+       else
+         socket
+       end
+     end)}
   end
 
   defp handle_workflow_params_change(socket, %{"workflow" => incoming_params}) do

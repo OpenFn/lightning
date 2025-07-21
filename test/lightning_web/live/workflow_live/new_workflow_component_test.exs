@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.WorkflowLive.Helpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -546,9 +547,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      view
-      |> element("#choose-workflow-template-form")
-      |> render_change(%{"template_id" => "base-webhook-template"})
+      {view, _parsed_template} = select_template(view, "base-webhook-template")
 
       refute view
              |> element("#create_workflow_btn[disabled]")
@@ -569,11 +568,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       assert element(view, "#create_workflow_btn[disabled]") |> has_element?()
 
       view
-      |> with_target("#new-workflow-panel")
-      |> render_click("create_workflow", %{})
+      |> render_click("save", %{})
 
-      assert_patch(view, ~p"/projects/#{project.id}/w/new?method=template")
-      assert render(view) =~ "Please select a template to continue."
+      assert render(view) =~ "Workflow could not be saved"
     end
 
     test "create button disabled in import mode when validation fails", %{
@@ -593,9 +590,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       view
       |> with_target("#new-workflow-panel")
       |> render_click("create_workflow", %{})
-
-      assert render(view) =~
-               "Please fix the validation errors before creating the workflow."
     end
 
     test "create button disabled in AI mode when no template generated", %{
@@ -613,11 +607,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
              |> has_element?()
 
       view
-      |> with_target("#new-workflow-panel")
-      |> render_click("create_workflow", %{})
+      |> render_click("save")
 
       assert render(view) =~
-               "Please generate a workflow using the AI assistant first."
+               "Workflow could not be saved"
     end
   end
 end

@@ -48,11 +48,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         },
         socket
       ) do
-    notify_parent(:canvas_state_changed, %{
-      show_canvas_placeholder: is_nil(code),
-      show_template_tooltip: nil
-    })
-
     {:ok,
      socket
      |> assign(session_or_message: session_or_message)
@@ -75,6 +70,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   @impl true
   def handle_event("choose-another-method", %{"method" => method}, socket) do
+    socket =
+      assign(socket, changeset: Workflow.changeset(socket.assigns.workflow, %{}))
+
     case method do
       "ai" ->
         handle_ai_method_selection(socket)
@@ -83,24 +81,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         handle_regular_method_selection(socket, method)
     end
   end
-
-  # def handle_event("create_workflow", _, socket) do
-  #   if create_disabled?(socket.assigns) do
-  #     {:noreply,
-  #      socket
-  #      |> put_flash(:error, error_flash_message(socket.assigns))
-  #      |> push_patch(
-  #        to:
-  #          "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
-  #      )}
-  #   else
-  #     notify_parent(:save_workflow, %{
-  #       query_params: build_ai_query_params(socket.assigns)
-  #     })
-
-  #     {:noreply, socket |> JS.push("save")}
-  #   end
-  # end
 
   def handle_event("search-templates", %{"search" => search_term}, socket) do
     filtered_templates =
@@ -435,7 +415,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             type="button"
             theme="primary"
             class="inline-flex gap-x-1 px-4"
-            phx-click={JS.push("save")}
+            {if !create_disabled?(assigns), do: ["phx-click": JS.push("save")], else: []}
             phx-disconnected={JS.set_attribute({"disabled", ""})}
             phx-connected={
               !create_disabled?(assigns) && JS.remove_attribute("disabled")

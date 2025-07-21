@@ -402,10 +402,11 @@ defmodule Lightning.AiAssistantTest do
       assert session.adaptor ==
                Lightning.AdaptorRegistry.resolve_adaptor(job_1.adaptor)
 
-      assert match?(
-               [%{role: :user, content: "foo", user: ^user}],
-               session.messages
-             )
+      assert length(session.messages) == 1
+      message = hd(session.messages)
+      assert message.role == :user
+      assert message.content == "foo"
+      assert message.user.id == user.id
     end
 
     test "truncates long session titles", %{
@@ -567,8 +568,8 @@ defmodule Lightning.AiAssistantTest do
             content: "test",
             user: user
           },
-          %{},
-          new_meta
+          meta: new_meta,
+          usage: %{}
         )
 
       assert updated_session.meta == new_meta
@@ -588,8 +589,8 @@ defmodule Lightning.AiAssistantTest do
             content: "test",
             user: user
           },
-          %{},
-          nil
+          meta: nil,
+          usage: %{}
         )
 
       assert updated_session.meta == existing_meta
@@ -971,11 +972,20 @@ defmodule Lightning.AiAssistantTest do
   end
 
   describe "create_workflow_session/3" do
-    test "creates a new workflow session", %{user: user, project: project} do
+    test "creates a new workflow session", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
       content = "Create a workflow for data sync"
 
       assert {:ok, session} =
-               AiAssistant.create_workflow_session(project, user, content)
+               AiAssistant.create_workflow_session(
+                 project,
+                 workflow,
+                 user,
+                 content
+               )
 
       assert session.project_id == project.id
       assert session.user_id == user.id
@@ -986,37 +996,67 @@ defmodule Lightning.AiAssistantTest do
 
     test "generates a UUID for new workflow session", %{
       user: user,
-      project: project
+      project: project,
+      workflow: workflow
     } do
       assert {:ok, session} =
-               AiAssistant.create_workflow_session(project, user, "test")
+               AiAssistant.create_workflow_session(
+                 project,
+                 workflow,
+                 user,
+                 "test"
+               )
 
       assert is_binary(session.id)
       assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
     end
 
-    test "initializes meta as empty map", %{user: user, project: project} do
+    test "initializes meta as empty map", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
       assert {:ok, session} =
-               AiAssistant.create_workflow_session(project, user, "test")
+               AiAssistant.create_workflow_session(
+                 project,
+                 workflow,
+                 user,
+                 "test"
+               )
 
       assert session.meta == %{}
     end
 
-    test "creates title from content", %{user: user, project: project} do
+    test "creates title from content", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
       content = "Create a data processing workflow for customer data"
 
       assert {:ok, session} =
-               AiAssistant.create_workflow_session(project, user, content)
+               AiAssistant.create_workflow_session(
+                 project,
+                 workflow,
+                 user,
+                 content
+               )
 
       assert session.title == "Create a data processing workflow for"
     end
 
     test "creates initial user message with pending status", %{
       user: user,
-      project: project
+      project: project,
+      workflow: workflow
     } do
       assert {:ok, session} =
-               AiAssistant.create_workflow_session(project, user, "test message")
+               AiAssistant.create_workflow_session(
+                 project,
+                 workflow,
+                 user,
+                 "test message"
+               )
 
       [initial_message] = session.messages
       assert initial_message.status == :pending
@@ -1076,14 +1116,15 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       assert {:ok, updated_session} =
-               AiAssistant.query_workflow(session, "Create workflow", nil)
+               AiAssistant.query_workflow(session, "Create workflow")
 
       assert length(updated_session.messages) == 1
     end
 
     test "handles errors from workflow chat service", %{
       user: user,
-      project: project
+      project: project,
+      workflow: _workflow
     } do
       session =
         insert(:chat_session,
@@ -1108,12 +1149,13 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       assert {:error, "Invalid request"} =
-               AiAssistant.query_workflow(session, "Create workflow", nil)
+               AiAssistant.query_workflow(session, "Create workflow")
     end
 
     test "handles timeout errors in workflow query", %{
       user: user,
-      project: project
+      project: project,
+      workflow: _workflow
     } do
       session =
         insert(:chat_session,
@@ -1134,7 +1176,7 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       assert {:error, "Request timed out. Please try again."} =
-               AiAssistant.query_workflow(session, "Create workflow", nil)
+               AiAssistant.query_workflow(session, "Create workflow")
     end
 
     test "handles connection refused errors in workflow query", %{
@@ -1160,7 +1202,7 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       assert {:error, "Unable to reach the AI server. Please try again later."} =
-               AiAssistant.query_workflow(session, "Create workflow", nil)
+               AiAssistant.query_workflow(session, "Create workflow")
     end
 
     test "handles unexpected errors in workflow query", %{
@@ -1186,7 +1228,7 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       assert {:error, "Oops! Something went wrong. Please try again."} =
-               AiAssistant.query_workflow(session, "Create workflow", nil)
+               AiAssistant.query_workflow(session, "Create workflow")
     end
 
     test "updates pending user message status on success", %{
@@ -1228,7 +1270,7 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       {:ok, updated_session} =
-        AiAssistant.query_workflow(session, "Create workflow", nil)
+        AiAssistant.query_workflow(session, "Create workflow")
 
       user_message = Enum.find(updated_session.messages, &(&1.role == :user))
       assert user_message.status == :success
@@ -1265,7 +1307,7 @@ defmodule Lightning.AiAssistantTest do
         {:error, :timeout}
       end)
 
-      {:error, _} = AiAssistant.query_workflow(session, "Create workflow", nil)
+      {:error, _} = AiAssistant.query_workflow(session, "Create workflow")
 
       updated_session = AiAssistant.get_session!(session.id)
       user_message = Enum.find(updated_session.messages, &(&1.role == :user))
@@ -1307,7 +1349,9 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       {:ok, _} =
-        AiAssistant.query_workflow(session, "Fix the errors", validation_errors)
+        AiAssistant.query_workflow(session, "Fix the errors",
+          workflow_errors: validation_errors
+        )
     end
 
     test "includes latest workflow YAML in request", %{
@@ -1374,8 +1418,7 @@ defmodule Lightning.AiAssistantTest do
       {:ok, _} =
         AiAssistant.query_workflow(
           session_with_messages,
-          "Update the workflow",
-          nil
+          "Update the workflow"
         )
     end
   end

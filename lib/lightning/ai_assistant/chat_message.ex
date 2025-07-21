@@ -68,31 +68,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
   * User messages (role: `:user`) require an associated user
   * Status defaults based on role: `:pending` for users, `:success` for assistant
   * If status is explicitly provided, it takes precedence over role-based defaults
-
-  ## Examples
-
-      # Valid user message
-      ChatMessage.changeset(%ChatMessage{}, %{
-        content: "Hello AI",
-        role: :user,
-        user: %User{id: "123"},
-        chat_session_id: "session-456"
-      })
-
-      # Valid assistant message
-      ChatMessage.changeset(%ChatMessage{}, %{
-        content: "Hello! How can I help?",
-        role: :assistant,
-        chat_session_id: "session-456"
-      })
-
-      # With explicit status (overrides default)
-      ChatMessage.changeset(%ChatMessage{}, %{
-        content: "Processing...",
-        role: :assistant,
-        status: :pending,
-        chat_session_id: "session-456"
-      })
   """
   def changeset(chat_message, attrs) do
     chat_message
