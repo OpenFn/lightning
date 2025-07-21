@@ -11,6 +11,7 @@ defmodule Lightning.Runs.PromExPlugin do
 
   alias Lightning.Repo
   alias Lightning.Run
+  alias Lightning.Runs.PromExPlugin.ImpededProjectHelper
   alias Telemetry.Metrics
 
   @available_count_event [:lightning, :run, :queue, :available]
@@ -298,8 +299,9 @@ defmodule Lightning.Runs.PromExPlugin do
         DateTime.add(Lightning.current_time(), -unclaimed_threshold_seconds)
 
       count =
-        projects_with_available_runs_older_than(threshold_time)
-        |> projects_with_spare_capacity()
+        threshold_time
+        |> ImpededProjectHelper.workflows_with_available_runs_older_than()
+        |> ImpededProjectHelper.find_projects_with_unused_concurrency()
         |> Enum.count()
 
       :telemetry.execute(
@@ -308,38 +310,5 @@ defmodule Lightning.Runs.PromExPlugin do
         %{}
       )
     end
-  end
-
-  def projects_with_available_runs_older_than(threshold_time) do
-    query =
-      from r in Run,
-        join: w in assoc(r, :workflow),
-        join: p in assoc(w, :project),
-        where: r.state == :available,
-        where: r.inserted_at <= ^threshold_time,
-        select: [p.id, p.concurrency],
-        distinct: p.id
-
-    Repo.all(query)
-  end
-
-  def projects_with_spare_capacity(projects) do
-    projects
-    |> Enum.filter(fn [project_id, project_concurrency] ->
-      count_in_progress_runs_for(project_id) < project_concurrency
-    end)
-    |> Enum.map(fn [project_id, _project_concurrency] -> project_id end)
-  end
-
-  defp count_in_progress_runs_for(project_id) do
-    query =
-      from r in Run,
-        join: w in assoc(r, :workflow),
-        join: p in assoc(w, :project),
-        where: p.id == ^project_id,
-        where: r.state in [:claimed, :started],
-        select: count(r)
-
-    Repo.one(query)
   end
 end
