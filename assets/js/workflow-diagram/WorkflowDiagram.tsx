@@ -318,7 +318,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         });
       }, FIT_DURATION * 2);
 
-      const resizeOb = new ResizeObserver(function (entries) {
+      const resizeOb = new ResizeObserver(function(entries) {
         if (!isFirstCallback) {
           // Don't fit when the listener attaches (it callsback immediately)
           throttledResize();
@@ -455,7 +455,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         />
       </ReactFlow>
       <MiniHistory
-        collapsed={!runSteps.length}
+        collapsed={!runSteps.steps.length}
         history={someHistory}
         selectRunHandler={onRunChange}
       ></MiniHistory>
