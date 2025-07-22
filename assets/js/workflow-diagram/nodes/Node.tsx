@@ -181,7 +181,7 @@ const Node = ({
             style={{
               left: "calc(100% - 24px)"
             }}
-            data-tooltip={`Run by ${runData.startBy || "unknown"}`}
+            data-tooltip={`Started by ${runData.startBy || "unknown"}`}
             data-tooltip-placement="top"
           >
             <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
