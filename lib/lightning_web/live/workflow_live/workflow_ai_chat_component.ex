@@ -47,7 +47,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
 
   @impl true
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
-    if Lightning.Workflows.Comparison.equivalent?(
+    if Lightning.Workflows.ParamsComparator.equivalent?(
          socket.assigns.workflow_params,
          params
        ) do

@@ -1,4 +1,4 @@
-defmodule Lightning.Workflows.Comparison do
+defmodule Lightning.Workflows.ParamsComparator do
   @moduledoc """
   Functions for comparing workflow structures and detecting changes.
   This module provides functionality to compare workflows semantically (ignoring IDs and
@@ -37,22 +37,7 @@ defmodule Lightning.Workflows.Comparison do
     checksum(workflow1, opts) == checksum(workflow2, opts)
   end
 
-  @doc """
-  Performs an exact comparison where everything must match including IDs.
-  Equivalent to calling `equivalent?(workflow1, workflow2, mode: :exact)`
-  """
-  def exact_match?(workflow1, workflow2) do
-    equivalent?(workflow1, workflow2, mode: :exact)
-  end
-
-  @doc """
-  Generates a SHA256 checksum for a workflow structure.
-  The checksum is deterministic - the same workflow structure will always
-  produce the same checksum given the same options.
-  ## Options
-  Same as `equivalent?/3`
-  """
-  def checksum(workflow, opts \\ []) do
+  defp checksum(workflow, opts) do
     ignore_list = build_ignore_list(opts)
 
     workflow
@@ -314,7 +299,16 @@ defmodule Lightning.Workflows.Comparison do
 
     jobs
     |> Enum.map(fn job ->
-      normalized = %{name: get_field(job, "name")}
+      normalized = %{}
+
+      normalized =
+        add_unless_ignored(
+          normalized,
+          :name,
+          get_field(job, "name"),
+          ignore_list,
+          :job_name
+        )
 
       normalized =
         add_unless_ignored(
@@ -409,10 +403,25 @@ defmodule Lightning.Workflows.Comparison do
 
     triggers
     |> Enum.map(fn trigger ->
-      normalized = %{
-        type: get_field(trigger, "type"),
-        enabled: get_field(trigger, "enabled")
-      }
+      normalized = %{}
+
+      normalized =
+        add_unless_ignored(
+          normalized,
+          :type,
+          get_field(trigger, "type"),
+          ignore_list,
+          :trigger_type
+        )
+
+      normalized =
+        add_unless_ignored(
+          normalized,
+          :enabled,
+          get_field(trigger, "enabled"),
+          ignore_list,
+          :trigger_enabled
+        )
 
       normalized =
         add_unless_ignored(
