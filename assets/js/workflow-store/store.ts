@@ -44,6 +44,7 @@ export type RunStep = {
   started_at: string;
   // below don't come from backend
   startNode?: boolean;
+  startBy: string | null;
 };
 
 export type RunInfo = {
@@ -51,6 +52,7 @@ export type RunInfo = {
   inserted_at: string;
   isTrigger: boolean;
   steps: RunStep[];
+  run_by: string | null;
 };
 
 export type WorkOrderStates = 'failed' | 'success' | 'crashed';

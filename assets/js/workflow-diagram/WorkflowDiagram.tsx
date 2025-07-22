@@ -1,34 +1,33 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ReactFlow,
+  Background,
+  ControlButton,
   Controls,
+  MiniMap,
+  ReactFlow,
   ReactFlowProvider,
   applyNodeChanges,
   getNodesBounds,
   type NodeChange,
   type ReactFlowInstance,
   type Rect,
-  ControlButton,
-  Background,
-  MiniMap,
 } from '@xyflow/react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useWorkflowStore } from '../workflow-store/store';
+import MiniMapNode from './components/MiniMapNode';
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import edgeTypes from './edges';
 import layout from './layout';
+import MiniHistory from './MiniHistory';
 import nodeTypes from './nodes';
+import type { Flow, Positions } from './types';
 import useConnect from './useConnect';
 import usePlaceholders from './usePlaceholders';
 import fromWorkflow from './util/from-workflow';
 import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
-import tippy from 'tippy.js';
-import { useWorkflowStore } from '../workflow-store/store';
-import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
-import MiniMapNode from './components/MiniMapNode';
-import MiniHistory from './MiniHistory';
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -48,32 +47,6 @@ type ChartCache = {
 
 const LAYOUT_DURATION = 300;
 
-// Simple React hook for Tippy tooltips that finds buttons by their content
-const useTippyForControls = (isManualLayout: boolean) => {
-  useEffect(() => {
-    // Find the control buttons and initialize tooltips based on their dataset attributes
-    const buttons = document.querySelectorAll('.react-flow__controls button');
-
-    const cleaner: (() => void)[] = [];
-    buttons.forEach(button => {
-      if (button instanceof HTMLElement && button.dataset.tooltip) {
-        const tp = tippy(button, {
-          content: button.dataset.tooltip,
-          placement: 'right',
-          animation: false,
-          allowHTML: false,
-        });
-        cleaner.push(tp.destroy.bind(tp));
-      }
-    });
-
-    return () => {
-      cleaner.forEach(f => {
-        f();
-      });
-    };
-  }, [isManualLayout]); // Only run once on mount
-};
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const {
@@ -318,7 +291,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         });
       }, FIT_DURATION * 2);
 
-      const resizeOb = new ResizeObserver(function(entries) {
+      const resizeOb = new ResizeObserver(function (entries) {
         if (!isFirstCallback) {
           // Don't fit when the listener attaches (it callsback immediately)
           throttledResize();
@@ -358,8 +331,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     },
     flow
   );
-  // Set up tooltips for control buttons
-  useTippyForControls(isManualLayout);
 
   // undo/redo keyboard shortcuts
   React.useEffect(() => {

@@ -487,7 +487,7 @@ defmodule Lightning.WorkOrders do
   def get_run_steps(run_id) do
     Run
     |> where([r], r.id == ^run_id)
-    |> preload(:steps)
+    |> preload([:created_by, :steps])
     |> Repo.one()
     |> case do
       nil ->
@@ -499,7 +499,9 @@ defmodule Lightning.WorkOrders do
           start_from: job_id,
           steps: run_steps,
           isTrigger: false,
-          inserted_at: data.inserted_at
+          inserted_at: data.inserted_at,
+          run_by:
+            if(is_nil(data.created_by), do: nil, else: data.created_by.email)
         }
 
       %{steps: run_steps, starting_trigger_id: trigger_id, starting_job_id: nil} =

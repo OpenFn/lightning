@@ -70,7 +70,8 @@ const fromWorkflow = (
     let step_value: RunStep;
     if (b.exit_reason === "success" && exists?.exit_reason === "fail") step_value = exists;
     else step_value = b;
-    a[b.job_id] = { ...step_value, startNode: b.job_id === startNodeId };
+    const startNode = b.job_id === startNodeId;
+    if (startNode) a[b.job_id] = { ...step_value, startNode, startBy: runSteps.run_by }
     return a;
   }, {} as Record<string, RunStep>)
 

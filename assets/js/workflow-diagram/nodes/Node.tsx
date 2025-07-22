@@ -93,23 +93,6 @@ const Node = ({
   // TODO: remember triggers
   const didRun = data.isRun ? !!runData : true
 
-  const [tooltip, setTooltip] = React.useState({ visible: false, x: 0, y: 0, content: "" });
-  const wrapperRef = React.useRef(null);
-
-  const handleMouseMove = (e: MouseEvent) => {
-    const rect = wrapperRef.current.getBoundingClientRect();
-    setTooltip({
-      visible: true,
-      x: e.clientX - (rect.left + 16),
-      y: e.clientY - (rect.top + 50),
-      content: isErrorRun ? runData?.error_type : "Successful run",
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setTooltip({ ...tooltip, visible: false });
-  };
-
   const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
     selected,
     hasErrors(errors),
@@ -185,9 +168,8 @@ const Node = ({
           </svg>
           {runData && !isTriggerNode ? <div
             className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}
-            ref={wrapperRef}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
+            data-tooltip={isErrorRun ? runData?.error_type : "Successful run"}
+            data-tooltip-placement="top"
           >
             {isErrorRun ?
               <span className='hero-exclamation-circle w-3 h-3'></span> :
@@ -195,10 +177,12 @@ const Node = ({
             }
           </div> : null}
           {runData?.startNode ? <div
-            className={`absolute -top-2 flex gap-2 items-center`}
+            className={`absolute -top-2 flex gap-2 items-center z-30`}
             style={{
               left: "calc(100% - 24px)"
             }}
+            data-tooltip={`Run by ${runData.startBy || "unknown"}`}
+            data-tooltip-placement="top"
           >
             <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
               <span className='hero-play-solid w-3 h-3'></span>
@@ -212,23 +196,6 @@ const Node = ({
           >
             {formatDate(new Date(runData.started_at))}
           </div> : null}
-          {tooltip.visible && (
-            <div
-              style={{
-                position: "absolute",
-                top: tooltip.y,
-                left: tooltip.x,
-                background: "#333",
-                color: "#fff",
-                padding: "4px 8px",
-                borderRadius: "4px",
-                pointerEvents: "none",
-                fontSize: "12px",
-              }}
-            >
-              {tooltip.content}
-            </div>
-          )}
           {primaryIcon && (
             <div
               style={{
