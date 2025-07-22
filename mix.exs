@@ -82,7 +82,7 @@ defmodule Lightning.MixProject do
       {:dialyxir, "~> 1.4.5", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.8.2"},
-      {:ecto_sql, "~> 3.11"},
+      {:ecto_sql, "~> 3.13"},
       {:esbuild, "~> 0.9", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.9.1"},
