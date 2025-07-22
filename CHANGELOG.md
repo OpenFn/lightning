@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Upgrade Ecto from v3.11 to v3.13
+  [#3448](https://github.com/OpenFn/lightning/pull/3448)
+
 ### Fixed
 
 - Fixed bug that prevented HTTP credentials from loading, now allow JSON objects
