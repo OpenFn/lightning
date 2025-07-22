@@ -71,7 +71,11 @@ const fromWorkflow = (
     if (b.exit_reason === "success" && exists?.exit_reason === "fail") step_value = exists;
     else step_value = b;
     const startNode = b.job_id === startNodeId;
-    if (startNode) a[b.job_id] = { ...step_value, startNode, startBy: runSteps.run_by }
+    if (startNode) {
+      // if it's where execution started. we need to add that to RunStep and also add a startBy field
+      const startBy = runSteps.run_by ? runSteps.run_by : "unknown"
+      a[b.job_id] = { ...step_value, startNode, startBy }
+    }
     return a;
   }, {} as Record<string, RunStep>)
 
@@ -117,7 +121,8 @@ const fromWorkflow = (
             model.data.runData = {
               ...(model.data.runData || {}),
               startNode: true,
-              started_at: runSteps.inserted_at
+              started_at: runSteps.inserted_at,
+              startBy: runSteps.run_by || "Trigger"
             }
           }
         }

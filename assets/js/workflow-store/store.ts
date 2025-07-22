@@ -44,7 +44,7 @@ export type RunStep = {
   started_at: string;
   // below don't come from backend
   startNode?: boolean;
-  startBy: string | null;
+  startBy: string;
 };
 
 export type RunInfo = {
