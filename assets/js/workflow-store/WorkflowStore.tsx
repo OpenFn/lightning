@@ -150,12 +150,8 @@ export const WorkflowStore: WithActionProps = props => {
       {},
       (response: { workflow_params: WorkflowProps }) => {
         const { workflow_params } = response;
+        // workflow_params can contain an empty array of nodes and edges (empty workflow)
         setState(workflow_params);
-        // if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
-        //   const diff = createNewWorkflow();
-        //   reset();
-        //   setState({ jobs: diff.jobs, edges: diff.edges, triggers: diff.triggers })
-        // }
 
         const end = new Date();
         console.debug('current-worflow-params processed', end.toISOString());

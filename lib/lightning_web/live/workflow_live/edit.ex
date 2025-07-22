@@ -3091,7 +3091,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       [type, selected] ->
         socket
         |> set_selected_node(type, selected)
-        |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
+        |> set_mode(if mode in ["expand", "workflow_input", "settings"], do: mode, else: nil)
 
       nil ->
         socket |> unselect_all()

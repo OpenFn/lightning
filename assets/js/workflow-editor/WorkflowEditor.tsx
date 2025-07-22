@@ -19,23 +19,17 @@ const onSelectionChange = (id?: string) => {
   const idExists = getItem(id);
   if (!idExists) {
     nextUrl.searchParams.delete('s');
-    // Don't delete 'm' here - let the mode be managed separately
+    nextUrl.searchParams.delete('m');
     nextUrl.searchParams.set('placeholder', 'true');
   } else {
     nextUrl.searchParams.delete('placeholder');
     if (!id) {
       console.debug('Unselecting');
       nextUrl.searchParams.delete('s');
-      // Don't delete 'm' here - selection and mode are independent concerns
+      nextUrl.searchParams.delete('m');
     } else {
       console.debug('Selecting', id);
       nextUrl.searchParams.set('s', id);
-      // When selecting something, check if we're in settings or code mode
-      // If so, remove the mode (since they can't coexist)
-      const currentMode = nextUrl.searchParams.get('m');
-      if (currentMode === 'settings' || currentMode === 'code') {
-        nextUrl.searchParams.delete('m');
-      }
     }
   }
 
