@@ -174,7 +174,7 @@ const Node = ({
               <span className='hero-play-solid w-3 h-3'></span>
             </div>
           </div> : null}
-          {(runData?.started_at && runData?.finished_at) ? <div
+          {(runData?.started_at && runData.finished_at) ? <div
             className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
             style={{
               left: "calc(100% + 6px)"

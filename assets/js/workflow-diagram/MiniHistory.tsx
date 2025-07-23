@@ -163,7 +163,7 @@ export default function MiniHistory({
                           </span>
                           <span className="text-gray-400 text-xs">
 
-                            {(!run.started_at || !run.finished_at) ? "-" : timeSpent(run.started_at, run.finished_at)}
+                            {(!run.started_at || !run.finished_at) ? "-ms" : timeSpent(run.started_at, run.finished_at)}
                           </span>
                         </div>
                         <StatePill state={run.state} />
