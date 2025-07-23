@@ -151,6 +151,36 @@ const Node = ({
               />
             </>
           )}
+          {runData && !isTriggerNode ? <div
+            className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}
+            data-tooltip={isErrorRun ? runData?.error_type : "Successful run"}
+            data-tooltip-placement="top"
+          >
+            {isErrorRun ?
+              <span className='hero-exclamation-circle w-3 h-3'></span> :
+              <span className='hero-check w-3 h-3'></span>
+            }
+          </div> : null}
+          {runData?.startNode ? <div
+            className={`absolute -top-2 flex gap-2 items-center`}
+            style={{
+              left: "calc(100% - 24px)"
+            }}
+            data-tooltip={`Started by ${runData.startBy || "unknown"}`}
+            data-tooltip-placement="top"
+          >
+            <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
+              <span className='hero-play-solid w-3 h-3'></span>
+            </div>
+          </div> : null}
+          {runData?.started_at ? <div
+            className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
+            style={{
+              left: "calc(100% + 6px)"
+            }}
+          >
+            {isTriggerNode ? formatDate(new Date(runData.started_at)) : timeSpent(runData.started_at, runData.finished_at)}
+          </div> : null}
           <svg
             style={{
               maxWidth: '110px',
@@ -167,36 +197,6 @@ const Node = ({
               styles={style}
             />
           </svg>
-          {runData && !isTriggerNode ? <div
-            className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}
-            data-tooltip={isErrorRun ? runData?.error_type : "Successful run"}
-            data-tooltip-placement="top"
-          >
-            {isErrorRun ?
-              <span className='hero-exclamation-circle w-3 h-3'></span> :
-              <span className='hero-check w-3 h-3'></span>
-            }
-          </div> : null}
-          {runData?.startNode ? <div
-            className={`absolute -top-2 flex gap-2 items-center z-30`}
-            style={{
-              left: "calc(100% - 24px)"
-            }}
-            data-tooltip={`Started by ${runData.startBy || "unknown"}`}
-            data-tooltip-placement="top"
-          >
-            <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
-              <span className='hero-play-solid w-3 h-3'></span>
-            </div>
-          </div> : null}
-          {runData?.started_at ? <div
-            className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap`}
-            style={{
-              left: "calc(100% + 6px)"
-            }}
-          >
-            {isTriggerNode ? formatDate(new Date(runData.started_at)) : timeSpent(runData.started_at, runData.finished_at)}
-          </div> : null}
           {primaryIcon && (
             <div
               style={{
