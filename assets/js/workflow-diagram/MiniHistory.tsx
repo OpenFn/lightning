@@ -115,7 +115,7 @@ export default function MiniHistory({
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpandedWorder(prev => prev === workorder.id ? "" : workorder.id) }}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         {
                           workorder.selected ?
@@ -144,10 +144,10 @@ export default function MiniHistory({
                     <div
                       key={run.id}
                       className={[
-                        "pl-8 pr-3 py-1.5 text-xs hover:bg-gray-50 transition-colors cursor-pointer",
+                        "pl-8 pr-3 py-1.5 text-xs hover:bg-gray-50 transition-colors cursor-pointer border-l-2",
                         run.selected
-                          ? "bg-indigo-50 border-l-2 border-l-indigo-500"
-                          : "",
+                          ? "bg-indigo-50 border-l-indigo-500"
+                          : " border-l-transparent",
                       ].join(" ")}
                       onClick={() => selectRunHandler(run.id, workorder.version)}
                     >
