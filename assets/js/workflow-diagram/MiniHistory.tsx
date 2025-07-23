@@ -2,6 +2,7 @@ import truncateUid from "../utils/truncateUID";
 import type { WorkflowRunHistory, WorkOrderStates } from "#/workflow-store/store";
 import formatDate from "../utils/formatDate";
 import { useState } from "react";
+import { timeSpent } from "../utils/timeSpent";
 
 // TODO: to be put somewhere else
 const STATE_ICONS = {
@@ -37,13 +38,6 @@ const StatePill: React.FC<{ state: WorkOrderStates, size?: "normal" | "mini" }> 
     className={`inline-flex rounded-full bg-gray-200 justify-center items-center p-0.5 ${colors()} ${size === "normal" ? "w-5 h-5" : "w-4 h-4"}`}>
     <span className={`${STATE_ICONS[state]} ${size === "normal" ? "w-4 h-4" : "w-3 h-3"}`}></span>
   </span >
-};
-
-const formatDuration = (start, end) => {
-  if (!start || !end) return "-";
-  const durationMs = new Date(end) - new Date(start);
-  const minutes = Math.floor(durationMs / 60000);
-  return `${minutes} min`;
 };
 
 interface MiniHistoryProps {
@@ -168,7 +162,7 @@ export default function MiniHistory({
                               : formatDate(new Date(run.finished_at))}
                           </span>
                           <span className="text-gray-400 text-xs">
-                            {formatDuration(run.started_at, run.finished_at)}
+                            {timeSpent(run.started_at, run.finished_at)}
                           </span>
                         </div>
                         <StatePill state={run.state} />
