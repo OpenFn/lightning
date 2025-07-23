@@ -333,6 +333,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           chat_session_id={@job_chat_session_id}
                           query_params={@query_params}
                           base_url={@base_url}
+                          parent_id={self()}
                           action={if(@job_chat_session_id, do: :show, else: :new)}
                           id={"aichat-#{@selected_job.id}"}
                         />
@@ -2289,6 +2290,27 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  def handle_info(
+        {:code_assistant, code, %{id: job_id}},
+        %{assigns: %{workflow_params: workflow_params}} = socket
+      ) do
+        dbg(code)
+        dbg(job_id)
+    updated_jobs =
+      workflow_params["jobs"]
+      |> Enum.map(fn job ->
+        if job["id"] == job_id do
+          Map.put(job, "body", code)
+        else
+          job
+        end
+      end)
+
+    updated_workflow_params = Map.put(workflow_params, "jobs", updated_jobs)
+
+    {:noreply, handle_new_params(socket, updated_workflow_params, :workflow)}
+  end
+
   def handle_info(%{}, socket) do
     {:noreply, socket}
   end
@@ -3091,7 +3113,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       [type, selected] ->
         socket
         |> set_selected_node(type, selected)
-        |> set_mode(if mode in ["expand", "workflow_input", "settings"], do: mode, else: nil)
+        |> set_mode(
+          if mode in ["expand", "workflow_input", "settings"],
+            do: mode,
+            else: nil
+        )
 
       nil ->
         socket |> unselect_all()

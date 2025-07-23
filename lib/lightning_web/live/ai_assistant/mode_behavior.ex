@@ -6,7 +6,7 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   by implementing the required callbacks and optionally overriding defaults.
   """
 
-  alias Lightning.AiAssistant.ChatMessage
+  # alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
   alias LightningWeb.Live.AiAssistant.PaginationMeta
 
@@ -132,12 +132,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   @callback metadata() :: mode_metadata()
 
   @doc """
-  Extracts generated code from AI response.
-  """
-  @callback extract_generated_code(session() | ChatMessage.t()) ::
-              generated_code()
-
-  @doc """
   Handles new session initialization.
   """
   @callback on_session_start(Phoenix.LiveView.Socket.t(), (atom(), any() ->
@@ -152,7 +146,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
     chat_title: 1,
     supports_template_generation?: 0,
     metadata: 0,
-    extract_generated_code: 1,
     on_session_start: 2
   ]
 
@@ -195,8 +188,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
         }
       end
 
-      def extract_generated_code(_session_or_message), do: nil
-
       def on_session_start(socket, _ui_callback), do: socket
 
       def error_message(error), do: ErrorHandler.format_error(error)
@@ -205,7 +196,6 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
                      chat_title: 1,
                      supports_template_generation?: 0,
                      metadata: 0,
-                     extract_generated_code: 1,
                      on_session_start: 2,
                      error_message: 1,
                      validate_form_changeset: 1,

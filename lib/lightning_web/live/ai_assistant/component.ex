@@ -211,13 +211,14 @@ defmodule LightningWeb.AiAssistant.Component do
      end)}
   end
 
-  def handle_event(
-        "select_assistant_message",
-        %{"message-id" => message_id},
-        %{assigns: assigns} = socket
-      ) do
-    message = Enum.find(assigns.session.messages, &(&1.id == message_id))
-    {:noreply, maybe_push_workflow_code(socket, message)}
+  def handle_event("apply_workflow_code", %{"message-id" => message_id}, socket) do
+    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
+    {:noreply, socket.assigns.handler.apply_changes(socket, message)}
+  end
+
+  def handle_event("apply_job_code", %{"message-id" => message_id}, socket) do
+    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
+    {:noreply, socket.assigns.handler.apply_changes(socket, message)}
   end
 
   def handle_event("retry_load_sessions", _params, socket) do
@@ -257,8 +258,8 @@ defmodule LightningWeb.AiAssistant.Component do
      socket
      |> assign(:session, session)
      |> assign(:pending_message, AsyncResult.ok(nil))
-     |> maybe_push_workflow_code(session)
-     |> assign(workflow_error: nil)}
+     |> assign(workflow_error: nil)
+     |> socket.assigns.handler.apply_changes(session)}
   end
 
   def handle_async(:process_message, {:ok, {:error, error}}, socket),
@@ -306,10 +307,12 @@ defmodule LightningWeb.AiAssistant.Component do
     session =
       socket.assigns.handler.get_session!(socket.assigns)
 
-    if socket.assigns[:parent_module] ==
-         LightningWeb.WorkflowLive.NewWorkflowComponent do
-      maybe_push_workflow_code(socket, session)
-    end
+    socket.assigns.handler.apply_changes(socket, session)
+
+    # if socket.assigns[:parent_module] ==
+    #      LightningWeb.WorkflowLive.NewWorkflowComponent do
+    #   maybe_push_workflow_code(socket, session)
+    # end
 
     pending_message = find_pending_user_message(session)
 
@@ -425,24 +428,6 @@ defmodule LightningWeb.AiAssistant.Component do
     |> start_async(:process_message, fn ->
       handler.query(session, message, options)
     end)
-  end
-
-  defp maybe_push_workflow_code(socket, session_or_message) do
-    case socket.assigns.handler.extract_generated_code(session_or_message) do
-      nil ->
-        socket
-
-      %{yaml: yaml} ->
-        send_update(
-          socket.assigns.parent_module,
-          id: socket.assigns.parent_id,
-          action: :workflow_updated,
-          workflow_code: yaml,
-          session_or_message: session_or_message
-        )
-
-        socket
-    end
   end
 
   defp get_chat_param_for_mode(mode) do
@@ -1369,18 +1354,34 @@ defmodule LightningWeb.AiAssistant.Component do
               @has_workflow_error? ->
                 "border-red-300"
 
-              @message.workflow_code && @handler.supports_template_generation?() ->
+              @message.workflow_code ->
+                "border-gray-200 cursor-pointer hover:border-indigo-200 transition-all duration-200 group"
+
+              @message.job_code ->
                 "border-gray-200 cursor-pointer hover:border-indigo-200 transition-all duration-200 group"
 
               true ->
                 "border-gray-200"
             end
           ]}
-          {if @message.workflow_code && @handler.supports_template_generation?() && !@has_workflow_error?, do: [
-            "phx-click": "select_assistant_message",
-            "phx-value-message-id": @message.id,
-            "phx-target": @target
-          ], else: []}
+          {cond do
+            @message.workflow_code && !@has_workflow_error? ->
+              [
+                "phx-click": "apply_workflow_code",
+                "phx-value-message-id": @message.id,
+                "phx-target": @target
+              ]
+
+            @message.job_code ->
+              [
+                "phx-click": "apply_job_code",
+                "phx-value-message-id": @message.id,
+                "phx-target": @target
+              ]
+
+            true ->
+              []
+          end}
         >
           <div
             :if={@has_workflow_error? && @message.workflow_code}
@@ -1395,16 +1396,25 @@ defmodule LightningWeb.AiAssistant.Component do
           </div>
 
           <div
-            :if={
-              @message.workflow_code && @handler.supports_template_generation?() &&
-                !@has_workflow_error?
-            }
+            :if={@message.workflow_code && !@has_workflow_error?}
             class="px-4 py-2 ai-bg-gradient-light border-b border-gray-100"
           >
             <div class="flex items-center gap-2 text-sm">
               <.icon name="hero-gift" class="w-4 h-4 text-indigo-600" />
               <span class="text-indigo-700 font-medium text-xs">
                 Click to restore workflow to here
+              </span>
+            </div>
+          </div>
+
+          <div
+            :if={@message.job_code}
+            class="px-4 py-2 ai-bg-gradient-light border-b border-gray-100"
+          >
+            <div class="flex items-center gap-2 text-sm">
+              <.icon name="hero-gift" class="w-4 h-4 text-indigo-600" />
+              <span class="text-indigo-700 font-medium text-xs">
+                Click to apply suggested job code
               </span>
             </div>
           </div>

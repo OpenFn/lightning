@@ -43,7 +43,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
         adaptor:
           form[:adaptor].value
           |> Lightning.AdaptorRegistry.resolve_adaptor(),
-        source: form.source.data.body,
+        source: Ecto.Changeset.get_field(form.source, :body),
         job_id: form[:id].value
       )
 

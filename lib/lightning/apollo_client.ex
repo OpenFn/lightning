@@ -92,8 +92,7 @@ defmodule Lightning.ApolloClient do
         "meta" => meta
       }
 
-    client()
-    |> Tesla.post("/services/job_chat", payload)
+    client() |> Tesla.post("/services/job_chat", payload)
   end
 
   @doc """

@@ -785,6 +785,16 @@ defmodule Lightning.AiAssistant do
   defp build_job_message(body) do
     message = body["history"] |> Enum.reverse() |> hd()
     message_attrs = Map.take(message, ["role", "content"])
+
+    job_code = get_in(body, ["response", "suggested_code"])
+
+    message_attrs =
+      if job_code do
+        Map.put(message_attrs, "job_code", job_code)
+      else
+        message_attrs
+      end
+
     opts = [usage: body["usage"] || %{}, meta: body["meta"]]
 
     {message_attrs, opts}

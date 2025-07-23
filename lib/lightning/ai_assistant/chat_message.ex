@@ -29,6 +29,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
           id: Ecto.UUID.t(),
           content: String.t() | nil,
           workflow_code: String.t() | nil,
+          job_code: String.t() | nil,
           role: role(),
           status: status(),
           is_deleted: boolean(),
@@ -42,6 +43,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   schema "ai_chat_messages" do
     field :content, :string
     field :workflow_code, :string
+    field :job_code, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
     field :status, Ecto.Enum, values: [:pending, :success, :error, :cancelled]
     field :is_deleted, :boolean, default: false
@@ -74,6 +76,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> cast(attrs, [
       :content,
       :workflow_code,
+      :job_code,
       :role,
       :status,
       :is_deleted,

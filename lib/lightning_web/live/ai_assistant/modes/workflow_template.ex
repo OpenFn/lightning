@@ -149,11 +149,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
     }
   end
 
-  @doc """
-  Extracts YAML from latest message with workflow code.
-  """
-  @impl true
-  def extract_generated_code(session_or_message) do
+  defp extract_generated_code(session_or_message) do
     case extract_workflow_yaml(session_or_message) do
       nil -> nil
       yaml -> %{yaml: yaml}
@@ -200,4 +196,22 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
 
   defp has_workflow_code?(code) when is_binary(code), do: code != ""
   defp has_workflow_code?(_), do: false
+
+  def apply_changes(socket, session_or_message) do
+    case extract_generated_code(session_or_message) do
+      nil ->
+        socket
+
+      %{yaml: yaml} ->
+        Phoenix.LiveView.send_update(
+          socket.assigns.parent_module,
+          id: socket.assigns.parent_id,
+          action: :workflow_updated,
+          workflow_code: yaml,
+          session_or_message: session_or_message
+        )
+
+        socket
+    end
+  end
 end

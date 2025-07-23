@@ -12,6 +12,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   alias Lightning.AiAssistant
   alias Lightning.Invocation
   alias Lightning.Workflows.Job
+  alias Lightning.AiAssistant.ChatMessage
+  alias Lightning.AiAssistant.ChatSession
   alias LightningWeb.Live.AiAssistant.ErrorHandler
 
   defmodule Form do
@@ -224,4 +226,34 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   defp job_is_unsaved?(%{__meta__: %{state: :built}}), do: true
   defp job_is_unsaved?(_job), do: false
+
+  defp extract_job_code(%ChatSession{messages: messages}) do
+    messages
+    |> Enum.reverse()
+    |> Enum.find_value(fn message ->
+      if has_job_code?(message.job_code), do: message.job_code
+    end)
+  end
+
+  defp extract_job_code(%ChatMessage{job_code: code}) do
+    if has_job_code?(code), do: code
+  end
+
+  defp has_job_code?(code) when is_binary(code), do: code != ""
+  defp has_job_code?(_), do: false
+
+  def apply_changes(socket, session_or_message) do
+    case extract_job_code(session_or_message) do
+      nil ->
+        socket
+
+      code ->
+        send(
+          socket.assigns.parent_id,
+          {:code_assistant, code, socket.assigns.selected_job}
+        )
+
+        socket
+    end
+  end
 end
