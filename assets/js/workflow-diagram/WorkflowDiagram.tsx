@@ -29,6 +29,8 @@ import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
+const controlButtonStyle = (disabled: boolean) => disabled ? { background: "#eee", cursor: "not-allowed", color: "#818181" } : { color: "#000" };
+
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
   containerEl?: HTMLElement | null;
@@ -379,8 +381,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           showInteractive={false}
           showFitView={false}
         >
-          <ControlButton onClick={handleFitView} data-tooltip="Fit view">
-            <span className="text-black hero-viewfinder-circle w-4 h-4" />
+          <ControlButton
+            onClick={handleFitView}
+            data-tooltip="Fit view"
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
+          >
+            <span className="hero-viewfinder-circle w-4 h-4" />
           </ControlButton>
 
           <ControlButton
@@ -390,30 +397,38 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
                 ? 'Switch to auto layout mode'
                 : 'Switch to manual layout mode'
             }
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
           >
             {isManualLayout ? (
-              <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
+              <span className="hero-cursor-arrow-rays w-4 h-4" />
             ) : (
-              <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
+              <span className="hero-cursor-arrow-ripple w-4 h-4" />
             )}
           </ControlButton>
           <ControlButton
             onClick={forceLayout}
             data-tooltip="Run auto layout (override manual positions)"
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
           >
-            <span className="text-black hero-squares-2x2 w-4 h-4" />
+            <span className="hero-squares-2x2 w-4 h-4" />
           </ControlButton>
           <ControlButton
             onClick={undo}
             data-tooltip="Undo"
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
           >
-            <span className="text-black hero-arrow-uturn-left w-4 h-4" />
+            <span className="hero-arrow-uturn-left w-4 h-4" />
           </ControlButton>
           <ControlButton
             onClick={redo}
             data-tooltip="Redo"
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
           >
-            <span className="text-black hero-arrow-uturn-right w-4 h-4" />
+            <span className="hero-arrow-uturn-right w-4 h-4" />
           </ControlButton>
 
         </Controls>

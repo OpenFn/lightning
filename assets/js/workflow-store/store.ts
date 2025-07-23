@@ -186,7 +186,7 @@ function proposeChanges(
       fn(draft);
     },
     (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
-      if (!skipUndoStack) {
+      if (!skipUndoStack && !state.disabled) {
         pushUndo({ patches: p, inverse: _inverse });
       }
       patches = p.map(toRFC6902Patch);
@@ -435,7 +435,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       }));
 
       // if there's an inverse, add this to undo stack
-      if (patches.inverse && patches.inverse.length) {
+      if (patches.inverse && patches.inverse.length && !get().disabled) {
         // don't forget to prep inverse patches path.
         const inverseImmerPatches: ImmerPatch[] = patches.inverse.map(
           patch => ({

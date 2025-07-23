@@ -121,8 +121,9 @@ export const WorkflowStore: WithActionProps = props => {
   React.useEffect(() => {
     return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunInfo }) => {
       updateRuns(response.run_steps, response.run_id);
+      setDisabled(true)
     })
-  }, [props.handleEvent, updateRuns])
+  }, [props.handleEvent, updateRuns, setDisabled])
 
   // Fetch initial state once on mount
   React.useEffect(() => {
