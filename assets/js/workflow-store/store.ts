@@ -42,6 +42,7 @@ export type RunStep = {
   error_type: string;
   exit_reason: 'fail' | 'success' | 'crash' | null;
   started_at: string;
+  finished_at: string;
   // below don't come from backend
   startNode?: boolean;
   startBy: string;

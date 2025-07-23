@@ -2202,7 +2202,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
             job_id: step.job_id,
             error_type: step.error_type,
             exit_reason: step.exit_reason,
-            started_at: step.started_at
+            started_at: step.started_at,
+            finished_at: step.finished_at
           }
         end)
       end)

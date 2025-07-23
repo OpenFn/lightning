@@ -1,11 +1,12 @@
-import React, { memo, type MouseEvent } from 'react';
 import { Handle, type NodeProps } from '@xyflow/react';
+import React, { memo } from 'react';
 
-import Shape from '../components/Shape';
-import ErrorMessage from '../components/ErrorMessage';
-import { nodeIconStyles, nodeLabelStyles } from '../styles';
-import type { RunStep } from '#/workflow-store/store';
+import { timeSpent } from '../../utils/timeSpent';
+import type { RunStep } from '../../workflow-store/store';
 import formatDate from '../../utils/formatDate';
+import ErrorMessage from '../components/ErrorMessage';
+import Shape from '../components/Shape';
+import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
 
@@ -194,7 +195,7 @@ const Node = ({
               left: "calc(100% + 6px)"
             }}
           >
-            {formatDate(new Date(runData.started_at))}
+            {isTriggerNode ? formatDate(new Date(runData.started_at)) : timeSpent(runData.started_at, runData.finished_at)}
           </div> : null}
           {primaryIcon && (
             <div
