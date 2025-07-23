@@ -90,6 +90,7 @@ const Node = ({
 }: BaseNodeProps) => {
   const isTriggerNode = type === "trigger";
   const runData = data?.runData as RunStep | undefined;
+  const startInfo = data?.startInfo as { started_at: string, startBy: string } | undefined;
   const isErrorRun = runData?.exit_reason !== "success";
   // TODO: remember triggers
   const didRun = data.isRun ? !!runData : true
@@ -161,25 +162,33 @@ const Node = ({
               <span className='hero-check w-3 h-3'></span>
             }
           </div> : null}
-          {runData?.startNode ? <div
+          {startInfo ? <div
             className={`absolute -top-2 flex gap-2 items-center`}
             style={{
               left: "calc(100% - 24px)"
             }}
-            data-tooltip={`Started by ${runData.startBy || "unknown"}`}
+            data-tooltip={`Started by ${startInfo.startBy}`}
             data-tooltip-placement="top"
           >
             <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
               <span className='hero-play-solid w-3 h-3'></span>
             </div>
           </div> : null}
-          {runData?.started_at ? <div
+          {(runData?.started_at && runData?.finished_at) ? <div
             className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
             style={{
               left: "calc(100% + 6px)"
             }}
           >
             {isTriggerNode ? formatDate(new Date(runData.started_at)) : timeSpent(runData.started_at, runData.finished_at)}
+          </div> : null}
+          {(isTriggerNode && startInfo?.started_at) ? <div
+            className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
+            style={{
+              left: "calc(100% + 6px)"
+            }}
+          >
+            {formatDate(new Date(startInfo.started_at))}
           </div> : null}
           <svg
             style={{

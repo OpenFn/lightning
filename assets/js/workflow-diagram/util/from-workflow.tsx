@@ -60,7 +60,6 @@ const fromWorkflow = (
     placeholders.nodes.length === 0 && !workflow.disabled;
 
   const isRun = !!runSteps.start_from;
-  const startNodeId = runSteps.start_from;
 
   const runStepsObj = runSteps.steps.reduce((a, b) => {
     const exists = a[b.job_id];
@@ -70,14 +69,7 @@ const fromWorkflow = (
     let step_value: RunStep;
     if (b.exit_reason === "success" && exists?.exit_reason === "fail") step_value = exists;
     else step_value = b;
-    const startNode = b.job_id === startNodeId;
     a[b.job_id] = { ...step_value };
-    if (startNode && a[b.job_id]) {
-      // if it's where execution started. we need to add that to RunStep and also add a startBy field
-      const startBy = runSteps.run_by ? runSteps.run_by : "unknown"
-      a[b.job_id].startNode = true;
-      a[b.job_id].startBy = startBy;
-    }
     return a;
   }, {} as Record<string, RunStep>)
 
@@ -113,20 +105,19 @@ const fromWorkflow = (
         model.data.allowPlaceholder = allowPlaceholder;
         model.data.isRun = isRun;
         model.data.runData = runStepsObj[node.id];
+        if (item.id === runSteps.start_from) {
+          const startBy = type === "trigger" ? "Trigger" : (runSteps.run_by || "unknown")
+          model.data.startInfo = {
+            started_at: runSteps.inserted_at,
+            startBy
+          }
+        }
 
         if (type === 'trigger') {
           model.data.trigger = {
             type: (node as Lightning.TriggerNode).type,
             enabled: (node as Lightning.TriggerNode).enabled,
           };
-          if (runSteps.isTrigger && runSteps.start_from === node.id) {
-            model.data.runData = {
-              ...(model.data.runData || {}),
-              startNode: true,
-              started_at: runSteps.inserted_at,
-              startBy: runSteps.run_by || "Trigger"
-            }
-          }
         }
         styleNode(model);
       } else {
