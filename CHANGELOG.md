@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.13.6] - 2025-07-24
+
+### Added
+
 - Extended impeded project to take workflow concurrency into account.
   [#3408](https://github.com/OpenFn/lightning/issues/3408)
 
