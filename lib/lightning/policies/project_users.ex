@@ -22,9 +22,6 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_digest_alerts
           | :edit_failure_alerts
           | :create_project_credential
-          | :create_keychain_credential
-          | :edit_keychain_credential
-          | :delete_keychain_credential
           | :edit_data_retention
           | :write_webhook_auth_method
           | :write_github_connection
@@ -78,10 +75,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :add_project_user,
              :remove_project_user,
              :edit_run_settings,
-             :create_collection,
-             :create_keychain_credential,
-             :edit_keychain_credential,
-             :delete_keychain_credential
+             :create_collection
            ],
       do: project_user.role in [:owner, :admin]
 
@@ -94,10 +88,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :add_project_user,
              :remove_project_user,
              :edit_run_settings,
-             :create_collection,
-             :create_keychain_credential,
-             :edit_keychain_credential,
-             :delete_keychain_credential
+             :create_collection
            ],
       do: false
 
@@ -115,8 +106,9 @@ defmodule Lightning.Policies.ProjectUsers do
         %User{},
         %ProjectUser{} = project_user
       )
-      when action in @project_user_actions,
-      do: project_user.role in [:owner, :admin, :editor]
+      when action in @project_user_actions do
+    project_user.role in [:owner, :admin, :editor]
+  end
 
   def authorize(
         action,
@@ -125,9 +117,6 @@ defmodule Lightning.Policies.ProjectUsers do
       )
       when action in @project_user_actions,
       do: support_user
-
-  def authorize(action, user, %{project_id: project_id}),
-    do: authorize(action, user, Projects.get_project(project_id))
 
   def allow_as_support_user?(user, %Project{
         allow_support_access: allow_support_access
