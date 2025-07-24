@@ -518,11 +518,38 @@ defmodule Lightning.WorkOrders do
     end
   end
 
-  def get_workorders_with_runs(workflow_id) do
-    from(wo in WorkOrder,
-      where: wo.workflow_id == ^workflow_id,
-      preload: [:snapshot, runs: [:steps]]
-    )
+  def get_workorders_with_runs(workflow_id, run_id) do
+    main_query =
+      from(wo in WorkOrder,
+        join: r in assoc(wo, :runs),
+        where: wo.workflow_id == ^workflow_id,
+        preload: [:snapshot, runs: [:steps]],
+        limit: 20
+      )
+
+    workorder_with_run =
+      if run_id do
+        from([wo, r] in main_query,
+          where: r.id != ^run_id
+        )
+      else
+        main_query
+      end
+
+    final_query =
+      if run_id do
+        from(wo in WorkOrder,
+          join: r in assoc(wo, :runs),
+          where: r.id == ^run_id and wo.workflow_id == ^workflow_id,
+          preload: [:snapshot, runs: [:steps]],
+          union: ^workorder_with_run
+        )
+      else
+        workorder_with_run
+      end
+
+    final_query
+    |> order_by(desc: fragment("last_activity"))
     |> Repo.all()
     |> Enum.map(fn worder ->
       %{

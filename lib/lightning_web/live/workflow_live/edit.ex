@@ -2208,7 +2208,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         end)
       end)
 
-    history = WorkOrders.get_workorders_with_runs(workflow_id)
+    history = WorkOrders.get_workorders_with_runs(workflow_id, run_id)
 
     %{run_steps: run_steps, history: history}
   end
