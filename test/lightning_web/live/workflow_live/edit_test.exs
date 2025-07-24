@@ -213,7 +213,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # selecting a job now opens the panel
       {job, _, _} = select_first_job(view)
       path = assert_patch(view)
-      assert path == ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}"
+
+      assert path ==
+               ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&v=#{workflow.lock_version - 1}"
+
       assert render(view) =~ "Job Name"
       assert has_element?(view, "input[name='workflow[jobs][0][name]']")
 
@@ -2734,7 +2737,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id, v: workflow.lock_version]}"
       )
 
       assert render(view) =~

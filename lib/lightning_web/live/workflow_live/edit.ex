@@ -1281,9 +1281,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     params =
       if assigns.selection_mode == "settings" do
-        Helpers.standard_params()
+        Helpers.orthogonal_params()
       else
-        Helpers.with_params(m: "settings")
+        [Helpers.param("m", "settings")] ++ Helpers.orthogonal_params()
       end
 
     url = Helpers.build_url(assigns, params)

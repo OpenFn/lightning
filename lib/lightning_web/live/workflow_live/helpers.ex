@@ -227,7 +227,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   @doc """
   Creates chat-related parameters
   """
-  def chat_params() do
+  def chat_params do
     [
       param("w-chat", fn a, _ -> a.workflow_chat_session_id end),
       param("j-chat", fn a, _ -> a.job_chat_session_id end)
@@ -237,7 +237,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   @doc """
   Creates standard URL parameters (all common params)
   """
-  def standard_params() do
+  def standard_params do
     [
       query_param("m"),
       query_param("s"),
@@ -250,7 +250,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   @doc """
   Creates orthogonal parameters (excludes mode and selection)
   """
-  def orthogonal_params() do
+  def orthogonal_params do
     [
       query_param("a"),
       query_param("v"),
@@ -271,14 +271,14 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   @doc """
   Creates code view parameters
   """
-  def code_view_params() do
+  def code_view_params do
     [param("m", "code")] ++ orthogonal_params()
   end
 
   @doc """
   Creates parameters excluding mode and selection
   """
-  def params_without_mode_selection() do
+  def params_without_mode_selection do
     orthogonal_params()
   end
 
