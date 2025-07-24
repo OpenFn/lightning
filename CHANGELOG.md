@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow users to name existsing dataclips
+  [#311](https://github.com/OpenFn/lightning/issues/311)
+
 ### Changed
 
 ### Fixed
