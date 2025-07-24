@@ -38,6 +38,7 @@
       type="module"
       src={Routes.static_path(@conn, "/assets/js/app.js")}
     >
+      <%= Application.get_env(:live_debugger, :live_debugger_tags) %>
     </script>
     {render_slot(@header_tags)}
   </head>
