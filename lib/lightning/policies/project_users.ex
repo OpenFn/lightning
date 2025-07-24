@@ -118,7 +118,13 @@ defmodule Lightning.Policies.ProjectUsers do
       when action in @project_user_actions,
       do: support_user
 
-  def allow_as_support_user?(user, %Project{
+  # TODO: these should be private, but they are called from elsewhere currently
+  # ideally we move the concept of support access into Projects.get_project_user_role/2
+  # where we expose an extra :support_user role - just an idea here, we want to
+  # careful to not to "hide" this concept into a single function that isn't
+  # guaranteed to be called in the right place by all the places that need to
+  # know if permission should be granted.
+  def allow_as_support_user?(%User{} = user, %Project{
         allow_support_access: allow_support_access
       }),
       do: user.support_user and allow_support_access

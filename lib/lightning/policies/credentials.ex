@@ -6,7 +6,9 @@ defmodule Lightning.Policies.Credentials do
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
   require Logger
 
@@ -31,10 +33,32 @@ defmodule Lightning.Policies.Credentials do
         ) :: boolean
   def authorize(
         :create_keychain_credential,
-        %ProjectUser{} = project_user,
-        _resource
+        %User{} = user,
+        %{project: project, project_user: project_user}
       ) do
-    project_user.role in [:owner, :admin]
+    (!!project_user and project_user.role in [:owner, :admin]) or
+      ProjectUsers.allow_as_support_user?(user, project)
+  end
+
+  # User with project - check project membership or support user access
+  def authorize(
+        :create_keychain_credential,
+        %User{} = user,
+        %Project{} = project
+      ) do
+    case Projects.get_project_user(project, user) do
+      %ProjectUser{} = project_user ->
+        Bodyguard.permit?(
+          __MODULE__,
+          :create_keychain_credential,
+          user,
+          %{project_user: project_user, project: project}
+        )
+
+      nil ->
+        # No project membership - check if support user with project access
+        ProjectUsers.allow_as_support_user?(user, project)
+    end
   end
 
   # KeychainCredential actions - require owner or admin role
@@ -53,13 +77,20 @@ defmodule Lightning.Policies.Credentials do
              :delete_keychain_credential,
              :view_keychain_credential
            ] do
-    get_project_user(keychain_credential, user_or_project_user)
-    |> case do
-      %ProjectUser{} = project_user ->
-        project_user.role in [:owner, :admin]
+    # Check if user is a support user first
+    case user_or_project_user do
+      %User{support_user: true} ->
+        true
 
       _ ->
-        false
+        get_project_user(keychain_credential, user_or_project_user)
+        |> case do
+          %ProjectUser{} = project_user ->
+            project_user.role in [:owner, :admin]
+
+          _ ->
+            false
+        end
     end
   end
 

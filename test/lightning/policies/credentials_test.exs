@@ -14,15 +14,17 @@ defmodule Lightning.Policies.CredentialsTest do
     Enum.find(project.project_users, &(&1.user_id == user.id))
   end
 
-  setup do
+  setup tags do
     viewer = insert(:user)
     admin = insert(:user)
     owner = insert(:user)
     editor = insert(:user)
     intruder = insert(:user)
+    support_user = insert(:user, support_user: true)
 
     project =
       insert(:project,
+        allow_support_access: tags[:allow_support_access],
         project_users: [
           %{user_id: viewer.id, role: :viewer},
           %{user_id: editor.id, role: :editor},
@@ -44,7 +46,8 @@ defmodule Lightning.Policies.CredentialsTest do
       admin: admin,
       owner: owner,
       editor: editor,
-      intruder: intruder
+      intruder: intruder,
+      support_user: support_user
     }
   end
 
@@ -56,7 +59,11 @@ defmodule Lightning.Policies.CredentialsTest do
       project_user = get_project_user(project, owner)
 
       assert Credentials
-             |> Bodyguard.permit?(:create_keychain_credential, project_user)
+             |> Bodyguard.permit?(
+               :create_keychain_credential,
+               owner,
+               %{project_user: project_user, project: project}
+             )
     end
 
     test "admins can create keychain credentials", %{
@@ -66,7 +73,11 @@ defmodule Lightning.Policies.CredentialsTest do
       project_user = get_project_user(project, admin)
 
       assert Credentials
-             |> Bodyguard.permit?(:create_keychain_credential, project_user)
+             |> Bodyguard.permit?(
+               :create_keychain_credential,
+               admin,
+               %{project_user: project_user, project: project}
+             )
     end
 
     test "editors cannot create keychain credentials", %{
@@ -76,7 +87,11 @@ defmodule Lightning.Policies.CredentialsTest do
       project_user = get_project_user(project, editor)
 
       refute Credentials
-             |> Bodyguard.permit?(:create_keychain_credential, project_user)
+             |> Bodyguard.permit?(
+               :create_keychain_credential,
+               editor,
+               %{project_user: project_user, project: project}
+             )
     end
 
     test "viewers cannot create keychain credentials", %{
@@ -86,17 +101,36 @@ defmodule Lightning.Policies.CredentialsTest do
       project_user = get_project_user(project, viewer)
 
       refute Credentials
-             |> Bodyguard.permit?(:create_keychain_credential, project_user)
+             |> Bodyguard.permit?(
+               :create_keychain_credential,
+               viewer,
+               %{project_user: project_user, project: project}
+             )
     end
 
     test "non-project members cannot create keychain credentials", %{
+      project: project,
       intruder: intruder
     } do
-      # Create a project user with :viewer role for the intruder to test the fallback
-      project_user = insert(:project_user, user: intruder, role: :viewer)
-
       refute Credentials
-             |> Bodyguard.permit?(:create_keychain_credential, project_user)
+             |> Bodyguard.permit?(
+               :create_keychain_credential,
+               intruder,
+               project
+             )
+    end
+
+    @tag allow_support_access: true
+    test "support users can create keychain credentials", %{
+      project: project,
+      support_user: support_user
+    } do
+      assert Credentials
+             |> Bodyguard.permit?(
+               :create_keychain_credential,
+               support_user,
+               project
+             )
     end
   end
 
@@ -157,6 +191,18 @@ defmodule Lightning.Policies.CredentialsTest do
              |> Bodyguard.permit?(
                :edit_keychain_credential,
                intruder,
+               keychain_credential
+             )
+    end
+
+    test "support users can edit keychain credentials", %{
+      keychain_credential: keychain_credential,
+      support_user: support_user
+    } do
+      assert Credentials
+             |> Bodyguard.permit?(
+               :edit_keychain_credential,
+               support_user,
                keychain_credential
              )
     end
@@ -222,6 +268,18 @@ defmodule Lightning.Policies.CredentialsTest do
                keychain_credential
              )
     end
+
+    test "support users can delete keychain credentials", %{
+      keychain_credential: keychain_credential,
+      support_user: support_user
+    } do
+      assert Credentials
+             |> Bodyguard.permit?(
+               :delete_keychain_credential,
+               support_user,
+               keychain_credential
+             )
+    end
   end
 
   describe "KeychainCredential viewing" do
@@ -281,6 +339,18 @@ defmodule Lightning.Policies.CredentialsTest do
              |> Bodyguard.permit?(
                :view_keychain_credential,
                intruder,
+               keychain_credential
+             )
+    end
+
+    test "support users can view keychain credentials", %{
+      keychain_credential: keychain_credential,
+      support_user: support_user
+    } do
+      assert Credentials
+             |> Bodyguard.permit?(
+               :view_keychain_credential,
+               support_user,
                keychain_credential
              )
     end
