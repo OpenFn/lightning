@@ -1355,14 +1355,14 @@ defmodule Lightning.Credentials do
 
   ## Examples
 
-      iex> get_keychain_credential!(123)
+      iex> get_keychain_credential(123)
       %KeychainCredential{}
 
-      iex> get_keychain_credential!(456)
+      iex> get_keychain_credential(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_keychain_credential!(id), do: Repo.get!(KeychainCredential, id)
+  def get_keychain_credential(id), do: Repo.get(KeychainCredential, id)
 
   @doc """
   Creates a keychain credential.
