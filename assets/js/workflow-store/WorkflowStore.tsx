@@ -171,26 +171,13 @@ export const WorkflowStore: WithActionProps = props => {
   }, [props.pushEventTo, setState, add]);
 
   React.useEffect(() => {
-    const disabledHandler = props.handleEvent(
+    return props.handleEvent(
       'set-disabled',
       (response: { disabled: boolean }) => {
         setDisabled(response.disabled);
       }
     );
-
-    const aiAssistantVisibilityHandler = props.handleEvent(
-      'set-ai-assistant-visibility',
-      (response: { showAiAssistant: boolean; aiAssistantId: string }) => {
-        setShowAiAssistant(response.showAiAssistant);
-        setAiAssistantId(response.aiAssistantId);
-      }
-    );
-
-    return () => {
-      disabledHandler();
-      aiAssistantVisibilityHandler();
-    };
-  }, [props.handleEvent, setDisabled, setShowAiAssistant, setAiAssistantId]);
+  }, [props.handleEvent, setDisabled]);
 
   // clear store when store-component unmounted
   React.useEffect(() => {

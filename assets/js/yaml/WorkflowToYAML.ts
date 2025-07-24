@@ -30,10 +30,16 @@ const WorkflowToYAML = {
     this.pushEvent('get-current-state', {}, (response: WorkflowResponse) => {
       const workflowState = response.workflow_params;
       
-      const workflowSpec = convertWorkflowStateToSpec(workflowState);
-      const yaml = YAML.stringify(workflowSpec);
+      const workflowSpecWithoutIds = convertWorkflowStateToSpec(workflowState, false);
+      const workflowSpecWithIds = convertWorkflowStateToSpec(workflowState, true);
       
-      this.pushEvent('workflow_code_generated', { code: yaml });
+      const yamlWithoutIds = YAML.stringify(workflowSpecWithoutIds);
+      const yamlWithIds = YAML.stringify(workflowSpecWithIds);
+      
+      this.pushEvent('workflow_code_generated', { 
+        code: yamlWithoutIds,
+        code_with_ids: yamlWithIds
+      });
     });
   },
   

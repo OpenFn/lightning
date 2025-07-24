@@ -35,13 +35,14 @@ const roundPosition = (pos: Position): Position => {
 };
 
 export const convertWorkflowStateToSpec = (
-  workflowState: WorkflowState
+  workflowState: WorkflowState,
+  includeIds: boolean = true
 ): WorkflowSpec => {
   const jobs: { [key: string]: SpecJob } = {};
   workflowState.jobs.forEach(job => {
     const pos = workflowState.positions?.[job.id]
     const jobDetails: SpecJob = {
-      id: job.id,
+      ...(includeIds && { id: job.id }),
       name: job.name,
       adaptor: job.adaptor,
       body: job.body,
@@ -54,7 +55,7 @@ export const convertWorkflowStateToSpec = (
   workflowState.triggers.forEach(trigger => {
     const pos = workflowState.positions?.[trigger.id];
     const triggerDetails: SpecTrigger = {
-      id: trigger.id,
+      ...(includeIds && { id: trigger.id }),
       type: trigger.type,
       enabled: trigger.enabled,
       pos: trigger.type !== 'kafka' && pos ? roundPosition(pos) : undefined,
@@ -68,7 +69,7 @@ export const convertWorkflowStateToSpec = (
   const edges: { [key: string]: SpecEdge } = {};
   workflowState.edges.forEach(edge => {
     const edgeDetails: SpecEdge = {
-      id: edge.id,
+      ...(includeIds && { id: edge.id }),
       condition_type: edge.condition_type,
       enabled: edge.enabled,
       target_job: ''
@@ -109,7 +110,7 @@ export const convertWorkflowStateToSpec = (
   });
 
   const workflowSpec: WorkflowSpec = {
-    id: workflowState.id,
+    ...(includeIds && { id: workflowState.id }),
     name: workflowState.name,
     jobs: jobs,
     triggers: triggers,

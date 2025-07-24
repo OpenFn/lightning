@@ -7,8 +7,7 @@ export const WorkflowEditor: WithActionProps<{
   showAiAssistant?: boolean;
   aiAssistantId?: string;
 }> = props => {
-  const { getItem, forceFit, showAiAssistant, aiAssistantId } =
-    useWorkflowStore();
+  const { getItem, forceFit } = useWorkflowStore();
 
 const onSelectionChange = (id?: string) => {
   console.debug('onSelectionChange', id);
@@ -47,8 +46,8 @@ const onSelectionChange = (id?: string) => {
       selection={props.selection}
       onSelectionChange={onSelectionChange}
       forceFit={forceFit}
-      showAiAssistant={showAiAssistant}
-      aiAssistantId={aiAssistantId}
+      showAiAssistant={props.showAiAssistant}
+      aiAssistantId={props.aiAssistantId}
     />
   );
 };

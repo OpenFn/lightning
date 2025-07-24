@@ -147,48 +147,6 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       * `:value` - The value or a function that receives (assigns, params) (required)
       * `:when` - Condition as boolean or function that receives (assigns, params) (default: true)
       * `:transform` - Optional transformation function applied to the value
-
-  ## Examples
-
-      # Simple static parameters
-      build_url(assigns, [
-        [name: "m", value: "edit"],
-        [name: "s", value: "job_1"]
-      ])
-
-      # Dynamic values from assigns
-      build_url(assigns, [
-        [name: "a", value: fn a, _ -> a.selected_run end],
-        [name: "chat", value: fn a, _ -> a.chat_session_id end]
-      ])
-
-      # Conditional parameters
-      build_url(assigns, [
-        [name: "v",
-         value: fn a, _ -> Ecto.Changeset.get_field(a.changeset, :lock_version) end,
-         when: fn a, _ -> a.snapshot_version_tag != "latest" end]
-      ])
-
-      # With transformations
-      build_url(assigns, [
-        [name: "ts",
-         value: fn _, _ -> DateTime.utc_now() end,
-         transform: &DateTime.to_unix/1]
-      ])
-
-      # Complex example with all features
-      build_url(assigns, [
-        [name: "m", value: "edit"],
-        [name: "s", value: fn _, params -> params["node_id"] end],
-        [name: "method", value: "ai", when: fn a, _ -> a.show_workflow_ai_chat end],
-        [name: "chat",
-         value: fn a, _ -> a.chat_session_id end,
-         when: fn a, _ -> a.show_workflow_ai_chat end],
-        [name: "v",
-         value: fn a, _ -> Ecto.Changeset.get_field(a.changeset, :lock_version) end,
-         when: fn a, _ -> a.snapshot_version_tag != "latest" end,
-         transform: &to_string/1]
-      ])
   """
   def build_url(assigns, params) when is_list(params) do
     query_string =
@@ -255,93 +213,108 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   @doc """
-  Common parameter definitions for workflows.
-
-  These can be used as a starting point and modified as needed:
-
-      params = workflow_params() ++ [
-        [name: "custom", value: "value"]
-      ]
-
-      build_url(assigns, params)
-  """
-  def workflow_params do
-    [
-      [name: "m", value: fn _, params -> params[:mode] end],
-      [name: "s", value: fn _, params -> params[:selection] end],
-      [
-        name: "a",
-        value: fn a, _ -> a.selected_run end,
-        when: fn a, params -> params[:include_run] && a.selected_run end
-      ],
-      [
-        name: "v",
-        value: fn a, _ ->
-          Ecto.Changeset.get_field(a.changeset, :lock_version)
-        end,
-        when: fn a, params ->
-          params[:include_version] && a.snapshot_version_tag != "latest"
-        end
-      ],
-      [
-        name: "method",
-        value: "ai",
-        when: fn a, _ -> a.show_workflow_ai_chat end
-      ],
-      [
-        name: "chat",
-        value: fn a, _ -> a.chat_session_id end,
-        when: fn a, _ -> a.show_workflow_ai_chat end
-      ]
-    ]
-  end
-
-  @doc """
   Creates a parameter definition with common defaults.
-
-  ## Examples
-
-      param("m", "edit")
-      param("s", fn a, _ -> a.selected_job.id end)
-      param("v", fn a, _ -> a.version end, when: fn a, _ -> a.version != nil end)
   """
   def param(name, value, opts \\ []) do
     [name: name, value: value] ++ opts
   end
 
   @doc """
-  Cleans query parameters, removing nil values and optionally specific parameters.
-
-  ## Options
-
-    * `:drop` - List of parameter names to remove
-    * `:keep_if` - Function that receives {name, value} and returns boolean
-
-  ## Examples
-
-      clean_query_params(%{"v" => "1", "chat" => nil})
-      #=> %{"v" => "1"}
-
-      clean_query_params(%{"v" => "1", "m" => "edit"}, drop: ["v"])
-      #=> %{"m" => "edit"}
-
-      clean_query_params(params, keep_if: fn {k, _} -> k != "v" end)
+  Creates a parameter that pulls from query_params
   """
-  def clean_query_params(params, opts \\ []) do
-    params
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-    |> then(fn params ->
-      case Keyword.get(opts, :drop) do
-        nil -> params
-        drop_list -> Enum.reject(params, fn {k, _} -> k in drop_list end)
+  def query_param(name), do: param(name, fn a, _ -> a.query_params[name] end)
+
+  @doc """
+  Creates chat-related parameters
+  """
+  def chat_params() do
+    [
+      param("w-chat", fn a, _ -> a.workflow_chat_session_id end),
+      param("j-chat", fn a, _ -> a.job_chat_session_id end)
+    ]
+  end
+
+  @doc """
+  Creates standard URL parameters (all common params)
+  """
+  def standard_params() do
+    [
+      query_param("m"),
+      query_param("s"),
+      query_param("a"),
+      query_param("v"),
+      query_param("method")
+    ] ++ chat_params()
+  end
+
+  @doc """
+  Creates orthogonal parameters (excludes mode and selection)
+  """
+  def orthogonal_params() do
+    [
+      query_param("a"),
+      query_param("v"),
+      query_param("method")
+    ] ++ chat_params()
+  end
+
+  @doc """
+  Creates workflow input run parameters
+  """
+  def workflow_input_params(selection_id) do
+    [
+      param("s", selection_id),
+      param("m", "workflow_input")
+    ] ++ orthogonal_params()
+  end
+
+  @doc """
+  Creates code view parameters
+  """
+  def code_view_params() do
+    [param("m", "code")] ++ orthogonal_params()
+  end
+
+  @doc """
+  Creates parameters excluding mode and selection
+  """
+  def params_without_mode_selection() do
+    orthogonal_params()
+  end
+
+  @doc """
+  Creates parameters with custom overrides
+  """
+  def with_params(overrides \\ []) do
+    base = standard_params()
+
+    Enum.map(overrides, fn {name, value_or_opts} ->
+      name = to_string(name)
+
+      case value_or_opts do
+        opts when is_list(opts) ->
+          # If it's already a param definition, use it
+          if Keyword.has_key?(opts, :name) do
+            opts
+          else
+            Keyword.put(opts, :name, name)
+          end
+
+        value ->
+          param(name, value)
       end
+    end) ++ remove_overridden_params(base, overrides)
+  end
+
+  defp remove_overridden_params(base_params, overrides) do
+    override_names =
+      overrides
+      |> Keyword.keys()
+      |> Enum.map(&to_string/1)
+      |> MapSet.new()
+
+    Enum.reject(base_params, fn param ->
+      MapSet.member?(override_names, Keyword.get(param, :name))
     end)
-    |> then(fn params ->
-      case Keyword.get(opts, :keep_if) do
-        nil -> params
-        keep_func -> Enum.filter(params, keep_func)
-      end
-    end)
-    |> Map.new()
   end
 end
