@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.1">
-    <meta name="project" content="Lightning v2.13.6-pre">
+    <meta name="project" content="Lightning v2.13.6">
 
 
-    <title>Lightning.ApolloClient — Lightning v2.13.6-pre</title>
+    <title>Lightning.ApolloClient — Lightning v2.13.6</title>
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-B54FCE0D.js"></script>
+    <script defer src="dist/sidebar_items-F481EBC1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.13.6-pre
+          v2.13.6
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.ApolloClient</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.13.6-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.13.6)</small>
 
     </h1>
 
@@ -98,27 +98,27 @@ an external AI service that powers Lightning's intelligent assistance features.
 Apollo offers two main AI services:</p><ol><li><strong>Job Chat</strong> - Provides AI assistance for coding tasks, debugging, and
 adaptor-specific guidance within individual workflow jobs</li><li><strong>Workflow Chat</strong> - Generates complete workflow templates from natural
 language descriptions</li></ol><h2 id="module-configuration" class="section-heading"><a href="#module-configuration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Configuration</span></h2><p>The Apollo client requires the following configuration values:</p><ul><li><code class="inline">:endpoint</code> - Base URL of the Apollo service</li><li><code class="inline">:ai_assistant_api_key</code> - Authentication key for API access</li></ul><h2 id="module-usage-examples" class="section-heading"><a href="#module-usage-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Check service availability</span><span class="w">
-</span><span class="k">case</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">test</span><span class="p" data-group-id="6081386435-1">(</span><span class="p" data-group-id="6081386435-1">)</span><span class="w"> </span><span class="k" data-group-id="6081386435-2">do</span><span class="w">
+</span><span class="k">case</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">test</span><span class="p" data-group-id="3907446495-1">(</span><span class="p" data-group-id="3907446495-1">)</span><span class="w"> </span><span class="k" data-group-id="3907446495-2">do</span><span class="w">
   </span><span class="ss">:ok</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="c1"># Service is healthy</span><span class="w">
   </span><span class="ss">:error</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="c1"># Service unavailable</span><span class="w">
-</span><span class="k" data-group-id="6081386435-2">end</span><span class="w">
+</span><span class="k" data-group-id="3907446495-2">end</span><span class="w">
 
 </span><span class="c1"># Get job assistance</span><span class="w">
-</span><span class="p" data-group-id="6081386435-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="6081386435-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">job_chat</span><span class="p" data-group-id="6081386435-4">(</span><span class="w">
+</span><span class="p" data-group-id="3907446495-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="3907446495-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">job_chat</span><span class="p" data-group-id="3907446495-4">(</span><span class="w">
   </span><span class="s">&quot;How do I handle API rate limits?&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="6081386435-5">%{</span><span class="ss">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn() =&gt; http.get(&#39;/api/data&#39;)&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-http&quot;</span><span class="p" data-group-id="6081386435-5">}</span><span class="p">,</span><span class="w">
+  </span><span class="p" data-group-id="3907446495-5">%{</span><span class="ss">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn() =&gt; http.get(&#39;/api/data&#39;)&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-http&quot;</span><span class="p" data-group-id="3907446495-5">}</span><span class="p">,</span><span class="w">
   </span><span class="n">previous_messages</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="6081386435-6">%{</span><span class="ss">session_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;123&quot;</span><span class="p" data-group-id="6081386435-6">}</span><span class="w">
-</span><span class="p" data-group-id="6081386435-4">)</span><span class="w">
+  </span><span class="p" data-group-id="3907446495-6">%{</span><span class="ss">session_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;123&quot;</span><span class="p" data-group-id="3907446495-6">}</span><span class="w">
+</span><span class="p" data-group-id="3907446495-4">)</span><span class="w">
 
 </span><span class="c1"># Generate workflow template</span><span class="w">
-</span><span class="p" data-group-id="6081386435-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="6081386435-7">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="6081386435-8">(</span><span class="w">
+</span><span class="p" data-group-id="3907446495-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="3907446495-7">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="3907446495-8">(</span><span class="w">
   </span><span class="s">&quot;Create a daily sync from Salesforce to PostgreSQL&quot;</span><span class="p">,</span><span class="w">
   </span><span class="no">nil</span><span class="p">,</span><span class="w">
   </span><span class="no">nil</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="6081386435-9">[</span><span class="p" data-group-id="6081386435-9">]</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="6081386435-10">%{</span><span class="p" data-group-id="6081386435-10">}</span><span class="w">
-</span><span class="p" data-group-id="6081386435-8">)</span></code></pre>
+  </span><span class="p" data-group-id="3907446495-9">[</span><span class="p" data-group-id="3907446495-9">]</span><span class="p">,</span><span class="w">
+  </span><span class="p" data-group-id="3907446495-10">%{</span><span class="p" data-group-id="3907446495-10">}</span><span class="w">
+</span><span class="p" data-group-id="3907446495-8">)</span></code></pre>
     </section>
 
 </div>
@@ -279,24 +279,24 @@ provide more targeted and relevant assistance.</p>
 <p>Requests AI assistance for job-specific coding tasks and debugging.</p><p>Sends user queries along with job context (expression code and adaptor) to the
 Apollo job_chat service. The AI provides targeted assistance for coding tasks,
 error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_chat/4-parameters" class="section-heading"><a href="#job_chat/4-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - User's question or request for assistance</li><li><code class="inline">context</code> - Job context including expression code and adaptor info</li><li><code class="inline">history</code> - Previous conversation messages for context (list of maps with <code class="inline">:role</code> and <code class="inline">:content</code>)</li><li><code class="inline">meta</code> - Additional metadata like session IDs or user preferences</li></ul><h2 id="job_chat/4-returns" class="section-heading"><a href="#job_chat/4-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">Tesla.Env.result()</code> with response body containing:</p><ul><li><code class="inline">&quot;history&quot;</code> - Updated conversation including AI response</li><li><code class="inline">&quot;usage&quot;</code> - Token usage and cost information</li><li><code class="inline">&quot;meta&quot;</code> - Updated metadata</li></ul><h2 id="job_chat/4-examples" class="section-heading"><a href="#job_chat/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Basic job assistance</span><span class="w">
-</span><span class="p" data-group-id="9256776746-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9256776746-2">%{</span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9256776746-3">%{</span><span class="s">&quot;history&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">updated_history</span><span class="p" data-group-id="9256776746-3">}</span><span class="p" data-group-id="9256776746-2">}</span><span class="p" data-group-id="9256776746-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">job_chat</span><span class="p" data-group-id="9256776746-4">(</span><span class="w">
+</span><span class="p" data-group-id="1710407697-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1710407697-2">%{</span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1710407697-3">%{</span><span class="s">&quot;history&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">updated_history</span><span class="p" data-group-id="1710407697-3">}</span><span class="p" data-group-id="1710407697-2">}</span><span class="p" data-group-id="1710407697-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">job_chat</span><span class="p" data-group-id="1710407697-4">(</span><span class="w">
   </span><span class="s">&quot;Why is my HTTP request returning a 401 error?&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="9256776746-5">%{</span><span class="w">
+  </span><span class="p" data-group-id="1710407697-5">%{</span><span class="w">
     </span><span class="ss">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn(state) =&gt; http.get(&#39;https://api.example.com/data&#39;, {headers: {&#39;Authorization&#39;: &#39;Bearer &#39; + state.token}})&quot;</span><span class="p">,</span><span class="w">
     </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-http&quot;</span><span class="w">
-  </span><span class="p" data-group-id="9256776746-5">}</span><span class="w">
-</span><span class="p" data-group-id="9256776746-4">)</span><span class="w">
+  </span><span class="p" data-group-id="1710407697-5">}</span><span class="w">
+</span><span class="p" data-group-id="1710407697-4">)</span><span class="w">
 
 </span><span class="c1"># With conversation history</span><span class="w">
-</span><span class="p" data-group-id="9256776746-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="9256776746-6">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">job_chat</span><span class="p" data-group-id="9256776746-7">(</span><span class="w">
+</span><span class="p" data-group-id="1710407697-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="1710407697-6">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">job_chat</span><span class="p" data-group-id="1710407697-7">(</span><span class="w">
   </span><span class="s">&quot;Can you show me how to add error handling?&quot;</span><span class="p">,</span><span class="w">
   </span><span class="n">job_context</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="9256776746-8">[</span><span class="w">
-    </span><span class="p" data-group-id="9256776746-9">%{</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">content</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;How do I make an HTTP request?&quot;</span><span class="p" data-group-id="9256776746-9">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="9256776746-10">%{</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;assistant&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">content</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Here&#39;s how to make HTTP requests...&quot;</span><span class="p" data-group-id="9256776746-10">}</span><span class="w">
-  </span><span class="p" data-group-id="9256776746-8">]</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="9256776746-11">%{</span><span class="ss">session_id</span><span class="p">:</span><span class="w"> </span><span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="9256776746-11">}</span><span class="w">
-</span><span class="p" data-group-id="9256776746-7">)</span></code></pre>
+  </span><span class="p" data-group-id="1710407697-8">[</span><span class="w">
+    </span><span class="p" data-group-id="1710407697-9">%{</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">content</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;How do I make an HTTP request?&quot;</span><span class="p" data-group-id="1710407697-9">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="1710407697-10">%{</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;assistant&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">content</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Here&#39;s how to make HTTP requests...&quot;</span><span class="p" data-group-id="1710407697-10">}</span><span class="w">
+  </span><span class="p" data-group-id="1710407697-8">]</span><span class="p">,</span><span class="w">
+  </span><span class="p" data-group-id="1710407697-11">%{</span><span class="ss">session_id</span><span class="p">:</span><span class="w"> </span><span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="1710407697-11">}</span><span class="w">
+</span><span class="p" data-group-id="1710407697-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="query/4">
@@ -331,10 +331,10 @@ error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_c
       </div>
 
 <p>Legacy alias for <a href="#job_chat/4"><code class="inline">job_chat/4</code></a> maintained for backward compatibility.</p><h2 id="query/4-deprecated" class="section-heading"><a href="#query/4-deprecated" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Deprecated</span></h2><p>Use <a href="#job_chat/4"><code class="inline">job_chat/4</code></a> instead. This function will be removed in a future version.</p><h2 id="query/4-parameters" class="section-heading"><a href="#query/4-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><p>Same as <a href="#job_chat/4"><code class="inline">job_chat/4</code></a>.</p><h2 id="query/4-examples" class="section-heading"><a href="#query/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Old way (deprecated)</span><span class="w">
-</span><span class="p" data-group-id="2695204779-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="2695204779-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="2695204779-2">(</span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="p">,</span><span class="w"> </span><span class="n">history</span><span class="p">,</span><span class="w"> </span><span class="n">meta</span><span class="p" data-group-id="2695204779-2">)</span><span class="w">
+</span><span class="p" data-group-id="9365228019-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="9365228019-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="9365228019-2">(</span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="p">,</span><span class="w"> </span><span class="n">history</span><span class="p">,</span><span class="w"> </span><span class="n">meta</span><span class="p" data-group-id="9365228019-2">)</span><span class="w">
 
 </span><span class="c1"># New way (preferred)</span><span class="w">
-</span><span class="p" data-group-id="2695204779-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="2695204779-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">job_chat</span><span class="p" data-group-id="2695204779-4">(</span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="p">,</span><span class="w"> </span><span class="n">history</span><span class="p">,</span><span class="w"> </span><span class="n">meta</span><span class="p" data-group-id="2695204779-4">)</span></code></pre>
+</span><span class="p" data-group-id="9365228019-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="9365228019-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">job_chat</span><span class="p" data-group-id="9365228019-4">(</span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="p">,</span><span class="w"> </span><span class="n">history</span><span class="p">,</span><span class="w"> </span><span class="n">meta</span><span class="p" data-group-id="9365228019-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="test/0">
@@ -364,14 +364,14 @@ error debugging, adaptor-specific guidance, and best practices.</p><h2 id="job_c
 
 <p>Performs a health check on the Apollo service endpoint.</p><p>Sends a GET request to the root endpoint to verify the service is running
 and accessible. This should be called before attempting AI operations to
-ensure graceful degradation when the service is unavailable.</p><h2 id="test/0-returns" class="section-heading"><a href="#test/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">:ok</code> - Service responded with 2xx status code</li><li><code class="inline">:error</code> - Service unavailable, network error, or non-2xx response</li></ul><h2 id="test/0-examples" class="section-heading"><a href="#test/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="k">case</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">test</span><span class="p" data-group-id="4045815992-1">(</span><span class="p" data-group-id="4045815992-1">)</span><span class="w"> </span><span class="k" data-group-id="4045815992-2">do</span><span class="w">
+ensure graceful degradation when the service is unavailable.</p><h2 id="test/0-returns" class="section-heading"><a href="#test/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">:ok</code> - Service responded with 2xx status code</li><li><code class="inline">:error</code> - Service unavailable, network error, or non-2xx response</li></ul><h2 id="test/0-examples" class="section-heading"><a href="#test/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="k">case</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">test</span><span class="p" data-group-id="4915096332-1">(</span><span class="p" data-group-id="4915096332-1">)</span><span class="w"> </span><span class="k" data-group-id="4915096332-2">do</span><span class="w">
   </span><span class="ss">:ok</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
     </span><span class="c1"># Service is healthy, proceed with AI operations</span><span class="w">
-    </span><span class="n">show_ai_features</span><span class="p" data-group-id="4045815992-3">(</span><span class="p" data-group-id="4045815992-3">)</span><span class="w">
+    </span><span class="n">show_ai_features</span><span class="p" data-group-id="4915096332-3">(</span><span class="p" data-group-id="4915096332-3">)</span><span class="w">
   </span><span class="ss">:error</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
     </span><span class="c1"># Service unavailable, disable AI features</span><span class="w">
-    </span><span class="n">hide_ai_features</span><span class="p" data-group-id="4045815992-4">(</span><span class="p" data-group-id="4045815992-4">)</span><span class="w">
-</span><span class="k" data-group-id="4045815992-2">end</span></code></pre>
+    </span><span class="n">hide_ai_features</span><span class="p" data-group-id="4915096332-4">(</span><span class="p" data-group-id="4915096332-4">)</span><span class="w">
+</span><span class="k" data-group-id="4915096332-2">end</span></code></pre>
   </section>
 </section>
 <section class="detail" id="workflow_chat/5">
@@ -416,31 +416,31 @@ ensure graceful degradation when the service is unavailable.</p><h2 id="test/0-r
 <p>Generates or improves workflow templates using AI assistance.</p><p>Sends requests to the Apollo workflow_chat service to create complete workflow
 YAML definitions from natural language descriptions. Can also iteratively improve
 existing workflows based on validation errors or user feedback.</p><h2 id="workflow_chat/5-parameters" class="section-heading"><a href="#workflow_chat/5-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - Natural language description of desired workflow functionality</li><li><code class="inline">existing_yaml</code> - Optional existing workflow YAML to modify or improve</li><li><code class="inline">errors</code> - Optional validation errors from previous workflow attempts</li><li><code class="inline">history</code> - Previous conversation messages for context</li><li><code class="inline">meta</code> - Additional metadata</li></ul><h2 id="workflow_chat/5-returns" class="section-heading"><a href="#workflow_chat/5-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">Tesla.Env.result()</code> with response body containing:</p><ul><li><code class="inline">&quot;response&quot;</code> - Human-readable explanation of the generated workflow</li><li><code class="inline">&quot;response_yaml&quot;</code> - Complete workflow YAML definition</li><li><code class="inline">&quot;usage&quot;</code> - Token usage and cost information</li></ul><h2 id="workflow_chat/5-examples" class="section-heading"><a href="#workflow_chat/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Generate new workflow from description</span><span class="w">
-</span><span class="p" data-group-id="8438462632-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8438462632-2">%{</span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8438462632-3">%{</span><span class="s">&quot;response_yaml&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">yaml</span><span class="p" data-group-id="8438462632-3">}</span><span class="p" data-group-id="8438462632-2">}</span><span class="p" data-group-id="8438462632-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="8438462632-4">(</span><span class="w">
+</span><span class="p" data-group-id="1901719776-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1901719776-2">%{</span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1901719776-3">%{</span><span class="s">&quot;response_yaml&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">yaml</span><span class="p" data-group-id="1901719776-3">}</span><span class="p" data-group-id="1901719776-2">}</span><span class="p" data-group-id="1901719776-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="1901719776-4">(</span><span class="w">
   </span><span class="s">&quot;Create a daily workflow that syncs Salesforce contacts to a PostgreSQL database&quot;</span><span class="w">
-</span><span class="p" data-group-id="8438462632-4">)</span><span class="w">
+</span><span class="p" data-group-id="1901719776-4">)</span><span class="w">
 
 </span><span class="c1"># Improve existing workflow</span><span class="w">
-</span><span class="p" data-group-id="8438462632-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="8438462632-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="8438462632-6">(</span><span class="w">
+</span><span class="p" data-group-id="1901719776-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="1901719776-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="1901719776-6">(</span><span class="w">
   </span><span class="s">&quot;Add error handling and logging to this workflow&quot;</span><span class="p">,</span><span class="w">
   </span><span class="n">existing_workflow_yaml</span><span class="w">
-</span><span class="p" data-group-id="8438462632-6">)</span><span class="w">
+</span><span class="p" data-group-id="1901719776-6">)</span><span class="w">
 
 </span><span class="c1"># Fix validation errors</span><span class="w">
-</span><span class="p" data-group-id="8438462632-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="8438462632-7">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="8438462632-8">(</span><span class="w">
+</span><span class="p" data-group-id="1901719776-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="1901719776-7">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="1901719776-8">(</span><span class="w">
   </span><span class="s">&quot;Please fix the validation errors in this workflow&quot;</span><span class="p">,</span><span class="w">
   </span><span class="n">broken_yaml</span><span class="p">,</span><span class="w">
   </span><span class="s">&quot;Invalid cron expression: &#39;0 0 * * 8&#39;. Day of week must be 0-6.&quot;</span><span class="w">
-</span><span class="p" data-group-id="8438462632-8">)</span><span class="w">
+</span><span class="p" data-group-id="1901719776-8">)</span><span class="w">
 
 </span><span class="c1"># With conversation context</span><span class="w">
-</span><span class="p" data-group-id="8438462632-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="8438462632-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="8438462632-10">(</span><span class="w">
+</span><span class="p" data-group-id="1901719776-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="1901719776-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ApolloClient</span><span class="o">.</span><span class="n">workflow_chat</span><span class="p" data-group-id="1901719776-10">(</span><span class="w">
   </span><span class="s">&quot;Make the sync run every 2 hours instead of daily&quot;</span><span class="p">,</span><span class="w">
   </span><span class="n">current_yaml</span><span class="p">,</span><span class="w">
   </span><span class="no">nil</span><span class="p">,</span><span class="w">
   </span><span class="n">previous_conversation</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="8438462632-11">%{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="8438462632-11">}</span><span class="w">
-</span><span class="p" data-group-id="8438462632-10">)</span></code></pre>
+  </span><span class="p" data-group-id="1901719776-11">%{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="1901719776-11">}</span><span class="w">
+</span><span class="p" data-group-id="1901719776-10">)</span></code></pre>
   </section>
 </section>
 
