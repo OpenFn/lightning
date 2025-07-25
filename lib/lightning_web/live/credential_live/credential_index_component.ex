@@ -17,7 +17,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
        credential: nil,
        credentials: [],
        current_user: nil,
-       keychain_credentials: [],
+       keychain_credentials: nil,
        oauth_client: nil,
        oauth_clients: [],
        project: nil,
@@ -54,20 +54,19 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{current_user: _, projects: _, return_to: _} = assigns,
         socket
       ) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> load_credentials()}
+    {:ok, socket |> assign(assigns) |> load_credentials()}
   end
 
   defp load_credentials(socket) do
+    %{current_user: current_user, project: project} = socket.assigns
+
     socket
     |> assign(%{
-      credentials: list_credentials(socket.assigns.current_user),
-      oauth_clients: list_clients(socket.assigns.current_user)
+      credentials: list_credentials(project || current_user),
+      oauth_clients: list_clients(project || current_user)
     })
     |> then(fn socket ->
-      if is_list(socket.assigns.keychain_credentials) do
+      if socket.assigns.project do
         socket
         |> assign(
           :keychain_credentials,
@@ -380,21 +379,18 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     )
   end
 
-  defp can_edit_credential(
-         current_user,
-         %KeychainCredential{} = keychain_credential
-       ) do
+  defp can_edit_credential(current_user, %KeychainCredential{} = credential) do
     Policies.Permissions.can?(
       :credentials,
       :edit_keychain_credential,
       current_user,
-      keychain_credential
+      credential
     )
   end
 
   defp can_edit_credential(current_user, credential) do
     Policies.Permissions.can?(
-      Policies.Users,
+      :users,
       :edit_credential,
       current_user,
       credential
@@ -413,8 +409,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     |> Credentials.list_credentials()
     |> Enum.map(fn c ->
       project_names =
-        Map.get(c, :projects, [])
-        |> Enum.map(fn p -> p.name end)
+        Map.get(c, :projects, []) |> Enum.map(fn p -> p.name end)
 
       Map.put(c, :project_names, project_names)
     end)

@@ -51,6 +51,11 @@ defmodule Lightning.Policies.ProjectUsers do
         (allow_as_support_user?(user, project) or
            Projects.member_of?(project, user))
 
+  def authorize(:access_project, %User{} = user, %{project_id: project_id}) do
+    project = Projects.get_project(project_id)
+    authorize(:access_project, user, project)
+  end
+
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner
 

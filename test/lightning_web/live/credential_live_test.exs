@@ -4,7 +4,6 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
-  import Lightning.CredentialsFixtures
   import Lightning.Factories
 
   import Ecto.Query
@@ -34,7 +33,9 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   defp create_project_credential(%{user: user}) do
-    project_credential = project_credential_fixture(user_id: user.id)
+    project_credential =
+      insert(:project_credential, credential: build(:credential, user: user))
+
     %{project_credential: project_credential}
   end
 
@@ -479,12 +480,17 @@ defmodule LightningWeb.CredentialLiveTest do
           project_credentials: [%{project: project}]
         )
 
-      {:ok, view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
-      assert html =~ credential.name
+      assert view
+             |> element("#credentials-table")
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.find("tr td:first-child")
+             |> Floki.text() =~ credential.name
 
       refute has_element?(
                view,

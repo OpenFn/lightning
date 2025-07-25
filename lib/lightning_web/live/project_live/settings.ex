@@ -6,7 +6,6 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   import LightningWeb.LayoutComponents
 
-  alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
@@ -37,7 +36,6 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     project_user = Projects.get_project_user(project, current_user)
 
-    credentials = Lightning.Credentials.list_credentials_for_project(project)
     oauth_clients = OauthClients.list_clients(project)
 
     keychain_credentials =
@@ -131,7 +129,6 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_receive_failure_alerts: can_receive_failure_alerts,
        collaborators_to_invite: [],
        collections: collections,
-       credentials: credentials,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
        keychain_credentials: keychain_credentials,
@@ -399,7 +396,7 @@ defmodule LightningWeb.ProjectLive.Settings do
          |> put_flash(:info, "Credential deleted")
          |> assign(
            :credentials,
-           Lightning.Credentials.list_credentials_for_project(assigns.project)
+           Lightning.Credentials.list_credentials(assigns.project)
          )}
 
       {:error, %Ecto.Changeset{} = _changeset} ->
@@ -522,7 +519,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   defp confirm_user_removal_modal(assigns) do
     user_credentials =
-      get_user_credentials_in_project(
+      Credentials.list_user_credentials_in_project(
         assigns.project_user.user,
         assigns.project_user.project
       )
@@ -623,13 +620,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:error, _reason, %{text: error}} ->
         error
     end
-  end
-
-  defp get_user_credentials_in_project(
-         %User{} = user,
-         %Projects.Project{} = project
-       ) do
-    Credentials.list_user_credentials_in_project(user, project)
   end
 
   attr :can_edit_project, :boolean, required: true

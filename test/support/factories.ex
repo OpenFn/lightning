@@ -279,6 +279,18 @@ defmodule Lightning.Factories do
     }
   end
 
+  def with_personal_access_token(user_token) do
+    %{
+      user_token
+      | token:
+          Lightning.Tokens.PersonalAccessToken.generate_and_sign!(
+            %{"sub" => "user:#{user_token.user.id}"},
+            Lightning.Config.token_signer()
+          ),
+        context: "api"
+    }
+  end
+
   def backup_code_factory do
     %Lightning.Accounts.UserBackupCode{
       code: Lightning.Accounts.UserBackupCode.generate_backup_code()

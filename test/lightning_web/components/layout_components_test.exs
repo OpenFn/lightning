@@ -25,11 +25,12 @@ defmodule LightningWeb.LayoutComponentsTest do
     element =
       (&LayoutComponents.menu_items/1)
       |> render_component(assigns)
+      |> Floki.parse_fragment!()
       |> Floki.find("a[href='/projects/#{project_id}/settings']")
 
     assert Floki.text(element) == "Settings"
 
-    assert element |> Floki.attribute("class") |> hd =~
+    assert element |> Floki.attribute("class") |> List.first() =~
              "menu-item-active"
   end
 end

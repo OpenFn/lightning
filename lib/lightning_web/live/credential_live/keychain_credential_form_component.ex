@@ -34,7 +34,7 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
 
     available_credentials =
       if assigns.project do
-        Credentials.list_credentials_for_project(assigns.project)
+        Credentials.list_credentials(assigns.project)
       else
         []
       end

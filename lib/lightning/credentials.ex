@@ -1460,24 +1460,4 @@ defmodule Lightning.Credentials do
     |> Ecto.Changeset.put_assoc(:project, project)
     |> Ecto.Changeset.apply_changes()
   end
-
-  @doc """
-  Returns the list of credentials for a project, used for keychain credential
-  default credential selection.
-
-  ## Examples
-
-      iex> list_credentials_for_project(%Project{id: 123})
-      [%Credential{}, ...]
-
-  """
-  def list_credentials_for_project(%Project{id: project_id}) do
-    from(c in Credential,
-      join: pc in assoc(c, :project_credentials),
-      on: pc.project_id == ^project_id,
-      order_by: [asc: fragment("lower(?)", c.name)],
-      distinct: c.id
-    )
-    |> Repo.all()
-  end
 end
