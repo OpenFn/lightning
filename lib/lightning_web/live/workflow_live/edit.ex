@@ -515,9 +515,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           phx-value-id={@selected_job.id}
                           theme="danger"
                           disabled={
-                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                               @has_child_edges or @is_first_job or
-                               @snapshot_version_tag != "latest") ||
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @has_child_edges or @is_first_job or
+                              @snapshot_version_tag != "latest" ||
                               !@has_presence_edit_priority
                           }
                           tooltip={
@@ -561,8 +561,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={tf}
                   on_change={&send_form_changed/1}
                   disabled={
-                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                       @snapshot_version_tag != "latest") ||
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                      @snapshot_version_tag != "latest" ||
                       !@has_presence_edit_priority
                   }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
@@ -577,8 +577,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         type="toggle"
                         field={tf[:enabled]}
                         disabled={
-                          (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                             @snapshot_version_tag != "latest") ||
+                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                            @snapshot_version_tag != "latest" ||
                             !@has_presence_edit_priority
                         }
                         label="Enabled"
@@ -613,8 +613,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.edge_form
                   form={ef}
                   disabled={
-                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                       @snapshot_version_tag != "latest") ||
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                      @snapshot_version_tag != "latest" ||
                       !@has_presence_edit_priority
                   }
                   cancel_url={close_url(assigns, :selected_edge, :unselect)}
@@ -631,8 +631,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           type="toggle"
                           field={ef[:enabled]}
                           disabled={
-                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                               @snapshot_version_tag != "latest") ||
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @snapshot_version_tag != "latest" ||
                               !@has_presence_edit_priority
                           }
                           label="Enabled"
@@ -649,9 +649,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             phx-click="delete_edge"
                             phx-value-id={ef[:id].value}
                             disabled={
-                              ((!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                                  @snapshot_version_tag != "latest") ||
-                                 !@has_presence_edit_priority) or
+                              !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                                @snapshot_version_tag != "latest" ||
+                                !@has_presence_edit_priority or
                                 ef[:source_trigger_id].value
                             }
                           >
@@ -1489,7 +1489,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     query_params =
       socket.assigns.query_params
-      |> Map.reject(fn {k, v} -> is_nil(v) or k == "v" end)
+      |> Map.reject(fn {k, v} ->
+        is_nil(v) or k == "v" or k == "a"
+      end)
 
     url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
 
@@ -1519,7 +1521,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("get-current-state", _params, socket) do
-    {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
+    run_id = socket.assigns.selected_run
+
+    %{run_steps: run_steps, history: history} =
+      get_run_steps_and_history(
+        socket.assigns.workflow.id,
+        run_id
+      )
+
+    # don't forget to send update state of disabled
+    socket =
+      socket
+      |> maybe_disable_canvas()
+
+    {:reply,
+     %{
+       workflow_params: socket.assigns.workflow_params,
+       run_steps: run_steps,
+       run_id: run_id,
+       history: history
+     }, socket}
   end
 
   def handle_event(
@@ -2171,6 +2192,30 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
+  defp get_run_steps_and_history(workflow_id, run_id) do
+    run_steps =
+      if run_id == nil do
+        %{steps: []}
+      else
+        WorkOrders.get_run_steps(run_id)
+      end
+      |> Map.update!(:steps, fn steps ->
+        Enum.map(steps, fn step ->
+          %{
+            job_id: step.job_id,
+            error_type: step.error_type,
+            exit_reason: step.exit_reason,
+            started_at: step.started_at,
+            finished_at: step.finished_at
+          }
+        end)
+      end)
+
+    history = WorkOrders.get_workorders_with_runs(workflow_id, run_id)
+
+    %{run_steps: run_steps, history: history}
+  end
+
   defp save_workflow(socket, submitted_params) do
     %{
       workflow_params: initial_params,
@@ -2407,7 +2452,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       snapshot_version_tag: version,
       can_edit_workflow: can_edit_workflow,
       workflow: workflow,
-      show_new_workflow_panel: show_new_workflow_panel
+      show_new_workflow_panel: show_new_workflow_panel,
+      selected_run: selected_run
     } = socket.assigns
 
     disabled =
@@ -2415,7 +2461,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_workflow)
 
     push_event(socket, "set-disabled", %{
-      disabled: show_new_workflow_panel || disabled
+      disabled: !is_nil(selected_run) || show_new_workflow_panel || disabled
     })
   end
 
@@ -2768,6 +2814,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
         handle_method_assignment(socket, method)
 
+      %{"m" => "history", "a" => run_id, "v" => version_tag, "s" => selected_id} ->
+        handle_run_selection_history(socket, run_id, version_tag, selected_id)
+
       %{"s" => nil} ->
         handle_no_selection(socket)
 
@@ -2805,11 +2854,75 @@ defmodule LightningWeb.WorkflowLive.Edit do
       [type, selected] ->
         socket
         |> set_selected_node(type, selected)
-        |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
+        |> set_mode(
+          if mode in ["expand", "workflow_input", "history"], do: mode, else: nil
+        )
 
       nil ->
         socket |> unselect_all()
     end
+  end
+
+  #  This is called when switching to latest
+  defp handle_run_selection_history(socket, _run_id, version_tag, selected_id)
+       when is_nil(version_tag) do
+    socket
+    |> handle_selection_with_mode(selected_id, "history")
+    |> set_mode(nil)
+  end
+
+  defp handle_run_selection_history(socket, run_id, version_tag, selected_id) do
+    workflow_id = socket.assigns.workflow.id
+
+    %{run_steps: run_steps} =
+      get_run_steps_and_history(workflow_id, run_id)
+
+    snapshot = Snapshot.get_by_version(workflow_id, version_tag)
+
+    fine_snap = %{
+      triggers:
+        snapshot.triggers
+        |> Enum.map(fn trigger ->
+          Map.take(trigger, [
+            :id,
+            :comment,
+            :custom_path,
+            :cron_expression,
+            :type,
+            :enabled
+          ])
+        end),
+      jobs:
+        snapshot.jobs
+        |> Enum.map(fn job ->
+          Map.take(job, [:id, :body, :name, :adaptor])
+        end),
+      edges:
+        snapshot.edges
+        |> Enum.map(fn edge ->
+          Map.take(edge, [
+            :id,
+            :condition_type,
+            :condition_expression,
+            :condition_label,
+            :enabled,
+            :source_job_id,
+            :source_trigger_id,
+            :target_job_id
+          ])
+        end),
+      positions: Map.get(snapshot, :positions, nil)
+    }
+
+    # pushing the snapshot state before pushing the runs for it
+    socket
+    |> handle_selection_with_mode(selected_id, "history")
+    |> assign_workflow(socket.assigns.workflow, snapshot)
+    |> push_event("state-applied", %{state: fine_snap})
+    |> push_event("patch-runs", %{
+      run_id: run_id,
+      run_steps: run_steps
+    })
   end
 
   defp handle_new_workflow_panel(socket) do
@@ -2916,7 +3029,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp set_mode(socket, mode) do
-    if mode in [nil, "expand", "settings", "code", "workflow_input"] do
+    if mode in [nil, "expand", "settings", "code", "workflow_input", "history"] do
       socket
       |> assign(selection_mode: mode)
     else

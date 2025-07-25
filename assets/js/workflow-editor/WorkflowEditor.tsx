@@ -1,10 +1,37 @@
 
 import type { WithActionProps } from '#/react/lib/with-props';
+import React from 'react';
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
 import { useWorkflowStore } from '../workflow-store/store';
+import tippy, { type Placement } from 'tippy.js';
 
 export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) => {
   const { getItem, forceFit } = useWorkflowStore();
+
+  // TODO to be moved to a higher level
+  React.useEffect(() => {
+    const globalMouseEnterHandler = (e: MouseEvent<HTMLElement>) => {
+      const target = e.target as HTMLElement;
+      const content = target.dataset['tooltip'];
+      const placement: Placement = target.dataset['tooltipPlacement'] || "right";
+      if (content) {
+        let tp: ReturnType<typeof tippy>[number] | undefined = target._tippy;
+        if (tp) {
+          tp.setContent(content);
+          tp.setProps({ placement })
+        } else {
+          tp = tippy(target, {
+            content: content,
+            placement,
+            animation: false,
+            allowHTML: false,
+          });
+        }
+      }
+    }
+    window.addEventListener("mouseover", globalMouseEnterHandler);
+    return () => { window.removeEventListener("mouseover", globalMouseEnterHandler) };
+  }, []);
 
   const onSelectionChange = (id?: string) => {
     console.debug('onSelectionChange', id);
@@ -38,11 +65,22 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
     }
   }
 
+  const onRunChangeHandler = (id: string, version: number) => {
+    console.log("clicked:", version)
+    const currentUrl = new URL(window.location.href);
+    const nextUrl = new URL(currentUrl);
+    nextUrl.searchParams.set('a', id);
+    nextUrl.searchParams.set('v', version.toString());
+    nextUrl.searchParams.set('m', 'history')
+    props.navigate(nextUrl.toString());
+  }
+
   return <WorkflowDiagram
     el={props.el}
     containerEl={props.containerEl}
     selection={props.selection}
     onSelectionChange={onSelectionChange}
     forceFit={forceFit}
+    onRunChange={onRunChangeHandler}
   />
 }

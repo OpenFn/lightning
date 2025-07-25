@@ -484,6 +484,88 @@ defmodule Lightning.WorkOrders do
     {:ok, 0, 0}
   end
 
+  def get_run_steps(run_id) do
+    Run
+    |> where([r], r.id == ^run_id)
+    |> preload([:created_by, :steps])
+    |> Repo.one()
+    |> case do
+      nil ->
+        %{start_from: nil, steps: [], isTrigger: true}
+
+      %{steps: run_steps, starting_trigger_id: nil, starting_job_id: job_id} =
+          data ->
+        %{
+          start_from: job_id,
+          steps: run_steps,
+          isTrigger: false,
+          inserted_at: data.inserted_at,
+          run_by:
+            if(is_nil(data.created_by), do: nil, else: data.created_by.email)
+        }
+
+      %{steps: run_steps, starting_trigger_id: trigger_id, starting_job_id: nil} =
+          data ->
+        %{
+          start_from: trigger_id,
+          steps: run_steps,
+          isTrigger: true,
+          inserted_at: data.inserted_at
+        }
+
+      _ ->
+        %{start_from: nil, steps: [], isTrigger: true}
+    end
+  end
+
+  def get_workorders_with_runs(workflow_id, run_id) do
+    main_query =
+      from(wo in WorkOrder,
+        join: r in assoc(wo, :runs),
+        where: wo.workflow_id == ^workflow_id,
+        preload: [:snapshot, runs: [:steps]],
+        limit: 20
+      )
+
+    workorder_with_run =
+      if run_id do
+        from([wo, r] in main_query,
+          where: r.id != ^run_id
+        )
+      else
+        main_query
+      end
+
+    final_query =
+      if run_id do
+        from(wo in WorkOrder,
+          join: r in assoc(wo, :runs),
+          where: r.id == ^run_id and wo.workflow_id == ^workflow_id,
+          preload: [:snapshot, runs: [:steps]],
+          union: ^workorder_with_run
+        )
+      else
+        workorder_with_run
+      end
+
+    final_query
+    |> order_by(desc: fragment("last_activity"))
+    |> Repo.all()
+    |> Enum.map(fn worder ->
+      %{
+        runs:
+          worder.runs
+          |> Enum.map(fn run ->
+            Map.take(run, [:id, :state, :error_type, :started_at, :finished_at])
+          end),
+        version: worder.snapshot.lock_version,
+        state: worder.state,
+        last_activity: worder.last_activity,
+        id: worder.id
+      }
+    end)
+  end
+
   def get_last_runs_steps_with_dataclips(workorders, jobs) do
     job_ids = Enum.map(jobs, & &1.id)
 

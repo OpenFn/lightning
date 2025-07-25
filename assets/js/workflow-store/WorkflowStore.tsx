@@ -3,9 +3,11 @@ import React from 'react';
 import {
   useWorkflowStore,
   type ChangeArgs,
+  type RunInfo,
   type PendingAction,
   type ReplayAction,
   type WorkflowProps,
+  type WorkflowRunHistory,
 } from './store';
 import { randomUUID } from '../common';
 import { DEFAULT_TEXT } from '../editor/Editor';
@@ -48,7 +50,8 @@ export const WorkflowStore: WithActionProps = props => {
     subscribe,
     setDisabled,
     setForceFit,
-    reset
+    reset,
+    updateRuns
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -115,6 +118,13 @@ export const WorkflowStore: WithActionProps = props => {
     }
   }, [add, props.handleEvent, setSelection, setForceFit]);
 
+  React.useEffect(() => {
+    return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunInfo }) => {
+      updateRuns(response.run_steps, response.run_id);
+      setDisabled(true)
+    })
+  }, [props.handleEvent, updateRuns, setDisabled])
+
   // Fetch initial state once on mount
   React.useEffect(() => {
     const workflowLoadParamsStart = new Date();
@@ -128,9 +138,10 @@ export const WorkflowStore: WithActionProps = props => {
     props.pushEventTo(
       'get-current-state',
       {},
-      (response: { workflow_params: WorkflowProps }) => {
-        const { workflow_params } = response;
+      (response: { workflow_params: WorkflowProps, run_steps: RunInfo, run_id: string | null, history: WorkflowRunHistory }) => {
+        const { workflow_params, run_steps, run_id, history } = response;
         setState(workflow_params);
+        updateRuns(run_steps, run_id, history);
         if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
           const diff = createNewWorkflow();
           add(diff);
@@ -151,7 +162,7 @@ export const WorkflowStore: WithActionProps = props => {
         });
       }
     );
-  }, [props.pushEventTo, setState, add]);
+  }, [props.pushEventTo, setState, add, updateRuns]);
 
   React.useEffect(() => {
     return props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
