@@ -337,7 +337,11 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         width="w-[32rem] lg:w-[44rem]"
       >
         <:title>
-          <.modal_title action={@action} />
+          <%= if @action in [:edit] do %>
+            Edit OAuth Client
+          <% else %>
+            Add an OAuth Client
+          <% end %>
         </:title>
         <.form
           :let={f}
@@ -577,16 +581,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
         </span>
       </div>
     </div>
-    """
-  end
-
-  defp modal_title(assigns) do
-    ~H"""
-    <%= if @action in [:edit] do %>
-      Edit OAuth Client
-    <% else %>
-      Add an OAuth Client
-    <% end %>
     """
   end
 end

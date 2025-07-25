@@ -51,6 +51,11 @@ defmodule Lightning.Policies.ProjectUsers do
         (allow_as_support_user?(user, project) or
            Projects.member_of?(project, user))
 
+  def authorize(:access_project, %User{} = user, %{project_id: project_id}) do
+    project = Projects.get_project(project_id)
+    authorize(:access_project, user, project)
+  end
+
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner
 
@@ -106,8 +111,9 @@ defmodule Lightning.Policies.ProjectUsers do
         %User{},
         %ProjectUser{} = project_user
       )
-      when action in @project_user_actions,
-      do: project_user.role in [:owner, :admin, :editor]
+      when action in @project_user_actions do
+    project_user.role in [:owner, :admin, :editor]
+  end
 
   def authorize(
         action,
@@ -117,10 +123,13 @@ defmodule Lightning.Policies.ProjectUsers do
       when action in @project_user_actions,
       do: support_user
 
-  def authorize(action, user, %{project_id: project_id}),
-    do: authorize(action, user, Projects.get_project(project_id))
-
-  def allow_as_support_user?(user, %Project{
+  # TODO: these should be private, but they are called from elsewhere currently
+  # ideally we move the concept of support access into Projects.get_project_user_role/2
+  # where we expose an extra :support_user role - just an idea here, we want to
+  # careful to not to "hide" this concept into a single function that isn't
+  # guaranteed to be called in the right place by all the places that need to
+  # know if permission should be granted.
+  def allow_as_support_user?(%User{} = user, %Project{
         allow_support_access: allow_support_access
       }),
       do: user.support_user and allow_support_access

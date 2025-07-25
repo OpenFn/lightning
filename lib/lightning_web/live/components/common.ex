@@ -309,6 +309,7 @@ defmodule LightningWeb.Components.Common do
 
   attr :kind, :atom, required: true, values: [:error, :info]
   attr :flash, :map, required: true
+  attr :rest, :global
 
   def flash(%{kind: :error} = assigns) do
     assigns =
@@ -329,6 +330,7 @@ defmodule LightningWeb.Components.Common do
         |> hide(@id)
       }
       phx-hook="Flash"
+      {@rest}
     >
       <div class="flex justify-between items-center space-x-3 text-red-900">
         <.icon name="hero-exclamation-circle-solid" class="w-5 h-5" />
@@ -373,6 +375,7 @@ defmodule LightningWeb.Components.Common do
       }
       phx-value-key="info"
       phx-hook="Flash"
+      {@rest}
     >
       <div class="flex justify-between items-center space-x-3 text-blue-900">
         <.icon name="hero-check-circle-solid" class="w-5 h-5" />

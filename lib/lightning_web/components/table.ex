@@ -101,7 +101,9 @@ defmodule LightningWeb.Components.Table do
         ]}>
           {render_slot(@body)}
         </tbody>
-        <tfoot>{render_slot(@footer)}</tfoot>
+        <%= for footer <- @footer do %>
+          <tfoot>{footer}</tfoot>
+        <% end %>
       </table>
       <%= if @page && @url do %>
         <div class="border-t border-gray-200">
@@ -148,6 +150,7 @@ defmodule LightningWeb.Components.Table do
         "transition-colors duration-150",
         "has-[td]:hover:bg-gray-50",
         @onclick && "cursor-pointer",
+        "last:rounded-b-lg",
         "[&>td:first-child]:py-4 [&>td:first-child]:pr-3 [&>td:first-child]:pl-4 [&>td:first-child]:sm:pl-6",
         "[&>th:first-child]:py-3.5 [&>th:first-child]:pr-3 [&>th:first-child]:pl-4 [&>th:first-child]:sm:pl-6",
         "[&>td:not(:first-child):not(:last-child)]:px-3 [&>td:not(:first-child):not(:last-child)]:py-4",
@@ -262,7 +265,14 @@ defmodule LightningWeb.Components.Table do
 
   def td(assigns) do
     ~H"""
-    <td id={@id} class={["text-sm text-gray-500", @class]} {@rest}>
+    <td
+      id={@id}
+      class={[
+        "text-sm text-gray-500 first:rounded-bl-lg last:rounded-br-lg",
+        @class
+      ]}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </td>
     """
@@ -277,6 +287,7 @@ defmodule LightningWeb.Components.Table do
   attr :button_target, :any, default: nil
   attr :button_action_value, :any, default: nil
   attr :interactive, :boolean, default: true
+  attr :rest, :global
 
   def empty_state(assigns) do
     ~H"""
@@ -289,6 +300,7 @@ defmodule LightningWeb.Components.Table do
         phx-value-action={@button_action_value}
         class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
         disabled={@button_disabled}
+        {@rest}
       >
         <.icon name={@icon} class="mx-auto w-12 h-12 text-secondary-400" />
         <span class="mt-2 block text-xs font-semibold text-secondary-600">

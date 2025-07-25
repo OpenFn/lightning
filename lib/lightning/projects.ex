@@ -246,8 +246,11 @@ defmodule Lightning.Projects do
   """
   def get_project_user!(id), do: Repo.get!(ProjectUser, id)
 
-  def get_project_user(id), do: Repo.get(ProjectUser, id)
+  @spec get_project_user(Ecto.UUID.t()) :: ProjectUser.t() | nil
+  def get_project_user(id) when is_binary(id), do: Repo.get(ProjectUser, id)
 
+  @spec get_project_user(project :: Project.t(), user :: User.t()) ::
+          ProjectUser.t() | nil
   def get_project_user(%Project{id: project_id}, %User{id: user_id}) do
     from(pu in ProjectUser,
       join: p in assoc(pu, :project),
@@ -257,6 +260,12 @@ defmodule Lightning.Projects do
       preload: [:user, :project]
     )
     |> Repo.one()
+  end
+
+  @spec get_project_user(project_id :: binary(), user :: User.t()) ::
+          ProjectUser.t() | nil
+  def get_project_user(project_id, %User{} = user) when is_binary(project_id) do
+    get_project_user(%Project{id: project_id}, user)
   end
 
   @doc """
@@ -683,9 +692,7 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @spec project_user_role_query(user :: User.t(), project :: Project.t()) ::
-          Ecto.Queryable.t()
-  def project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do
+  defp project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: p.id == ^project_id and pu.user_id == ^user_id,
@@ -712,6 +719,8 @@ defmodule Lightning.Projects do
       :owner
 
   """
+  @spec get_project_user_role(user :: User.t(), project :: Project.t()) ::
+          atom() | nil
   def get_project_user_role(user, project) do
     project_user_role_query(user, project)
     |> Repo.one()

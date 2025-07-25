@@ -16,8 +16,8 @@ defmodule Lightning.Policies.UserPermissionsTest do
 
   import Lightning.AccountsFixtures
 
-  alias Lightning.CredentialsFixtures
-  alias Lightning.Policies.{Permissions, Users}
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
 
   setup do
     %{
@@ -32,20 +32,19 @@ defmodule Lightning.Policies.UserPermissionsTest do
          %{
            user: user
          } do
-      user_api_token = api_token_fixture(user).token
-      user_cred = CredentialsFixtures.credential_fixture(user_id: user.id)
+      api_token =
+        build(:user_token, user: user)
+        |> with_personal_access_token()
+        |> insert()
 
-      assert Users |> Permissions.can?(:edit_credential, user, user_cred)
+      credential = insert(:credential, user: user)
+      client = insert(:oauth_client, user: user)
+
+      assert Users |> Permissions.can?(:edit_credential, user, credential)
       assert Users |> Permissions.can?(:delete_account, user, user)
-
-      assert Users
-             |> Permissions.can?(
-               :delete_api_token,
-               user,
-               user_api_token
-             )
-
-      assert Users |> Permissions.can?(:delete_credential, user, user_cred)
+      assert Users |> Permissions.can?(:delete_api_token, user, api_token.token)
+      assert Users |> Permissions.can?(:delete_credential, user, credential)
+      assert Users |> Permissions.can?(:delete_credential, user, client)
     end
 
     test "cannot access admin space, edit other users credentials, and delete other users accounts, api tokens, and credentials",
@@ -53,25 +52,18 @@ defmodule Lightning.Policies.UserPermissionsTest do
            user: user,
            other_user: other_user
          } do
-      other_user_api_token = api_token_fixture(other_user).token
-      other_user_credential = CredentialsFixtures.credential_fixture()
+      api_token =
+        build(:user_token, user: other_user)
+        |> with_personal_access_token()
+        |> insert()
 
-      refute Users |> Permissions.can?(:access_admin_space, user, {})
+      credential = insert(:credential)
 
-      refute Users
-             |> Permissions.can?(:edit_credential, user, other_user_credential)
-
+      refute Users |> Permissions.can?(:access_admin_space, user)
+      refute Users |> Permissions.can?(:edit_credential, user, credential)
       refute Users |> Permissions.can?(:delete_account, user, other_user)
-
-      refute Users
-             |> Permissions.can?(
-               :delete_api_token,
-               user,
-               other_user_api_token
-             )
-
-      refute Users
-             |> Permissions.can?(:delete_credential, user, other_user_credential)
+      refute Users |> Permissions.can?(:delete_api_token, user, api_token.token)
+      refute Users |> Permissions.can?(:delete_credential, user, credential)
     end
   end
 
@@ -80,20 +72,19 @@ defmodule Lightning.Policies.UserPermissionsTest do
          %{
            superuser: superuser
          } do
-      api_token = api_token_fixture(superuser).token
-      credential = CredentialsFixtures.credential_fixture(user_id: superuser.id)
+      api_token =
+        build(:user_token, user: superuser)
+        |> with_personal_access_token()
+        |> insert()
 
-      assert Users |> Permissions.can?(:access_admin_space, superuser, {})
+      credential = insert(:credential, user: superuser)
 
+      assert Users |> Permissions.can?(:access_admin_space, superuser)
       assert Users |> Permissions.can?(:edit_credential, superuser, credential)
       assert Users |> Permissions.can?(:delete_account, superuser, superuser)
 
       assert Users
-             |> Permissions.can?(
-               :delete_api_token,
-               superuser,
-               api_token
-             )
+             |> Permissions.can?(:delete_api_token, superuser, api_token.token)
 
       assert Users |> Permissions.can?(:delete_credential, superuser, credential)
     end
@@ -103,31 +94,20 @@ defmodule Lightning.Policies.UserPermissionsTest do
            superuser: superuser,
            other_user: other_user
          } do
-      other_user_api_token = api_token_fixture(other_user).token
-      other_user_credential = CredentialsFixtures.credential_fixture()
+      api_token =
+        build(:user_token, user: other_user)
+        |> with_personal_access_token()
+        |> insert()
 
-      refute Users
-             |> Permissions.can?(
-               :edit_credential,
-               superuser,
-               other_user_credential
-             )
+      credential = insert(:credential)
 
+      refute Users |> Permissions.can?(:edit_credential, superuser, credential)
       refute Users |> Permissions.can?(:delete_account, superuser, other_user)
 
       refute Users
-             |> Permissions.can?(
-               :delete_api_token,
-               superuser,
-               other_user_api_token
-             )
+             |> Permissions.can?(:delete_api_token, superuser, api_token.token)
 
-      refute Users
-             |> Permissions.can?(
-               :delete_credential,
-               superuser,
-               other_user_credential
-             )
+      refute Users |> Permissions.can?(:delete_credential, superuser, credential)
     end
   end
 end

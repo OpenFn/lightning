@@ -313,6 +313,16 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                     <NewInputs.input type="text" field={f[:name]} label="Name" />
                   </div>
                   <div>
+                    <NewInputs.input
+                      type="text"
+                      field={f[:external_id]}
+                      label="External ID"
+                    />
+                    <p class="mt-1 text-sm text-gray-500">
+                      Optional identifier for this credential in external systems
+                    </p>
+                  </div>
+                  <div>
                     <Components.Form.check_box form={f} field={:production} />
                   </div>
                 </div>

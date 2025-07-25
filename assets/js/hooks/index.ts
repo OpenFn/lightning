@@ -27,6 +27,7 @@ import {
 } from './KeyHandlers';
 
 import FileDropzone from './FileDropzone';
+import CredentialSelector from './CredentialSelector';
 
 export {
   LogLineHighlight,
@@ -46,6 +47,7 @@ export {
   CloseInspectorPanelViaEscape,
   CloseNodePanelViaEscape,
   FileDropzone,
+  CredentialSelector,
 };
 
 export { ReactComponent } from '#/react/hooks';

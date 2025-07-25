@@ -5,7 +5,7 @@ defmodule LightningWeb.Gettext do
   By using [Gettext](https://hexdocs.pm/gettext),
   your module gains a set of macros for translations, for example:
 
-      import LightningWeb.Gettext
+      use Gettext, backend: LightningWeb.Gettext
 
       # Simple translation
       gettext("Here is the string to translate")
@@ -20,5 +20,5 @@ defmodule LightningWeb.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :lightning
+  use Gettext.Backend, otp_app: :lightning
 end

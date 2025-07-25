@@ -36,4 +36,15 @@ defmodule Lightning.VersionControl.GithubError do
   def api_error(msg, meta \\ %{}) do
     new(:api_error, msg, meta)
   end
+
+  @impl Exception
+  def message(%__MODULE__{code: code, message: message, meta: meta}) do
+    meta_str =
+      case map_size(meta) do
+        0 -> ""
+        _ -> " (#{inspect(meta)})"
+      end
+
+    "[#{code}] #{message}#{meta_str}"
+  end
 end

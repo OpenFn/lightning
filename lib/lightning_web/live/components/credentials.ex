@@ -12,9 +12,15 @@ defmodule LightningWeb.Components.Credentials do
                         target: "##{@credentials_index_live_component}"
                       )
 
-  def credentials_index_live_component(assigns) do
-    assigns = assign(assigns, :id, @credentials_index_live_component)
+  attr :id, :string, default: @credentials_index_live_component
+  attr :current_user, :any, required: true
+  attr :project, :any
+  attr :projects, :list, required: true
+  attr :can_create_project_credential, :any, required: true
+  attr :show_owner_in_tables, :boolean, default: false
+  attr :return_to, :string, required: true
 
+  def credentials_index_live_component(assigns) do
     ~H"""
     <.live_component
       id={@id}
@@ -210,47 +216,67 @@ defmodule LightningWeb.Components.Credentials do
   attr :disabled, :boolean, default: false
   attr :phx_target, :any, default: "##{@credentials_index_live_component}"
 
-  def new_credential_menu_button(assigns) do
-    assigns =
-      assign_new(assigns, :options, fn ->
-        [
-          %{
-            name: "Credential",
-            id: "new-credential-option-menu-item",
-            target: "new_credential"
-          },
-          %{
-            name: "OAuth client",
-            id: "new-oauth-client-option-menu-item",
-            target: "new_oauth_client",
-            badge: "Advanced"
-          }
-        ]
-      end)
+  slot :option, required: true do
+    attr :id, :string, required: true
+    attr :target, :string, required: true
+    attr :badge, :string, required: false
+    attr :disabled, :boolean, required: false
+  end
 
+  def new_credential_menu_button(assigns) do
     ~H"""
     <Common.simple_dropdown id={@id}>
       <:button>
         Add new
       </:button>
       <:options>
-        <a
-          :for={%{name: name, id: id, target: target} = option <- @options}
-          href="#"
-          role="menuitem"
-          tabindex="-1"
-          id={id}
-          phx-click={target}
+        <.menu_button_option
+          :for={option <- @option}
+          id={option.id}
+          target={option.target}
+          badge={option[:badge]}
+          disabled={Map.get(option, :disabled, false)}
           phx-target={@phx_target}
-          disabled={@disabled}
         >
-          {name}<span
-            :if={Map.get(option, :badge)}
-            class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
-          ><%= Map.get(option, :badge) %></span>
-        </a>
+          {render_slot(option)}
+        </.menu_button_option>
       </:options>
     </Common.simple_dropdown>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :target, :string, required: true
+  attr :badge, :string, default: nil
+  attr :disabled, :boolean, required: false
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  defp menu_button_option(assigns) do
+    ~H"""
+    <span
+      role="menuitem"
+      tabindex="-1"
+      phx-click={!@disabled && "show_modal"}
+      phx-value-target={!@disabled && @target}
+      id={@id}
+      class={
+        if @disabled, do: "text-gray-400 cursor-not-allowed", else: "cursor-pointer"
+      }
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+      <span
+        :if={@badge}
+        class={[
+          "ml-2 inline-flex items-center rounded-md bg-gray-50",
+          "px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1",
+          "ring-inset ring-gray-500/10"
+        ]}
+      >
+        {@badge}
+      </span>
+    </span>
     """
   end
 end

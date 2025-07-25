@@ -181,6 +181,7 @@ defmodule Lightning.Workflows.SnapshotsTest do
                :body,
                :adaptor,
                :project_credential_id,
+               :keychain_credential_id,
                :inserted_at,
                :updated_at
              ])

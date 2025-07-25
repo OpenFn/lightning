@@ -32,6 +32,8 @@ defmodule Lightning.Credentials.OauthClient do
     field :optional_scopes, :string
     field :scopes_doc_url, :string
 
+    field :project_names, {:array, :string}, virtual: true
+
     belongs_to :user, User
 
     has_many :project_oauth_clients, ProjectOauthClient

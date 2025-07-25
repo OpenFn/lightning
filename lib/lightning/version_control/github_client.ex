@@ -166,27 +166,25 @@ defmodule Lightning.VersionControl.GithubClient do
           build_bearer_client(installation_token)
 
         {:ok, %{status: 404, body: body}} ->
-          Logger.error("Unexpected GitHub Response: #{inspect(body)}")
-
           error =
             GithubError.installation_not_found(
               "GitHub Installation APP ID is misconfigured",
               body
             )
 
+          Logger.error(Exception.message(error))
           Sentry.capture_exception(error)
 
           {:error, error}
 
         {:ok, %{status: 401, body: body}} ->
-          Logger.error("Unexpected GitHub Response: #{inspect(body)}")
-
           error =
             GithubError.invalid_certificate(
               "GitHub Certificate is misconfigured",
               body
             )
 
+          Logger.error(Exception.message(error))
           Sentry.capture_exception(error)
 
           {:error, error}

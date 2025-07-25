@@ -2,30 +2,51 @@ defmodule Lightning.Policies.Permissions do
   @moduledoc """
   This module defines a unique interface managing authorizations in Lightning.
 
-  Users in Lightning have instance-wide and project-wide roles which determine their level of access to resources in the application. Fo rmore details see the [documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
+  Users in Lightning have instance-wide and project-wide roles which determine 
+  their level of access to resources in the application. For more details see 
+  the [documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
 
-  These authorizations policies are all implemented under the `lib/lightning/policies` folder. In that folder you can find 3 files:
-  - The `users.ex` file has all the policies for the instances wide access levels
-  - The `project_users.ex` file has all the policies for the project wide access levels
-  - The `permissions.ex` file defines the `Lightning.Policies.Permissions.can/4` interface. Which is a wrapper around the `Bodyguard.permit/4` function.
-  We use that interface to be able to harmonize the use of policies across the entire app.
+  ## Policy Modules
 
-  All the policies are tested in the `test/lightning/policies` folder. And the test are written in a way that allows the reader to quickly who can do what in the app.
+  Authorization policies are implemented under `lib/lightning/policies/`:
+  - `users.ex` - Instance-wide access levels
+  - `project_users.ex` - Project-wide access levels  
+  - `credentials.ex` - Credential management permissions
+  - `workflows.ex` - Workflow-related permissions
+  - `collections.ex` - Collection access permissions
+  - `dataclips.ex` - Dataclip permissions
+  - `exports.ex` - Export functionality permissions
+  - `provisioning.ex` - Resource provisioning permissions
 
-  We have two variants of the `Lightning.Policies.Permissions.can/4` interface:
-  - `Lightning.Policies.Permissions.can(policy, action, actor, resource)` returns `:ok` if the actor can perform the action on the resource and `{:error, :unauthorized}` otherwise.
-  - `Lightning.Policies.Permissions.can?(policy, action, actor, resource)` returns `true` if the actor can perform the action on the resource and `false` otherwise.
+  ## Interface
 
-  Here is an example of how we the `Lightning.Policies.Permissions.can/4` interface to check if the a user can edit a job or not
+  This module provides the `can/4` and `can?/4` interface, which wraps 
+  `Bodyguard.permit/4` to harmonize policy usage across the application.
+
+  **Policy Resolution**: You can reference policy modules in two ways:
+  - Full module names: `Lightning.Policies.Users`
+  - Atom shortcuts for sub-modules: `:users`, `:project_users`, `:credentials`
+
+  ## Functions
+
+  - `can(policy, action, actor, resource)` - Returns `:ok` or `{:error, :unauthorized}`
+  - `can?(policy, action, actor, resource)` - Returns `true` or `false`
+
+  ## Examples
+
+  **Using full module names:**
   ```elixir
-  can_edit_workflow = Lightning.Policies.ProjectUsers |> Lightning.Policies.Permissions.can?(:edit_workflow, socket.assigns.current_user, socket.assigns.project)
-
-  if can_edit_workflow do
-    # allow user to edit the workflow
-  else
-    # quick user out
-  end
+  can_edit = Lightning.Policies.ProjectUsers 
+             |> Lightning.Policies.Permissions.can?(:edit_workflow, user, project)
   ```
+
+  **Using atom shortcuts:**
+  ```elixir  
+  can_create = Permissions.can?(:credentials, :create_keychain_credential, project_user)
+  can_delete = Permissions.can?(:project_users, :delete_project, user, project)
+  ```
+
+  All policies are comprehensively tested in `test/lightning/policies/`.
   """
 
   @doc """
@@ -43,7 +64,9 @@ defmodule Lightning.Policies.Permissions do
 
   """
   def can(policy, action, user, params \\ []) do
-    Bodyguard.permit(policy, action, user, params)
+    policy
+    |> resolve_policy_module()
+    |> Bodyguard.permit(action, user, params)
   end
 
   @doc """
@@ -59,9 +82,19 @@ defmodule Lightning.Policies.Permissions do
 
   """
   def can?(policy, action, user, params \\ []) do
-    case can(policy, action, user, params) do
-      :ok -> true
-      {:error, :unauthorized} -> false
+    policy
+    |> resolve_policy_module()
+    |> Bodyguard.permit?(action, user, params)
+  end
+
+  defp resolve_policy_module(policy) when is_atom(policy) do
+    if Code.ensure_loaded?(policy) do
+      policy
+    else
+      policy
+      |> Atom.to_string()
+      |> Macro.camelize()
+      |> then(&Module.concat([Lightning.Policies, &1]))
     end
   end
 end
