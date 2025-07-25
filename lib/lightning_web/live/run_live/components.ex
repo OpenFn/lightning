@@ -5,17 +5,40 @@ defmodule LightningWeb.RunLive.Components do
   alias Lightning.WorkOrders.SearchParams
   alias Phoenix.LiveView.JS
 
-  attr :run, Lightning.Run, required: true
+  attr :item, :map,
+    required: true,
+    doc: "An item with id, started_at, and finished_at fields"
 
+  attr :context, :string, default: "", doc: "Optional context to make IDs unique"
+
+  @type item_with_timestamps :: %{
+          id: String.t(),
+          started_at: DateTime.t() | nil,
+          finished_at: DateTime.t() | nil
+        }
+
+  @spec elapsed_indicator(%{item: item_with_timestamps()}) ::
+          Phoenix.LiveView.Rendered.t()
   def elapsed_indicator(assigns) do
     ~H"""
     <div
       phx-hook="ElapsedIndicator"
-      data-start-time={as_timestamp(@run.started_at)}
-      data-finish-time={as_timestamp(@run.finished_at)}
-      id={"elapsed-indicator-#{@run.id}"}
+      data-start-time={as_timestamp(@item.started_at)}
+      data-finish-time={as_timestamp(@item.finished_at)}
+      id={build_elapsed_indicator_id(@item, @context)}
     />
     """
+  end
+
+  defp build_elapsed_indicator_id(item, context) do
+    base_id = "elapsed-indicator"
+
+    context_part = if context != "", do: "-#{context}", else: ""
+
+    case Map.get(item, :run_id) do
+      nil -> "#{base_id}#{context_part}-#{item.id}"
+      run_id -> "#{base_id}#{context_part}-#{run_id}-#{item.id}"
+    end
   end
 
   defp as_timestamp(datetime) do
@@ -140,6 +163,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :job_id, :string, default: nil
   attr :selected, :boolean, default: false
   attr :class, :string, default: ""
+  attr :context, :string, default: ""
   attr :rest, :global
 
   def step_item(assigns) do
@@ -210,24 +234,10 @@ defmodule LightningWeb.RunLive.Components do
           <% end %>
         </div>
         <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
-          <.step_duration step={@step} />
+          <.elapsed_indicator item={@step} context={@context} />
         </div>
       </div>
     </div>
-    """
-  end
-
-  defp step_duration(assigns) do
-    ~H"""
-    <%= cond do %>
-      <% is_nil(@step.started_at) -> %>
-        Unknown
-      <% is_nil(@step.finished_at) -> %>
-        Running...
-      <% true -> %>
-        {DateTime.to_unix(@step.finished_at, :millisecond) -
-          DateTime.to_unix(@step.started_at, :millisecond)} ms
-    <% end %>
     """
   end
 
@@ -302,7 +312,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"run-#{@run.id}"}
       data-entity="run"
-      class="bg-gray-100"
+      class={["bg-gray-100", @step_list != [] && "border-t border-gray-300"]}
     >
       <%= for step <- @step_list do %>
         <.step_list_item
@@ -335,10 +345,10 @@ defmodule LightningWeb.RunLive.Components do
       DateTime.compare(assigns.step.inserted_at, assigns.run.inserted_at) ==
         :lt
 
-    base_classes = ~w(grid grid-cols-6 items-center)
-
     step_item_classes =
-      if is_clone, do: base_classes ++ ~w(opacity-50), else: base_classes
+      if is_clone,
+        do: ~w(flex items-center opacity-50),
+        else: ~w(flex items-center)
 
     assigns =
       assign(assigns,
@@ -351,7 +361,7 @@ defmodule LightningWeb.RunLive.Components do
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
       <div
         role="cell"
-        class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="flex-[2] py-2 text-sm font-normal text-gray-500 text-left"
       >
         <div class="flex pl-4">
           <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
@@ -407,26 +417,21 @@ defmodule LightningWeb.RunLive.Components do
         </div>
       </div>
       <div
-        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
+        class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right"
       >
-        <.timestamp
-          tooltip_prefix="Step started at"
-          timestamp={@step.started_at}
-          style={:wrapped}
-        />
+        <Common.datetime datetime={@step.started_at} />
       </div>
       <div
-        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
+        class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right"
       >
-        <.timestamp
-          tooltip_prefix="Step finished at"
-          timestamp={@step.finished_at}
-          style={:wrapped}
-        />
+        <.elapsed_indicator item={@step} context="list" />
       </div>
-      <div class="ml-3 py-2 px-4 text-xs text-gray-500 font-mono" role="cell">
+      <div
+        role="cell"
+        class="flex-1 py-2 px-4 text-xs text-gray-500 font-mono text-right"
+      >
         {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
       </div>
     </div>
@@ -498,57 +503,6 @@ defmodule LightningWeb.RunLive.Components do
     else
       "For more information, contact one of your project admins"
     end
-  end
-
-  attr :timestamp, :map, required: true
-  attr :style, :atom, default: :default, values: [:default, :wrapped, :time_only]
-  attr :tooltip_prefix, :string, default: ""
-
-  def timestamp(assigns) do
-    assigns =
-      assign_new(assigns, :tooltip_id, fn ->
-        "tooltip-" <> Base.encode16(:crypto.strong_rand_bytes(3))
-      end)
-
-    ~H"""
-    <%= if is_nil(@timestamp) do %>
-      <%= case @style do %>
-        <% :wrapped -> %>
-          <span>--</span>
-          <br />
-          <span class="font-medium text-gray-700">--</span>
-        <% :default -> %>
-          <span>--</span>
-        <% :time_only -> %>
-          <span>--</span>
-      <% end %>
-    <% else %>
-      <Common.wrapper_tooltip
-        id={@tooltip_id}
-        tooltip={"#{@tooltip_prefix} #{DateTime.to_iso8601(@timestamp)}"}
-      >
-        <%= case @style do %>
-          <% :default -> %>
-            {Timex.format!(
-              @timestamp,
-              "%d/%b/%y, %H:%M:%S",
-              :strftime
-            )}
-          <% :wrapped -> %>
-            {Timex.format!(
-              @timestamp,
-              "%d/%b/%y",
-              :strftime
-            )}<br />
-            <span class="font-medium text-gray-700">
-              {Timex.format!(@timestamp, "%H:%M:%S", :strftime)}
-            </span>
-          <% :time_only -> %>
-            {Timex.format!(@timestamp, "%H:%M:%S", :strftime)}
-        <% end %>
-      </Common.wrapper_tooltip>
-    <% end %>
-    """
   end
 
   @spec step_icon(%{
