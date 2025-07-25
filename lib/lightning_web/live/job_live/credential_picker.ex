@@ -31,8 +31,8 @@ defmodule LightningWeb.JobLive.CredentialPicker do
     ~H"""
     <div
       phx-hook="CredentialSelector"
-      data-project-field="job[project_credential_id]"
-      data-keychain-field="job[keychain_credential_id]"
+      data-project-field={@form[:project_credential_id].name}
+      data-keychain-field={@form[:keychain_credential_id].name}
       id="credential-picker"
     >
       <.old_error field={@form[:project_credential_id]} />
@@ -42,10 +42,12 @@ defmodule LightningWeb.JobLive.CredentialPicker do
         type="select"
         name="credential_selector"
         id="credential_selector"
+        value={
+          @form[:project_credential_id].value || @form[:keychain_credential_id].value
+        }
         label="Credential"
         tooltip="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
         options={@all_options}
-        value=""
         prompt=""
         disabled={@disabled}
       />
@@ -53,12 +55,12 @@ defmodule LightningWeb.JobLive.CredentialPicker do
     <!-- Hidden fields that get populated by JS -->
       <input
         type="hidden"
-        name="job[project_credential_id]"
+        name={@form[:project_credential_id].name}
         value={@form[:project_credential_id].value}
       />
       <input
         type="hidden"
-        name="job[keychain_credential_id]"
+        name={@form[:keychain_credential_id].name}
         value={@form[:keychain_credential_id].value}
       />
 
