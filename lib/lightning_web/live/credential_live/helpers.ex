@@ -5,6 +5,9 @@ defmodule LightningWeb.CredentialLive.Helpers do
   of projects associations to credentials and / or oauth clients.
   """
 
+  alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Policies
+
   defp build_project_assoc_map(
          %{id: id, project_id: project_id},
          extra_fields \\ %{}
@@ -157,10 +160,21 @@ defmodule LightningWeb.CredentialLive.Helpers do
   end
 
   # if we want support users to view oauth clients or credentials just extend this condition
-  def can_edit?(
-        %{user_id: user_id},
-        current_user
-      ) do
-    user_id == current_user.id
+  def can_edit?(%KeychainCredential{} = keychain_credential, project_user) do
+    Policies.Permissions.can?(
+      Policies.Credentials,
+      :edit_keychain_credential,
+      project_user,
+      keychain_credential
+    )
+  end
+
+  def can_edit?(credential, current_user) do
+    Policies.Permissions.can?(
+      Policies.Users,
+      :edit_credential,
+      current_user,
+      credential
+    )
   end
 end

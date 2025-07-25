@@ -26,9 +26,7 @@ defmodule LightningWeb.ProjectLiveTest do
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
 
-  @create_attrs %{
-    raw_name: "some name"
-  }
+  @create_attrs %{raw_name: "some name"}
   @invalid_attrs %{raw_name: nil}
 
   describe "Index as a regular user" do
@@ -1091,14 +1089,14 @@ defmodule LightningWeb.ProjectLiveTest do
           on_error: :raise
         )
 
-      # button is disabled
+      # button appears disabled
       assert view |> element("#new-credential-option-menu-item") |> render() =~
-               "disabled"
+               "cursor-not-allowed"
 
       # send event anyway
       view
       |> with_target("#credentials-index-component")
-      |> render_click("new_credential")
+      |> render_click("show_modal", %{"target" => "new_credential"})
 
       # for some reason the #credentials is not included in the url in tests
       assert_patched(view, ~p"/projects/#{project}/settings")
@@ -1144,14 +1142,17 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
-      # Verify the keychain credential option is in the page
-      assert html =~ "Keychain credential"
-      assert html =~ "option-menu-item-2"
+      # Verify the new keychain credential option is in the page
+      assert has_element?(
+               view,
+               "#new-keychain-credential-option-menu-item",
+               "Keychain"
+             )
     end
 
     test "project admin can view keychain credentials table", %{
@@ -1219,7 +1220,7 @@ defmodule LightningWeb.ProjectLiveTest do
           created_by: user
         )
 
-      {:ok, _view, html} =
+      {:ok, view, html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
@@ -1228,6 +1229,11 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Test Keychain"
       assert html =~ "$.organization.id"
       assert html =~ "Actions"
+
+      html =
+        view
+        |> element("#keychain-credential-actions-#{keychain_credential.id}-edit")
+        |> render_click()
 
       # Verify that edit modal component is present in the page
       assert html =~ "edit-keychain-credential-#{keychain_credential.id}-modal"
@@ -1295,23 +1301,39 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ keychain_credential.name
       assert html =~ "Actions"
 
-      # Verify that delete modal component is present in the page
-      assert html =~ "delete_keychain_credential_#{keychain_credential.id}_modal"
-
-      # Test actual deletion by directly triggering the delete event
-      # Simulate clicking the delete confirmation button
       html =
         view
         |> element(
-          "#delete_keychain_credential_#{keychain_credential.id}_modal_confirm_button"
+          "#keychain-credential-actions-#{keychain_credential.id}-delete"
         )
         |> render_click()
 
+      # Verify that delete modal component is present in the page
+      assert html =~ "delete-keychain-credential-#{keychain_credential.id}-modal"
+
+      html =
+        view
+        |> element(
+          "#delete-keychain-credential-#{keychain_credential.id}-modal_confirm_button"
+        )
+        |> render_click()
+
+      # close the modal, which gets the
+      # view
+      # |> with_target("#credentials-index-component")
+      # |> render_hook("close_active_modal", %{})
+
+      # open_browser(view)
       # Verify the flash message appears
       assert html =~ "Keychain credential deleted"
 
+      html =
+        view
+        |> element("#keychain-credentials-table-container")
+        |> render()
+
       # Verify the keychain credential is removed from the UI
-      refute render(view) =~ keychain_credential.name
+      refute html =~ keychain_credential.name
     end
 
     test "project editor cannot edit keychain credentials", %{
@@ -1410,46 +1432,6 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute html =~
                "keychain-credential-actions-#{keychain_credential.id}-dropdown"
-    end
-
-    test "project editor cannot create keychain credentials", %{
-      conn: _conn,
-      user: user
-    } do
-      alias Lightning.Policies.Permissions
-      alias Lightning.Policies.ProjectUsers
-
-      admin_user = insert(:user)
-
-      project =
-        insert(:project,
-          name: "project-1",
-          project_users: [
-            %{user_id: user.id, role: :editor},
-            %{user_id: admin_user.id, role: :admin}
-          ]
-        )
-
-      project_user = Lightning.Projects.get_project_user(project, user)
-
-      # Editor should NOT be able to create keychain credentials
-      refute Permissions.can?(
-               ProjectUsers,
-               :create_keychain_credential,
-               user,
-               project_user
-             )
-
-      # Admin should be able to create keychain credentials for comparison
-      admin_project_user =
-        Lightning.Projects.get_project_user(project, admin_user)
-
-      assert Permissions.can?(
-               ProjectUsers,
-               :create_keychain_credential,
-               admin_user,
-               admin_project_user
-             )
     end
 
     test "project admin can't edit project name and description with invalid data",
@@ -4741,6 +4723,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(submit_btn) =~ "disabled=\"disabled\""
     end
 
+    @tag :capture_log
     test "all users can see a saved repo connection", %{conn: conn} do
       project = insert(:project)
 
@@ -4855,6 +4838,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "authorized users cannot reconnect project if they don't have access to the installation",
          %{conn: conn} do
       project = insert(:project)
@@ -5246,6 +5230,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "unauthorized users cannot remove github connection", %{conn: conn} do
       project = insert(:project)
 
@@ -5308,6 +5293,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "authorized users who have not setup github accounts can remove github connection",
          %{conn: conn} do
       project = insert(:project)
@@ -5363,6 +5349,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "authorized users with valid github oauth can remove github connection even when undoing some github actions fail",
          %{conn: conn} do
       project = insert(:project)
@@ -5446,6 +5433,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "unauthorized users cannot initiate github sync", %{conn: conn} do
       project = insert(:project)
 

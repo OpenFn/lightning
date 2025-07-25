@@ -6,17 +6,17 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
 
   alias Lightning.Credentials
   alias Lightning.Policies.Permissions
-  alias Lightning.Policies.ProjectUsers
   alias LightningWeb.Components.NewInputs
 
   @valid_assigns [
-    :id,
     :action,
-    :keychain_credential,
-    :project,
     :credentials,
-    :project_user,
     :current_user,
+    :id,
+    :keychain_credential,
+    :on_close,
+    :project,
+    :project_user,
     :return_to
   ]
 
@@ -26,7 +26,7 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
   end
 
   @impl true
-  def update(assigns, socket) do
+  def update(%{project: project, project_user: project_user} = assigns, socket) do
     changeset =
       Credentials.change_keychain_credential(assigns.keychain_credential)
 
@@ -41,19 +41,20 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
 
     can_create =
       Permissions.can?(
-        ProjectUsers,
+        :credentials,
         :create_keychain_credential,
         assigns.current_user,
-        assigns.project_user
+        %{project: project, project_user: project_user}
       )
 
     can_edit =
-      Permissions.can?(
-        ProjectUsers,
-        :edit_keychain_credential,
-        assigns.current_user,
-        assigns.project_user
-      )
+      assigns.keychain_credential &&
+        Permissions.can?(
+          :credentials,
+          :edit_keychain_credential,
+          assigns.project_user,
+          assigns.keychain_credential
+        )
 
     {:ok,
      socket
@@ -93,27 +94,18 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="text-left mt-10 sm:mt-0">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
+    <div class="text-xs text-left">
+      <Components.Credentials.credential_modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 max-w-full"
+      >
         <:title>
           <div class="flex justify-between">
-            <span class="font-bold">
-              <%= if @action == :edit do %>
-                Edit keychain credential
-              <% else %>
-                Create keychain credential
-              <% end %>
-            </span>
-            <button
-              id={"close-keychain-credential-modal-#{@keychain_credential.id || "new"}"}
-              phx-click={hide_modal(@id)}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
+            <%= if @action == :edit do %>
+              Edit keychain credential
+            <% else %>
+              Create keychain credential
+            <% end %>
           </div>
         </:title>
 
@@ -177,14 +169,17 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
               theme="primary"
               disabled={!@changeset.valid?}
             >
-              {if @action == :edit, do: "Update", else: "Create"}
+              <%= case @action do %>
+                <% :edit -> %>
+                  Save Changes
+                <% :new -> %>
+                  Create
+              <% end %>
             </.button>
-            <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
-              Cancel
-            </.button>
+            <Components.Credentials.cancel_button modal_id={@id} />
           </.modal_footer>
         </.form>
-      </.modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -199,7 +194,14 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
           {:noreply,
            socket
            |> put_flash(:info, "Keychain credential updated successfully")
-           |> push_navigate(to: socket.assigns.return_to)}
+           |> push_event("close_modal", %{id: socket.assigns.id})
+           |> then(fn socket ->
+             if socket.assigns[:on_close] do
+               socket.assigns.on_close.()
+             end
+
+             socket
+           end)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :changeset, changeset)}
@@ -211,7 +213,7 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
          :error,
          "You are not authorized to edit this keychain credential"
        )
-       |> push_navigate(to: socket.assigns.return_to)}
+       |> push_event("close_modal", %{id: socket.assigns.id})}
     end
   end
 
@@ -225,7 +227,7 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
           {:noreply,
            socket
            |> put_flash(:info, "Keychain credential created successfully")
-           |> push_navigate(to: socket.assigns.return_to)}
+           |> push_event("close_modal", %{id: socket.assigns.id})}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :changeset, changeset)}
@@ -237,7 +239,7 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
          :error,
          "You are not authorized to create keychain credentials"
        )
-       |> push_navigate(to: socket.assigns.return_to)}
+       |> push_event("close_modal", %{id: socket.assigns.id})}
     end
   end
 end

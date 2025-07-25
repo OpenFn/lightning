@@ -12,9 +12,15 @@ defmodule LightningWeb.Components.Credentials do
                         target: "##{@credentials_index_live_component}"
                       )
 
-  def credentials_index_live_component(assigns) do
-    assigns = assign(assigns, :id, @credentials_index_live_component)
+  attr :id, :string, default: @credentials_index_live_component
+  attr :current_user, :any, required: true
+  attr :project, :any
+  attr :projects, :list, required: true
+  attr :can_create_project_credential, :any, required: true
+  attr :show_owner_in_tables, :boolean, default: false
+  attr :return_to, :string, required: true
 
+  def credentials_index_live_component(assigns) do
     ~H"""
     <.live_component
       id={@id}
@@ -71,51 +77,6 @@ defmodule LightningWeb.Components.Credentials do
     >
       {render_slot(@inner_block) || "Cancel"}
     </.button>
-    """
-  end
-
-  def delete_keychain_credential_modal(assigns) do
-    ~H"""
-    <.modal id={@id} width="max-w-md">
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            Delete Keychain Credential
-          </span>
-
-          <button
-            phx-click={hide_modal(@id)}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <div>
-        <p class="text-sm text-gray-500">
-          You are about the delete the keychain credential "{@keychain_credential.name}" which may be used in jobs. All jobs using this keychain credential will fail.
-          <br /><br />Do you want to proceed with this action?
-        </p>
-      </div>
-      <.modal_footer>
-        <.button
-          id={"#{@id}_confirm_button"}
-          type="button"
-          phx-value-keychain_credential_id={@keychain_credential.id}
-          phx-click="delete_keychain_credential"
-          phx-disable-with="Deleting..."
-          theme="danger"
-        >
-          Delete
-        </.button>
-        <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
-          Cancel
-        </.button>
-      </.modal_footer>
-    </.modal>
     """
   end
 
@@ -255,57 +216,67 @@ defmodule LightningWeb.Components.Credentials do
   attr :disabled, :boolean, default: false
   attr :phx_target, :any, default: "##{@credentials_index_live_component}"
 
-  def new_credential_menu_button(assigns) do
-    assigns =
-      assign_new(assigns, :options, fn ->
-        [
-          %{
-            name: "Credential",
-            id: "new-credential-option-menu-item",
-            target: "new_credential"
-          },
-          %{
-            name: "Keychain credential",
-            id: "new-keychain-credential-option-menu-item",
-            target: "new_keychain_credential"
-          },
-          %{
-            name: "OAuth client",
-            id: "new-oauth-client-option-menu-item",
-            target: "new_oauth_client",
-            badge: "Advanced"
-          }
-        ]
-      end)
+  slot :option, required: true do
+    attr :id, :string, required: true
+    attr :target, :string, required: true
+    attr :badge, :string, required: false
+    attr :disabled, :boolean, required: false
+  end
 
+  def new_credential_menu_button(assigns) do
     ~H"""
     <Common.simple_dropdown id={@id}>
       <:button>
         Add new
       </:button>
       <:options>
-        <a
-          :for={%{name: name, id: id, target: target} = option <- @options}
-          href="#"
-          role="menuitem"
-          tabindex="-1"
-          id={id}
-          phx-click={Map.get(option, :disabled, false) || show_modal(target)}
-          class={
-            Map.get(option, :disabled, false) && "text-gray-400 cursor-not-allowed"
-          }
+        <.menu_button_option
+          :for={option <- @option}
+          id={option.id}
+          target={option.target}
+          badge={option[:badge]}
+          disabled={Map.get(option, :disabled, false)}
+          phx-target={@phx_target}
         >
-          {name}<span
-            :if={Map.get(option, :badge)}
-            class={[
-              "ml-2 inline-flex items-center rounded-md bg-gray-50",
-              "px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1",
-              "ring-inset ring-gray-500/10"
-            ]}
-          ><%= Map.get(option, :badge) %></span>
-        </a>
+          {render_slot(option)}
+        </.menu_button_option>
       </:options>
     </Common.simple_dropdown>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :target, :string, required: true
+  attr :badge, :string, default: nil
+  attr :disabled, :boolean, required: false
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  defp menu_button_option(assigns) do
+    ~H"""
+    <span
+      role="menuitem"
+      tabindex="-1"
+      phx-click={!@disabled && "show_modal"}
+      phx-value-target={!@disabled && @target}
+      id={@id}
+      class={
+        if @disabled, do: "text-gray-400 cursor-not-allowed", else: "cursor-pointer"
+      }
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+      <span
+        :if={@badge}
+        class={[
+          "ml-2 inline-flex items-center rounded-md bg-gray-50",
+          "px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1",
+          "ring-inset ring-gray-500/10"
+        ]}
+      >
+        {@badge}
+      </span>
+    </span>
     """
   end
 end
