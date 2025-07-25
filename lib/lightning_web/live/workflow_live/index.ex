@@ -110,6 +110,7 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   defp apply_action(socket, :index, _params) do
     %{
+      current_user: current_user,
       project: project,
       search_term: search_term,
       sort_key: sort_key,
@@ -125,7 +126,7 @@ defmodule LightningWeb.WorkflowLive.Index do
         opts
       end
 
-    workflows = Workflows.get_workflows_for(project, opts)
+    workflows = Workflows.get_workflows_for(project, current_user, opts)
     workflow_stats = Enum.map(workflows, &DashboardStats.get_workflow_stats/1)
 
     sorted_stats =

@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Indicate chat exists on project, workflow or job
+  [#2922](https://github.com/OpenFn/lightning/issues/2922)
+
 ### Changed
 
 ### Fixed
@@ -281,6 +284,10 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 
 ### Changed
 
+- Optimize run claim query performance with per-workflow limiting strategy
+  [#3245](https://github.com/OpenFn/lightning/pull/3245)
+- Add configurable per-workflow claim limit (default: 50) via
+  `PER_WORKFLOW_CLAIM_LIMIT` environment variable
 - Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
 - Standardized table components across the application
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
