@@ -103,6 +103,28 @@ defmodule LightningWeb.WebhooksControllerTest do
              }
     end
 
+    test "returns 404 when trigger does not exist for GET request", %{conn: conn} do
+      non_existent_trigger_id = Ecto.UUID.generate()
+
+      conn = get(conn, "/i/#{non_existent_trigger_id}")
+
+      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
+    end
+
+    test "returns 404 when trigger exists but is of type cron", %{conn: conn} do
+      %{triggers: [trigger = %{id: trigger_id}]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      # Change the trigger type to cron
+
+      Ecto.Changeset.change(trigger, type: :cron)
+      |> Lightning.Repo.update!()
+
+      conn = get(conn, "/i/#{trigger_id}")
+
+      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
+    end
+
     test "creates a pending workorder with a valid trigger", %{conn: conn} do
       %{triggers: [%{id: trigger_id}]} =
         insert(:simple_workflow)

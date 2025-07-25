@@ -487,6 +487,24 @@ defmodule Lightning.WorkflowsTest do
       assert Workflows.get_webhook_trigger("foo").id == trigger.id
     end
 
+    test "get_webhook_trigger/1 does not return a trigger when type is cron" do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Repo.preload(:triggers)
+
+      # Change the trigger type to cron
+      Ecto.Changeset.change(trigger, type: :cron)
+      |> Lightning.Repo.update!()
+
+      # Should not return the trigger even though the ID matches
+      assert Workflows.get_webhook_trigger(trigger.id) == nil
+
+      # Set a custom path and verify it still doesn't return
+      Ecto.Changeset.change(trigger, custom_path: "cron_path")
+      |> Lightning.Repo.update!()
+
+      assert Workflows.get_webhook_trigger("cron_path") == nil
+    end
+
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
       t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
       job_0 = insert(:job, %{workflow: t1.workflow})
@@ -517,24 +535,24 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
-  describe "get_trigger_by_webhook/1" do
+  describe "get_webhook_trigger/1" do
     test "returns a trigger when a matching custom_path is provided" do
       trigger = insert(:trigger, custom_path: "some_path")
 
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_trigger_by_webhook("some_path")
+               Workflows.get_webhook_trigger("some_path")
     end
 
     test "returns a trigger when a matching id is provided" do
       trigger = insert(:trigger)
 
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_trigger_by_webhook(trigger.id)
+               Workflows.get_webhook_trigger(trigger.id)
     end
 
     test "returns nil when no matching trigger is found" do
       insert(:trigger, custom_path: "some_path")
-      assert Workflows.get_trigger_by_webhook("non_existent_path") == nil
+      assert Workflows.get_webhook_trigger("non_existent_path") == nil
     end
   end
 
