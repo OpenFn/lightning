@@ -12,22 +12,46 @@ const WorkflowToYAML = {
     this.generateWorkflowCode();
     
     this.handleEvent('generate_workflow_code', () => {
-      this.generateWorkflowCode();
+      this.debouncedGenerate();
     });
   },
   
-  generateWorkflowCode() {
+  debouncedGenerate() {
+    if (this.generateTimeout) {
+      clearTimeout(this.generateTimeout);
+    }
+    
+    this.generateTimeout = setTimeout(() => {
+      this.generateWorkflowCode();
+    }, 300);
+  },
+  
+  generateWorkflowCode() {    
     this.pushEvent('get-current-state', {}, (response: WorkflowResponse) => {
       const workflowState = response.workflow_params;
       
-      const workflowSpec = convertWorkflowStateToSpec(workflowState);
-      const yaml = YAML.stringify(workflowSpec);
+      const workflowSpecWithoutIds = convertWorkflowStateToSpec(workflowState, false);
+      const workflowSpecWithIds = convertWorkflowStateToSpec(workflowState, true);
       
-      this.pushEvent('workflow_code_generated', { code: yaml });
+      const yamlWithoutIds = YAML.stringify(workflowSpecWithoutIds);
+      const yamlWithIds = YAML.stringify(workflowSpecWithIds);
+      
+      this.pushEvent('workflow_code_generated', { 
+        code: yamlWithoutIds,
+        code_with_ids: yamlWithIds
+      });
     });
+  },
+  
+  destroyed() {
+    if (this.generateTimeout) {
+      clearTimeout(this.generateTimeout);
+    }
   }
 } as PhoenixHook<{
   generateWorkflowCode(): void;
+  debouncedGenerate(): void;
+  generateTimeout?: ReturnType<typeof setTimeout>;
 }>;
 
 export default WorkflowToYAML;

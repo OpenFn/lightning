@@ -100,7 +100,7 @@ export type ReplayAction = {
   inverse: ImmerPatch[];
 };
 
-const undos: ReplayAction[] = [];
+let undos: ReplayAction[] = [];
 let redos: ReplayAction[] = [];
 
 // simple squash function
@@ -410,7 +410,11 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
         disabled: value,
       }));
     },
-    setState: set.bind(this),
+    setState(value) {
+      undos = [];
+      redos = [];
+      set(value);
+    },
     setSelection(value) {
       set(state => ({
         ...state,
