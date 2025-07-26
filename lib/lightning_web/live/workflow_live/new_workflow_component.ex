@@ -273,7 +273,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   defp filter_templates(templates, _), do: templates
 
   defp notify_parent(action, payload) do
-    send(self(), {:workflow_assistant, action, payload})
+    send(self(), {:ai_assistant, action, payload})
   end
 
   defp handle_ai_method_selection(socket) do
@@ -383,6 +383,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             workflow_code={@workflow_code}
             base_url={@base_url}
             search_term={@search_term}
+            ai_assistant_component_id={@ai_assistant_component_id}
           />
         </div>
         <div class="px-4 py-4 sm:p-3 flex flex-row justify-end gap-2 h-max border-t">
@@ -670,7 +671,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         action={if(@chat_session_id, do: :show, else: :new)}
         parent_id={@parent_id}
         parent_module={LightningWeb.WorkflowLive.NewWorkflowComponent}
-        id="workflow-ai-assistant"
+        id={@ai_assistant_component_id}
       />
     </div>
     """

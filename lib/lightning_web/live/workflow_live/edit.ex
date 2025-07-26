@@ -204,7 +204,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <div id="workflow-to-yaml" class="h-full flex" phx-hook="WorkflowToYAML">
         <.live_component
           :if={@show_new_workflow_panel}
-          id="new-workflow-panel"
+          id={@new_workflow_panel_id}
+          ai_assistant_component_id={@new_workflow_ai_assistant_id}
           module={LightningWeb.WorkflowLive.NewWorkflowComponent}
           workflow={@workflow}
           project={@project}
@@ -222,6 +223,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.live_component
             :if={@show_workflow_ai_chat}
             id={@workflow_ai_chat_id}
+            ai_assistant_component_id={@workflow_ai_assistant_id}
             module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
             workflow={@workflow}
             workflow_code={@workflow_code_with_ids}
@@ -336,7 +338,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           query_params={@query_params}
                           base_url={@base_url}
                           action={if(@job_chat_session_id, do: :show, else: :new)}
-                          id={"aichat-#{@selected_job.id}"}
+                          id={@job_ai_assistant_id_fn.(@selected_job.id)}
                         />
                       </div>
                     </:panel>
@@ -1355,6 +1357,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> view_only_users()
       |> Enum.map(fn pu -> pu.user.id end)
 
+    workflow_ai_chat_id = "workflow-ai-chat-panel"
+    new_workflow_panel_id = "new-workflow-panel"
+
     {:ok,
      socket
      |> authorize()
@@ -1404,7 +1409,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
        method: nil,
        workflow_code: nil,
        workflow_code_with_ids: nil,
-       workflow_ai_chat_id: "workflow-ai-chat-panel",
+       workflow_ai_chat_id: workflow_ai_chat_id,
+       workflow_ai_assistant_id: "#{workflow_ai_chat_id}-assistant",
+       new_workflow_panel_id: new_workflow_panel_id,
+       new_workflow_ai_assistant_id: "#{new_workflow_panel_id}-assistant",
+       job_ai_assistant_id_fn: fn job_id -> "job-#{job_id}-ai-assistant" end,
        project_repo_connection:
          VersionControl.get_repo_connection_for_project(assigns.project.id),
        max_concurrency: assigns.project.concurrency
@@ -1432,6 +1441,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
                  job -> job.id
                end
            })
+         end
+
+         if socket.assigns.workflow_chat_session_id do
+           Lightning.subscribe(
+             "ai_session:#{socket.assigns.workflow_chat_session_id}"
+           )
+         end
+
+         if socket.assigns.job_chat_session_id do
+           Lightning.subscribe(
+             "ai_session:#{socket.assigns.job_chat_session_id}"
+           )
          end
        end
      end)}
@@ -2199,13 +2220,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_disable_canvas()}
   end
 
-  def handle_info({:workflow_assistant, action, payload}, socket) do
+  def handle_info({:ai_assistant, action, payload}, socket) do
     case action do
       :canvas_state_changed ->
         update_canvas_state(socket, payload)
 
       :workflow_params_changed ->
         handle_workflow_params_change(socket, payload)
+
+      :message_status_changed ->
+        handle_message_status_change(socket, payload)
     end
   end
 
@@ -3317,6 +3341,38 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> handle_new_params(incoming_params, :workflow, !create_action?)
      |> push_event("set-disabled", %{disabled: create_action?})
      |> push_event("force-fit", %{})}
+  end
+
+  defp handle_message_status_change(socket, status) do
+    component_id = get_active_ai_component_id(socket)
+
+    if component_id do
+      send_update(LightningWeb.AiAssistant.Component,
+        id: component_id,
+        message_status_update: status
+      )
+    end
+
+    {:noreply, socket}
+  end
+
+  defp get_active_ai_component_id(socket) do
+    %{assigns: assigns} = socket
+
+    cond do
+      assigns.show_workflow_ai_chat && assigns.workflow_chat_session_id ->
+        assigns.workflow_ai_assistant_id
+
+      assigns.live_action == :new && assigns.workflow_chat_session_id ->
+        assigns.new_workflow_ai_assistant_id
+
+      assigns.selected_job && assigns.selection_mode == "expand" &&
+          assigns.job_chat_session_id ->
+        assigns.job_ai_assistant_id_fn.(assigns.selected_job.id)
+
+      true ->
+        nil
+    end
   end
 
   defp link_workflow_to_ai_session(%{

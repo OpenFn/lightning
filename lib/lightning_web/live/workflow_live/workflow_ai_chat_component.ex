@@ -168,7 +168,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
             action={if(@chat_session_id, do: :show, else: :new)}
             parent_id={@id}
             parent_module={__MODULE__}
-            id="workflow-ai-assistant-persistent"
+            id={@ai_assistant_component_id}
           />
         </div>
       </div>
@@ -177,7 +177,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   end
 
   defp notify_parent(action, payload) do
-    send(self(), {:workflow_assistant, action, payload})
+    send(self(), {:ai_assistant, action, payload})
   end
 
   defp format_changeset_errors(changeset) do

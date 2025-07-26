@@ -466,6 +466,19 @@ defmodule Lightning.AiAssistant do
       ChatSession.changeset(session, %{meta: meta || session.meta})
     end)
     |> Multi.merge(&maybe_increment_ai_usage/1)
+    |> Multi.run(:enqueue_if_user_message, fn _repo, %{message: message} ->
+      if message.role == :user && message.status == :pending do
+        Oban.insert(
+          Lightning.Oban,
+          Lightning.AiAssistant.MessageProcessor.new(%{
+            message_id: message.id,
+            session_id: session.id
+          })
+        )
+      else
+        {:ok, nil}
+      end
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{session: session}} ->
@@ -499,7 +512,7 @@ defmodule Lightning.AiAssistant do
   @spec update_message_status(ChatSession.t(), ChatMessage.t(), atom()) ::
           {:ok, ChatSession.t()} | {:error, Changeset.t()}
   def update_message_status(session, message, status) do
-    case Repo.update(ChatMessage.changeset(message, %{status: status})) do
+    case Repo.update(ChatMessage.status_changeset(message, status)) do
       {:ok, _updated_message} ->
         {:ok,
          session
@@ -553,7 +566,8 @@ defmodule Lightning.AiAssistant do
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content, opts \\ []) do
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
-    pending_user_message = find_pending_user_message(session, content)
+
+    pending_user_message = Keyword.get(opts, :processing_message)
 
     context =
       build_context(
@@ -619,8 +633,9 @@ defmodule Lightning.AiAssistant do
     workflow_errors = Keyword.get(opts, :workflow_errors)
     meta = Keyword.get(opts, :meta, session.meta || %{})
 
+    pending_user_message = Keyword.get(opts, :processing_message)
+
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
-    pending_user_message = find_pending_user_message(session, content)
 
     ApolloClient.workflow_chat(
       content,
@@ -805,7 +820,7 @@ defmodule Lightning.AiAssistant do
     {message_attrs, opts}
   end
 
-  defp get_latest_workflow_yaml(session) do
+  def get_latest_workflow_yaml(session) do
     messages = session.messages || []
 
     messages
@@ -828,16 +843,6 @@ defmodule Lightning.AiAssistant do
       messages ->
         Enum.map(messages, &Map.take(&1, [:role, :content]))
     end
-  end
-
-  defp find_pending_user_message(session, content) do
-    messages = session.messages || []
-
-    Enum.find(messages, fn message ->
-      message.role == :user &&
-        message.status == :pending &&
-        message.content == content
-    end)
   end
 
   defp maybe_increment_ai_usage(%{

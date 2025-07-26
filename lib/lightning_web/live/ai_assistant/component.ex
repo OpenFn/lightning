@@ -64,6 +64,30 @@ defmodule LightningWeb.AiAssistant.Component do
      )}
   end
 
+  def update(%{message_status_update: status}, socket) do
+    updated_socket =
+      case status do
+        :processing ->
+          assign(socket, :pending_message, AsyncResult.loading())
+
+        {:completed, updated_session} ->
+          socket
+          |> assign(:session, updated_session)
+          |> assign(:pending_message, AsyncResult.ok(nil))
+          |> maybe_push_workflow_code(updated_session)
+          |> assign(workflow_error: nil)
+
+        :error ->
+          session = socket.assigns.handler.get_session!(socket.assigns)
+
+          socket
+          |> assign(:session, session)
+          |> assign(:pending_message, AsyncResult.ok(nil))
+      end
+
+    {:ok, updated_socket}
+  end
+
   def update(
         %{action: action, current_user: current_user, mode: mode} = assigns,
         socket
@@ -192,23 +216,28 @@ defmodule LightningWeb.AiAssistant.Component do
   def handle_event("retry_message", %{"message-id" => message_id}, socket) do
     message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
 
-    {:ok, session} =
-      AiAssistant.update_message_status(
-        socket.assigns.session,
-        message,
-        :success
-      )
+    # Update status to pending so it gets picked up by Oban
+    {:ok, _} =
+      message
+      |> Ecto.Changeset.change(%{status: :pending})
+      |> Lightning.Repo.update()
 
-    handler = socket.assigns.handler
-    options = handler.query_options(socket.assigns)
+    # Enqueue for processing
+    Oban.insert(
+      Lightning.Oban,
+      Lightning.AiAssistant.MessageProcessor.new(%{
+        message_id: message.id,
+        session_id: socket.assigns.session.id
+      })
+    )
+
+    # Update the session in the socket to reflect the status change
+    {:ok, session} = AiAssistant.get_session(socket.assigns.session.id)
 
     {:noreply,
      socket
      |> assign(:session, session)
-     |> assign(:pending_message, AsyncResult.loading())
-     |> start_async(:process_message, fn ->
-       handler.query(session, message.content, options)
-     end)}
+     |> assign(:pending_message, AsyncResult.loading())}
   end
 
   def handle_event(
@@ -252,21 +281,6 @@ defmodule LightningWeb.AiAssistant.Component do
     {:noreply, socket}
   end
 
-  def handle_async(:process_message, {:ok, {:ok, session}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:session, session)
-     |> assign(:pending_message, AsyncResult.ok(nil))
-     |> maybe_push_workflow_code(session)
-     |> assign(workflow_error: nil)}
-  end
-
-  def handle_async(:process_message, {:ok, {:error, error}}, socket),
-    do: handle_failed_async({:error, error}, socket)
-
-  def handle_async(:process_message, {:exit, error}, socket),
-    do: handle_failed_async({:exit, error}, socket)
-
   defp apply_action(socket, :new) do
     %{assigns: %{sort_direction: sort_direction, handler: handler} = assigns} =
       socket
@@ -303,28 +317,28 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp apply_action(socket, :show) do
-    session =
-      socket.assigns.handler.get_session!(socket.assigns)
+    session = socket.assigns.handler.get_session!(socket.assigns)
 
     if socket.assigns[:parent_module] ==
          LightningWeb.WorkflowLive.NewWorkflowComponent do
       maybe_push_workflow_code(socket, session)
     end
 
-    pending_message = find_pending_user_message(session)
+    pending_message_loading =
+      Enum.any?(session.messages, fn msg ->
+        msg.role == :user && msg.status in [:pending, :processing]
+      end)
 
-    if pending_message do
-      socket
-      |> assign(:session, session)
-      |> process_message(pending_message.content)
-    else
-      assign(socket, :session, session)
-    end
-  end
-
-  defp find_pending_user_message(session) do
-    session.messages
-    |> Enum.find(&(&1.role == :user && &1.status == :pending))
+    socket
+    |> assign(:session, session)
+    |> assign(
+      :pending_message,
+      if pending_message_loading do
+        AsyncResult.loading()
+      else
+        AsyncResult.ok(nil)
+      end
+    )
   end
 
   defp save_message(socket, :new, content) do
@@ -337,6 +351,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
         socket
         |> assign(:session, session)
+        |> assign(:pending_message, AsyncResult.loading())
         |> push_patch(to: redirect_url(socket.assigns.base_url, query_params))
 
       error ->
@@ -351,7 +366,7 @@ defmodule LightningWeb.AiAssistant.Component do
       {:ok, session} ->
         socket
         |> assign(:session, session)
-        |> process_message(content)
+        |> assign(:pending_message, AsyncResult.loading())
 
       error ->
         assign(socket,
@@ -367,20 +382,6 @@ defmodule LightningWeb.AiAssistant.Component do
       |> URI.encode_query()
 
     "#{base_url}?#{query_string}"
-  end
-
-  defp handle_failed_async(error, socket) do
-    message = List.last(socket.assigns.session.messages)
-
-    {:ok, updated_session} =
-      AiAssistant.update_message_status(socket.assigns.session, message, :error)
-
-    {:noreply,
-     socket
-     |> assign(:session, updated_session)
-     |> update(:pending_message, fn async_result ->
-       AsyncResult.failed(async_result, error)
-     end)}
   end
 
   defp maybe_check_limit(%{assigns: %{ai_limit_result: nil}} = socket) do
@@ -413,18 +414,6 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp ai_feedback do
     Application.get_env(:lightning, :ai_feedback)
-  end
-
-  defp process_message(socket, message) do
-    session = socket.assigns.session
-    handler = socket.assigns.handler
-    options = handler.query_options(socket.assigns)
-
-    socket
-    |> assign(:pending_message, AsyncResult.loading())
-    |> start_async(:process_message, fn ->
-      handler.query(session, message, options)
-    end)
   end
 
   defp maybe_push_workflow_code(socket, session_or_message) do

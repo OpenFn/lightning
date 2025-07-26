@@ -23,7 +23,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   import Lightning.Validators, only: [validate_required_assoc: 2]
 
   @type role() :: :user | :assistant
-  @type status() :: :pending | :success | :error | :cancelled
+  @type status() :: :pending | :processing | :success | :error | :cancelled
 
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
@@ -33,6 +33,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
           status: status(),
           is_deleted: boolean(),
           is_public: boolean(),
+          processing_started_at: DateTime.t() | nil,
+          completed_at: DateTime.t() | nil,
           chat_session_id: Ecto.UUID.t(),
           user_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t(),
@@ -43,9 +45,14 @@ defmodule Lightning.AiAssistant.ChatMessage do
     field :content, :string
     field :workflow_code, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
-    field :status, Ecto.Enum, values: [:pending, :success, :error, :cancelled]
+
+    field :status, Ecto.Enum,
+      values: [:pending, :processing, :success, :error, :cancelled]
+
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
+    field :processing_started_at, :utc_datetime_usec
+    field :completed_at, :utc_datetime_usec
 
     belongs_to :chat_session, Lightning.AiAssistant.ChatSession
     belongs_to :user, Lightning.Accounts.User
@@ -78,7 +85,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :status,
       :is_deleted,
       :is_public,
-      :chat_session_id
+      :chat_session_id,
+      :processing_started_at,
+      :completed_at
     ])
     |> validate_required([:content, :role])
     |> validate_length(:content, min: 1, max: 10_000)
@@ -107,7 +116,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
       ChatMessage.status_changeset(message, :error)
   """
   def status_changeset(chat_message, status)
-      when status in [:pending, :success, :error, :cancelled] do
+      when status in [:pending, :processing, :success, :error, :cancelled] do
     chat_message
     |> change(%{status: status})
   end
