@@ -114,31 +114,25 @@ defmodule LightningWeb.RunChannel do
           %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
         })
 
-      {:error, %{type: :reauthorization_required, credential: credential}} ->
+      {:error, {:reauthorization_required, _credential} = reason} ->
         Logger.error("OAuth refresh token has expired", credential_id: id)
-        credentials_url = url(~p"/projects/#{project_id}/settings#credentials")
 
-        error = """
-        Oauth token has expired. Reauthorize with your external system:
-          1. Go to #{credentials_url}
-          2. Find #{credential.name}
-          3. Click "Edit" and then "Reauthorize"
-        If this is not your credential, send this link to the owner and ask them to reauthorize.
-        """
+        error =
+          LightningWeb.ErrorFormatter.format(reason, %{project: project_id})
 
         {:reply, {:error, error}, socket}
 
-      {:error, %{type: :temporary_failure}} ->
+      {:error, {:temporary_failure, _credential}} ->
         Logger.error("Could not reach the oauth provider", credential_id: id)
 
         {:reply, {:error, "Could not reach the oauth provider. Try again later"},
          socket}
 
-      {:error, %{type: :oauth_error, original_error: original_error}} ->
+      {:error, {other_error, _credential}} ->
         Logger.error(fn ->
           {"""
            Something went wrong when fetching or refreshing a credential.
-           #{inspect(original_error)}
+           #{inspect(other_error)}
            """, [credential_id: id]}
         end)
 
@@ -146,7 +140,7 @@ defmodule LightningWeb.RunChannel do
           socket,
           {:error,
            %{
-             error: original_error,
+             error: other_error,
              message: "An error occured when fetching your credential"
            }}
         )

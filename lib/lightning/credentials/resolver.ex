@@ -39,6 +39,16 @@ defmodule Lightning.Credentials.ResolvedCredential do
 end
 
 defmodule Lightning.Credentials.Resolver do
+  @moduledoc """
+  Provides credential resolution abstraction for workflow execution.
+
+  Handles the complexities of preparing credentials for worker consumption,
+  including OAuth token refresh, credential body merging, and empty value cleanup.
+  Supports regular credentials, OAuth credentials, and future keychain credentials.
+
+  Returns a ResolvedCredential containing the final worker-ready body and original
+  credential reference for scrubbing setup.
+  """
   import Ecto.Query
 
   alias Lightning.Credentials
@@ -46,6 +56,9 @@ defmodule Lightning.Credentials.Resolver do
   alias Lightning.Credentials.ResolvedCredential
   alias Lightning.Repo
   alias Lightning.Run
+
+  @type error_reason :: :not_found | Credentials.oauth_refresh_error()
+  @type resolve_error :: {error_reason(), Credential.t()}
 
   @doc """
   Resolves a credential into a ResolvedCredential ready for worker consumption.
@@ -57,33 +70,26 @@ defmodule Lightning.Credentials.Resolver do
   For regular credentials, returns the body as-is.
   For OAuth credentials, refreshes tokens if needed and merges into body.
   """
+  @spec resolve_credential(Credential.t()) ::
+          {:ok, ResolvedCredential.t()} | {:error, resolve_error()}
   def resolve_credential(%Credential{schema: "oauth"} = credential) do
-    with {:ok, refreshed_credential} <-
-           Credentials.maybe_refresh_token(credential) do
-      resolved_credential = ResolvedCredential.from(refreshed_credential)
-      {:ok, resolved_credential}
-    else
-      {:error, :reauthorization_required} ->
-        {:error, %{type: :reauthorization_required, credential: credential}}
+    case Credentials.maybe_refresh_token(credential) do
+      {:ok, credential} ->
+        {:ok, ResolvedCredential.from(credential)}
 
-      {:error, :temporary_failure} ->
-        {:error, %{type: :temporary_failure, credential: credential}}
-
-      {:error, other_error} ->
-        {:error,
-         %{
-           type: :oauth_error,
-           credential: credential,
-           original_error: other_error
-         }}
+      {:error, reason} ->
+        {:error, {reason, credential}}
     end
   end
 
+  @spec resolve_credential(Credential.t()) :: {:ok, ResolvedCredential.t()}
   def resolve_credential(%Credential{} = credential) do
     resolved_credential = ResolvedCredential.from(credential)
     {:ok, resolved_credential}
   end
 
+  @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
+          {:ok, ResolvedCredential.t()} | {:error, :not_found | resolve_error()}
   def resolve_credential(%Run{} = run, id) do
     credential = get_run_credential(run, id)
 
@@ -93,6 +99,7 @@ defmodule Lightning.Credentials.Resolver do
     end
   end
 
+  @spec get_run_credential(Run.t(), String.t()) :: Credential.t() | nil
   defp get_run_credential(%Run{} = run, id) do
     from(c in Ecto.assoc(run, [:workflow, :jobs, :credential]),
       where: c.id == ^id

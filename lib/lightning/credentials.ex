@@ -31,6 +31,7 @@ defmodule Lightning.Credentials do
   require Logger
 
   @type transfer_error :: :token_error | :not_found | :not_owner
+  @type oauth_refresh_error :: :temporary_failure | :reauthorization_required
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
@@ -827,6 +828,8 @@ defmodule Lightning.Credentials do
      iex> maybe_refresh_token(expired_oauth_credential)
      {:ok, refreshed_oauth_credential}
   """
+  @spec maybe_refresh_token(Credential.t()) ::
+          {:ok, Credential.t()} | {:error, oauth_refresh_error() | any()}
   def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
     credential
     |> Repo.preload(oauth_token: :oauth_client)

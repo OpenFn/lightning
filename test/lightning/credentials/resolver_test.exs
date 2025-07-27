@@ -275,7 +275,7 @@ defmodule ResolverTest do
       # Preload the credential with oauth_token for proper resolution
       credential = Repo.preload(credential, oauth_token: [:oauth_client])
 
-      assert {:error, %{type: :reauthorization_required, credential: credential}} =
+      assert {:error, {:reauthorization_required, credential}} =
                Resolver.resolve_credential(credential)
 
       assert credential.name == "Test Googlesheets Credential"
@@ -322,7 +322,7 @@ defmodule ResolverTest do
       # Preload the credential with oauth_token for proper resolution
       credential = Repo.preload(credential, oauth_token: [:oauth_client])
 
-      assert {:error, %{type: :temporary_failure}} =
+      assert {:error, {:temporary_failure, _credential}} =
                Resolver.resolve_credential(credential)
     end
 
@@ -367,10 +367,10 @@ defmodule ResolverTest do
       # Preload the credential with oauth_token for proper resolution
       credential = Repo.preload(credential, oauth_token: [:oauth_client])
 
-      assert {:error, %{type: :oauth_error, original_error: original_error}} =
+      assert {:error, {original_error, _credential}} =
                Resolver.resolve_credential(credential)
 
-      # Should return the wrapped oauth_error for generic failures
+      # Should return the original error for generic failures
       assert original_error != :reauthorization_required
       assert original_error != :temporary_failure
     end
@@ -409,7 +409,14 @@ defmodule ResolverTest do
       job = insert(:job, project_credential: %{credential: credential})
       workflow = insert(:workflow, project: project, jobs: [job])
       work_order = insert(:workorder, workflow: workflow)
-      run = insert(:run, work_order: work_order)
+      dataclip = insert(:dataclip)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_job: job
+        )
 
       assert {:ok, resolved} = Resolver.resolve_credential(run, credential.id)
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
@@ -419,9 +426,17 @@ defmodule ResolverTest do
 
     test "returns not_found when credential doesn't exist", %{user: user} do
       project = insert(:project, project_users: [%{user: user}])
-      workflow = insert(:workflow, project: project)
+      job = insert(:job)
+      workflow = insert(:workflow, project: project, jobs: [job])
       work_order = insert(:workorder, workflow: workflow)
-      run = insert(:run, work_order: work_order)
+      dataclip = insert(:dataclip)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_job: job
+        )
 
       fake_id = Ecto.UUID.generate()
       assert {:error, :not_found} = Resolver.resolve_credential(run, fake_id)
@@ -433,9 +448,17 @@ defmodule ResolverTest do
       project = insert(:project, project_users: [%{user: user}])
       other_credential = insert(:credential, user: user)
 
-      workflow = insert(:workflow, project: project)
+      job = insert(:job)
+      workflow = insert(:workflow, project: project, jobs: [job])
       work_order = insert(:workorder, workflow: workflow)
-      run = insert(:run, work_order: work_order)
+      dataclip = insert(:dataclip)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_job: job
+        )
 
       assert {:error, :not_found} =
                Resolver.resolve_credential(run, other_credential.id)
