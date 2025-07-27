@@ -12,6 +12,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.Limiter
+  alias LightningWeb.AiAssistant.Quotes
   alias LightningWeb.Live.AiAssistant.ModeRegistry
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
@@ -22,6 +23,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
   @default_page_size 20
   @message_preview_length 50
+  @typing_animation_delay_ms 100
 
   @impl true
   def mount(socket) do
@@ -900,10 +902,7 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp render_onboarding(assigns) do
-    assigns =
-      assign(assigns,
-        ai_quote: ai_quotes() |> Enum.filter(& &1[:enabled]) |> Enum.random()
-      )
+    assigns = assign(assigns, ai_quote: Quotes.random_enabled())
 
     ~H"""
     <div class="h-full flex flex-col">
@@ -929,116 +928,6 @@ defmodule LightningWeb.AiAssistant.Component do
       <.ai_footer />
     </div>
     """
-  end
-
-  defp ai_quotes do
-    [
-      %{
-        quote: "What hath God wrought?",
-        author: "Samuel Morse",
-        source_attribute: "Samuel Morse in the first telegraph message",
-        source_link: "https://www.history.com",
-        enabled: true
-      },
-      %{
-        quote: "All models are wrong, but some are useful",
-        author: "George Box",
-        source_attribute: "Wikipedia",
-        source_link: "https://en.wikipedia.org/wiki/All_models_are_wrong",
-        enabled: true
-      },
-      %{
-        quote: "AI is neither artificial nor intelligent",
-        author: "Kate Crawford",
-        source_link:
-          "https://www.wired.com/story/researcher-says-ai-not-artificial-intelligent/",
-        enabled: true
-      },
-      %{
-        quote: "With big data comes big responsibilities",
-        author: "Kate Crawford",
-        source_link:
-          "https://www.technologyreview.com/2011/10/05/190904/with-big-data-comes-big-responsibilities",
-        enabled: true
-      },
-      %{
-        quote: "AI is holding the internet hostage",
-        author: "Bryan Walsh",
-        source_link:
-          "https://www.vox.com/technology/352849/openai-chatgpt-google-meta-artificial-intelligence-vox-media-chatbots",
-        enabled: true
-      },
-      %{
-        quote: "Remember the human",
-        author: "OpenFn Responsible AI Policy",
-        source_link: "https://www.openfn.org/ai",
-        enabled: true
-      },
-      %{
-        quote: "Be skeptical, but don't be cynical",
-        author: "OpenFn Responsible AI Policy",
-        source_link: "https://www.openfn.org/ai",
-        enabled: true
-      },
-      %{
-        quote:
-          "Out of the crooked timber of humanity no straight thing was ever made",
-        author: "Emmanuel Kant",
-        source_link:
-          "https://www.goodreads.com/quotes/74482-out-of-the-crooked-timber-of-humanity-no-straight-thing"
-      },
-      %{
-        quote:
-          "The more helpful our phones get, the harder it is to be ourselves",
-        author: "Brain Chrstian",
-        source_attribute: "The most human Human",
-        source_link:
-          "https://www.goodreads.com/book/show/8884400-the-most-human-human"
-      },
-      %{
-        quote:
-          "If a machine can think, it might think more intelligently than we do, and then where should we be?",
-        author: "Alan Turing",
-        source_link:
-          "https://turingarchive.kings.cam.ac.uk/publications-lectures-and-talks-amtb/amt-b-5"
-      },
-      %{
-        quote:
-          "If you make an algorithm, and let it optimise for a certain value, then it won't care what you really want",
-        author: "Tom Chivers",
-        source_link:
-          "https://forum.effectivealtruism.org/posts/feNJWCo4LbsoKbRon/interview-with-tom-chivers-ai-is-a-plausible-existential"
-      },
-      %{
-        quote:
-          "By far the greatest danger of Artificial Intelligence is that people conclude too early that they understand it",
-        author: "Eliezer Yudkowsky",
-        source_attribute:
-          "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
-        source_link:
-          "https://zoo.cs.yale.edu/classes/cs671/12f/12f-papers/yudkowsky-ai-pos-neg-factor.pdf"
-      },
-      %{
-        quote:
-          "The AI does not hate you, nor does it love you, but you are made out of atoms which it can use for something else",
-        author: "Eliezer Yudkowsky",
-        source_attribute:
-          "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
-        source_link:
-          "https://zoo.cs.yale.edu/classes/cs671/12f/12f-papers/yudkowsky-ai-pos-neg-factor.pdf"
-      },
-      %{
-        quote:
-          "World domination is such an ugly phrase. I prefer to call it world optimisation",
-        author: "Eliezer Yudkowsky",
-        source_link: "https://hpmor.com/"
-      },
-      %{
-        quote: "AI is not ultimately responsible for its output: we are",
-        author: "OpenFn Responsible AI Policy",
-        source_link: "https://www.openfn.org/ai"
-      }
-    ]
   end
 
   defp ai_footer(assigns) do
@@ -1252,6 +1141,9 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp user_message(assigns) do
+    msg_status = message_status_display(assigns.message.status)
+    assigns = assign(assigns, msg_status: msg_status)
+
     ~H"""
     <div class="flex text-sm justify-end">
       <div class="flex items-end gap-3 max-w-[85%]">
@@ -1307,23 +1199,11 @@ defmodule LightningWeb.AiAssistant.Component do
             </span>
 
             <div class="flex items-center gap-1">
-              <%= case @message.status do %>
-                <% :pending -> %>
-                  <.icon name="hero-clock" class="w-3.5 h-3.5 text-indigo-300 ml-2" />
-                  <span class="text-xs text-indigo-300">Sending</span>
-                <% :error -> %>
-                  <.icon
-                    name="hero-exclamation-triangle"
-                    class="w-3.5 h-3.5 text-red-300 ml-2"
-                  />
-                  <span class="text-xs text-red-300">Failed</span>
-                <% _ -> %>
-                  <.icon
-                    name="hero-check-circle"
-                    class="w-3.5 h-3.5 text-indigo-300 ml-2"
-                  />
-                  <span class="text-xs text-indigo-300">Sent</span>
-              <% end %>
+              <.icon
+                name={@msg_status.icon}
+                class={"w-3.5 h-3.5 #{@msg_status.color} ml-2"}
+              />
+              <span class={"text-xs #{@msg_status.color}"}>{@msg_status.text}</span>
             </div>
           </div>
         </div>
@@ -1478,6 +1358,8 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp assistant_typing_indicator(assigns) do
+    assigns = assign(assigns, animation_delay: @typing_animation_delay_ms)
+
     ~H"""
     <div class="flex justify-start">
       <div class="flex items-start gap-4">
@@ -1492,12 +1374,12 @@ defmodule LightningWeb.AiAssistant.Component do
             <div class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
             <div
               class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-              style="animation-delay: 0.1s"
+              style={"animation-delay: #{@animation_delay}ms"}
             >
             </div>
             <div
               class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-              style="animation-delay: 0.2s"
+              style={"animation-delay: #{@animation_delay * 2}ms"}
             >
             </div>
           </div>
@@ -1580,6 +1462,19 @@ defmodule LightningWeb.AiAssistant.Component do
       count -> "#{count} messages"
     end
   end
+
+  defp message_status_display(:pending),
+    do: %{icon: "hero-clock", text: "Sending", color: "text-indigo-300"}
+
+  defp message_status_display(:error),
+    do: %{
+      icon: "hero-exclamation-triangle",
+      text: "Failed",
+      color: "text-red-300"
+    }
+
+  defp message_status_display(_),
+    do: %{icon: "hero-check-circle", text: "Sent", color: "text-indigo-300"}
 
   defp format_session_time(datetime) do
     now = DateTime.utc_now()
