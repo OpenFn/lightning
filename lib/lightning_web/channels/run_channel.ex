@@ -8,7 +8,7 @@ defmodule LightningWeb.RunChannel do
   import LightningWeb.ChannelHelpers
 
   alias Lightning.Credentials
-  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.Resolver
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
@@ -89,19 +89,17 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:credential", %{"id" => id}, socket) do
     %{run: run, scrubber: scrubber, project_id: project_id} = socket.assigns
 
-    credential = Runs.get_credential(run, id)
-
-    with credential when is_map(credential) <- credential || :not_found,
-         {:ok, credential} <- Credentials.maybe_refresh_token(credential),
-         credential <- maybe_merge_oauth(credential),
-         samples <- Credentials.sensitive_values_for(credential),
-         basic_auth <- Credentials.basic_auth_for(credential),
+    with {:ok, resolved_credential} <- Resolver.resolve_credential(run, id),
+         samples <-
+           Credentials.sensitive_values_for(resolved_credential.credential),
+         basic_auth <-
+           Credentials.basic_auth_for(resolved_credential.credential),
          {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
       socket
       |> assign(scrubber: scrubber)
-      |> reply_with({:ok, remove_empty_values(credential.body)})
+      |> reply_with({:ok, resolved_credential.body})
     else
-      :not_found ->
+      {:error, :not_found} ->
         reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
 
       {:error,
@@ -116,8 +114,8 @@ defmodule LightningWeb.RunChannel do
           %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
         })
 
-      {:error, :reauthorization_required} ->
-        Logger.error("oauth refresh token has expired", credential_id: id)
+      {:error, %{type: :reauthorization_required, credential: credential}} ->
+        Logger.error("OAuth refresh token has expired", credential_id: id)
         credentials_url = url(~p"/projects/#{project_id}/settings#credentials")
 
         error = """
@@ -130,11 +128,28 @@ defmodule LightningWeb.RunChannel do
 
         {:reply, {:error, error}, socket}
 
-      {:error, :temporary_failure} ->
+      {:error, %{type: :temporary_failure}} ->
         Logger.error("Could not reach the oauth provider", credential_id: id)
 
         {:reply, {:error, "Could not reach the oauth provider. Try again later"},
          socket}
+
+      {:error, %{type: :oauth_error, original_error: original_error}} ->
+        Logger.error(fn ->
+          {"""
+           Something went wrong when fetching or refreshing a credential.
+           #{inspect(original_error)}
+           """, [credential_id: id]}
+        end)
+
+        reply_with(
+          socket,
+          {:error,
+           %{
+             error: original_error,
+             message: "An error occured when fetching your credential"
+           }}
+        )
 
       {:error, error} ->
         Logger.error(fn ->
@@ -232,27 +247,11 @@ defmodule LightningWeb.RunChannel do
   end
 
   defp update_scrubber(nil, samples, basic_auth) do
-    Scrubber.start_link(
-      samples: samples,
-      basic_auth: basic_auth
-    )
+    Scrubber.start_link(samples: samples, basic_auth: basic_auth)
   end
 
   defp update_scrubber(scrubber, samples, basic_auth) do
     :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
     {:ok, scrubber}
-  end
-
-  defp remove_empty_values(credential_body) do
-    Map.reject(credential_body, fn {_key, val} -> val == "" end)
-  end
-
-  defp maybe_merge_oauth(%Credential{schema: "oauth"} = credential) do
-    merged_body = Map.merge(credential.body, credential.oauth_token.body)
-    %{credential | body: merged_body}
-  end
-
-  defp maybe_merge_oauth(%Credential{} = credential) do
-    credential
   end
 end
