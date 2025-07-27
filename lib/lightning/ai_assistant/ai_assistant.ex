@@ -651,6 +651,30 @@ defmodule Lightning.AiAssistant do
     )
   end
 
+  @doc """
+  Resets a message status to pending and enqueues it for reprocessing.
+  Handles both the database update and Oban job creation atomically.
+  """
+  def retry_message(message) do
+    Multi.new()
+    |> Multi.update(
+      :message,
+      Ecto.Changeset.change(message, %{status: :pending})
+    )
+    |> Multi.insert(
+      :job,
+      Lightning.AiAssistant.MessageProcessor.new(%{
+        message_id: message.id,
+        session_id: message.chat_session_id
+      })
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{message: message, job: job}} -> {:ok, {message, job}}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
   defp get_workflow_sessions_with_count(
          project,
          workflow,

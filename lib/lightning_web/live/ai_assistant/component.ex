@@ -20,6 +20,10 @@ defmodule LightningWeb.AiAssistant.Component do
 
   @dialyzer {:nowarn_function, process_ast: 2}
 
+  @default_page_size 20
+  @message_preview_length 50
+
+  @impl true
   def mount(socket) do
     {:ok,
      socket
@@ -41,6 +45,7 @@ defmodule LightningWeb.AiAssistant.Component do
      end)}
   end
 
+  @impl true
   def update(
         %{
           action: :workflow_parse_error,
@@ -106,25 +111,32 @@ defmodule LightningWeb.AiAssistant.Component do
      |> apply_action(action)}
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
-    <div id={@id} class="h-full relative">
-      <%= if !@ai_enabled? do %>
-        <.render_ai_not_configured />
-      <% else %>
-        <%= if !@has_read_disclaimer do %>
-          <.render_onboarding
-            myself={@myself}
-            can_edit_workflow={@can_edit_workflow}
-          />
-        <% else %>
-          <.render_session {assigns} />
-        <% end %>
-      <% end %>
-    </div>
+    <div id={@id} class="h-full relative"><.render_content {assigns} /></div>
     """
   end
 
+  defp render_content(%{ai_enabled?: false} = assigns) do
+    ~H"""
+    <.render_ai_not_configured />
+    """
+  end
+
+  defp render_content(%{has_read_disclaimer: false} = assigns) do
+    ~H"""
+    <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
+    """
+  end
+
+  defp render_content(assigns) do
+    ~H"""
+    <.render_session {assigns} />
+    """
+  end
+
+  @impl true
   def handle_event("validate", %{"assistant" => params}, socket) do
     handler = socket.assigns.handler
 
@@ -214,30 +226,22 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   def handle_event("retry_message", %{"message-id" => message_id}, socket) do
-    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
+    socket.assigns.session.messages
+    |> Enum.find(&(&1.id == message_id))
+    |> AiAssistant.retry_message()
+    |> case do
+      {:ok, {_message, _job}} ->
+        {:ok, session} = AiAssistant.get_session(socket.assigns.session.id)
 
-    # Update status to pending so it gets picked up by Oban
-    {:ok, _} =
-      message
-      |> Ecto.Changeset.change(%{status: :pending})
-      |> Lightning.Repo.update()
+        {:noreply,
+         socket
+         |> assign(:session, session)
+         |> assign(:pending_message, AsyncResult.loading())}
 
-    # Enqueue for processing
-    Oban.insert(
-      Lightning.Oban,
-      Lightning.AiAssistant.MessageProcessor.new(%{
-        message_id: message.id,
-        session_id: socket.assigns.session.id
-      })
-    )
-
-    # Update the session in the socket to reflect the status change
-    {:ok, session} = AiAssistant.get_session(socket.assigns.session.id)
-
-    {:noreply,
-     socket
-     |> assign(:session, session)
-     |> assign(:pending_message, AsyncResult.loading())}
+      {:error, _changeset} ->
+        {:noreply,
+         put_flash(socket, :error, "Failed to retry message. Please try again.")}
+    end
   end
 
   def handle_event(
@@ -263,22 +267,18 @@ defmodule LightningWeb.AiAssistant.Component do
         _ -> []
       end
 
-    offset = length(current_sessions)
-
-    socket =
-      socket
-      |> assign_async([:all_sessions, :pagination_meta], fn ->
-        case handler.list_sessions(assigns, sort_direction,
-               offset: offset,
-               limit: 20
-             ) do
-          %{sessions: new_sessions, pagination: pagination} ->
-            all_sessions = current_sessions ++ new_sessions
-            {:ok, %{all_sessions: all_sessions, pagination_meta: pagination}}
-        end
-      end)
-
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> assign_async([:all_sessions, :pagination_meta], fn ->
+       case handler.list_sessions(assigns, sort_direction,
+              offset: length(current_sessions),
+              limit: @default_page_size
+            ) do
+         %{sessions: new_sessions, pagination: pagination} ->
+           all_sessions = current_sessions ++ new_sessions
+           {:ok, %{all_sessions: all_sessions, pagination_meta: pagination}}
+       end
+     end)}
   end
 
   defp apply_action(socket, :new) do
@@ -309,7 +309,9 @@ defmodule LightningWeb.AiAssistant.Component do
     socket
     |> handler.on_session_start(ui_callback)
     |> assign_async([:all_sessions, :pagination_meta], fn ->
-      case handler.list_sessions(assigns, sort_direction, limit: 20) do
+      case handler.list_sessions(assigns, sort_direction,
+             limit: @default_page_size
+           ) do
         %{sessions: sessions, pagination: pagination} ->
           {:ok, %{all_sessions: sessions, pagination_meta: pagination}}
       end
@@ -341,38 +343,53 @@ defmodule LightningWeb.AiAssistant.Component do
     )
   end
 
-  defp save_message(socket, :new, content) do
-    case socket.assigns.handler.create_session(socket.assigns, content) do
+  defp save_message(socket, action, content) do
+    result =
+      case action do
+        :new -> create_new_session(socket, content)
+        :show -> add_to_existing_session(socket, content)
+      end
+
+    case result do
       {:ok, session} ->
-        chat_param = get_chat_param_for_mode(socket.assigns.mode)
+        handle_successful_save(socket, session, action)
 
-        query_params =
-          Map.put(socket.assigns.query_params, chat_param, session.id)
-
-        socket
-        |> assign(:session, session)
-        |> assign(:pending_message, AsyncResult.loading())
-        |> push_patch(to: redirect_url(socket.assigns.base_url, query_params))
-
-      error ->
-        assign(socket,
-          error_message: socket.assigns.handler.error_message(error)
-        )
+      {:error, error} ->
+        handle_save_error(socket, error)
     end
   end
 
-  defp save_message(socket, :show, content) do
-    case socket.assigns.handler.save_message(socket.assigns, content) do
-      {:ok, session} ->
-        socket
-        |> assign(:session, session)
-        |> assign(:pending_message, AsyncResult.loading())
+  defp create_new_session(socket, content) do
+    socket.assigns.handler.create_session(socket.assigns, content)
+  end
 
-      error ->
-        assign(socket,
-          error_message: socket.assigns.handler.error_message(error)
-        )
-    end
+  defp add_to_existing_session(socket, content) do
+    socket.assigns.handler.save_message(socket.assigns, content)
+  end
+
+  defp handle_successful_save(socket, session, :new) do
+    socket
+    |> assign(:session, session)
+    |> assign(:pending_message, AsyncResult.loading())
+    |> redirect_to_session(session)
+  end
+
+  defp handle_successful_save(socket, session, :show) do
+    socket
+    |> assign(:session, session)
+    |> assign(:pending_message, AsyncResult.loading())
+  end
+
+  defp redirect_to_session(socket, session) do
+    chat_param = get_chat_param_for_mode(socket.assigns.mode)
+    query_params = Map.put(socket.assigns.query_params, chat_param, session.id)
+    push_patch(socket, to: redirect_url(socket.assigns.base_url, query_params))
+  end
+
+  defp handle_save_error(socket, error) do
+    assign(socket,
+      error_message: socket.assigns.handler.error_message(error)
+    )
   end
 
   defp redirect_url(base_url, query_params) do
@@ -645,8 +662,6 @@ defmodule LightningWeb.AiAssistant.Component do
         </span>
         <.inputs_for :let={options} field={@form[:options]}>
           <.input type="checkbox" label="Code" field={options[:code]} />
-          <%!-- <.input type="checkbox" label="Input" field={options[:input]} />
-          <.input type="checkbox" label="Output" field={options[:output]} /> --%>
           <.input type="checkbox" label="Logs" field={options[:logs]} />
         </.inputs_for>
       </div>
@@ -863,14 +878,14 @@ defmodule LightningWeb.AiAssistant.Component do
   defp format_last_message(message) do
     message
     |> String.trim()
-    |> String.slice(0, 50)
+    |> String.slice(0, @message_preview_length)
     |> add_ellipsis_if_needed(String.length(message))
   end
 
   defp add_ellipsis_if_needed("", _), do: "New conversation"
 
   defp add_ellipsis_if_needed(preview, original_length)
-       when original_length > 50 do
+       when original_length > @message_preview_length do
     preview <> "..."
   end
 
