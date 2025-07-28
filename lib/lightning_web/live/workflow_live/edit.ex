@@ -1491,7 +1491,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     query_params =
       socket.assigns.query_params
       |> Map.reject(fn {k, v} ->
-        is_nil(v) or k == "v" or k == "a"
+        is_nil(v) or k == "v"
       end)
 
     url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
@@ -2860,21 +2860,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  #  This is called when switching to latest
-  defp handle_run_selection_history(socket, _run_id, version_tag, selected_id)
-       when is_nil(version_tag) do
-    socket
-    |> handle_selection_with_mode(selected_id, "history")
-    |> set_mode(nil)
-  end
-
   defp handle_run_selection_history(socket, run_id, version_tag, selected_id) do
     workflow_id = socket.assigns.workflow.id
 
     %{run_steps: run_steps} =
       get_run_steps_and_history(workflow_id, run_id)
 
-    snapshot = Snapshot.get_by_version(workflow_id, version_tag)
+    # when switching to latest version_tag is nil
+    # hence, we just pick the version on workflow
+    version = version_tag || socket.assigns.workflow.lock_version
+
+    snapshot = Snapshot.get_by_version(workflow_id, version)
 
     fine_snap = %{
       triggers:
