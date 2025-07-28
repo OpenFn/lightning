@@ -93,7 +93,7 @@ const Node = ({
   const startInfo = data?.startInfo as { started_at: string, startBy: string } | undefined;
   const isErrorRun = runData?.exit_reason !== "success";
   // TODO: remember triggers
-  const didRun = data.isRun ? !!runData : true
+  const didRun = data.isRun ? (!!runData || !!data?.startInfo) : true
 
   const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
     selected,
