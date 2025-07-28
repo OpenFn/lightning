@@ -23,8 +23,8 @@ defmodule Lightning.Credentials.KeychainCredential do
           default_credential:
             Credential.t() | Ecto.Association.NotLoaded.t() | nil,
           project: Project.t() | Ecto.Association.NotLoaded.t() | nil,
-          inserted_at: NaiveDateTime.t() | nil,
-          updated_at: NaiveDateTime.t() | nil
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
         }
 
   schema "keychain_credentials" do

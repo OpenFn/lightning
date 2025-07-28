@@ -128,22 +128,23 @@ defmodule LightningWeb.RunChannel do
         {:reply, {:error, "Could not reach the oauth provider. Try again later"},
          socket}
 
-      {:error, {other_error, _credential}} ->
-        Logger.error(fn ->
-          {"""
-           Something went wrong when fetching or refreshing a credential.
-           #{inspect(other_error)}
-           """, [credential_id: id]}
-        end)
+      # What is this, did I put this here?
+      # {:error, {other_error, _credential}} ->
+      #   Logger.error(fn ->
+      #     {"""
+      #      Something went wrong when fetching or refreshing a credential.
+      #      #{inspect(other_error)}
+      #      """, [credential_id: id]}
+      #   end)
 
-        reply_with(
-          socket,
-          {:error,
-           %{
-             error: other_error,
-             message: "An error occured when fetching your credential"
-           }}
-        )
+      #   reply_with(
+      #     socket,
+      #     {:error,
+      #      %{
+      #        error: other_error,
+      #        message: "An error occured when fetching your credential"
+      #      }}
+      #   )
 
       {:error, error} ->
         Logger.error(fn ->
