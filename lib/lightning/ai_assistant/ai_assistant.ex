@@ -400,6 +400,41 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
+  Enriches a chat session with job-specific context.
+
+  Loads the associated job and enriches the session with:
+  - Job expression code and adaptor information
+  - Run logs if following a specific run (via session.meta["follow_run_id"])
+
+  ## Parameters
+  - `session` - The chat session to enrich
+
+  ## Returns
+  The enriched session with job context loaded
+  """
+  @spec enrich_session_with_job_context(ChatSession.t()) :: ChatSession.t()
+  def enrich_session_with_job_context(%{job_id: nil} = session), do: session
+
+  def enrich_session_with_job_context(session) do
+    job = Repo.get!(Lightning.Workflows.Job, session.job_id)
+
+    session
+    |> put_expression_and_adaptor(job.body, job.adaptor)
+    |> maybe_add_run_logs()
+  end
+
+  @doc false
+  defp maybe_add_run_logs(%{meta: %{"follow_run_id" => run_id}} = session)
+       when not is_nil(run_id) do
+    logs =
+      Lightning.Invocation.assemble_logs_for_job_and_run(session.job_id, run_id)
+
+    %{session | logs: logs}
+  end
+
+  defp maybe_add_run_logs(session), do: session
+
+  @doc """
   Associates a workflow with a chat session.
 
   Links a generated workflow to the session that created it, enabling tracking
@@ -567,8 +602,6 @@ defmodule Lightning.AiAssistant do
   def query(session, content, opts \\ []) do
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
-    pending_user_message = Keyword.get(opts, :processing_message)
-
     context =
       build_context(
         %{
@@ -588,7 +621,7 @@ defmodule Lightning.AiAssistant do
       history: history,
       meta: meta
     )
-    |> handle_ai_response(session, pending_user_message, &build_job_message/1)
+    |> handle_ai_response(session, &build_job_message/1)
   end
 
   defp build_context(context, opts) do
@@ -627,13 +660,9 @@ defmodule Lightning.AiAssistant do
   @spec query_workflow(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
   def query_workflow(session, content, opts \\ []) do
-    workflow_code =
-      Keyword.get(opts, :workflow_code) || get_latest_workflow_yaml(session)
-
+    workflow_code = Keyword.get(opts, :workflow_code)
     workflow_errors = Keyword.get(opts, :workflow_errors)
     meta = Keyword.get(opts, :meta, session.meta || %{})
-
-    pending_user_message = Keyword.get(opts, :processing_message)
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
@@ -644,11 +673,7 @@ defmodule Lightning.AiAssistant do
       history: build_history(session),
       meta: meta
     )
-    |> handle_ai_response(
-      session,
-      pending_user_message,
-      &build_workflow_message/1
-    )
+    |> handle_ai_response(session, &build_workflow_message/1)
   end
 
   @doc """
@@ -761,38 +786,19 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  defp handle_ai_response(response, session, pending_message, message_builder) do
+  defp handle_ai_response(response, session, message_builder) do
     case response do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
         {message_attrs, opts} = message_builder.(body)
-
-        save_and_update_status(session, message_attrs, pending_message, opts)
+        save_message(session, message_attrs, opts)
 
       error ->
-        handle_error_response(error, session, pending_message)
+        handle_error_response(error, session)
     end
   end
 
-  defp save_and_update_status(session, message_attrs, pending_message, opts) do
-    case save_message(session, message_attrs, opts) do
-      {:ok, updated_session} ->
-        if pending_message do
-          update_message_status(updated_session, pending_message, :success)
-        else
-          {:ok, updated_session}
-        end
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
-  end
-
-  defp handle_error_response(error_response, session, pending_user_message) do
-    if pending_user_message do
-      update_message_status(session, pending_user_message, :error)
-    end
-
+  defp handle_error_response(error_response, session) do
     case error_response do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status not in @success_status_range ->
@@ -842,17 +848,6 @@ defmodule Lightning.AiAssistant do
     ]
 
     {message_attrs, opts}
-  end
-
-  def get_latest_workflow_yaml(session) do
-    messages = session.messages || []
-
-    messages
-    |> Enum.reverse()
-    |> Enum.find_value(nil, fn
-      %{role: :assistant, workflow_code: yaml} when not is_nil(yaml) -> yaml
-      _ -> nil
-    end)
   end
 
   defp build_history(session) do

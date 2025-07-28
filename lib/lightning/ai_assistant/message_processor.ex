@@ -1,6 +1,10 @@
 defmodule Lightning.AiAssistant.MessageProcessor do
   @moduledoc """
-  Processes AI assistant messages asynchronously using Oban.
+  Asynchronous message processor for AI Assistant using Oban.
+
+  This module handles the background processing of AI chat messages, ensuring
+  reliable and scalable AI interactions. It processes messages outside of the
+  web request lifecycle, providing better user experience and system resilience.
   """
   use Oban.Worker,
     queue: :ai_assistant,
@@ -12,7 +16,23 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   require Logger
 
+  @doc """
+  Processes an AI assistant message asynchronously.
+
+  This is the main entry point called by Oban. It handles the complete
+  lifecycle of message processing including status updates and broadcasting.
+
+  ## Arguments
+
+  - `job` - Oban job containing `message_id` and `session_id` in args
+
+  ## Returns
+
+  Always returns `:ok` to prevent Oban retries, even on errors.
+  Errors are handled by updating message status and logging.
+  """
   @impl Oban.Worker
+  @spec perform(Oban.Job.t()) :: :ok
   def perform(%Oban.Job{
         args: %{"message_id" => message_id, "session_id" => session_id}
       }) do
@@ -21,23 +41,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     message = Repo.get!(ChatMessage, message_id)
     session = AiAssistant.get_session!(session_id)
 
-    # Mark as processing
-    {:ok, _} =
-      message
-      |> Ecto.Changeset.change(%{
-        status: :processing,
-        processing_started_at: DateTime.utc_now()
-      })
-      |> Repo.update()
+    {:ok, _} = update_message_status(message, :processing, session)
 
-    # Broadcast processing status
-    broadcast_status(session_id, :processing)
-
-    # Process based on session type
-    result = process_message(session, message)
-
-    # Always return :ok so Oban doesn't retry
-    case result do
+    case process_message(session, message) do
       {:ok, _updated_session} ->
         Logger.info(
           "[MessageProcessor] Successfully processed message: #{message_id}"
@@ -54,12 +60,26 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     end
   end
 
+  @doc """
+  Defines the job timeout based on Apollo configuration.
+
+  Adds a 10-second buffer to the Apollo timeout to account for
+  network overhead and processing time.
+
+  ## Returns
+
+  Timeout in milliseconds
+  """
   @impl Oban.Worker
+  @spec timeout(Oban.Job.t()) :: pos_integer()
   def timeout(_job) do
     apollo_timeout_ms = Lightning.Config.apollo(:timeout) || 30_000
     apollo_timeout_ms + 10_000
   end
 
+  @doc false
+  @spec process_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
+          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_message(session, message) do
     result =
       case session.session_type do
@@ -72,69 +92,97 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     case result do
       {:ok, updated_session} ->
-        # Mark message as complete
-        {:ok, _} =
-          message
-          |> Ecto.Changeset.change(%{
-            status: :success,
-            completed_at: DateTime.utc_now()
-          })
-          |> Repo.update()
-
-        broadcast_status(session.id, {:completed, updated_session})
+        {:ok, _} = update_message_status(message, :success, updated_session)
         {:ok, updated_session}
 
       {:error, error_message} ->
-        # Mark message as failed
-        {:ok, _} =
-          message
-          |> Ecto.Changeset.change(%{
-            status: :error,
-            completed_at: DateTime.utc_now()
-          })
-          |> Repo.update()
-
-        broadcast_status(session.id, :error)
+        {:ok, _} = update_message_status(message, :error, session)
         {:error, error_message}
     end
   end
 
+  @doc false
+  @spec process_job_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
+          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_job_message(session, message) do
-    job = Repo.get!(Lightning.Workflows.Job, session.job_id)
-
-    session =
-      AiAssistant.put_expression_and_adaptor(
-        session,
-        job.body,
-        job.adaptor
-      )
-
-    session =
-      if run_id = session.meta["follow_run_id"] do
-        logs = Lightning.Invocation.assemble_logs_for_job_and_run(job.id, run_id)
-        %{session | logs: logs}
-      else
-        session
-      end
-
-    AiAssistant.query(session, message.content, processing_message: message)
-  end
-
-  defp process_workflow_message(session, message) do
-    workflow_code =
-      message.workflow_code || AiAssistant.get_latest_workflow_yaml(session)
-
-    AiAssistant.query_workflow(session, message.content,
-      workflow_code: workflow_code,
-      processing_message: message
-    )
+    enriched_session = AiAssistant.enrich_session_with_job_context(session)
+    AiAssistant.query(enriched_session, message.content)
   end
 
   @doc false
+  @spec process_workflow_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
+          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+  defp process_workflow_message(session, message) do
+    code = message.workflow_code || workflow_code_from_session(session)
+    AiAssistant.query_workflow(session, message.content, workflow_code: code)
+  end
+
+  @doc false
+  @spec broadcast_status(
+          String.t(),
+          atom() | {:completed, AiAssistant.ChatSession.t()}
+        ) :: :ok
   defp broadcast_status(session_id, status) do
     Lightning.broadcast(
       "ai_session:#{session_id}",
       {:ai_assistant, :message_status_changed, status}
     )
+  end
+
+  @doc false
+  @spec update_message_status(
+          ChatMessage.t(),
+          atom(),
+          AiAssistant.ChatSession.t()
+        ) ::
+          {:ok, ChatMessage.t()}
+  defp update_message_status(message, status, session) do
+    changes = build_status_changes(status)
+
+    {:ok, updated_message} =
+      message
+      |> Ecto.Changeset.change(changes)
+      |> Repo.update()
+
+    broadcast_status(session.id, {status, session})
+
+    {:ok, updated_message}
+  end
+
+  @doc false
+  @spec build_status_changes(atom()) :: map()
+  defp build_status_changes(:processing) do
+    %{
+      status: :processing,
+      processing_started_at: DateTime.utc_now()
+    }
+  end
+
+  defp build_status_changes(:success) do
+    %{
+      status: :success,
+      processing_completed_at: DateTime.utc_now()
+    }
+  end
+
+  defp build_status_changes(:error) do
+    %{
+      status: :error,
+      processing_completed_at: DateTime.utc_now()
+    }
+  end
+
+  @doc false
+  @spec workflow_code_from_session(AiAssistant.ChatSession.t()) ::
+          String.t() | nil
+  defp workflow_code_from_session(session) do
+    messages = session.messages || []
+
+    messages
+    |> Enum.reverse()
+    |> Enum.find_value(nil, fn
+      %{role: :assistant, workflow_code: code} when not is_nil(code) -> code
+      _ -> nil
+    end)
   end
 end

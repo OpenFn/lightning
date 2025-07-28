@@ -34,7 +34,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
           is_deleted: boolean(),
           is_public: boolean(),
           processing_started_at: DateTime.t() | nil,
-          completed_at: DateTime.t() | nil,
+          processing_completed_at: DateTime.t() | nil,
           chat_session_id: Ecto.UUID.t(),
           user_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t(),
@@ -52,7 +52,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
     field :processing_started_at, :utc_datetime_usec
-    field :completed_at, :utc_datetime_usec
+    field :processing_completed_at, :utc_datetime_usec
 
     belongs_to :chat_session, Lightning.AiAssistant.ChatSession
     belongs_to :user, Lightning.Accounts.User
@@ -87,7 +87,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :is_public,
       :chat_session_id,
       :processing_started_at,
-      :completed_at
+      :processing_completed_at
     ])
     |> validate_required([:content, :role])
     |> validate_length(:content, min: 1, max: 10_000)

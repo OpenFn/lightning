@@ -72,27 +72,23 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   def update(%{message_status_update: status}, socket) do
-    updated_socket =
-      case status do
-        :processing ->
-          assign(socket, :pending_message, AsyncResult.loading())
+    case status do
+      {:processing, _session} ->
+        assign(socket, :pending_message, AsyncResult.loading())
 
-        {:completed, updated_session} ->
-          socket
-          |> assign(:session, updated_session)
-          |> assign(:pending_message, AsyncResult.ok(nil))
-          |> maybe_push_workflow_code(updated_session)
-          |> assign(workflow_error: nil)
+      {:success, session} ->
+        socket
+        |> assign(:session, session)
+        |> assign(:pending_message, AsyncResult.ok(nil))
+        |> maybe_push_workflow_code(session)
+        |> assign(workflow_error: nil)
 
-        :error ->
-          session = socket.assigns.handler.get_session!(socket.assigns)
-
-          socket
-          |> assign(:session, session)
-          |> assign(:pending_message, AsyncResult.ok(nil))
-      end
-
-    {:ok, updated_socket}
+      {:error, session} ->
+        socket
+        |> assign(:session, session)
+        |> assign(:pending_message, AsyncResult.ok(nil))
+    end
+    |> then(fn socket -> {:ok, socket} end)
   end
 
   def update(
