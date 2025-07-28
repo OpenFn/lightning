@@ -786,7 +786,7 @@ defmodule Lightning.AiAssistant do
     message = body["history"] |> Enum.reverse() |> hd()
     message_attrs = Map.take(message, ["role", "content"])
 
-    job_code = get_in(body, ["response", "suggested_code"])
+    job_code = get_in(body, ["suggested_code"])
 
     message_attrs =
       if job_code do
