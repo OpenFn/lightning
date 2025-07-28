@@ -146,7 +146,13 @@ export type ReplayAction = {
 const undos: ReplayAction[] = [];
 let redos: ReplayAction[] = [];
 
-const RUNS_TMP: RunInfo = { steps: [], isTrigger: false, start_from: null };
+export const RUNS_TMP: RunInfo = {
+  steps: [],
+  isTrigger: false,
+  start_from: null,
+  inserted_at: '',
+  run_by: null,
+};
 
 // simple squash function
 // I think after squashing. we can actually ignore in-between states.

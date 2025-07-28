@@ -38,6 +38,7 @@ type WorkflowDiagramProps = {
   onSelectionChange: (id: string | null) => void;
   forceFit?: boolean;
   onRunChange: (id: string, version: number) => void;
+  onCollapseHistory: () => void;
 };
 
 type ChartCache = {
@@ -66,7 +67,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
-  const { selection, onSelectionChange, containerEl: el, onRunChange } = props;
+  const { selection, onSelectionChange, containerEl: el, onRunChange, onCollapseHistory } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
@@ -444,6 +445,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         collapsed={!runSteps.steps.length}
         history={someHistory}
         selectRunHandler={onRunChange}
+        onCollapseHistory={onCollapseHistory}
       ></MiniHistory>
     </ReactFlowProvider >
   );

@@ -44,12 +44,14 @@ interface MiniHistoryProps {
   collapsed: boolean;
   history: WorkflowRunHistory;
   selectRunHandler: (runId: string, version: number) => void
+  onCollapseHistory: () => void
 }
 
 export default function MiniHistory({
   history,
   selectRunHandler,
-  collapsed = true
+  collapsed = true,
+  onCollapseHistory
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
@@ -62,10 +64,18 @@ export default function MiniHistory({
     setExpandedWorder(prev => prev === workorder.id ? "" : workorder.id);
   }
 
+  const historyToggle = () => {
+    setIsCollapsed(p => {
+      if (!p) onCollapseHistory();
+      return !p;
+    })
+  }
+
+
   return (
     <div className={`absolute left-2 top-2 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${isCollapsed ? "w-44" : "w-88"}`}>
       {/* Header */}
-      <div className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 ${isCollapsed ? "border-b-0" : "border-b"}`} onClick={() => setIsCollapsed(p => !p)}>
+      <div className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 ${isCollapsed ? "border-b-0" : "border-b"}`} onClick={() => historyToggle()}>
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-gray-700">
             {isCollapsed ? "View history" : "Recent Activities"}

@@ -2,11 +2,11 @@
 import type { WithActionProps } from '#/react/lib/with-props';
 import React from 'react';
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
-import { useWorkflowStore } from '../workflow-store/store';
+import { RUNS_TMP, useWorkflowStore } from '../workflow-store/store';
 import tippy, { type Placement } from 'tippy.js';
 
 export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) => {
-  const { getItem, forceFit } = useWorkflowStore();
+  const { getItem, forceFit, updateRuns } = useWorkflowStore();
 
   // TODO to be moved to a higher level
   React.useEffect(() => {
@@ -66,12 +66,24 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
   }
 
   const onRunChangeHandler = (id: string, version: number) => {
-    console.log("clicked:", version)
     const currentUrl = new URL(window.location.href);
     const nextUrl = new URL(currentUrl);
     nextUrl.searchParams.set('a', id);
     nextUrl.searchParams.set('v', version.toString());
     nextUrl.searchParams.set('m', 'history')
+    props.navigate(nextUrl.toString());
+  }
+
+  const onCollapseHistory = () => {
+    // remove run steps from the store
+    updateRuns(RUNS_TMP, null);
+
+    // update the url query.
+    const currentUrl = new URL(window.location.href);
+    const nextUrl = new URL(currentUrl);
+    nextUrl.searchParams.delete('a');
+    nextUrl.searchParams.delete('v');
+    nextUrl.searchParams.delete('m');
     props.navigate(nextUrl.toString());
   }
 
@@ -82,5 +94,6 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
     onSelectionChange={onSelectionChange}
     forceFit={forceFit}
     onRunChange={onRunChangeHandler}
+    onCollapseHistory={onCollapseHistory}
   />
 }
