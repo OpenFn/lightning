@@ -7,6 +7,7 @@ import formatDate from '../../utils/formatDate';
 import ErrorMessage from '../components/ErrorMessage';
 import Shape from '../components/Shape';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
+import { RUN_DATA_ICON } from './Node.styles';
 
 type NodeData = any;
 
@@ -153,14 +154,12 @@ const Node = ({
             </>
           )}
           {runData && !isTriggerNode ? <div
-            className={`flex justify-center items-center absolute -left-2 -top-2 border-2 w-6 h-6 rounded-full ${isErrorRun ? "border-red-600 bg-red-100" : "border-green-600 bg-green-100"}`}
-            data-tooltip={isErrorRun ? runData?.error_type : "Successful run"}
-            data-tooltip-placement="top"
+            className={`flex justify-center items-center absolute -left-2 -top-2 w-7 h-7 rounded-full ${RUN_DATA_ICON[runData?.exit_reason]['color']} ${RUN_DATA_ICON[runData?.exit_reason]['border']} ${RUN_DATA_ICON[runData?.exit_reason]['text']}`}
           >
-            {isErrorRun ?
-              <span className='hero-exclamation-circle w-3 h-3'></span> :
-              <span className='hero-check w-3 h-3'></span>
-            }
+            <span
+              data-tooltip={isErrorRun ? runData?.error_type : "Successful run"}
+              data-tooltip-placement="top"
+              className={`${RUN_DATA_ICON[runData?.exit_reason]['icon']} w-full h-full`}></span>
           </div> : null}
           {startInfo ? <div
             className={`absolute -top-2 flex gap-2 items-center`}
@@ -170,7 +169,7 @@ const Node = ({
             data-tooltip={`Started by ${startInfo.startBy}`}
             data-tooltip-placement="top"
           >
-            <div className='flex justify-center items-center border-2 w-6 h-6 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
+            <div className='flex justify-center items-center w-7 h-7 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
               <span className='hero-play-solid w-3 h-3'></span>
             </div>
           </div> : null}

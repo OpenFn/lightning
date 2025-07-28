@@ -21,7 +21,7 @@ const STATE_ICONS = {
   lost: "hero-question-mark-circle"
 }
 
-const StatePill: React.FC<{ state: WorkOrderStates, size?: "normal" | "mini" }> = ({ state, size = "normal" }) => {
+const StatePill: React.FC<{ state: WorkOrderStates }> = ({ state }) => {
   const colors = () => {
     switch (state) {
       case "success":
@@ -34,10 +34,10 @@ const StatePill: React.FC<{ state: WorkOrderStates, size?: "normal" | "mini" }> 
         return "bg-slate-200 text-slate-500"
     }
   }
-  return <span
-    className={`inline-flex rounded-full bg-gray-200 justify-center items-center p-0.5 ${colors()} ${size === "normal" ? "w-5 h-5" : "w-4 h-4"}`}>
-    <span className={`${STATE_ICONS[state]} ${size === "normal" ? "w-4 h-4" : "w-3 h-3"}`}></span>
-  </span >
+  return <div
+    className={`flex rounded-full bg-gray-200 justify-center items-center ${colors()} w-6 h-6`}>
+    <span className={`${STATE_ICONS[state]} w-4 h-4 text-center"}`}></span>
+  </div>
 };
 
 interface MiniHistoryProps {
