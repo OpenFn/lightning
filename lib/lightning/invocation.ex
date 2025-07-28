@@ -862,10 +862,7 @@ defmodule Lightning.Invocation do
 
       {:name_or_id_part, query} ->
         String.starts_with?(dataclip.id, query) or
-          String.contains?(
-            String.downcase(dataclip.name),
-            String.downcase(query)
-          )
+          dataclip_name_matches?(dataclip.name, query)
 
       {:type, type} ->
         dataclip.type == type
@@ -879,11 +876,8 @@ defmodule Lightning.Invocation do
       {:exclude_id, exclude_id} ->
         dataclip.id != exclude_id
 
-      {:name_part, name} ->
-        String.contains?(
-          String.downcase(dataclip.name),
-          String.downcase(name)
-        )
+      {:name_part, name_part} ->
+        dataclip_name_matches?(dataclip.name, name_part)
 
       {:named_only, true} ->
         is_binary(dataclip.name)
@@ -891,6 +885,14 @@ defmodule Lightning.Invocation do
       _other ->
         true
     end)
+  end
+
+  defp dataclip_name_matches?(nil, _name_part), do: false
+
+  defp dataclip_name_matches?(name, name_part) do
+    name
+    |> String.downcase()
+    |> String.contains?(String.downcase(name_part))
   end
 
   # credo:disable-for-next-line

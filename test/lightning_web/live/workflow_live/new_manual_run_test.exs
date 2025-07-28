@@ -148,6 +148,53 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       assert List.first(dataclips).id == output_dataclip.id
     end
 
+    test "does not return next cron run for cron-triggered that don't match the name" do
+      project = insert(:project)
+
+      # Create a cron-triggered workflow
+      cron_trigger = build(:trigger, type: :cron, cron_expression: "0 0 * * *")
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(cron_trigger)
+        |> with_job(job)
+        |> with_edge({cron_trigger, job})
+        |> insert()
+        |> with_snapshot()
+
+      # Create a successful step with output dataclip
+      input_dataclip =
+        insert(:dataclip, project: project, body: %{"input" => "data"})
+
+      output_dataclip =
+        insert(:dataclip,
+          project: project,
+          body: %{"output" => "result"},
+          type: :step_result
+        )
+
+      insert(:step,
+        job: hd(workflow.jobs),
+        input_dataclip: input_dataclip,
+        output_dataclip: output_dataclip,
+        exit_reason: "success",
+        finished_at: DateTime.utc_now()
+      )
+
+      job_id = workflow.jobs |> hd() |> Map.get(:id)
+
+      {:ok, result} =
+        NewManualRun.search_selectable_dataclips(job_id, "query=abc", 10, 0)
+
+      assert %{
+               dataclips: [],
+               next_cron_run_dataclip_id: next_cron_run_dataclip_id
+             } = result
+
+      assert next_cron_run_dataclip_id == output_dataclip.id
+    end
+
     test "does not return next cron run for webhook-triggered workflows" do
       project = insert(:project)
 
