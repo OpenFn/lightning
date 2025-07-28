@@ -524,6 +524,7 @@ defmodule Lightning.WorkOrders do
         join: r in assoc(wo, :runs),
         where: wo.workflow_id == ^workflow_id,
         preload: [:snapshot, runs: [:steps]],
+        distinct: wo.id,
         limit: 20
       )
 
