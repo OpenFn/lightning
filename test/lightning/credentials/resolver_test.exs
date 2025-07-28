@@ -197,23 +197,18 @@ defmodule ResolverTest do
         )
 
       new_expiry = expires_at + 3600
-      endpoint = oauth_client.token_endpoint
 
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %Tesla.Env{method: :post, url: ^endpoint} = env, _opts ->
-          {:ok,
-           %Tesla.Env{
-             env
-             | status: 200,
-               body: %{
-                 "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-                 "expires_at" => new_expiry,
-                 "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-                 "scope" => "https://www.googleapis.com/auth/spreadsheets",
-                 "token_type" => "Bearer"
-               }
-           }}
-      end)
+      Lightning.CredentialHelpers.stub_oauth_client(
+        oauth_client,
+        {200,
+         %{
+           "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+           "expires_at" => new_expiry,
+           "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+           "scope" => "https://www.googleapis.com/auth/spreadsheets",
+           "token_type" => "Bearer"
+         }}
+      )
 
       # Preload the credential with oauth_token for proper resolution
       credential = Repo.preload(credential, oauth_token: [:oauth_client])
@@ -307,17 +302,7 @@ defmodule ResolverTest do
           user: user
         )
 
-      endpoint = oauth_client.token_endpoint
-
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %Tesla.Env{method: :post, url: ^endpoint} = env, _opts ->
-          {:ok,
-           %Tesla.Env{
-             env
-             | status: 429,
-               body: %{"error" => "rate limit"}
-           }}
-      end)
+      Lightning.CredentialHelpers.stub_oauth_client(oauth_client, 429)
 
       # Preload the credential with oauth_token for proper resolution
       credential = Repo.preload(credential, oauth_token: [:oauth_client])
@@ -352,17 +337,7 @@ defmodule ResolverTest do
           user: user
         )
 
-      endpoint = oauth_client.token_endpoint
-
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %Tesla.Env{method: :post, url: ^endpoint} = env, _opts ->
-          {:ok,
-           %Tesla.Env{
-             env
-             | status: 500,
-               body: %{"error" => "internal_server_error"}
-           }}
-      end)
+      Lightning.CredentialHelpers.stub_oauth_client(oauth_client, 500)
 
       # Preload the credential with oauth_token for proper resolution
       credential = Repo.preload(credential, oauth_token: [:oauth_client])
@@ -377,28 +352,283 @@ defmodule ResolverTest do
   end
 
   describe "resolve_credential/1 with keychain credential" do
-    @tag skip: true
-    test "resolves to regular credential using JSONPath"
+    test "is unsupported" do
+      credential = insert(:keychain_credential)
+
+      assert_raise FunctionClauseError, fn ->
+        Resolver.resolve_credential(credential)
+      end
+    end
+  end
+
+  describe "resolve_credential/2 with keychain credential and run" do
+    setup do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      # Create actual credentials that will be referenced by keychain via external_id
+      credential_a =
+        insert(:credential,
+          name: "Alice DHIS2",
+          body: %{
+            "username" => "alice",
+            "password" => "alice_pass",
+            "hostUrl" => "https://dhis2.example.com"
+          },
+          schema: "dhis2",
+          external_id: "alice_dhis2",
+          user: user
+        )
+
+      credential_b =
+        insert(:credential,
+          name: "Bob DHIS2",
+          body: %{
+            "username" => "bob",
+            "password" => "bob_pass",
+            "hostUrl" => "https://dhis2.example.com"
+          },
+          schema: "dhis2",
+          external_id: "bob_dhis2",
+          user: user
+        )
+
+      default_credential =
+        insert(:credential,
+          name: "System DHIS2",
+          body: %{
+            "username" => "default",
+            "password" => "default_pass",
+            "hostUrl" => "https://dhis2.example.com"
+          },
+          schema: "dhis2",
+          user: user
+        )
+
+      # Associate credentials with project
+      for credential <- [credential_a, credential_b, default_credential] do
+        insert(:project_credential, project: project, credential: credential)
+      end
+
+      # Create keychain credential using the factory
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "DHIS2 Multi-User Keychain",
+          path: "$.user_id",
+          default_credential: default_credential,
+          project: project,
+          created_by: user
+        )
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{keychain_credential: keychain_credential})
+        |> insert()
+
+      %{
+        credential_a: credential_a,
+        credential_b: credential_b,
+        default_credential: default_credential,
+        job: job,
+        keychain_credential: keychain_credential,
+        project: project,
+        user: user,
+        workflow: workflow
+      }
+    end
+
+    test "resolves keychain credential using dataclip data", %{
+      credential_a: credential_a,
+      job: job,
+      keychain_credential: keychain_credential,
+      workflow: workflow
+    } do
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          # Create dataclip with user_id = "alice_dhis2" that matches alice's external_id
+          dataclip:
+            build(:dataclip, %{
+              body: %{
+                "user_id" => "alice_dhis2",
+                "form_data" => %{"name" => "Test Form"}
+              }
+            }),
+          starting_job: job
+        })
+
+      # Should resolve to credential_a based on JSONPath $.user_id
+      # matching external_id
+      assert {:ok, %Lightning.Credentials.ResolvedCredential{} = resolved} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+
+      assert resolved.body == credential_a.body
+      assert resolved.credential.id == credential_a.id
+    end
+
+    test "falls back to default when JSONPath doesn't match dataclip", %{
+      default_credential: default_credential,
+      job: job,
+      keychain_credential: keychain_credential,
+      workflow: workflow
+    } do
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          # Create dataclip with user_id that doesn't match any credential's external_id
+          dataclip:
+            build(:dataclip, %{
+              body: %{
+                "user_id" => "charlie_dhis2",
+                "form_data" => %{"name" => "Test Form"}
+              }
+            }),
+          starting_job: job
+        })
+
+      # Should fall back to default_credential when no external_id matches
+      assert {:ok, resolved} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+
+      assert %Lightning.Credentials.ResolvedCredential{} = resolved
+      assert resolved.body == default_credential.body
+      assert resolved.credential.id == default_credential.id
+    end
+
+    test "returns nil when there is no matching or default credential", %{
+      project: project,
+      user: user
+    } do
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Without Default",
+          path: "$.user_id",
+          default_credential: nil,
+          project: project,
+          created_by: user
+        )
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{keychain_credential: keychain_credential})
+        |> insert()
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          dataclip:
+            build(:dataclip, %{
+              body: %{
+                "user_id" => "charlie_dhis2",
+                "form_data" => %{"name" => "Test Form"}
+              }
+            }),
+          starting_job: job
+        })
+
+      assert {:ok, nil} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+    end
+
+    test "resolves keychain oauth credential and refreshes token", %{
+      keychain_credential: keychain_credential,
+      project: project,
+      user: user
+    } do
+      # Create OAuth client and credential with expired token
+      oauth_client = insert(:oauth_client)
+
+      expires_at =
+        DateTime.utc_now() |> DateTime.add(-299, :second) |> DateTime.to_unix()
+
+      oauth_credential =
+        insert(:credential,
+          name: "Alice OAuth DHIS2",
+          schema: "oauth",
+          body: %{"sandbox" => false},
+          external_id: "alice_oauth_dhis2",
+          oauth_client: oauth_client,
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "expired_access_token",
+                "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+                "expires_at" => expires_at
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
+          project_credentials: [%{project: project}]
+        )
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{keychain_credential: keychain_credential})
+        |> insert()
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          dataclip:
+            build(:dataclip, %{
+              body: %{
+                "user_id" => "alice_oauth_dhis2",
+                "form_data" => %{"name" => "Test Form"}
+              }
+            }),
+          starting_job: job
+        })
+
+      new_expiry = expires_at + 3600
+
+      # Stub OAuth refresh response
+      Lightning.CredentialHelpers.stub_oauth_client(
+        oauth_client,
+        {200,
+         %{
+           "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+           "expires_at" => new_expiry,
+           "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+           "scope" => "https://www.googleapis.com/auth/spreadsheets",
+           "token_type" => "Bearer"
+         }}
+      )
+
+      # Should resolve to OAuth credential and refresh the token
+      assert {:ok, %Lightning.Credentials.ResolvedCredential{} = resolved} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+
+      # Should have refreshed token data merged with credential body
+      assert %{
+               "sandbox" => false,
+               "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+               "expires_at" => ^new_expiry,
+               "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+               "scope" => "https://www.googleapis.com/auth/spreadsheets",
+               "token_type" => "Bearer",
+               "updated_at" => _updated_at
+             } = resolved.body
+
+      assert resolved.credential.id == oauth_credential.id
+    end
 
     @tag skip: true
-    test "falls back to default when path doesn't match"
-
-    @tag skip: true
-    test "returns error when no match and no default"
-
-    @tag skip: true
-    test "resolves and refreshes oauth token if needed"
+    test "handles nested JSONPath expressions in keychain" do
+    end
   end
 
   describe "resolve_credential/2 with run and credential id" do
     setup do
       user = insert(:user)
-      %{user: user}
+      project = insert(:project, project_users: [%{user: user}])
+      %{user: user, project: project}
     end
 
-    test "resolves credential accessible by run", %{user: user} do
-      project = insert(:project, project_users: [%{user: user}])
-
+    test "resolves credential accessible by run", %{project: project, user: user} do
       credential =
         insert(:credential,
           user: user,
@@ -406,17 +636,19 @@ defmodule ResolverTest do
           body: %{"key" => "value"}
         )
 
-      job = insert(:job, project_credential: %{credential: credential})
-      workflow = insert(:workflow, project: project, jobs: [job])
-      work_order = insert(:workorder, workflow: workflow)
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{
+          project_credential: %{credential: credential, project: project}
+        })
+        |> insert()
+
       dataclip = insert(:dataclip)
 
-      run =
-        insert(:run,
-          work_order: work_order,
-          dataclip: dataclip,
-          starting_job: job
-        )
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
 
       assert {:ok, resolved} = Resolver.resolve_credential(run, credential.id)
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
@@ -426,17 +658,18 @@ defmodule ResolverTest do
 
     test "returns not_found when credential doesn't exist", %{user: user} do
       project = insert(:project, project_users: [%{user: user}])
-      job = insert(:job)
-      workflow = insert(:workflow, project: project, jobs: [job])
-      work_order = insert(:workorder, workflow: workflow)
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job()
+        |> insert()
+
       dataclip = insert(:dataclip)
 
-      run =
-        insert(:run,
-          work_order: work_order,
-          dataclip: dataclip,
-          starting_job: job
-        )
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
 
       fake_id = Ecto.UUID.generate()
       assert {:error, :not_found} = Resolver.resolve_credential(run, fake_id)
@@ -448,28 +681,20 @@ defmodule ResolverTest do
       project = insert(:project, project_users: [%{user: user}])
       other_credential = insert(:credential, user: user)
 
-      job = insert(:job)
-      workflow = insert(:workflow, project: project, jobs: [job])
-      work_order = insert(:workorder, workflow: workflow)
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job()
+        |> insert()
+
       dataclip = insert(:dataclip)
 
-      run =
-        insert(:run,
-          work_order: work_order,
-          dataclip: dataclip,
-          starting_job: job
-        )
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
 
       assert {:error, :not_found} =
                Resolver.resolve_credential(run, other_credential.id)
     end
-  end
-
-  describe "resolve_credential/1 error cases" do
-    @tag skip: true
-    test "returns not_found error when credential doesn't exist"
-
-    @tag skip: true
-    test "returns not_found error when credential exists but not accessible by run"
   end
 end

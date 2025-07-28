@@ -53,6 +53,7 @@ defmodule Lightning.Credentials.Resolver do
 
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.ResolvedCredential
   alias Lightning.Repo
   alias Lightning.Run
@@ -91,19 +92,93 @@ defmodule Lightning.Credentials.Resolver do
   @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
           {:ok, ResolvedCredential.t()} | {:error, :not_found | resolve_error()}
   def resolve_credential(%Run{} = run, id) do
-    credential = get_run_credential(run, id)
+    case get_run_credential(run, id) do
+      %Credential{} = credential ->
+        resolve_credential(credential)
 
-    case credential do
-      nil -> {:error, :not_found}
-      credential -> resolve_credential(credential)
+      %KeychainCredential{} = keychain ->
+        resolve_keychain_credential(keychain, run)
+
+      nil ->
+        {:error, :not_found}
     end
   end
 
-  @spec get_run_credential(Run.t(), String.t()) :: Credential.t() | nil
-  defp get_run_credential(%Run{} = run, id) do
-    from(c in Ecto.assoc(run, [:workflow, :jobs, :credential]),
-      where: c.id == ^id
+  @spec resolve_keychain_credential(KeychainCredential.t(), Run.t()) ::
+          {:ok, ResolvedCredential.t() | nil} | {:error, resolve_error()}
+  defp resolve_keychain_credential(
+         %KeychainCredential{} = keychain,
+         %Run{} = run
+       ) do
+    credential =
+      find_credential_by_jsonpath(run, keychain.path) ||
+        keychain.default_credential
+
+    # Find credential by external_id within the same project using JSONPath extraction
+    if credential do
+      resolve_credential(credential)
+    else
+      {:ok, nil}
+    end
+  end
+
+  @spec find_credential_by_jsonpath(Run.t(), String.t()) ::
+          Credential.t() | nil
+  defp find_credential_by_jsonpath(
+         %Run{dataclip_id: dataclip_id} = run,
+         jsonpath
+       ) do
+    get_external_id_query =
+      from(d in Lightning.Invocation.Dataclip,
+        where: d.id == ^dataclip_id,
+        select:
+          fragment(
+            "jsonb_path_query_first(?, ?::jsonpath) #>> '{}'",
+            d.body,
+            type(^jsonpath, :string)
+          )
+      )
+
+    from(
+      c in Ecto.assoc(run, [
+        :workflow,
+        :project,
+        :project_credentials,
+        :credential
+      ]),
+      where: c.external_id == subquery(get_external_id_query)
     )
     |> Repo.one()
+  end
+
+  @spec get_run_credential(Run.t(), String.t()) ::
+          Credential.t() | KeychainCredential.t() | nil
+  defp get_run_credential(%Run{} = run, id) do
+    from(j in Ecto.assoc(run, [:workflow, :jobs]),
+      left_join: c in assoc(j, :credential),
+      left_join: k in assoc(j, :keychain_credential),
+      left_join: default_cred in assoc(k, :default_credential),
+      where: c.id == ^id or k.id == ^id,
+      select: %{
+        credential: c,
+        keychain: k,
+        default_credential: default_cred
+      }
+    )
+    |> Repo.one()
+    |> case do
+      %{credential: %Credential{} = credential, keychain: nil} ->
+        credential
+
+      %{
+        credential: nil,
+        keychain: %KeychainCredential{} = keychain,
+        default_credential: default_cred
+      } ->
+        %{keychain | default_credential: default_cred}
+
+      nil ->
+        nil
+    end
   end
 end

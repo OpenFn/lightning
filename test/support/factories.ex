@@ -579,7 +579,7 @@ defmodule Lightning.Factories do
     |> with_edge({trigger, job})
   ```
   """
-  def with_job(workflow, job) do
+  def with_job(workflow, job \\ %{}) do
     %{
       workflow
       | jobs: merge_assoc(workflow.jobs, merge_attributes(job, %{workflow: nil}))
