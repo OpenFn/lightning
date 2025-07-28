@@ -715,155 +715,32 @@ defmodule Lightning.Runs.PromExPluginTest do
     end
 
     defp setup_available_run_and_claimed_run_for(project, run_inserted_at) do
-      setup_run(project, run_inserted_at, :available)
-      setup_run(project, run_inserted_at, :claimed)
+      workflow = insert(:workflow, project: project, concurrency: 2)
+
+      with_run(
+        insert(:workorder, workflow: workflow),
+        %{
+          inserted_at: run_inserted_at,
+          state: :available,
+          dataclip: build(:dataclip),
+          starting_job: build(:job)
+        }
+      )
+
+      with_run(
+        insert(:workorder, workflow: workflow),
+        %{
+          inserted_at: run_inserted_at,
+          state: :claimed,
+          dataclip: build(:dataclip),
+          starting_job: build(:job)
+        }
+      )
     end
-  end
-
-  describe "projects_with_available_runs_older_than" do
-    setup do
-      threshold = Lightning.current_time()
-
-      _no_runs_project = insert(:project)
-
-      _no_available_runs_project =
-        insert(:project)
-        |> setup_runs(threshold, [{0, :claimed}, {-1, :started}])
-
-      _available_run_within_threshold_project =
-        insert(:project)
-        |> setup_runs(threshold, [{1, :available}, {2, :available}])
-
-      eligible_project_1 =
-        insert(:project, name: "A", concurrency: 10)
-        |> setup_runs(threshold, [{0, :available}, {-1, :started}])
-
-      eligible_project_2 =
-        insert(:project, name: "B", concurrency: 20)
-        |> setup_runs(
-          threshold,
-          [{-1, :available}, {-2, :started}, {-3, :available}]
-        )
-
-      %{
-        eligible_project_1: eligible_project_1,
-        eligible_project_2: eligible_project_2,
-        threshold: threshold
-      }
-    end
-
-    test "returns projects with available runs older than the threshold",
-         %{
-           eligible_project_1: eligible_project_1,
-           eligible_project_2: eligible_project_2,
-           threshold: threshold
-         } do
-      projects =
-        PromExPlugin.projects_with_available_runs_older_than(threshold)
-
-      assert Enum.count(projects) == 2
-
-      assert Enum.any?(
-               projects,
-               fn [project_id, concurrency] ->
-                 project_id == eligible_project_1.id && concurrency == 10
-               end
-             )
-
-      assert Enum.any?(
-               projects,
-               fn [project_id, concurrency] ->
-                 project_id == eligible_project_2.id && concurrency == 20
-               end
-             )
-    end
-  end
-
-  describe "projects_with_spare_capacity/1" do
-    setup do
-      equal_to_concurrency_claimed_project =
-        insert(:project, concurrency: 5)
-        |> setup_runs([:claimed, :claimed, :claimed, :claimed, :claimed])
-
-      equal_to_concurrency_started_project =
-        insert(:project, concurrency: 4)
-        |> setup_runs([:started, :started, :started, :started])
-
-      less_than_concurrency_project =
-        insert(:project, concurrency: 3)
-        |> setup_runs([:available, :claimed, :started])
-
-      no_runs_in_progress_project =
-        insert(:project, concurrency: 3)
-        |> setup_runs([:available, :success, :lost])
-
-      %{
-        equal_to_concurrency_claimed_project:
-          equal_to_concurrency_claimed_project,
-        equal_to_concurrency_started_project:
-          equal_to_concurrency_started_project,
-        less_than_concurrency_project: less_than_concurrency_project,
-        no_runs_in_progress_project: no_runs_in_progress_project
-      }
-    end
-
-    test "returns ids that have fewer runs in progress than concurrency", %{
-      equal_to_concurrency_claimed_project: equal_to_concurrency_claimed_project,
-      equal_to_concurrency_started_project: equal_to_concurrency_started_project,
-      less_than_concurrency_project: less_than_concurrency_project,
-      no_runs_in_progress_project: no_runs_in_progress_project
-    } do
-      less_than_id = less_than_concurrency_project.id
-      no_runs_id = no_runs_in_progress_project.id
-
-      projects = [
-        [
-          equal_to_concurrency_claimed_project.id,
-          equal_to_concurrency_claimed_project.concurrency
-        ],
-        [
-          less_than_concurrency_project.id,
-          less_than_concurrency_project.concurrency
-        ],
-        [
-          equal_to_concurrency_started_project.id,
-          equal_to_concurrency_started_project.concurrency
-        ],
-        [
-          no_runs_in_progress_project.id,
-          no_runs_in_progress_project.concurrency
-        ]
-      ]
-
-      assert [
-               ^less_than_id,
-               ^no_runs_id
-             ] = PromExPlugin.projects_with_spare_capacity(projects)
-    end
-  end
-
-  defp setup_runs(project, states) do
-    states
-    |> Enum.each(fn state ->
-      setup_run(project, Lightning.current_time(), state)
-    end)
-
-    project
-  end
-
-  defp setup_runs(project, threshold, attributes) do
-    attributes
-    |> Enum.each(fn {time_shift, state} ->
-      inserted_at = DateTime.add(threshold, time_shift)
-
-      setup_run(project, inserted_at, state)
-    end)
-
-    project
   end
 
   defp setup_run(project, run_inserted_at, state) do
-    workflow = insert(:workflow, project: project)
+    workflow = insert(:workflow, project: project, concurrency: 2)
     work_order = insert(:workorder, workflow: workflow)
 
     with_run(

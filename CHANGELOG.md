@@ -22,6 +22,30 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.13.6] - 2025-07-24
+
+### Added
+
+- Extended impeded project to take workflow concurrency into account.
+  [#3408](https://github.com/OpenFn/lightning/issues/3408)
+
+### Changed
+
+- Upgrade Ecto from v3.11 to v3.13
+  [#3448](https://github.com/OpenFn/lightning/pull/3448)
+
+### Fixed
+
+- Fixed bug that prevented HTTP credentials from loading, now allow JSON objects
+  to be passed as credential form inputs for complex settings like custom TLS
+  options [#3437](https://github.com/OpenFn/lightning/issues/3437)
+
+## [v2.13.6-pre] 2025-07-18
+
+### Changed
+
 - Bump bcrypt_elixir from 3.2.1 to 3.3.2
   [#3264](https://github.com/OpenFn/lightning/issues/3264)
 - Bump sobelow from 0.13.0 to 0.14.0
