@@ -73,10 +73,7 @@ export default function MiniHistory({
   }
 
   const historyToggle = () => {
-    setIsCollapsed(p => {
-      if (!p) onCollapseHistory();
-      return !p;
-    })
+    setIsCollapsed(p => !p);
   }
 
 
@@ -158,15 +155,16 @@ export default function MiniHistory({
                     <div
                       key={run.id}
                       className={[
-                        "pl-8 pr-3 py-1.5 text-xs hover:bg-gray-50 transition-colors cursor-pointer border-l-2",
+                        "px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors cursor-pointer border-l-2",
                         run.selected
                           ? "bg-indigo-50 border-l-indigo-500"
                           : " border-l-transparent",
                       ].join(" ")}
-                      onClick={() => selectRunHandler(run.id, workorder.version)}
+                      onClick={() => run.selected ? onCollapseHistory() : selectRunHandler(run.id, workorder.version)}
                     >
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className={`hero-x-mark w-4 h-4 text-gray-400 ${run.selected ? "visible" : "invisible"}`}></span>
                           <span className="text-gray-500 truncate">
                             {truncateUid(run.id)}
                           </span>
