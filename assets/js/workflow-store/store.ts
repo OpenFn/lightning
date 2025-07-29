@@ -450,9 +450,6 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
           })
         );
         pushUndo({ patches: immerPatches, inverse: inverseImmerPatches });
-      } else {
-        // we believe this isn't actually a patch but a state-applied that isn't well defined on the elixir side
-        get().updateRuns(RUNS_TMP, null);
       }
 
       set(state => immerApplyPatches(state, immerPatches));
