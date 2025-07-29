@@ -6,6 +6,7 @@ import type { RunStep } from '../../workflow-store/store';
 import formatDate from '../../utils/formatDate';
 import ErrorMessage from '../components/ErrorMessage';
 import Shape from '../components/Shape';
+import { icon } from '../components/RunIcons';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 import { RUN_DATA_ICON } from './Node.styles';
 
@@ -87,14 +88,18 @@ const Node = ({
   secondaryIcon,
 
   errors,
-  type
+  type,
 }: BaseNodeProps) => {
-  const isTriggerNode = type === "trigger";
+  const isTriggerNode = type === 'trigger';
   const runData = data?.runData as RunStep | undefined;
-  const startInfo = data?.startInfo as { started_at: string, startBy: string } | undefined;
-  const isErrorRun = runData?.exit_reason !== "success";
+  const startInfo = data?.startInfo as
+    | { started_at: string; startBy: string }
+    | undefined;
+  const isErrorRun = runData?.exit_reason !== 'success';
   // TODO: remember triggers
-  const didRun = data.isRun ? (!!runData || (!!data?.startInfo && isTriggerNode)) : true
+  const didRun = data.isRun
+    ? !!runData || (!!data?.startInfo && isTriggerNode)
+    : true;
 
   const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
     selected,
@@ -105,7 +110,10 @@ const Node = ({
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
 
   return (
-    <div className={`group ${didRun ? "opacity-100" : "opacity-30"}`} data-a-node>
+    <div
+      className={`group ${didRun ? 'opacity-100' : 'opacity-30'}`}
+      data-a-node
+    >
       <div className="flex flex-row cursor-pointer">
         <div className="relative">
           {targetPosition && (
@@ -153,48 +161,59 @@ const Node = ({
               />
             </>
           )}
-          {runData && !isTriggerNode ? <div
+          {runData && !isTriggerNode
+            ? icon(runData.exit_reason, runData?.error_type ?? 'Successful run')
+            : null}
+          {/* {runData && !isTriggerNode ? <div
             className={`flex justify-center items-center absolute -left-2 -top-2 w-7 h-7 rounded-full ${RUN_DATA_ICON[runData?.exit_reason]['color']} ${RUN_DATA_ICON[runData?.exit_reason]['border']} ${RUN_DATA_ICON[runData?.exit_reason]['text']}`}
           >
             <span
               data-tooltip={isErrorRun ? runData?.error_type : "Successful run"}
               data-tooltip-placement="top"
               className={`${RUN_DATA_ICON[runData?.exit_reason]['icon']} w-full h-full`}></span>
-          </div> : null}
-          {startInfo ? <div
-            className={`absolute -top-2 flex gap-2 items-center`}
-            style={{
-              left: "calc(100% - 24px)"
-            }}
-            data-tooltip={`Started by ${startInfo.startBy}`}
-            data-tooltip-placement="top"
-          >
-            <div className='flex justify-center items-center w-7 h-7 rounded-full text-slate-50 border-slate-700 bg-slate-600'>
-              <span className='hero-play-solid w-3 h-3'></span>
+          </div> : null} */}
+          {startInfo ? (
+            <div
+              className={`absolute -top-2 flex gap-2 items-center`}
+              style={{
+                left: 'calc(100% - 24px)',
+              }}
+              data-tooltip={`Started by ${startInfo.startBy}`}
+              data-tooltip-placement="top"
+            >
+              <div className="flex justify-center items-center w-7 h-7 rounded-full text-slate-50 border-slate-700 bg-slate-600">
+                <span className="hero-play-solid w-3 h-3"></span>
+              </div>
             </div>
-          </div> : null}
-          {(runData?.started_at && runData.finished_at) ? <div
-            className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
-            style={{
-              left: "calc(100% + 6px)"
-            }}
-          >
-            {isTriggerNode ? formatDate(new Date(runData.started_at)) : timeSpent(runData.started_at, runData.finished_at)}
-          </div> : null}
-          {(isTriggerNode && startInfo?.started_at) ? <div
-            className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
-            style={{
-              left: "calc(100% + 6px)"
-            }}
-          >
-            {formatDate(new Date(startInfo.started_at))}
-          </div> : null}
+          ) : null}
+          {runData?.started_at && runData.finished_at ? (
+            <div
+              className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
+              style={{
+                left: 'calc(100% + 6px)',
+              }}
+            >
+              {isTriggerNode
+                ? formatDate(new Date(runData.started_at))
+                : timeSpent(runData.started_at, runData.finished_at)}
+            </div>
+          ) : null}
+          {isTriggerNode && startInfo?.started_at ? (
+            <div
+              className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
+              style={{
+                left: 'calc(100% + 6px)',
+              }}
+            >
+              {formatDate(new Date(startInfo.started_at))}
+            </div>
+          ) : null}
           <svg
             style={{
               maxWidth: '110px',
               maxHeight: '110px',
               opacity: nodeOpacity,
-              overflow: "visible"
+              overflow: 'visible',
             }}
           >
             <Shape
@@ -297,9 +316,10 @@ const Node = ({
             justifyContent: 'center',
           }}
           className={`flex flex-row items-center
-                    opacity-0  ${(!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-            ''
-            }
+                    opacity-0  ${
+                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+                      ''
+                    }
                     transition duration-150 ease-in-out`}
         >
           {toolbar()}
