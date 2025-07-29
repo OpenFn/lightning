@@ -1243,8 +1243,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> form("#workflow-form", %{"workflow" => %{"concurrency" => "5"}})
              |> render_change() =~ "No more than 5 runs at a time"
 
-      assert view |> element("#workflow-form") |> render_submit() =~
-               "Workflow saved"
+      # the current implmentation simply sends `save` the event, it does
+      # not submit the form. I'm mimicking that here
+      assert view |> render_submit("save") =~ "Workflow saved"
+
+      assert Lightning.Repo.reload(workflow).concurrency == 5
 
       assert assert_patch(view) =~
                ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
@@ -1371,8 +1374,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert workflow.enable_job_logs == true
 
-        # submit the form
-        view |> element("#workflow-form") |> render_submit()
+        # send a save event
+        view |> render_submit("save")
 
         assert assert_patch(view) =~
                  ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"

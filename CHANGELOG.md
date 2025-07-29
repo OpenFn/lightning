@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Authorized users unable to change the workflow concurrency setting
+  [#3459](https://github.com/OpenFn/lightning/issues/3459)
+
 ## [v2.13.6] - 2025-07-24
 
 ### Added
