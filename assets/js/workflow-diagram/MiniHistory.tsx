@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import formatDate from '../utils/formatDate';
 import { timeSpent } from '../utils/timeSpent';
 import truncateUid from '../utils/truncateUID';
-import { icon } from './components/RunIcons';
+import { renderIcon } from './components/RunIcons';
 
 // TODO: to be put somewhere else
 const STATE_ICONS = {
@@ -26,27 +26,7 @@ const STATE_ICONS = {
 };
 
 const StatePill: React.FC<{ state: WorkOrderStates }> = ({ state }) => {
-  return icon(state);
-
-  const colors = () => {
-    switch (state) {
-      case 'success':
-        return 'bg-green-200 text-green-500 border-green-500';
-      case 'failed':
-        return 'bg-red-200 text-red-500';
-      case 'crashed':
-        return 'bg-orange-200 text-orange-500';
-      default:
-        return 'bg-slate-200 text-slate-500';
-    }
-  };
-  return (
-    <div
-      className={`flex rounded-full bg-gray-200 justify-center items-center ${colors()} w-6 h-6`}
-    >
-      <span className={`${STATE_ICONS[state]} w-4 h-4 text-center"}`}></span>
-    </div>
-  );
+  return renderIcon(state, { size: 6 });
 };
 
 interface MiniHistoryProps {

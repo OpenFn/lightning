@@ -1,4 +1,3 @@
-// TODO: to be put somewhere else
 const STATE_ICONS = {
   rejected: 'hero-x-circle',
   pending: 'hero-clock',
@@ -17,25 +16,35 @@ const STATE_ICONS = {
 
 const STATE_COLORS = {
   success: 'bg-green-200 text-green-500',
+  failed: 'bg-red-200 text-red-500',
+  crashed: 'bg-orange-200 text-orange-500 p-px',
 };
 
-export const icon = (type: string, tooltip?: string) => {
-  switch (type) {
-    case 'success':
-      return SuccessIcon({ tooltip });
+export const renderIcon = (
+  type?: string,
+  options: Partial<{ tooltip: string; size: number }> = {}
+) => {
+  const { tooltip, size = 8 } = options;
+  // switch (type) {
+  //   case 'success':
+  //     return Icon(type, { tooltip, size });
+  // }
+  if (!(type in STATE_COLORS)) {
+    console.error('ERROR: Unknown run state:', type);
+    // what do we do here?
+    type = 'success';
   }
-  return SuccessIcon({ tooltip });
+  return Icon(type!, { tooltip, size });
 };
 
-// absolute -left-2 -top-2
-export const SuccessIcon = ({ tooltip }: any) => (
+const Icon = (type: string, { tooltip, size }: any) => (
   <div
-    className={`flex justify-center items-center  w-8 h-8 rounded-full ${STATE_COLORS.success}`}
+    className={`flex justify-center items-center  w-${size} h-${size} rounded-full ${STATE_COLORS[type]}`}
   >
     <span
       data-tooltip={tooltip}
       data-tooltip-placement="top"
-      className={`${STATE_ICONS.success} w-full h-full`}
+      className={`${STATE_ICONS[type]} w-full h-full`}
     ></span>
   </div>
 );

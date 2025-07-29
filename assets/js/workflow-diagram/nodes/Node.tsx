@@ -6,7 +6,7 @@ import type { RunStep } from '../../workflow-store/store';
 import formatDate from '../../utils/formatDate';
 import ErrorMessage from '../components/ErrorMessage';
 import Shape from '../components/Shape';
-import { icon } from '../components/RunIcons';
+import { renderIcon } from '../components/RunIcons';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 import { RUN_DATA_ICON } from './Node.styles';
 
@@ -29,6 +29,14 @@ type ErrorObject = {
 type LabelProps = React.PropsWithChildren<{
   hasErrors?: boolean;
 }>;
+
+const reasonMap = {
+  fail: 'failed',
+};
+
+const mapReason = (reason: string) => {
+  return reasonMap[reason] ?? reason;
+};
 
 function errorsMessage(errors: ErrorObject): string {
   const messages = Object.entries(errors).map(([key, errorArray]) => {
@@ -161,17 +169,13 @@ const Node = ({
               />
             </>
           )}
-          {runData && !isTriggerNode
-            ? icon(runData.exit_reason, runData?.error_type ?? 'Successful run')
-            : null}
-          {/* {runData && !isTriggerNode ? <div
-            className={`flex justify-center items-center absolute -left-2 -top-2 w-7 h-7 rounded-full ${RUN_DATA_ICON[runData?.exit_reason]['color']} ${RUN_DATA_ICON[runData?.exit_reason]['border']} ${RUN_DATA_ICON[runData?.exit_reason]['text']}`}
-          >
-            <span
-              data-tooltip={isErrorRun ? runData?.error_type : "Successful run"}
-              data-tooltip-placement="top"
-              className={`${RUN_DATA_ICON[runData?.exit_reason]['icon']} w-full h-full`}></span>
-          </div> : null} */}
+          {runData && !isTriggerNode ? (
+            <div className="absolute -left-2 -top-2">
+              {renderIcon(mapReason(runData.exit_reason), {
+                tooltip: runData?.error_type ?? 'Successful run',
+              })}
+            </div>
+          ) : null}
           {startInfo ? (
             <div
               className={`absolute -top-2 flex gap-2 items-center`}
