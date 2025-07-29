@@ -32,6 +32,7 @@ type LabelProps = React.PropsWithChildren<{
 
 const reasonMap = {
   fail: 'failed',
+  crash: 'crashed',
 };
 
 const mapReason = (reason: string) => {
