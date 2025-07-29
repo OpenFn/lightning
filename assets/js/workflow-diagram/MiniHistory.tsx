@@ -1,8 +1,8 @@
-import truncateUid from "../utils/truncateUID";
 import type { WorkflowRunHistory, WorkOrderStates } from "#/workflow-store/store";
+import React, { useState } from "react";
 import formatDate from "../utils/formatDate";
-import { useState } from "react";
 import { timeSpent } from "../utils/timeSpent";
+import truncateUid from "../utils/truncateUID";
 
 // TODO: to be put somewhere else
 const STATE_ICONS = {
@@ -55,7 +55,15 @@ export default function MiniHistory({
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
-  const loading = false;
+
+  // to ensure panel is not collapsed when there's a selected item in history
+  // at time this component will be rendered before data reaches store. that makes the panel collapse
+  const selectedItem = history.find(w => w.selected)?.id
+  React.useEffect(() => {
+    if (selectedItem) {
+      setIsCollapsed(false);
+    }
+  }, [selectedItem])
 
   const expandWorkorderHandler = (workorder: WorkflowRunHistory[number]) => {
     if (workorder.runs.length === 1 && workorder.runs[0]) {
@@ -103,11 +111,7 @@ export default function MiniHistory({
 
       {/* Content */}
       <div className={`overflow-y-auto no-scrollbar ${isCollapsed ? "h-0" : "h-82"}`}>
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-sm text-gray-500">Loading recent activity...</div>
-          </div>
-        ) : history.length === 0 ? (
+        {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-gray-500">
             <span className="hero-clock w-8 h-8 mb-2 opacity-50" ></span>
             <p className="text-sm font-medium">No recent activity</p>
