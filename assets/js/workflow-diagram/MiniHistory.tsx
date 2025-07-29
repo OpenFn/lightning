@@ -8,23 +8,6 @@ import { timeSpent } from '../utils/timeSpent';
 import truncateUid from '../utils/truncateUID';
 import { renderIcon } from './components/RunIcons';
 
-// TODO: to be put somewhere else
-const STATE_ICONS = {
-  rejected: 'hero-x-circle',
-  pending: 'hero-clock',
-  running: 'hero-play-circle',
-  available: 'hero-clock',
-  claimed: 'hero-arrow-right-circle',
-  started: 'hero-play-circle',
-  success: 'hero-check-circle',
-  failed: 'hero-x-circle',
-  crashed: 'hero-exclamation-triangle',
-  cancelled: 'hero-no-symbol',
-  killed: 'hero-shield-exclamation',
-  exception: 'hero-exclamation-circle',
-  lost: 'hero-question-mark-circle',
-};
-
 const StatePill: React.FC<{ state: WorkOrderStates }> = ({ state }) => {
   return renderIcon(state, { size: 6 });
 };

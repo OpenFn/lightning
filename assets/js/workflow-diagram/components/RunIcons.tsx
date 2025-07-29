@@ -18,33 +18,28 @@ const STATE_COLORS = {
   success: 'bg-green-200 text-green-500',
   failed: 'bg-red-200 text-red-500',
   crashed: 'bg-orange-200 text-orange-500 p-px',
+  pending: 'bg-gray-600 text-white',
 };
 
 export const renderIcon = (
-  type?: string,
+  type: keyof typeof STATE_COLORS,
   options: Partial<{ tooltip: string; size: number }> = {}
 ) => {
   const { tooltip, size = 8 } = options;
-  // switch (type) {
-  //   case 'success':
-  //     return Icon(type, { tooltip, size });
-  // }
   if (!(type in STATE_COLORS)) {
     console.error('ERROR: Unknown run state:', type);
     // what do we do here?
     type = 'success';
   }
-  return Icon(type!, { tooltip, size });
+  return (
+    <div
+      className={`flex justify-center items-center  w-${size} h-${size} rounded-full ${STATE_COLORS[type]}`}
+    >
+      <span
+        data-tooltip={tooltip}
+        data-tooltip-placement="top"
+        className={`${STATE_ICONS[type]} w-full h-full`}
+      ></span>
+    </div>
+  );
 };
-
-const Icon = (type: string, { tooltip, size }: any) => (
-  <div
-    className={`flex justify-center items-center  w-${size} h-${size} rounded-full ${STATE_COLORS[type]}`}
-  >
-    <span
-      data-tooltip={tooltip}
-      data-tooltip-placement="top"
-      className={`${STATE_ICONS[type]} w-full h-full`}
-    ></span>
-  </div>
-);
