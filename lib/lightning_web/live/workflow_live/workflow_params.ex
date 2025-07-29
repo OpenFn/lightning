@@ -86,7 +86,14 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   defp to_serializable(%Ecto.Changeset{} = changeset, accessor)
        when is_function(accessor) do
     Map.merge(
-      changeset |> to_serializable([:project_id, :name, :positions]),
+      changeset
+      |> to_serializable([
+        :project_id,
+        :name,
+        :concurrency,
+        :enable_job_logs,
+        :positions
+      ]),
       %{
         jobs:
           changeset
