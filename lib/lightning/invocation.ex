@@ -774,10 +774,14 @@ defmodule Lightning.Invocation do
   Return all logs for a step as a string of text, separated by new line \n breaks
   """
   @spec assemble_logs_for_step(Step.t()) :: binary()
-  def assemble_logs_for_step(%Step{} = step),
-    do:
-      logs_for_step(step)
-      |> Enum.map_join("\n", fn log -> log.message end)
+  def assemble_logs_for_step(%Step{} = step) do
+    step
+    |> Ecto.assoc(:log_lines)
+    |> order_by([l], asc: l.timestamp)
+    |> select([l], l.message)
+    |> Repo.all()
+    |> Enum.join("\n")
+  end
 
   @doc """
   Exports work orders by performing a series of database operations wrapped in a transaction.

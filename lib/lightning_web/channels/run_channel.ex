@@ -89,30 +89,26 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:credential", %{"id" => id}, socket) do
     %{run: run, scrubber: scrubber, project_id: project_id} = socket.assigns
 
-    with {:ok, resolved_credential} <- Resolver.resolve_credential(run, id),
-         samples <-
-           Credentials.sensitive_values_for(resolved_credential.credential),
-         basic_auth <-
-           Credentials.basic_auth_for(resolved_credential.credential),
-         {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
-      socket
-      |> assign(scrubber: scrubber)
-      |> reply_with({:ok, resolved_credential.body})
-    else
+    Resolver.resolve_credential(run, id)
+    |> case do
+      {:ok, nil} ->
+        reply_with(socket, {:ok, nil})
+
+      {:ok, resolved_credential} ->
+        samples =
+          Credentials.sensitive_values_for(resolved_credential.credential)
+
+        basic_auth =
+          Credentials.basic_auth_for(resolved_credential.credential)
+
+        {:ok, scrubber} = update_scrubber(scrubber, samples, basic_auth)
+
+        socket
+        |> assign(scrubber: scrubber)
+        |> reply_with({:ok, resolved_credential.body})
+
       {:error, :not_found} ->
         reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
-
-      {:error,
-       %{
-         body: %{
-           "error" => error,
-           "error_description" => error_description
-         }
-       }} ->
-        reply_with(socket, {
-          :error,
-          %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
-        })
 
       {:error, {:reauthorization_required, _credential} = reason} ->
         Logger.error("OAuth refresh token has expired", credential_id: id)
@@ -127,24 +123,6 @@ defmodule LightningWeb.RunChannel do
 
         {:reply, {:error, "Could not reach the oauth provider. Try again later"},
          socket}
-
-      # What is this, did I put this here?
-      # {:error, {other_error, _credential}} ->
-      #   Logger.error(fn ->
-      #     {"""
-      #      Something went wrong when fetching or refreshing a credential.
-      #      #{inspect(other_error)}
-      #      """, [credential_id: id]}
-      #   end)
-
-      #   reply_with(
-      #     socket,
-      #     {:error,
-      #      %{
-      #        error: other_error,
-      #        message: "An error occured when fetching your credential"
-      #      }}
-      #   )
 
       {:error, error} ->
         Logger.error(fn ->

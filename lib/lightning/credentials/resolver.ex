@@ -58,6 +58,8 @@ defmodule Lightning.Credentials.Resolver do
   alias Lightning.Repo
   alias Lightning.Run
 
+  require Logger
+
   @type error_reason :: :not_found | Credentials.oauth_refresh_error()
   @type resolve_error :: {error_reason(), Credential.t()}
 
@@ -90,8 +92,11 @@ defmodule Lightning.Credentials.Resolver do
   end
 
   @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
-          {:ok, ResolvedCredential.t()} | {:error, :not_found | resolve_error()}
+          {:ok, ResolvedCredential.t() | nil}
+          | {:error, :not_found | resolve_error()}
   def resolve_credential(%Run{} = run, id) do
+    Logger.info("Resolving credential #{id} for run #{run.id}")
+
     case get_run_credential(run, id) do
       %Credential{} = credential ->
         resolve_credential(credential)
