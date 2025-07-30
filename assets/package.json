@@ -6,6 +6,9 @@
     "start": "node dev-server.js",
     "test": "NODE_OPTIONS=\"--loader=ts-node/esm --no-warnings\" TS_NODE_PROJECT=tsconfig.test.json ava ./test/index.test.ts",
     "test-report": "NODE_OPTIONS=\"--loader=ts-node/esm --no-warnings\" TS_NODE_PROJECT=tsconfig.test.json ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
     "check": "tsc --build",
     "lint": "eslint"
   },
@@ -47,6 +50,7 @@
     "@eslint-community/eslint-plugin-eslint-comments": "^4.4.1",
     "@eslint/js": "^9.21.0",
     "@openfn/ws-worker": "^1.13.2",
+    "@playwright/test": "^1.54.1",
     "@total-typescript/ts-reset": "^0.6.1",
     "@tsconfig/node-lts": "^22.0.1",
     "@tsconfig/recommended": "^1.0.8",
