@@ -3,7 +3,10 @@ export type CollaborativeEditorProps = {
   workflow_name: string;
 };
 
-export const CollaborativeEditor = ({ workflow_id, workflow_name }: CollaborativeEditorProps) => {
+export const CollaborativeEditor = ({
+  workflow_id,
+  workflow_name,
+}: CollaborativeEditorProps) => {
   return (
     <div className="collaborative-editor">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
@@ -13,9 +16,7 @@ export const CollaborativeEditor = ({ workflow_id, workflow_name }: Collaborativ
         <p className="text-blue-700 mb-2">
           Collaborative Editor for: <strong>{workflow_name}</strong>
         </p>
-        <p className="text-blue-600 text-sm">
-          Workflow ID: {workflow_id}
-        </p>
+        <p className="text-blue-600 text-sm">Workflow ID: {workflow_id}</p>
         <div className="mt-4 p-4 bg-white rounded border">
           <p className="text-gray-600 text-sm">
             This is a React component rendered inside Phoenix LiveView!

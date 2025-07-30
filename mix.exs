@@ -150,7 +150,8 @@ defmodule Lightning.MixProject do
       {:earmark, "~> 1.4"},
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.3.1", only: :dev},
-      {:statistics, "~> 0.6", only: :dev}
+      {:statistics, "~> 0.6", only: :dev},
+      {:y_ex, "~> 0.8.0"}
     ]
   end
 
