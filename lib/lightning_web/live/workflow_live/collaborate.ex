@@ -1,56 +1,74 @@
 defmodule LightningWeb.WorkflowLive.Collaborate do
   @moduledoc """
-  LiveView for collaborative workflow editing using Yjs.
+  LiveView for collaborative workflow editing using shared Y.js documents.
   """
   use LightningWeb, {:live_view, container: {:div, []}}
 
   alias Lightning.Workflows
+  alias Lightning.WorkflowCollaboration
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(%{"id" => workflow_id}, _session, socket) do
     workflow = Workflows.get_workflow!(workflow_id)
+    user_id = socket.assigns.current_user.id
 
-    # Initialize Y.Doc with this LiveView process as the worker
-    ydoc = Yex.Doc.new(self())
+    # Join the collaborative workflow session
+    case WorkflowCollaboration.join_workflow(workflow_id, user_id) do
+      {:ok, collaborator_pid, _initial_doc_state} ->
+        # Monitor the collaborator process
+        Process.monitor(collaborator_pid)
 
-    # Create a text field for collaborative editing
-    text_field = Yex.Doc.get_text(ydoc, "workflow_content")
+        # Observe Y.js updates from the shared document
+        WorkflowCollaboration.observe_document(collaborator_pid)
 
-    # Create a map for storing counter
-    counter_map = Yex.Doc.get_map(ydoc, "counter_data")
+        # Get the current shared document state
+        shared_doc = WorkflowCollaboration.get_document(collaborator_pid)
 
-    # Set initial content
-    :ok =
-      Yex.Doc.transaction(ydoc, fn ->
-        Yex.Text.insert(text_field, 0, "Hello World from Y.Doc!")
-        Yex.Map.set(counter_map, "value", 0)
-      end)
+        # Access shared structures
+        counter_map = Yex.Doc.get_map(shared_doc, "counter_data")
 
-    # Monitor updates to the ydoc
-    {:ok, _sub_ref} = Yex.Doc.monitor_update(ydoc)
+        # Get current counter value and timestamp
+        initial_counter =
+          case Yex.Map.fetch(counter_map, "value") do
+            {:ok, value} -> value
+            :error -> 0
+          end
 
-    # Get initial text content and counter value
-    initial_content = Yex.Text.to_string(text_field)
-    initial_counter = Yex.Map.fetch!(counter_map, "value") || 0
+        initial_timestamp =
+          case Yex.Map.fetch(counter_map, "last_updated") do
+            {:ok, timestamp} -> timestamp
+            :error -> DateTime.utc_now() |> DateTime.to_iso8601()
+          end
 
-    IO.inspect({initial_content, initial_counter}, label: "mount")
-    # Start the counter timer
-    Process.send_after(self(), :increment_counter, 1000)
+        {:ok,
+         socket
+         |> assign(
+           active_menu_item: :overview,
+           page_title: "Collaborate on #{workflow.name}",
+           workflow: workflow,
+           workflow_id: workflow_id,
+           user_id: user_id,
+           collaborator_pid: collaborator_pid,
+           counter: initial_counter,
+           last_updated: initial_timestamp
+         )}
 
-    {:ok,
-     socket
-     |> assign(
-       active_menu_item: :overview,
-       page_title: "Collaborate on #{workflow.name}",
-       workflow: workflow,
-       ydoc: ydoc,
-       text_field: text_field,
-       counter_map: counter_map,
-       content: initial_content,
-       counter: initial_counter
-     )}
+      {:error, reason} ->
+        {:ok,
+         socket
+         |> put_flash(
+           :error,
+           "Failed to join collaborative session: #{inspect(reason)}"
+         )
+         |> assign(
+           active_menu_item: :overview,
+           page_title: "Collaborate on #{workflow.name}",
+           workflow: workflow,
+           error: true
+         )}
+    end
   end
 
   @impl true
@@ -58,65 +76,122 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     {:noreply, socket}
   end
 
-  # Required by Y.Doc when using this process as worker
+  # Handle Y.js messages from the shared document
   @impl true
-  def handle_call({Yex.Doc, :run, fun}, _from, socket) do
-    result = fun.()
-    {:reply, result, socket}
-  end
+  def handle_info({:yjs, _message, _server_pid}, socket) do
+    IO.inspect({self(), socket.assigns[:collaborator_pid]},
+      label: "handle_info :yjs"
+    )
 
-  # Handle Y.Doc update messages
-  @impl true
-  def handle_info({:update_v1, _update_binary, _origin, _metadata}, socket) do
-    # Update the content when ydoc changes
-    updated_content = Yex.Text.to_string(socket.assigns.text_field)
-    updated_counter = Yex.Map.fetch!(socket.assigns.counter_map, "value") || 0
+    # Refresh counter and timestamp from shared document when we receive updates
+    if socket.assigns[:collaborator_pid] do
+      shared_doc =
+        WorkflowCollaboration.get_document(socket.assigns.collaborator_pid)
 
-    IO.inspect({updated_content, updated_counter}, label: "handle_info")
+      counter_map = Yex.Doc.get_map(shared_doc, "counter_data")
 
-    {:noreply,
-     assign(socket, content: updated_content, counter: updated_counter)}
-  end
-
-  # Handle counter increment timer
-  @impl true
-  def handle_info(:increment_counter, socket) do
-    counter_map = socket.assigns.counter_map
-    ydoc = socket.assigns.ydoc
-    current_counter = Yex.Map.fetch!(counter_map, "value") || 0
-    new_counter = current_counter + 1
-
-    # Update counter in Y.Doc
-    _result =
-      Yex.Doc.transaction(ydoc, fn ->
-        Yex.Map.set(counter_map, "value", new_counter)
-      end)
-
-    # Schedule next increment
-    Process.send_after(self(), :increment_counter, 1000)
-
-    {:noreply, socket}
-  end
-
-  # Handle content updates from the UI
-  @impl true
-  def handle_event("update_content", %{"value" => new_content}, socket) do
-    text_field = socket.assigns.text_field
-    ydoc = socket.assigns.ydoc
-
-    # Clear and set new content in a transaction
-    _result =
-      Yex.Doc.transaction(ydoc, fn ->
-        current_length = Yex.Text.length(text_field)
-
-        if current_length > 0 do
-          Yex.Text.delete(text_field, 0, current_length)
+      updated_counter =
+        case Yex.Map.fetch(counter_map, "value") do
+          {:ok, value} -> value
+          :error -> 0
         end
 
-        Yex.Text.insert(text_field, 0, new_content)
-      end)
+      updated_timestamp =
+        case Yex.Map.fetch(counter_map, "last_updated") do
+          {:ok, timestamp} -> timestamp
+          :error -> DateTime.utc_now() |> DateTime.to_iso8601()
+        end
+
+      {:noreply,
+       assign(socket, counter: updated_counter, last_updated: updated_timestamp)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Handle collaborator process going down
+  @impl true
+  def handle_info({:DOWN, _ref, :process, pid, reason}, socket) do
+    if socket.assigns[:collaborator_pid] == pid do
+      {:noreply,
+       socket
+       |> put_flash(
+         :error,
+         "Collaborative session disconnected: #{inspect(reason)}"
+       )
+       |> assign(error: true)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Handle increment button
+  @impl true
+  def handle_event("increment", _params, socket) do
+    if socket.assigns[:collaborator_pid] && !socket.assigns[:error] do
+      # Update counter via shared document
+      WorkflowCollaboration.update_document(
+        socket.assigns.collaborator_pid,
+        fn doc ->
+          counter_map = Yex.Doc.get_map(doc, "counter_data")
+
+          current_counter =
+            case Yex.Map.fetch(counter_map, "value") do
+              {:ok, value} -> value
+              :error -> 0
+            end
+
+          new_counter = current_counter + 1
+          timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+
+          Yex.Map.set(counter_map, "value", new_counter)
+          Yex.Map.set(counter_map, "last_updated", timestamp)
+        end
+      )
+    end
 
     {:noreply, socket}
+  end
+
+  # Handle decrement button
+  @impl true
+  def handle_event("decrement", _params, socket) do
+    if socket.assigns[:collaborator_pid] && !socket.assigns[:error] do
+      # Update counter via shared document
+      WorkflowCollaboration.update_document(
+        socket.assigns.collaborator_pid,
+        fn doc ->
+          counter_map = Yex.Doc.get_map(doc, "counter_data")
+
+          current_counter =
+            case Yex.Map.fetch(counter_map, "value") do
+              {:ok, value} -> value
+              :error -> 0
+            end
+
+          new_counter = current_counter - 1
+          timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+
+          Yex.Map.set(counter_map, "value", new_counter)
+          Yex.Map.set(counter_map, "last_updated", timestamp)
+        end
+      )
+    end
+
+    {:noreply, socket}
+  end
+
+  # Clean up when LiveView terminates
+  @impl true
+  def terminate(reason, socket) do
+    IO.inspect(reason, label: "terminate")
+
+    if socket.assigns[:collaborator_pid] do
+      WorkflowCollaboration.leave_workflow(
+        socket.assigns.collaborator_pid,
+        self()
+      )
+    end
   end
 
   @impl true
@@ -125,43 +200,53 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     <div class="flex flex-col h-full">
       <div class="flex-1 p-4">
         <h2 class="text-2xl font-bold mb-4">
-          Y.Doc Collaborative Editor - {@workflow.name}
+          Collaborative Counter - {@workflow.name}
         </h2>
 
-        <div class="mb-6 p-4 bg-blue-50 rounded-lg">
-          <h3 class="text-lg font-semibold text-blue-800 mb-2">
-            Y.Doc Counter
-          </h3>
-          <div class="text-3xl font-bold text-blue-600">
-            {@counter}
+        <%= if assigns[:error] do %>
+          <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h3 class="text-lg font-semibold text-red-800 mb-2">
+              ⚠️ Collaboration Unavailable
+            </h3>
+            <p class="text-red-700">
+              Unable to join collaborative session. Check the logs for details.
+            </p>
           </div>
-          <p class="text-sm text-blue-600 mt-1">
-            Auto-incrementing every second (stored in Y.Doc Map)
-          </p>
-        </div>
+        <% else %>
+          <div class="max-w-md mx-auto mt-8">
+            <div class="text-center mb-6">
+              <div class="text-6xl font-bold text-blue-600 mb-2">
+                {assigns[:counter] || 0}
+              </div>
+              <p class="text-sm text-gray-600">
+                Shared counter (synced across all users)
+              </p>
+            </div>
 
-        <div class="space-y-4">
-          <div>
-            <label for="content" class="block text-sm font-medium text-gray-700">
-              Content (Y.Doc Text)
-            </label>
-            <textarea
-              id="content"
-              name="content"
-              rows="10"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
-                     focus:border-indigo-500 focus:ring-indigo-500"
-              phx-keyup="update_content"
-              phx-debounce="300"
-            ><%= @content %></textarea>
-          </div>
+            <div class="flex gap-4 justify-center mb-6">
+              <button
+                phx-click="decrement"
+                class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-colors"
+              >
+                - Decrement
+              </button>
+              <button
+                phx-click="increment"
+                class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg shadow-md transition-colors"
+              >
+                + Increment
+              </button>
+            </div>
 
-          <div class="text-sm text-gray-500">
-            <p>This content is stored in a Y.Doc CRDT structure.</p>
-            <p>Current content length: {String.length(@content)} characters</p>
-            <p>Counter value: {@counter} (auto-increments via Y.Doc Map)</p>
+            <div class="text-center text-sm text-gray-500">
+              <p><strong>Last updated:</strong></p>
+              <p class="font-mono">{assigns[:last_updated] || "Never"}</p>
+              <p class="mt-2 text-xs">
+                Open multiple browser tabs to see real-time collaboration
+              </p>
+            </div>
           </div>
-        </div>
+        <% end %>
       </div>
     </div>
     """
