@@ -48,8 +48,6 @@ export const WorkflowStore: WithActionProps = props => {
     subscribe,
     setDisabled,
     setForceFit,
-    setShowAiAssistant,
-    setAiAssistantId,
     reset,
   } = useWorkflowStore();
 

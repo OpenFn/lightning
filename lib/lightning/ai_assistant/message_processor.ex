@@ -120,7 +120,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @doc false
   @spec broadcast_status(
           String.t(),
-          atom() | {:completed, AiAssistant.ChatSession.t()}
+          atom() | {atom(), AiAssistant.ChatSession.t()}
         ) :: :ok
   defp broadcast_status(session_id, status) do
     Lightning.broadcast(
@@ -176,9 +176,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec workflow_code_from_session(AiAssistant.ChatSession.t()) ::
           String.t() | nil
   defp workflow_code_from_session(session) do
-    messages = session.messages || []
-
-    messages
+    session.messages
     |> Enum.reverse()
     |> Enum.find_value(nil, fn
       %{role: :assistant, workflow_code: code} when not is_nil(code) -> code
