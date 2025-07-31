@@ -19,6 +19,7 @@ defmodule Lightning.AiAssistant do
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
+  alias Lightning.AiAssistant.MessageProcessor
   alias Lightning.ApolloClient
   alias Lightning.Projects.Project
   alias Lightning.Repo
@@ -505,7 +506,7 @@ defmodule Lightning.AiAssistant do
       if message.role == :user && message.status == :pending do
         Oban.insert(
           Lightning.Oban,
-          Lightning.AiAssistant.MessageProcessor.new(%{
+          MessageProcessor.new(%{
             message_id: message.id,
             session_id: session.id
           })
@@ -688,7 +689,7 @@ defmodule Lightning.AiAssistant do
     )
     |> Multi.insert(
       :job,
-      Lightning.AiAssistant.MessageProcessor.new(%{
+      MessageProcessor.new(%{
         message_id: message.id,
         session_id: message.chat_session_id
       })
