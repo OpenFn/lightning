@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.16.7-pre]
+
+### Fixed
+
 - Prevent requests to webhook URLs from matching non-webhook triggers
   [#3453](https://github.com/OpenFn/lightning/issues/3453)
 - Authorized users unable to change the workflow concurrency setting
