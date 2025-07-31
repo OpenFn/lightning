@@ -33,7 +33,7 @@ defmodule LightningWeb.JobLive.CredentialPicker do
       phx-hook="CredentialSelector"
       data-project-field={@form[:project_credential_id].name}
       data-keychain-field={@form[:keychain_credential_id].name}
-      id="credential-picker"
+      id={"credential-picker-#{@form[:id].value}"}
     >
       <.old_error field={@form[:project_credential_id]} />
       <.old_error field={@form[:keychain_credential_id]} />

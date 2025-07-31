@@ -2,32 +2,12 @@ import type { PhoenixHook } from './PhoenixHook';
 
 export default {
   mounted() {
-    this.selector = this.el.querySelector('select') as HTMLSelectElement;
-    console.log('selector', this.selector);
-    this.projectCredentialField = this.el.querySelector(
-      `[name="${this.el.dataset.projectField}"]`
-    ) as HTMLInputElement;
-    this.keychainCredentialField = this.el.querySelector(
-      `[name="${this.el.dataset.keychainField}"]`
-    ) as HTMLInputElement;
+    this.setFields();
+    this.removeEvents = this.attachEvents();
+  },
 
-    if (
-      !this.selector ||
-      !this.projectCredentialField ||
-      !this.keychainCredentialField
-    ) {
-      console.error('CredentialSelector: Required elements not found', {
-        selector: this.selector,
-        projectField: this.projectCredentialField,
-        keychainField: this.keychainCredentialField,
-      });
-      return;
-    }
-
-    this.selector.addEventListener('input', e => {
-      e.stopImmediatePropagation();
-    });
-    this.selector.addEventListener('change', this.handleSelection.bind(this));
+  destroyed() {
+    this.removeEvents();
   },
 
   handleSelection(event: Event) {
@@ -68,16 +48,56 @@ export default {
     const optgroup = option.closest('optgroup');
     return optgroup?.label === 'Keychain Credentials';
   },
+
+  attachEvents() {
+    // Store bound function references so we can remove them later
+    const inputHandler = (e: Event) => {
+      e.stopImmediatePropagation();
+    };
+    const changeHandler = this.handleSelection.bind(this);
+
+    this.selector.addEventListener('input', inputHandler);
+    this.selector.addEventListener('change', changeHandler);
+
+    return () => {
+      this.selector.removeEventListener('input', inputHandler);
+      this.selector.removeEventListener('change', changeHandler);
+    };
+  },
+
+  setFields() {
+    const selector = this.el.querySelector('select') as HTMLSelectElement;
+    const projectCredentialField = this.el.querySelector(
+      `[name="${this.el.dataset.projectField}"]`
+    ) as HTMLInputElement;
+    const keychainCredentialField = this.el.querySelector(
+      `[name="${this.el.dataset.keychainField}"]`
+    ) as HTMLInputElement;
+
+    if (!selector || !projectCredentialField || !keychainCredentialField) {
+      console.error('CredentialSelector: Required elements not found', {
+        selector: this.selector,
+        projectField: this.projectCredentialField,
+        keychainField: this.keychainCredentialField,
+      });
+      return;
+    }
+
+    this.selector = selector;
+    this.projectCredentialField = projectCredentialField;
+    this.keychainCredentialField = keychainCredentialField;
+  },
 } as PhoenixHook<
   {
     selector: HTMLSelectElement;
     projectCredentialField: HTMLInputElement;
     keychainCredentialField: HTMLInputElement;
-    handleSelection: (event: Event) => void;
-    clearFields: () => void;
+    attachEvents: () => () => void;
     dispatchFormChange: () => void;
-    initializeSelection: () => void;
+    handleSelection: (event: Event) => void;
     isKeychainCredential: (option: HTMLOptionElement) => boolean;
+    removeEvents: () => void;
+    setFields: () => void;
   },
   {
     projectField: string;
