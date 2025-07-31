@@ -91,7 +91,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:value>
                     <.link
                       navigate={
-                        ~p"/projects/#{@project}/w/#{@workflow.id}?v=#{run.snapshot.lock_version}"
+                        ~p"/projects/#{@project}/w/#{@workflow.id}?a=#{run.id}&v=#{run.snapshot.lock_version}"
                       }
                       class="link text-ellipsis"
                     >
