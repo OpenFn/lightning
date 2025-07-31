@@ -389,7 +389,7 @@ defmodule ResolverTest do
             "hostUrl" => "https://dhis2.example.com"
           },
           schema: "dhis2",
-          external_id: "bob_dhis2",
+          external_id: "123",
           user: user
         )
 
@@ -440,6 +440,7 @@ defmodule ResolverTest do
 
     test "resolves keychain credential using dataclip data", %{
       credential_a: credential_a,
+      credential_b: credential_b,
       job: job,
       keychain_credential: keychain_credential,
       workflow: workflow
@@ -465,6 +466,34 @@ defmodule ResolverTest do
 
       assert resolved.body == credential_a.body
       assert resolved.credential.id == credential_a.id
+
+      # Specifically test that resolving values that are stored as integers
+      # in the dataclip body are resolved correctly
+      # External IDs are stored as strings, so we need to ensure that the
+      # JSONPath query doesn't care if it's a string or an integer.
+
+      keychain_credential
+      |> Ecto.Changeset.change(path: "$.data.number_key")
+      |> Repo.update!()
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          dataclip:
+            build(:dataclip, %{
+              body: %{
+                "data" => %{"number_key" => 123},
+                "form_data" => %{"name" => "Test Form"}
+              }
+            }),
+          starting_job: job
+        })
+
+      assert {:ok, %Lightning.Credentials.ResolvedCredential{} = resolved} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+
+      assert resolved.body == credential_b.body
+      assert resolved.credential.id == credential_b.id
     end
 
     test "falls back to default when JSONPath doesn't match dataclip", %{
