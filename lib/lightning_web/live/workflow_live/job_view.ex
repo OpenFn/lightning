@@ -95,7 +95,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <.adaptor_block adaptor={@job.adaptor} />
           <.credential_block credential={
             fetch_credential(
-              @form[:project_credential_id] && @form[:project_credential_id].value
+              @form[:project_credential_id].value,
+              @form[:keychain_credential_id].value
             )
           } />
           <div class="flex gap-2">
@@ -283,8 +284,16 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  defp fetch_credential(project_credential_id) do
-    project_credential_id && byte_size(project_credential_id) > 0 &&
-      Credentials.get_credential_by_project_credential(project_credential_id)
+  defp fetch_credential(project_credential_id, keychain_credential_id) do
+    cond do
+      project_credential_id && byte_size(project_credential_id) > 0 ->
+        Credentials.get_credential_by_project_credential(project_credential_id)
+
+      keychain_credential_id && byte_size(keychain_credential_id) > 0 ->
+        Credentials.get_keychain_credential(keychain_credential_id)
+
+      true ->
+        nil
+    end
   end
 end

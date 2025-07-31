@@ -6,6 +6,8 @@ defmodule Lightning.MetadataService do
   alias Lightning.CLI
   alias Lightning.Credentials.Credential
 
+  require Logger
+
   defmodule Error do
     @type t :: %__MODULE__{type: String.t()}
 
@@ -79,6 +81,9 @@ defmodule Lightning.MetadataService do
         {:ok,
          {adaptor_path,
           %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
+
+      {_adaptor_path, %{}} ->
+        {:error, Error.new("unsupported_credential")}
     end
   end
 
