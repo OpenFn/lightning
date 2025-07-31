@@ -227,6 +227,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }
   }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection]);
 
+  // This effect only runs when AI assistant visibility changes, not on every selection change
   useEffect(() => {
     if (!props.showAiAssistant) {
       setDrawerWidth(0);
@@ -285,7 +286,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         observer.disconnect();
       }
     };
-  }, [props.showAiAssistant, props.aiAssistantId, flow, model.nodes]);
+  }, [props.showAiAssistant, props.aiAssistantId]);
 
   useEffect(() => {
     if (props.forceFit && flow && model.nodes.length > 0) {
