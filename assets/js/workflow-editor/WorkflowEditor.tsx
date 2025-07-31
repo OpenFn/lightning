@@ -22,14 +22,15 @@ const onSelectionChange = (id?: string) => {
     nextUrl.searchParams.set('placeholder', 'true');
   } else {
     nextUrl.searchParams.delete('placeholder');
-    nextUrl.searchParams.delete('m');
     if (!id) {
       console.debug('Unselecting');
+
       nextUrl.searchParams.delete('s');
+      nextUrl.searchParams.delete('m');
     } else {
       console.debug('Selecting', id);
+      
       nextUrl.searchParams.set('s', id);
-      // nextUrl.searchParams.delete('m');
     }
   }
 
