@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Keychain credentials allow variable authentication/secret selection based on a
+  run's input dataclip [#3359](https://github.com/OpenFn/lightning/issues/3359)
+
 ### Changed
 
 ### Fixed
