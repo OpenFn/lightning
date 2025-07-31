@@ -2869,46 +2869,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     snapshot = Snapshot.get_by_version(workflow_id, version_tag)
 
-    fine_snap = %{
-      triggers:
-        snapshot.triggers
-        |> Enum.map(fn trigger ->
-          Map.take(trigger, [
-            :id,
-            :comment,
-            :custom_path,
-            :cron_expression,
-            :type,
-            :enabled
-          ])
-        end),
-      jobs:
-        snapshot.jobs
-        |> Enum.map(fn job ->
-          Map.take(job, [:id, :body, :name, :adaptor])
-        end),
-      edges:
-        snapshot.edges
-        |> Enum.map(fn edge ->
-          Map.take(edge, [
-            :id,
-            :condition_type,
-            :condition_expression,
-            :condition_label,
-            :enabled,
-            :source_job_id,
-            :source_trigger_id,
-            :target_job_id
-          ])
-        end),
-      positions: Map.get(snapshot, :positions, nil)
-    }
-
     # pushing the snapshot state before pushing the runs for it
     socket
     |> handle_selection_with_mode(selected_id, "history")
     |> assign_workflow(socket.assigns.workflow, snapshot)
-    |> push_event("state-applied", %{state: fine_snap})
+    |> push_patches_applied(socket.assigns.workflow_params)
     |> push_event("patch-runs", %{
       run_id: run_id,
       run_steps: run_steps
