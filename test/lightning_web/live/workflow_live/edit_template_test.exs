@@ -19,7 +19,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       view |> element("#publish-template-btn") |> render_click()
@@ -62,7 +63,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       view |> element("#publish-template-btn") |> render_click()
@@ -103,7 +105,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       view |> element("#publish-template-btn") |> render_click()
@@ -135,7 +138,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       view |> element("#publish-template-btn") |> render_click()
@@ -156,7 +160,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       view |> element("#publish-template-btn") |> render_click()
@@ -175,7 +180,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       view
@@ -194,7 +200,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       view |> element("#publish-template-btn") |> render_click()
@@ -217,7 +224,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       view |> element("#publish-template-btn") |> render_click()
@@ -244,7 +252,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       # Make unsaved changes
@@ -273,7 +282,8 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
 
       render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
+        "code" => "test workflow code",
+        "code_with_ids" => "test workflow code with ids"
       })
 
       refute view |> element("#publish-template-btn") |> has_element?()

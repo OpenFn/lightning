@@ -30,33 +30,6 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
   - Provides actionable guidance when possible
   - Maintains consistent tone and style
   - Includes recovery suggestions where appropriate
-
-  ## Examples
-
-      # Direct string errors (pre-formatted)
-      ErrorHandler.format_error({:error, "Invalid API key configuration"})
-      # => "Invalid API key configuration"
-
-      # Validation errors from forms
-      changeset = %Ecto.Changeset{errors: [content: {"can't be blank", [validation: :required]}]}
-      ErrorHandler.format_error({:error, changeset})
-      # => "Content can't be blank"
-
-      # Network timeout errors
-      ErrorHandler.format_error({:error, :timeout})
-      # => "Request timed out. Please try again."
-
-      # Connection failures
-      ErrorHandler.format_error({:error, :econnrefused})
-      # => "Unable to reach the AI server. Please try again later."
-
-      # Structured errors with custom text
-      ErrorHandler.format_error({:error, :custom_reason, %{text: "Service maintenance in progress"}})
-      # => "Service maintenance in progress"
-
-      # Unknown error types (fallback)
-      ErrorHandler.format_error({:unexpected, :error, :format})
-      # => "Oops! Something went wrong. Please try again."
   """
   @spec format_error(any()) :: String.t()
   def format_error({:error, message}) when is_binary(message) and message != "",
@@ -111,28 +84,6 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
   - Provide timeframe expectations when relevant
   - Suggest appropriate escalation paths
   - Include contact information for resolution
-
-  ## Examples
-
-    # Quota exhaustion with custom message
-    ErrorHandler.format_limit_error({:error, :quota_exceeded, %{text: "Monthly AI usage limit reached"}})
-    # => "Monthly AI usage limit reached"
-
-    # Standard quota exceeded
-    ErrorHandler.format_limit_error({:error, :quota_exceeded})
-    # => "AI usage limit reached. Please try again later or contact support."
-
-    # Rate limiting (temporary)
-    ErrorHandler.format_limit_error({:error, :rate_limited})
-    # => "Too many requests. Please wait a moment before trying again."
-
-    # Credit depletion (requires admin action)
-    ErrorHandler.format_limit_error({:error, :insufficient_credits})
-    # => "Insufficient AI credits. Please contact your administrator."
-
-    # Unknown limit error (fallback)
-    ErrorHandler.format_limit_error(:unknown_limit_type)
-    # => "AI usage limit reached. Please try again later."
   """
   @spec format_limit_error(any()) :: String.t()
   def format_limit_error({:error, _reason, %{text: text_message}})
@@ -165,32 +116,6 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
   - Humanized field name
   - Interpolated error message
   - Clear, actionable guidance
-
-  ## Examples
-    # Single field validation error
-    changeset = %Ecto.Changeset{
-      errors: [content: {"can't be blank", [validation: :required]}]
-    }
-    ErrorHandler.extract_changeset_errors(changeset)
-    # => ["Content can't be blank"]
-    # Multiple field errors
-    changeset = %Ecto.Changeset{
-      errors: [
-        content: {"can't be blank", [validation: :required]},
-        title: {"should be at least %{count} character(s)", [count: 3, validation: :length]}
-      ]
-    }
-    ErrorHandler.extract_changeset_errors(changeset)
-    # => ["Content can't be blank", "Title should be at least 3 character(s)"]
-    # Complex field names
-    changeset = %Ecto.Changeset{
-      errors: [user_email: {"has invalid format", [validation: :format]}]
-    }
-    ErrorHandler.extract_changeset_errors(changeset)
-    # => ["User email has invalid format"]
-    # Non-changeset input (safety)
-    ErrorHandler.extract_changeset_errors("not a changeset")
-    # => []
   """
   @spec extract_changeset_errors(Ecto.Changeset.t()) :: [String.t()]
   def extract_changeset_errors(%Ecto.Changeset{errors: errors}) do

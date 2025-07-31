@@ -18,11 +18,13 @@ export type StateWebhookTrigger = {
   enabled: boolean;
   type: 'webhook';
 };
+
 export type StateKafkaTrigger = {
   id: string;
   enabled: boolean;
   type: 'kafka';
 };
+
 export type StateTrigger =
   | StateCronTrigger
   | StateWebhookTrigger
@@ -57,6 +59,7 @@ export type WorkflowState = {
 
 // Spec
 export type SpecJob = {
+  id?: string;
   name: string;
   adaptor: string;
   body: string;
@@ -64,6 +67,7 @@ export type SpecJob = {
 };
 
 export type SpecCronTrigger = {
+  id?: string;
   type: 'cron';
   enabled: boolean;
   cron_expression: string;
@@ -71,12 +75,14 @@ export type SpecCronTrigger = {
 };
 
 export type SpecWebhookTrigger = {
+  id?: string;
   type: 'webhook';
   enabled: boolean;
   pos: Position | undefined;
 };
 
 export type SpecKafkaTrigger = {
+  id?: string;
   type: 'kafka';
   enabled: boolean;
 };
@@ -87,6 +93,7 @@ export type SpecTrigger =
   | SpecKafkaTrigger;
 
 export type SpecEdge = {
+  id?: string;
   source_trigger?: string;
   source_job?: string;
   target_job: string;
@@ -97,6 +104,7 @@ export type SpecEdge = {
 };
 
 export type WorkflowSpec = {
+  id?: string;
   name: string;
   jobs: Record<string, SpecJob>;
   triggers: Record<string, SpecTrigger>;

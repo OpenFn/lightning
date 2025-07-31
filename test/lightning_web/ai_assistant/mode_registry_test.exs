@@ -41,7 +41,7 @@ defmodule LightningWeb.AiAssistant.ModeRegistryTest do
 
       job_mode = Enum.find(modes, &(&1.id == :job))
       assert job_mode.name == "Job Code Assistant"
-      assert job_mode.icon == "hero-cpu-chip"
+      assert job_mode.icon == "hero-code-bracket"
     end
   end
 
@@ -90,7 +90,7 @@ defmodule LightningWeb.AiAssistant.ModeRegistryTest do
 
       assert job_metadata.id == :job
       assert job_metadata.name == "Job Code Assistant"
-      assert job_metadata.icon == "hero-cpu-chip"
+      assert job_metadata.icon == "hero-code-bracket"
 
       workflow_metadata = ModeRegistry.get_mode_metadata(:workflow)
       assert workflow_metadata.id == :workflow

@@ -256,7 +256,8 @@ defmodule Lightning.Config.Bootstrap do
         scheduler: 1,
         workflow_failures: 1,
         background: 1,
-        history_exports: 1
+        history_exports: 1,
+        ai_assistant: 10
       ]
 
     # https://plausible.io/ is an open-source, privacy-friendly alternative to
