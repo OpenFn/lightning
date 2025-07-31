@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-DA4E800F.js"></script>
+    <script defer src="dist/sidebar_items-F94D515D.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -130,9 +130,7 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><p>authorize/3 takes an action, a user, and a project. It checks the user's role
-for this project and returns <code class="inline">true</code> if the user can perform the action and
-false if they cannot.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Bodyguard.Policy.authorize/3</code></a>.</p></div>
 
     </div>
 
@@ -159,7 +157,7 @@ false if they cannot.</p></div>
       <h1 class="signature" translate="no">actions()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L11" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L12" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -200,7 +198,7 @@ false if they cannot.</p></div>
       <h1 class="signature" translate="no">authorize(action, authenticated_user, account_user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L19" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -215,10 +213,7 @@ false if they cannot.</p></div>
 
       </div>
 
-<p>authorize/3 takes an action, a user, and a project. It checks the user's role
-for this project and returns <code class="inline">true</code> if the user can perform the action and
-false if they cannot.</p><p>Note that permissions are grouped by action.</p><p>We deny by default, so if a user's role is not added to the allow roles list
-for a particular action they are denied.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/bodyguard/2.4.3/Bodyguard.Policy.html#c:authorize/3"><code class="inline">Bodyguard.Policy.authorize/3</code></a>.</p>
   </section>
 </section>
 
