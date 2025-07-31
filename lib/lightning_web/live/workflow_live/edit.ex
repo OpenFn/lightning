@@ -2810,7 +2810,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"method" => method, "m" => nil, "s" => nil, "a" => nil} ->
         handle_method_assignment(socket, method)
 
-      %{"m" => "history", "a" => run_id, "v" => version_tag, "s" => selected_id} ->
+      %{"m" => "history", "a" => run_id, "v" => version_tag, "s" => selected_id}
+      when not is_nil(version_tag) ->
         handle_run_selection_history(socket, run_id, version_tag, selected_id)
 
       %{"s" => nil} ->
@@ -2859,17 +2860,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  # version_tag will never be nil here
   defp handle_run_selection_history(socket, run_id, version_tag, selected_id) do
     workflow_id = socket.assigns.workflow.id
 
     %{run_steps: run_steps} =
       get_run_steps_and_history(workflow_id, run_id)
 
-    # when switching to latest version_tag is nil
-    # hence, we just pick the version on workflow
-    version = version_tag || socket.assigns.workflow.lock_version
-
-    snapshot = Snapshot.get_by_version(workflow_id, version)
+    snapshot = Snapshot.get_by_version(workflow_id, version_tag)
 
     fine_snap = %{
       triggers:
