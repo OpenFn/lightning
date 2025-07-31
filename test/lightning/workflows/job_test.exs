@@ -2,6 +2,7 @@ defmodule Lightning.Workflows.JobTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Workflows.Job
+  alias Lightning.Repo
 
   import Lightning.Factories
 
@@ -15,6 +16,88 @@ defmodule Lightning.Workflows.JobTest do
   end
 
   describe "changeset/2" do
+    test "accepts keychain_credential_id in changeset" do
+      workflow = insert(:workflow)
+
+      keychain_credential =
+        insert(:keychain_credential, project: workflow.project)
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "test",
+          adaptor: "@openfn/language-common@latest",
+          keychain_credential_id: keychain_credential.id,
+          workflow_id: workflow.id
+        })
+
+      assert changeset.valid?
+      refute changeset.errors[:keychain_credential_id]
+    end
+
+    test "validates that only one credential type can be set" do
+      workflow = insert(:workflow)
+      project_credential = insert(:project_credential, project: workflow.project)
+
+      keychain_credential =
+        insert(:keychain_credential, project: workflow.project)
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "test",
+          adaptor: "@openfn/language-common@latest",
+          project_credential_id: project_credential.id,
+          keychain_credential_id: keychain_credential.id,
+          workflow_id: workflow.id
+        })
+
+      refute changeset.valid?
+
+      # The validate_exclusive function adds the error to the field that was changed
+      assert changeset.errors[:project_credential_id] ==
+               {"cannot be set when the other credential type is also set", []}
+    end
+
+    test "validates that keychain credential belongs to the same project as the job" do
+      workflow = insert(:workflow)
+      other_project = insert(:project)
+      keychain_credential = insert(:keychain_credential, project: other_project)
+
+      workflow_with_project = Repo.preload(workflow, :project)
+
+      changeset =
+        %Job{}
+        |> Ecto.Changeset.change()
+        |> Job.put_workflow(Ecto.Changeset.change(workflow_with_project))
+        |> Job.changeset(%{
+          name: "Test Job",
+          body: "test",
+          adaptor: "@openfn/language-common@latest",
+          keychain_credential_id: keychain_credential.id,
+          workflow_id: workflow.id
+        })
+
+      refute changeset.valid?
+
+      assert changeset.errors[:keychain_credential_id] ==
+               {"must belong to the same project as the job", []}
+    end
+
+    test "allows both credential fields to be null" do
+      workflow = insert(:workflow)
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "test",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: workflow.id
+        })
+
+      assert changeset.valid?
+    end
+
     test "raises a constraint error when jobs in the same workflow have the same downcased and hyphenated name" do
       workflow = insert(:workflow)
 
@@ -44,6 +127,23 @@ defmodule Lightning.Workflows.JobTest do
                     constraint_name: "jobs_name_workflow_id_index"
                   ]}
       end)
+    end
+
+    test "database constraint prevents job with both credential types" do
+      workflow = insert(:workflow)
+      project_credential = insert(:project_credential, project: workflow.project)
+
+      keychain_credential =
+        insert(:keychain_credential, project: workflow.project)
+
+      # This should fail at the database level due to the constraint
+      assert_raise Ecto.ConstraintError, fn ->
+        insert(:job,
+          workflow: workflow,
+          project_credential: project_credential,
+          keychain_credential: keychain_credential
+        )
+      end
     end
 
     test "name can't be longer than 100 chars" do

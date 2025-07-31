@@ -15,6 +15,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Helpers
   alias Lightning.Repo
+
+  setup :stub_apollo_unavailable
   alias Lightning.Workflows
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Snapshot
@@ -88,11 +90,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute has_element?(view, "#credential-form")
 
       assert view
-             |> element(
-               ~S{[name='workflow[jobs][0][project_credential_id]'] option[selected="selected"]}
-             )
-             |> render() =~ "newly created credential",
-             "Should have the project credential selected"
+             |> has_element?(
+               ~S{select[name='credential_selector'] option},
+               "newly created credential"
+             ),
+             "Should have the project credential available"
     end
   end
 
@@ -113,6 +115,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         %{
           patches: [
             %{op: "add", path: "/jobs/0/project_credential_id", value: nil},
+            %{op: "add", path: "/jobs/0/keychain_credential_id", value: nil},
             %{
               op: "add",
               path: "/jobs/0/errors",
@@ -239,7 +242,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> CredentialLiveHelpers.click_save()
 
-      assert view |> selected_credential(job) =~ "My Credential"
+      assert view |> selected_credential_name(job) == "My Credential"
 
       # Editing the Jobs' body
       view |> click_edit(job)
@@ -279,9 +282,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         1,
-        fn %{type: :activate_workflow}, _context ->
-          :ok
-        end
+        fn %{type: :activate_workflow}, _context -> :ok end
       )
 
       # subscribe to workflow events
@@ -806,9 +807,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         assert view |> has_element?("[id='adaptor-version'][disabled]")
 
         assert view
-               |> has_element?(
-                 "select[name='snapshot[jobs][#{idx}][project_credential_id]'][disabled]"
-               )
+               |> has_element?("select[name='credential_selector'][disabled]")
 
         view |> click_edit(job)
 
@@ -2456,6 +2455,93 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert capture_log(fun) =~ ~r/foo-bar-event/
       assert capture_log(fun) =~ ~r/#{workflow_id}/
     end
+
+    @tag role: :editor
+    test "can change job name, adaptor, version, and credential sequentially", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential: build(:credential)
+        )
+
+      keychain_credential =
+        insert(:keychain_credential, project: project)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
+        )
+
+      # Select the first job
+      job = hd(workflow.jobs)
+      view |> select_node(job, workflow.lock_version)
+
+      # Step 1: Change job name
+      new_job_name = "Updated Job Name"
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{
+          "jobs" => %{
+            "0" => %{
+              "name" => new_job_name
+            }
+          }
+        }
+      })
+      |> render_change()
+
+      # Step 2: Change adaptor
+      view |> change_adaptor(job, "@openfn/language-dhis2")
+      view |> trigger_save()
+
+      # Step 3: Change adaptor version to something specific (not @latest)
+      specific_version = "@openfn/language-dhis2@3.0.4"
+      view |> change_adaptor_version(specific_version)
+
+      assert view
+             |> credential_options()
+             |> Enum.reject(&(&1.text == "")) ==
+               [
+                 %{
+                   text: project_credential.credential.name,
+                   value: project_credential.id
+                 },
+                 %{text: keychain_credential.name, value: keychain_credential.id}
+               ]
+
+      view |> change_credential(job, project_credential)
+
+      assert view |> selected_credential_name() ==
+               project_credential.credential.name
+
+      view |> trigger_save()
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job.id]}"
+      )
+
+      job = Lightning.Repo.reload(job)
+      assert job.adaptor == specific_version
+      assert job.name == new_job_name
+      assert job.project_credential_id == project_credential.id
+
+      view |> change_credential(job, keychain_credential)
+      assert view |> selected_credential_name() == keychain_credential.name
+
+      view |> trigger_save()
+
+      job = Lightning.Repo.reload(job)
+      assert job.project_credential_id == nil
+      assert job.keychain_credential_id == keychain_credential.id
+    end
   end
 
   describe "Save and Sync to Github" do
@@ -2667,6 +2753,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute has_element?(view, "#github-sync-modal")
     end
 
+    @tag :capture_log
     test "does not close the github modal when Github sync fails", %{
       conn: conn,
       project: project,
@@ -3635,5 +3722,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     dataclip
     |> Map.put(:body, body)
     |> Map.put(:request, nil)
+  end
+
+  defp stub_apollo_unavailable(_context) do
+    stub(Lightning.MockConfig, :apollo, fn key ->
+      case key do
+        :endpoint -> "http://localhost:3000"
+        :ai_assistant_api_key -> "test_api_key"
+      end
+    end)
+
+    stub(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
+      {:error, :econnrefused}
+    end)
+
+    :ok
   end
 end

@@ -155,12 +155,4 @@ defmodule LightningWeb.CredentialLive.Helpers do
       |> Phoenix.LiveView.push_navigate(to: socket.assigns.return_to)
     end
   end
-
-  # if we want support users to view oauth clients or credentials just extend this condition
-  def can_edit?(
-        %{user_id: user_id},
-        current_user
-      ) do
-    user_id == current_user.id
-  end
 end

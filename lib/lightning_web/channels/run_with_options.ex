@@ -71,10 +71,15 @@ defmodule LightningWeb.RunWithOptions do
   end
 
   defp get_credential_id(job) do
-    job.credential
-    |> case do
-      nil -> nil
-      c -> c.id
+    cond do
+      job.keychain_credential_id ->
+        job.keychain_credential_id
+
+      job.credential ->
+        job.credential.id
+
+      true ->
+        nil
     end
   end
 

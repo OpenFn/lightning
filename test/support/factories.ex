@@ -215,6 +215,16 @@ defmodule Lightning.Factories do
     }
   end
 
+  def keychain_credential_factory do
+    %Lightning.Credentials.KeychainCredential{
+      name: sequence(:credential_name, &"keychain-credential-#{&1}"),
+      path: "$.user_id",
+      created_by: build(:user),
+      project: build(:project),
+      default_credential: nil
+    }
+  end
+
   def oauth_client_factory do
     %Lightning.Credentials.OauthClient{
       name: sequence(:oauth_client_name, &"oauth-client#{&1}"),
@@ -266,6 +276,18 @@ defmodule Lightning.Factories do
   def user_token_factory do
     %Lightning.Accounts.UserToken{
       token: fn -> Ecto.UUID.generate() end
+    }
+  end
+
+  def with_personal_access_token(user_token) do
+    %{
+      user_token
+      | token:
+          Lightning.Tokens.PersonalAccessToken.generate_and_sign!(
+            %{"sub" => "user:#{user_token.user.id}"},
+            Lightning.Config.token_signer()
+          ),
+        context: "api"
     }
   end
 
@@ -557,7 +579,7 @@ defmodule Lightning.Factories do
     |> with_edge({trigger, job})
   ```
   """
-  def with_job(workflow, job) do
+  def with_job(workflow, job \\ %{}) do
     %{
       workflow
       | jobs: merge_assoc(workflow.jobs, merge_attributes(job, %{workflow: nil}))

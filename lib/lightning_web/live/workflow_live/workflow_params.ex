@@ -104,7 +104,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :name,
             :adaptor,
             :body,
-            :project_credential_id
+            :project_credential_id,
+            :keychain_credential_id
           ]),
         triggers:
           changeset

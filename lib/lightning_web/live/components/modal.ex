@@ -137,7 +137,7 @@ defmodule LightningWeb.Components.Modal do
   end
 
   def hide_modal(js \\ %JS{}, id) when is_binary(id) do
-    js
+    %JS{}
     |> JS.hide(
       to: "##{id}-bg",
       transition:
@@ -153,6 +153,7 @@ defmodule LightningWeb.Components.Modal do
          "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
+    |> JS.concat(js)
     |> JS.pop_focus()
   end
 end

@@ -7,7 +7,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
-  setup %{project: project} do
+  setup %{project: project} = tags do
+    if Map.get(tags, :stub_apollo, true) do
+      Lightning.AiAssistantHelpers.stub_online()
+    end
+
     # Create 5 distinct templates using factories
     templates = [
       insert(:workflow_template, %{
@@ -53,6 +57,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
   end
 
   describe "workflow creation methods" do
+    @tag stub_apollo: false
     test "displays template and import options", %{conn: conn, project: project} do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
@@ -62,6 +67,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       refute view |> element("#workflow-importer") |> has_element?()
     end
 
+    @tag stub_apollo: false
     test "switches to import view when import button is clicked", %{
       conn: conn,
       project: project
@@ -341,10 +347,16 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       assert view |> element("#workflow-file") |> has_element?()
     end
 
+    @tag stub_apollo: false
     test "dropzone has proper attributes for drag and drop", %{
       conn: conn,
       project: project
     } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Switch to import view
@@ -360,6 +372,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
   end
 
   describe "AI method integration" do
+    @tag stub_apollo: false
     test "switching to AI method without search term shows AI interface", %{
       conn: conn,
       project: project,
@@ -389,6 +402,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       assert html =~ "Start a conversation to see your chat history appear here"
     end
 
+    @tag stub_apollo: false
     test "switching to AI method with search term creates session and shows AI interface",
          %{
            conn: conn,
