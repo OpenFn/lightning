@@ -203,9 +203,11 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </.td>
         <.td class="text-right">
           <LightningWeb.RunLive.Components.elapsed_indicator
+            :if={@last_run}
             item={@last_run}
             context="table"
           />
+          <span :if={is_nil(@last_run)}>Not started</span>
         </.td>
         <.td class="text-right">
           <div class="flex items-center justify-end gap-2">
@@ -270,7 +272,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                           <% end %>
                         </div>
                       </div>
-                      <div class="flex-1 py-2 px-4 text-right">
+                      <div data-label="run state" class="flex-1 py-2 px-4 text-right">
                         <%= case run.state do %>
                           <% :available -> %>
                             enqueued <Common.datetime datetime={run.inserted_at} />

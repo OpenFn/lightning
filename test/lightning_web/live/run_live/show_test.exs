@@ -100,7 +100,9 @@ defmodule LightningWeb.RunLive.ShowTest do
       html = step_list_item(view, run, step)
 
       assert html =~ job_a.name
-      assert html =~ "Running"
+
+      assert html =~
+               "data-start-time=\"#{DateTime.to_unix(step.started_at, :millisecond)}\""
 
       {:ok, log_line_1} = add_log(run, ["I'm the worker, I'm working!"])
 
@@ -162,7 +164,9 @@ defmodule LightningWeb.RunLive.ShowTest do
       html = step_list_item(view, run, step_2)
 
       assert html =~ job_b.name
-      assert html =~ "Running..."
+
+      assert html =~
+               "data-start-time=\"#{DateTime.to_unix(step_2.started_at, :millisecond)}\""
 
       view |> select_step(run, job_b.name)
 

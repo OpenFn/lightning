@@ -57,9 +57,28 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "wo_date_before" => nil,
                "date_after" => nil,
                "date_before" => nil,
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
+             }
+    end
+
+    test "includes sort params if given" do
+      assert SearchParams.to_uri_params(%{
+               "sort_direction" => "desc",
+               "sort_by" => "inserted_at",
+               "failed" => true,
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
+             }) == %{
+               "id" => true,
+               "log" => true,
+               "body" => true,
+               "failed" => true,
+               "wo_date_after" => nil,
+               "wo_date_before" => nil,
+               "date_after" => nil,
+               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
-               "sort_by" => nil,
-               "sort_direction" => nil
+               "sort_direction" => "desc",
+               "sort_by" => "inserted_at"
              }
     end
 
@@ -83,9 +102,7 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "wo_date_before" => now |> DateTime.to_string(),
                "date_after" => now |> DateTime.to_string(),
                "date_before" => nil,
-               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
-               "sort_by" => nil,
-               "sort_direction" => nil
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
              }
     end
   end
