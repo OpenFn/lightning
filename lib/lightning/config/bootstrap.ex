@@ -540,7 +540,8 @@ defmodule Lightning.Config.Bootstrap do
         pool_size: Enum.max([schedulers + 8, schedulers * 2])
 
       config :ex_unit,
-        assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 1000)
+        assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 1000),
+        timeout: env!("EX_UNIT_TIMEOUT", :integer, 60_000)
     end
 
     config :sentry,
