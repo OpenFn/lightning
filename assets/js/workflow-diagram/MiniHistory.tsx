@@ -62,7 +62,7 @@ export default function MiniHistory({
       >
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-gray-700">
-            {isCollapsed ? 'View history' : 'Recent Activities'}
+            {isCollapsed ? 'View History' : 'Recent Activity'}
           </h3>
           <a
             href={`#`}
