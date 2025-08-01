@@ -19,7 +19,9 @@ defmodule Lightning.WorkflowCollaboration do
 
   @pg_scope :workflow_collaboration
   # Wait 60s before cleanup in case of reconnects
-  @cleanup_delay_ms 60_000
+  @cleanup_delay_ms Application.compile_env(:lightning, __MODULE__, [])[
+                      :cleanup_delay_ms
+                    ] || 60_000
 
   defstruct [
     :workflow_id,
@@ -38,12 +40,14 @@ defmodule Lightning.WorkflowCollaboration do
   Returns {:ok, collaborator_pid, initial_doc_state} or {:error, reason}.
   """
   def join_workflow(workflow_id, user_id) do
-    Logger.info("Attempting to join workflow #{workflow_id} for user #{user_id}")
+    Logger.info(
+      "Attempting to join workflow workflow=#{workflow_id} user=#{user_id}"
+    )
 
     case find_or_start_collaborator(workflow_id) do
       {:ok, collaborator_pid} ->
         Logger.info(
-          "Found/started collaborator #{inspect(collaborator_pid)} for workflow #{workflow_id}"
+          "Found/started collaborator workflow=#{workflow_id} collaborator=#{inspect(collaborator_pid)}"
         )
 
         case GenServer.call(collaborator_pid, {:join_user, user_id}) do
@@ -52,7 +56,7 @@ defmodule Lightning.WorkflowCollaboration do
 
           error ->
             Logger.error(
-              "Failed to join user #{user_id} to collaborator: #{inspect(error)}"
+              "Failed to join user to collaborator user=#{user_id} error=#{inspect(error)}"
             )
 
             error
@@ -60,7 +64,7 @@ defmodule Lightning.WorkflowCollaboration do
 
       error ->
         Logger.error(
-          "Failed to find/start collaborator for workflow #{workflow_id}: #{inspect(error)}"
+          "Failed to find/start collaborator workflow=#{workflow_id} error=#{inspect(error)}"
         )
 
         error
@@ -105,12 +109,16 @@ defmodule Lightning.WorkflowCollaboration do
   # Process Discovery using :pg
 
   defp find_or_start_collaborator(workflow_id) do
-    Logger.info("Looking for existing collaborators for workflow #{workflow_id}")
+    caller_info = Process.info(self(), :current_function)
+
+    Logger.info(
+      "Looking for existing collaborators workflow=#{workflow_id} caller_info=#{inspect(caller_info)} caller_pid=#{inspect(self())}"
+    )
 
     case :pg.get_members(@pg_scope, workflow_id) do
       [] ->
         Logger.info(
-          "No existing collaborators found, starting new one for workflow #{workflow_id}"
+          "No existing collaborators found, starting new one workflow=#{workflow_id}"
         )
 
         # No processes exist, start one locally
@@ -118,7 +126,7 @@ defmodule Lightning.WorkflowCollaboration do
 
       processes ->
         Logger.info(
-          "Found existing collaborators: #{inspect(processes)} for workflow #{workflow_id}"
+          "Found existing collaborators workflow=#{workflow_id} processes=#{inspect(processes)}"
         )
 
         # Use existing process, prefer local for performance
@@ -141,8 +149,10 @@ defmodule Lightning.WorkflowCollaboration do
   end
 
   defp start_local_collaborator(workflow_id) do
+    caller_info = Process.info(self(), :current_function)
+
     Logger.info(
-      "Attempting to start local collaborator for workflow #{workflow_id}"
+      "Attempting to start local collaborator workflow=#{workflow_id} caller_info=#{inspect(caller_info)} caller_pid=#{inspect(self())}"
     )
 
     case Lightning.WorkflowCollaboration.Supervisor.start_collaboration(
@@ -150,21 +160,21 @@ defmodule Lightning.WorkflowCollaboration do
          ) do
       {:ok, pid} ->
         Logger.info(
-          "Successfully started collaborator #{inspect(pid)} for workflow #{workflow_id}"
+          "Successfully started collaborator workflow=#{workflow_id} collaborator=#{inspect(pid)}"
         )
 
         {:ok, pid}
 
       {:error, {:already_started, pid}} ->
         Logger.info(
-          "Collaborator already started #{inspect(pid)} for workflow #{workflow_id}"
+          "Collaborator already started workflow=#{workflow_id} collaborator=#{inspect(pid)}"
         )
 
         {:ok, pid}
 
       error ->
         Logger.error(
-          "Failed to start collaborator for workflow #{workflow_id}: #{inspect(error)}"
+          "Failed to start collaborator workflow=#{workflow_id} error=#{inspect(error)}"
         )
 
         error
@@ -204,7 +214,7 @@ defmodule Lightning.WorkflowCollaboration do
       cleanup_timer: nil
     }
 
-    Logger.info("Started workflow collaborator for #{workflow_id}")
+    Logger.info("Started workflow collaborator workflow=#{workflow_id}")
     {:ok, state}
   end
 
@@ -232,7 +242,7 @@ defmodule Lightning.WorkflowCollaboration do
     new_state = %{state | connected_users: connected_users}
 
     Logger.info(
-      "User #{user_id} (PID #{inspect(from_pid)}) joined workflow #{state.workflow_id}"
+      "User joined workflow user=#{user_id} workflow=#{state.workflow_id} pid=#{inspect(from_pid)}"
     )
 
     {:reply, {:ok, doc_state}, new_state}
@@ -274,7 +284,10 @@ defmodule Lightning.WorkflowCollaboration do
         new_state = %{state | connected_users: connected_users}
 
         Logger.info(
-          "User #{user_id} (PID #{inspect(liveview_pid)}) left workflow #{state.workflow_id}"
+          "User left Collaboration",
+          user: user_id,
+          workflow: state.workflow_id,
+          liveview: inspect(liveview_pid)
         )
 
         # Check if we should cleanup
@@ -291,7 +304,7 @@ defmodule Lightning.WorkflowCollaboration do
     cond do
       pid == state.shared_doc_pid ->
         Logger.error(
-          "SharedDoc died for workflow #{state.workflow_id}: #{inspect(reason)}"
+          "SharedDoc died workflow=#{state.workflow_id} reason=#{inspect(reason)}"
         )
 
         {:stop, :shared_doc_died, state}
@@ -304,7 +317,7 @@ defmodule Lightning.WorkflowCollaboration do
             new_state = %{state | connected_users: connected_users}
 
             Logger.info(
-              "User #{user_id} (PID #{inspect(pid)}) disconnected from workflow #{state.workflow_id}"
+              "User disconnected from workflow user=#{user_id} workflow=#{state.workflow_id} pid=#{inspect(pid)}"
             )
 
             # Check if we should cleanup
@@ -331,7 +344,7 @@ defmodule Lightning.WorkflowCollaboration do
   def handle_info(:cleanup_timeout, state) do
     if map_size(state.connected_users) == 0 do
       Logger.info(
-        "Cleaning up workflow collaborator #{state.workflow_id} - no users"
+        "Cleaning up workflow collaborator - no users workflow=#{state.workflow_id}"
       )
 
       {:stop, :normal, state}
@@ -346,8 +359,13 @@ defmodule Lightning.WorkflowCollaboration do
     # Leave the process group
     :pg.leave(@pg_scope, state.workflow_id, self())
 
-    # The SharedDoc will handle its own cleanup
-    Logger.info("Workflow collaborator #{state.workflow_id} terminating")
+    # Check if SharedDoc is still alive
+    shared_doc_alive = Process.alive?(state.shared_doc_pid)
+
+    Logger.info(
+      "Workflow collaborator terminating workflow=#{state.workflow_id} shared_doc_alive=#{shared_doc_alive} shared_doc_pid=#{inspect(state.shared_doc_pid)}"
+    )
+
     :ok
   end
 
