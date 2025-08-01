@@ -17,7 +17,15 @@ and this project adheres to
 
 ### Added
 
-- Allow users to name existsing dataclips
+### Changed
+
+### Fixed
+
+## [v2.14.0-pre] - 2025-08-01
+
+### Added
+
+- Allow users to name and preserve existing dataclips
   [#311](https://github.com/OpenFn/lightning/issues/311)
 
 ### Changed
@@ -33,16 +41,14 @@ and this project adheres to
 - Easier expansion of work orders in the history table
   [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
 
-### Fixed
-
-## [v2.16.7-pre1] 2025-08-01
+## [v2.13.7-pre1] 2025-08-01
 
 ### Added
 
 - Keychain credentials allow variable authentication/secret selection based on a
   run's input dataclip [#3359](https://github.com/OpenFn/lightning/issues/3359)
 
-## [v2.16.7-pre] 2025-07-31
+## [v2.13.7-pre] 2025-07-31
 
 ### Fixed
 
