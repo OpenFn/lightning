@@ -33,7 +33,7 @@ defmodule LightningWeb.RunChannelTest do
 
   describe "joining" do
     test "without providing a token" do
-      assert LightningWeb.UserSocket
+      assert LightningWeb.WorkerSocket
              |> socket("socket_id", %{})
              |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue") ==
                {:error, %{reason: "unauthorized"}}

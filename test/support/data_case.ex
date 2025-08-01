@@ -67,6 +67,5 @@ defmodule Lightning.DataCase do
       )
 
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-    :ok
   end
 end
