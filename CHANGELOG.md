@@ -19,6 +19,17 @@ and this project adheres to
 
 ### Changed
 
+- Click to copy all timestamps in UTC across the application
+  [1419](https://github.com/OpenFn/lightning/issues/1419)
+- Display relative times and respect browser timezones
+  [1255](https://github.com/OpenFn/lightning/issues/1255)
+- Sortable history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+- Visible run durations on the history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+- Easier expansion of work orders in the history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+
 ### Fixed
 
 ## [v2.13.6-pre] 2025-07-18
