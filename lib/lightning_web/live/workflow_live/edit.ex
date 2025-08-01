@@ -1866,7 +1866,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     # the changeset/validation.
     patches = WorkflowParams.to_patches(params, socket.assigns.workflow_params)
 
-    {:reply, %{patches: patches}, socket |> apply_query_params()}
+    {:reply, %{patches: patches}, socket}
   end
 
   def handle_event("copied_to_clipboard", _, socket) do
@@ -2869,10 +2869,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     snapshot = Snapshot.get_by_version(workflow_id, version_tag)
 
+    # snapshots currently don't have positions
+    # if we don't do this, the patch wouldn't replace the existing position in params
+    updated_snapshot = Map.put(snapshot, :positions, nil)
+
     # pushing the snapshot state before pushing the runs for it
     socket
     |> handle_selection_with_mode(selected_id, "history")
-    |> assign_workflow(socket.assigns.workflow, snapshot)
+    |> assign_workflow(socket.assigns.workflow, updated_snapshot)
     |> push_patches_applied(socket.assigns.workflow_params)
     |> push_event("patch-runs", %{
       run_id: run_id,
