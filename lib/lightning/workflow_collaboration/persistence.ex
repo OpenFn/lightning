@@ -14,30 +14,29 @@ defmodule Lightning.WorkflowCollaboration.Persistence do
 
   @impl true
   def bind(_state, doc_name, doc) do
-    Logger.info("Loading persisted state for document", document: doc_name)
+    Logger.info("Loading persisted state. document=#{doc_name}")
 
     case load_document_state(doc_name) do
       {:ok, binary_state} ->
         case Yex.apply_update(doc, binary_state) do
           :ok ->
-            Logger.info("Successfully loaded persisted state for #{doc_name}",
-              document: doc_name
+            Logger.info(
+              "Successfully loaded persisted state. document=#{doc_name}"
             )
 
             :ok
 
           {:error, reason} ->
             Logger.warning(
-              "Failed to apply persisted state: #{inspect(reason)}",
-              document: doc_name
+              "Failed to apply persisted state. document=#{doc_name} reason=#{inspect(reason)}"
             )
 
             :ok
         end
 
       {:error, :not_found} ->
-        Logger.info("No persisted state found, starting fresh",
-          document: doc_name
+        Logger.info(
+          "No persisted state found, starting fresh. document=#{doc_name}"
         )
 
         :ok
@@ -49,8 +48,8 @@ defmodule Lightning.WorkflowCollaboration.Persistence do
 
   @impl true
   def update_v1(state, update, doc_name, _doc) do
-    Logger.debug("Received update, state persistence scheduled",
-      document: doc_name
+    Logger.debug(
+      "Received update, state persistence scheduled. document=#{doc_name}"
     )
 
     # TODO For now, we'll persist every update immediately
@@ -65,16 +64,16 @@ defmodule Lightning.WorkflowCollaboration.Persistence do
 
   @impl true
   def unbind(%{doc_name: doc_name}, _doc_name, doc) do
-    Logger.info("Saving final state for document", document: doc_name)
+    Logger.info("Saving final state. document=#{doc_name}")
 
     case Yex.encode_state_as_update(doc) do
       {:ok, update} ->
         save_document_state(doc_name, update)
-        Logger.info("Successfully saved final state for", document: doc_name)
+        Logger.info("Successfully saved final state. document=#{doc_name}")
 
       {:error, reason} ->
-        Logger.error("Failed to encode final state: #{inspect(reason)}",
-          document: doc_name
+        Logger.error(
+          "Failed to encode final state. document=#{doc_name} reason=#{inspect(reason)}"
         )
     end
 
@@ -116,8 +115,8 @@ defmodule Lightning.WorkflowCollaboration.Persistence do
   defp save_update(doc_name, update) do
     # For immediate persistence, we could store individual updates
     # For now, let's just log them and rely on the final unbind save
-    Logger.debug("Received update, size: #{byte_size(update)} bytes",
-      document: doc_name
+    Logger.debug(
+      "Received update. document=#{doc_name} size_bytes=#{byte_size(update)}"
     )
   end
 end
