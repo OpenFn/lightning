@@ -78,6 +78,7 @@ Lightning.FailureNotifierView.html
 Lightning.Graph.html
 Lightning.Helpers.html
 Lightning.Invocation.Dataclip.html
+Lightning.Invocation.DataclipAudit.html
 Lightning.Invocation.LogLine.html
 Lightning.Invocation.Query.html
 Lightning.Invocation.Step.html
@@ -381,8 +382,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-F38A58BE.js
-dist/sidebar_items-CE8C63D7.js
+dist/search_data-88EF3063.js
+dist/sidebar_items-602436E0.js
 index.html
 provisioning.html
 readme.html
