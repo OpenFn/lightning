@@ -6,6 +6,7 @@ export enum SeletableOptions {
 
 export interface Dataclip {
   id: string;
+  name: string | null;
   body: {
     data: Record<string, unknown>;
     request: {
@@ -47,6 +48,7 @@ export enum FilterTypes {
   DATACLIP_TYPE = 'type',
   BEFORE_DATE = 'before',
   AFTER_DATE = 'after',
+  NAMED_ONLY = 'named_only',
 }
 
 export type SetDates = React.Dispatch<

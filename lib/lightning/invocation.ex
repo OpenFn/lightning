@@ -5,7 +5,9 @@ defmodule Lightning.Invocation do
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
+  alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.DataclipAudit
   alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
   alias Lightning.Projects.File, as: ProjectFile
@@ -67,36 +69,9 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
-    db_filters =
-      Enum.reduce(user_filters, dynamic(true), fn
-        {:id, uuid}, dynamic ->
-          dynamic([d], ^dynamic and d.id == ^uuid)
-
-        {:id_prefix, id_prefix}, dynamic ->
-          {id_prefix_start, id_prefix_end} =
-            id_prefix_interval(id_prefix)
-
-          dynamic(
-            [d],
-            ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
-          )
-
-        {:type, type}, dynamic ->
-          dynamic([d], ^dynamic and d.type == ^type)
-
-        {:after, ts}, dynamic ->
-          dynamic([d], ^dynamic and d.inserted_at >= ^ts)
-
-        {:before, ts}, dynamic ->
-          dynamic([d], ^dynamic and d.inserted_at <= ^ts)
-
-        {:exclude_id, exclude_id}, dynamic ->
-          dynamic([d], ^dynamic and d.id != ^exclude_id)
-      end)
-
     Query.last_n_for_job(job_id, limit)
     |> where([d], is_nil(d.wiped_at))
-    |> where([d], ^db_filters)
+    |> where([d], ^dataclip_where_filter(user_filters))
     |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
     |> Repo.all()
     |> maybe_filter_uuid_prefix(user_filters)
@@ -322,6 +297,23 @@ defmodule Lightning.Invocation do
     dataclip
     |> Dataclip.changeset(attrs |> coerce_json_field("body"))
     |> Repo.update()
+  end
+
+  @spec update_dataclip_name(Dataclip.t(), String.t() | nil, User.t()) ::
+          {:ok, Dataclip.t()} | {:error, Ecto.Changeset.t()}
+  def update_dataclip_name(%Dataclip{} = dataclip, name, acting_user) do
+    changeset =
+      dataclip
+      |> Ecto.Changeset.cast(%{name: name}, [:name])
+      |> Ecto.Changeset.unique_constraint([:name, :project_id])
+
+    Repo.transact(fn ->
+      with {:ok, updated_dataclip} <- Repo.update(changeset),
+           {:ok, _} <-
+             DataclipAudit.save_name_updated(dataclip, changeset, acting_user) do
+        {:ok, updated_dataclip}
+      end
+    end)
   end
 
   @doc """
@@ -869,12 +861,80 @@ defmodule Lightning.Invocation do
   # Check if a dataclip matches the user filters (applied in Elixir)
   defp dataclip_matches_filters?(dataclip, user_filters) do
     Enum.all?(user_filters, fn
-      {:id, uuid} -> dataclip.id == uuid
-      {:id_prefix, id_prefix} -> String.starts_with?(dataclip.id, id_prefix)
-      {:type, type} -> dataclip.type == type
-      {:after, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :lt
-      {:before, ts} -> DateTime.compare(dataclip.inserted_at, ts) != :gt
-      {:exclude_id, exclude_id} -> dataclip.id != exclude_id
+      {:id, uuid} ->
+        dataclip.id == uuid
+
+      {:name_or_id_part, query} ->
+        String.starts_with?(dataclip.id, query) or
+          dataclip_name_matches?(dataclip.name, query)
+
+      {:type, type} ->
+        dataclip.type == type
+
+      {:after, ts} ->
+        DateTime.compare(dataclip.inserted_at, ts) != :lt
+
+      {:before, ts} ->
+        DateTime.compare(dataclip.inserted_at, ts) != :gt
+
+      {:exclude_id, exclude_id} ->
+        dataclip.id != exclude_id
+
+      {:name_part, name_part} ->
+        dataclip_name_matches?(dataclip.name, name_part)
+
+      {:named_only, true} ->
+        is_binary(dataclip.name)
+
+      _other ->
+        true
+    end)
+  end
+
+  defp dataclip_name_matches?(nil, _name_part), do: false
+
+  defp dataclip_name_matches?(name, name_part) do
+    name
+    |> String.downcase()
+    |> String.contains?(String.downcase(name_part))
+  end
+
+  # credo:disable-for-next-line
+  defp dataclip_where_filter(user_filters) do
+    Enum.reduce(user_filters, dynamic(true), fn
+      {:id, uuid}, dynamic ->
+        dynamic([d], ^dynamic and d.id == ^uuid)
+
+      {:name_or_id_part, query}, dynamic ->
+        {id_prefix_start, id_prefix_end} =
+          id_prefix_interval(query)
+
+        dynamic(
+          [d],
+          (^dynamic and ilike(d.name, ^"%#{query}%")) or
+            (d.id > ^id_prefix_start and d.id < ^id_prefix_end)
+        )
+
+      {:type, type}, dynamic ->
+        dynamic([d], ^dynamic and d.type == ^type)
+
+      {:after, ts}, dynamic ->
+        dynamic([d], ^dynamic and d.inserted_at >= ^ts)
+
+      {:before, ts}, dynamic ->
+        dynamic([d], ^dynamic and d.inserted_at <= ^ts)
+
+      {:exclude_id, exclude_id}, dynamic ->
+        dynamic([d], ^dynamic and d.id != ^exclude_id)
+
+      {:name_part, name}, dynamic ->
+        dynamic([d], ^dynamic and ilike(d.name, ^"%#{name}%"))
+
+      {:named_only, true}, dynamic ->
+        dynamic([d], ^dynamic and not is_nil(d.name))
+
+      _other, dynamic ->
+        dynamic
     end)
   end
 

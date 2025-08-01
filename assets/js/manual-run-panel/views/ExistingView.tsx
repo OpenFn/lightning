@@ -29,6 +29,8 @@ interface ExistingViewProps {
   clearFilter: (v: FilterTypes) => void;
   selectedDates: { before: string; after: string };
   setSelectedDates: SetDates;
+  namedOnly: boolean;
+  setNamedOnly: (v: boolean) => void;
   onSubmit: () => void;
   fixedHeight: boolean;
   currentRunDataclip?: Dataclip | null;
@@ -46,6 +48,8 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   clearFilter,
   selectedDates,
   setSelectedDates,
+  namedOnly,
+  setNamedOnly,
   onSubmit,
   fixedHeight,
   currentRunDataclip,
@@ -68,10 +72,13 @@ const ExistingView: React.FC<ExistingViewProps> = ({
           clearFilter(key as FilterTypes);
         }}
       >
-        {key}:{' '}
-        {(key as FilterTypes) === FilterTypes.DATACLIP_TYPE
-          ? DataclipTypeNames[value!]
-          : value}{' '}
+        {(key as FilterTypes) === FilterTypes.NAMED_ONLY
+          ? key
+          : `${key}: ${
+              (key as FilterTypes) === FilterTypes.DATACLIP_TYPE
+                ? DataclipTypeNames[value!]
+                : value
+            }`}{' '}
       </Pill>
     ));
 
@@ -97,7 +104,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 }}
                 type="text"
                 className="focus:outline focus:outline-2 focus:-outline-offset-2 focus:ring-0  disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 border-slate-300 focus:border-slate-400 focus:outline-indigo-600 block w-full rounded-md border-0 py-1.5 pl-10 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                placeholder="Search by UUID (starts with)"
+                placeholder="Search names or UUID prefixes"
               />
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
@@ -119,7 +126,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 onClick={() => {
                   setDateOpen(p => !p);
                 }}
-                className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300"
+                className="border rounded-md px-1 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300"
               >
                 <CalendarDaysIcon className="w-6 h-6 text-slate-700" />
               </button>
@@ -172,7 +179,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 onClick={() => {
                   setTypesOpen(p => !p);
                 }}
-                className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300"
+                className="border rounded-md px-1 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300"
               >
                 <RectangleGroupIcon className="w-6 h-6 text-slate-700" />
               </button>
@@ -212,6 +219,20 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  setNamedOnly(!namedOnly);
+                  onSubmit();
+                }}
+                className={`border rounded-md px-1 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300 ${
+                  namedOnly ? 'bg-primary-100 border-primary-300' : ''
+                }`}
+              >
+                <span className="hero-tag h-5 w-5 text-slate-700" />
+              </button>
+            </div>
+            <div className="relative inline-block">
+              <button
+                type="button"
+                onClick={() => {
                   onSubmit();
                 }}
                 // TODO: This should come from app.css (lib/lightning_web/components/new_inputs.ex button_base_classes)
@@ -240,22 +261,24 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                   }}
                   className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
                 >
-                  <div className="flex gap-2 items-center text-sm">
-                    {isCurrent ? (
-                      <span
-                        className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
-                        title="Current dataclip for this step"
-                      />
-                    ) : isNextCronRun ? (
-                      <span
-                        className="hero-clock-solid size-4 text-primary-400 group-hover:text-primary-600"
-                        title="Next state that will be used for cron execution"
-                      />
-                    ) : (
-                      <span className="hero-document-text align-middle size-4 group-hover:text-primary-600" />
-                    )}
-                    <span className="font-mono leading-none align-middle relative top-[1px]">
-                      {truncateUid(clip.id)}
+                  <div className="flex gap-2 items-center text-sm max-w-9/10">
+                    <span className="flex items-center">
+                      {isCurrent ? (
+                        <span
+                          className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
+                          title="Current dataclip for this step"
+                        />
+                      ) : isNextCronRun ? (
+                        <span
+                          className="hero-clock-solid size-4 text-primary-400 group-hover:text-primary-600"
+                          title="Next state that will be used for cron execution"
+                        />
+                      ) : (
+                        <span className="hero-document-text size-4 group-hover:text-primary-600" />
+                      )}
+                    </span>
+                    <span className="font-mono leading-none align-middle truncate">
+                      {clip.name || truncateUid(clip.id)}
                     </span>
                     <span className="align-middle">
                       <DataclipTypePill type={clip.type} size="small" />

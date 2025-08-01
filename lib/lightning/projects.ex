@@ -939,7 +939,8 @@ defmodule Lightning.Projects do
         on: d.id == r.dataclip_id,
         left_join: s in Step,
         on: d.id == s.input_dataclip_id or d.id == s.output_dataclip_id,
-        where: is_nil(wo.id) and is_nil(r.id) and is_nil(s.id),
+        where:
+          is_nil(d.name) and is_nil(wo.id) and is_nil(r.id) and is_nil(s.id),
         select: d.id
 
     delete_dataclips(
