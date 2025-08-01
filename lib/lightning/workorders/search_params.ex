@@ -146,8 +146,6 @@ defmodule Lightning.WorkOrders.SearchParams do
     end)
     |> Enum.into(%{})
     |> Map.merge(search_params, fn _key, v1, _v2 -> v1 end)
-    |> Map.put("sort_by", Map.get(search_params, "sort_by"))
-    |> Map.put("sort_direction", Map.get(search_params, "sort_direction"))
   end
 
   def from_map(map) do
@@ -160,8 +158,6 @@ defmodule Lightning.WorkOrders.SearchParams do
       |> Map.update!(:date_before, &parse_datetime/1)
       |> Map.update!(:wo_date_after, &parse_datetime/1)
       |> Map.update!(:wo_date_before, &parse_datetime/1)
-      |> Map.put_new(:sort_by, nil)
-      |> Map.put_new(:sort_direction, nil)
 
     struct(__MODULE__, updated_map)
   end

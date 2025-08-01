@@ -120,7 +120,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> Timex.shift(months: -1)
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[sort_by]=&amp;filters[sort_direction]=&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]=#{date}"
         end)
 
       assert html
