@@ -2867,7 +2867,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{run_steps: run_steps} =
       get_run_steps_and_history(workflow_id, run_id)
 
-    snapshot = Snapshot.get_by_version(workflow_id, version_tag)
+    snapshot = snapshot_by_version(workflow_id, version_tag)
 
     # snapshots currently don't have positions
     # if we don't do this, the patch wouldn't replace the existing position in params
@@ -2876,6 +2876,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     # pushing the snapshot state before pushing the runs for it
     socket
     |> handle_selection_with_mode(selected_id, "history")
+    |> assign(selected_run: run_id)
     |> assign_workflow(socket.assigns.workflow, updated_snapshot)
     |> push_patches_applied(socket.assigns.workflow_params, false)
     |> push_event("patch-runs", %{
