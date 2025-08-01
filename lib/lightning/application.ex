@@ -64,8 +64,6 @@ defmodule Lightning.Application do
 
     :ok = Oban.Telemetry.attach_default_logger(:debug)
 
-    # Process group will be started in children list below
-
     topologies =
       if System.get_env("K8S_HEADLESS_SERVICE") do
         [
@@ -132,6 +130,7 @@ defmodule Lightning.Application do
         {Phoenix.PubSub, name: Lightning.PubSub},
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
+        {Lightning.WorkflowCollaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
@@ -141,8 +140,7 @@ defmodule Lightning.Application do
         {Lightning.Runtime.RuntimeManager,
          worker_secret: Lightning.Config.worker_secret(),
          endpoint: LightningWeb.Endpoint},
-        {Lightning.KafkaTriggers.Supervisor, type: :supervisor},
-        {Lightning.WorkflowCollaboration.Supervisor, []}
+        {Lightning.KafkaTriggers.Supervisor, type: :supervisor}
         # Start a worker by calling: Lightning.Worker.start_link(arg)
         # {Lightning.Worker, arg}
       ]

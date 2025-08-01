@@ -50,4 +50,12 @@ defmodule Lightning.WorkflowCollaboration.Supervisor do
   def list_collaborations do
     DynamicSupervisor.which_children(__MODULE__.DynamicSupervisor)
   end
+
+  def start_child(child_spec) do
+    DynamicSupervisor.start_child(__MODULE__.DynamicSupervisor, child_spec)
+  end
+
+  def stop_child(pid) do
+    DynamicSupervisor.terminate_child(__MODULE__.DynamicSupervisor, pid)
+  end
 end
