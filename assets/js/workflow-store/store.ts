@@ -143,7 +143,7 @@ export type ReplayAction = {
   inverse: ImmerPatch[];
 };
 
-const undos: ReplayAction[] = [];
+let undos: ReplayAction[] = [];
 let redos: ReplayAction[] = [];
 
 export const RUNS_TMP: RunInfo = {
@@ -464,6 +464,8 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       }));
     },
     setState(value) {
+      undos = [];
+      redos = [];
       set(value);
       get().updateRuns(RUNS_TMP, null);
     },

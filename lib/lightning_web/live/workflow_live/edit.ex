@@ -2877,7 +2877,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket
     |> handle_selection_with_mode(selected_id, "history")
     |> assign_workflow(socket.assigns.workflow, updated_snapshot)
-    |> push_patches_applied(socket.assigns.workflow_params)
+    |> push_patches_applied(socket.assigns.workflow_params, false)
     |> push_event("patch-runs", %{
       run_id: run_id,
       run_steps: run_steps
@@ -2927,13 +2927,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     )
   end
 
-  defp push_patches_applied(socket, initial_params) do
+  defp push_patches_applied(socket, initial_params, inverse \\ true) do
     next_params = socket.assigns.workflow_params
 
     patches =
       WorkflowParams.to_patches(initial_params, next_params)
 
-    inverse_patches = WorkflowParams.to_patches(next_params, initial_params)
+    inverse_patches =
+      if inverse == true,
+        do: WorkflowParams.to_patches(next_params, initial_params),
+        else: []
 
     socket
     |> push_event("patches-applied", %{
