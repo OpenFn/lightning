@@ -1468,7 +1468,7 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_projects_overview(user) == []
     end
 
-    test "returns projects overview with workflows and collaborators count" do
+    test "returns projects overview with workflows, collaborators count and if has chats " do
       user = insert(:user)
       other_user = insert(:user)
 
@@ -1477,25 +1477,38 @@ defmodule Lightning.ProjectsTest do
         insert(:project, name: "Project A", project_users: [%{user_id: user.id}])
 
       insert(:simple_workflow, project: project)
-      insert(:simple_workflow, project: project)
+      %{jobs: [job1 | _]} = insert(:simple_workflow, project: project)
+
+      insert(:chat_session,
+        user: user,
+        job: job1,
+        messages: [%{role: :user, content: "what?", user: user}]
+      )
 
       insert(:project,
         name: "Project B",
         project_users: [%{user_id: other_user.id}]
       )
+      |> then(fn other_project ->
+        %{jobs: [other_job | _]} =
+          insert(:simple_workflow, project: other_project)
 
-      result = Projects.get_projects_overview(user)
+        insert(:chat_session,
+          user: other_user,
+          job: other_job,
+          messages: [%{role: :user, content: "what?", user: other_user}]
+        )
+      end)
 
-      assert length(result) == 1
-
-      [
-        %ProjectOverviewRow{
-          id: ^project_id,
-          name: "Project A",
-          workflows_count: 2,
-          collaborators_count: 1
-        }
-      ] = result
+      assert [
+               %ProjectOverviewRow{
+                 id: ^project_id,
+                 name: "Project A",
+                 workflows_count: 2,
+                 collaborators_count: 1,
+                 has_ai_chat: true
+               }
+             ] = Projects.get_projects_overview(user)
     end
 
     test "orders projects by name ascending by default" do

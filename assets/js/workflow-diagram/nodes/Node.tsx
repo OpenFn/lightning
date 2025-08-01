@@ -1,8 +1,8 @@
-import React, { memo } from 'react';
+import { SparklesIcon } from '@heroicons/react/24/outline';
 import { Handle, type NodeProps } from '@xyflow/react';
-
-import Shape from '../components/Shape';
+import React, { memo } from 'react';
 import ErrorMessage from '../components/ErrorMessage';
+import Shape from '../components/Shape';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
@@ -23,6 +23,7 @@ type ErrorObject = {
 
 type LabelProps = React.PropsWithChildren<{
   hasErrors?: boolean;
+  hasAi?: boolean;
 }>;
 
 function errorsMessage(errors: ErrorObject): string {
@@ -39,16 +40,29 @@ const hasErrors = (errors: ErrorObject | null | undefined): boolean => {
   return Object.values(errors).some(errorArray => errorArray.length > 0);
 };
 
-const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
+const Label: React.FC<LabelProps> = ({
+  children,
+  hasErrors = false,
+  hasAi = false,
+}) => {
   const textColorClass = hasErrors ? 'text-red-500' : '';
 
   if (children && (children as any).length) {
     return (
-      <p
-        className={`line-clamp-2 align-left text-m max-w-[120px] text-ellipsis overflow-hidden ${textColorClass}`}
-      >
-        {children}
-      </p>
+      <div className="inline-flex">
+        <p
+          className={`flex line-clamp-2 align-left text-m max-w-[275px] text-ellipsis overflow-hidden ${textColorClass}`}
+        >
+          {children}
+        </p>
+        {hasAi ? (
+          <SparklesIcon
+            title="AI chat was used in this job"
+            className="w-5 h-5 ml-1"
+            color="#FF5722"
+          />
+        ) : null}
+      </div>
     );
   }
   return null;
@@ -225,8 +239,10 @@ const Node = ({
             }}
           />
         )}
-        <div className="flex flex-col mt-8 ml-2 absolute left-[116px] top-0 pointer-events-none min-w-[275px]">
-          <Label hasErrors={hasErrors(errors)}>{label}</Label>
+        <div className="flex flex-col flex-1 ml-2 mt-8">
+          <Label hasErrors={hasErrors(errors)} hasAi={!!data.has_ai_chat}>
+            {label}{' '}
+          </Label>
           <SubLabel>{sublabel}</SubLabel>
           {data.isActiveDropTarget &&
             typeof data.dropTargetError === 'string' && (

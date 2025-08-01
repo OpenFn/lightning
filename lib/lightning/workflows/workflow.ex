@@ -55,6 +55,7 @@ defmodule Lightning.Workflows.Workflow do
     field :deleted_at, :utc_datetime
 
     field :delete, :boolean, virtual: true
+    field :has_ai_chat, :boolean, virtual: true
 
     timestamps()
   end
