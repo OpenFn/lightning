@@ -43,7 +43,9 @@ defmodule LightningWeb.RunLive.Index do
     killed: :boolean,
     exception: :boolean,
     lost: :boolean,
-    rejected: :boolean
+    rejected: :boolean,
+    sort_by: :string,
+    sort_direction: :string
   }
 
   @empty_page %{
@@ -143,7 +145,9 @@ defmodule LightningWeb.RunLive.Index do
         Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
       "date_before" => "",
       "wo_date_after" => "",
-      "wo_date_before" => ""
+      "wo_date_before" => "",
+      "sort_by" => "last_activity",
+      "sort_direction" => "desc"
     }
 
   @impl true
@@ -469,6 +473,33 @@ defmodule LightningWeb.RunLive.Index do
      |> assign(filters: filters)
      |> push_patch(
        to: ~p"/projects/#{project.id}/history?#{%{filters: filters}}"
+     )}
+  end
+
+  def handle_event("sort", %{"by" => sort_by}, socket) do
+    %{filters: filters, project: project} = socket.assigns
+
+    current_sort_by = Map.get(filters, "sort_by")
+    current_sort_direction = Map.get(filters, "sort_direction", "desc")
+
+    # Toggle direction if clicking the same column, otherwise use desc as default
+    new_sort_direction =
+      if current_sort_by == sort_by do
+        if current_sort_direction == "desc", do: "asc", else: "desc"
+      else
+        "desc"
+      end
+
+    new_filters =
+      filters
+      |> Map.put("sort_by", sort_by)
+      |> Map.put("sort_direction", new_sort_direction)
+
+    {:noreply,
+     socket
+     |> assign(filters: new_filters)
+     |> push_patch(
+       to: ~p"/projects/#{project.id}/history?#{%{filters: new_filters}}"
      )}
   end
 

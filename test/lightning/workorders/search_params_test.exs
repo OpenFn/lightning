@@ -61,6 +61,27 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
              }
     end
 
+    test "includes sort params if given" do
+      assert SearchParams.to_uri_params(%{
+               "sort_direction" => "desc",
+               "sort_by" => "inserted_at",
+               "failed" => true,
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
+             }) == %{
+               "id" => true,
+               "log" => true,
+               "body" => true,
+               "failed" => true,
+               "wo_date_after" => nil,
+               "wo_date_before" => nil,
+               "date_after" => nil,
+               "date_before" => nil,
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+               "sort_direction" => "desc",
+               "sort_by" => "inserted_at"
+             }
+    end
+
     test "converts dates to string" do
       now = DateTime.utc_now()
 

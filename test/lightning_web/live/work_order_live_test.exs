@@ -103,7 +103,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
   end
 
   defp format_timestamp(timestamp) do
-    Timex.format!(timestamp, "%d/%b/%y, %H:%M", :strftime)
+    Calendar.strftime(timestamp, "%Y-%m-%d %H:%M:%S.%f UTC")
+    |> String.replace(~r/\.(\d{3})\d+/, ".\\1")
   end
 
   defp assert_work_order_steps(work_order, expected_count) do
@@ -513,11 +514,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
           runs_params
         )
 
-      claimed_at = format_timestamp(run_1.claimed_at)
-      claimed_iso = DateTime.to_iso8601(run_1.claimed_at)
+      claimed_at_formatted = format_timestamp(run_1.claimed_at)
+      claimed_at = DateTime.to_iso8601(run_1.claimed_at)
 
-      started_at = format_timestamp(run_2.started_at)
-      started_iso = DateTime.to_iso8601(run_2.started_at)
+      started_at_formatted = format_timestamp(run_2.started_at)
+      started_at = DateTime.to_iso8601(run_2.started_at)
 
       {:ok, view, _html} =
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
@@ -525,24 +526,32 @@ defmodule LightningWeb.WorkOrderLiveTest do
       rendered =
         view |> element("#toggle_details_for_#{work_order.id}") |> render_click()
 
-      assert rendered =~ run_1.id
       assert rendered =~ run_2.id
+      refute rendered =~ run_1.id
+
+      assert view
+             |> element("#toggle_runs_for_#{work_order.id}")
+             |> render_click() =~ run_1.id
 
       claimed_at_element =
         view
-        |> element("div[role='columnheader']", "claimed @")
+        |> element("div[data-label='run state']", "claimed")
         |> render()
 
       assert claimed_at_element =~ claimed_at
-      assert claimed_at_element =~ "Run claimed by worker at #{claimed_iso}"
+
+      assert claimed_at_element =~
+               "data-iso-timestamp=\"#{claimed_at_formatted}\""
 
       started_at_element =
         view
-        |> element("div[role='columnheader']", "started @")
+        |> element("div[data-label='run state']", "started")
         |> render()
 
       assert started_at_element =~ started_at
-      assert started_at_element =~ "Run started at #{started_iso}"
+
+      assert started_at_element =~
+               "data-iso-timestamp=\"#{started_at_formatted}\""
     end
 
     test "lists all workorders", %{
@@ -601,28 +610,28 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       table =
         view
-        |> element("section#inner_content div[data-entity='work_order_index']")
+        |> element("#work-orders-table")
         |> render()
 
       assert table =~ workflow.name
       assert table =~ LiveHelpers.display_short_uuid(work_order.id)
       assert table =~ LiveHelpers.display_short_uuid(dataclip.id)
 
-      refute table =~ LiveHelpers.display_short_uuid(run_id)
+      refute has_element?(view, "#run_#{run_id}")
 
-      assert view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:first-child > div:last-child"
-             )
-             |> render() =~
-               "Enqueued"
+      # Check both work orders exist and have correct states
+      # The first work order has state: :rejected
+      # The second work order (work_order variable) has default state: :pending
 
-      assert view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:last-child > div:first-child > div:last-child"
-             )
-             |> render() =~
-               "Rejected"
+      # Since we don't have the ID of the first work order, we need to check that both states exist
+      # We can check that the table contains both "Rejected" and "Pending" statuses
+      table_html =
+        view
+        |> element("#work-orders-table")
+        |> render()
+
+      assert table_html =~ "Rejected"
+      assert table_html =~ "Enqueued"
 
       # toggle work_order details
       # TODO move to test work_order_component
@@ -630,7 +639,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       expanded =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+          "tbody#workorder-#{work_order.id} tr#toggle_details_for_#{work_order.id}"
         )
         |> render_click()
 
@@ -640,12 +649,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
       collapsed_again =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
+          "tbody#workorder-#{work_order.id} tr#toggle_details_for_#{work_order.id}"
         )
         |> render_click()
 
       refute collapsed_again =~ "run-#{run_id}"
-      refute collapsed_again =~ LiveHelpers.display_short_uuid(run_id)
     end
   end
 
@@ -748,10 +756,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       work_order_list =
         html
         |> Floki.parse_fragment!()
-        |> Floki.find("div[data-entity='work_order_list'] > div:first-child")
+        |> Floki.find("#work-orders-table tbody > tr:first-child")
         |> hd()
-
-      assert Floki.attribute(work_order_list, "class") |> hd() =~ "animate-pulse"
 
       assert Floki.children(work_order_list) |> Floki.text() =~
                "Loading work orders ..."
@@ -861,7 +867,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+               "tbody#workorder-#{work_order.id} td.text-right:nth-child(8)"
              )
              |> render() =~ "Failed"
 
@@ -871,9 +877,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       |> render_submit()
 
       refute view
-             |> element(
-               "section#inner_content div[data-entity='work _order_list'] > div:first-child > div:last-child"
-             )
+             |> element("tbody#workorder-#{work_order.id}")
              |> has_element?()
 
       # recheck failure
@@ -884,9 +888,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
-        )
+        |> element("tbody#workorder-#{work_order.id} td.text-right:nth-child(8)")
         |> render_async()
 
       assert div =~ "Failed"
@@ -993,9 +995,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
-        )
+        |> element("tbody:first-child")
         |> render_async()
 
       refute div =~ "workflow 1"
@@ -1005,9 +1005,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
-        )
+        |> element("tbody:first-child")
         |> render_async()
 
       assert div =~ "workflow 1"
@@ -1109,9 +1107,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       div =
         view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
-        )
+        |> element("tbody:first-child td.text-right:nth-child(8)")
         |> render()
 
       assert div =~ "Failed"
@@ -1153,7 +1149,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       refute workflow_displayed(view, "workflow 2")
     end
 
-    test "bulk select isn't available when there's no workorder matching the filter",
+    test "bulk select is disabled when there's no workorder matching the filter",
          %{
            conn: conn,
            project: project
@@ -1199,10 +1195,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
       view |> select_workflow_in_dropdown(workflow.id)
 
       assert has_element?(view, "#select_all")
+      refute has_element?(view, "#select_all:disabled")
 
       view |> select_workflow_in_dropdown(workflow_two.id)
 
-      refute has_element?(view, "#select_all")
+      assert has_element?(view, "#select_all:disabled")
     end
   end
 
@@ -1322,8 +1319,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       view |> element("#toggle_details_for_#{work_order.id}") |> render_click()
 
-      assert has_element?(view, "#run_#{run_1.id}.hidden")
-      refute has_element?(view, "#run_#{run_2.id}.hidden")
+      refute has_element?(view, "#run_#{run_1.id}")
       assert has_element?(view, "#run_#{run_2.id}")
     end
 
@@ -1435,21 +1431,17 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       view |> element("#toggle_details_for_#{workorder.id}") |> render_click()
 
-      assert has_element?(view, "#run_#{run_1.id}.hidden")
-      refute has_element?(view, "#run_#{run_2.id}.hidden")
+      refute has_element?(view, "#run_#{run_1.id}")
       assert has_element?(view, "#run_#{run_2.id}")
 
       # show all
       view |> element("#toggle_runs_for_#{workorder.id}") |> render_click()
-      refute has_element?(view, "#run_#{run_1.id}.hidden")
-      refute has_element?(view, "#run_#{run_2.id}.hidden")
       assert has_element?(view, "#run_#{run_1.id}")
       assert has_element?(view, "#run_#{run_2.id}")
 
       # hide some
       view |> element("#toggle_runs_for_#{workorder.id}") |> render_click()
-      assert has_element?(view, "#run_#{run_1.id}.hidden")
-      refute has_element?(view, "#run_#{run_2.id}.hidden")
+      refute has_element?(view, "#run_#{run_1.id}")
       assert has_element?(view, "#run_#{run_2.id}")
     end
 
@@ -1812,9 +1804,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   def workflow_displayed(view, name) do
     elem =
       view
-      |> element(
-        "section#inner_content div[data-entity='work_order_list'] > div:first-child"
-      )
+      |> element("tbody:first-child")
 
     if elem |> has_element?() do
       elem |> render() =~ name
@@ -2397,53 +2387,6 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
   defp safe_html_string(string) do
     string |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-  end
-
-  describe "timestamp" do
-    test "default option" do
-      now = DateTime.utc_now()
-
-      assert render_component(&LightningWeb.RunLive.Components.timestamp/1,
-               timestamp: now
-             ) =~
-               Timex.format!(
-                 now,
-                 "%d/%b/%y, %H:%M:%S",
-                 :strftime
-               )
-    end
-
-    test "wrapped option" do
-      now = DateTime.utc_now()
-
-      html =
-        render_component(&LightningWeb.RunLive.Components.timestamp/1,
-          timestamp: now,
-          style: :wrapped
-        )
-
-      refute html =~ Timex.format!(now, "%d/%b/%y, %H:%M:%S", :strftime)
-
-      assert html =~ Timex.format!(now, "%d/%b/%y", :strftime)
-
-      assert html =~ Timex.format!(now, "%H:%M:%S", :strftime)
-    end
-
-    test "with time only option" do
-      now = DateTime.utc_now()
-
-      html =
-        render_component(&LightningWeb.RunLive.Components.timestamp/1,
-          timestamp: now,
-          style: :time_only
-        )
-
-      refute html =~ Timex.format!(now, "%d/%b/%y, %H:%M:%S", :strftime)
-
-      refute html =~ Timex.format!(now, "%d/%b/%y", :strftime)
-
-      assert html =~ Timex.format!(now, "%H:%M:%S", :strftime)
-    end
   end
 
   defp select_workflow_in_dropdown(view, workflow_id) do

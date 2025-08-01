@@ -2,6 +2,8 @@ import tippy, {
   type Instance as TippyInstance,
   type Placement,
 } from 'tippy.js';
+import { format, formatRelative } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
@@ -581,25 +583,47 @@ export const Tooltip = {
     let allowHTML = this.el.dataset.allowHtml
       ? this.el.dataset.allowHtml
       : 'false';
+    let hideOnClick = this.el.dataset.hideOnClick !== 'false';
+
     this._tippyInstance = tippy(this.el, {
       placement: placement,
       animation: false,
       allowHTML: allowHTML === 'true',
-      interactive: true,
+      interactive: false,
+      hideOnClick: hideOnClick,
     });
     this._tippyInstance.setContent(content);
+
+    // Store the original content for restoration
+    this._originalContent = content;
+
+    // Listen for custom events to show "Copied!" message
+    this.el.addEventListener('show-copied', () => {
+      if (this._tippyInstance) {
+        this._tippyInstance.setContent('Copied!');
+        this._tippyInstance.show();
+
+        setTimeout(() => {
+          if (this._tippyInstance) {
+            this._tippyInstance.setContent(this._originalContent);
+            this._tippyInstance.hide();
+          }
+        }, 1500);
+      }
+    });
   },
   updated() {
     let content = this.el.ariaLabel;
     if (content && this._tippyInstance) {
       this._tippyInstance.setContent(content);
+      this._originalContent = content;
     }
   },
   destroyed() {
     if (this._tippyInstance) this._tippyInstance.unmount();
   },
 } as PhoenixHook<
-  { _tippyInstance: TippyInstance | null },
+  { _tippyInstance: TippyInstance | null; _originalContent: string },
   { placement: Placement }
 >;
 
@@ -679,6 +703,7 @@ export const Copy = {
 
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
+      ev.stopPropagation();
 
       let text = '';
 
@@ -701,22 +726,23 @@ export const Copy = {
         navigator.clipboard
           .writeText(text)
           .then(() => {
-            console.log('Copied!');
-            if (phxThenAttribute == null) {
-              let originalText = element.textContent;
-              element.textContent = 'Copied!';
-              setTimeout(function () {
-                element.textContent = originalText;
-              }, 3000);
-            } else {
-              this.liveSocket.execJS(this.el, phxThenAttribute);
-            }
+            this.showCopiedTooltip();
           })
           .catch(err => {
             console.error('Failed to copy text: ', err);
           });
       }
     });
+  },
+
+  showCopiedTooltip() {
+    // Find the tooltip element that contains this copy element
+    const tooltipElement = this.el.closest('[phx-hook="Tooltip"]');
+
+    if (tooltipElement) {
+      // Dispatch a custom event to trigger the "Copied!" tooltip
+      tooltipElement.dispatchEvent(new CustomEvent('show-copied'));
+    }
   },
 } as PhoenixHook;
 
@@ -848,3 +874,78 @@ export const TypewriterHook = {
     typeH1();
   },
 };
+
+const relativeLocale = {
+  ...enUS,
+  formatRelative: (token, date, baseDate, options) => {
+    const formatters = {
+      lastWeek: "'last' eeee 'at' p",
+      yesterday: "'yesterday at' p",
+      today: "'today at' p",
+      tomorrow: "'tomorrow at' p",
+      nextWeek: "eeee 'at' p",
+      other: (date, baseDate) => {
+        const currentYear = new Date().getFullYear();
+        const dateYear = date.getFullYear();
+        return dateYear === currentYear ? "MMMM do, p" : "yyyy-MM-dd, p";
+      },
+    };
+    
+    if (token === 'other') {
+      return formatters.other(date, baseDate);
+    }
+    
+    return formatters[token] || formatters.other(date, baseDate);
+  },
+};
+
+export const LocalTimeConverter = {
+  mounted() {
+    this.convertDateTime();
+  },
+
+  updated() {
+    this.convertDateTime();
+  },
+
+  convertDateTime() {
+    const isoTimestamp = this.el.dataset['isoTimestamp'];
+    const display = this.el.dataset['format'];
+
+    if (!isoTimestamp) return;
+    this.convertToDisplayTime(isoTimestamp, display || 'relative');
+  },
+
+  convertToDisplayTime(isoTimestamp: string, display: string) {
+    try {
+      const now = new Date();
+      const date = new Date(isoTimestamp);
+      let displayTime: string | undefined;
+
+      switch (display) {
+        case 'detailed':
+          displayTime = format(date, "MMMM do, yyyy 'at' h:mm:ss.SSS a");
+          break;
+
+        // case 'relative':
+        default:
+          displayTime = formatRelative(date, now, { locale: relativeLocale });
+          break;
+
+        // Is there any need for a default? Detailed or relative make sense.
+        // default:
+        //   displayTime = format(date, "MMM do 'at' h:mmaaa");
+      }
+
+      const textElement = this.el.querySelector('.datetime-text');
+      if (textElement && displayTime) {
+        textElement.textContent = displayTime;
+      }
+    } catch (err) {
+      console.error('Failed to convert timestamp to display time:', err);
+    }
+  },
+} as PhoenixHook<{
+  convertDateTime: () => void;
+  convertToDisplayTime: (isoTimestamp: string, display: string) => void;
+}>;

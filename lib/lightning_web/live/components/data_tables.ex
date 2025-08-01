@@ -307,7 +307,7 @@ defmodule LightningWeb.Components.DataTables do
           <:body>
             <%= for file <- @project_files do %>
               <.tr>
-                <.td>{file.inserted_at |> Lightning.Helpers.format_date()}</.td>
+                <.td><Common.datetime datetime={file.inserted_at} /></.td>
                 <.td>
                   <%= if file.path do %>
                     {Path.basename(file.path)}
