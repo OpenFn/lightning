@@ -459,7 +459,7 @@ defmodule Lightning.ProjectsTest do
       actual_deletion_date =
         Lightning.Config.purge_deleted_after_days()
         |> Lightning.Helpers.actual_deletion_date()
-        |> Lightning.Helpers.format_date()
+        |> Lightning.Helpers.format_date("%F at %T")
 
       for user <- [user_1, user_2] do
         email = %Email{

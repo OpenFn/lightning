@@ -17,21 +17,38 @@ and this project adheres to
 
 ### Added
 
-- Allow users to name existsing dataclips
-  [#311](https://github.com/OpenFn/lightning/issues/311)
-
 ### Changed
 
 ### Fixed
 
-## [v2.16.7-pre1] 2025-08-01
+## [v2.14.0-pre] - 2025-08-01
+
+### Added
+
+- Allow users to name and preserve existing dataclips
+  [#311](https://github.com/OpenFn/lightning/issues/311)
+
+### Changed
+
+- Click to copy all timestamps in UTC across the application
+  [1419](https://github.com/OpenFn/lightning/issues/1419)
+- Display relative times and respect browser timezones
+  [1255](https://github.com/OpenFn/lightning/issues/1255)
+- Sortable history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+- Visible run durations on the history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+- Easier expansion of work orders in the history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+
+## [v2.13.7-pre1] 2025-08-01
 
 ### Added
 
 - Keychain credentials allow variable authentication/secret selection based on a
   run's input dataclip [#3359](https://github.com/OpenFn/lightning/issues/3359)
 
-## [v2.16.7-pre] 2025-07-31
+## [v2.13.7-pre] 2025-07-31
 
 ### Fixed
 

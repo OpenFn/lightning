@@ -783,7 +783,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> has_element?(
-               "[id='canvas-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at)}']",
+               "[id='canvas-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at, "%F at %T")}']",
                version
              )
 
@@ -813,7 +813,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert view
                |> has_element?(
-                 "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at)}']",
+                 "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at, "%F at %T")}']",
                  version
                )
 
@@ -1052,7 +1052,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> has_element?(
-               "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(run_1.snapshot.inserted_at)}']",
+               "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(run_1.snapshot.inserted_at, "%F at %T")}']",
                run_1_version
              )
 
