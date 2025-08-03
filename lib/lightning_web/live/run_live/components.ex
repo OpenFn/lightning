@@ -361,11 +361,11 @@ defmodule LightningWeb.RunLive.Components do
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
       <div
         role="cell"
-        class="flex-[2] py-2 text-sm font-normal text-gray-500 text-left"
+        class="flex-1 py-2 text-sm font-normal text-gray-500 text-left"
       >
-        <div class="flex pl-4">
+        <div class="flex items-center pl-4">
           <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
-          <div class="text-gray-800 flex gap-2 text-sm">
+          <div class="text-gray-800 flex items-center gap-2 text-sm">
             <.link
               navigate={
                 ~p"/projects/#{@project_id}/runs/#{@run}?#{%{step: @step.id}}"
@@ -376,63 +376,57 @@ defmodule LightningWeb.RunLive.Components do
             </.link>
 
             <%= if @is_clone do %>
-              <div class="flex gap-1">
-                <span
-                  class="cursor-pointer"
-                  id={"clone_" <> @run.id <> "_" <> @step.id}
-                  aria-label="This step was originally executed in a previous run.
-                    It was skipped in this run; the original output has been
-                    used as the starting point for downstream jobs."
-                  phx-hook="Tooltip"
-                  data-placement="right"
-                >
-                  <Heroicons.paper_clip
-                    mini
-                    class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
-                  />
-                </span>
-              </div>
+              <span
+                class="cursor-pointer"
+                id={"clone_" <> @run.id <> "_" <> @step.id}
+                aria-label="This step was originally executed in a previous run.
+                  It was skipped in this run; the original output has been
+                  used as the starting point for downstream jobs."
+                phx-hook="Tooltip"
+                data-placement="right"
+              >
+                <Heroicons.paper_clip
+                  mini
+                  class="h-3 w-3 flex-shrink-0 text-gray-500"
+                />
+              </span>
             <% end %>
-
-            <%= if @can_run_workflow && @step.exit_reason do %>
-              <.step_rerun_tag {assigns} />
-            <% end %>
-            <.link
-              id={"inspect-step-#{@step.id}"}
-              phx-hook="Tooltip"
-              aria-label="Inspect this step"
-              class="cursor-pointer"
-              navigate={
-                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run.id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
-                  <> "#log"
-              }
-            >
-              <.icon
-                naked
-                name="hero-document-magnifying-glass-mini"
-                class="h-5 w-5"
-              />
-            </.link>
+            &bull;
+            <span class="text-xs text-gray-500">
+              started <Common.datetime datetime={@step.started_at} format={:time_only} />
+            </span>
           </div>
         </div>
       </div>
       <div
         role="cell"
-        class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right"
+        class="flex-shrink-0 py-2 px-4 text-right"
       >
-        started <Common.datetime datetime={@step.started_at} format={:time_only} />
-      </div>
-      <div
-        role="cell"
-        class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right"
-      >
-        <.elapsed_indicator item={@step} context="list" />
-      </div>
-      <div
-        role="cell"
-        class="flex-1 py-2 px-4 text-xs text-gray-500 font-mono text-right"
-      >
-        {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
+        <div class="flex items-center justify-end gap-3 text-xs text-gray-500">
+          <%= if @can_run_workflow && @step.exit_reason do %>
+            <.step_rerun_tag {assigns} />
+          <% end %>
+          <.link
+            id={"inspect-step-#{@step.id}"}
+            phx-hook="Tooltip"
+            aria-label="Inspect this step"
+            class="cursor-pointer"
+            navigate={
+              ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run.id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
+                <> "#log"
+            }
+          >
+            <.icon
+              naked
+              name="hero-document-magnifying-glass-mini"
+              class="h-5 w-5"
+            />
+          </.link>
+          <.elapsed_indicator item={@step} context="list" />
+          <span class="font-mono">
+            {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
+          </span>
+        </div>
       </div>
     </div>
     """
