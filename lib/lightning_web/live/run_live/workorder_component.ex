@@ -232,15 +232,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <span
                   id={"retry-disabled-#{@work_order.id}"}
                   class="inline-flex items-center p-1 text-xs font-medium text-gray-400 cursor-not-allowed rounded"
-                  title={
+                  phx-hook="Tooltip"
+                  data-placement="top"
+                  data-allow-html="true"
+                  aria-label={
                     rerun_zero_persistence_tooltip_message(
                       @project.id,
                       @can_edit_data_retention
                     )
                   }
-                  phx-hook="Tooltip"
-                  data-placement="top"
-                  data-allow-html="true"
                 >
                   <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
                 </span>
