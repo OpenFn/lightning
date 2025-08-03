@@ -361,11 +361,11 @@ defmodule LightningWeb.RunLive.Components do
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
       <div
         role="cell"
-        class="flex-1 py-2 text-sm font-normal text-gray-500 text-left"
+        class="flex-1 py-2 text-xs font-normal text-gray-500 text-left"
       >
         <div class="flex items-center pl-4">
           <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
-          <div class="text-gray-800 flex items-center gap-2 text-sm">
+          <div class="text-gray-800 flex items-center gap-2 text-xs">
             <.link
               navigate={
                 ~p"/projects/#{@project_id}/runs/#{@run}?#{%{step: @step.id}}"
