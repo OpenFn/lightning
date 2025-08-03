@@ -275,13 +275,29 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       <div data-label="run state" class="flex-1 py-2 px-4 text-right">
                         <%= case run.state do %>
                           <% :available -> %>
-                            enqueued <Common.datetime datetime={run.inserted_at} />
+                            enqueued
+                            <Common.datetime
+                              datetime={run.inserted_at}
+                              format={:relative_detailed}
+                            />
                           <% :claimed -> %>
-                            claimed <Common.datetime datetime={run.claimed_at} />
+                            claimed
+                            <Common.datetime
+                              datetime={run.claimed_at}
+                              format={:relative_detailed}
+                            />
                           <% :started -> %>
-                            started <Common.datetime datetime={run.started_at} />
+                            started
+                            <Common.datetime
+                              datetime={run.started_at}
+                              format={:relative_detailed}
+                            />
                           <% _state -> %>
-                            finished <Common.datetime datetime={run.finished_at} />
+                            finished
+                            <Common.datetime
+                              datetime={run.finished_at}
+                              format={:relative_detailed}
+                            />
                         <% end %>
                       </div>
                       <div class="flex-1 py-2 px-4 text-right">

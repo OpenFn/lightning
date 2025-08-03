@@ -285,7 +285,7 @@ defmodule LightningWeb.RunLive.Components do
 
   def async_filler(assigns) do
     ~H"""
-    <div data-entity="work_order" class={["bg-gray-50", @class]}>
+    <div data-entity="work_order" class={@class}>
       <div class="py-3 text-center text-gray-500">{@message}</div>
     </div>
     """
@@ -420,7 +420,7 @@ defmodule LightningWeb.RunLive.Components do
         role="cell"
         class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right"
       >
-        <Common.datetime datetime={@step.started_at} format={:detailed} />
+        started <Common.datetime datetime={@step.started_at} format={:time_only} />
       </div>
       <div
         role="cell"
