@@ -361,7 +361,7 @@ defmodule LightningWeb.RunLive.Components do
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
       <div
         role="cell"
-        class="flex-[2] py-2 text-sm font-normal text-gray-500 text-left"
+        class="flex-[3] py-2 text-sm font-normal text-gray-500 text-left"
       >
         <div class="flex pl-4">
           <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
@@ -418,7 +418,7 @@ defmodule LightningWeb.RunLive.Components do
       </div>
       <div
         role="cell"
-        class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right"
+        class="flex-[3] py-2 px-4 text-xs font-normal text-gray-500 text-right"
       >
         started <Common.datetime datetime={@step.started_at} format={:time_only} />
       </div>
@@ -433,6 +433,11 @@ defmodule LightningWeb.RunLive.Components do
         class="flex-1 py-2 px-4 text-xs text-gray-500 font-mono text-right"
       >
         {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
+      </div>
+      <div
+        role="cell"
+        class="flex-1 py-2 px-4 text-xs text-gray-500 text-right"
+      >
       </div>
     </div>
     """

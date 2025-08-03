@@ -243,7 +243,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     class="w-full bg-white border border-gray-300 rounded-lg overflow-hidden"
                   >
                     <div class="bg-gray-200 text-xs flex items-center">
-                      <div class="flex-[2] py-2 text-left">
+                      <div class="flex-[3] py-2 text-left">
                         <div class="pl-4">
                           Run
                           <.link navigate={
@@ -272,7 +272,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                           <% end %>
                         </div>
                       </div>
-                      <div data-label="run state" class="flex-1 py-2 px-4 text-right">
+                      <div data-label="run state" class="flex-[3] py-2 px-4 text-right">
                         <%= case run.state do %>
                           <% :available -> %>
                             enqueued
@@ -305,6 +305,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       </div>
                       <div class="flex-1 py-2 px-4 text-right">
                         {run.state}
+                      </div>
+                      <div class="flex-1 py-2 px-4 text-right">
                       </div>
                     </div>
                     <.run_item
