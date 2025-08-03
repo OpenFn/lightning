@@ -221,7 +221,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <button
                   type="button"
                   id={"retry-workorder-#{@work_order.id}"}
-                  phx-click={JS.push("bulk-rerun", value: %{type: "single", workorder_id: @work_order.id}) |> JS.push("toggle_details", target: @myself) |> JS.exec("event.stopPropagation()")}
+                  phx-click={
+                    JS.push("bulk-rerun",
+                      value: %{type: "single", workorder_id: @work_order.id}
+                    )
+                    |> JS.push("toggle_details", target: @myself)
+                    |> JS.exec("event.stopPropagation()")
+                  }
                   class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-primary-400 cursor-pointer rounded"
                   phx-hook="Tooltip"
                   aria-label="Retry (run from the start)"
@@ -247,9 +253,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 </span>
               <% end %>
               <%!-- <%= if Enum.count(@work_order.runs) > 1 do %> --%>
-                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                  {Enum.count(@work_order.runs)}
-                </span>
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                {Enum.count(@work_order.runs)}
+              </span>
               <%!-- <% end %> --%>
               <.icon
                 name={

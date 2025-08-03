@@ -399,7 +399,10 @@ defmodule LightningWeb.RunLive.Components do
           </div>
         </div>
       </div>
-      <div role="cell" class="flex-shrink-0 py-2 px-4 text-right group-hover:bg-white">
+      <div
+        role="cell"
+        class="flex-shrink-0 py-2 px-4 text-right group-hover:bg-white"
+      >
         <div class="flex items-center justify-end gap-3 text-xs text-gray-500">
           <%= if @can_run_workflow && @step.exit_reason do %>
             <.step_rerun_tag {assigns} />
@@ -465,7 +468,10 @@ defmodule LightningWeb.RunLive.Components do
           )
         }
       >
-        <.icon name="hero-play-circle-mini" class="h-5 w-5 cursor-not-allowed text-gray-400" />
+        <.icon
+          name="hero-play-circle-mini"
+          class="h-5 w-5 cursor-not-allowed text-gray-400"
+        />
       </span>
     <% end %>
     """
