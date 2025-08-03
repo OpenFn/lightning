@@ -347,8 +347,8 @@ defmodule LightningWeb.RunLive.Components do
 
     step_item_classes =
       if is_clone,
-        do: ~w(flex items-center w-full opacity-50),
-        else: ~w(flex items-center w-full)
+        do: ~w(flex items-center w-full opacity-50 group),
+        else: ~w(flex items-center w-full group)
 
     assigns =
       assign(assigns,
@@ -361,7 +361,7 @@ defmodule LightningWeb.RunLive.Components do
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
       <div
         role="cell"
-        class="flex-1 py-2 text-xs font-normal text-gray-500 text-left"
+        class="flex-1 py-2 text-xs font-normal text-gray-500 text-left group-hover:bg-white"
       >
         <div class="flex items-center pl-4">
           <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
@@ -393,15 +393,13 @@ defmodule LightningWeb.RunLive.Components do
             <% end %>
             &bull;
             <span class="text-xs text-gray-500">
-              started <Common.datetime datetime={@step.started_at} format={:time_only} />
+              started
+              <Common.datetime datetime={@step.started_at} format={:time_only} />
             </span>
           </div>
         </div>
       </div>
-      <div
-        role="cell"
-        class="flex-shrink-0 py-2 px-4 text-right"
-      >
+      <div role="cell" class="flex-shrink-0 py-2 px-4 text-right group-hover:bg-white">
         <div class="flex items-center justify-end gap-3 text-xs text-gray-500">
           <%= if @can_run_workflow && @step.exit_reason do %>
             <.step_rerun_tag {assigns} />
@@ -416,11 +414,7 @@ defmodule LightningWeb.RunLive.Components do
                 <> "#log"
             }
           >
-            <.icon
-              naked
-              name="hero-document-magnifying-glass-mini"
-              class="h-5 w-5"
-            />
+            <.icon naked name="hero-document-magnifying-glass-mini" class="h-5 w-5" />
           </.link>
           <.elapsed_indicator item={@step} context="list" />
           <span class="font-mono">
