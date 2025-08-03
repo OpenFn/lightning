@@ -209,8 +209,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
           <span :if={is_nil(@last_run)}>Not started</span>
         </.td>
-        <.td class="text-center">
-          <div class="flex items-center justify-center gap-2">
+        <.td class="text-right">
+          <div class="flex items-center justify-end gap-2">
             <.state_pill state={@work_order.state} />
           </div>
         </.td>
