@@ -585,11 +585,13 @@ export const Tooltip = {
       : 'false';
     let hideOnClick = this.el.dataset.hideOnClick !== 'false';
 
+    let interactive = this.el.dataset.interactive || false;
+
     this._tippyInstance = tippy(this.el, {
       placement: placement,
       animation: false,
       allowHTML: allowHTML === 'true',
-      interactive: false,
+      interactive,
       hideOnClick: hideOnClick,
     });
     this._tippyInstance.setContent(content);

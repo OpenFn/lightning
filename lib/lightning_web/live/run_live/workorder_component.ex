@@ -233,8 +233,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   id={"retry-disabled-#{@work_order.id}"}
                   class="inline-flex items-center p-1 text-xs font-medium text-gray-400 cursor-not-allowed rounded"
                   phx-hook="Tooltip"
-                  data-placement="top"
                   data-allow-html="true"
+                  data-placement="top"
+                  data-interactive="true"
                   aria-label={
                     rerun_zero_persistence_tooltip_message(
                       @project.id,
@@ -330,7 +331,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       <div class="flex-shrink-0 py-2 px-4 text-right">
                         <div class="flex items-center justify-end gap-4">
                           <.elapsed_indicator item={run} context="details" />
-                          <span>{run.state}</span>
+                          <span class="font-mono">{run.state}</span>
                         </div>
                       </div>
                     </div>
@@ -373,6 +374,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         class="link-uuid cursor-not-allowed"
         phx-hook="Tooltip"
         data-placement="right"
+        data-interactive="true"
         data-allow-html="true"
         aria-label={
           wiped_dataclip_tooltip_message(@project.id, @can_edit_data_retention)

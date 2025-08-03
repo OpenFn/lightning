@@ -457,6 +457,7 @@ defmodule LightningWeb.RunLive.Components do
         phx-hook="Tooltip"
         data-placement="top"
         data-allow-html="true"
+        data-interactive="true"
         aria-label={
           rerun_zero_persistence_tooltip_message(
             @project_id,
