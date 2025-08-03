@@ -370,7 +370,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <span
         id={"view-dataclip-#{@work_order.dataclip_id}-for-#{@work_order.id}"}
         title={@work_order.dataclip_id}
-        class="link-uuid"
+        class="link-uuid cursor-not-allowed"
         phx-hook="Tooltip"
         data-placement="right"
         data-allow-html="true"

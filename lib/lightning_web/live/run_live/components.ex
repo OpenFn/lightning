@@ -446,7 +446,7 @@ defmodule LightningWeb.RunLive.Components do
           name="hero-play-circle-mini"
           class={"h-5 w-5 #{if not @deleted,
             do: "hover:text-primary-400 cursor-pointer",
-            else: "text-gray-400 hover:text-gray-400"
+            else: "text-gray-400 hover:text-gray-400 cursor-not-allowed"
         }"}
         />
       </span>
@@ -464,7 +464,7 @@ defmodule LightningWeb.RunLive.Components do
           )
         }
       >
-        <Heroicons.arrow_path class="h-5 w-5" />
+        <.icon name="hero-play-circle-mini" class="h-5 w-5 cursor-not-allowed text-gray-400" />
       </span>
     <% end %>
     """
