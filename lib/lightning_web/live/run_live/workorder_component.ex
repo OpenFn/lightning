@@ -242,8 +242,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     id={"run_#{run.id}"}
                     class="w-full bg-white border border-gray-300 rounded-lg overflow-hidden"
                   >
-                    <div class="bg-gray-200 text-xs flex items-center">
-                      <div class="flex-[3] py-2 text-left">
+                    <div class="bg-gray-200 text-xs flex items-center w-full">
+                      <div class="flex-1 py-2 text-left">
                         <div class="pl-4">
                           Run
                           <.link navigate={
@@ -270,43 +270,40 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                               </span>
                             <% end %>
                           <% end %>
+                          &bull;
+                          <%= case run.state do %>
+                            <% :available -> %>
+                              enqueued
+                              <Common.datetime
+                                datetime={run.inserted_at}
+                                format={:relative_detailed}
+                              />
+                            <% :claimed -> %>
+                              claimed
+                              <Common.datetime
+                                datetime={run.claimed_at}
+                                format={:relative_detailed}
+                              />
+                            <% :started -> %>
+                              started
+                              <Common.datetime
+                                datetime={run.started_at}
+                                format={:relative_detailed}
+                              />
+                            <% _state -> %>
+                              finished
+                              <Common.datetime
+                                datetime={run.finished_at}
+                                format={:relative_detailed}
+                              />
+                          <% end %>
                         </div>
                       </div>
-                      <div data-label="run state" class="flex-[3] py-2 px-4 text-right">
-                        <%= case run.state do %>
-                          <% :available -> %>
-                            enqueued
-                            <Common.datetime
-                              datetime={run.inserted_at}
-                              format={:relative_detailed}
-                            />
-                          <% :claimed -> %>
-                            claimed
-                            <Common.datetime
-                              datetime={run.claimed_at}
-                              format={:relative_detailed}
-                            />
-                          <% :started -> %>
-                            started
-                            <Common.datetime
-                              datetime={run.started_at}
-                              format={:relative_detailed}
-                            />
-                          <% _state -> %>
-                            finished
-                            <Common.datetime
-                              datetime={run.finished_at}
-                              format={:relative_detailed}
-                            />
-                        <% end %>
-                      </div>
-                      <div class="flex-1 py-2 px-4 text-right">
-                        <.elapsed_indicator item={run} context="details" />
-                      </div>
-                      <div class="flex-1 py-2 px-4 text-right">
-                        {run.state}
-                      </div>
-                      <div class="flex-1 py-2 px-4 text-right">
+                      <div class="flex-shrink-0 py-2 px-4 text-right">
+                        <div class="flex items-center justify-end gap-4">
+                          <.elapsed_indicator item={run} context="details" />
+                          <span>{run.state}</span>
+                        </div>
                       </div>
                     </div>
                     <.run_item
