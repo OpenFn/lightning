@@ -217,6 +217,34 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <.td class="text-right">
           <%= if @work_order.runs !== [] do %>
             <div class="flex items-center justify-end gap-2 pr-2 -mr-3">
+              <%= if wo_dataclip_available?(@work_order) do %>
+                <button
+                  type="button"
+                  id={"retry-workorder-#{@work_order.id}"}
+                  phx-click={JS.push("bulk-rerun", value: %{type: "single", workorder_id: @work_order.id}) |> JS.push("toggle_details", target: @myself) |> JS.exec("event.stopPropagation()")}
+                  class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-primary-400 cursor-pointer rounded"
+                  phx-hook="Tooltip"
+                  aria-label="Retry (run from the start)"
+                >
+                  <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+                </button>
+              <% else %>
+                <span
+                  id={"retry-disabled-#{@work_order.id}"}
+                  class="inline-flex items-center p-1 text-xs font-medium text-gray-400 cursor-not-allowed rounded"
+                  title={
+                    rerun_zero_persistence_tooltip_message(
+                      @project.id,
+                      @can_edit_data_retention
+                    )
+                  }
+                  phx-hook="Tooltip"
+                  data-placement="top"
+                  data-allow-html="true"
+                >
+                  <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+                </span>
+              <% end %>
               <%!-- <%= if Enum.count(@work_order.runs) > 1 do %> --%>
                 <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                   {Enum.count(@work_order.runs)}

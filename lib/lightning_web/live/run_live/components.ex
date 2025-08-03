@@ -611,6 +611,7 @@ defmodule LightningWeb.RunLive.Components do
               <.button
                 type="button"
                 theme="primary"
+                id="rerun-selected-from-start"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
                 phx-disable-with="Running..."
@@ -624,6 +625,7 @@ defmodule LightningWeb.RunLive.Components do
               <.button
                 type="button"
                 theme="primary"
+                id="rerun-all-matching-from-start"
                 phx-click="bulk-rerun"
                 phx-value-type="all"
                 phx-disable-with="Running..."
