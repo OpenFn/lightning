@@ -420,7 +420,7 @@ defmodule LightningWeb.RunLive.Components do
         role="cell"
         class="flex-1 py-2 px-4 text-xs font-normal text-gray-500 text-right"
       >
-        <Common.datetime datetime={@step.started_at} />
+        <Common.datetime datetime={@step.started_at} format={:detailed} />
       </div>
       <div
         role="cell"
