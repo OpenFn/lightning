@@ -49,6 +49,9 @@ export class YjsPhoenixProvider extends Observable<any> {
     this.resyncInterval = options.resyncInterval || 30000;
     this.awareness = options.awareness || new awarenessProtocol.Awareness(doc);
 
+    // Set up LiveView event listeners
+    this.setupLiveViewEventHandlers();
+
     this.setupDocumentHandlers();
     this.setupAwarenessHandlers();
     this.setupResyncInterval();
@@ -71,8 +74,15 @@ export class YjsPhoenixProvider extends Observable<any> {
   }
 
   private handleDocUpdate(update: Uint8Array, origin: any) {
+    console.log('DEBUG: YjsPhoenixProvider - handleDocUpdate called', { 
+      updateLength: update.length, 
+      origin: origin === this ? 'this provider' : 'external' 
+    });
     if (origin !== this) {
+      console.log('DEBUG: YjsPhoenixProvider - sending update to server');
       this.sendUpdate(update);
+    } else {
+      console.log('DEBUG: YjsPhoenixProvider - ignoring update from this provider');
     }
   }
 
@@ -92,8 +102,12 @@ export class YjsPhoenixProvider extends Observable<any> {
   }
 
   private sendUpdate(update: Uint8Array) {
-    if (!this.hook) return;
+    if (!this.hook) {
+      console.log('DEBUG: YjsPhoenixProvider - sendUpdate called but no hook available');
+      return;
+    }
 
+    console.log('DEBUG: YjsPhoenixProvider - sendUpdate called, preparing message');
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, messageSync);
     syncProtocol.writeUpdate(encoder, update);
@@ -105,6 +119,13 @@ export class YjsPhoenixProvider extends Observable<any> {
       user_id: this.getUserId(),
     };
 
+    console.log('DEBUG: YjsPhoenixProvider - pushing yjs_update event to LiveView:', {
+      type: message.type,
+      payloadLength: message.payload instanceof Uint8Array ? message.payload.length : 'unknown',
+      userId: message.user_id,
+      timestamp: message.timestamp,
+      payload: message.payload
+    });
     this.hook.pushEvent('yjs_update', message);
   }
 
@@ -267,6 +288,64 @@ export class YjsPhoenixProvider extends Observable<any> {
 
     this.synced = false;
     this.emit('status', [{ status: 'disconnected' }]);
+  }
+
+  private setupLiveViewEventHandlers() {
+    if (!this.hook?.handleEvent) {
+      console.warn('YjsPhoenixProvider: LiveView hook not available');
+      return;
+    }
+
+    // Listen for Yjs updates from server (from other users)
+    this.hook.handleEvent('yjs_update_from_server', (message: any) => {
+      console.log('Received yjs_update_from_server:', message);
+      console.log('Message payload type:', typeof message.payload);
+      console.log('Message payload:', message.payload);
+      
+      let buffer: Uint8Array;
+      
+      if (message.payload instanceof Uint8Array) {
+        buffer = message.payload;
+      } else if (Array.isArray(message.payload)) {
+        buffer = new Uint8Array(message.payload);
+      } else if (typeof message.payload === 'object' && message.payload !== null) {
+        // Convert object with numeric keys back to Uint8Array
+        const keys = Object.keys(message.payload).map(k => parseInt(k)).sort((a, b) => a - b);
+        const values = keys.map(k => message.payload[k.toString()]);
+        buffer = new Uint8Array(values);
+        console.log('Converted object payload to Uint8Array:', buffer);
+      } else {
+        console.warn('Received invalid yjs_update_from_server message:', typeof message.payload, message.payload);
+        return;
+      }
+      
+      this.processYjsMessage(buffer);
+    });
+
+    // Listen for awareness updates from server (from other users)  
+    this.hook.handleEvent('yjs_awareness_from_server', (message: any) => {
+      console.log('Received yjs_awareness_from_server:', message);
+      console.log('Awareness payload type:', typeof message.payload);
+      
+      let buffer: Uint8Array;
+      
+      if (message.payload instanceof Uint8Array) {
+        buffer = message.payload;
+      } else if (Array.isArray(message.payload)) {
+        buffer = new Uint8Array(message.payload);
+      } else if (typeof message.payload === 'object' && message.payload !== null) {
+        // Convert object with numeric keys back to Uint8Array
+        const keys = Object.keys(message.payload).map(k => parseInt(k)).sort((a, b) => a - b);
+        const values = keys.map(k => message.payload[k.toString()]);
+        buffer = new Uint8Array(values);
+        console.log('Converted awareness object payload to Uint8Array:', buffer);
+      } else {
+        console.warn('Received invalid yjs_awareness_from_server message:', typeof message.payload, message.payload);
+        return;
+      }
+      
+      this.processYjsMessage(buffer);
+    });
   }
 
   public override destroy() {
