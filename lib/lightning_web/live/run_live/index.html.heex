@@ -643,6 +643,7 @@
                     size="sm"
                     type="button"
                     theme="secondary"
+                    id="bulk-rerun-from-start-job-modal-trigger"
                     class="!py-1"
                     phx-click={
                       with :ok <-
@@ -704,7 +705,7 @@
                 Duration
               </.th>
               <.th class="text-right">
-                Status
+                <span class="mr-2">Status</span>
               </.th>
               <.th class="text-right">Runs</.th>
             </.tr>

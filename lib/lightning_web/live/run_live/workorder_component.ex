@@ -217,11 +217,52 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <.td class="text-right">
           <%= if @work_order.runs !== [] do %>
             <div class="flex items-center justify-end gap-2 pr-2 -mr-3">
-              <%= if Enum.count(@work_order.runs) > 1 do %>
-                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                  {Enum.count(@work_order.runs)}
+              <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
+                <button
+                  type="button"
+                  id={"retry-workorder-#{@work_order.id}"}
+                  phx-click={
+                    JS.push("bulk-rerun",
+                      value: %{type: "single", workorder_id: @work_order.id}
+                    )
+                    |> JS.push("toggle_details", target: @myself)
+                    |> JS.exec("event.stopPropagation()")
+                  }
+                  class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-primary-400 cursor-pointer rounded"
+                  phx-hook="Tooltip"
+                  aria-label="Retry (run from the start)"
+                >
+                  <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+                </button>
+              <% else %>
+                <span
+                  id={"retry-disabled-#{@work_order.id}"}
+                  class="inline-flex items-center p-1 text-xs font-medium text-gray-400 cursor-not-allowed rounded"
+                  phx-hook="Tooltip"
+                  data-allow-html="true"
+                  data-placement="top"
+                  data-interactive={@can_run_workflow && "true"}
+                  aria-label={
+                    cond do
+                      not @can_run_workflow ->
+                        "You are not authorized to start runs for this project."
+
+                      not wo_dataclip_available?(@work_order) ->
+                        rerun_zero_persistence_tooltip_message(
+                          @project.id,
+                          @can_edit_data_retention
+                        )
+                    end
+                  }
+                >
+                  <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
                 </span>
               <% end %>
+              <%!-- <%= if Enum.count(@work_order.runs) > 1 do %> --%>
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                {Enum.count(@work_order.runs)}
+              </span>
+              <%!-- <% end %> --%>
               <.icon
                 name={
                   if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
@@ -242,8 +283,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     id={"run_#{run.id}"}
                     class="w-full bg-white border border-gray-300 rounded-lg overflow-hidden"
                   >
-                    <div class="bg-gray-200 text-xs flex items-center">
-                      <div class="flex-[2] py-2 text-left">
+                    <div class="bg-gray-200 text-xs flex items-center w-full">
+                      <div class="flex-1 py-2 text-left">
                         <div class="pl-4">
                           Run
                           <.link navigate={
@@ -270,25 +311,40 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                               </span>
                             <% end %>
                           <% end %>
+                          &bull;
+                          <%= case run.state do %>
+                            <% :available -> %>
+                              enqueued
+                              <Common.datetime
+                                datetime={run.inserted_at}
+                                format={:relative_detailed}
+                              />
+                            <% :claimed -> %>
+                              claimed
+                              <Common.datetime
+                                datetime={run.claimed_at}
+                                format={:relative_detailed}
+                              />
+                            <% :started -> %>
+                              started
+                              <Common.datetime
+                                datetime={run.started_at}
+                                format={:relative_detailed}
+                              />
+                            <% _state -> %>
+                              finished
+                              <Common.datetime
+                                datetime={run.finished_at}
+                                format={:relative_detailed}
+                              />
+                          <% end %>
                         </div>
                       </div>
-                      <div data-label="run state" class="flex-1 py-2 px-4 text-right">
-                        <%= case run.state do %>
-                          <% :available -> %>
-                            enqueued <Common.datetime datetime={run.inserted_at} />
-                          <% :claimed -> %>
-                            claimed <Common.datetime datetime={run.claimed_at} />
-                          <% :started -> %>
-                            started <Common.datetime datetime={run.started_at} />
-                          <% _state -> %>
-                            finished <Common.datetime datetime={run.finished_at} />
-                        <% end %>
-                      </div>
-                      <div class="flex-1 py-2 px-4 text-right">
-                        <.elapsed_indicator item={run} context="details" />
-                      </div>
-                      <div class="flex-1 py-2 px-4 text-right">
-                        {run.state}
+                      <div class="flex-shrink-0 py-2 px-4 text-right">
+                        <div class="flex items-center justify-end gap-4">
+                          <.elapsed_indicator item={run} context="details" />
+                          <span class="font-mono">{run.state}</span>
+                        </div>
                       </div>
                     </div>
                     <.run_item
@@ -327,9 +383,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <span
         id={"view-dataclip-#{@work_order.dataclip_id}-for-#{@work_order.id}"}
         title={@work_order.dataclip_id}
-        class="link-uuid"
+        class="link-uuid cursor-not-allowed"
         phx-hook="Tooltip"
         data-placement="right"
+        data-interactive="true"
         data-allow-html="true"
         aria-label={
           wiped_dataclip_tooltip_message(@project.id, @can_edit_data_retention)

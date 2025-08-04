@@ -567,6 +567,20 @@ defmodule LightningWeb.RunLive.Index do
     )
   end
 
+  defp handle_bulk_rerun(socket, %{
+         "type" => "single",
+         "workorder_id" => workorder_id
+       }) do
+    work_order =
+      Enum.find(socket.assigns.page.entries, fn wo -> wo.id == workorder_id end)
+
+    [work_order]
+    |> WorkOrders.retry_many(
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
+  end
+
   defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
     socket.assigns.selected_work_orders
     |> WorkOrders.retry_many(

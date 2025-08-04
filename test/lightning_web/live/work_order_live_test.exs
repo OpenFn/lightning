@@ -533,25 +533,26 @@ defmodule LightningWeb.WorkOrderLiveTest do
              |> element("#toggle_runs_for_#{work_order.id}")
              |> render_click() =~ run_1.id
 
-      claimed_at_element =
+      # Check that the run states are displayed
+      claimed_state_element =
         view
-        |> element("div[data-label='run state']", "claimed")
+        |> element("span.font-mono", "claimed")
         |> render()
 
-      assert claimed_at_element =~ claimed_at
-
-      assert claimed_at_element =~
-               "data-iso-timestamp=\"#{claimed_at_formatted}\""
-
-      started_at_element =
+      started_state_element =
         view
-        |> element("div[data-label='run state']", "started")
+        |> element("span.font-mono", "started")
         |> render()
 
-      assert started_at_element =~ started_at
+      assert claimed_state_element =~ "claimed"
+      assert started_state_element =~ "started"
 
-      assert started_at_element =~
-               "data-iso-timestamp=\"#{started_at_formatted}\""
+      # Check that the timestamps are displayed (in the datetime components)
+      rendered_content = view |> render()
+      assert rendered_content =~ claimed_at
+      assert rendered_content =~ started_at
+      assert rendered_content =~ "data-iso-timestamp=\"#{claimed_at_formatted}\""
+      assert rendered_content =~ "data-iso-timestamp=\"#{started_at_formatted}\""
     end
 
     test "lists all workorders", %{
