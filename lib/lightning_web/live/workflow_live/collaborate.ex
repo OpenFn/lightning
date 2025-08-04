@@ -15,8 +15,10 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     user_id = socket.assigns.current_user.id
 
     # Subscribe to PubSub topic for this workflow's collaboration
-    topic = "workflow:#{workflow_id}:collaboration"
-    Phoenix.PubSub.subscribe(Lightning.PubSub, topic)
+    topic = "workflow:collaborate:#{workflow_id}"
+    # NOTE: we can't subscript to this topic because it's sending full on
+    # yjs binary updates, and we don't have any handlers for them.
+    # Phoenix.PubSub.subscribe(Lightning.PubSub, topic)
 
     # Join the collaborative workflow session
     case WorkflowCollaboration.join_workflow(workflow_id, user_id) do
@@ -25,7 +27,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         Process.monitor(collaborator_pid)
 
         # Observe Y.js updates from the shared document
-        WorkflowCollaboration.observe_document(collaborator_pid)
+        #  WorkflowCollaboration.observe_document(collaborator_pid)
 
         # Get the current shared document state
         shared_doc = WorkflowCollaboration.get_document(collaborator_pid)
@@ -353,7 +355,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
             data-user-id={@user_id}
             data-user-name={@current_user.first_name <> " " <> @current_user.last_name}
           />
-          
+
     <!-- Original Counter Demo (keeping for comparison) -->
           <div class="mt-8 pt-8 border-t border-gray-200">
             <h3 class="text-lg font-semibold mb-4 text-gray-700">

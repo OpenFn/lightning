@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTodoStore } from '../../../stores/todo-store';
+import { useTodoStore } from '../../contexts/TodoStoreProvider';
 
 export const TodoInput: React.FC = () => {
   const [text, setText] = useState('');
