@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import * as Y from 'yjs';
 import * as awarenessProtocol from 'y-protocols/awareness';
-import { TodoItem, AwarenessUser, TodoStore } from '../types/todo';
+import type { TodoItem, AwarenessUser, TodoStore } from '../types/todo';
 import { YjsPhoenixProvider } from '../lib/yjs-phoenix-provider';
 
 interface TodoStoreState extends TodoStore {
@@ -30,6 +30,12 @@ export const useTodoStore = create<TodoStoreState>((set, get) => ({
 
   // Setup functions
   initializeYjs: (hook: any, userId: string, userName: string) => {
+    console.log(
+      'DEBUG: Initializing Yjs with userId:',
+      userId,
+      'userName:',
+      userName
+    );
     const ydoc = new Y.Doc();
     const todoItems = ydoc.getMap<TodoItem>('todoItems');
     const todoOrder = ydoc.getArray<string>('todoOrder');
