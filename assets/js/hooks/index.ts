@@ -52,7 +52,7 @@ export {
   CredentialSelector,
 };
 
-export { ReactComponent } from '#/react/hooks';
+export { ReactComponent, HeexReactComponent } from '#/react/hooks';
 
 export const TabIndent = {
   mounted() {
