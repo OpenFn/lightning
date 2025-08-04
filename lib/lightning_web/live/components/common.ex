@@ -302,7 +302,7 @@ defmodule LightningWeb.Components.Common do
 
   attr :format, :atom,
     default: :relative,
-    values: [:relative, :detailed]
+    values: [:relative, :relative_detailed, :detailed, :time_only]
 
   @doc """
   Renders a datetime with click-to-copy functionality and optional hover tooltip.

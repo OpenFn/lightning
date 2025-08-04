@@ -21,6 +21,22 @@ and this project adheres to
 
 ### Fixed
 
+- Added "interactive" to checkbox disabled tooltip to allow user to click link,
+  ensure permissions line up with admin or above.
+  [PR-3473](https://github.com/OpenFn/lightning/pull/3473)
+
+## [v2.14.0-pre1] - 2025-08-04
+
+### Added
+
+- Added a retry button to the work order row itself
+  [PR-3472](https://github.com/OpenFn/lightning/pull/3472)
+
+### Fixed
+
+- Fixed small table UI regression for history
+  [PR-3472](https://github.com/OpenFn/lightning/pull/3472)
+
 ## [v2.14.0-pre] - 2025-08-01
 
 ### Added
@@ -31,9 +47,9 @@ and this project adheres to
 ### Changed
 
 - Click to copy all timestamps in UTC across the application
-  [1419](https://github.com/OpenFn/lightning/issues/1419)
+  [#1419](https://github.com/OpenFn/lightning/issues/1419)
 - Display relative times and respect browser timezones
-  [1255](https://github.com/OpenFn/lightning/issues/1255)
+  [#1255](https://github.com/OpenFn/lightning/issues/1255)
 - Sortable history table
   [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
 - Visible run durations on the history table
