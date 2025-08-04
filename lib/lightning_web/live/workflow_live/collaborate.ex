@@ -181,6 +181,80 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     {:noreply, socket}
   end
 
+  # Handle Yjs update events from React component
+  @impl true
+  def handle_event(
+        "yjs_update",
+        %{"type" => type, "payload" => payload} = params,
+        socket
+      ) do
+    IO.inspect({type, payload, params}, label: "yjs_update received")
+
+    # For now, just log the message and acknowledge receipt
+    # In Phase 4, we would integrate this with WorkflowCollaboration
+
+    {:noreply, socket}
+  end
+
+  # Handle Yjs awareness events from React component
+  @impl true
+  def handle_event(
+        "yjs_awareness",
+        %{"type" => type, "payload" => payload} = params,
+        socket
+      ) do
+    IO.inspect({type, payload, params}, label: "yjs_awareness received")
+
+    # For now, just log the message and acknowledge receipt
+    # In Phase 4, we would broadcast awareness updates to other clients
+
+    {:noreply, socket}
+  end
+
+  # Handle sync requests from React component
+  @impl true
+  def handle_event(
+        "sync_request",
+        %{"type" => type, "payload" => payload} = params,
+        socket
+      ) do
+    IO.inspect({type, payload, params}, label: "sync_request received")
+
+    # For now, just log the message and acknowledge receipt
+    # In Phase 4, we would handle document synchronization
+
+    {:noreply, socket}
+  end
+
+  # Handle Yjs responses from React component
+  @impl true
+  def handle_event(
+        "yjs_response",
+        %{"type" => type, "payload" => payload} = params,
+        socket
+      ) do
+    IO.inspect({type, payload, params}, label: "yjs_response received")
+
+    # For now, just log the message and acknowledge receipt
+
+    {:noreply, socket}
+  end
+
+  # Handle Yjs awareness queries from React component
+  @impl true
+  def handle_event(
+        "yjs_query_awareness",
+        %{"type" => type, "payload" => payload} = params,
+        socket
+      ) do
+    IO.inspect({type, payload, params}, label: "yjs_query_awareness received")
+
+    # For now, just log the message and acknowledge receipt
+    # In Phase 4, we would return current awareness state
+
+    {:noreply, socket}
+  end
+
   # Clean up when LiveView terminates
   @impl true
   def terminate(reason, socket) do
@@ -200,7 +274,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     <div class="flex flex-col h-full">
       <div class="flex-1 p-4">
         <h2 class="text-2xl font-bold mb-4">
-          Collaborative Counter - {@workflow.name}
+          Collaborative Workflow Editor - {@workflow.name}
         </h2>
 
         <%= if assigns[:error] do %>
@@ -213,37 +287,55 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
             </p>
           </div>
         <% else %>
-          <div class="max-w-md mx-auto mt-8">
-            <div class="text-center mb-6">
-              <div class="text-6xl font-bold text-blue-600 mb-2">
-                {assigns[:counter] || 0}
+          <!-- Collaborative Editor React Component -->
+          <div
+            id="collaborative-editor-react"
+            phx-hook="ReactComponent"
+            data-react-name="CollaborativeEditor"
+            data-react-file={~p"/assets/js/react/components/CollaborativeEditor.js"}
+            data-workflow-id={@workflow_id}
+            data-workflow-name={@workflow.name}
+            data-user-id={@user_id}
+            data-user-name={@current_user.first_name <> " " <> @current_user.last_name}
+          />
+          
+    <!-- Original Counter Demo (keeping for comparison) -->
+          <div class="mt-8 pt-8 border-t border-gray-200">
+            <h3 class="text-lg font-semibold mb-4 text-gray-700">
+              Original Counter Demo (Y.js Backend Integration)
+            </h3>
+            <div class="max-w-md mx-auto">
+              <div class="text-center mb-6">
+                <div class="text-4xl font-bold text-blue-600 mb-2">
+                  {assigns[:counter] || 0}
+                </div>
+                <p class="text-sm text-gray-600">
+                  Shared counter (synced across all users)
+                </p>
               </div>
-              <p class="text-sm text-gray-600">
-                Shared counter (synced across all users)
-              </p>
-            </div>
 
-            <div class="flex gap-4 justify-center mb-6">
-              <button
-                phx-click="decrement"
-                class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-colors"
-              >
-                - Decrement
-              </button>
-              <button
-                phx-click="increment"
-                class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg shadow-md transition-colors"
-              >
-                + Increment
-              </button>
-            </div>
+              <div class="flex gap-4 justify-center mb-6">
+                <button
+                  phx-click="decrement"
+                  class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-colors"
+                >
+                  - Decrement
+                </button>
+                <button
+                  phx-click="increment"
+                  class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg shadow-md transition-colors"
+                >
+                  + Increment
+                </button>
+              </div>
 
-            <div class="text-center text-sm text-gray-500">
-              <p><strong>Last updated:</strong></p>
-              <p class="font-mono">{assigns[:last_updated] || "Never"}</p>
-              <p class="mt-2 text-xs">
-                Open multiple browser tabs to see real-time collaboration
-              </p>
+              <div class="text-center text-sm text-gray-500">
+                <p><strong>Last updated:</strong></p>
+                <p class="font-mono text-xs">{assigns[:last_updated] || "Never"}</p>
+                <p class="mt-2 text-xs">
+                  Open multiple browser tabs to see real-time collaboration
+                </p>
+              </div>
             </div>
           </div>
         <% end %>
