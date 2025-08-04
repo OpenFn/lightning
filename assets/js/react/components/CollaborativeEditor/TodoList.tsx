@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTodoStore } from '../../../stores/todo-store';
+import { useTodoStore } from '../../contexts/TodoStoreProvider';
 import { TodoItem } from './TodoItem';
 import { TodoInput } from './TodoInput';
 import { UserAwareness } from './UserAwareness';
