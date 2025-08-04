@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTodoStore } from '../../../stores/todo-store';
+import { useTodoStore } from '../../contexts/TodoStoreProvider';
 
 export const UserAwareness: React.FC = () => {
   const { users, isConnected, isSynced } = useTodoStore();
