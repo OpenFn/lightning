@@ -905,17 +905,17 @@ const relativeDetailedLocale = {
   ...enUS,
   formatRelative: (token, date, baseDate, options) => {
     const formatters = {
-      lastWeek: "'last' eeee 'at' h:mm:ss.SSS a",
-      yesterday: "'yesterday at' h:mm:ss.SSS a",
-      today: "'today at' h:mm:ss.SSS a",
-      tomorrow: "'tomorrow at' h:mm:ss.SSS a",
-      nextWeek: "eeee 'at' h:mm:ss.SSS a",
+      lastWeek: "'last' eeee 'at' h:mm:ss a",
+      yesterday: "'yesterday at' h:mm:ss a",
+      today: "'today at' h:mm:ss a",
+      tomorrow: "'tomorrow at' h:mm:ss a",
+      nextWeek: "eeee 'at' h:mm:ss a",
       other: (date, baseDate) => {
         const currentYear = new Date().getFullYear();
         const dateYear = date.getFullYear();
         return dateYear === currentYear
-          ? 'MMMM do, h:mm:ss.SSS a'
-          : 'yyyy-MM-dd, h:mm:ss.SSS a';
+          ? 'MMMM do, h:mm:ss a'
+          : 'yyyy-MM-dd, h:mm:ss a';
       },
     };
 
@@ -952,15 +952,17 @@ export const LocalTimeConverter = {
 
       switch (display) {
         case 'detailed':
-          displayTime = format(date, "MMMM do, yyyy 'at' h:mm:ss.SSS a");
+          displayTime = format(date, "MMMM do, yyyy 'at' h:mm:ss a");
           break;
 
         case 'relative_detailed':
-          displayTime = formatRelative(date, now, { locale: relativeDetailedLocale });
+          displayTime = formatRelative(date, now, {
+            locale: relativeDetailedLocale,
+          });
           break;
 
         case 'time_only':
-          displayTime = format(date, 'h:mm:ss.SSS a');
+          displayTime = format(date, 'h:mm:ss a');
           break;
 
         // case 'relative':

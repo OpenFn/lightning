@@ -217,7 +217,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <.td class="text-right">
           <%= if @work_order.runs !== [] do %>
             <div class="flex items-center justify-end gap-2 pr-2 -mr-3">
-              <%= if wo_dataclip_available?(@work_order) do %>
+              <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
                 <button
                   type="button"
                   id={"retry-workorder-#{@work_order.id}"}
@@ -241,12 +241,17 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   phx-hook="Tooltip"
                   data-allow-html="true"
                   data-placement="top"
-                  data-interactive="true"
+                  data-interactive={@can_run_workflow && "true"}
                   aria-label={
-                    rerun_zero_persistence_tooltip_message(
-                      @project.id,
-                      @can_edit_data_retention
-                    )
+                    cond do
+                      not @can_run_workflow ->
+                        "You are not authorized to start runs for this project."
+                      not wo_dataclip_available?(@work_order) ->
+                        rerun_zero_persistence_tooltip_message(
+                          @project.id,
+                          @can_edit_data_retention
+                        )
+                    end
                   }
                 >
                   <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
