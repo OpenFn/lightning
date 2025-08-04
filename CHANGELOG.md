@@ -21,7 +21,8 @@ and this project adheres to
 
 ### Fixed
 
-- Added "interactive" to checkbox disabled tooltip to allow user to click link. []
+- Added "interactive" to checkbox disabled tooltip to allow user to click link.
+  [PR-3473](https://github.com/OpenFn/lightning/pull/3473)
 
 ## [v2.14.0-pre1] - 2025-08-04
 

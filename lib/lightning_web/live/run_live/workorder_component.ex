@@ -146,7 +146,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 phx-hook="Tooltip"
                 data-placement="top"
                 data-allow-html="true"
-                data-interactive={@can_run_workflow && "true"}
+                data-interactive={@can_edit_data_retention && "true"}
                 aria-label={
                   rerun_zero_persistence_tooltip_message(
                     @project.id,
@@ -242,7 +242,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   phx-hook="Tooltip"
                   data-allow-html="true"
                   data-placement="top"
-                  data-interactive={@can_run_workflow && "true"}
+                  data-interactive={@can_edit_data_retention && "true"}
                   aria-label={
                     cond do
                       not @can_run_workflow ->
