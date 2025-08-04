@@ -105,7 +105,7 @@ defmodule LightningWeb.Components.Table do
           {render_slot(@body)}
         </tbody>
         <%= for footer <- @footer do %>
-          <tfoot class={@divide && "border-t border-gray-200"}>{footer}</tfoot>
+          <tfoot>{footer}</tfoot>
         <% end %>
       </table>
       <%= if @page && @url do %>

@@ -246,6 +246,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     cond do
                       not @can_run_workflow ->
                         "You are not authorized to start runs for this project."
+
                       not wo_dataclip_available?(@work_order) ->
                         rerun_zero_persistence_tooltip_message(
                           @project.id,
