@@ -25,7 +25,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
   @impl true
   def update(
         %{
-          action: :workflow_updated,
+          action: :workflow_code_generated,
           workflow_code: code,
           session_or_message: session_or_message
         },
@@ -35,10 +35,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
      socket
      |> assign(session_or_message: session_or_message)
      |> push_event("template_selected", %{template: code})}
-  end
-
-  def update(%{action: :sending_ai_message}, socket) do
-    {:ok, push_event(socket, "set-disabled", %{disabled: true})}
   end
 
   def update(assigns, socket) do
@@ -58,87 +54,101 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
 
       if changeset.valid? do
         notify_parent(:workflow_params_changed, %{"workflow" => params})
-
         {:noreply, assign(socket, :workflow_params, params)}
       else
-        error_details = format_changeset_errors(changeset)
-
-        Logger.error(
-          "Workflow changeset validation failed: #{inspect(error_details)}"
-        )
-
-        send_update(
-          LightningWeb.AiAssistant.Component,
-          id: "workflow-ai-assistant-persistent",
-          action: :workflow_parse_error,
-          error_details: error_details,
-          session_or_message: socket.assigns.session_or_message
-        )
-
-        {:noreply, socket}
+        error = error_from_changeset(changeset)
+        {:noreply, send_error(socket, error)}
       end
     end
   end
 
-  def handle_event(
-        "template-parse-error",
-        %{
-          "error" => error_details,
-          "formattedMessage" => formatted_message,
-          "template" => template
-        },
-        socket
-      ) do
-    Logger.error(template)
+  def handle_event("template-parse-error", %{"error" => error}, socket) do
+    {:noreply, send_error(socket, error)}
+  end
 
-    Logger.error(
-      "Workflow template parsing failed #{inspect(error_details)} \n\n #{formatted_message}"
-    )
+  defp send_error(socket, error) do
+    Logger.error("Workflow code parse failed: #{inspect(error)}")
 
     send_update(
       LightningWeb.AiAssistant.Component,
-      id: "workflow-ai-assistant-persistent",
-      action: :workflow_parse_error,
-      error_details: formatted_message,
+      id: socket.assigns.ai_assistant_component_id,
+      action: :code_error,
+      error: error,
       session_or_message: socket.assigns.session_or_message
     )
 
-    {:noreply, socket}
+    socket
+  end
+
+  @spec build_ai_callbacks(String.t()) :: map()
+  defp build_ai_callbacks(component_id) do
+    %{
+      on_message_selected: &send_workflow_update(component_id, &1, &2),
+      on_message_received: fn code, session_or_message ->
+        notify_parent(:canvas_state_changed, %{sending_ai_message: false})
+        send_workflow_update(component_id, code, session_or_message)
+      end,
+      on_message_send: fn ->
+        notify_parent(:canvas_state_changed, %{sending_ai_message: true})
+      end,
+      on_session_open: &send_workflow_update(component_id, &1, &2)
+    }
+  end
+
+  @spec send_workflow_update(String.t(), String.t() | nil, any()) :: :ok
+  defp send_workflow_update(component_id, code, session_or_message) do
+    send_update(__MODULE__,
+      id: component_id,
+      action: :workflow_code_generated,
+      workflow_code: code,
+      session_or_message: session_or_message
+    )
+  end
+
+  @spec slide_in() :: JS.t()
+  defp slide_in do
+    JS.remove_class("opacity-0")
+    |> JS.transition(
+      {"transform transition-transform duration-500 ease-in-out",
+       "-translate-x-full", "translate-x-0"},
+      time: 500
+    )
+  end
+
+  @spec slide_out() :: JS.t()
+  defp slide_out do
+    JS.transition(
+      {"transform transition-transform duration-500 ease-in-out",
+       "translate-x-0", "-translate-x-full"},
+      time: 500
+    )
+  end
+
+  @spec fade_in_delayed() :: JS.t()
+  defp fade_in_delayed do
+    JS.transition(
+      {"transition-opacity duration-300 ease-in-out delay-300", "opacity-0",
+       "opacity-100"},
+      time: 300
+    )
   end
 
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :callbacks, build_ai_callbacks(assigns.id))
+
     ~H"""
     <div
       id={@id}
       phx-hook="TemplateToWorkflow"
       class="absolute inset-y-0 left-0 w-[30%] max-w-[30%] z-20 -translate-x-full"
-      phx-mounted={
-        JS.remove_class("opacity-0")
-        |> JS.transition(
-          {"transform transition-transform duration-500 ease-in-out",
-           "-translate-x-full", "translate-x-0"},
-          time: 500
-        )
-      }
-      phx-remove={
-        JS.transition(
-          {"transform transition-transform duration-500 ease-in-out",
-           "translate-x-0", "-translate-x-full"},
-          time: 500
-        )
-      }
+      phx-mounted={slide_in()}
+      phx-remove={slide_out()}
     >
       <div
         id="close-ai-assistant-panel"
         class="absolute top-4 -right-8 z-30 opacity-0"
-        phx-mounted={
-          JS.transition(
-            {"transition-opacity duration-300 ease-in-out delay-300", "opacity-0",
-             "opacity-100"},
-            time: 300
-          )
-        }
+        phx-mounted={fade_in_delayed()}
         phx-hook="Tooltip"
         aria-label="Click to close the AI Assistant panel"
       >
@@ -157,17 +167,16 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
           <.live_component
             module={LightningWeb.AiAssistant.Component}
             mode={:workflow}
-            can_edit_workflow={@can_edit_workflow}
+            can_edit={@can_edit}
             project={@project}
             workflow={@workflow}
-            current_user={@current_user}
+            user={@user}
             chat_session_id={@chat_session_id}
-            workflow_code={@workflow_code}
+            code={@workflow_code}
             query_params={@query_params}
             base_url={@base_url}
             action={if(@chat_session_id, do: :show, else: :new)}
-            parent_id={@id}
-            parent_module={__MODULE__}
+            callbacks={@callbacks}
             id={@ai_assistant_component_id}
           />
         </div>
@@ -180,7 +189,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     send(self(), {:ai_assistant, action, payload})
   end
 
-  defp format_changeset_errors(changeset) do
+  defp error_from_changeset(changeset) do
     errors = traverse_changeset_errors(changeset)
 
     Enum.map_join(errors, "\n", fn {path, field, message} ->

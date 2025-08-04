@@ -148,7 +148,7 @@ defmodule Lightning.AiAssistant do
   - `content` - Initial message content that will become the session title
   - `opts` - Keyword list of options:
     - `:meta` - Optional metadata for the session
-    - `:workflow_code` - Optional workflow code for the initial message
+    - `:code` - Optional workflow code for the initial message
 
   ## Returns
 
@@ -199,7 +199,7 @@ defmodule Lightning.AiAssistant do
   - `content` - Description of the desired workflow functionality
   - `opts` - Keyword list of options:
     - `:meta` - Optional metadata for the session
-    - `:workflow_code` - Optional workflow code for the initial message
+    - `:code` - Optional workflow code for the initial message
 
   ## Returns
 
@@ -472,7 +472,7 @@ defmodule Lightning.AiAssistant do
   - `opts` - Keyword list of options:
     - `:usage` - Map containing AI usage metrics (default: `%{}`)
     - `:meta` - Session metadata to update (default: keeps existing)
-    - `:workflow_code` - Optional workflow code to attach to the message
+    - `:code` - Optional workflow code to attach to the message
 
   ## Returns
 
@@ -484,13 +484,13 @@ defmodule Lightning.AiAssistant do
   def save_message(session, message_attrs, opts \\ []) do
     usage = Keyword.get(opts, :usage, %{})
     meta = Keyword.get(opts, :meta)
-    workflow_code = Keyword.get(opts, :workflow_code)
+    code = Keyword.get(opts, :code)
 
     message_attrs =
       message_attrs
       |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
       |> Map.put("chat_session_id", session.id)
-      |> Map.put("workflow_code", workflow_code)
+      |> Map.put("code", code)
 
     Multi.new()
     |> Multi.put(:usage, usage)
@@ -649,8 +649,8 @@ defmodule Lightning.AiAssistant do
   - `session` - The workflow template `%ChatSession{}`
   - `content` - User's description of desired workflow functionality or modifications
   - `opts` - Keyword list of options:
-    - `:workflow_code` - Current YAML to modify (default: uses latest from session)
-    - `:workflow_errors` - Validation errors from previous workflow attempts
+    - `:code` - Current YAML to modify (default: uses latest from session)
+    - `:errors` - Validation errors from previous workflow attempts
     - `:meta` - Additional metadata to pass to the AI service (default: session.meta)
 
   ## Returns
@@ -661,16 +661,16 @@ defmodule Lightning.AiAssistant do
   @spec query_workflow(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
   def query_workflow(session, content, opts \\ []) do
-    workflow_code = Keyword.get(opts, :workflow_code)
-    workflow_errors = Keyword.get(opts, :workflow_errors)
+    code = Keyword.get(opts, :code)
+    errors = Keyword.get(opts, :errors)
     meta = Keyword.get(opts, :meta, session.meta || %{})
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
     ApolloClient.workflow_chat(
       content,
-      workflow_code: workflow_code,
-      workflow_errors: workflow_errors,
+      code: code,
+      errors: errors,
       history: build_history(session),
       meta: meta
     )
@@ -688,7 +688,7 @@ defmodule Lightning.AiAssistant do
       Ecto.Changeset.change(message, %{status: :pending})
     )
     |> Multi.insert(
-      :job,
+      :oban_job,
       MessageProcessor.new(%{
         message_id: message.id,
         session_id: message.chat_session_id
@@ -696,8 +696,11 @@ defmodule Lightning.AiAssistant do
     )
     |> Repo.transaction()
     |> case do
-      {:ok, %{message: message, job: job}} -> {:ok, {message, job}}
-      {:error, _op, changeset, _changes} -> {:error, changeset}
+      {:ok, %{message: message, oban_job: oban_job}} ->
+        {:ok, {message, oban_job}}
+
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 
@@ -845,7 +848,7 @@ defmodule Lightning.AiAssistant do
     opts = [
       usage: body["usage"] || %{},
       meta: body["meta"],
-      workflow_code: body["response_yaml"]
+      code: body["response_yaml"]
     ]
 
     {message_attrs, opts}

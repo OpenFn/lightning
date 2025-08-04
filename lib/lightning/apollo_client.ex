@@ -107,8 +107,8 @@ defmodule Lightning.ApolloClient do
 
   - `content` - Natural language description of desired workflow functionality
   - `opts` - Keyword list of options:
-    - `:workflow_code` - Optional existing workflow YAML to modify or improve
-    - `:workflow_errors` - Optional validation errors from previous workflow attempts
+    - `:code` - Optional existing workflow YAML to modify or improve
+    - `:errors` - Optional validation errors from previous workflow attempts
     - `:history` - Previous conversation messages for context (default: [])
     - `:meta` - Additional metadata (default: %{})
 
@@ -121,8 +121,8 @@ defmodule Lightning.ApolloClient do
   """
   @spec workflow_chat(String.t(), opts()) :: Tesla.Env.result()
   def workflow_chat(content, opts \\ []) do
-    workflow_code = Keyword.get(opts, :workflow_code)
-    workflow_errors = Keyword.get(opts, :workflow_errors)
+    code = Keyword.get(opts, :code)
+    errors = Keyword.get(opts, :errors)
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
 
@@ -130,8 +130,8 @@ defmodule Lightning.ApolloClient do
       %{
         "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
         "content" => content,
-        "existing_yaml" => workflow_code,
-        "errors" => workflow_errors,
+        "existing_yaml" => code,
+        "errors" => errors,
         "history" => history,
         "meta" => meta
       }

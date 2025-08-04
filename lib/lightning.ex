@@ -37,6 +37,11 @@ defmodule Lightning do
     end
 
     @impl true
+    def unsubscribe(topic) do
+      Phoenix.PubSub.unsubscribe(@pubsub, topic)
+    end
+
+    @impl true
     def release do
       Application.get_env(:lightning, :release,
         label: nil,
@@ -62,6 +67,7 @@ defmodule Lightning do
   @callback broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
   @callback local_broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
   @callback subscribe(binary()) :: :ok | {:error, term()}
+  @callback unsubscribe(binary()) :: :ok | {:error, term()}
   @callback release() :: release_info()
 
   @doc """
@@ -74,6 +80,8 @@ defmodule Lightning do
   def local_broadcast(topic, msg), do: impl().local_broadcast(topic, msg)
 
   def subscribe(topic), do: impl().subscribe(topic)
+
+  def unsubscribe(topic), do: impl().unsubscribe(topic)
 
   @spec release() :: release_info()
   def release, do: impl().release()

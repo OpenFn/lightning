@@ -74,7 +74,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec timeout(Oban.Job.t()) :: pos_integer()
   def timeout(_job) do
     apollo_timeout_ms = Lightning.Config.apollo(:timeout) || 30_000
-    apollo_timeout_ms + 10_000
+    apollo_timeout_ms + 1000
   end
 
   @doc false
@@ -113,8 +113,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec process_workflow_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
           {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_workflow_message(session, message) do
-    code = message.workflow_code || workflow_code_from_session(session)
-    AiAssistant.query_workflow(session, message.content, workflow_code: code)
+    code = message.code || workflow_code_from_session(session)
+    AiAssistant.query_workflow(session, message.content, code: code)
   end
 
   @doc false
@@ -125,7 +125,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   defp broadcast_status(session_id, status) do
     Lightning.broadcast(
       "ai_session:#{session_id}",
-      {:ai_assistant, :message_status_changed, status}
+      {:ai_assistant, :message_status_changed,
+       %{
+         status: status,
+         session_id: session_id
+       }}
     )
   end
 
@@ -179,7 +183,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     session.messages
     |> Enum.reverse()
     |> Enum.find_value(nil, fn
-      %{role: :assistant, workflow_code: code} when not is_nil(code) -> code
+      %{role: :assistant, code: code} when not is_nil(code) -> code
       _ -> nil
     end)
   end

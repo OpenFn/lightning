@@ -42,7 +42,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   @impl true
   def update(
         %{
-          action: :workflow_updated,
+          action: :workflow_code_generated,
           workflow_code: code,
           session_or_message: session_or_message
         },
@@ -150,33 +150,13 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     end
   end
 
-  def handle_event(
-        "template-parse-error",
-        %{
-          "error" => error_details,
-          "formattedMessage" => formatted_message,
-          "template" => _template
-        },
-        socket
-      ) do
-    Logger.error(
-      "Workflow template parsing failed #{inspect(error_details)} \n\n #{formatted_message}"
-    )
-
+  def handle_event("template-parse-error", %{"error" => error}, socket) do
     notify_parent(:canvas_state_changed, %{
       show_canvas_placeholder: true,
       show_template_tooltip: nil
     })
 
-    send_update(
-      LightningWeb.AiAssistant.Component,
-      id: "workflow-ai-assistant",
-      action: :workflow_parse_error,
-      error_details: formatted_message,
-      session_or_message: socket.assigns.session_or_message
-    )
-
-    {:noreply, socket}
+    {:noreply, send_error(socket, error)}
   end
 
   def handle_event(
@@ -197,6 +177,20 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   def handle_event(_event, _params, socket) do
     {:noreply, socket}
+  end
+
+  defp send_error(socket, error) do
+    Logger.error("Workflow code parse failed: #{inspect(error)}")
+
+    send_update(
+      LightningWeb.AiAssistant.Component,
+      id: socket.assigns.ai_assistant_component_id,
+      action: :code_error,
+      error: error,
+      session_or_message: socket.assigns.session_or_message
+    )
+
+    socket
   end
 
   defp ensure_unique_name(params, project) do
@@ -330,7 +324,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
     session_assigns = %{
       project: assigns.project,
-      current_user: assigns.current_user
+      user: assigns.user
     }
 
     case handler.create_session(session_assigns, input_value) do
@@ -377,7 +371,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             :if={@selected_method == "ai"}
             parent_id={@id}
             project={@project}
-            current_user={@current_user}
+            user={@user}
+            can_edit={@can_edit}
             chat_session_id={@chat_session_id}
             query_params={@query_params}
             workflow_code={@workflow_code}
@@ -650,7 +645,36 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     """
   end
 
+  @spec build_ai_callbacks(String.t()) :: map()
+  defp build_ai_callbacks(parent_id) do
+    %{
+      on_session_close: fn ->
+        notify_parent(:canvas_state_changed, %{
+          show_canvas_placeholder: true,
+          show_template_tooltip: nil
+        })
+
+        send_workflow_update(parent_id, nil, nil)
+      end,
+      on_session_open: &send_workflow_update(parent_id, &1, &2),
+      on_message_selected: &send_workflow_update(parent_id, &1, &2),
+      on_message_received: &send_workflow_update(parent_id, &1, &2)
+    }
+  end
+
+  @spec send_workflow_update(String.t(), String.t() | nil, any()) :: :ok
+  defp send_workflow_update(parent_id, code, session_or_message) do
+    send_update(__MODULE__,
+      id: parent_id,
+      action: :workflow_code_generated,
+      workflow_code: code,
+      session_or_message: session_or_message
+    )
+  end
+
   defp create_workflow_via_ai(assigns) do
+    assigns = assign(assigns, :callbacks, build_ai_callbacks(assigns.parent_id))
+
     ~H"""
     <div
       class="flex-grow overflow-hidden"
@@ -660,17 +684,15 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       <.live_component
         module={LightningWeb.AiAssistant.Component}
         mode={:workflow}
-        can_edit_workflow={true}
+        can_edit={@can_edit}
         project={@project}
-        current_user={@current_user}
+        user={@user}
         chat_session_id={@chat_session_id}
-        workflow_code={@workflow_code}
+        code={@workflow_code}
         query_params={@query_params}
         base_url={@base_url}
-        input_value={@search_term}
         action={if(@chat_session_id, do: :show, else: :new)}
-        parent_id={@parent_id}
-        parent_module={LightningWeb.WorkflowLive.NewWorkflowComponent}
+        callbacks={@callbacks}
         id={@ai_assistant_component_id}
       />
     </div>

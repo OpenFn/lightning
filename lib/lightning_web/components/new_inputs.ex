@@ -118,6 +118,8 @@ defmodule LightningWeb.Components.NewInputs do
   slot :inner_block, required: true
 
   def button(%{theme: theme} = assigns) when is_binary(theme) do
+    disabled = assigns[:rest][:disabled] || false
+
     assigns
     |> assign(:class, [
       # Base classes
@@ -126,7 +128,7 @@ defmodule LightningWeb.Components.NewInputs do
       # size variants
       button_size_classes(assigns.size),
       # theme variants
-      button_theme_classes(theme),
+      button_theme_classes(theme, disabled),
       # other classes to override
       assigns.class
     ])
@@ -156,6 +158,10 @@ defmodule LightningWeb.Components.NewInputs do
   attr :theme, :string, values: @button_themes, required: true
   attr :size, :string, default: "md", values: @button_sizes
 
+  attr :disabled, :boolean,
+    default: false,
+    doc: "If true, renders a disabled button that cannot be clicked"
+
   attr :rest, :global,
     include:
       ~w(id href patch navigate replace method csrf_token download hreflang referrerpolicy rel target type)
@@ -164,28 +170,51 @@ defmodule LightningWeb.Components.NewInputs do
 
   def button_link(assigns) do
     ~H"""
-    <.link
-      class={
-        [
-          # Base classes
-          button_base_classes(),
-          # TODO: consider another approach:
-          # https://github.com/OpenFn/lightning/issues/3269
-          # We want a way to style these links as buttons without interfering
-          # with JS.show()—using `inline-block` leads to a Tailwind gotcha.
-          "inline-block",
-          # size variants
-          button_size_classes(@size),
-          # theme variants
-          button_theme_classes(@theme),
-          # other classes to override
-          @class
-        ]
-      }
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </.link>
+    <%= if @disabled do %>
+      <span
+        class={
+          [
+            # Base classes
+            button_base_classes(),
+            "inline-block",
+            # size variants
+            button_size_classes(@size),
+            # theme variants
+            button_theme_classes(@theme, true),
+            # disabled state
+            "pointer-events-none cursor-not-allowed",
+            # other classes to override
+            @class
+          ]
+        }
+        aria-disabled="true"
+      >
+        {render_slot(@inner_block)}
+      </span>
+    <% else %>
+      <.link
+        class={
+          [
+            # Base classes
+            button_base_classes(),
+            # TODO: consider another approach:
+            # https://github.com/OpenFn/lightning/issues/3269
+            # We want a way to style these links as buttons without interfering
+            # with JS.show()—using `inline-block` leads to a Tailwind gotcha.
+            "inline-block",
+            # size variants
+            button_size_classes(@size),
+            # theme variants
+            button_theme_classes(@theme, false),
+            # other classes to override
+            @class
+          ]
+        }
+        {@rest}
+      >
+        {render_slot(@inner_block)}
+      </.link>
+    <% end %>
     """
   end
 
@@ -193,31 +222,46 @@ defmodule LightningWeb.Components.NewInputs do
     "rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75"
   end
 
-  defp button_theme_classes(theme) do
-    case theme do
-      "primary" ->
-        "bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-
-      "secondary" ->
-        "bg-white hover:bg-gray-50 text-gray-900 disabled:bg-gray-50 ring-1 ring-gray-300 ring-inset"
-
-      "danger" ->
-        "bg-red-600 hover:bg-red-500 text-white disabled:bg-red-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-
-      "success" ->
-        "bg-green-600 hover:bg-green-500 text-white disabled:bg-green-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
-
-      "warning" ->
-        "bg-yellow-600 hover:bg-yellow-500 text-white disabled:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
-
-      "custom" ->
-        ""
-    end
-  end
-
   defp button_size_classes("sm"), do: "px-2.5 py-1.5"
   defp button_size_classes("md"), do: "px-3 py-2"
   defp button_size_classes("lg"), do: "px-3.5 py-2.5"
+
+  defp button_theme_classes(theme, disabled) do
+    button_themes = %{
+      "primary" => %{
+        disabled: "bg-primary-300 text-white",
+        enabled:
+          "bg-primary-600 hover:bg-primary-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      },
+      "secondary" => %{
+        disabled: "bg-gray-50 text-gray-400 ring-1 ring-gray-200 ring-inset",
+        enabled:
+          "bg-white hover:bg-gray-50 text-gray-900 ring-1 ring-gray-300 ring-inset"
+      },
+      "danger" => %{
+        disabled: "bg-red-300 text-white",
+        enabled:
+          "bg-red-600 hover:bg-red-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+      },
+      "success" => %{
+        disabled: "bg-green-300 text-white",
+        enabled:
+          "bg-green-600 hover:bg-green-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+      },
+      "warning" => %{
+        disabled: "bg-yellow-300 text-white",
+        enabled:
+          "bg-yellow-600 hover:bg-yellow-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
+      },
+      "custom" => %{
+        disabled: "",
+        enabled: ""
+      }
+    }
+
+    state = if disabled, do: :disabled, else: :enabled
+    get_in(button_themes, [theme, state]) || ""
+  end
 
   attr :tooltip, :any, default: nil
   attr :rest, :global, include: ~w(id disabled form name value class type)

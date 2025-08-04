@@ -39,11 +39,12 @@ defmodule LightningWeb.JobLive.CredentialPicker do
         disabled={@disabled}
       />
 
-      <div :if={!@disabled} class="text-right">
+      <div class="text-right">
         <button
           id="new-credential-button"
           type="button"
           class="link text-xs"
+          disabled={@disabled}
           phx-click="toggle_job_credential_modal"
         >
           New credential

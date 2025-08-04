@@ -9,7 +9,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   ## Schema Fields
 
   * `content` - The text content of the message (required, 1-10,000 characters)
-  * `workflow_code` - Optional code associated with the message (e.g., generated workflows)
+  * `code` - Optional code associated with the message (e.g., generated workflows)
   * `role` - Who sent the message: `:user` or `:assistant`
   * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
   * `is_deleted` - Soft deletion flag (defaults to false)
@@ -28,7 +28,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
           content: String.t() | nil,
-          workflow_code: String.t() | nil,
+          code: String.t() | nil,
           role: role(),
           status: status(),
           is_deleted: boolean(),
@@ -43,7 +43,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   schema "ai_chat_messages" do
     field :content, :string
-    field :workflow_code, :string
+    field :code, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
 
     field :status, Ecto.Enum,
@@ -80,7 +80,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     chat_message
     |> cast(attrs, [
       :content,
-      :workflow_code,
+      :code,
       :role,
       :status,
       :is_deleted,

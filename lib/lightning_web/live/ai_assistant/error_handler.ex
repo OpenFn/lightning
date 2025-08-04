@@ -1,35 +1,21 @@
 defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
   @moduledoc """
-  Comprehensive error handling and message formatting for AI Assistant interactions.
+  Error handling for AI Assistant interactions.
 
-  This module provides a centralized, consistent approach to error handling across
-  all AI Assistant modes and operations. It transforms technical errors into
-  user-friendly messages that provide clear guidance and actionable feedback.
+  Transforms technical errors into user-friendly messages.
   """
 
   @doc """
-  Transforms various error types into user-friendly, actionable messages.
+  Formats errors into user-friendly messages.
 
-  This is the primary error formatting function that handles the most common
-  error scenarios across the AI Assistant system. It provides intelligent
-  error detection and appropriate message formatting for different error types.
+  ## Examples
 
-  ## Parameters
+      iex> format_error({:error, "Something went wrong"})
+      "Something went wrong"
 
-  - `error` - Error to format, supporting multiple types:
-    - `{:error, String.t()}` - Direct error messages
-    - `{:error, %Ecto.Changeset{}}` - Validation errors
-    - `{:error, atom()}` - Categorized error types
-    - `{:error, reason, %{text: String.t()}}` - Structured errors with text
-    - Any other format - Falls back to generic message
+      iex> format_error({:error, :timeout})
+      "Request timed out. Please try again."
 
-  ## Returns
-
-  A user-friendly string message that:
-  - Uses clear, non-technical language
-  - Provides actionable guidance when possible
-  - Maintains consistent tone and style
-  - Includes recovery suggestions where appropriate
   """
   @spec format_error(any()) :: String.t()
   def format_error({:error, message}) when is_binary(message) and message != "",
@@ -62,28 +48,13 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
     do: "Oops! Something went wrong. Please try again."
 
   @doc """
-  Formats AI usage limit and quota errors with specific guidance.
+  Formats AI usage limit errors.
 
-  Provides specialized handling for usage limit errors, offering more specific
-  guidance about limits, quotas, and resolution paths. These errors require
-  different messaging because they often involve administrative actions or
-  subscription management.
+  ## Examples
 
-  ## Parameters
+      iex> format_limit_error({:error, :quota_exceeded})
+      "AI usage limit reached. Please try again later or contact support."
 
-  - `error` - Limit-related error to format:
-    - `{:error, :quota_exceeded}` - Usage quota exhausted
-    - `{:error, :rate_limited}` - Request rate too high
-    - `{:error, :insufficient_credits}` - Account credits depleted
-    - `{:error, reason, %{text: String.t()}}` - Custom limit messages
-
-  ## Returns
-
-  Specialized limit error messages that:
-  - Explain the specific limit condition
-  - Provide timeframe expectations when relevant
-  - Suggest appropriate escalation paths
-  - Include contact information for resolution
   """
   @spec format_limit_error(any()) :: String.t()
   def format_limit_error({:error, _reason, %{text: text_message}})
@@ -103,19 +74,7 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
     do: "AI usage limit reached. Please try again later."
 
   @doc """
-  Extracts and formats validation errors from Ecto changesets.
-  Processes Ecto changeset validation errors into user-friendly messages
-  suitable for form display and user guidance. Handles field name
-  humanization, error message interpolation, and multiple error aggregation.
-
-  ## Parameters
-  - `changeset` - An `%Ecto.Changeset{}` containing validation errors
-
-  ## Returns
-  A list of formatted error messages, each containing:
-  - Humanized field name
-  - Interpolated error message
-  - Clear, actionable guidance
+  Extracts errors from Ecto changesets.
   """
   @spec extract_changeset_errors(Ecto.Changeset.t()) :: [String.t()]
   def extract_changeset_errors(%Ecto.Changeset{errors: errors}) do
@@ -133,6 +92,8 @@ defmodule LightningWeb.Live.AiAssistant.ErrorHandler do
 
   def extract_changeset_errors(_), do: []
 
+  @doc false
+  @spec interpolate_error_message(String.t(), Keyword.t()) :: String.t()
   defp interpolate_error_message(message, opts) do
     Enum.reduce(opts, message, fn {key, value}, acc ->
       String.replace(acc, "%{#{key}}", inspect(value))

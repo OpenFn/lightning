@@ -1,14 +1,15 @@
 defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
   @moduledoc """
-  Contract for AI Assistant interaction modes.
+  Defines the contract for AI Assistant interaction modes.
 
-  Each mode handles a specific type of AI assistance (job debugging, workflow generation, etc.)
-  by implementing the required callbacks and optionally overriding defaults.
+  Each mode implements different AI assistance functionality (e.g., job code help, workflow generation).
+  The component delegates all mode-specific decisions to the implementing module.
   """
 
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
   alias LightningWeb.Live.AiAssistant.PaginationMeta
+  alias Phoenix.LiveView.Socket
 
   @type assigns :: %{atom() => any()}
   @type session :: ChatSession.t()
@@ -37,123 +38,129 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
           optional(:features) => [String.t()],
           name: String.t(),
           description: String.t(),
-          icon: String.t()
+          icon: String.t(),
+          chat_param: String.t()
         }
 
-  @type generated_code :: %{yaml: String.t()} | nil
+  @type update_result :: {:ok, Socket.t()} | {:unhandled, Socket.t()}
 
   @doc """
-  Creates a new AI session with initial message.
-
-  Required assigns:
-  - `:current_user` - User creating the session
-  - Mode-specific context (`:selected_job`, `:project`, etc.)
+  Creates a new chat session with initial content.
   """
-  @callback create_session(assigns(), String.t()) :: session_result()
+  @callback create_session(assigns(), String.t(), opts :: Keyword.t()) ::
+              session_result()
 
   @doc """
-  Loads session with mode-specific context enrichment.
-
-  Required assigns:
-  - `:chat_session_id` - Session UUID
-  - Mode-specific context
-
-  Raises when session not found.
+  Retrieves an existing session by ID from assigns.
   """
   @callback get_session!(assigns()) :: session() | no_return()
 
   @doc """
-  Lists sessions filtered by mode context.
-
-  Required assigns vary by mode (e.g., `:selected_job`, `:project`).
+  Lists chat sessions with pagination support.
   """
   @callback list_sessions(assigns(), sort_direction(), list_opts()) ::
               session_list()
 
   @doc """
-  Adds user message to session.
-
-  Required assigns:
-  - `:session` - Target session
-  - `:current_user` - Message author
+  Saves a user message to the current session.
   """
   @callback save_message(assigns(), String.t()) :: session_result()
 
   @doc """
-  Sends message to AI service with mode context.
+  Sends a query to the AI service.
   """
   @callback query(session(), String.t(), Keyword.t()) :: session_result()
 
   @doc """
-  Checks if chat input should be disabled.
+  Determines if the chat input should be disabled.
   """
   @callback chat_input_disabled?(assigns()) :: boolean()
 
   @doc """
-  Checks if more sessions exist beyond current count.
+  Checks if more sessions are available beyond the current count.
   """
   @callback more_sessions?(assigns(), current_count :: integer()) :: boolean()
 
-  # Optional callbacks - have default implementations
-
   @doc """
-  Validates form input parameters.
-  """
-  @callback validate_form_changeset(params :: map()) :: Ecto.Changeset.t()
-
-  @doc """
-  Extracts options from assigns for query processing.
-  """
-  @callback query_options(assigns()) :: Keyword.t()
-
-  @doc """
-  Whether to show attachment options UI.
-  """
-  @callback enable_attachment_options_component?() :: boolean()
-
-  @doc """
-  Placeholder text for chat input.
-  """
-  @callback input_placeholder() :: String.t()
-
-  @doc """
-  Formats session title for display.
-  """
-  @callback chat_title(session()) :: String.t()
-
-  @doc """
-  Whether mode generates applicable templates/code.
-  """
-  @callback supports_template_generation?() :: boolean()
-
-  @doc """
-  UI metadata for mode selection.
+  Returns mode metadata for UI display.
   """
   @callback metadata() :: mode_metadata()
 
   @doc """
-  Extracts generated code from AI response.
+  Called when a message is sent.
   """
-  @callback extract_generated_code(session() | ChatMessage.t()) ::
-              generated_code()
+  @callback on_message_send(Socket.t()) :: Socket.t()
 
   @doc """
-  Handles new session initialization.
+  Called when an AI response is received.
   """
-  @callback on_session_start(Phoenix.LiveView.Socket.t(), (atom(), any() ->
-                                                             any())) ::
-              Phoenix.LiveView.Socket.t()
+  @callback on_message_received(Socket.t(), session()) :: Socket.t()
+
+  @doc """
+  Called when a chat session is closed.
+  """
+  @callback on_session_close(Socket.t()) :: Socket.t()
+
+  @doc """
+  Called when a chat session is opened.
+  """
+  @callback on_session_open(Socket.t(), session()) :: Socket.t()
+
+  @doc """
+  Called when a message is selected in the UI.
+  """
+  @callback on_message_selected(Socket.t(), ChatMessage.t()) :: Socket.t()
+
+  @doc """
+  Renders mode-specific configuration form elements.
+  """
+  @callback render_config_form(assigns()) ::
+              Phoenix.LiveView.Rendered.t() | nil
+
+  @doc """
+  Returns the form module for this mode.
+  """
+  @callback form_module() :: module()
+
+  @doc """
+  Validates form parameters.
+  """
+  @callback validate_form(params :: map()) :: Ecto.Changeset.t()
+
+  @doc """
+  Extracts options from a validated changeset.
+  """
+  @callback extract_form_options(Ecto.Changeset.t()) :: Keyword.t()
+
+  @doc """
+  Returns placeholder text for the chat input.
+  """
+  @callback input_placeholder() :: String.t()
+
+  @doc """
+  Returns a display title for the chat session.
+  """
+  @callback chat_title(session()) :: String.t()
+
+  @doc """
+  Formats an error for display.
+  """
+  @callback error_message(any()) :: String.t()
+
+  @doc """
+  Returns tooltip text when chat is disabled.
+  """
+  @callback disabled_tooltip_message(assigns()) :: String.t() | nil
 
   @optional_callbacks [
-    validate_form_changeset: 1,
-    query_options: 1,
-    enable_attachment_options_component?: 0,
     input_placeholder: 0,
     chat_title: 1,
-    supports_template_generation?: 0,
-    metadata: 0,
-    extract_generated_code: 1,
-    on_session_start: 2
+    error_message: 1,
+    disabled_tooltip_message: 1,
+    render_config_form: 1,
+    on_message_received: 2,
+    on_session_close: 1,
+    on_session_open: 2
   ]
 
   defmacro __using__(_opts) do
@@ -161,23 +168,14 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
       @behaviour LightningWeb.Live.AiAssistant.ModeBehavior
 
       alias LightningWeb.Live.AiAssistant.ErrorHandler
+      alias Phoenix.LiveView.Socket
 
+      @doc false
       def input_placeholder do
         "Open a previous session or send a message to start a new one"
       end
 
-      def validate_form_changeset(params) do
-        data = %{content: nil}
-        types = %{content: :string}
-
-        {data, types}
-        |> Ecto.Changeset.cast(params, Map.keys(types))
-      end
-
-      def query_options(_assigns), do: []
-
-      def enable_attachment_options_component?, do: false
-
+      @doc false
       def chat_title(session) do
         case session do
           %{title: title} when is_binary(title) and title != "" -> title
@@ -185,32 +183,77 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
         end
       end
 
-      def supports_template_generation?, do: false
+      @doc false
+      def error_message(error), do: ErrorHandler.format_error(error)
 
-      def metadata do
-        %{
-          name: "AI Assistant",
-          description: "General AI assistance",
-          icon: "hero-cpu-chip"
-        }
+      @doc false
+      def disabled_tooltip_message(_assigns), do: nil
+
+      @doc false
+      def render_config_form(_assigns), do: nil
+
+      # Default event handlers - just pass through
+
+      @doc false
+      def on_message_send(socket), do: socket
+
+      @doc false
+      def on_message_received(socket, _session), do: socket
+
+      @doc false
+      def on_session_close(socket), do: socket
+
+      @doc false
+      def on_session_open(socket, _session), do: socket
+
+      @doc false
+      def on_message_selected(socket, _message), do: socket
+
+      @doc false
+      def form_module, do: __MODULE__.DefaultForm
+
+      @doc false
+      def validate_form(params) do
+        form_module().changeset(params)
       end
 
-      def extract_generated_code(_session_or_message), do: nil
+      @doc false
+      def extract_form_options(changeset) do
+        form_module().extract_options(changeset)
+      end
 
-      def on_session_start(socket, _ui_callback), do: socket
+      defmodule DefaultForm do
+        @moduledoc false
 
-      def error_message(error), do: ErrorHandler.format_error(error)
+        use Ecto.Schema
+        import Ecto.Changeset
+
+        @primary_key false
+        embedded_schema do
+          field :content, :string
+        end
+
+        def changeset(params) do
+          %__MODULE__{}
+          |> cast(params, [:content])
+        end
+
+        def extract_options(_changeset), do: []
+      end
 
       defoverridable input_placeholder: 0,
                      chat_title: 1,
-                     supports_template_generation?: 0,
-                     metadata: 0,
-                     extract_generated_code: 1,
-                     on_session_start: 2,
                      error_message: 1,
-                     validate_form_changeset: 1,
-                     query_options: 1,
-                     enable_attachment_options_component?: 0
+                     disabled_tooltip_message: 1,
+                     render_config_form: 1,
+                     on_message_send: 1,
+                     on_message_received: 2,
+                     on_session_close: 1,
+                     on_session_open: 2,
+                     on_message_selected: 2,
+                     form_module: 0,
+                     validate_form: 1,
+                     extract_form_options: 1
     end
   end
 end

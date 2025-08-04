@@ -2,14 +2,18 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   @moduledoc """
   AI mode for job-specific code assistance and debugging.
 
-  Provides contextual help for job development using expression code,
-  adaptor information, and run logs.
+  Provides context-aware help for job code, including adaptor usage,
+  debugging support, and optional log attachment.
   """
-
   use LightningWeb.Live.AiAssistant.ModeBehavior
+
+  import Phoenix.Component
+  import LightningWeb.Components.Icons
+  import LightningWeb.Components.NewInputs
 
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.Invocation
   alias Lightning.Workflows.Job
   alias LightningWeb.Live.AiAssistant.ErrorHandler
@@ -32,17 +36,20 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       end
     end
 
+    @spec changeset(map()) :: Ecto.Changeset.t()
     def changeset(params) do
       %__MODULE__{}
       |> cast(params, [:content])
       |> cast_embed(:options, with: &options_changeset/2)
     end
 
+    @spec options_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
     defp options_changeset(schema, params) do
       cast(schema, params, [:code, :input, :output, :logs])
     end
 
-    def get_options(changeset) do
+    @spec extract_options(Ecto.Changeset.t()) :: Keyword.t()
+    def extract_options(changeset) do
       data = apply_changes(changeset)
 
       if data.options do
@@ -57,51 +64,47 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
 
   @type job :: Job.t()
   @type user :: User.t()
-  @type session :: AiAssistant.ChatSession.t()
+  @type session :: ChatSession.t()
+  @type assigns :: %{atom() => any()}
 
-  @doc """
-  Creates job-scoped session with expression and adaptor context.
-  """
   @impl true
+  @spec create_session(assigns(), String.t(), Keyword.t()) ::
+          {:ok, session()} | {:error, term()}
   def create_session(
-        %{selected_job: job, current_user: user},
+        %{selected_job: job, user: user},
         content,
         opts \\ []
       ) do
     AiAssistant.create_session(job, user, content, opts)
   end
 
-  @doc """
-  Enriches session with job expression, adaptor, and optional run logs.
-  """
   @impl true
+  @spec get_session!(assigns()) :: session()
   def get_session!(%{chat_session_id: session_id, selected_job: job} = assigns) do
     AiAssistant.get_session!(session_id)
     |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
     |> maybe_add_run_logs(job, assigns[:follow_run])
   end
 
-  @doc """
-  Lists all sessions for the selected job.
-  """
   @impl true
+  @spec list_sessions(assigns(), :asc | :desc, Keyword.t()) :: %{
+          sessions: [session()],
+          pagination: map()
+        }
   def list_sessions(%{selected_job: job}, sort_direction, opts \\ []) do
     AiAssistant.list_sessions(job, sort_direction, opts)
   end
 
-  @doc """
-  Checks for more job-specific sessions.
-  """
   @impl true
+  @spec more_sessions?(assigns(), integer()) :: boolean()
   def more_sessions?(%{selected_job: job}, current_count) do
     AiAssistant.has_more_sessions?(job, current_count)
   end
 
-  @doc """
-  Saves message with user attribution.
-  """
   @impl true
-  def save_message(%{session: session, current_user: user}, content) do
+  @spec save_message(assigns(), String.t()) ::
+          {:ok, session()} | {:error, term()}
+  def save_message(%{session: session, user: user}, content) do
     AiAssistant.save_message(session, %{
       role: :user,
       content: content,
@@ -109,42 +112,20 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     })
   end
 
-  @doc """
-  Queries standard AI endpoint with job context.
-  """
   @impl true
+  @spec query(session(), String.t(), Keyword.t()) ::
+          {:ok, session()} | {:error, term()}
   def query(session, content, opts) do
     AiAssistant.query(session, content, opts)
   end
 
-  @doc """
-  Extracts attachment options from form changeset.
-  """
   @impl true
-  def query_options(%{changeset: changeset}) do
-    Form.get_options(changeset)
-  end
-
-  @doc """
-  Validates form with attachment options.
-  """
-  @impl true
-  def validate_form_changeset(params) do
-    Form.changeset(params)
-  end
-
-  @impl true
-  def enable_attachment_options_component?, do: true
-
-  @doc """
-  Disabled when: no permission, limit reached, endpoint down, loading, or job unsaved.
-  """
-  @impl true
+  @spec chat_input_disabled?(assigns()) :: boolean()
   def chat_input_disabled?(%{
         selected_job: job,
-        can_edit_workflow: can_edit,
+        can_edit: can_edit,
         ai_limit_result: limit_result,
-        endpoint_available?: available?,
+        endpoint_available: available?,
         pending_message: pending
       }) do
     !can_edit or
@@ -154,18 +135,14 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       job_is_unsaved?(job)
   end
 
-  @doc """
-  Prompts for job code questions.
-  """
   @impl true
+  @spec input_placeholder() :: String.t()
   def input_placeholder do
     "Ask about your job code, debugging, or OpenFn adaptors..."
   end
 
-  @doc """
-  Uses job name in title when available.
-  """
   @impl true
+  @spec chat_title(session()) :: String.t()
   def chat_title(session) do
     case session do
       %{title: title} when is_binary(title) and title != "" ->
@@ -180,27 +157,20 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   end
 
   @impl true
-  def supports_template_generation?, do: false
-
-  @doc """
-  Job assistance metadata.
-  """
-  @impl true
+  @spec metadata() :: map()
   def metadata do
     %{
       name: "Job Code Assistant",
       description: "Get help with job code, debugging, and OpenFn adaptors",
-      icon: "hero-code-bracket"
+      icon: "hero-cpu-chip",
+      chat_param: "j-chat"
     }
   end
 
-  @doc """
-  Returns tooltip explaining why input is disabled.
-  """
-  @spec disabled_tooltip_message(map()) :: String.t() | nil
+  @impl true
+  @spec disabled_tooltip_message(assigns()) :: String.t() | nil
   def disabled_tooltip_message(assigns) do
-    case {assigns.can_edit_workflow, assigns.ai_limit_result,
-          assigns.selected_job} do
+    case {assigns.can_edit, assigns.ai_limit_result, assigns.selected_job} do
       {false, _, _} ->
         "You are not authorized to use the AI Assistant"
 
@@ -215,6 +185,44 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     end
   end
 
+  @impl true
+  @spec form_module() :: module()
+  def form_module, do: Form
+
+  @impl true
+  @spec validate_form(map()) :: Ecto.Changeset.t()
+  def validate_form(params) do
+    Form.changeset(params)
+  end
+
+  @impl true
+  @spec extract_form_options(Ecto.Changeset.t()) :: Keyword.t()
+  def extract_form_options(changeset) do
+    Form.extract_options(changeset)
+  end
+
+  @impl true
+  @spec render_config_form(assigns()) :: Phoenix.LiveView.Rendered.t() | nil
+  def render_config_form(assigns) do
+    if assigns[:handler] && assigns.handler.form_module() == Form do
+      ~H"""
+      <div class="mt-2 flex gap-2 content-center">
+        <span class="place-content-center">
+          <.icon name="hero-paper-clip" class="size-4" /> Attach:
+        </span>
+        <.inputs_for :let={options} field={@form[:options]}>
+          <.input type="checkbox" label="Code" field={options[:code]} />
+          <.input type="checkbox" label="Logs" field={options[:logs]} />
+        </.inputs_for>
+      </div>
+      """
+    else
+      nil
+    end
+  end
+
+  @doc false
+  @spec maybe_add_run_logs(session(), job(), map() | nil) :: session()
   defp maybe_add_run_logs(session, _job, nil), do: session
 
   defp maybe_add_run_logs(session, job, run) do
@@ -222,6 +230,8 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     %{session | logs: logs}
   end
 
+  @doc false
+  @spec job_is_unsaved?(job()) :: boolean()
   defp job_is_unsaved?(%{__meta__: %{state: :built}}), do: true
   defp job_is_unsaved?(_job), do: false
 end

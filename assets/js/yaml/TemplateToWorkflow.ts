@@ -23,8 +23,7 @@ const TemplateToWorkflow = {
         console.error('Workflow parsing error:', workflowError);
         
         this.pushEventTo(this.el, 'template-parse-error', {
-          error: workflowError.toJSON(),
-          formattedMessage: formatWorkflowError(workflowError),
+          error: formatWorkflowError(workflowError),
           template: payload.template
         });
       }

@@ -1,16 +1,15 @@
 defmodule LightningWeb.AiAssistant.Component do
   @moduledoc """
-  Comprehensive LiveView component for AI-powered assistance in Lightning.
+  LiveView component for AI-powered assistance.
 
-  This component provides a rich, interactive chat interface that integrates multiple
-  AI assistance modes, real-time message processing, session management, and user
-  experience optimizations. It serves as the primary user interface for all AI
-  Assistant functionality within Lightning.
+  Provides an interactive chat interface supporting multiple AI modes,
+  real-time message processing, and session management.
   """
-
   use LightningWeb, :live_component
 
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.ChatMessage
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.AiAssistant.Limiter
   alias LightningWeb.AiAssistant.Quotes
   alias LightningWeb.Live.AiAssistant.ModeRegistry
@@ -31,83 +30,187 @@ defmodule LightningWeb.AiAssistant.Component do
      socket
      |> assign(%{
        session: nil,
-       error_message: nil,
        ai_limit_result: nil,
        pagination_meta: nil,
        sort_direction: :desc,
        has_read_disclaimer: false,
        all_sessions: AsyncResult.ok([]),
        pending_message: AsyncResult.ok(nil),
-       ai_enabled?: AiAssistant.enabled?(),
-       workflow_error: nil,
-       workflow_code: nil
+       ai_enabled: AiAssistant.enabled?(),
+       code: nil,
+       code_error: nil,
+       alert: nil,
+       callbacks: %{},
+       selected_message: nil,
+       registered_session_id: nil,
+       registered_component_id: nil
      })
-     |> assign_async(:endpoint_available?, fn ->
-       {:ok, %{endpoint_available?: AiAssistant.endpoint_available?()}}
+     |> assign_async(:endpoint_available, fn ->
+       {:ok, %{endpoint_available: AiAssistant.endpoint_available?()}}
      end)}
   end
 
   @impl true
-  def update(
-        %{
-          action: :workflow_parse_error,
-          error_details: error_details,
-          session_or_message: session_or_message
-        },
-        socket
-      ) do
-    message =
-      case session_or_message do
-        %AiAssistant.ChatSession{messages: messages} ->
-          List.last(messages)
-
-        %AiAssistant.ChatMessage{} = message ->
-          message
-      end
-
-    {:ok,
-     assign(socket,
-       workflow_error: %{message: message, error: error_details}
-     )}
+  def update(%{message_status_changed: status}, socket) do
+    {:ok, handle_message_status(status, socket)}
   end
 
-  def update(%{message_status_update: status}, socket) do
-    case status do
-      {:processing, _session} ->
-        assign(socket, :pending_message, AsyncResult.loading())
-
-      {:success, session} ->
-        socket
-        |> assign(:session, session)
-        |> assign(:pending_message, AsyncResult.ok(nil))
-        |> maybe_push_workflow_code(session)
-        |> assign(workflow_error: nil)
-
-      {:error, session} ->
-        socket
-        |> assign(:session, session)
-        |> assign(:pending_message, AsyncResult.ok(nil))
-    end
-    |> then(fn socket -> {:ok, socket} end)
+  def update(%{action: :code_error} = assigns, socket) do
+    {:ok, handle_code_error(socket, assigns)}
   end
 
-  def update(
-        %{action: action, current_user: current_user, mode: mode} = assigns,
-        socket
-      ) do
+  def update(%{action: action} = assigns, socket)
+      when action in [:new, :show] do
     {:ok,
      socket
-     |> assign(assigns)
-     |> assign(
-       has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
-     )
-     |> assign(:handler, ModeRegistry.get_handler(mode))
-     |> assign_new(:changeset, fn %{handler: handler} ->
-       handler.validate_form_changeset(%{"content" => nil})
-     end)
-     |> maybe_check_limit()
+     |> init_assigns(assigns)
+     |> register_session(assigns)
+     |> ensure_limit_checked()
      |> apply_action(action)}
   end
+
+  def update(assigns, socket) do
+    {:ok, assign(socket, assigns)}
+  end
+
+  defp register_session(socket, params) do
+    registration = build_registration(params, socket)
+
+    case registration do
+      {:no_change, _} ->
+        socket
+
+      {:update, current, new} ->
+        socket
+        |> handle_unregistration(current, new)
+        |> handle_registration(new)
+        |> assign_registration(new)
+    end
+  end
+
+  defp build_registration(params, socket) do
+    new = %{
+      session_id: params[:chat_session_id],
+      component_id: params[:id] || params.id
+    }
+
+    current = %{
+      session_id: socket.assigns[:registered_session_id],
+      component_id: socket.assigns[:registered_component_id],
+      has_pending: has_pending_operation?(socket)
+    }
+
+    if current.session_id == new.session_id &&
+         current.component_id == new.component_id do
+      {:no_change, current}
+    else
+      {:update, current, new}
+    end
+  end
+
+  defp handle_unregistration(socket, %{session_id: nil}, _new), do: socket
+  defp handle_unregistration(socket, %{has_pending: true}, _new), do: socket
+
+  defp handle_unregistration(socket, current, new) do
+    component_id = current.component_id || new.component_id
+    send_unregister_message(component_id)
+    socket
+  end
+
+  defp handle_registration(socket, %{session_id: nil}), do: socket
+
+  defp handle_registration(socket, %{
+         session_id: session_id,
+         component_id: component_id
+       }) do
+    send_register_message(component_id, session_id)
+    socket
+  end
+
+  defp assign_registration(socket, registration) do
+    socket
+    |> assign(:registered_session_id, registration.session_id)
+    |> assign(:registered_component_id, registration.component_id)
+  end
+
+  defp has_pending_operation?(socket) do
+    case socket.assigns[:pending_message] do
+      %{loading: true} -> true
+      %{loading: _} -> false
+      _ -> false
+    end
+  end
+
+  defp send_register_message(component_id, session_id) do
+    send(self(), {
+      :ai_assistant,
+      :register_component,
+      %{component_id: component_id, session_id: session_id}
+    })
+  end
+
+  defp send_unregister_message(component_id) do
+    send(self(), {
+      :ai_assistant,
+      :unregister_component,
+      %{component_id: component_id}
+    })
+  end
+
+  defp handle_message_status({:processing, _session}, socket) do
+    assign(socket, :pending_message, AsyncResult.loading())
+  end
+
+  defp handle_message_status({:success, session}, socket) do
+    socket
+    |> assign(
+      session: session,
+      pending_message: AsyncResult.ok(nil),
+      selected_message: nil,
+      code_error: nil
+    )
+    |> delegate_to_handler(:on_message_received, [session])
+  end
+
+  defp handle_message_status({:error, session}, socket) do
+    assign(socket,
+      session: session,
+      pending_message: AsyncResult.ok(nil)
+    )
+  end
+
+  defp handle_code_error(socket, assigns) do
+    assign(socket,
+      code_error: %{
+        message_id: extract_message_id(assigns.session_or_message),
+        details: assigns.error || "Unknown error"
+      }
+    )
+  end
+
+  defp init_assigns(socket, assigns) do
+    handler = ModeRegistry.get_handler(assigns.mode)
+
+    socket
+    |> assign(assigns)
+    |> assign(
+      callbacks: assigns[:callbacks] || %{},
+      handler: handler,
+      has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(assigns.user)
+    )
+    |> assign_new(:changeset, fn _ ->
+      handler.validate_form(%{"content" => nil})
+    end)
+  end
+
+  defp extract_message_id(%ChatSession{messages: messages}) do
+    messages
+    |> List.last()
+    |> extract_message_id()
+  end
+
+  defp extract_message_id(%ChatMessage{id: id}), do: id
+  defp extract_message_id(_), do: nil
 
   @impl true
   def render(assigns) do
@@ -116,7 +219,7 @@ defmodule LightningWeb.AiAssistant.Component do
     """
   end
 
-  defp render_content(%{ai_enabled?: false} = assigns) do
+  defp render_content(%{ai_enabled: false} = assigns) do
     ~H"""
     <.render_ai_not_configured />
     """
@@ -124,7 +227,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp render_content(%{has_read_disclaimer: false} = assigns) do
     ~H"""
-    <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
+    <.render_onboarding id={@id} myself={@myself} can_edit={@can_edit} />
     """
   end
 
@@ -138,8 +241,7 @@ defmodule LightningWeb.AiAssistant.Component do
   def handle_event("validate", %{"assistant" => params}, socket) do
     handler = socket.assigns.handler
 
-    {:noreply,
-     assign(socket, changeset: handler.validate_form_changeset(params))}
+    {:noreply, assign(socket, changeset: handler.validate_form(params))}
   end
 
   def handle_event(
@@ -147,67 +249,46 @@ defmodule LightningWeb.AiAssistant.Component do
         %{"assistant" => %{"content" => content} = params},
         socket
       ) do
-    handler = socket.assigns.handler
+    cleared_params = Map.put(params, "content", nil)
 
-    if socket.assigns.can_edit_workflow do
-      %{action: action} = socket.assigns
-
-      socket =
-        socket
-        |> assign(error_message: nil)
-        |> check_limit()
-
-      if socket.assigns.ai_limit_result == :ok do
-        if handler.supports_template_generation?() do
-          send_update(
-            socket.assigns.parent_module,
-            id: socket.assigns.parent_id,
-            action: :sending_ai_message,
-            content: content
-          )
-        end
-
+    cond do
+      not socket.assigns.can_edit ->
         {:noreply,
          socket
          |> assign(
-           :changeset,
-           params
-           |> Map.merge(%{"content" => nil})
-           |> handler.validate_form_changeset()
-         )
-         |> assign(workflow_error: nil)
-         |> save_message(action, content)}
-      else
+           changeset: socket.assigns.handler.validate_form(cleared_params),
+           alert: "You are not authorized to use the AI Assistant"
+         )}
+
+      socket.assigns.ai_limit_result != :ok ->
         {:noreply, socket}
-      end
-    else
-      {:noreply,
-       socket
-       |> assign(
-         changeset:
-           params
-           |> Map.merge(%{"content" => nil})
-           |> handler.validate_form_changeset(),
-         error_message: "You are not authorized to use the AI Assistant"
-       )}
+
+      true ->
+        {:noreply,
+         socket
+         |> assign(alert: nil, code_error: nil)
+         |> delegate_to_handler(:on_message_send)
+         |> assign(
+           :changeset,
+           socket.assigns.handler.validate_form(cleared_params)
+         )
+         |> save_message(socket.assigns.action, content)}
     end
   end
 
   def handle_event("mark_disclaimer_read", _params, socket) do
-    {:ok, _} = AiAssistant.mark_disclaimer_read(socket.assigns.current_user)
+    {:ok, _} = AiAssistant.mark_disclaimer_read(socket.assigns.user)
     {:noreply, assign(socket, has_read_disclaimer: true)}
   end
 
   def handle_event("toggle_sort", _params, socket) do
-    new_direction =
-      if socket.assigns.sort_direction == :desc, do: :asc, else: :desc
-
-    socket =
-      socket
-      |> assign(:sort_direction, new_direction)
-      |> apply_action(:new)
-
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> update(:sort_direction, fn
+       :desc -> :asc
+       :asc -> :desc
+     end)
+     |> apply_action(:new)}
   end
 
   def handle_event("cancel_message", %{"message-id" => message_id}, socket) do
@@ -228,7 +309,7 @@ defmodule LightningWeb.AiAssistant.Component do
     |> Enum.find(&(&1.id == message_id))
     |> AiAssistant.retry_message()
     |> case do
-      {:ok, {_message, _job}} ->
+      {:ok, {_message, _oban_job}} ->
         {:ok, session} = AiAssistant.get_session(socket.assigns.session.id)
 
         {:noreply,
@@ -248,7 +329,11 @@ defmodule LightningWeb.AiAssistant.Component do
         %{assigns: assigns} = socket
       ) do
     message = Enum.find(assigns.session.messages, &(&1.id == message_id))
-    {:noreply, maybe_push_workflow_code(socket, message)}
+
+    {:noreply,
+     socket
+     |> assign(selected_message: message)
+     |> delegate_to_handler(:on_message_selected, [message])}
   end
 
   def handle_event("retry_load_sessions", _params, socket) do
@@ -279,66 +364,43 @@ defmodule LightningWeb.AiAssistant.Component do
      end)}
   end
 
-  defp apply_action(socket, :new) do
+  defp apply_action(socket, action) do
     %{assigns: %{sort_direction: sort_direction, handler: handler} = assigns} =
       socket
 
-    ui_callback = fn event, _data ->
-      case event do
-        :clear_template ->
-          if socket.assigns[:parent_module] ==
-               LightningWeb.WorkflowLive.NewWorkflowComponent do
-            send_update(
-              socket.assigns.parent_module,
-              id: socket.assigns.parent_id,
-              action: :workflow_updated,
-              workflow_code: nil,
-              session_or_message: nil
-            )
-          else
-            :ok
+    case action do
+      :new ->
+        socket
+        |> delegate_to_handler(:on_session_close)
+        |> assign_async([:all_sessions, :pagination_meta], fn ->
+          case handler.list_sessions(assigns, sort_direction,
+                 limit: @default_page_size
+               ) do
+            %{sessions: sessions, pagination: pagination} ->
+              {:ok, %{all_sessions: sessions, pagination_meta: pagination}}
           end
+        end)
 
-        _ ->
-          :ok
-      end
+      :show ->
+        session = handler.get_session!(assigns)
+
+        message_loading =
+          Enum.any?(session.messages, fn msg ->
+            msg.role == :user && msg.status in [:pending, :processing]
+          end)
+
+        socket
+        |> assign(:session, session)
+        |> assign(
+          :pending_message,
+          if message_loading do
+            AsyncResult.loading()
+          else
+            AsyncResult.ok(nil)
+          end
+        )
+        |> delegate_to_handler(:on_session_open, [session])
     end
-
-    socket
-    |> handler.on_session_start(ui_callback)
-    |> assign_async([:all_sessions, :pagination_meta], fn ->
-      case handler.list_sessions(assigns, sort_direction,
-             limit: @default_page_size
-           ) do
-        %{sessions: sessions, pagination: pagination} ->
-          {:ok, %{all_sessions: sessions, pagination_meta: pagination}}
-      end
-    end)
-  end
-
-  defp apply_action(socket, :show) do
-    session = socket.assigns.handler.get_session!(socket.assigns)
-
-    if socket.assigns[:parent_module] ==
-         LightningWeb.WorkflowLive.NewWorkflowComponent do
-      maybe_push_workflow_code(socket, session)
-    end
-
-    pending_message_loading =
-      Enum.any?(session.messages, fn msg ->
-        msg.role == :user && msg.status in [:pending, :processing]
-      end)
-
-    socket
-    |> assign(:session, session)
-    |> assign(
-      :pending_message,
-      if pending_message_loading do
-        AsyncResult.loading()
-      else
-        AsyncResult.ok(nil)
-      end
-    )
   end
 
   defp save_message(socket, action, content) do
@@ -379,15 +441,13 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp redirect_to_session(socket, session) do
-    chat_param = get_chat_param_for_mode(socket.assigns.mode)
+    chat_param = socket.assigns.handler.metadata().chat_param
     query_params = Map.put(socket.assigns.query_params, chat_param, session.id)
     push_patch(socket, to: redirect_url(socket.assigns.base_url, query_params))
   end
 
   defp handle_save_error(socket, error) do
-    assign(socket,
-      error_message: socket.assigns.handler.error_message(error)
-    )
+    assign(socket, alert: socket.assigns.handler.error_message(error))
   end
 
   defp redirect_url(base_url, query_params) do
@@ -399,19 +459,25 @@ defmodule LightningWeb.AiAssistant.Component do
     "#{base_url}?#{query_string}"
   end
 
-  defp maybe_check_limit(%{assigns: %{ai_limit_result: nil}} = socket) do
-    check_limit(socket)
-  end
-
-  defp maybe_check_limit(socket), do: socket
-
-  defp check_limit(socket) do
+  defp ensure_limit_checked(%{assigns: %{ai_limit_result: nil}} = socket) do
     limit = Limiter.validate_quota(socket.assigns.project.id)
 
-    error_message =
-      if limit != :ok, do: socket.assigns.handler.error_message(limit)
+    alert =
+      if limit != :ok, do: socket.assigns.handler.error_message(limit), else: nil
 
-    assign(socket, ai_limit_result: limit, error_message: error_message)
+    assign(socket, ai_limit_result: limit, alert: alert)
+  end
+
+  defp ensure_limit_checked(socket), do: socket
+
+  defp delegate_to_handler(socket, callback, args \\ []) do
+    handler = socket.assigns.handler
+
+    if function_exported?(handler, callback, length(args) + 1) do
+      apply(handler, callback, [socket | args])
+    else
+      socket
+    end
   end
 
   defp maybe_show_ellipsis(title) when is_binary(title) do
@@ -423,38 +489,11 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp display_cancel_message_btn?(session) do
-    user_messages = Enum.filter(session.messages, &(&1.role == :user))
-    length(user_messages) > 1
+    session.messages |> Enum.filter(&(&1.role == :user)) |> length() > 1
   end
 
   defp ai_feedback do
     Application.get_env(:lightning, :ai_feedback)
-  end
-
-  defp maybe_push_workflow_code(socket, session_or_message) do
-    case socket.assigns.handler.extract_generated_code(session_or_message) do
-      nil ->
-        socket
-
-      %{yaml: yaml} ->
-        send_update(
-          socket.assigns.parent_module,
-          id: socket.assigns.parent_id,
-          action: :workflow_updated,
-          workflow_code: yaml,
-          session_or_message: session_or_message
-        )
-
-        socket
-    end
-  end
-
-  defp get_chat_param_for_mode(mode) do
-    case mode do
-      :workflow -> "w-chat"
-      :job -> "j-chat"
-      _ -> "chat"
-    end
   end
 
   defp render_ai_not_configured(assigns) do
@@ -522,12 +561,12 @@ defmodule LightningWeb.AiAssistant.Component do
             base_url={@base_url}
             target={@myself}
             handler={@handler}
-            workflow_error={@workflow_error}
+            code_error={@code_error}
             mode={@mode}
           />
       <% end %>
 
-      <.async_result :let={endpoint_available?} assign={@endpoint_available?}>
+      <.async_result :let={endpoint_available} assign={@endpoint_available}>
         <:loading>
           <div class="flex items-center justify-center m-4 border-r-2">
             <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-gray-50">
@@ -546,25 +585,28 @@ defmodule LightningWeb.AiAssistant.Component do
           phx-target={@myself}
           phx-hook="SendMessageViaCtrlEnter"
           data-keybinding-scope="chat"
-          id="ai-assistant-form"
+          id={"ai-assistant-form-#{@id}"}
         >
           <div
-            :if={@error_message}
+            :if={@alert}
             id="ai-assistant-error"
             class="alert alert-danger hover:cursor-pointer flex justify-between"
             role="alert"
             phx-click={JS.hide()}
           >
-            <div>{@error_message}</div>
+            <div>{@alert}</div>
             <.icon name="hero-x-mark" class="h-5 w-5" />
           </div>
 
           <.chat_input
+            id={"chat-input-#{@id}"}
+            disclaimer_id={"ai-assistant-disclaimer-#{@id}"}
+            form_id={"ai-assistant-form-#{@id}"}
             form={form}
             disabled={
               @handler.chat_input_disabled?(%{
                 assigns
-                | endpoint_available?: endpoint_available?
+                | endpoint_available: endpoint_available
               })
             }
             tooltip={@handler.disabled_tooltip_message(assigns)}
@@ -573,13 +615,16 @@ defmodule LightningWeb.AiAssistant.Component do
         </.form>
       </.async_result>
     </div>
-    <.disclaimer />
+    <.disclaimer id={"ai-assistant-disclaimer-#{@id}"} />
     """
   end
 
+  attr :id, :string
+  attr :disclaimer_id, :string
   attr :disabled, :boolean
   attr :tooltip, :string
   attr :form, :map, required: true
+  attr :form_id, :string, required: true
   attr :handler, :any, required: true
 
   defp chat_input(assigns) do
@@ -596,7 +641,7 @@ defmodule LightningWeb.AiAssistant.Component do
         <label for="content" class="sr-only">Describe your request</label>
 
         <textarea
-          id="content"
+          id={"content-#{@id}"}
           name={@form[:content].name}
           rows="6"
           class={[
@@ -632,10 +677,10 @@ defmodule LightningWeb.AiAssistant.Component do
           </span>
 
           <.simple_button_with_tooltip
-            id="ai-assistant-form-submit-btn"
+            id={"ai-assistant-form-submit-btn-#{@id}"}
             type="submit"
             disabled={@disabled}
-            form="ai-assistant-form"
+            form={@form_id}
             class={[
               "p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center h-7 w-7",
               if(@disabled,
@@ -651,21 +696,12 @@ defmodule LightningWeb.AiAssistant.Component do
         </div>
       </div>
 
-      <div
-        :if={@handler.enable_attachment_options_component?()}
-        class="mt-2 flex gap-2 content-center"
-      >
-        <span class="place-content-center">
-          <.icon name="hero-paper-clip" class="size-4" /> Attach:
-        </span>
-        <.inputs_for :let={options} field={@form[:options]}>
-          <.input type="checkbox" label="Code" field={options[:code]} />
-          <.input type="checkbox" label="Logs" field={options[:logs]} />
-        </.inputs_for>
-      </div>
+      <%= if form = @handler.render_config_form(assigns) do %>
+        {form}
+      <% end %>
 
       <div class="mt-2">
-        <.ai_footer />
+        <.ai_footer disclaimer_id={@disclaimer_id} />
       </div>
     </div>
     """
@@ -681,7 +717,7 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :handler, :any, required: true
 
   defp render_all_sessions(assigns) do
-    chat_param = get_chat_param_for_mode(assigns.mode)
+    chat_param = assigns.handler.metadata().chat_param
     assigns = assign(assigns, :chat_param, chat_param)
 
     ~H"""
@@ -914,14 +950,14 @@ defmodule LightningWeb.AiAssistant.Component do
           id="get-started-with-ai-btn"
           phx-click="mark_disclaimer_read"
           phx-target={@myself}
-          disabled={!@can_edit_workflow}
+          disabled={!@can_edit}
         >
           Get started with the AI Assistant
         </.button>
 
-        <.disclaimer />
+        <.disclaimer id={"ai-assistant-disclaimer-#{@id}"} />
       </div>
-      <.ai_footer />
+      <.ai_footer disclaimer_id={"ai-assistant-disclaimer-#{@id}"} />
     </div>
     """
   end
@@ -932,7 +968,7 @@ defmodule LightningWeb.AiAssistant.Component do
       <p class="flex-1 text-xs mt-1 text-left ml-1">
         <a
           href="#"
-          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+          phx-click={JS.show(to: "##{@disclaimer_id}")}
           class="text-primary-400 hover:text-primary-600"
         >
           About the AI Assistant
@@ -950,8 +986,6 @@ defmodule LightningWeb.AiAssistant.Component do
     </div>
     """
   end
-
-  attr :id, :string, default: "ai-assistant-disclaimer"
 
   defp disclaimer(assigns) do
     ~H"""
@@ -1056,12 +1090,12 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :base_url, :string, required: true
   attr :target, :any, required: true
   attr :handler, :any, required: true
-  attr :workflow_error, :any, required: true
+  attr :code_error, :any, required: true
   attr :mode, :atom, required: true
 
   defp render_individual_session(assigns) do
     assigns = assign(assigns, ai_feedback: ai_feedback())
-    chat_param = get_chat_param_for_mode(assigns.mode)
+    chat_param = assigns.handler.metadata().chat_param
     assigns = assign(assigns, :chat_param, chat_param)
 
     ~H"""
@@ -1087,7 +1121,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
         <div class="flex items-center gap-2">
           <.link
-            id="close-chat-session-btn"
+            id={"close-chat-session-btn-#{@session.id}"}
             patch={redirect_url(@base_url, Map.put(@query_params, @chat_param, nil))}
             class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
             phx-hook="Tooltip"
@@ -1102,7 +1136,7 @@ defmodule LightningWeb.AiAssistant.Component do
         id={"ai-session-#{@session.id}-messages"}
         phx-hook="ScrollToMessage"
         data-scroll-to-message={
-          if @workflow_error, do: @workflow_error.message.id, else: nil
+          if @code_error, do: @code_error.message_id, else: nil
         }
         class="flex-1 overflow-y-auto px-6 py-4 space-y-6"
       >
@@ -1116,7 +1150,7 @@ defmodule LightningWeb.AiAssistant.Component do
               session={@session}
               target={@target}
               ai_feedback={@ai_feedback}
-              workflow_error={@workflow_error}
+              code_error={@code_error}
               data-message-id={message.id}
             />
           <% end %>
@@ -1213,11 +1247,9 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp assistant_message(assigns) do
-    has_workflow_error? =
-      assigns[:workflow_error] &&
-        assigns.message.id == assigns.workflow_error.message.id
-
-    assigns = assign(assigns, has_workflow_error?: has_workflow_error?)
+    code_error = assigns[:code_error]
+    has_error = code_error && code_error.message_id == assigns.message.id
+    assigns = assign(assigns, has_error: has_error)
 
     ~H"""
     <div class="text-sm flex justify-start" data-message-id={@message.id}>
@@ -1225,7 +1257,7 @@ defmodule LightningWeb.AiAssistant.Component do
         <div class="flex-shrink-0 mt-1">
           <div class={[
             "w-8 h-8 rounded-full flex items-center justify-center",
-            if(@has_workflow_error?,
+            if(@has_error,
               do: "bg-red-100",
               else: "ai-bg-gradient"
             )
@@ -1233,7 +1265,7 @@ defmodule LightningWeb.AiAssistant.Component do
             <.icon
               name={@handler.metadata().icon}
               class={[
-                if(@has_workflow_error?,
+                if(@has_error,
                   do: "w-6 h-6 text-red-600",
                   else: "w-6 h-6 text-white"
                 )
@@ -1246,26 +1278,23 @@ defmodule LightningWeb.AiAssistant.Component do
           class={[
             "flex-1 bg-white rounded-2xl border overflow-hidden",
             cond do
-              @has_workflow_error? ->
+              @has_error ->
                 "border-red-300"
 
-              @message.workflow_code && @handler.supports_template_generation?() ->
+              @message.code ->
                 "border-gray-200 cursor-pointer hover:border-indigo-200 transition-all duration-200 group"
 
               true ->
                 "border-gray-200"
             end
           ]}
-          {if @message.workflow_code && @handler.supports_template_generation?() && !@has_workflow_error?, do: [
+          {if @message.code && !@has_error, do: [
             "phx-click": "select_assistant_message",
             "phx-value-message-id": @message.id,
             "phx-target": @target
           ], else: []}
         >
-          <div
-            :if={@has_workflow_error? && @message.workflow_code}
-            class="px-4 py-2 bg-red-50 border-b border-red-200"
-          >
+          <div :if={@has_error} class="px-4 py-2 bg-red-50 border-b border-red-200">
             <div class="flex items-center gap-2">
               <.icon name="hero-exclamation-triangle" class="w-4 h-4 text-red-600" />
               <p class="text-red-700 font-medium text-xs">
@@ -1275,10 +1304,7 @@ defmodule LightningWeb.AiAssistant.Component do
           </div>
 
           <div
-            :if={
-              @message.workflow_code && @handler.supports_template_generation?() &&
-                !@has_workflow_error?
-            }
+            :if={@message.code && !@has_error}
             class="px-4 py-2 ai-bg-gradient-light border-b border-gray-100"
           >
             <div class="flex items-center gap-2 text-sm">
@@ -1314,10 +1340,7 @@ defmodule LightningWeb.AiAssistant.Component do
             </div>
           </div>
 
-          <div
-            :if={@has_workflow_error? && @message.workflow_code}
-            class="border-t border-red-100"
-          >
+          <div :if={@has_error} class="border-t border-red-100">
             <button
               type="button"
               phx-click={
@@ -1335,12 +1358,12 @@ defmodule LightningWeb.AiAssistant.Component do
             </button>
             <div id={"error-details-#{@message.id}"} class="hidden px-4 py-4">
               <p class="text-red-600 text-xs">
-                {@workflow_error.error}
+                {@code_error.details}
               </p>
             </div>
           </div>
 
-          <div :if={@ai_feedback && !@has_workflow_error?} class="px-4 pb-4">
+          <div :if={@ai_feedback} class="px-4 pb-4">
             {Phoenix.LiveView.TagEngine.component(
               @ai_feedback.component,
               %{session_id: @session.id, message_id: @message.id},

@@ -1,80 +1,49 @@
 defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
   @moduledoc """
-  Centralized registry for managing AI Assistant interaction modes.
+  Registry for AI Assistant interaction modes.
 
-  This module provides a pluggable architecture for AI Assistant modes, enabling
-  dynamic mode discovery, configuration, and management. It serves as the central
-  coordination point for all AI assistance capabilities within Lightning.
+  Manages mode discovery, metadata retrieval, and feature detection.
   """
 
   alias LightningWeb.Live.AiAssistant.Modes.JobCode
+  alias LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
+
+  @type mode_id :: atom()
+  @type mode_module :: module()
+  @type mode_metadata :: %{
+          optional(:features) => [String.t()],
+          optional(:category) => String.t(),
+          id: mode_id(),
+          name: String.t(),
+          description: String.t(),
+          icon: String.t(),
+          chat_param: String.t()
+        }
 
   @doc """
-  Returns the complete registry of available AI Assistant modes.
-
-  Retrieves mode mappings from application configuration, providing the
-  foundation for all mode-related operations. The registry can be customized
-  through application configuration to enable/disable modes or add custom implementations.
-
-  ## Configuration
-
-  Modes are configured in application config:
-  ```elixir
-  config :lightning, :ai_assistant_modes, %{
-    job: LightningWeb.Live.AiAssistant.Modes.JobCode,
-    workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate,
-    custom: MyApp.CustomAIMode
-  }
-  ```
-
-  ## Returns
-
-  A map where:
-  - **Keys** are mode identifiers (atoms) used for selection and routing
-  - **Values** are module names implementing the `ModeBehavior` protocol
+  Returns all registered modes.
   """
-  @spec register_modes() :: %{atom() => module()}
+  @spec register_modes() :: %{mode_id() => mode_module()}
   def register_modes do
-    Lightning.Config.ai_assistant_modes()
+    Lightning.Config.ai_assistant_modes() ||
+      %{
+        job: JobCode,
+        workflow: WorkflowTemplate
+      }
   end
 
   @doc """
-  Retrieves the handler module for a specific AI Assistant mode.
-
-  Provides the primary lookup mechanism for mode delegation, with built-in
-  fallback handling to ensure system stability even when invalid modes are requested.
-
-  ## Parameters
-
-  - `mode` - Mode identifier atom (e.g., `:job`, `:workflow`, `:custom`)
-
-  ## Returns
-
-  The module implementing `ModeBehavior` for the requested mode, or the default
-  `JobCode` mode if the requested mode is not found.
+  Gets the handler module for a mode.
   """
-  @spec get_handler(atom()) :: module()
+  @spec get_handler(mode_id()) :: mode_module()
   def get_handler(mode) do
     Map.get(register_modes(), mode, JobCode)
   end
 
   @doc """
-  Returns a comprehensive list of all available modes with their metadata.
-
-  Aggregates metadata from all registered modes to provide rich information
-  for UI generation, feature detection, and mode selection interfaces.
-
-  ## Returns
-
-  A list of maps, each containing:
-  - `:id` - Mode identifier for programmatic access
-  - `:name` - Human-readable mode name for display
-  - `:description` - Brief explanation of mode capabilities
-  - `:icon` - UI icon class for visual representation
-  - `:category` - Optional grouping category
-  - `:features` - Optional list of supported features
+  Lists all available modes with metadata.
   """
-  @spec available_modes() :: [map()]
+  @spec available_modes() :: [mode_metadata()]
   def available_modes do
     register_modes()
     |> Enum.map(fn {id, module} ->
@@ -83,75 +52,83 @@ defmodule LightningWeb.Live.AiAssistant.ModeRegistry do
   end
 
   @doc """
-  Retrieves complete metadata for a specific mode.
-
-  Provides detailed information about a single mode's capabilities,
-  configuration, and UI requirements for focused mode operations.
-
-  ## Parameters
-
-  - `mode` - Mode identifier atom to look up
-
-  ## Returns
-
-  A map containing the mode's metadata with the ID field automatically included.
-  If the mode is not found, returns metadata for the default mode.
+  Gets metadata for a specific mode.
   """
-  @spec get_mode_metadata(atom()) :: map()
+  @spec get_mode_metadata(mode_id()) :: mode_metadata()
   def get_mode_metadata(mode) do
     handler = get_handler(mode)
     Map.put(handler.metadata(), :id, mode)
   end
 
   @doc """
-  Checks if a specific mode supports template generation capabilities.
-
-  Provides capability detection for UI features that depend on template
-  generation, such as "Apply Template" buttons, template preview panels,
-  and workflow export functionality.
-
-  ## Parameters
-
-  - `mode` - Mode identifier atom to check
-
-  ## Returns
-
-  `true` if the mode supports template generation, `false` otherwise.
+  Returns the default mode.
   """
-  @spec supports_template_generation?(atom()) :: boolean()
-  def supports_template_generation?(mode) do
-    get_handler(mode).supports_template_generation?()
-  end
-
-  @doc """
-  Returns the default mode identifier for fallback scenarios.
-
-  Provides a programmatic way to access the default mode used when
-  explicit mode selection fails or is unavailable.
-
-  ## Returns
-
-  The mode identifier atom for the default mode (currently `:job`).
-  """
-  @spec default_mode() :: atom()
+  @spec default_mode() :: mode_id()
   def default_mode, do: :job
 
   @doc """
-  Validates that a mode exists in the registry.
-
-  Provides explicit validation for mode identifiers before attempting
-  operations, enabling better error handling and user feedback.
-
-  ## Parameters
-
-  - `mode` - Mode identifier atom to validate
-
-  ## Returns
-
-  `true` if mode exists in registry, `false` otherwise.
+  Checks if a mode exists.
   """
-  @spec mode_exists?(atom()) :: boolean()
+  @spec mode_exists?(mode_id()) :: boolean()
   def mode_exists?(mode) do
     Map.has_key?(register_modes(), mode)
+  end
+
+  @doc """
+  Gets the chat parameter name for a mode.
+  """
+  @spec get_chat_param(mode_id()) :: String.t()
+  def get_chat_param(mode) do
+    get_mode_metadata(mode)[:chat_param] || "chat"
+  end
+
+  @doc """
+  Creates a callbacks map for parent component communication.
+
+  ## Example
+
+      create_callbacks(%{
+        on_workflow_update: &handle_workflow_update/2,
+        on_session_change: &handle_session_change/1
+      })
+
+  """
+  @spec create_callbacks(map()) :: map()
+  def create_callbacks(opts \\ %{}) do
+    %{
+      on_workflow_update: opts[:on_workflow_update] || fn _, _ -> :ok end,
+      on_workflow_clear: opts[:on_workflow_clear] || fn -> :ok end,
+      on_workflow_message_send:
+        opts[:on_workflow_message_send] || fn _ -> :ok end,
+      on_session_change: opts[:on_session_change] || fn _ -> :ok end
+    }
+  end
+
+  @doc """
+  Lists modes supporting a specific feature.
+  """
+  @spec modes_with_feature(String.t()) :: [mode_id()]
+  def modes_with_feature(feature) do
+    register_modes()
+    |> Enum.filter(fn {_id, module} ->
+      metadata = module.metadata()
+      features = Map.get(metadata, :features, [])
+      feature in features
+    end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  @doc """
+  Gets all unique features across all modes.
+  """
+  @spec all_features() :: [String.t()]
+  def all_features do
+    register_modes()
+    |> Enum.flat_map(fn {_id, module} ->
+      metadata = module.metadata()
+      Map.get(metadata, :features, [])
+    end)
+    |> Enum.uniq()
+    |> Enum.sort()
   end
 end

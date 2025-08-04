@@ -104,6 +104,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :can_edit_run_settings, :boolean, required: true
   attr :project_concurrency_disabled, :boolean, required: true
+  attr :sending_ai_message, :boolean, required: true
   attr :project_id, :string, required: true
   attr :max_concurrency, :integer, required: true
   attr :code_view_url, :string, required: true
@@ -112,7 +113,12 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="md:grid md:grid-cols-4 md:gap-4 p-2 @container">
       <div class="col-span-6 @md:col-span-4">
-        <.input type="text" label="Workflow Name" field={@form[:name]} />
+        <.input
+          type="text"
+          label="Workflow Name"
+          field={@form[:name]}
+          disabled={@sending_ai_message}
+        />
       </div>
       <div class="col-span-6 @md:col-span-4">
         <span class="flex grow flex-col mb-3">
@@ -146,10 +152,18 @@ defmodule LightningWeb.WorkflowLive.Components do
             id="toggle-workflow-logs-btn"
             type="toggle"
             field={@form[:enable_job_logs]}
-            disabled={!@can_edit_run_settings}
+            disabled={!@can_edit_run_settings || @sending_ai_message}
             tooltip={
-              !@can_edit_run_settings &&
-                "You don't have permission to edit this setting."
+              case {!@can_edit_run_settings, @sending_ai_message} do
+                {true, _} ->
+                  "You don't have permission to edit this setting."
+
+                {false, true} ->
+                  "You can't edit this setting while AI is processing."
+
+                {false, false} ->
+                  nil
+              end
             }
           />
         </div>
@@ -190,7 +204,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               class="w-4 text-right"
               min="1"
               max={@max_concurrency}
-              disabled={@project_concurrency_disabled}
+              disabled={@project_concurrency_disabled || @sending_ai_message}
             />
           </div>
         </div>

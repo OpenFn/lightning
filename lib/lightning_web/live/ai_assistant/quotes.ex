@@ -1,32 +1,8 @@
 defmodule LightningWeb.AiAssistant.Quotes do
   @moduledoc """
-  A curated collection of quotes about AI, technology, and human responsibility.
-
-  This module provides thoughtful quotes displayed during the AI Assistant onboarding
-  process. The quotes are carefully selected to encourage critical thinking about AI
-  technology and emphasize human responsibility when using AI tools.
-
-  ## Quote Structure
-
-  Each quote contains:
-  - `quote` - The actual quote text
-  - `author` - Person or organization who said/wrote it
-  - `source_attribute` - Optional additional context (book, paper, etc.)
-  - `source_link` - URL to the original source or reference
-  - `enabled` - Whether the quote should be included in the random selection
-
-  ## Philosophy
-
-  These quotes serve to:
-  - Set appropriate expectations about AI capabilities and limitations
-  - Encourage critical thinking and healthy skepticism
-  - Emphasize human agency and responsibility
-  - Provide historical and philosophical context for AI technology
+  Quotes about AI and human responsibility for the AI Assistant onboarding.
   """
 
-  @typedoc """
-  Structure of an AI-related quote.
-  """
   @type quote :: %{
           required(:quote) => String.t(),
           required(:author) => String.t(),
@@ -143,13 +119,13 @@ defmodule LightningWeb.AiAssistant.Quotes do
   ]
 
   @doc """
-  Returns all available quotes, including disabled ones.
+  Returns all quotes.
   """
   @spec all() :: [quote()]
   def all, do: @quotes
 
   @doc """
-  Returns only enabled quotes.
+  Returns enabled quotes only.
   """
   @spec enabled() :: [quote()]
   def enabled do
@@ -159,10 +135,7 @@ defmodule LightningWeb.AiAssistant.Quotes do
   end
 
   @doc """
-  Returns a random quote from the enabled quotes.
-
-  This is the primary function used by the AI Assistant onboarding
-  to display a thought-provoking quote to users.
+  Returns a random enabled quote.
   """
   @spec random_enabled() :: quote()
   def random_enabled do
@@ -171,7 +144,7 @@ defmodule LightningWeb.AiAssistant.Quotes do
   end
 
   @doc """
-  Safely returns a random enabled quote, with a fallback.
+  Returns a random enabled quote with error handling.
   """
   @spec safe_random_enabled() :: {:ok, quote()} | {:error, :no_quotes_available}
   def safe_random_enabled do
@@ -182,7 +155,7 @@ defmodule LightningWeb.AiAssistant.Quotes do
   end
 
   @doc """
-  Returns quotes by a specific author.
+  Returns quotes by author.
   """
   @spec by_author(String.t()) :: [quote()]
   def by_author(author_name) do
@@ -192,13 +165,13 @@ defmodule LightningWeb.AiAssistant.Quotes do
   end
 
   @doc """
-  Counts the total number of quotes.
+  Counts total quotes.
   """
   @spec count() :: non_neg_integer()
   def count, do: length(@quotes)
 
   @doc """
-  Counts the number of enabled quotes.
+  Counts enabled quotes.
   """
   @spec enabled_count() :: non_neg_integer()
   def enabled_count, do: length(enabled())

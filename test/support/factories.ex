@@ -355,7 +355,7 @@ defmodule Lightning.Factories do
       status: :success,
       is_deleted: false,
       is_public: false,
-      workflow_code: nil,
+      code: nil,
       user: build(:user),
       chat_session: build(:chat_session)
     }
