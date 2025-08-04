@@ -14,6 +14,10 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     workflow = Workflows.get_workflow!(workflow_id)
     user_id = socket.assigns.current_user.id
 
+    # Subscribe to PubSub topic for this workflow's collaboration
+    topic = "workflow:#{workflow_id}:collaboration"
+    Phoenix.PubSub.subscribe(Lightning.PubSub, topic)
+
     # Join the collaborative workflow session
     case WorkflowCollaboration.join_workflow(workflow_id, user_id) do
       {:ok, collaborator_pid, _initial_doc_state} ->
@@ -52,7 +56,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
            user_id: user_id,
            collaborator_pid: collaborator_pid,
            counter: initial_counter,
-           last_updated: initial_timestamp
+           last_updated: initial_timestamp,
+           collaboration_topic: topic
          )}
 
       {:error, reason} ->
@@ -125,6 +130,26 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     end
   end
 
+  # Handle broadcasted Yjs updates from other users
+  @impl true
+  def handle_info({:yjs_update, message}, socket) do
+    IO.inspect(message, label: "Broadcasting yjs_update to client")
+
+    # Push the Yjs update to this client's React component
+    {:noreply, socket |> push_event("yjs_update_from_server", message)}
+  end
+
+  # Handle broadcasted Yjs awareness updates from other users
+  @impl true
+  def handle_info({:yjs_awareness, message}, socket) do
+    IO.inspect(message, label: "Broadcasting yjs_awareness to client")
+
+    # Push the awareness update to this client's React component
+    {:noreply,
+     socket
+     |> push_event("yjs_awareness_from_server", message)}
+  end
+
   # Handle increment button
   @impl true
   def handle_event("increment", _params, socket) do
@@ -190,8 +215,22 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       ) do
     IO.inspect({type, payload, params}, label: "yjs_update received")
 
-    # For now, just log the message and acknowledge receipt
-    # In Phase 4, we would integrate this with WorkflowCollaboration
+    # Broadcast the Yjs update to other LiveView processes
+    if socket.assigns[:collaboration_topic] do
+      message = %{
+        type: type,
+        payload: payload,
+        user_id: socket.assigns.user_id,
+        timestamp: System.system_time(:millisecond)
+      }
+
+      Phoenix.PubSub.broadcast_from(
+        Lightning.PubSub,
+        self(),
+        socket.assigns.collaboration_topic,
+        {:yjs_update, message}
+      )
+    end
 
     {:noreply, socket}
   end
@@ -205,8 +244,24 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       ) do
     IO.inspect({type, payload, params}, label: "yjs_awareness received")
 
-    # For now, just log the message and acknowledge receipt
-    # In Phase 4, we would broadcast awareness updates to other clients
+    # Broadcast awareness updates to other LiveView processes
+    if socket.assigns[:collaboration_topic] do
+      message = %{
+        type: type,
+        payload: payload,
+        user_id: socket.assigns.user_id,
+        user_name:
+          "#{socket.assigns.current_user.first_name} #{socket.assigns.current_user.last_name}",
+        timestamp: System.system_time(:millisecond)
+      }
+
+      Phoenix.PubSub.broadcast_from(
+        Lightning.PubSub,
+        self(),
+        socket.assigns.collaboration_topic,
+        {:yjs_awareness, message}
+      )
+    end
 
     {:noreply, socket}
   end
