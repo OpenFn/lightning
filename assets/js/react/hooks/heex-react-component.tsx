@@ -5,6 +5,7 @@ import ReactDOMClient from 'react-dom/client';
 
 import {
   importComponent,
+  isReactContainerElement,
   isReactHookedElement,
   lazyLoadComponent,
   replaceEqualDeep,
@@ -22,7 +23,7 @@ import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
 
 const rootObserver = new RootObserver();
 
-export const ReactComponent = {
+export const HeexReactComponent = {
   mounted() {
     this._name = this.el.dataset.reactName;
     this._file = this.el.dataset.reactFile;
@@ -46,14 +47,19 @@ export const ReactComponent = {
     this._listeners = new Set();
     this._boundaryMounted = false;
 
+
     invariant(
       isReactHookedElement(this.el),
       this._errorMsg('Element is not valid for this hook!')
     );
 
-    // TODO: remove this, in this hook there is no difference between the 
-    // container and the element
-    this._containerEl = this.el;
+    invariant(
+      isReactContainerElement(this.el.nextElementSibling) &&
+      this.el.nextElementSibling.dataset.reactContainer === this.el.id,
+      this._errorMsg(`Missing valid React container element!`)
+    );
+
+    this._containerEl = this.el.nextElementSibling;
     this._Component = withProps(
       lazyLoadComponent(
         () => importComponent(this._file, this._name),
@@ -67,18 +73,13 @@ export const ReactComponent = {
         pushEvent: this.pushEvent.bind(this),
         handleEvent: (name, callback) => {
           const ref = this.handleEvent(name, callback);
-          return () => {
-            this.removeHandleEvent(ref);
-          };
+          return () => { this.removeHandleEvent(ref); }
         },
         pushEventTo: this.pushEventTo.bind(this, this.el),
         el: this.el,
         containerEl: this._containerEl,
-        navigate: path => {
-          this.liveSocket.execJS(
-            this.el,
-            '[["patch",{"replace":false,"href":"' + path + '"}]]'
-          );
+        navigate: (path) => {
+          this.liveSocket.execJS(this.el, '[["patch",{"replace":false,"href":"' + path + '"}]]')
         },
       },
       /* eslint-enable */
@@ -177,12 +178,14 @@ export const ReactComponent = {
   },
 
   _setProps() {
-    const props = Object.fromEntries(
-      Array.from(this.el.attributes).map(attribute => [
-        attribute.name,
-        attribute.value,
-      ])
+    invariant(
+      this.el.textContent != null && this.el.textContent !== '',
+      this._errorMsg('No content in <script> tag!')
     );
+
+    // TODO: Wrap `JSON.parse` in a try/catch, or just let it throw?
+    // If the JSON is malformed, it'll throw a [`SyntaxError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/JSON_bad_parse)
+    const props = JSON.parse(this.el.textContent) as object;
 
     invariant(
       typeof props === 'object',
@@ -361,8 +364,8 @@ export const ReactComponent = {
       [
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         this._name != null &&
-          // prettier-ignore -- the above supression should not leak down
-          `name \`${this._name}\``,
+        // prettier-ignore -- the above supression should not leak down
+        `name \`${this._name}\``,
         `id \`${this.el.id}\``,
       ]
         .filter(Boolean)
