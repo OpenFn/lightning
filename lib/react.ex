@@ -118,7 +118,7 @@ defmodule React do
             data-react-name={@__name__}
             data-react-id={@__react_id__}
             data-react-portal-target={@__react_portal_target__}
-            phx-hook="ReactComponent"
+            phx-hook="HeexReactComponent"
           >
             <%= raw(React.json(assigns)) %>
           </script>
