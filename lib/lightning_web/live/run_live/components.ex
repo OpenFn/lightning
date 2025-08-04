@@ -496,7 +496,7 @@ defmodule LightningWeb.RunLive.Components do
       </a>
       """
     else
-      "For more information, contact one of your project admins"
+      "For more information, contact one of your project admins."
     end
   end
 
