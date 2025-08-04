@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { TodoItem as TodoItemType } from '../../../types/todo';
-import { useTodoStore } from '../../../stores/todo-store';
+import type { TodoItem as TodoItemType } from '../../../types/todo';
+import { useTodoStore } from '../../contexts/TodoStoreProvider';
 
 interface TodoItemProps {
   todo: TodoItemType;
   index: number;
 }
 
-export const TodoItem: React.FC<TodoItemProps> = ({ todo, index }) => {
+export const TodoItem: React.FC<TodoItemProps> = ({ todo }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(todo.text);
   const { toggleTodo, deleteTodo, updateTodoText, users } = useTodoStore();
