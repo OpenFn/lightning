@@ -87,7 +87,7 @@ defmodule Lightning.Application do
           [
             cross_cluster: [
               strategy: LibclusterPostgres.Strategy,
-              config: Lightning.Repo.config(),
+              config: Keyword.merge(Lightning.Repo.config(), channel_name: "lightning-cluster"),
             ]
           ]
         )
@@ -95,6 +95,7 @@ defmodule Lightning.Application do
         topologies
       end
 
+      IO.inspect(topologies, label: "Cluster topologies")
     goth =
       Application.get_env(:lightning, Lightning.Google, [])
       |> then(fn config ->
