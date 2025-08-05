@@ -5,6 +5,7 @@ defmodule Lightning.CollaborationTest do
   use Lightning.DataCase, async: false
 
   import Eventually
+  import Lightning.Factories
 
   alias Lightning.Collaboration.Session
   # we assume that the WorkflowCollaboration supervisor is up
@@ -45,13 +46,13 @@ defmodule Lightning.CollaborationTest do
 
   describe "joining" do
     test "with start_link" do
-      workflow_id = Ecto.UUID.generate()
+      workflow = insert(:simple_workflow)
 
       client_1 =
         Task.async(fn ->
-          {:ok, pid} = Session.start(workflow_id)
+          {:ok, pid} = Session.start(workflow.id)
 
-          Session.get_document(pid) |> IO.inspect()
+          assert Session.get_doc(pid)
 
           pid
         end)
@@ -60,9 +61,9 @@ defmodule Lightning.CollaborationTest do
 
       client_2 =
         Task.async(fn ->
-          {:ok, pid} = Session.start(workflow_id)
+          {:ok, pid} = Session.start(workflow.id)
 
-          Session.get_document(pid) |> IO.inspect()
+          assert Session.get_doc(pid)
 
           pid
         end)
@@ -76,12 +77,156 @@ defmodule Lightning.CollaborationTest do
       Process.alive?(client_1)
 
       # TODO: I've enabled auto_exit: true, so this should be 0.
-      # But we might want to control the cleanup ourselves.
+      # But we might want to control the cleanup ourselves, in which case
+      # this will be > 0.
       assert_eventually(
-        length(:pg.get_members(:workflow_collaboration, workflow_id)) == 0
+        length(:pg.get_members(:workflow_collaboration, workflow.id)) == 0
       )
 
       # IO.inspect({session_one, session_two})
+    end
+  end
+
+  describe "workflow initialization" do
+    test "SharedDoc is initialized with workflow data" do
+      # Create a workflow with jobs
+      workflow =
+        build(:workflow, name: "Test Workflow")
+        |> with_job(build(:job, name: "Job 1", body: "console.log('job1')"))
+        |> with_job(build(:job, name: "Job 2", body: "console.log('job2')"))
+        |> insert()
+
+      # Start a session - this should initialize the SharedDoc with workflow data
+      {:ok, session_pid} = Session.start(workflow.id)
+
+      # Send a message to allow :handle_continue to finish
+      :sys.get_state(session_pid)
+      shared_doc = Session.get_doc(session_pid)
+
+      # Check workflow map exists and has correct data
+      workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
+      assert Yex.Map.fetch!(workflow_map, "id") == workflow.id
+      assert Yex.Map.fetch!(workflow_map, "name") == "Test Workflow"
+
+      # Check jobs array exists and has correct data
+      jobs_array = Yex.Doc.get_array(shared_doc, "jobs")
+      jobs_data = Yex.Array.to_json(jobs_array)
+
+      assert length(jobs_data) == 2
+
+      # Verify job data
+      job_ids = Enum.map(jobs_data, & &1["id"])
+      assert workflow.jobs |> Enum.map(& &1.id) == job_ids
+
+      for job <- workflow.jobs do
+        job_data = Enum.find(jobs_data, &(&1["id"] == job.id))
+        assert job_data["name"] == job.name
+        assert job_data["body"] == job.body
+      end
+    end
+
+    test "existing SharedDoc is not reinitialized" do
+      workflow = insert(:workflow, name: "Test Workflow")
+
+      insert(:job, workflow: workflow, name: "Original Job", body: "original")
+
+      # Start first session
+      {:ok, session1_pid} = Session.start(workflow.id)
+
+      shared_doc_1 = Session.get_doc(session1_pid)
+
+      Session.update_doc(session1_pid, fn doc ->
+        workflow_map = Yex.Doc.get_map(doc, "workflow")
+        Yex.Map.set(workflow_map, "name", "Modified Name")
+      end)
+
+      # Start second session - should connect to existing SharedDoc
+      {:ok, session2_pid} = Session.start(workflow.id)
+      shared_doc_2 = Session.get_doc(session2_pid)
+
+      assert shared_doc_1 == shared_doc_2
+
+      # The modified name should still be there (not reinitialized)
+      workflow_map = Yex.Doc.get_map(shared_doc_2, "workflow")
+      assert Yex.Map.fetch!(workflow_map, "name") == "Modified Name"
+    end
+
+    test "client can sync workflow data from SharedDoc" do
+      # Create workflow with jobs
+      workflow = insert(:workflow, name: "Sync Test Workflow")
+
+      job =
+        insert(:job,
+          workflow: workflow,
+          name: "Sync Job",
+          body: "console.log('sync')"
+        )
+
+      # Start session to initialize SharedDoc
+      {:ok, session_pid} = Session.start(workflow.id)
+
+      state = :sys.get_state(session_pid)
+      shared_doc_pid = state.shared_doc_pid
+
+      # Simulate a client connecting and syncing
+      Task.async(fn ->
+        # Create a client document
+        client_doc = Yex.Doc.new()
+
+        # Observe the SharedDoc to receive sync messages
+        Yex.Sync.SharedDoc.observe(shared_doc_pid)
+
+        # Start sync process
+        initiate_sync(shared_doc_pid, client_doc)
+        receive_and_handle_replies(client_doc)
+
+        # Verify client received workflow data
+        workflow_map = Yex.Doc.get_map(client_doc, "workflow")
+        jobs_array = Yex.Doc.get_array(client_doc, "jobs")
+
+        assert Yex.Map.fetch!(workflow_map, "id") == workflow.id
+        assert Yex.Map.fetch!(workflow_map, "name") == "Sync Test Workflow"
+
+        jobs_data = Yex.Array.to_json(jobs_array)
+        assert length(jobs_data) == 1
+        assert List.first(jobs_data)["name"] == job.name
+        assert List.first(jobs_data)["body"] == job.body
+      end)
+      |> Task.await()
+    end
+  end
+
+  defp initiate_sync(shared_doc, client_doc) do
+    {:ok, step1} = Yex.Sync.get_sync_step1(client_doc)
+    local_message = Yex.Sync.message_encode!({:sync, step1})
+    Yex.Sync.SharedDoc.start_sync(shared_doc, local_message)
+  end
+
+  # Helper function for sync tests (similar to SharedDoc test pattern)
+  defp receive_and_handle_replies(doc, timeout \\ 100) do
+    receive do
+      {:yjs, reply, proc} ->
+        case Yex.Sync.message_decode(reply) do
+          {:ok, {:sync, sync_message}} ->
+            case Yex.Sync.read_sync_message(sync_message, doc, proc) do
+              :ok ->
+                :ok
+
+              {:ok, reply} ->
+                Yex.Sync.SharedDoc.send_yjs_message(
+                  proc,
+                  Yex.Sync.message_encode!({:sync, reply})
+                )
+            end
+
+          _ ->
+            :ok
+        end
+
+        receive_and_handle_replies(doc, timeout)
+    after
+      # If we don't receive a message, we're done
+      timeout -> :ok
     end
   end
 
@@ -96,7 +241,7 @@ defmodule Lightning.CollaborationTest do
 
       # SharedDoc should still be alive if we want to control cleanup
 
-      refute_eventually Process.alive?(shared_doc_pid)
+      refute_eventually(Process.alive?(shared_doc_pid))
 
       # assert_eventually(
       #   :sys.get_state(shared_doc_pid)
