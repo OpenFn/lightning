@@ -1,4 +1,4 @@
-defmodule Lightning.WorkflowCollaboration.Supervisor do
+defmodule Lightning.Collaboration.Supervisor do
   @moduledoc """
   Supervisor for workflow collaboration infrastructure.
 
@@ -28,7 +28,7 @@ defmodule Lightning.WorkflowCollaboration.Supervisor do
            [
              [
                strategy: :one_for_one,
-               name: __MODULE__.DynamicSupervisor
+               name: __MODULE__.DocSupervisor
              ]
            ]},
         type: :supervisor
@@ -38,24 +38,11 @@ defmodule Lightning.WorkflowCollaboration.Supervisor do
     Supervisor.init(children, strategy: :one_for_one)
   end
 
-  def start_collaboration(workflow_id) do
-    child_spec = {Lightning.WorkflowCollaboration, workflow_id}
-    DynamicSupervisor.start_child(__MODULE__.DynamicSupervisor, child_spec)
-  end
-
-  def stop_collaboration(pid) when is_pid(pid) do
-    DynamicSupervisor.terminate_child(__MODULE__.DynamicSupervisor, pid)
-  end
-
-  def list_collaborations do
-    DynamicSupervisor.which_children(__MODULE__.DynamicSupervisor)
-  end
-
   def start_child(child_spec) do
-    DynamicSupervisor.start_child(__MODULE__.DynamicSupervisor, child_spec)
+    DynamicSupervisor.start_child(__MODULE__.DocSupervisor, child_spec)
   end
 
-  def stop_child(pid) do
-    DynamicSupervisor.terminate_child(__MODULE__.DynamicSupervisor, pid)
+  def stop_child(pid) when is_pid(pid) do
+    DynamicSupervisor.terminate_child(__MODULE__.DocSupervisor, pid)
   end
 end
