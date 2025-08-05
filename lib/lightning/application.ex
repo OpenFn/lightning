@@ -80,6 +80,21 @@ defmodule Lightning.Application do
         Application.get_env(:libcluster, :topologies)
       end
 
+    topologies =
+      if Application.get_env(:lightning, :k8s)[:enable_cross_cluster_discovery] do
+        Keyword.merge(
+          topologies,
+          [
+            cross_cluster: [
+              strategy: LibclusterPostgres.Strategy,
+              config: Lightning.Repo.config(),
+            ]
+          ]
+        )
+      else
+        topologies
+      end
+
     goth =
       Application.get_env(:lightning, Lightning.Google, [])
       |> then(fn config ->
