@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.14.0] - 2025-08-05
+
+### Fixed
+
 - Added "interactive" to checkbox disabled tooltip to allow user to click link,
   ensure permissions line up with admin or above.
   [PR-3473](https://github.com/OpenFn/lightning/pull/3473)
