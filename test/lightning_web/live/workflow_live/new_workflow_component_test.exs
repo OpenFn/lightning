@@ -445,6 +445,14 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       project: project
     } do
       Oban.Testing.with_testing_mode(:manual, fn ->
+        Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+          case key do
+            :endpoint -> "http://localhost:3000"
+            :ai_assistant_api_key -> "api_key"
+            :timeout -> 5_000
+          end
+        end)
+
         {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
         view

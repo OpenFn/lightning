@@ -2531,7 +2531,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job.id]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job.id, v: workflow.lock_version]}"
       )
 
       job = Lightning.Repo.reload(job)
