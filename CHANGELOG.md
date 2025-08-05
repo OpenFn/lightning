@@ -22,6 +22,9 @@ and this project adheres to
 - Add test gauge metric that can be used to set arbitrary values for the purposes
   of triggering behaviour in metric consumers.
   [3510](https://github.com/OpenFn/lightning/issues/3510)
+- Possibly temporary plumbing to allow the use of libcluster_postgres as an
+  additional mechanism for discovering Erlang nodes.
+  [3482](https://github.com/OpenFn/lightning/issues/3482)
 
 ### Changed
 
