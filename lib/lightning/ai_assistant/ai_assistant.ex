@@ -552,6 +552,7 @@ defmodule Lightning.AiAssistant do
   @spec query(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content, opts \\ []) do
+    use_new_prompt = Keyword.get(opts, :use_new_prompt, true)
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
     pending_user_message = find_pending_user_message(session, content)
 
@@ -573,7 +574,7 @@ defmodule Lightning.AiAssistant do
       context: context,
       history: history,
       meta: meta,
-      use_new_prompt: true
+      use_new_prompt: use_new_prompt
     )
     |> handle_ai_response(session, pending_user_message, &build_job_message/1)
   end
@@ -619,6 +620,7 @@ defmodule Lightning.AiAssistant do
 
     workflow_errors = Keyword.get(opts, :workflow_errors)
     meta = Keyword.get(opts, :meta, session.meta || %{})
+    use_new_prompt = Keyword.get(opts, :use_new_prompt, true)
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
     pending_user_message = find_pending_user_message(session, content)
@@ -628,7 +630,8 @@ defmodule Lightning.AiAssistant do
       workflow_code: workflow_code,
       workflow_errors: workflow_errors,
       history: build_history(session),
-      meta: meta
+      meta: meta,
+      use_new_prompt: use_new_prompt
     )
     |> handle_ai_response(
       session,

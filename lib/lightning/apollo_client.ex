@@ -82,6 +82,7 @@ defmodule Lightning.ApolloClient do
     context = Keyword.get(opts, :context, %{})
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
+    use_new_prompt = Keyword.get(opts, :use_new_prompt, false)
 
     payload =
       %{
@@ -89,7 +90,8 @@ defmodule Lightning.ApolloClient do
         "content" => content,
         "context" => context,
         "history" => history,
-        "meta" => meta
+        "meta" => meta,
+        "use_new_prompt" => use_new_prompt
       }
 
     client() |> Tesla.post("/services/job_chat", payload)
