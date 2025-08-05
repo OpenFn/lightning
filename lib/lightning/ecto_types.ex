@@ -76,39 +76,85 @@ defmodule Lightning.LogMessage do
 
   In the case of JSON objects we serialize them to a string, and in the case of
   arrays we serialize them individually and join them with a space.
+
+  This type also sanitizes strings to remove characters that PostgreSQL text
+  fields cannot store (null bytes and certain control characters).
   """
   use Ecto.Type
+
+  # Regex to match PostgreSQL-incompatible characters
+  # Matches: NULL (0x00), control chars (0x01-0x08, 0x0B, 0x0C, 0x0E-0x1F), DEL (0x7F)
+  @invalid_chars_regex ~r/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/
+
+  @unicode_escape_regex ~r/\\u00[0-8B-CE-F][0-9A-F]|\\u007F/i
+
+  @replacement_char "�"
+
   def type, do: :string
 
-  def cast(d) when is_binary(d), do: Ecto.Type.cast(:string, d)
-
-  def cast(d) when is_integer(d),
-    do: Ecto.Type.cast(:string, d |> Integer.to_string())
-
-  def cast(d) when is_boolean(d),
-    do: Ecto.Type.cast(:string, d |> to_string())
-
-  def cast(d) when is_float(d),
-    do: Ecto.Type.cast(:string, d |> Float.to_string())
-
-  def cast(d) when is_list(d) do
-    {:ok,
-     d
-     |> Enum.map(&cast/1)
-     |> Enum.map(fn {:ok, v} -> v end)
-     |> Enum.intersperse(" ")
-     |> IO.iodata_to_binary()}
+  def cast(d) when is_binary(d) do
+    {:ok, sanitize_string(d)}
   end
 
-  def cast(d) when is_map(d) or is_list(d) or is_nil(d) do
-    Jason.encode(d)
+  def cast(d) when is_integer(d) do
+    d |> Integer.to_string() |> cast()
+  end
+
+  def cast(d) when is_boolean(d) do
+    d |> to_string() |> cast()
+  end
+
+  def cast(d) when is_float(d) do
+    d |> Float.to_string() |> cast()
+  end
+
+  def cast(d) when is_list(d) do
+    sanitized_parts =
+      d
+      |> Enum.map(fn item ->
+        case cast(item) do
+          {:ok, v} -> v
+          _ -> ""
+        end
+      end)
+      |> Enum.intersperse(" ")
+      |> IO.iodata_to_binary()
+
+    {:ok, sanitized_parts}
+  end
+
+  def cast(d) when is_map(d) or is_nil(d) do
+    case Jason.encode(d) do
+      {:ok, json_string} ->
+        {:ok, sanitize_json_string(json_string)}
+
+      {:error, _} = error ->
+        error
+    end
   end
 
   def load(d) do
     Ecto.Type.load(:string, d)
   end
 
+  def dump(d) when is_binary(d) do
+    {:ok, sanitize_string(d)}
+  end
+
   def dump(d) do
     Ecto.Type.dump(:string, d)
+  end
+
+  defp sanitize_string(string) when is_binary(string) do
+    string
+    |> String.replace(@invalid_chars_regex, @replacement_char)
+  end
+
+  defp sanitize_string(other), do: other
+
+  defp sanitize_json_string(json_string) when is_binary(json_string) do
+    json_string
+    |> sanitize_string()
+    |> String.replace(@unicode_escape_regex, @replacement_char)
   end
 end
