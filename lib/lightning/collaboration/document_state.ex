@@ -1,4 +1,4 @@
-defmodule Lightning.WorkflowCollaboration.DocumentState do
+defmodule Lightning.Collaboration.DocumentState do
   @moduledoc """
   Schema for persisting Y.js collaborative document states.
 
@@ -9,7 +9,7 @@ defmodule Lightning.WorkflowCollaboration.DocumentState do
   use Ecto.Schema
   import Ecto.Changeset
 
-  schema "workflow_document_states" do
+  schema "collaboration_document_states" do
     field :document_name, :string
     field :state_data, :binary
     # For efficient updates in the future
