@@ -94,7 +94,7 @@ defmodule LightningWeb.Components.Table do
     ~H"""
     <div
       id={@id}
-      class="overflow-x-auto shadow ring-1 ring-black/5 sm:rounded-lg bg-gray-50"
+      class="shadow ring-1 ring-black/5 sm:rounded-lg bg-gray-50"
     >
       <table class={["min-w-full", @divide && "divide-y divide-gray-200"]}>
         <thead>{render_slot(@header)}</thead>
