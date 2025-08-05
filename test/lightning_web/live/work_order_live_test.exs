@@ -874,7 +874,9 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       # uncheck :failure
       view
-      |> form("#workorder-filter-form", filters: %{"failed" => "false"})
+      |> form("#workorder-filter-form",
+        filters: %{"failed" => "false", "success" => "true"}
+      )
       |> render_submit()
 
       refute view

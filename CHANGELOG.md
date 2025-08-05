@@ -28,6 +28,8 @@ and this project adheres to
   [#3476](https://github.com/OpenFn/lightning/issues/3476)
 - Fixed "⚠️ Production" icon size in credentials table
   [#3483](https://github.com/OpenFn/lightning/issues/3483)
+- Fixed test on history page
+  [3475](https://github.com/OpenFn/lightning/issues/3475)
 
 ## [v2.14.0-pre1] - 2025-08-04
 
