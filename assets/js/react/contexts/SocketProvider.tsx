@@ -4,10 +4,10 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Socket } from 'phoenix';
+import { Socket as PhoenixSocket } from 'phoenix';
 
 interface SocketContextValue {
-  socket: Socket | null;
+  socket: PhoenixSocket | null;
   isConnected: boolean;
   connectionError: string | null;
   connect: () => void;
@@ -29,7 +29,7 @@ interface SocketProviderProps {
 }
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<PhoenixSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
@@ -47,7 +47,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
 
     // Create new socket
-    const newSocket = new Socket('/socket', {
+    const newSocket = new PhoenixSocket('/socket', {
       params: { token: userToken },
       logger: (kind: any, msg: any, data: any) => {
         console.log(`Phoenix Socket ${kind}:`, msg, data);
@@ -79,7 +79,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   const disconnect = () => {
     if (socket) {
-      socket.disconnect();
+      socket.disconnect(true);
       setSocket(null);
       setIsConnected(false);
     }

@@ -7,6 +7,8 @@ defmodule LightningWeb.WorkflowChannel do
   """
   use Phoenix.Channel
 
+  alias Lightning.Collaboration.Session
+
   def join("workflow:collaborate:" <> workflow_id = topic, _params, socket) do
     # Check if user is authenticated
     case socket.assigns[:current_user] do
@@ -20,20 +22,22 @@ defmodule LightningWeb.WorkflowChannel do
             {:error, %{reason: "workflow not found"}}
 
           workflow ->
-            case Lightning.Policies.Workflows.authorize(
+            case Lightning.Policies.Permissions.can(
+                   :workflows,
                    :access_read,
                    user,
                    workflow.project
                  ) do
               :ok ->
-                # Subscribe to PubSub for this workflow
-                Phoenix.PubSub.subscribe(Lightning.PubSub, topic)
+                {:ok, session_pid} =
+                  Session.start(workflow_id)
 
                 {:ok,
                  assign(socket,
                    workflow_id: workflow_id,
                    collaboration_topic: topic,
-                   workflow: workflow
+                   workflow: workflow,
+                   session_pid: session_pid
                  )}
 
               {:error, :unauthorized} ->
@@ -45,66 +49,14 @@ defmodule LightningWeb.WorkflowChannel do
 
   # Handle Yjs protocol messages (used for sync and awareness)
   def handle_in("yjs", {:binary, payload}, socket) do
-    IO.inspect(byte_size(payload), label: "Received binary yjs message")
-
-    # Broadcast to other channel processes
-    Phoenix.PubSub.broadcast_from(
-      Lightning.PubSub,
-      self(),
-      socket.assigns.collaboration_topic,
-      {:yjs, payload}
-    )
-
-    {:noreply, socket}
-  end
-
-  # Handle JSON-encoded Yjs messages (fallback for Phoenix.js JSON encoding)
-  def handle_in("yjs", payload, socket) when is_map(payload) do
-    binary_payload = convert_json_to_binary(payload)
-
-    IO.inspect(byte_size(binary_payload),
-      label: "Received JSON yjs message, converted to binary"
-    )
-
-    # Broadcast to other channel processes
-    Phoenix.PubSub.broadcast_from(
-      Lightning.PubSub,
-      self(),
-      socket.assigns.collaboration_topic,
-      {:yjs, binary_payload}
-    )
+    Session.send_yjs_message(socket.assigns.session_pid, payload)
 
     {:noreply, socket}
   end
 
   # Handle Yjs sync messages (initial sync)
-  def handle_in("yjs_sync", {:binary, payload}, socket) do
-    IO.inspect(byte_size(payload), label: "Received binary yjs_sync message")
-
-    Phoenix.PubSub.broadcast_from(
-      Lightning.PubSub,
-      self(),
-      socket.assigns.collaboration_topic,
-      {:yjs_sync, payload}
-    )
-
-    {:noreply, socket}
-  end
-
-  # Handle JSON-encoded sync messages (fallback)
-  def handle_in("yjs_sync", payload, socket) when is_map(payload) do
-    binary_payload = convert_json_to_binary(payload)
-
-    IO.inspect(byte_size(binary_payload),
-      label: "Received JSON yjs_sync message, converted to binary"
-    )
-
-    Phoenix.PubSub.broadcast_from(
-      Lightning.PubSub,
-      self(),
-      socket.assigns.collaboration_topic,
-      {:yjs_sync, binary_payload}
-    )
+  def handle_in("yjs_sync", {:binary, chunk}, socket) do
+    Session.start_sync(socket.assigns.session_pid, chunk)
 
     {:noreply, socket}
   end
@@ -113,28 +65,5 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_info({:yjs, payload}, socket) do
     push(socket, "yjs", {:binary, payload})
     {:noreply, socket}
-  end
-
-  def handle_info({:yjs_sync, payload}, socket) do
-    push(socket, "yjs_sync", {:binary, payload})
-    {:noreply, socket}
-  end
-
-  # Helper function to convert JSON object with numeric keys back to binary
-  defp convert_json_to_binary(payload) when is_map(payload) do
-    # Phoenix.js converts Uint8Array to object with numeric string keys
-    # e.g., %{"0" => 1, "1" => 137, "2" => 170, ...}
-
-    # Get all numeric keys and sort them
-    keys =
-      payload
-      |> Map.keys()
-      |> Enum.map(&String.to_integer/1)
-      |> Enum.sort()
-
-    # Extract values in order and convert to binary
-    keys
-    |> Enum.map(&Map.get(payload, Integer.to_string(&1)))
-    |> :binary.list_to_bin()
   end
 end

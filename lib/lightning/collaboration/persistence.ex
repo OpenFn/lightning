@@ -1,4 +1,4 @@
-defmodule Lightning.WorkflowCollaboration.Persistence do
+defmodule Lightning.Collaboration.Persistence do
   @moduledoc """
   Persistence implementation for collaborative workflow documents.
 
@@ -8,9 +8,10 @@ defmodule Lightning.WorkflowCollaboration.Persistence do
 
   @behaviour Yex.Sync.SharedDoc.PersistenceBehaviour
 
-  require Logger
+  alias Lightning.Collaboration.DocumentState
   alias Lightning.Repo
-  alias Lightning.WorkflowCollaboration.DocumentState
+
+  require Logger
 
   @impl true
   def bind(_state, doc_name, doc) do
