@@ -273,7 +273,7 @@ defmodule Lightning.Accounts.UserNotifier do
     deliver(user, "Your OpenFn History Export Is Complete", """
     Hello #{user.first_name},
 
-    You history export started requested on #{Helpers.format_date(project_file.inserted_at)} is completed. Please visit this URL to download the file:acceptor
+    You history export requested on #{Helpers.format_date(project_file.inserted_at, "%F at %T")} is completed. Please visit this URL to download the file:
 
     #{url(~p"/project_files/#{project_file.id}/download")}
 
@@ -362,7 +362,7 @@ defmodule Lightning.Accounts.UserNotifier do
     actual_deletion_date =
       Lightning.Config.purge_deleted_after_days()
       |> Lightning.Helpers.actual_deletion_date()
-      |> Lightning.Helpers.format_date()
+      |> Lightning.Helpers.format_date("%F at %T")
 
     deliver(user, "Project scheduled for deletion", """
     Hi #{user.first_name},

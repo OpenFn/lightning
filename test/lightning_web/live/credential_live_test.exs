@@ -4,7 +4,6 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
-  import Lightning.CredentialsFixtures
   import Lightning.Factories
 
   import Ecto.Query
@@ -16,12 +15,14 @@ defmodule LightningWeb.CredentialLiveTest do
 
   @create_attrs %{
     name: "some credential",
-    body: Jason.encode!(%{"a" => 1})
+    body: Jason.encode!(%{"a" => 1}),
+    external_id: "test-external-id"
   }
 
   @update_attrs %{
     name: "some updated name",
-    body: "{\"a\":\"new_secret\"}"
+    body: "{\"a\":\"new_secret\"}",
+    external_id: "updated-external-id"
   }
 
   @invalid_attrs %{name: "this won't work", body: nil}
@@ -32,7 +33,9 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   defp create_project_credential(%{user: user}) do
-    project_credential = project_credential_fixture(user_id: user.id)
+    project_credential =
+      insert(:project_credential, credential: build(:credential, user: user))
+
     %{project_credential: project_credential}
   end
 
@@ -477,12 +480,17 @@ defmodule LightningWeb.CredentialLiveTest do
           project_credentials: [%{project: project}]
         )
 
-      {:ok, view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
-      assert html =~ credential.name
+      assert view
+             |> element("#credentials-table")
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.find("tr td:first-child")
+             |> Floki.text() =~ credential.name
 
       refute has_element?(
                view,
@@ -676,6 +684,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert inputs_in_position == ~w(
                credential[name]
+               credential[external_id]
                credential[production]
                credential[production]
                credential[body][username]
@@ -740,6 +749,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert inputs_in_position == [
                "credential[name]",
+               "credential[external_id]",
                "credential[production]",
                "credential[production]",
                "credential[body][host]",
@@ -823,13 +833,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> fill_credential(%{
-               name: "My Credential",
+               name: "My Credential with TLS",
                body: %{username: "foo", password: "bar", baseUrl: "baz"}
              }) =~ "expected to be a URI"
 
       assert index_live
              |> fill_credential(%{
-               body: %{baseUrl: "http://localhost"}
+               body: %{baseUrl: "http://localhost", tls: "{\"a\":1}"}
              })
 
       refute index_live |> submit_disabled("save-credential-button-new")
@@ -849,6 +859,20 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential created successfully"}
+
+      body =
+        Repo.get_by(Lightning.Credentials.Credential,
+          name: "My Credential with TLS"
+        )
+        |> Map.get(:body)
+
+      assert body == %{
+               "access_token" => "",
+               "baseUrl" => "",
+               "password" => "bar",
+               "tls" => %{"a" => 1},
+               "username" => "foo"
+             }
     end
 
     test "allows the user to define and save a credential with email (godata)",
@@ -931,6 +955,19 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential updated successfully"}
 
       assert html =~ "some updated name"
+    end
+
+    test "displays external_id in credentials table", %{
+      conn: conn,
+      credential: credential
+    } do
+      # Update credential with external_id
+      Credentials.update_credential(credential, %{external_id: "display-test-id"})
+
+      {:ok, _index_live, html} = live(conn, ~p"/credentials")
+
+      # Verify external_id is displayed in the table
+      assert html =~ "display-test-id"
     end
 
     test "Edit adds new project with access", %{

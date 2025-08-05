@@ -19,6 +19,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthToken
   alias Lightning.Credentials.OauthValidation
@@ -30,6 +31,7 @@ defmodule Lightning.Credentials do
   require Logger
 
   @type transfer_error :: :token_error | :not_found | :not_owner
+  @type oauth_refresh_error :: :temporary_failure | :reauthorization_required
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
@@ -144,12 +146,6 @@ defmodule Lightning.Credentials do
         on: pc.id == ^project_credential_id
 
     Repo.one(query)
-  end
-
-  def get_credential_for_update!(id) do
-    Credential
-    |> Repo.get!(id)
-    |> Repo.preload([:project_credentials, :projects])
   end
 
   @doc """
@@ -832,6 +828,8 @@ defmodule Lightning.Credentials do
      iex> maybe_refresh_token(expired_oauth_credential)
      {:ok, refreshed_oauth_credential}
   """
+  @spec maybe_refresh_token(Credential.t()) ::
+          {:ok, Credential.t()} | {:error, oauth_refresh_error() | any()}
   def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
     credential
     |> Repo.preload(oauth_token: :oauth_client)
@@ -1327,5 +1325,136 @@ defmodule Lightning.Credentials do
         distinct: c.id
 
     Repo.all(query)
+  end
+
+  @doc """
+  Returns the list of keychain credentials for a project.
+
+  ## Examples
+
+      iex> list_keychain_credentials_for_project(%Project{id: 123})
+      [%KeychainCredential{}, ...]
+
+  """
+  def list_keychain_credentials_for_project(%Project{id: project_id}) do
+    from(kc in KeychainCredential,
+      where: kc.project_id == ^project_id,
+      order_by: [asc: fragment("lower(?)", kc.name)],
+      preload: [:project, :created_by, :default_credential]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets a single keychain credential.
+
+  Raises `Ecto.NoResultsError` if the KeychainCredential does not exist.
+
+  ## Examples
+
+      iex> get_keychain_credential(123)
+      %KeychainCredential{}
+
+      iex> get_keychain_credential(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_keychain_credential(id), do: Repo.get(KeychainCredential, id)
+
+  @doc """
+  Creates a keychain credential.
+
+  ## Examples
+
+      iex> create_keychain_credential(%{name: "My Keychain", path: "$.user_id"})
+      {:ok, %KeychainCredential{}}
+
+      iex> create_keychain_credential(%{name: nil})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_keychain_credential(
+        %KeychainCredential{} = keychain_credential,
+        attrs \\ %{}
+      ) do
+    keychain_credential
+    |> KeychainCredential.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a keychain credential.
+
+  ## Examples
+
+      iex> update_keychain_credential(keychain_credential, %{name: "Updated"})
+      {:ok, %KeychainCredential{}}
+
+      iex> update_keychain_credential(keychain_credential, %{name: nil})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_keychain_credential(
+        %KeychainCredential{} = keychain_credential,
+        attrs
+      ) do
+    keychain_credential
+    |> KeychainCredential.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a keychain credential.
+
+  ## Examples
+
+      iex> delete_keychain_credential(keychain_credential)
+      {:ok, %KeychainCredential{}}
+
+      iex> delete_keychain_credential(keychain_credential)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_keychain_credential(%KeychainCredential{} = keychain_credential) do
+    Repo.delete(keychain_credential)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking keychain credential changes.
+
+  ## Examples
+
+      iex> change_keychain_credential(keychain_credential)
+      %Ecto.Changeset{data: %KeychainCredential{}}
+
+  """
+  def change_keychain_credential(
+        %KeychainCredential{} = keychain_credential,
+        attrs \\ %{}
+      ) do
+    KeychainCredential.changeset(keychain_credential, attrs)
+  end
+
+  @doc """
+  Creates a new keychain credential struct with proper associations.
+
+  This function ensures that the created_by and project associations are
+  properly set and cannot be tampered with via browser params.
+
+  ## Examples
+
+      iex> new_keychain_credential(user, project)
+      %KeychainCredential{created_by: user, project: project}
+
+  """
+  def new_keychain_credential(
+        %Lightning.Accounts.User{} = user,
+        %Lightning.Projects.Project{} = project
+      ) do
+    %KeychainCredential{}
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:created_by, user)
+    |> Ecto.Changeset.put_assoc(:project, project)
+    |> Ecto.Changeset.apply_changes()
   end
 end

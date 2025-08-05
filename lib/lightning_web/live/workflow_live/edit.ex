@@ -98,7 +98,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   if @snapshot_version_tag == "latest",
                     do: "This is the latest version of this workflow",
                     else:
-                      "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
+                      "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
               <LightningWeb.WorkflowLive.Components.online_users
@@ -1618,7 +1618,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:reply,
          %{
            dataclips: dataclips,
-           next_cron_run_dataclip_id: next_cron_run_dataclip_id
+           next_cron_run_dataclip_id: next_cron_run_dataclip_id,
+           can_edit_dataclip: socket.assigns.can_edit_workflow
          }, socket}
 
       {:error, changeset} ->
@@ -1626,7 +1627,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
          %{
            dataclips: [],
            next_cron_run_dataclip_id: nil,
-           errors: LightningWeb.ChangesetJSON.errors(changeset)
+           errors: LightningWeb.ChangesetJSON.errors(changeset),
+           can_edit_dataclip: socket.assigns.can_edit_workflow
          }, socket}
     end
   end
@@ -1640,6 +1642,35 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> case do
       nil -> {:reply, %{dataclip: nil}, socket}
       dataclip -> {:reply, %{dataclip: dataclip}, socket}
+    end
+  end
+
+  def handle_event(
+        "update-dataclip-name",
+        %{"dataclip_id" => dataclip_id, "name" => name},
+        socket
+      ) do
+    if socket.assigns.can_edit_workflow do
+      dataclip = Invocation.get_dataclip!(dataclip_id)
+      current_user = socket.assigns.current_user
+
+      case Invocation.update_dataclip_name(dataclip, name, current_user) do
+        {:ok, updated_dataclip} ->
+          flash =
+            if updated_dataclip.name do
+              "Label created. Dataclip will be saved permanently"
+            else
+              "Label deleted. Dataclip will be purged when your retention policy limit is reached"
+            end
+
+          {:reply, %{dataclip: updated_dataclip},
+           put_flash(socket, :info, flash)}
+
+        {:error, _changeset} ->
+          {:reply, %{error: "dataclip name already in use"}, socket}
+      end
+    else
+      {:reply, %{error: "You are not authorized to perform this action"}, socket}
     end
   end
 
@@ -3110,12 +3141,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     inverse_patches = WorkflowParams.to_patches(next_params, initial_params)
 
-    socket
-    |> push_event("patches-applied", %{
-      patches: patches,
-      inverse: inverse_patches
-    })
-    |> generate_workflow_code()
+    if length(patches) > 0 do
+      socket
+      |> push_event("patches-applied", %{
+        patches: patches,
+        inverse: inverse_patches
+      })
+      |> generate_workflow_code()
+    else
+      socket
+    end
   end
 
   defp step_retryable?(assigns),

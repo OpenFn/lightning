@@ -37,8 +37,9 @@ defmodule LightningWeb do
         formats: [:html, :json],
         layouts: [html: LightningWeb.Layouts]
 
+      use Gettext, backend: LightningWeb.Gettext
+
       import Plug.Conn
-      import LightningWeb.Gettext
       import LightningWeb.UserAuth, only: [fetch_current_user: 2]
       import LightningWeb.Components.NewInputs
       import LightningWeb.Components.Table
@@ -102,12 +103,14 @@ defmodule LightningWeb do
   def channel do
     quote do
       use Phoenix.Channel
-      import LightningWeb.Gettext
+      use Gettext, backend: LightningWeb.Gettext
     end
   end
 
   defp html_helpers do
     quote do
+      use Gettext, backend: LightningWeb.Gettext
+
       # Use all HTML functionality (forms, tags, etc)
       import Phoenix.HTML
 
@@ -122,7 +125,6 @@ defmodule LightningWeb do
       import Phoenix.View
 
       import LightningWeb.FormHelpers
-      import LightningWeb.Gettext
 
       import PetalComponents.Avatar
       import PetalComponents.Card

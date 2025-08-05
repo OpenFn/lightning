@@ -87,6 +87,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         %{"type" => "string", "writeOnly" => true} -> "password"
         %{"type" => "string"} -> "text"
         %{"type" => "integer"} -> "text"
+        %{"type" => "object"} -> "codearea"
         %{"type" => "boolean"} -> "checkbox"
         %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> "text"
       end

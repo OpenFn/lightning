@@ -43,7 +43,9 @@ defmodule LightningWeb.RunLive.Index do
     killed: :boolean,
     exception: :boolean,
     lost: :boolean,
-    rejected: :boolean
+    rejected: :boolean,
+    sort_by: :string,
+    sort_direction: :string
   }
 
   @empty_page %{
@@ -143,7 +145,9 @@ defmodule LightningWeb.RunLive.Index do
         Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
       "date_before" => "",
       "wo_date_after" => "",
-      "wo_date_before" => ""
+      "wo_date_before" => "",
+      "sort_by" => "last_activity",
+      "sort_direction" => "desc"
     }
 
   @impl true
@@ -472,6 +476,33 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  def handle_event("sort", %{"by" => sort_by}, socket) do
+    %{filters: filters, project: project} = socket.assigns
+
+    current_sort_by = Map.get(filters, "sort_by")
+    current_sort_direction = Map.get(filters, "sort_direction", "desc")
+
+    # Toggle direction if clicking the same column, otherwise use desc as default
+    new_sort_direction =
+      if current_sort_by == sort_by do
+        if current_sort_direction == "desc", do: "asc", else: "desc"
+      else
+        "desc"
+      end
+
+    new_filters =
+      filters
+      |> Map.put("sort_by", sort_by)
+      |> Map.put("sort_direction", new_sort_direction)
+
+    {:noreply,
+     socket
+     |> assign(filters: new_filters)
+     |> push_patch(
+       to: ~p"/projects/#{project.id}/history?#{%{filters: new_filters}}"
+     )}
+  end
+
   def handle_event("invalid-rerun:" <> error_message, _params, socket) do
     {:noreply,
      socket
@@ -531,6 +562,20 @@ defmodule LightningWeb.RunLive.Index do
     socket.assigns.project
     |> Invocation.search_workorders_for_retry(filter)
     |> WorkOrders.retry_many(job_id,
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
+  end
+
+  defp handle_bulk_rerun(socket, %{
+         "type" => "single",
+         "workorder_id" => workorder_id
+       }) do
+    work_order =
+      Enum.find(socket.assigns.page.entries, fn wo -> wo.id == workorder_id end)
+
+    [work_order]
+    |> WorkOrders.retry_many(
       created_by: socket.assigns.current_user,
       project_id: socket.assigns.project.id
     )

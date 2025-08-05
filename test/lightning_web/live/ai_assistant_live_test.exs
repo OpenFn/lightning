@@ -63,6 +63,18 @@ defmodule LightningWeb.AiAssistantLiveTest do
         :timeout -> 50000
       end)
 
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: "/"}, _opts ->
+            {:error, :econnrefused}
+
+          %{method: :get, url: "http://localhost:4001/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+        end
+      )
+
       {:ok, view, _html} =
         live(
           conn,
@@ -598,6 +610,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert html =~ expected_answer
     end
 
+    @tag :capture_log
     @tag email: "user@openfn.org"
     test "an error is displayed incase the assistant does not return 200", %{
       conn: conn,
@@ -649,6 +662,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "[phx-click='retry_message']")
     end
 
+    @tag :capture_log
     @tag email: "user@openfn.org"
     test "an error is displayed when the assistant query fails", %{
       conn: conn,
@@ -761,6 +775,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "#ai-assistant-error", error_message)
     end
 
+    @tag :capture_log
     @tag email: "user@openfn.org"
     test "displays apollo server error messages", %{
       conn: conn,
@@ -825,6 +840,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "[phx-click='retry_message']")
     end
 
+    @tag :capture_log
     @tag email: "user@openfn.org"
     test "handles timeout errors from Apollo", %{
       conn: conn,
@@ -881,6 +897,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "[phx-click='retry_message']")
     end
 
+    @tag :capture_log
     @tag email: "user@openfn.org"
     test "handles connection refused errors from Apollo", %{
       conn: conn,
@@ -936,6 +953,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "[phx-click='retry_message']")
     end
 
+    @tag :capture_log
     @tag email: "user@openfn.org"
     test "handles unexpected errors from Apollo", %{
       conn: conn,
@@ -2061,6 +2079,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
              "Create button should be enabled after template selection"
     end
 
+    @tag :capture_log
     test "workflow mode handles template generation errors", %{
       conn: conn,
       project: project,
@@ -2489,6 +2508,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert workflow_html =~ "Describe the workflow you want to create"
     end
 
+    @tag :capture_log
     test "error handling is consistent across modes", %{
       conn: conn,
       project: project,
@@ -3358,6 +3378,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       refute html =~ "Processing..."
     end
 
+    @tag :capture_log
     test "error boundaries work correctly", %{
       conn: conn,
       project: project,

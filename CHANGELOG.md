@@ -19,6 +19,82 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Added "interactive" to checkbox disabled tooltip to allow user to click link,
+  ensure permissions line up with admin or above.
+  [PR-3473](https://github.com/OpenFn/lightning/pull/3473)
+
+## [v2.14.0-pre1] - 2025-08-04
+
+### Added
+
+- Added a retry button to the work order row itself
+  [PR-3472](https://github.com/OpenFn/lightning/pull/3472)
+
+### Fixed
+
+- Fixed small table UI regression for history
+  [PR-3472](https://github.com/OpenFn/lightning/pull/3472)
+
+## [v2.14.0-pre] - 2025-08-01
+
+### Added
+
+- Allow users to name and preserve existing dataclips
+  [#311](https://github.com/OpenFn/lightning/issues/311)
+
+### Changed
+
+- Click to copy all timestamps in UTC across the application
+  [#1419](https://github.com/OpenFn/lightning/issues/1419)
+- Display relative times and respect browser timezones
+  [#1255](https://github.com/OpenFn/lightning/issues/1255)
+- Sortable history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+- Visible run durations on the history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+- Easier expansion of work orders in the history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+
+## [v2.13.7-pre1] 2025-08-01
+
+### Added
+
+- Keychain credentials allow variable authentication/secret selection based on a
+  run's input dataclip [#3359](https://github.com/OpenFn/lightning/issues/3359)
+
+## [v2.13.7-pre] 2025-07-31
+
+### Fixed
+
+- Prevent requests to webhook URLs from matching non-webhook triggers
+  [#3453](https://github.com/OpenFn/lightning/issues/3453)
+- Authorized users unable to change the workflow concurrency setting
+  [#3459](https://github.com/OpenFn/lightning/issues/3459)
+
+## [v2.13.6] - 2025-07-24
+
+### Added
+
+- Extended impeded project to take workflow concurrency into account.
+  [#3408](https://github.com/OpenFn/lightning/issues/3408)
+
+### Changed
+
+- Upgrade Ecto from v3.11 to v3.13
+  [#3448](https://github.com/OpenFn/lightning/pull/3448)
+
+### Fixed
+
+- Fixed bug that prevented HTTP credentials from loading, now allow JSON objects
+  to be passed as credential form inputs for complex settings like custom TLS
+  options [#3437](https://github.com/OpenFn/lightning/issues/3437)
+
+## [v2.13.6-pre] 2025-07-18
+
+### Changed
+
 - Bump bcrypt_elixir from 3.2.1 to 3.3.2
   [#3264](https://github.com/OpenFn/lightning/issues/3264)
 - Bump sobelow from 0.13.0 to 0.14.0
@@ -29,6 +105,8 @@ and this project adheres to
   [#3159](https://github.com/OpenFn/lightning/issues/3159)
 - Bump eqrcode from 0.1.10 to 0.2.1
   [#3116](https://github.com/OpenFn/lightning/issues/3116)
+- Remove unused test as well as puppeteer dependency.
+  [#3404](https://github.com/OpenFn/lightning/issues/3404)
 
 ### Fixed
 

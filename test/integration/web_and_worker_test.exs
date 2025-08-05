@@ -2,7 +2,6 @@
 defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
-  import Lightning.JobsFixtures
   import Lightning.Factories
   import Mox
 
@@ -59,23 +58,21 @@ defmodule Lightning.WebAndWorkerTest do
       webhook_body = %{"x" => 1}
       conn = post(conn, "/i/#{webhook_trigger_id}", webhook_body)
 
-      assert %{"work_order_id" => wo_id} =
+      assert %{"work_order_id" => workorder_id} =
                json_response(conn, 200)
 
       assert %{runs: [run]} =
-               WorkOrders.get(wo_id, include: [:runs])
+               WorkOrders.get(workorder_id, include: [:runs])
 
       # wait to complete
       Events.subscribe(run)
 
       assert %{id: run_id, steps: []} = Runs.get(run.id, include: [:steps])
 
-      assert_receive %Events.RunUpdated{
-                       run: %{id: ^run_id, state: :success}
-                     },
+      assert_receive %Events.RunUpdated{run: %{id: ^run_id, state: :success}},
                      115_000
 
-      assert %{state: :success} = WorkOrders.get(wo_id)
+      assert %{state: :success} = WorkOrders.get(workorder_id)
 
       %{entries: steps} = Invocation.list_steps_for_project(project)
 
@@ -100,7 +97,7 @@ defmodule Lightning.WebAndWorkerTest do
              |> Enum.frequencies()
              |> Enum.all?(fn {_x, count} -> count == 2 end)
 
-      assert %{state: :success} = WorkOrders.get(wo_id)
+      assert %{state: :success} = WorkOrders.get(workorder_id)
 
       # There was an initial http_request dataclip and 7 run_result dataclips
       assert Repo.all(Lightning.Invocation.Dataclip) |> Enum.count() == 8
@@ -120,79 +117,85 @@ defmodule Lightning.WebAndWorkerTest do
           project: project
         )
 
-      %{
-        job: first_job = %{workflow: workflow},
-        trigger: webhook_trigger,
-        edge: _edge
-      } =
-        workflow_job_fixture(
-          project: project,
-          name: "1st-job",
+      project_credential_2 =
+        insert(:project_credential,
+          credential: %{
+            name: "resolved by keychain",
+            body: %{"username" => "foo", "password" => "immasecret"},
+            external_id: "some_string"
+          },
+          project: project
+        )
+
+      # Matches the webhook body, resolves to the project_credential_2
+      keychain_credential =
+        insert(:keychain_credential, project: project, path: "$.fieldTwo")
+
+      # Doesn't match anything, resolves to `nil`
+      keychain_credential_2 =
+        insert(:keychain_credential, project: project, path: "$.noMatch")
+
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_1 =
+        build(:job,
           adaptor: "@openfn/language-http@latest",
           body: webhook_expression(),
+          name: "1st-job",
           project_credential: project_credential
         )
 
-      flow_job =
-        insert(:job,
-          name: "2nd-job",
+      job_2 =
+        build(:job,
           adaptor: "@openfn/language-http@latest",
           body: flow_expression(),
-          workflow: workflow,
+          name: "2nd-job",
           project_credential: project_credential
         )
 
-      insert(:edge, %{
-        workflow: workflow,
-        source_job_id: first_job.id,
-        target_job_id: flow_job.id,
-        condition_type: :on_job_success
-      })
-
-      catch_job =
-        insert(:job,
-          name: "3rd-job",
-          adaptor: "@openfn/language-http@latest",
+      job_3 =
+        build(:job,
+          adaptor: "@openfn/language-http@7.2.0",
           body: catch_expression(),
-          workflow: workflow,
-          project_credential: project_credential
+          name: "3rd-job",
+          keychain_credential: keychain_credential
         )
 
-      insert(:edge, %{
-        source_job_id: flow_job.id,
-        workflow: workflow,
-        target_job_id: catch_job.id,
-        condition_type: :on_job_failure
-      })
-
-      expression1_job =
-        insert(:job,
-          name: "4th-job",
-          adaptor: "@openfn/language-http@latest",
+      job_4 =
+        build(:job,
+          adaptor: "@openfn/language-common@3.0.2",
           body: on_js_condition_body(),
-          workflow: workflow,
-          project_credential: project_credential
+          name: "4th-job",
+          keychain_credential: keychain_credential_2
         )
 
-      insert(:edge, %{
-        source_job_id: catch_job.id,
-        workflow: workflow,
-        target_job_id: expression1_job.id,
-        condition_type: :js_expression,
-        condition_label: "less_than_1000",
-        condition_expression: "state.x < 1000"
-      })
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(webhook_trigger)
+        |> with_job(job_1)
+        |> with_edge({webhook_trigger, job_1}, condition_type: :always)
+        |> with_job(job_2)
+        |> with_edge({job_1, job_2}, condition_type: :on_job_success)
+        |> with_job(job_3)
+        |> with_edge({job_2, job_3}, condition_type: :on_job_failure)
+        |> with_job(job_4)
+        |> with_edge({job_3, job_4},
+          condition_type: :js_expression,
+          condition_label: "less_than_1000",
+          condition_expression: "state.x < 1000"
+        )
+        |> insert()
 
       Snapshot.create(workflow)
 
-      webhook_body = %{"fieldOne" => 123, "fieldTwo" => "some string"}
+      webhook_body = %{"fieldOne" => 123, "fieldTwo" => "some_string"}
 
       conn = post(conn, "/i/#{webhook_trigger.id}", webhook_body)
 
-      assert %{"work_order_id" => wo_id} = json_response(conn, 200)
+      assert %{"work_order_id" => workorder_id} = json_response(conn, 200)
 
       assert %{runs: [%{id: run_id} = run]} =
-               WorkOrders.get(wo_id, include: [:runs])
+               WorkOrders.get(workorder_id, include: [:runs])
 
       assert %{steps: []} = Runs.get(run.id, include: [:steps])
 
@@ -209,52 +212,47 @@ defmodule Lightning.WebAndWorkerTest do
                      },
                      115_000
 
-      assert %{state: :success} = WorkOrders.get(wo_id)
+      assert %{state: :success} = WorkOrders.get(workorder_id)
 
-      # All steps are associated with the same project and run and proper job
-      %{steps: steps} = Runs.get(run.id, include: [:steps])
+      run =
+        Runs.get(run.id,
+          include: [steps: [:job, :log_lines], work_order: :workflow]
+        )
 
-      assert %{
-               total_entries: 4,
-               entries: [step_4, step_3, step_2, step_1] = entries_steps
-             } =
-               Invocation.list_steps_for_project(project)
-
-      assert MapSet.new(steps, & &1.id) ==
-               MapSet.new(entries_steps, & &1.id)
+      assert run.work_order.workflow.project_id == project.id
 
       # Alls steps have consistent finish_at, exit_reason and dataclips
-      %{claimed_at: claimed_at, finished_at: finished_at} =
-        Runs.get(run.id)
+      for step <- run.steps do
+        assert NaiveDateTime.after?(step.finished_at, run.claimed_at) and
+                 NaiveDateTime.before?(step.finished_at, run.finished_at),
+               "Expected step #{step.job.name} to finish between the run's claimed_at and finished_at"
+      end
 
-      assert Enum.all?(steps, fn step ->
-               NaiveDateTime.after?(step_2.finished_at, claimed_at) and
-                 NaiveDateTime.before?(step_2.finished_at, finished_at)
-             end)
+      for {a, b} <- Enum.zip(run.steps, Enum.slice(run.steps, 1..-1//1)) do
+        assert NaiveDateTime.before?(a.finished_at, b.started_at), """
+        Expected #{b.job.name} to start after #{a.job.name} finished.
+        """
+      end
 
-      # Step 1 succeeds with webhook_body as input
+      version_logs = pick_out_version_logs(run)
+      assert version_logs["@openfn/language-http"] =~ "3.1.12"
+      assert version_logs["worker"] =~ "1.13"
+      assert version_logs["node.js"] =~ "22.12"
+      assert version_logs["@openfn/language-common"] == "3.0.2"
+
+      [step_1, step_2, step_3, step_4] = run.steps
+
+      # ------------------------------------------------------------------------
+
       assert step_1.exit_reason == "success"
+      assert step_1.job.name == "1st-job"
 
       expected_job_x_value = 123 * 2
 
-      lines = Invocation.logs_for_step(step_1)
-
       assert Enum.any?(
-               lines,
+               step_1.log_lines,
                &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
              )
-
-      {:ok, version_logs} =
-        Repo.transaction(fn ->
-          run
-          |> Runs.get_log_lines()
-          |> Enum.find(fn l -> l.source == "VER" end)
-          |> Map.get(:message)
-        end)
-
-      assert version_logs =~ "▸ node.js                  22.12"
-      assert version_logs =~ "▸ worker                   1.13"
-      assert version_logs =~ "▸ @openfn/language-http    3.1.12"
 
       expected_lines =
         MapSet.new([
@@ -267,7 +265,7 @@ defmodule Lightning.WebAndWorkerTest do
       assert expected_lines ==
                MapSet.intersection(
                  expected_lines,
-                 MapSet.new(lines, &{&1.source, &1.message})
+                 MapSet.new(step_1.log_lines, &{&1.source, &1.message})
                )
 
       # input: has only the webhook body
@@ -277,8 +275,11 @@ defmodule Lightning.WebAndWorkerTest do
       assert %{"data" => ^webhook_body, "x" => ^expected_job_x_value} =
                select_dataclip_body(step_1.output_dataclip_id)
 
-      # #  Step 2 should fail but not expose a secret
+      # ------------------------------------------------------------------------
+
+      # Step 2 should fail but not expose a secret
       assert step_2.exit_reason == "fail"
+      assert step_2.job.name == "2nd-job"
 
       log = Invocation.assemble_logs_for_step(step_2)
 
@@ -293,15 +294,21 @@ defmodule Lightning.WebAndWorkerTest do
       assert log =~ ~S"Check state.errors"
 
       assert select_dataclip_body(step_1.output_dataclip_id) ==
-               select_dataclip_body(step_2.input_dataclip_id)
+               select_dataclip_body(step_2.input_dataclip_id),
+             "Expected step 2 to have the same input as step 1's output"
 
-      #  Step 3 should succeed and log the correct value of x
+      # ------------------------------------------------------------------------
+
       assert step_3.exit_reason == "success"
+      assert step_3.job.name == "3rd-job"
 
-      lines = Invocation.logs_for_step(step_3)
+      # Is set to use keychain_credential, which matches on the webhook body
+      # and resolves to the project_credential_2
+      assert pick_out_config(step_3.log_lines) |> Jason.decode!() ==
+               project_credential_2.credential.body
 
       assert Enum.any?(
-               lines,
+               step_3.log_lines,
                &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
              )
 
@@ -323,47 +330,63 @@ defmodule Lightning.WebAndWorkerTest do
       assert expected_lines ==
                MapSet.intersection(
                  expected_lines,
-                 MapSet.new(lines, &{&1.source, &1.message})
+                 MapSet.new(step_3.log_lines, &{&1.source, &1.message})
                )
 
-      assert select_dataclip_body(step_2.output_dataclip_id) ==
-               select_dataclip_body(step_3.input_dataclip_id)
+      # ------------------------------------------------------------------------
+
+      assert step_4.exit_reason == "success"
+      assert step_4.job.name == "4th-job"
+
+      # Is set to use keychain_credential_2, which doesn't match anything,
+      # so it resolves to `nil`
+      assert pick_out_config(step_4.log_lines) |> Jason.decode!() == %{}
+
+      assert select_dataclip_body(step_3.input_dataclip_id) ==
+               select_dataclip_body(step_2.output_dataclip_id),
+             "Expected step 3 to have the same input as step 2's output"
 
       assert %{"data" => ^webhook_body, "x" => ^expected_job_x_value} =
-               select_dataclip_body(step_3.output_dataclip_id)
+               select_dataclip_body(step_3.output_dataclip_id),
+             "Expected step 3 to have the same output as step 2's input"
 
       # Step 4 after the js condition should succeed and log the correct value of x
       expected_job_x_value = expected_job_x_value * 5
-      assert step_4.exit_reason == "success"
 
-      assert Enum.any?(Invocation.logs_for_step(step_4), fn line ->
+      assert Enum.any?(step_4.log_lines, fn line ->
                line.source == "JOB" and line.message =~ "#{expected_job_x_value}"
              end)
     end
   end
 
   defp webhook_expression do
-    "fn(state => {
+    """
+    fn(state => {
       state.x = state.data.fieldOne * 2;
       console.log(state.x);
       console.log({name: 'ศผ่องรี มมซึฆเ'})
       return state;
-    });"
+    });
+    """
   end
 
   defp flow_expression do
-    "fn(state => {
+    """
+    fn(state => {
       console.log();
       console.log('');
       console.log(null);
       console.log(undefined);
       console.log(state.configuration);
       throw 'fail!'
-    });"
+    });
+    """
   end
 
   defp catch_expression do
-    "fn(state => {
+    """
+    fn(state => {
+      console.log("config: " + util.encode(state.configuration));
       state.x = state.x * 3;
       console.log(state.x);
       console.log('quux is on the safelist')
@@ -371,15 +394,19 @@ defmodule Lightning.WebAndWorkerTest do
       console.log('along with its encoded form #{Base.encode64("immasecret")}');
       console.log('and its basic auth form #{Base.encode64("quux:immasecret")}');
       return state;
-    });"
+    });
+    """
   end
 
   defp on_js_condition_body do
-    "fn(state => {
+    """
+    fn(state => {
+      console.log("config: " + util.encode(state.configuration));
       state.x = state.x * 5;
       console.log(state.x);
       return state;
-    });"
+    });
+    """
   end
 
   defp start_runtime_manager(_context) do
@@ -405,15 +432,55 @@ defmodule Lightning.WebAndWorkerTest do
   end
 
   defp select_dataclip_body(uuid) do
-    {:ok, %{rows: [[body]]}} =
-      Ecto.Adapters.SQL.query(
-        Repo,
-        "SELECT BODY FROM DATACLIPS WHERE ID=$1",
-        [
-          Ecto.UUID.dump!(uuid)
-        ]
-      )
+    import Ecto.Query
 
-    body
+    from(d in Lightning.Invocation.Dataclip,
+      where: d.id == ^uuid,
+      select: d.body
+    )
+    |> Repo.one!()
+  end
+
+  defp pick_out_version_logs(run) do
+    {:ok, version_logs} =
+      Repo.transaction(fn ->
+        run
+        |> Runs.get_log_lines()
+        |> Enum.find(fn l -> l.source == "VER" end)
+        |> then(fn %{message: message} ->
+          ~r/▸ ([\@\/\-\w\.]+)\s+(\d+\.\d+(?:\.\d+))/
+          |> Regex.scan(message)
+          |> Enum.into(%{}, fn [_, dependency, version] ->
+            {dependency, version}
+          end)
+        end)
+      end)
+
+    version_logs
+  end
+
+  # Used to sneakily get the config from the job log lines, so we can check
+  # that the expected credential is resolved correctly - specifically
+  # the keychain credentials where the credential id does not map 1:1 with the
+  # credential body that is resolved.
+  defp pick_out_config(log_lines) do
+    Enum.reduce_while(log_lines, nil, fn line, _ ->
+      if line.source == "JOB" do
+        Regex.run(~r/config: (.+)/, line.message)
+        |> case do
+          nil ->
+            {:cont, nil}
+
+          [_, config] ->
+            {:halt, config |> Base.decode64!()}
+        end
+      else
+        {:cont, nil}
+      end
+    end)
+    |> tap(fn config ->
+      assert config,
+             "Expected config to be present in the log lines as a base64 encoded string prefixed with 'config: '"
+    end)
   end
 end

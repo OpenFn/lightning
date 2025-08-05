@@ -240,7 +240,7 @@
           <% end %>
         </div>
       </:panel>
-      <:panel hash="credentials" class="space-y-4">
+      <:panel hash="credentials" class="space-y-4 block">
         <.section_header
           title="Project credentials"
           subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
@@ -248,14 +248,37 @@
           can_perform_action={@can_create_project_credential}
         >
           <:action_button>
-            <LightningWeb.Components.Credentials.new_credential_menu_button
+            <Components.Credentials.new_credential_menu_button
               id="project-credential-options-menu-button"
               disabled={!@can_create_project_credential}
-            />
+            >
+              <:option
+                id="new-credential-option-menu-item"
+                target="new_credential"
+                disabled={!@can_create_project_credential}
+              >
+                Credential
+              </:option>
+              <:option
+                id="new-keychain-credential-option-menu-item"
+                target="new_keychain_credential"
+                disabled={!@can_create_keychain_credential}
+              >
+                Keychain
+              </:option>
+              <:option
+                id="new-oauth-client-option-menu-item"
+                target="new_oauth_client"
+                disabled={!@can_create_project_credential}
+                badge="Advanced"
+              >
+                OAuth Client
+              </:option>
+            </Components.Credentials.new_credential_menu_button>
           </:action_button>
         </.section_header>
 
-        <LightningWeb.Components.Credentials.credentials_index_live_component
+        <Components.Credentials.credentials_index_live_component
           current_user={@current_user}
           project={@project}
           projects={@projects}

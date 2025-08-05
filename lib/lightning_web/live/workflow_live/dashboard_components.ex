@@ -8,7 +8,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias LightningWeb.Components.Common
   alias LightningWeb.WorkflowLive.Helpers
   alias Phoenix.LiveView.JS
-  alias Timex.Format.DateTime.Formatters.Relative
 
   attr :period, :string, default: "last 30 days"
   attr :can_create_workflow, :boolean
@@ -232,8 +231,10 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                         </.link>
                       </div>
                       <div class="text-gray-500 text-xs">
-                        Latest failure {workflow.last_failed_workorder.updated_at
-                        |> Relative.format!("{relative}")}
+                        Latest failure
+                        <Common.datetime datetime={
+                          workflow.last_failed_workorder.updated_at
+                        } />
                       </div>
                     <% else %>
                       <div class="text-gray-400 text-lg">
@@ -301,23 +302,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :trigger_enabled, :boolean
 
   def workflow_card(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        relative_updated_at:
-          Relative.format!(
-            assigns.workflow.updated_at,
-            "{relative}"
-          )
-      )
-
     ~H"""
     <div class="flex flex-1 items-center truncate">
-      <Common.wrapper_tooltip
-        id={"workflow-name-#{@workflow.id}"}
-        tooltip={@workflow.name}
-      >
-        <div class="text-sm">
+      <div class="text-sm">
+        <Common.wrapper_tooltip
+          id={"workflow-name-#{@workflow.id}"}
+          tooltip={@workflow.name}
+        >
           <div class="flex items-center">
             <span
               class="flex-shrink truncate text-gray-900 font-medium workflow-name"
@@ -326,22 +317,22 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               {@workflow.name}
             </span>
           </div>
-          <%= if @trigger_enabled do %>
-            <p class="text-gray-500 text-xs mt-1">
-              Updated {@relative_updated_at}
-            </p>
-          <% else %>
-            <div class="flex items-center mt-1">
-              <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
-              <div>
-                <p class="text-[#8b5f0d] text-xs">
-                  &nbsp; Disabled
-                </p>
-              </div>
+        </Common.wrapper_tooltip>
+        <%= if @trigger_enabled do %>
+          <p class="text-gray-500 text-xs mt-1">
+            Updated <Common.datetime datetime={@workflow.updated_at} />
+          </p>
+        <% else %>
+          <div class="flex items-center mt-1">
+            <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
+            <div>
+              <p class="text-[#8b5f0d] text-xs">
+                &nbsp; Disabled
+              </p>
             </div>
-          <% end %>
-        </div>
-      </Common.wrapper_tooltip>
+          </div>
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -415,16 +406,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :period, :string, required: true
 
   def state_card(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        time:
-          if !is_nil(assigns.state) do
-            DateTime.to_naive(assigns.timestamp)
-            |> Relative.format!("{relative}")
-          end
-      )
-
     ~H"""
     <div class="flex flex-col text-center">
       <%= if is_nil(@state) do %>
@@ -433,7 +414,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <span class="text-grey-200 italic">Nothing {@period}</span>
         </div>
       <% else %>
-        <.status_card state={@state} time={@time} />
+        <.status_card state={@state} time={@timestamp} />
       <% end %>
     </div>
     """
@@ -489,7 +470,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         <span class={[@font_color, "font-medium"]}>{@text}</span>
       </div>
       <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
-        {@time}
+        <Common.datetime datetime={@time} />
       </span>
     </div>
     """
