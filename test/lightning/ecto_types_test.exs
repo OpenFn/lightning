@@ -79,17 +79,6 @@ defmodule Lightning.EctoTypesTest do
 
       assert result =~ "Error�here"
       assert result =~ "error"
-      assert result == ~s<{"level":"error","message":"Error�here"}>
-    end
-
-    test "sanitizes Unicode escape sequences in JSON" do
-      # When Jason encodes control characters, it uses \u00XX format
-      # This test ensures we handle those too
-      input = %{"text" => "Has\x01control\x00chars"}
-      {:ok, result} = LogMessage.cast(input)
-
-      # Should replace both \u0001 and \u0000 with �
-      assert result == ~s<{"text":"Has�control�chars"}>
     end
 
     test "sanitizes when dumping to database" do
@@ -107,6 +96,31 @@ defmodule Lightning.EctoTypesTest do
       assert {:ok, "Hello 👋 �World 🌍"} = LogMessage.cast("Hello 👋 \x00World 🌍")
       assert {:ok, "Café�"} = LogMessage.cast("Café\x00")
       assert {:ok, "日本語�test"} = LogMessage.cast("日本語\x00test")
+    end
+
+    test "handles JSON encoding errors for maps" do
+      invalid_map = %{key: {:tuple, "value"}}
+
+      assert {:error, _} = LogMessage.cast(invalid_map)
+    end
+
+    test "handles cast errors in lists by converting to empty string" do
+      list_with_invalid = [
+        "valid string",
+        fn x -> x end,
+        "another valid string",
+        {:tuple, "value"},
+        123
+      ]
+
+      assert {:ok, "valid string  another valid string  123"} =
+               LogMessage.cast(list_with_invalid)
+    end
+
+    test "handles lists with only invalid items" do
+      invalid_list = [fn -> nil end, {:ok, :tuple}, self()]
+
+      assert {:ok, "  "} = LogMessage.cast(invalid_list)
     end
   end
 

@@ -133,6 +133,8 @@ defmodule Lightning.LogMessage do
     end
   end
 
+  def cast(_), do: :error
+
   def load(d) do
     Ecto.Type.load(:string, d)
   end
