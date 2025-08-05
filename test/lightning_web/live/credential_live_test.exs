@@ -103,7 +103,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ project_names |> Enum.join(", ")
 
       assert html =~ "Edit"
-      assert html =~ "Production"
+      assert html =~ "Environment"
       assert html =~ credential.schema
       assert html =~ credential.name
     end
@@ -139,7 +139,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ project_names |> Enum.join(", ")
 
       assert html =~ "Edit"
-      assert html =~ "Production"
+      assert html =~ "Environment"
       assert html =~ credential.schema
       assert html =~ credential.name
       refute html =~ support_credential.name

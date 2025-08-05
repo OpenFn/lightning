@@ -961,7 +961,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Name"
       assert html =~ "Type"
       assert html =~ "Owner"
-      assert html =~ "Production"
+      assert html =~ "Environment"
 
       assert html =~
                credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
