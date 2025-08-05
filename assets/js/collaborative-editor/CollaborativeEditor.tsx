@@ -1,10 +1,10 @@
 import React from 'react';
-import type { WithActionProps } from '#/react/lib/with-props';
-import type { CollaborativeEditorDataProps } from '../../types/todo';
-import { SocketProvider } from '../contexts/SocketProvider';
-import { TodoStoreProvider } from '../contexts/TodoStoreProvider';
-import { TodoList } from './CollaborativeEditor/TodoList';
-import { ConnectionStatus } from './CollaborativeEditor/ConnectionStatus';
+import type { WithActionProps } from '../react/lib/with-props';
+import type { CollaborativeEditorDataProps } from './types/todo';
+import { SocketProvider } from '../react/contexts/SocketProvider';
+import { TodoStoreProvider } from './contexts/TodoStoreProvider';
+import { TodoList } from './components/TodoList';
+import { ConnectionStatus } from './components/ConnectionStatus';
 
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps

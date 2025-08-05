@@ -6,10 +6,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as Y from 'yjs';
 import * as awarenessProtocol from 'y-protocols/awareness';
-import { useSocket } from './SocketProvider';
+import { useSocket } from '../../react/contexts/SocketProvider';
 import { PhoenixChannelProvider } from 'y-phoenix-channel';
-// import { PhoenixChannelProvider } from '../../lib/yjs-channel-provider';
-import type { TodoItem, AwarenessUser, TodoStore } from '../../types/todo';
+import type { TodoItem, AwarenessUser, TodoStore } from '../types/todo';
 
 interface TodoStoreContextValue extends TodoStore {
   ydoc: Y.Doc | null;
@@ -70,11 +69,13 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
     const order = doc.getArray<string>('todoOrder');
 
     // Set up awareness with user info
-    awarenessInstance.setLocalStateField('user', {
+    const userData = {
       id: userId,
       name: userName,
       color: generateUserColor(userId),
-    });
+    };
+
+    awarenessInstance.setLocalStateField('user', userData);
 
     // Create the Yjs channel provider with the reference implementation
     const roomname = `workflow:collaborate:${workflowId}`;

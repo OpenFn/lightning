@@ -37,13 +37,15 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         <h2 class="text-2xl font-bold mb-4">
           Collaborative Workflow Editor - {@workflow.name}
         </h2>
-
+        
     <!-- Collaborative Editor React Component -->
         <div
           id="collaborative-editor-react"
           phx-hook="ReactComponent"
           data-react-name="CollaborativeEditor"
-          data-react-file={~p"/assets/js/react/components/CollaborativeEditor.js"}
+          data-react-file={
+            ~p"/assets/js/collaborative-editor/CollaborativeEditor.js"
+          }
           data-workflow-id={@workflow_id}
           data-workflow-name={@workflow.name}
           data-user-id={@user_id}
