@@ -83,14 +83,13 @@ defmodule Lightning.ApolloClient do
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
 
-    payload =
-      %{
-        "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
-        "content" => content,
-        "context" => context,
-        "history" => history,
-        "meta" => meta
-      }
+    payload = %{
+      "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
+      "content" => content,
+      "context" => context,
+      "history" => history,
+      "meta" => meta
+    }
 
     client()
     |> Tesla.post("/services/job_chat", payload)

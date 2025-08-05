@@ -71,11 +71,23 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   @spec create_session(assigns(), String.t(), Keyword.t()) ::
           {:ok, session()} | {:error, term()}
   def create_session(
-        %{selected_job: job, user: user},
+        %{selected_job: job, user: user, changeset: changeset} = assigns,
         content,
         opts \\ []
       ) do
-    AiAssistant.create_session(job, user, content, opts)
+    form_options = extract_form_options(changeset)
+
+    meta = %{"message_options" => Enum.into(form_options, %{})}
+
+    meta =
+      case assigns do
+        %{follow_run: %{id: run_id}} -> Map.put(meta, "follow_run_id", run_id)
+        _ -> meta
+      end
+
+    final_opts = Keyword.put(opts, :meta, meta)
+
+    AiAssistant.create_session(job, user, content, final_opts)
   end
 
   @impl true
@@ -104,12 +116,37 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   @impl true
   @spec save_message(assigns(), String.t()) ::
           {:ok, session()} | {:error, term()}
-  def save_message(%{session: session, user: user}, content) do
-    AiAssistant.save_message(session, %{
-      role: :user,
-      content: content,
-      user: user
-    })
+  def save_message(
+        %{session: session, user: user, changeset: changeset} = assigns,
+        content
+      ) do
+    options = extract_form_options(changeset)
+
+    # Preserve existing meta and add message options
+    updated_meta =
+      session.meta
+      |> Kernel.||(%{})
+      |> Map.put("message_options", Enum.into(options, %{}))
+
+    # Add follow_run_id if follow_run exists in assigns
+    updated_meta =
+      case assigns do
+        %{follow_run: %{id: run_id}} ->
+          Map.put(updated_meta, "follow_run_id", run_id)
+
+        _ ->
+          updated_meta
+      end
+
+    AiAssistant.save_message(
+      session,
+      %{
+        role: :user,
+        content: content,
+        user: user
+      },
+      meta: updated_meta
+    )
   end
 
   @impl true

@@ -106,7 +106,17 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_job_message(session, message) do
     enriched_session = AiAssistant.enrich_session_with_job_context(session)
-    AiAssistant.query(enriched_session, message.content)
+
+    options =
+      case session.meta do
+        %{"message_options" => opts} when is_map(opts) ->
+          Enum.map(opts, fn {k, v} -> {String.to_atom(k), v} end)
+
+        _ ->
+          []
+      end
+
+    AiAssistant.query(enriched_session, message.content, options)
   end
 
   @doc false

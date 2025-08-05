@@ -41,14 +41,7 @@ defmodule LightningWeb.AiAssistant.ModeRegistryTest do
 
       job_mode = Enum.find(modes, &(&1.id == :job))
       assert job_mode.name == "Job Code Assistant"
-      assert job_mode.icon == "hero-code-bracket"
-    end
-  end
-
-  describe "supports_template_generation?/1" do
-    test "returns correct capabilities" do
-      assert ModeRegistry.supports_template_generation?(:workflow) == true
-      assert ModeRegistry.supports_template_generation?(:job) == false
+      assert job_mode.icon == "hero-cpu-chip"
     end
   end
 
@@ -90,7 +83,7 @@ defmodule LightningWeb.AiAssistant.ModeRegistryTest do
 
       assert job_metadata.id == :job
       assert job_metadata.name == "Job Code Assistant"
-      assert job_metadata.icon == "hero-code-bracket"
+      assert job_metadata.icon == "hero-cpu-chip"
 
       workflow_metadata = ModeRegistry.get_mode_metadata(:workflow)
       assert workflow_metadata.id == :workflow
@@ -133,17 +126,6 @@ defmodule LightningWeb.AiAssistant.ModeRegistryTest do
     test "handles edge cases" do
       assert ModeRegistry.mode_exists?("job") == false
       assert ModeRegistry.mode_exists?(%{}) == false
-    end
-  end
-
-  describe "supports_template_generation?/1 edge cases" do
-    test "falls back to default behavior for unknown modes" do
-      assert ModeRegistry.supports_template_generation?(:unknown) == false
-    end
-
-    test "handles nil and invalid input" do
-      assert ModeRegistry.supports_template_generation?(nil) == false
-      assert ModeRegistry.supports_template_generation?("invalid") == false
     end
   end
 

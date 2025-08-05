@@ -373,7 +373,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      ai_assistant = element(view, "#workflow-ai-assistant")
+      ai_assistant = element(view, "#new-workflow-panel-assistant")
 
       refute has_element?(ai_assistant)
 
@@ -399,11 +399,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 50000
       end)
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      ai_assistant = element(view, "#workflow-ai-assistant")
+      ai_assistant = element(view, "#new-workflow-panel-assistant")
 
       refute has_element?(ai_assistant)
 
@@ -428,35 +429,37 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      view
-      |> form("#search-templates-form", %{"search" => "process webhook data"})
-      |> render_change()
+        view
+        |> form("#search-templates-form", %{"search" => "process webhook data"})
+        |> render_change()
 
-      build_with_button = element(view, "#template-label-ai-dynamic-template")
+        build_with_button = element(view, "#template-label-ai-dynamic-template")
 
-      html = render(build_with_button)
-      assert html =~ "process webhook data"
-      assert html =~ "Build with AI ✨"
+        html = render(build_with_button)
+        assert html =~ "process webhook data"
+        assert html =~ "Build with AI ✨"
 
-      sessions_before =
-        Lightning.AiAssistant.list_sessions(project)
-        |> Map.get(:sessions)
+        sessions_before =
+          Lightning.AiAssistant.list_sessions(project)
+          |> Map.get(:sessions)
 
-      assert Enum.empty?(sessions_before)
+        assert Enum.empty?(sessions_before)
 
-      build_with_button |> render_click()
+        build_with_button |> render_click()
 
-      assert view |> element("#create_workflow_via_ai") |> has_element?()
+        assert view |> element("#create_workflow_via_ai") |> has_element?()
 
-      sessions_after =
-        Lightning.AiAssistant.list_sessions(project)
-        |> Map.get(:sessions)
+        sessions_after =
+          Lightning.AiAssistant.list_sessions(project)
+          |> Map.get(:sessions)
 
-      refute Enum.empty?(sessions_after)
+        refute Enum.empty?(sessions_after)
 
-      assert sessions_after |> Enum.any?(&(&1.title == "process webhook data"))
+        assert sessions_after |> Enum.any?(&(&1.title == "process webhook data"))
+      end)
     end
 
     test "AI template card shows default text when no search term", %{

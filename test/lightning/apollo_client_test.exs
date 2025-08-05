@@ -271,8 +271,8 @@ defmodule Lightning.ApolloClientTest do
       {:ok, response} =
         ApolloClient.workflow_chat(
           "Create workflow",
-          workflow_code: "workflow: example",
-          workflow_errors: "validation error",
+          code: "workflow: example",
+          errors: "validation error",
           history: [%{role: "user", content: "previous"}],
           meta: %{key: "value"}
         )
@@ -351,8 +351,8 @@ defmodule Lightning.ApolloClientTest do
       {:ok, _response} =
         ApolloClient.workflow_chat(
           "Create workflow",
-          workflow_code: "workflow: existing",
-          workflow_errors: nil,
+          code: "workflow: existing",
+          errors: nil,
           history: [],
           meta: %{}
         )
@@ -374,7 +374,7 @@ defmodule Lightning.ApolloClientTest do
 
       {:ok, response} =
         ApolloClient.workflow_chat("Improve this",
-          workflow_code: "workflow: modify_this"
+          code: "workflow: modify_this"
         )
 
       assert response.body["response"] == "Modified workflow"
@@ -395,7 +395,7 @@ defmodule Lightning.ApolloClientTest do
 
       {:ok, response} =
         ApolloClient.workflow_chat("Fix errors",
-          workflow_errors: "Invalid cron expression"
+          errors: "Invalid cron expression"
         )
 
       assert response.body["response"] == "Fixed errors"
