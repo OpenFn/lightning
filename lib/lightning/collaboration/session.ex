@@ -1,6 +1,7 @@
 defmodule Lightning.Collaboration.Session do
   use GenServer
   alias Lightning.Collaboration
+  alias Yex.Sync.SharedDoc
   require Logger
 
   defstruct [:workflow_id, :shared_doc_pid, :cleanup_timer, :parent_pid]
@@ -39,7 +40,7 @@ defmodule Lightning.Collaboration.Session do
         Logger.info("No existing SharedDoc found for workflow #{workflow_id}")
 
         child_spec =
-          {Yex.Sync.SharedDoc,
+          {SharedDoc,
            [
              doc_name: "workflow:#{workflow_id}",
              auto_exit: true
@@ -48,8 +49,10 @@ defmodule Lightning.Collaboration.Session do
         case Collaboration.Supervisor.start_child(child_spec) do
           {:ok, pid} ->
             :pg.join(@pg_scope, workflow_id, pid)
+            # Initialize the SharedDoc with workflow data
+            initialize_workflow_document(pid, workflow_id)
             # Register the SharedDoc with :pg so other sessions can find it
-            Yex.Sync.SharedDoc.observe(pid)
+            SharedDoc.observe(pid)
             {:noreply, %{state | shared_doc_pid: pid}}
 
           {:error, {:already_started, pid}} ->
@@ -65,7 +68,7 @@ defmodule Lightning.Collaboration.Session do
 
       [shared_doc_pid | _] ->
         Logger.info("Existing SharedDoc found for workflow #{workflow_id}")
-        Yex.Sync.SharedDoc.observe(shared_doc_pid)
+        SharedDoc.observe(shared_doc_pid)
         {:noreply, %{state | shared_doc_pid: shared_doc_pid}}
     end
   end
@@ -91,10 +94,14 @@ defmodule Lightning.Collaboration.Session do
   end
 
   @doc """
-  Get the current document state.
+  Get the current document.
   """
-  def get_document(session_pid) do
+  def get_doc(session_pid) do
     GenServer.call(session_pid, :get_doc)
+  end
+
+  def update_doc(session_pid, fun) do
+    GenServer.call(session_pid, {:update_doc, fun})
   end
 
   def start_sync(session_pid, chunk) do
@@ -106,7 +113,16 @@ defmodule Lightning.Collaboration.Session do
   end
 
   def handle_call(:get_doc, _from, %{shared_doc_pid: shared_doc_pid} = state) do
-    {:reply, Yex.Sync.SharedDoc.get_doc(shared_doc_pid), state}
+    {:reply, SharedDoc.get_doc(shared_doc_pid), state}
+  end
+
+  def handle_call(
+        {:update_doc, fun},
+        _from,
+        %{shared_doc_pid: shared_doc_pid} = state
+      ) do
+    SharedDoc.update_doc(shared_doc_pid, fun)
+    {:reply, :ok, state}
   end
 
   def handle_call(
@@ -114,7 +130,7 @@ defmodule Lightning.Collaboration.Session do
         _from,
         %{shared_doc_pid: shared_doc_pid} = state
       ) do
-    Yex.Sync.SharedDoc.send_yjs_message(shared_doc_pid, chunk)
+    SharedDoc.send_yjs_message(shared_doc_pid, chunk)
     {:reply, :ok, state}
   end
 
@@ -123,12 +139,56 @@ defmodule Lightning.Collaboration.Session do
         _from,
         %{shared_doc_pid: shared_doc_pid} = state
       ) do
-    Yex.Sync.SharedDoc.start_sync(shared_doc_pid, chunk)
+    SharedDoc.start_sync(shared_doc_pid, chunk)
     {:reply, :ok, state}
   end
 
   def handle_info({:yjs, reply, _shared_doc_pid}, state) do
     Map.get(state, :parent_pid) |> send({:yjs, reply})
     {:noreply, state}
+  end
+
+  # Private function to initialize SharedDoc with workflow data
+  defp initialize_workflow_document(shared_doc_pid, workflow_id) do
+    Logger.info("Initializing SharedDoc with workflow data for #{workflow_id}")
+
+    # Fetch workflow from database
+    case Lightning.Workflows.get_workflow(workflow_id, include: [:jobs]) do
+      nil ->
+        Logger.warning(
+          "Workflow #{workflow_id} not found, initializing empty document"
+        )
+
+        :ok
+
+      workflow ->
+        # Initialize the document with workflow data
+        SharedDoc.update_doc(shared_doc_pid, fn doc ->
+          # Create the root workflow map
+          workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+          # Set workflow properties
+          Yex.Map.set(workflow_map, "id", workflow.id)
+          Yex.Map.set(workflow_map, "name", workflow.name || "")
+
+          # Create and populate jobs array
+          jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+          # Add each job to the array
+          Enum.each(workflow.jobs || [], fn job ->
+            job_map = %{
+              "id" => job.id,
+              "name" => job.name || "",
+              "body" => job.body || ""
+            }
+
+            Yex.Array.push(jobs_array, job_map)
+          end)
+
+          Logger.info(
+            "Initialized workflow document with #{length(workflow.jobs || [])} jobs"
+          )
+        end)
+    end
   end
 end
