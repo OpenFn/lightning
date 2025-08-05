@@ -150,8 +150,6 @@ defmodule Lightning.LogMessage do
     |> String.replace(@invalid_chars_regex, @replacement_char)
   end
 
-  defp sanitize_string(other), do: other
-
   defp sanitize_json_string(json_string) when is_binary(json_string) do
     json_string
     |> sanitize_string()
