@@ -3,8 +3,8 @@
  */
 
 import React from 'react';
-import { useSocket } from '../../contexts/SocketProvider';
-import { useTodoStore } from '../../contexts/TodoStoreProvider';
+import { useSocket } from '../../react/contexts/SocketProvider';
+import { useTodoStore } from '../contexts/TodoStoreProvider';
 
 export const ConnectionStatus: React.FC = () => {
   const { isConnected: socketConnected, connectionError } = useSocket();
