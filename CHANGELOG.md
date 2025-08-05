@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Upgraded Elixir from 1.17 to 1.18
+  [d35a6d1](https://github.com/OpenFn/lightning/commit/d35a6d1)
+
 ### Fixed
 
 ## [v2.14.0] - 2025-08-05
