@@ -16,6 +16,8 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Alert before removing a project from accessing a credential
+  [#537](https://github.com/OpenFn/lightning/issues/537)
 
 ### Changed
 

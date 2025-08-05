@@ -1109,6 +1109,75 @@ defmodule LightningWeb.CredentialLiveTest do
                end)
     end
 
+    test "shows confirmation dialog if the credential is being used in a workflow",
+         %{
+           conn: conn,
+           user: user
+         } do
+      credential =
+        insert(:credential,
+          name: "my-credential",
+          schema: "http",
+          body: %{"username" => "test", "password" => "test"},
+          user: user
+        )
+
+      project =
+        insert(:project, project_users: [build(:project_user, user: user)])
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      workflow_with_credential_1 =
+        insert(:simple_workflow, project: project)
+        |> tap(fn %{jobs: [job_1 | _]} ->
+          job_1
+          |> Ecto.Changeset.change(%{
+            project_credential_id: project_credential.id
+          })
+          |> Lightning.Repo.update!()
+        end)
+        |> with_snapshot()
+
+      workflow_with_credential_2 =
+        insert(:simple_workflow, project: project)
+        |> tap(fn %{jobs: [job_1 | _]} ->
+          job_1
+          |> Ecto.Changeset.change(%{
+            project_credential_id: project_credential.id
+          })
+          |> Lightning.Repo.update!()
+        end)
+        |> with_snapshot()
+
+      workflow_without_credential =
+        insert(:simple_workflow, project: project) |> with_snapshot()
+
+      another_project =
+        insert(:project, project_users: [build(:project_user, user: user)])
+
+      insert(:project_credential,
+        project: another_project,
+        credential: credential
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_edit_credential_modal(view, credential.id)
+
+      button_html = delete_credential_button(view, project.id) |> render()
+
+      assert button_html =~
+               "data-confirm=\"Are you sure you want to remove access? This credential is currently being used in #{workflow_with_credential_1.name}, #{workflow_with_credential_2.name}\""
+
+      assert button_html =~ workflow_with_credential_1.name
+      assert button_html =~ workflow_with_credential_2.name
+      refute button_html =~ workflow_without_credential.name
+
+      refute delete_credential_button(view, another_project.id) |> render() =~
+               "data-confirm"
+    end
+
     test "users can add and remove existing project credentials successfully", %{
       conn: conn,
       user: user

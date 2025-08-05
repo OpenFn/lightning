@@ -57,6 +57,27 @@ defmodule Lightning.Workflows do
     |> Repo.all()
   end
 
+  @spec workflow_names_using_project_credentials_per_project([
+          Ecto.UUID.t(),
+          ...
+        ]) ::
+          %{
+            optional(project :: Ecto.UUID.t()) => [workflow :: binary(), ...]
+          }
+  def workflow_names_using_project_credentials_per_project(project_credentials) do
+    query =
+      from w in Workflow,
+        join: j in assoc(w, :jobs),
+        where: j.project_credential_id in ^project_credentials,
+        select: %{name: w.name, project_id: w.project_id},
+        distinct: true
+
+    query
+    |> Repo.all()
+    |> Enum.group_by(& &1.project_id)
+    |> Map.new(fn {key, val} -> {key, Enum.map(val, & &1.name)} end)
+  end
+
   @doc """
   Gets a single workflow with optional preloads.
 

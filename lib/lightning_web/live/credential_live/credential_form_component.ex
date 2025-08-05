@@ -26,6 +26,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       project: nil,
       available_projects: [],
       selected_projects: [],
+      workflows_using_credentials: %{},
       oauth_clients: [],
       allow_credential_transfer: allow_credential_transfer
     }
@@ -353,6 +354,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                       selected_projects={@selected_projects}
                       projects={@projects}
                       selected={@selected_project}
+                      workflows_using_credentials={@workflows_using_credentials}
                       phx_target={@myself}
                     />
                   </div>
@@ -574,6 +576,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       |> Lightning.Repo.preload(:project)
       |> Enum.map(fn poc -> poc.project end)
 
+    workflows_using_credentials =
+      changeset
+      |> Ecto.Changeset.get_assoc(:project_credentials, :struct)
+      |> Enum.map(& &1.id)
+      |> Lightning.Workflows.workflow_names_using_project_credentials_per_project()
+
     available_projects =
       Helpers.filter_available_projects(
         projects,
@@ -603,6 +611,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       schema: schema,
       selected_project: nil,
       selected_projects: selected_projects,
+      workflows_using_credentials: workflows_using_credentials,
       available_projects: available_projects
     )
   end
