@@ -572,7 +572,8 @@ defmodule Lightning.AiAssistant do
       content,
       context: context,
       history: history,
-      meta: meta
+      meta: meta,
+      use_new_prompt: true
     )
     |> handle_ai_response(session, pending_user_message, &build_job_message/1)
   end
