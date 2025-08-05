@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Possibly temporary plumbing to allow the use of libcluster_postgres as an
+  additional mechanism for discovering Erlang nodes.
+  [3482](https://github.com/OpenFn/lightning/issues/3482)
+
 ### Changed
 
 ### Fixed

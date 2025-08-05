@@ -660,6 +660,14 @@ defmodule Lightning.Config.Bootstrap do
       calendly_url: nil,
       openfn_workflow_url: nil
 
+    config :lightning, :k8s,
+      enable_cross_cluster_discovery:
+        env!(
+          "K8S_CROSS_CLUSTER_DISCOVERY_ENABLED",
+          &Utils.ensure_boolean/1,
+          false
+        )
+
     # # ==============================================================================
 
     setup_storage()

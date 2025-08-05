@@ -80,6 +80,12 @@ defmodule Lightning.Application do
         Application.get_env(:libcluster, :topologies)
       end
 
+    topologies =
+      add_additional_libcluster_topology(
+        topologies,
+        Application.get_env(:lightning, :k8s)[:enable_cross_cluster_discovery]
+      )
+
     goth =
       Application.get_env(:lightning, Lightning.Google, [])
       |> then(fn config ->
@@ -237,5 +243,28 @@ defmodule Lightning.Application do
 
     You can do so by setting your `USAGE_TRACKING_ENABLED` environment variable to `true` at any time.
     """)
+  end
+
+  def add_additional_libcluster_topology(
+        topologies,
+        false = _enable_cross_cluster_comms
+      ) do
+    topologies
+  end
+
+  def add_additional_libcluster_topology(
+        topologies,
+        true = _enable_cross_cluster_comms
+      ) do
+    Keyword.merge(
+      topologies,
+      cross_cluster: [
+        strategy: LibclusterPostgres.Strategy,
+        config:
+          Keyword.merge(Lightning.Repo.config(),
+            channel_name: "lightning-cluster"
+          )
+      ]
+    )
   end
 end
