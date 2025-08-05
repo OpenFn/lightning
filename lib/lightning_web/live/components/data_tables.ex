@@ -41,7 +41,7 @@ defmodule LightningWeb.Components.DataTables do
                 Projects with access
               </.th>
               <.th>External ID</.th>
-              <.th>Production</.th>
+              <.th>Environment</.th>
               <.th>
                 <span class="sr-only">Actions</span>
               </.th>
@@ -95,11 +95,11 @@ defmodule LightningWeb.Components.DataTables do
                 </.td>
                 <.td class="wrap-break-word max-w-[5rem]">
                   <%= if credential.production do %>
-                    <div class="flex">
+                    <div class="flex items-center gap-1">
                       <.icon
-                        name="hero-exclamation-triangle"
-                        class="w-5 h-5 text-secondary-500"
-                      /> &nbsp;Production
+                        name="hero-exclamation-triangle-mini"
+                        class="w-5 h-5 text-yellow-500 shrink-0"
+                      />Production
                     </div>
                   <% end %>
                 </.td>
