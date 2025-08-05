@@ -24,6 +24,10 @@ and this project adheres to
 - Added "interactive" to checkbox disabled tooltip to allow user to click link,
   ensure permissions line up with admin or above.
   [PR-3473](https://github.com/OpenFn/lightning/pull/3473)
+- Fixed table action menus
+  [#3476](https://github.com/OpenFn/lightning/issues/3476)
+- Fixed "⚠️ Production" icon size in credentials table
+  [#3483](https://github.com/OpenFn/lightning/issues/3483)
 
 ## [v2.14.0-pre1] - 2025-08-04
 
