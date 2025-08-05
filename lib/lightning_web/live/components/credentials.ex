@@ -173,7 +173,7 @@ defmodule LightningWeb.Components.Credentials do
               phx-click="remove_selected_project"
               type="button"
               class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
-              {if(@workflows_using_credentials[project.id], do: %{"data-confirm": "Are you sure you want to remove access? This credential is currently being used in #{Enum.join(@workflows_using_credentials[project.id], ", ")}"}, else: %{})}
+              {if(@workflows_using_credentials[project.id], do: %{"data-confirm": "This credential is in use by workflows #{Enum.join(@workflows_using_credentials[project.id], ", ")}. Revoking access to #{project.name} will likely break those existing workflows. Are you sure you want to revoke access?"}, else: %{})}
             >
               <span class="sr-only">Remove</span>
               <Heroicons.x_mark solid class="w-4 h-4" />
