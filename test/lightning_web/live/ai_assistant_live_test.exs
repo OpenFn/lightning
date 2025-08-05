@@ -31,7 +31,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       refute String.match?(user.email, ~r/@openfn\.org/i)
@@ -60,7 +60,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> nil
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -90,6 +90,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       skip_disclaimer(user)
@@ -122,7 +123,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       refute user.preferences["ai_assistant.disclaimer_read_at"]
@@ -169,7 +170,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
@@ -205,7 +206,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       skip_disclaimer(user)
@@ -242,7 +243,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -386,7 +387,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -444,7 +445,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -487,7 +488,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -545,7 +546,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       expected_question = "Can you help me with this?"
@@ -622,7 +623,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -674,7 +675,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -733,7 +734,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001/health_check"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       error_message = "You have reached your quota of AI queries"
@@ -787,7 +788,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       error_message = "Server is temporarily unavailable"
@@ -852,7 +853,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -909,7 +910,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -965,7 +966,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1015,7 +1016,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1135,7 +1136,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1201,7 +1202,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1308,7 +1309,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1437,7 +1438,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1506,7 +1507,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1582,7 +1583,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1684,7 +1685,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1779,7 +1780,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Lightning.Tesla.Mock
@@ -1840,7 +1841,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1877,7 +1878,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1933,7 +1934,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       workflow_yaml = """
@@ -2090,7 +2091,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2135,7 +2136,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2200,7 +2201,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2229,7 +2230,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       error_message = "Monthly workflow generation limit reached"
@@ -2271,7 +2272,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2328,7 +2329,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2368,7 +2369,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2398,7 +2399,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2474,7 +2475,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2520,7 +2521,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2592,7 +2593,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2656,7 +2657,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       error_message = "AI usage limit reached"
@@ -2704,7 +2705,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2761,7 +2762,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       refute user.preferences["ai_assistant.disclaimer_read_at"]
@@ -2815,7 +2816,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       markdown_response = """
@@ -2901,7 +2902,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       response_content = "Here's some code you can copy"
@@ -2992,7 +2993,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3061,7 +3062,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3139,7 +3140,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3228,7 +3229,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3335,7 +3336,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3390,7 +3391,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn

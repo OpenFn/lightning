@@ -130,6 +130,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -151,6 +152,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -172,6 +174,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -194,6 +197,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1098,6 +1102,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1109,6 +1114,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> nil
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1120,6 +1126,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> nil
+          :timeout -> 5_000
         end
       end)
 
@@ -1131,6 +1138,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> nil
           :ai_assistant_api_key -> nil
+          :timeout -> 5_000
         end
       end)
 
@@ -1142,6 +1150,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> 123
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1153,6 +1162,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> 123
+          :timeout -> 5_000
         end
       end)
 
@@ -1481,6 +1491,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1520,6 +1531,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1551,6 +1563,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1577,6 +1590,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1603,6 +1617,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1629,6 +1644,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 
@@ -1678,6 +1694,7 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
         end
       end)
 

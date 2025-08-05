@@ -382,6 +382,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
@@ -413,7 +414,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 50000
+        :timeout -> 5_000
       end)
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
