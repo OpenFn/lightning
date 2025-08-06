@@ -4,11 +4,11 @@ export function duration(dateStr1: string, dateStr2: string) {
   const diffMs = Math.abs(date2 - date1);
 
   if (diffMs >= 3600000) {
-    return `${(diffMs / 3600000).toFixed(2)}hours`;
+    return `${(diffMs / 3600000).toFixed(2)}hrs`;
   } else if (diffMs >= 60000) {
-    return `${(diffMs / 60000).toFixed(2)}mins`;
+    return `${(diffMs / 60000).toFixed(2)}m`;
   } else if (diffMs >= 1000) {
-    return `${(diffMs / 1000).toFixed(2)}secs`;
+    return `${(diffMs / 1000).toFixed(2)}s`;
   } else {
     return `${diffMs.toString()}ms`;
   }
