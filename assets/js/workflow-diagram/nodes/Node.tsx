@@ -1,7 +1,7 @@
 import { Handle, type NodeProps } from '@xyflow/react';
 import React, { memo } from 'react';
 
-import { timeSpent } from '../../utils/timeSpent';
+import { duration } from '../../utils/duration';
 import type { RunStep } from '../../workflow-store/store';
 import formatDate from '../../utils/formatDate';
 import ErrorMessage from '../components/ErrorMessage';
@@ -200,7 +200,7 @@ const Node = ({
             >
               {isTriggerNode
                 ? formatDate(new Date(runData.started_at))
-                : timeSpent(runData.started_at, runData.finished_at)}
+                : duration(runData.started_at, runData.finished_at)}
             </div>
           ) : null}
           {isTriggerNode && startInfo?.started_at ? (
@@ -321,10 +321,9 @@ const Node = ({
             justifyContent: 'center',
           }}
           className={`flex flex-row items-center
-                    opacity-0  ${
-                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-                      ''
-                    }
+                    opacity-0  ${(!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+            ''
+            }
                     transition duration-150 ease-in-out`}
         >
           {toolbar()}

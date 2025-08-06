@@ -1,4 +1,4 @@
-export function timeSpent(dateStr1: string, dateStr2: string) {
+export function duration(dateStr1: string, dateStr2: string) {
   const date1 = new Date(dateStr1).getTime();
   const date2 = new Date(dateStr2).getTime();
   const diffMs = Math.abs(date2 - date1);

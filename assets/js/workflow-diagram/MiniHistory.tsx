@@ -4,7 +4,7 @@ import type {
 } from '#/workflow-store/store';
 import React, { useState } from 'react';
 import formatDate from '../utils/formatDate';
-import { timeSpent } from '../utils/timeSpent';
+import { duration } from '../utils/duration';
 import truncateUid from '../utils/truncateUID';
 import { renderIcon } from './components/RunIcons';
 
@@ -165,7 +165,7 @@ export default function MiniHistory({
                           <span className="text-gray-400 text-xs">
                             {!run.started_at || !run.finished_at
                               ? '-ms'
-                              : timeSpent(run.started_at, run.finished_at)}
+                              : duration(run.started_at, run.finished_at)}
                           </span>
                         </div>
                         <StatePill state={run.state} />
