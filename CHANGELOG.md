@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix PostgreSQL UTF-8 error when inserting log lines with null bytes
+  [#3090](https://github.com/OpenFn/lightning/issues/3090)
+
 ## [v2.14.0] - 2025-08-05
 
 ### Fixed
