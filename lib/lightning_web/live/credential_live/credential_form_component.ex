@@ -580,7 +580,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       changeset
       |> Ecto.Changeset.get_assoc(:project_credentials, :struct)
       |> Enum.map(& &1.id)
-      |> Lightning.Workflows.workflow_names_using_project_credentials_per_project()
+      |> Lightning.Workflows.project_workflows_using_credentials()
 
     available_projects =
       Helpers.filter_available_projects(
