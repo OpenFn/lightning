@@ -1531,17 +1531,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     # don't forget to send update state of disabled
-    socket =
-      socket
-      |> maybe_disable_canvas()
-
     {:reply,
      %{
        workflow_params: socket.assigns.workflow_params,
        run_steps: run_steps,
        run_id: run_id,
        history: history
-     }, socket}
+     }, maybe_disable_canvas(socket)}
   end
 
   def handle_event(
