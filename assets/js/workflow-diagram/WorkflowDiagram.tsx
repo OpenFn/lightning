@@ -35,6 +35,8 @@ type WorkflowDiagramProps = {
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   forceFit?: boolean;
+  showAiAssistant?: boolean;
+  aiAssistantId?: string;
 };
 
 type ChartCache = {
@@ -90,6 +92,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+  const [drawerWidth, setDrawerWidth] = useState(0);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
   const updateSelection = useCallback(
@@ -223,6 +226,80 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       chartCache.current.positions = {};
     }
   }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection]);
+
+  // This effect only runs when AI assistant visibility changes, not on every selection change
+  useEffect(() => {
+    if (!props.showAiAssistant) {
+      setDrawerWidth(0);
+      
+      // Fit view when AI assistant panel closes
+      if (flow && model.nodes.length > 0) {
+        setTimeout(() => {
+          const bounds = getNodesBounds(model.nodes);
+          void flow.fitBounds(bounds, {
+            duration: FIT_DURATION,
+            padding: FIT_PADDING,
+          });
+        }, 510);
+      }
+      
+      return;
+    }
+
+    if (!props.aiAssistantId) {
+      return;
+    }
+
+    const aiAssistantId = props.aiAssistantId;
+
+    let observer: ResizeObserver | null = null;
+
+    const timer = setTimeout(() => {
+      const drawer = document.getElementById(aiAssistantId);
+      if (drawer) {
+        observer = new ResizeObserver(entries => {
+          const entry = entries[0];
+          if (entry) {
+            const width = entry.contentRect.width;
+            setDrawerWidth(width);
+          }
+        });
+        observer.observe(drawer);
+        setDrawerWidth(drawer.getBoundingClientRect().width);
+        
+        // Fit view when AI assistant panel opens
+        if (flow && model.nodes.length > 0) {
+          setTimeout(() => {
+            const bounds = getNodesBounds(model.nodes);
+            void flow.fitBounds(bounds, {
+              duration: FIT_DURATION,
+              padding: FIT_PADDING,
+            });
+          }, 510);
+        }
+      }
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [props.showAiAssistant, props.aiAssistantId]);
+
+  useEffect(() => {
+    if (props.forceFit && flow && model.nodes.length > 0) {
+      // Immediately fit to bounds when forceFit becomes true
+      const bounds = getNodesBounds(model.nodes);
+      flow.fitBounds(bounds, {
+        duration: FIT_DURATION,
+        padding: FIT_PADDING,
+      }).catch((error) => {
+        console.error('Failed to fit bounds:', error);
+      });
+    }
+  }, [props.forceFit, flow, model.nodes]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -402,6 +479,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           position="bottom-left"
           showInteractive={false}
           showFitView={false}
+          style={{
+            transform: `translateX(${drawerWidth}px)`,
+            transition: 'transform 500ms ease-in-out',
+          }}
         >
           <ControlButton onClick={handleFitView} data-tooltip="Fit view">
             <span className="text-black hero-viewfinder-circle w-4 h-4" />

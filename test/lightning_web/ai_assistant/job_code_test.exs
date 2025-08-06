@@ -7,9 +7,9 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     test "disables when job is unsaved (state: :built)" do
       assigns = %{
         selected_job: %{__meta__: %{state: :built}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: nil}
       }
 
@@ -19,9 +19,9 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     test "enables when job is saved (state: :loaded)" do
       assigns = %{
         selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: nil}
       }
 
@@ -31,9 +31,9 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     test "disables when user lacks edit permissions" do
       assigns = %{
         selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: false,
+        can_edit: false,
         ai_limit_result: :ok,
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: nil}
       }
 
@@ -43,9 +43,9 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     test "disables when AI limits reached" do
       assigns = %{
         selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: {:error, :quota_exceeded},
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: nil}
       }
 
@@ -55,9 +55,9 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     test "disables when endpoint unavailable" do
       assigns = %{
         selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
-        endpoint_available?: false,
+        endpoint_available: false,
         pending_message: %{loading: nil}
       }
 
@@ -67,9 +67,9 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     test "disables when message is pending" do
       assigns = %{
         selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: "processing"}
       }
 
@@ -120,12 +120,6 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     end
   end
 
-  describe "supports_template_generation?/0" do
-    test "returns false - job mode doesn't generate templates" do
-      assert JobCode.supports_template_generation?() == false
-    end
-  end
-
   describe "metadata/0" do
     test "returns correct metadata" do
       meta = JobCode.metadata()
@@ -139,39 +133,10 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     end
   end
 
-  describe "handle_response_generated/3" do
-    test "returns assigns unchanged (job mode doesn't generate templates)" do
-      assigns = %{some: "data"}
-      session = %{messages: []}
-
-      ui_callback = fn _event, _data ->
-        flunk("UI callback should not be called in job mode")
-      end
-
-      result = JobCode.handle_response_generated(assigns, session, ui_callback)
-
-      assert result == assigns
-    end
-  end
-
-  describe "on_session_start/2" do
-    test "returns socket unchanged (no special initialization)" do
-      socket = %{assigns: %{test: "data"}}
-
-      ui_callback = fn _event, _data ->
-        flunk("UI callback should not be called in job mode")
-      end
-
-      result = JobCode.on_session_start(socket, ui_callback)
-
-      assert result == socket
-    end
-  end
-
   describe "disabled_tooltip_message/1" do
     test "returns permission message when user cannot edit" do
       assigns = %{
-        can_edit_workflow: false,
+        can_edit: false,
         ai_limit_result: :ok,
         selected_job: %{__meta__: %{state: :loaded}}
       }
@@ -183,7 +148,7 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
 
     test "returns limit message when AI limits exceeded" do
       assigns = %{
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: {:error, :quota_exceeded},
         selected_job: %{__meta__: %{state: :loaded}}
       }
@@ -196,7 +161,7 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
 
     test "returns save message when job is unsaved" do
       assigns = %{
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
         selected_job: %{__meta__: %{state: :built}}
       }
@@ -208,7 +173,7 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
 
     test "returns nil when input should be enabled" do
       assigns = %{
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
         selected_job: %{__meta__: %{state: :loaded}}
       }
@@ -233,17 +198,17 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     test "detects unsaved jobs" do
       assigns_unsaved = %{
         selected_job: %{__meta__: %{state: :built}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: nil}
       }
 
       assigns_saved = %{
         selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: nil}
       }
 
@@ -256,17 +221,17 @@ defmodule LightningWeb.AiAssistant.Modes.JobCodeTest do
     test "detects limit conditions" do
       assigns_limited = %{
         selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: {:error, :rate_limited},
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: nil}
       }
 
       assigns_ok = %{
         selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
+        can_edit: true,
         ai_limit_result: :ok,
-        endpoint_available?: true,
+        endpoint_available: true,
         pending_message: %{loading: nil}
       }
 

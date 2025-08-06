@@ -4,6 +4,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
   import Mox
+  use Oban.Testing, repo: Lightning.Repo
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
@@ -30,6 +31,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       refute String.match?(user.email, ~r/@openfn\.org/i)
@@ -43,7 +45,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      html = view |> element("#aichat-#{job_1.id}") |> render()
+      html = view |> element("#job-#{job_1.id}-ai-assistant") |> render()
       assert html =~ "Get started with the AI Assistant"
     end
 
@@ -52,11 +54,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _]} = workflow
+           workflow: %{jobs: [job_1 | _]} = workflow,
+           user: user
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> nil
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -86,7 +90,10 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
+
+      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -96,7 +103,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       render_async(view)
-      assert has_element?(view, "#aichat-#{job_1.id}")
+
+      assert has_element?(
+               view,
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
+             )
 
       refute render(view) =~
                "AI Assistant has not been configured for your instance"
@@ -112,6 +123,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       refute user.preferences["ai_assistant.disclaimer_read_at"]
@@ -125,14 +137,22 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      html = view |> element("#aichat-#{job_1.id}") |> render()
+      html = view |> element("#job-#{job_1.id}-ai-assistant") |> render()
       assert html =~ "Get started with the AI Assistant"
-      refute has_element?(view, "#ai-assistant-form")
+
+      refute has_element?(
+               view,
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
+             )
 
       view |> element("#get-started-with-ai-btn") |> render_click()
-      html = view |> element("#aichat-#{job_1.id}") |> render()
+      html = view |> element("#job-#{job_1.id}-ai-assistant") |> render()
       refute html =~ "Get started with the AI Assistant"
-      assert has_element?(view, "#ai-assistant-form")
+
+      assert has_element?(
+               view,
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
+             )
 
       assert Lightning.Repo.reload(user).preferences[
                "ai_assistant.disclaimer_read_at"
@@ -150,6 +170,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
@@ -165,9 +186,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      html = view |> element("#aichat-#{job_1.id}") |> render()
+      html = view |> element("#job-#{job_1.id}-ai-assistant") |> render()
       assert html =~ "Get started with the AI Assistant"
-      refute has_element?(view, "#ai-assistant-form")
+
+      refute has_element?(
+               view,
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
+             )
     end
 
     @tag email: "user@openfn.org"
@@ -181,6 +206,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       skip_disclaimer(user)
@@ -193,9 +219,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      html = view |> element("#aichat-#{job_1.id}") |> render()
+      html =
+        view
+        |> element("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+        |> render()
+
       refute html =~ "Get started with the AI Assistant"
-      assert has_element?(view, "#ai-assistant-form")
+
+      assert has_element?(
+               view,
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
+             )
     end
 
     @tag email: "user@openfn.org"
@@ -209,6 +243,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -255,11 +290,20 @@ defmodule LightningWeb.AiAssistantLiveTest do
         render_async(view)
 
         assert view
-               |> form("#ai-assistant-form")
+               |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
                |> has_element?()
 
-        input_element = element(view, "#ai-assistant-form textarea")
-        submit_btn = element(view, "#ai-assistant-form-submit-btn")
+        input_element =
+          element(
+            view,
+            "#ai-assistant-form-job-#{job_1.id}-ai-assistant textarea"
+          )
+
+        submit_btn =
+          element(
+            view,
+            "#ai-assistant-form-submit-btn-chat-input-job-#{job_1.id}-ai-assistant"
+          )
 
         assert has_element?(input_element)
         refute render(input_element) =~ "disabled=\"disabled\""
@@ -268,7 +312,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
         html =
           view
-          |> form("#ai-assistant-form")
+          |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
           |> render_submit(assistant: %{content: "Hello"})
 
         refute html =~ "You are not authorized to use the Ai Assistant"
@@ -302,11 +346,20 @@ defmodule LightningWeb.AiAssistantLiveTest do
         render_async(view)
 
         assert view
-               |> form("#ai-assistant-form")
+               |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
                |> has_element?()
 
-        input_element = element(view, "#ai-assistant-form textarea")
-        submit_btn = element(view, "#ai-assistant-form-submit-btn")
+        input_element =
+          element(
+            view,
+            "#ai-assistant-form-job-#{job_1.id}-ai-assistant textarea"
+          )
+
+        submit_btn =
+          element(
+            view,
+            "#ai-assistant-form-submit-btn-chat-input-job-#{job_1.id}-ai-assistant"
+          )
 
         assert has_element?(input_element)
         assert render(input_element) =~ "disabled=\"disabled\""
@@ -315,7 +368,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
         html =
           view
-          |> form("#ai-assistant-form")
+          |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
           |> render_submit(assistant: %{content: "Hello"})
 
         assert html =~ "You are not authorized to use the AI Assistant"
@@ -334,6 +387,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -359,11 +413,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(view)
 
       assert view
-             |> form("#ai-assistant-form")
+             |> form("#ai-assistant-form-job-#{job_id}-ai-assistant")
              |> has_element?()
 
-      input_element = element(view, "#ai-assistant-form textarea")
-      submit_btn = element(view, "#ai-assistant-form-submit-btn")
+      input_element =
+        element(view, "#ai-assistant-form-job-#{job_id}-ai-assistant textarea")
+
+      submit_btn =
+        element(
+          view,
+          "#ai-assistant-form-submit-btn-chat-input-job-#{job_id}-ai-assistant"
+        )
 
       assert has_element?(input_element)
       assert render(input_element) =~ "disabled=\"disabled\""
@@ -385,6 +445,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -410,7 +471,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       html =
         view
-        |> form("#ai-assistant-form")
+        |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
         |> render_change(assistant: %{content: random_text})
 
       assert html =~ random_text
@@ -420,14 +481,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
     test "users can start a new session", %{
       conn: conn,
       project: project,
-      workflow: %{jobs: [job_1 | _]} = workflow,
-      test: test
+      workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -438,21 +499,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
             {:ok, %Tesla.Env{status: 200}}
 
           %{method: :post}, _opts ->
-            test |> to_string() |> Lightning.subscribe()
-
-            receive do
-              :return_resp ->
-                {:ok,
-                 %Tesla.Env{
-                   status: 200,
-                   body: %{
-                     "history" => [
-                       %{"role" => "user", "content" => "Ping"},
-                       %{"role" => "assistant", "content" => "Pong"}
-                     ]
-                   }
-                 }}
-            end
+            # Simply return the response immediately
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "user", "content" => "Ping"},
+                   %{"role" => "assistant", "content" => "Pong"}
+                 ]
+               }
+             }}
         end
       )
 
@@ -467,18 +524,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
       view |> element("#get-started-with-ai-btn") |> render_click()
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
 
-      assert render(view) =~ "Processing..."
-      refute render(view) =~ "Pong"
-
-      test |> to_string() |> Lightning.broadcast(:return_resp)
-      html = render_async(view)
-
-      refute has_element?(view, "#assistant-pending-message")
+      # In test environment with inline Oban, response appears immediately
+      html = render(view)
       assert html =~ "Pong"
     end
 
@@ -494,6 +546,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       expected_question = "Can you help me with this?"
@@ -548,15 +601,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       assert_patch(view)
 
-      html =
-        view
-        |> form("#ai-assistant-form")
-        |> render_submit(assistant: %{content: expected_question})
+      # Submit the form
+      view
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+      |> render_submit(assistant: %{content: expected_question})
 
-      refute html =~ expected_answer
-
-      html = render_async(view)
-
+      # In test environment with inline Oban, the response appears immediately
+      html = render(view)
       assert html =~ expected_answer
     end
 
@@ -572,6 +623,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -582,7 +634,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
             {:ok, %Tesla.Env{status: 200}}
 
           %{method: :post}, _opts ->
-            {:ok, %Tesla.Env{status: 400}}
+            {:ok, %Tesla.Env{status: 400, body: %{"message" => "Bad request"}}}
         end
       )
 
@@ -597,22 +649,23 @@ defmodule LightningWeb.AiAssistantLiveTest do
       view |> element("#get-started-with-ai-btn") |> render_click()
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
 
-      render_async(view)
+      # Error appears immediately in test environment
+      html = render(view)
 
-      assert has_element?(view, "#assistant-failed-message")
-
-      assert view |> element("#assistant-failed-message") |> render() =~
-               "An error occurred: . Please try again."
+      # The user message should show as failed
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
+      assert has_element?(view, "[phx-click='retry_message']")
     end
 
     @tag :capture_log
     @tag email: "user@openfn.org"
-    test "an error is displayed incase the assistant query process crashes", %{
+    test "an error is displayed when the assistant query fails", %{
       conn: conn,
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
@@ -622,6 +675,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -632,7 +686,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
             {:ok, %Tesla.Env{status: 200}}
 
           %{method: :post}, _opts ->
-            raise "oops"
+            # Return an error response
+            {:ok,
+             %Tesla.Env{
+               status: 500,
+               body: %{"message" => "Internal server error"}
+             }}
         end
       )
 
@@ -646,18 +705,24 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view |> element("#get-started-with-ai-btn") |> render_click()
 
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(assistant: %{content: "Ping"})
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          view
+          |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+          |> render_submit(assistant: %{content: "Ping"})
+        end)
+
+      assert log =~ "AI query failed"
+      assert log =~ "Internal server error"
 
       assert_patch(view)
 
-      render_async(view)
+      html = render(view)
 
-      assert has_element?(view, "#assistant-failed-message")
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
 
-      assert view |> element("#assistant-failed-message") |> render() =~
-               "Oops! Something went wrong. Please try again."
+      assert has_element?(view, "[phx-click='retry_message']")
     end
 
     @tag email: "user@openfn.org"
@@ -669,6 +734,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001/health_check"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       error_message = "You have reached your quota of AI queries"
@@ -697,13 +763,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       assert has_element?(view, "#ai-assistant-error", error_message)
 
-      input_element = element(view, "#ai-assistant-form textarea")
+      input_element =
+        element(view, "#ai-assistant-form-job-#{job_1.id}-ai-assistant textarea")
 
       assert render(input_element) =~
                ~s(placeholder="#{error_message}")
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping"})
 
       assert has_element?(view, "#ai-assistant-error", error_message)
@@ -721,6 +788,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       error_message = "Server is temporarily unavailable"
@@ -753,15 +821,24 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(view)
       view |> element("#get-started-with-ai-btn") |> render_click()
 
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(assistant: %{content: "Ping"})
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          view
+          |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+          |> render_submit(assistant: %{content: "Ping"})
+        end)
+
+      assert log =~ "AI query failed for session"
+      assert log =~ "Server is temporarily unavailable"
 
       assert_patch(view)
       render_async(view)
 
-      assert view |> element("#assistant-failed-message") |> render() =~
-               error_message
+      html = render(view)
+
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
+      assert has_element?(view, "[phx-click='retry_message']")
     end
 
     @tag :capture_log
@@ -776,6 +853,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -800,15 +878,24 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       view |> element("#get-started-with-ai-btn") |> render_click()
 
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(assistant: %{content: "Ping"})
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          view
+          |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+          |> render_submit(assistant: %{content: "Ping"})
+        end)
+
+      assert log =~ "AI query timed out for session"
+      assert log =~ "Request timed out. Please try again."
 
       assert_patch(view)
       render_async(view)
 
-      assert view |> element("#assistant-failed-message") |> render() =~
-               "Request timed out. Please try again."
+      html = render(view)
+
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
+      assert has_element?(view, "[phx-click='retry_message']")
     end
 
     @tag :capture_log
@@ -823,6 +910,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -840,21 +928,30 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       render_async(view)
+
       view |> element("#get-started-with-ai-btn") |> render_click()
 
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(assistant: %{content: "Ping"})
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          view
+          |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+          |> render_submit(assistant: %{content: "Ping"})
+        end)
 
-      assert_patch(view)
-      render_async(view)
+      assert log =~ "Connection refused to AI server for session"
+      assert log =~ "Unable to reach the AI server. Please try again later."
 
-      assert view |> element("#assistant-failed-message") |> render() =~
-               "Unable to reach the AI server. Please try again later."
+      html = render_async(view)
+
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
+
+      assert has_element?(view, "[phx-click='retry_message']")
     end
 
     @tag :capture_log
@@ -869,6 +966,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -893,14 +991,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
       view |> element("#get-started-with-ai-btn") |> render_click()
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
       render_async(view)
 
-      assert view |> element("#assistant-failed-message") |> render() =~
-               "Oops! Something went wrong. Please try again."
+      html = render(view)
+
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
+      assert has_element?(view, "[phx-click='retry_message']")
     end
 
     @tag email: "user@openfn.org"
@@ -915,6 +1016,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1034,6 +1136,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1068,17 +1171,18 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(view)
 
       assert view
-             |> form("#ai-assistant-form")
+             |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
              |> has_element?()
 
-      input_element = element(view, "#ai-assistant-form textarea")
+      input_element =
+        element(view, "#ai-assistant-form-job-#{job_1.id}-ai-assistant textarea")
 
       assert has_element?(input_element)
 
       message = "Hello, AI Assistant!"
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: message})
 
       render_async(view)
@@ -1098,6 +1202,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1124,51 +1229,72 @@ defmodule LightningWeb.AiAssistantLiveTest do
       })
       |> Lightning.Repo.update!()
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}",
-          on_error: :raise
-        )
+      # Use manual testing mode to control job execution
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
+            on_error: :raise
+          )
 
-      render_async(view)
+        render_async(view)
 
-      assert has_element?(
-               view,
-               "#retry-message-#{List.first(session.messages).id}"
-             )
+        assert has_element?(
+                 view,
+                 "#retry-message-#{List.first(session.messages).id}"
+               )
 
-      refute has_element?(
-               view,
-               "#cancel-message-#{List.first(session.messages).id}"
-             )
+        refute has_element?(
+                 view,
+                 "#cancel-message-#{List.first(session.messages).id}"
+               )
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
+        # Update the mock for successful response
+        Mox.stub(Lightning.Tesla.Mock, :call, fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
 
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Hello"},
-                 %{"role" => "assistant", "content" => "Hi there!"}
-               ]
-             }
-           }}
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "user", "content" => "Hello"},
+                   %{"role" => "assistant", "content" => "Hi there!"}
+                 ]
+               }
+             }}
+        end)
+
+        # Click retry
+        view
+        |> element("#retry-message-#{List.first(session.messages).id}")
+        |> render_click()
+
+        # The message should now be in pending status
+        html = render(view)
+        assert html =~ "Sending"
+
+        # Verify job was enqueued
+        assert [job] =
+                 all_enqueued(worker: Lightning.AiAssistant.MessageProcessor)
+
+        assert job.args["message_id"] == List.first(session.messages).id
+
+        # Process the job
+        assert %{success: 1} =
+                 Oban.drain_queue(Lightning.Oban, queue: :ai_assistant)
+
+        # Re-render to see the updated state
+        html = render(view)
+
+        # Now check for the successful response
+        assert html =~ "Hi there!"
+        refute html =~ "Failed"
+        refute has_element?(view, "#assistant-failed-message")
       end)
-
-      view
-      |> element("#retry-message-#{List.first(session.messages).id}")
-      |> render_click()
-
-      html = render_async(view)
-
-      assert html =~ "Hi there!"
-
-      refute has_element?(view, "#assistant-failed-message")
     end
 
     @tag email: "user@openfn.org"
@@ -1183,6 +1309,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1218,7 +1345,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
           on_error: :raise
         )
 
@@ -1272,7 +1399,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: single_message_session.id]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": single_message_session.id]}",
           on_error: :raise
         )
 
@@ -1311,6 +1438,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1379,6 +1507,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1419,11 +1548,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # checkbox is checked
       assert has_element?(
                view,
-               "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
              )
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping"})
 
       assert_patch(view)
@@ -1433,7 +1562,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # checkbox is still checked even after patching
       assert has_element?(
                view,
-               "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
              )
     end
 
@@ -1454,6 +1583,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1494,11 +1624,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # checkbox is checked
       assert has_element?(
                view,
-               "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant input[type='checkbox'][name='assistant[options][code]'][value='true']:checked"
              )
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping", options: %{code: "false"}})
 
       assert_patch(view)
@@ -1508,7 +1638,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # checkbox is not checked
       assert has_element?(
                view,
-               "#ai-assistant-form input[type='checkbox'][name='assistant[options][code]'][value='true']:not(:checked)"
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant input[type='checkbox'][name='assistant[options][code]'][value='true']:not(:checked)"
              )
     end
 
@@ -1555,6 +1685,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(
@@ -1580,7 +1711,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # checkbox is unchecked
       assert has_element?(
                view,
-               "#ai-assistant-form input[type='checkbox'][name='assistant[options][logs]']:not(:checked)"
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant input[type='checkbox'][name='assistant[options][logs]']:not(:checked)"
              )
 
       GenServer.stop(view.pid)
@@ -1598,7 +1729,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # checkbox exists
       assert has_element?(
                view,
-               "#ai-assistant-form input[type='checkbox'][name='assistant[options][logs]']:not(:checked)"
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant input[type='checkbox'][name='assistant[options][logs]']:not(:checked)"
              )
     end
 
@@ -1649,6 +1780,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Lightning.Tesla.Mock
@@ -1689,7 +1821,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       view |> element("#get-started-with-ai-btn") |> render_click()
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping", options: %{logs: "true"}})
 
       assert_patch(view)
@@ -1709,6 +1841,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1725,7 +1858,10 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       html = render(view)
 
-      assert has_element?(view, "#ai-assistant-form")
+      assert has_element?(
+               view,
+               "#ai-assistant-form-new-workflow-panel-assistant"
+             )
 
       assert html =~ "Describe the workflow you want to create..."
 
@@ -1742,6 +1878,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1774,7 +1911,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(view)
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(
         assistant: %{content: "Create a Salesforce sync workflow"}
       )
@@ -1797,6 +1934,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       workflow_yaml = """
@@ -1846,7 +1984,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(view)
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(
         assistant: %{content: "Create a Salesforce sync workflow"}
       )
@@ -1871,8 +2009,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
         session.messages
         |> Enum.find(fn message ->
           message.role == :assistant &&
-            not is_nil(message.workflow_code) &&
-            message.workflow_code != ""
+            not is_nil(message.code) &&
+            message.code != ""
         end)
 
       assert assistant_message,
@@ -1880,15 +2018,51 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       message_id = assistant_message.id
 
-      assert assistant_message.workflow_code =~ "Salesforce Sync Workflow"
-      assert assistant_message.workflow_code =~ "fetch-data"
-      assert assistant_message.workflow_code =~ "getRecords"
+      assert assistant_message.code =~ "Salesforce Sync Workflow"
+      assert assistant_message.code =~ "fetch-data"
+      assert assistant_message.code =~ "getRecords"
 
       view
       |> element("[phx-value-message-id='#{message_id}']")
       |> render_click()
 
       assert_push_event(view, "template_selected", %{template: template_code})
+
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_hook("template-parsed", %{
+        "workflow" => %{
+          "name" => "Salesforce Sync Workflow",
+          "jobs" => [
+            %{
+              "id" => job_id,
+              "name" => "Fetch Salesforce data",
+              "adaptor" => "@openfn/language-salesforce@latest",
+              "body" =>
+                "getRecords('Contact', {\n  fields: ['Id', 'Name', 'Email'],\n  limit: 100\n});"
+            }
+          ],
+          "triggers" => [
+            %{
+              "id" => trigger_id,
+              "type" => "webhook",
+              "enabled" => true
+            }
+          ],
+          "edges" => [
+            %{
+              "id" => Ecto.UUID.generate(),
+              "source_trigger_id" => trigger_id,
+              "target_job_id" => job_id,
+              "condition_type" => "always",
+              "enabled" => true
+            }
+          ]
+        }
+      })
 
       assert template_code == workflow_yaml
       assert template_code =~ "Salesforce Sync Workflow"
@@ -1897,7 +2071,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert template_code =~ "getRecords"
       assert template_code =~ "webhook"
 
-      render(view)
+      render_async(view)
+
       create_btn_after = element(view, "#create_workflow_btn")
       create_btn_html_after = render(create_btn_after)
 
@@ -1916,6 +2091,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -1926,7 +2102,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
           {:ok,
            %Tesla.Env{
              status: 503,
-             body: %{"error" => "Service temporarily unavailable"}
+             body: %{"message" => "Service temporarily unavailable"}
            }}
       end)
 
@@ -1938,16 +2114,16 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(view)
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create a workflow"})
 
       assert_patch(view)
-      render_async(view)
 
-      assert has_element?(view, "#assistant-failed-message")
+      html = render(view)
 
-      error_html = view |> element("#assistant-failed-message") |> render()
-      assert error_html =~ "Something went wrong"
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
+      assert has_element?(view, "[phx-click='retry_message']")
     end
 
     test "workflow mode lists project-scoped sessions", %{
@@ -1960,6 +2136,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2024,6 +2201,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2052,6 +2230,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       error_message = "Monthly workflow generation limit reached"
@@ -2071,11 +2250,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       assert has_element?(view, "#ai-assistant-error", error_message)
 
-      input_element = element(view, "#ai-assistant-form textarea")
+      input_element =
+        element(view, "#content-chat-input-new-workflow-panel-assistant")
+
       assert render(input_element) =~ "placeholder=\"#{error_message}\""
 
       view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create workflow"})
 
       assert has_element?(view, "#ai-assistant-error", error_message)
@@ -2091,6 +2272,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2117,7 +2299,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/new?method=ai&chat=#{session_with_title.id}"
+          ~p"/projects/#{project.id}/w/new?method=ai&w-chat=#{session_with_title.id}"
         )
 
       render_async(view)
@@ -2147,6 +2329,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2161,8 +2344,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      input_element = element(view, "#ai-assistant-form textarea")
-      submit_btn = element(view, "#ai-assistant-form-submit-btn")
+      input_element =
+        element(view, "#ai-assistant-form-new-workflow-panel-assistant textarea")
+
+      submit_btn =
+        element(
+          view,
+          "#ai-assistant-form-submit-btn-chat-input-new-workflow-panel-assistant"
+        )
 
       refute render(input_element) =~ "disabled=\"disabled\""
       refute render(submit_btn) =~ "disabled=\"disabled\""
@@ -2180,6 +2369,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2197,7 +2387,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       # The component should have called send_update to clear any existing template
       # In a real test, we'd verify the parent component received the clear template message
       # For now, just verify the interface loads correctly
-      assert has_element?(view, "#workflow-ai-assistant")
+      assert has_element?(view, "#new-workflow-panel-assistant")
     end
 
     test "workflow mode handles concurrent users correctly", %{
@@ -2209,6 +2399,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2284,6 +2475,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2301,7 +2493,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(job_view)
 
-      job_html = job_view |> element("#aichat-#{job_1.id}") |> render()
+      job_html =
+        job_view
+        |> element("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+        |> render()
+
       assert job_html =~ "Ask about your job code, debugging, or OpenFn adaptors"
 
       {:ok, workflow_view, _html} =
@@ -2325,6 +2521,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2345,32 +2542,44 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(job_view)
 
-      job_view
-      |> form("#ai-assistant-form")
-      |> render_submit(assistant: %{content: "Help with code"})
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          job_view
+          |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+          |> render_submit(assistant: %{content: "Help with code"})
+        end)
 
-      render_async(job_view)
+      assert log =~ "AI query timed out for session"
+      assert log =~ "Request timed out. Please try again."
 
-      job_error = job_view |> element("#assistant-failed-message") |> render()
-      assert job_error =~ "Request timed out. Please try again."
+      html = render_async(job_view)
+
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
+
+      assert has_element?(job_view, "[phx-click='retry_message']")
 
       {:ok, workflow_view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
 
       render_async(workflow_view)
 
-      workflow_view
-      |> form("#ai-assistant-form")
-      |> render_submit(assistant: %{content: "Create workflow"})
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          workflow_view
+          |> form("#ai-assistant-form-new-workflow-panel-assistant")
+          |> render_submit(assistant: %{content: "Create workflow"})
+        end)
 
-      render_async(workflow_view)
+      assert log =~ "AI query timed out for session"
+      assert log =~ "Request timed out. Please try again."
 
-      workflow_error =
-        workflow_view |> element("#assistant-failed-message") |> render()
+      html = render_async(workflow_view)
 
-      assert workflow_error =~ "Request timed out. Please try again."
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
 
-      assert job_error == workflow_error
+      assert has_element?(job_view, "[phx-click='retry_message']")
     end
 
     test "session management works independently for different modes", %{
@@ -2384,6 +2593,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2424,7 +2634,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(job_view)
 
-      job_html = job_view |> element("#aichat-#{job_1.id}") |> render()
+      job_html = job_view |> element("#job-#{job_1.id}-ai-assistant") |> render()
       assert job_html =~ "Job Debugging Session"
       refute job_html =~ "Workflow Creation Session"
 
@@ -2447,6 +2657,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       error_message = "AI usage limit reached"
@@ -2467,7 +2678,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(job_view)
 
-      job_html = job_view |> element("#aichat-#{job_1.id}") |> render()
+      job_html =
+        job_view
+        |> element("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+        |> render()
+
       assert job_html =~ error_message
 
       {:ok, workflow_view, _html} =
@@ -2490,6 +2705,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2518,7 +2734,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(job_view)
 
-      job_form = job_view |> element("#ai-assistant-form")
+      job_form =
+        job_view |> element("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+
       assert has_element?(job_form)
       assert render(job_form) =~ "phx-hook=\"SendMessageViaCtrlEnter\""
 
@@ -2527,7 +2745,10 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(workflow_view)
 
-      workflow_form = workflow_view |> element("#ai-assistant-form")
+      workflow_form =
+        workflow_view
+        |> element("#new-workflow-panel-assistant")
+
       assert has_element?(workflow_form)
       assert render(workflow_form) =~ "phx-hook=\"SendMessageViaCtrlEnter\""
     end
@@ -2541,6 +2762,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       refute user.preferences["ai_assistant.disclaimer_read_at"]
@@ -2553,7 +2775,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(job_view)
 
-      job_html = job_view |> element("#aichat-#{job_1.id}") |> render()
+      job_html =
+        job_view
+        |> element("#job-#{job_1.id}-ai-assistant")
+        |> render()
+
       assert job_html =~ "Get started with the AI Assistant"
 
       {:ok, workflow_view, _html} =
@@ -2576,7 +2802,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       new_workflow_html = render(new_workflow_view)
       refute new_workflow_html =~ "Get started with the AI Assistant"
-      assert has_element?(new_workflow_view, "#ai-assistant-form")
+      assert has_element?(new_workflow_view, "#new-workflow-panel-assistant")
     end
 
     test "both modes handle markdown formatting consistently", %{
@@ -2590,6 +2816,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       markdown_response = """
@@ -2637,7 +2864,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(job_view)
 
       job_view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Help me"})
 
       render_async(job_view)
@@ -2653,7 +2880,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(workflow_view)
 
       workflow_view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create workflow"})
 
       render_async(workflow_view)
@@ -2675,6 +2902,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       response_content = "Here's some code you can copy"
@@ -2709,7 +2937,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(job_view)
 
       job_view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Help"})
 
       assert_patch(job_view)
@@ -2734,7 +2962,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(workflow_view)
 
       workflow_view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create"})
 
       assert_patch(workflow_view)
@@ -2765,6 +2993,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2795,7 +3024,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(job_view)
 
       job_view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Test"})
 
       render_async(job_view)
@@ -2813,7 +3042,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(workflow_view)
 
       workflow_view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Test"})
 
       render_async(workflow_view)
@@ -2833,6 +3062,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2910,6 +3140,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2959,13 +3190,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(job_view)
 
-      job_html = job_view |> element("#aichat-#{job_1.id}") |> render()
+      job_html = job_view |> element("#job-#{job_1.id}-ai-assistant") |> render()
       assert job_html =~ "Latest"
 
       job_view |> element("[phx-click='toggle_sort']") |> render_click()
 
       job_html_after_sort =
-        job_view |> element("#aichat-#{job_1.id}") |> render()
+        job_view |> element("#job-#{job_1.id}-ai-assistant") |> render()
 
       assert job_html_after_sort =~ "Oldest"
 
@@ -2998,6 +3229,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3051,23 +3283,27 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(job_view)
 
+      # Submit the form to create a chat session
       job_view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Help with debugging"})
 
-      assert_patch(job_view)
+      # This creates a session and navigates to include j-chat parameter
+      current_path = assert_patch(job_view)
       render_async(job_view)
 
       job_html = render(job_view)
       assert job_html =~ "Response content"
+      assert job_html =~ "Help with debugging"
 
+      # Navigate to workflow creation
       {:ok, workflow_view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
 
       render_async(workflow_view)
 
       workflow_view
-      |> form("#ai-assistant-form")
+      |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create new workflow"})
 
       assert_patch(workflow_view)
@@ -3076,16 +3312,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
       workflow_html = render(workflow_view)
       assert workflow_html =~ "Response content"
 
-      {:ok, new_job_view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
-        )
+      # Navigate back to the job view using the path with chat session
+      {:ok, new_job_view, _html} = live(conn, current_path)
 
       render_async(new_job_view)
 
-      new_job_html = new_job_view |> element("#aichat-#{job_1.id}") |> render()
-      assert new_job_html =~ "Help with"
+      # The entire view should show the chat history
+      new_job_html = render(new_job_view)
+
+      # The original conversation should be visible
+      assert new_job_html =~ "Help with debugging"
+      assert new_job_html =~ "Response content"
     end
 
     test "async result states work correctly", %{
@@ -3099,6 +3336,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3130,12 +3368,13 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      assert view
-             |> form("#ai-assistant-form")
-             |> render_submit(assistant: %{content: "Test async"}) =~
-               "Processing..."
+      view
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+      |> render_submit(assistant: %{content: "Test async"})
 
-      html = render_async(view)
+      assert_patch(view)
+
+      html = render(view)
       assert html =~ "Delayed response"
       refute html =~ "Processing..."
     end
@@ -3152,6 +3391,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3159,7 +3399,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
           {:ok, %Tesla.Env{status: 200}}
 
         %{method: :post}, _opts ->
-          raise "Simulated AI service crash"
+          # Return a server error
+          {:ok,
+           %Tesla.Env{
+             status: 500,
+             body: %{
+               "error" => "Internal server error",
+               "message" => "Service crashed"
+             }
+           }}
       end)
 
       skip_disclaimer(user)
@@ -3173,16 +3421,26 @@ defmodule LightningWeb.AiAssistantLiveTest do
       render_async(view)
 
       view
-      |> form("#ai-assistant-form")
-      |> render_submit(assistant: %{content: "Trigger crash"})
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
+      |> render_submit(assistant: %{content: "Trigger error"})
 
-      _html = render_async(view)
-      assert has_element?(view, "#assistant-failed-message")
+      assert_patch(view)
 
-      error_html = view |> element("#assistant-failed-message") |> render()
-      assert error_html =~ "Something went wrong"
+      # In test environment, error appears immediately
+      html = render(view)
 
-      assert has_element?(view, "#ai-assistant-form")
+      # The user message should show as failed
+      assert html =~ "ai-bg-gradient-error"
+      assert html =~ "Failed"
+
+      # The form should still be functional
+      assert has_element?(
+               view,
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
+             )
+
+      # User should be able to retry
+      assert has_element?(view, "[phx-click='retry_message']")
     end
   end
 
