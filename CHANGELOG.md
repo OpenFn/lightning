@@ -16,8 +16,9 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
-- Alert before removing a project from accessing a credential
-  [#537](https://github.com/OpenFn/lightning/issues/537)
+
+- Alert that workflows may break before letting users revoke access to a project
+  for their credential [#537](https://github.com/OpenFn/lightning/issues/537)
 
 ### Changed
 

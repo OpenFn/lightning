@@ -1168,7 +1168,7 @@ defmodule LightningWeb.CredentialLiveTest do
       button_html = delete_credential_button(view, project.id) |> render()
 
       assert button_html =~
-               "data-confirm=\"This credential is in use by workflows #{workflow_with_credential_1.name}, #{workflow_with_credential_2.name}. Revoking access to #{project.name} will likely break those existing workflows"
+               "data-confirm=\"Warning: This credential is in use by the following workflows: #{workflow_with_credential_1.name}, #{workflow_with_credential_2.name}. If you revoke access to the &quot;#{project.name}&quot; project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"
 
       assert button_html =~ workflow_with_credential_1.name
       assert button_html =~ workflow_with_credential_2.name
