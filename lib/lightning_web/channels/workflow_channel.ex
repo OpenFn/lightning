@@ -5,10 +5,14 @@ defmodule LightningWeb.WorkflowChannel do
   Unlike LiveView events, Phoenix Channels properly support binary data
   transmission without JSON serialization.
   """
-  use Phoenix.Channel
+  use LightningWeb, :channel
 
   alias Lightning.Collaboration.Session
+  alias Lightning.Collaboration.Utils
 
+  require Logger
+
+  @impl true
   def join("workflow:collaborate:" <> workflow_id = topic, _params, socket) do
     # Check if user is authenticated
     case socket.assigns[:current_user] do
@@ -47,23 +51,34 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Handle Yjs protocol messages (used for sync and awareness)
-  def handle_in("yjs", {:binary, payload}, socket) do
-    Session.send_yjs_message(socket.assigns.session_pid, payload)
-
-    {:noreply, socket}
-  end
-
-  # Handle Yjs sync messages (initial sync)
+  @impl true
   def handle_in("yjs_sync", {:binary, chunk}, socket) do
     Session.start_sync(socket.assigns.session_pid, chunk)
-
     {:noreply, socket}
   end
 
-  # Handle PubSub broadcasts from other channel processes
-  def handle_info({:yjs, payload}, socket) do
-    push(socket, "yjs", {:binary, payload})
+  def handle_in("yjs", {:binary, chunk}, socket) do
+    Logger.debug("""
+    WorkflowChannel: handle_in, yjs
+      from=#{inspect(self())}
+      chunk=#{inspect(Utils.decipher_message(chunk))}
+    """)
+
+    Session.send_yjs_message(socket.assigns.session_pid, chunk)
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:yjs, chunk}, socket) do
+    push(socket, "yjs", {:binary, chunk})
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        {:DOWN, _ref, :process, _pid, _reason},
+        socket
+      ) do
+    {:stop, {:error, "remote process crash"}, socket}
   end
 end

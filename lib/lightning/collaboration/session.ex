@@ -15,8 +15,13 @@ defmodule Lightning.Collaboration.Session do
     )
   end
 
-  # ---
+  def stop(session_pid) do
+    GenServer.stop(session_pid)
+  end
 
+  # ----------------------------------------------------------------------------
+
+  @impl true
   def init(opts) do
     workflow_id = Keyword.fetch!(opts, :workflow_id)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
@@ -34,6 +39,7 @@ defmodule Lightning.Collaboration.Session do
     {:ok, state, {:continue, :start_shared_doc}}
   end
 
+  @impl true
   def handle_continue(:start_shared_doc, %{workflow_id: workflow_id} = state) do
     case :pg.get_members(@pg_scope, workflow_id) do
       [] ->
@@ -84,14 +90,13 @@ defmodule Lightning.Collaboration.Session do
   #   {:stop, {:error, "remote process crash"}, socket}
   # end
 
+  @impl true
   def terminate(reason, _state) do
     Logger.debug("Session terminating: #{inspect({reason})}")
     :ok
   end
 
-  def stop(session_pid) do
-    GenServer.stop(session_pid)
-  end
+  # ----------------------------------------------------------------------------
 
   @doc """
   Get the current document.
@@ -105,17 +110,21 @@ defmodule Lightning.Collaboration.Session do
   end
 
   def start_sync(session_pid, chunk) do
-    GenServer.call(session_pid, {:yjs_sync, chunk})
+    GenServer.call(session_pid, {:start_sync, chunk})
   end
 
   def send_yjs_message(session_pid, chunk) do
-    GenServer.call(session_pid, {:yjs, chunk})
+    GenServer.call(session_pid, {:send_yjs_message, chunk})
   end
 
+  # ----------------------------------------------------------------------------
+
+  @impl true
   def handle_call(:get_doc, _from, %{shared_doc_pid: shared_doc_pid} = state) do
     {:reply, SharedDoc.get_doc(shared_doc_pid), state}
   end
 
+  @impl true
   def handle_call(
         {:update_doc, fun},
         _from,
@@ -125,8 +134,9 @@ defmodule Lightning.Collaboration.Session do
     {:reply, :ok, state}
   end
 
+  @impl true
   def handle_call(
-        {:yjs, chunk},
+        {:send_yjs_message, chunk},
         _from,
         %{shared_doc_pid: shared_doc_pid} = state
       ) do
@@ -134,19 +144,30 @@ defmodule Lightning.Collaboration.Session do
     {:reply, :ok, state}
   end
 
+  @impl true
   def handle_call(
-        {:yjs_sync, chunk},
-        _from,
+        {:start_sync, chunk},
+        from,
         %{shared_doc_pid: shared_doc_pid} = state
       ) do
+    Logger.debug({:start_sync, from} |> inspect)
     SharedDoc.start_sync(shared_doc_pid, chunk)
     {:reply, :ok, state}
   end
 
+  @impl true
   def handle_info({:yjs, reply, _shared_doc_pid}, state) do
     Map.get(state, :parent_pid) |> send({:yjs, reply})
     {:noreply, state}
   end
+
+  @impl true
+  def handle_info(any, state) do
+    Logger.debug("Session received unknown message: #{inspect(any)}")
+    {:noreply, state}
+  end
+
+  # ----------------------------------------------------------------------------
 
   # Private function to initialize SharedDoc with workflow data
   defp initialize_workflow_document(shared_doc_pid, workflow_id) do
