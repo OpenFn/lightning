@@ -3,8 +3,9 @@
  * Uses existing Lightning user token authentication
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Socket as PhoenixSocket } from 'phoenix';
+import { PHX_LV_DEBUG } from 'phoenix_live_view/constants';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface SocketContextValue {
   socket: PhoenixSocket | null;
@@ -50,7 +51,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     const newSocket = new PhoenixSocket('/socket', {
       params: { token: userToken },
       logger: (kind: any, msg: any, data: any) => {
-        console.log(`Phoenix Socket ${kind}:`, msg, data);
+        // Follow the LiveView debug mode
+        if (sessionStorage.getItem(PHX_LV_DEBUG) === 'true') {
+          console.log(`Phoenix Socket ${kind}:`, msg, data);
+        }
       },
     });
 
