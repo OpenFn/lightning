@@ -1,9 +1,12 @@
 import React from 'react';
 import type { WithActionProps } from '../react/lib/with-props';
-import type { CollaborativeEditorDataProps } from './types/todo';
+import type { CollaborativeEditorDataProps } from './types/workflow';
 import { SocketProvider } from '../react/contexts/SocketProvider';
+import { SessionProvider } from './contexts/SessionProvider';
 import { TodoStoreProvider } from './contexts/TodoStoreProvider';
+import { WorkflowStoreProvider } from './contexts/WorkflowStoreProvider';
 import { TodoList } from './components/TodoList';
+import { WorkflowEditor } from './components/WorkflowEditor';
 import { ConnectionStatus } from './components/ConnectionStatus';
 
 export const CollaborativeEditor: WithActionProps<
@@ -33,7 +36,7 @@ export const CollaborativeEditor: WithActionProps<
   }
 
   return (
-    <div className="collaborative-editor">
+    <div className="collaborative-editor h-full overflow-y-auto">
       {/* Development info */}
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h3 className="text-lg font-semibold text-blue-800 mb-2">
@@ -56,14 +59,33 @@ export const CollaborativeEditor: WithActionProps<
       </div>
 
       <SocketProvider>
-        <TodoStoreProvider
+        <SessionProvider
           workflowId={workflowId}
           userId={userId}
           userName={userName}
         >
-          <ConnectionStatus />
-          <TodoList />
-        </TodoStoreProvider>
+          {/* Keep TodoStoreProvider as reference during development */}
+          <TodoStoreProvider>
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                📝 Todo Reference Implementation
+              </h2>
+              <ConnectionStatus />
+              <TodoList />
+            </div>
+          </TodoStoreProvider>
+
+          {/* New WorkflowStoreProvider for workflow editing */}
+          <WorkflowStoreProvider>
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                ⚡ Workflow Editor (New Implementation)
+              </h2>
+              <ConnectionStatus />
+              <WorkflowEditor />
+            </div>
+          </WorkflowStoreProvider>
+        </SessionProvider>
       </SocketProvider>
     </div>
   );

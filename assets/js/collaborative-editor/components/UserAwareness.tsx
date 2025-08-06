@@ -1,8 +1,8 @@
 import React from 'react';
-import { useTodoStore } from '../contexts/TodoStoreProvider';
+import { useSession } from '../contexts/SessionProvider';
 
 export const UserAwareness: React.FC = () => {
-  const { users, isConnected, isSynced } = useTodoStore();
+  const { users, isConnected, isSynced } = useSession();
 
   return (
     <div
@@ -16,16 +16,16 @@ export const UserAwareness: React.FC = () => {
             isConnected && isSynced
               ? 'bg-green-500'
               : isConnected
-              ? 'bg-yellow-500'
-              : 'bg-red-500'
+                ? 'bg-yellow-500'
+                : 'bg-red-500'
           }`}
         />
         <span className="text-gray-600">
           {isConnected && isSynced
             ? 'Connected & Synced'
             : isConnected
-            ? 'Connected (Syncing...)'
-            : 'Disconnected'}
+              ? 'Connected (Syncing...)'
+              : 'Disconnected'}
         </span>
       </div>
 

@@ -1,18 +1,16 @@
 /**
- * TodoStoreProvider - Yjs TodoStore that uses WorkflowChannel for transport
- * Uses YjsChannelProvider for clean separation of concerns
+ * TodoStoreProvider - Yjs TodoStore for todo-specific operations
+ * Uses SessionProvider for shared Yjs/Phoenix Channel infrastructure
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as Y from 'yjs';
-import * as awarenessProtocol from 'y-protocols/awareness';
-import { useSocket } from '../../react/contexts/SocketProvider';
-import { PhoenixChannelProvider } from 'y-phoenix-channel';
-import type { TodoItem, AwarenessUser, TodoStore } from '../types/todo';
+import { useSession } from './SessionProvider';
+import type { TodoItem, TodoStore } from '../types/todo';
 
 interface TodoStoreContextValue extends TodoStore {
-  ydoc: Y.Doc | null;
-  awareness: awarenessProtocol.Awareness | null;
+  // Domain-specific todo operations only
+  // Session concerns (ydoc, awareness, users, connection) come from useSession
 }
 
 const TodoStoreContext = createContext<TodoStoreContextValue | null>(null);
@@ -26,75 +24,46 @@ export const useTodoStore = () => {
 };
 
 interface TodoStoreProviderProps {
-  workflowId: string;
-  userId: string;
-  userName: string;
   children: React.ReactNode;
 }
 
 export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
-  workflowId,
-  userId,
-  userName,
   children,
 }) => {
-  const { socket, isConnected } = useSocket();
+  const { ydoc, isConnected, isSynced, users } = useSession();
 
-  // Yjs state
-  const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
-  const [awareness, setAwareness] =
-    useState<awarenessProtocol.Awareness | null>(null);
-  const [_provider, setProvider] = useState<PhoenixChannelProvider | null>(
-    null
-  );
+  // Domain-specific Yjs state
   const [todoItems, setTodoItems] = useState<Y.Map<TodoItem> | null>(null);
   const [todoOrder, setTodoOrder] = useState<Y.Array<string> | null>(null);
 
-  // React state
+  // Domain-specific React state
   const [todos, setTodos] = useState<TodoItem[]>([]);
-  const [users, setUsers] = useState<AwarenessUser[]>([]);
-  const [isProviderConnected, setIsProviderConnected] = useState(false);
-  const [isSynced, setIsSynced] = useState(false);
+  const [userId, setUserId] = useState<string>('');
 
-  // Initialize Yjs when socket is connected
+  // Get userId from session users (current user)
   useEffect(() => {
-    if (!isConnected || !socket) {
+    if (users.length > 0) {
+      // Find the current user (the local user)
+      const currentUser = users.find(u => u.user.id);
+      if (currentUser) {
+        setUserId(currentUser.user.id);
+      }
+    }
+  }, [users]);
+
+  // Initialize domain-specific Yjs maps when ydoc is available
+  useEffect(() => {
+    if (!ydoc) {
       return;
     }
 
-    console.log('🚀 Initializing Yjs with PhoenixChannelProvider');
+    console.log('🚀 Initializing TodoStore domain maps');
 
-    // Create Yjs document and awareness
-    const doc = new Y.Doc();
-    const awarenessInstance = new awarenessProtocol.Awareness(doc);
-    const items = doc.getMap<TodoItem>('todoItems');
-    const order = doc.getArray<string>('todoOrder');
+    // Get domain-specific Yjs maps
+    const items = ydoc.getMap<TodoItem>('todoItems');
+    const order = ydoc.getArray<string>('todoOrder');
 
-    // Set up awareness with user info
-    const userData = {
-      id: userId,
-      name: userName,
-      color: generateUserColor(userId),
-    };
-
-    awarenessInstance.setLocalStateField('user', userData);
-    awarenessInstance.setLocalStateField('lastSeen', Date.now());
-
-    // Create the Yjs channel provider with the reference implementation
-    const roomname = `workflow:collaborate:${workflowId}`;
-    console.log('🔗 Creating PhoenixChannelProvider with:', {
-      roomname,
-      socketConnected: socket.isConnected(),
-    });
-
-    const channelProvider = new PhoenixChannelProvider(socket, roomname, doc, {
-      awareness: awarenessInstance,
-      connect: true,
-    });
-
-    console.debug('PhoenixChannelProvider: created', channelProvider);
-
-    // Listen to React state sync
+    // Sync todos to React state
     const syncTodos = () => {
       const todoMap = items.toJSON() as Record<string, TodoItem>;
       const orderArray = order.toArray();
@@ -104,131 +73,25 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
       setTodos(orderedTodos);
     };
 
-    const syncUsers = () => {
-      const userList: AwarenessUser[] = [];
-      awarenessInstance.getStates().forEach((state, clientId) => {
-        if (state['user']) {
-          userList.push({
-            clientId,
-            user: state['user'],
-            cursor: state['cursor'],
-          });
-        }
-      });
-      setUsers(userList);
-    };
-
-    // Set up observers
+    // Set up observers for domain-specific data
     items.observe(syncTodos);
     order.observe(syncTodos);
-    awarenessInstance.on('change', syncUsers);
 
-    // Try different approaches to event listening
-    const statusHandler = (...args: any[]) => {
-      console.debug('PhoenixChannelProvider: status event', args);
-      if (args.length > 0 && Array.isArray(args[0])) {
-        const statusEvents = args[0];
-        if (
-          statusEvents[0] &&
-          typeof statusEvents[0] === 'object' &&
-          'status' in statusEvents[0]
-        ) {
-          const status = (statusEvents[0] as { status: string }).status;
-          console.debug(
-            'PhoenixChannelProvider: setIsProviderConnected',
-            status
-          );
-          setIsProviderConnected(status === 'connected');
-        }
-      }
-    };
-
-    const syncHandler = (synced: boolean) => {
-      console.debug('PhoenixChannelProvider: synced event', synced);
-      setIsSynced(synced);
-    };
-
-    // Listen to provider status (reference implementation uses different event structure)
-    channelProvider.on('status', statusHandler);
-    channelProvider.on('sync', syncHandler);
-
-    // Also log initial provider state
-    console.debug('PhoenixChannelProvider: initial state', {
-      roomname,
-      shouldConnect: channelProvider.shouldConnect,
-      channel: channelProvider.channel,
-      synced: channelProvider.synced,
-      socketConnected: socket.isConnected(),
-    });
-
-    // Listen directly to channel for 'joined' state detection
-    const cleanupJoinListener = setupJoinListener(
-      channelProvider,
-      isConnected => {
-        setIsProviderConnected(isConnected);
-      }
-    );
-
-    // TODO: I don't think we need to check this, the status handler should be enough.
-    // Check the provider's current connection status periodically
-    // const statusCheckInterval = setInterval(() => {
-    //   const currentStatus = {
-    //     channel: channelProvider.channel?.state,
-    //     synced: channelProvider.synced,
-    //     socketConnected: socket.isConnected(),
-    //   };
-    //   console.log('🔍 Provider status check:', currentStatus);
-
-    //   // Manually update connection status based on channel state
-    //   if (channelProvider.channel?.state === 'joined') {
-    //     setIsProviderConnected(true);
-    //   } else {
-    //     setIsProviderConnected(false);
-    //   }
-
-    //   // Update sync status
-    //   setIsSynced(channelProvider.synced);
-    // }, 2000); // Check every 2 seconds
-
-    // Store state
-    setYdoc(doc);
-    setAwareness(awarenessInstance);
-    setProvider(channelProvider);
+    // Store domain state
     setTodoItems(items);
     setTodoOrder(order);
 
-    // Provider auto-connects if connect: true is passed
-
-    // Set up lastSeen timer - updates every 10 seconds
-    const cleanupLastSeenTimer = setupLastSeenTimer(awarenessInstance);
-
     // Initial sync
     syncTodos();
-    syncUsers();
 
     // Cleanup function
     return () => {
-      console.debug('PhoenixChannelProvider: cleaning up');
-
-      cleanupJoinListener();
-      cleanupLastSeenTimer();
-
-      channelProvider.off('status', statusHandler);
-      channelProvider.off('sync', syncHandler);
-
-      channelProvider.destroy();
-      doc.destroy();
-      setYdoc(null);
-      setAwareness(null);
-      setProvider(null);
+      console.debug('TodoStore: cleaning up domain maps');
       setTodoItems(null);
       setTodoOrder(null);
       setTodos([]);
-      setUsers([]);
-      setIsProviderConnected(false);
-      setIsSynced(false);
     };
-  }, [isConnected, socket, workflowId, userId, userName]);
+  }, [ydoc]);
 
   // Todo operations
   const addTodo = (text: string) => {
@@ -301,11 +164,9 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
   };
 
   const value: TodoStoreContextValue = {
-    ydoc,
-    awareness,
     todos,
     users,
-    isConnected: isProviderConnected,
+    isConnected,
     isSynced,
     addTodo,
     toggleTodo,
@@ -324,52 +185,4 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
 // Helper functions
 function generateTodoId(): string {
   return `todo_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-}
-
-function generateUserColor(userId: string): string {
-  const colors = [
-    '#FF6B6B',
-    '#4ECDC4',
-    '#45B7D1',
-    '#FFA07A',
-    '#98D8C8',
-    '#FFCF56',
-    '#FF8B94',
-    '#AED581',
-  ];
-
-  const hash = userId.split('').reduce((a, b) => {
-    a = (a << 5) - a + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-
-  return colors[Math.abs(hash) % colors.length] || '#999999';
-}
-
-function setupJoinListener(
-  channelProvider: PhoenixChannelProvider,
-  callback: (isConnected: boolean) => void
-) {
-  const ref = channelProvider.channel?.on('phx_reply', (payload, ref) => {
-    if (
-      payload.status === 'ok' &&
-      channelProvider.channel?.state === 'joined'
-    ) {
-      callback(true);
-    }
-  });
-
-  return () => {
-    channelProvider.channel?.off('phx_reply', ref);
-  };
-}
-
-function setupLastSeenTimer(awarenessInstance: awarenessProtocol.Awareness) {
-  const lastSeenTimer = setInterval(() => {
-    awarenessInstance.setLocalStateField('lastSeen', Date.now());
-  }, 10000);
-
-  return () => {
-    clearInterval(lastSeenTimer);
-  };
 }
