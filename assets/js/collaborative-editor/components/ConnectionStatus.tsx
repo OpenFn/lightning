@@ -4,11 +4,11 @@
 
 import React from 'react';
 import { useSocket } from '../../react/contexts/SocketProvider';
-import { useTodoStore } from '../contexts/TodoStoreProvider';
+import { useSession } from '../contexts/SessionProvider';
 
 export const ConnectionStatus: React.FC = () => {
   const { isConnected: socketConnected, connectionError } = useSocket();
-  const { isConnected: yjsConnected, isSynced } = useTodoStore();
+  const { isConnected: yjsConnected, isSynced } = useSession();
 
   const getStatusColor = (connected: boolean) => {
     return connected ? 'text-green-600' : 'text-red-600';

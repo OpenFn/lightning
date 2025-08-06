@@ -32,27 +32,17 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="flex flex-col h-full">
-      <div class="flex-1 p-4">
-        <h2 class="text-2xl font-bold mb-4">
-          Collaborative Workflow Editor - {@workflow.name}
-        </h2>
-        
-    <!-- Collaborative Editor React Component -->
-        <div
-          id="collaborative-editor-react"
-          phx-hook="ReactComponent"
-          data-react-name="CollaborativeEditor"
-          data-react-file={
-            ~p"/assets/js/collaborative-editor/CollaborativeEditor.js"
-          }
-          data-workflow-id={@workflow_id}
-          data-workflow-name={@workflow.name}
-          data-user-id={@user_id}
-          data-user-name={@current_user.first_name <> " " <> @current_user.last_name}
-        />
-      </div>
-    </div>
+    <div
+      id="collaborative-editor-react"
+      class="h-full"
+      phx-hook="ReactComponent"
+      data-react-name="CollaborativeEditor"
+      data-react-file={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
+      data-workflow-id={@workflow_id}
+      data-workflow-name={@workflow.name}
+      data-user-id={@user_id}
+      data-user-name={@current_user.first_name <> " " <> @current_user.last_name}
+    />
     """
   end
 end
