@@ -17,12 +17,20 @@ and this project adheres to
 
 ### Added
 
+- Extended the AI Assistant to support editing existing workflows
+  [#3247](https://github.com/OpenFn/lightning/issues/3247)
 - Alert that workflows may break before letting users revoke access to a project
   for their credential [#537](https://github.com/OpenFn/lightning/issues/537)
 
 ### Changed
 
+- Upgraded Elixir from 1.17 to 1.18
+  [d35a6d1](https://github.com/OpenFn/lightning/commit/d35a6d1)
+
 ### Fixed
+
+- Fix CTRL+S saving previously selected template when creating a workflow
+  [#3442](https://github.com/OpenFn/lightning/issues/3442)
 
 ## [v2.14.0] - 2025-08-05
 

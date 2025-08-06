@@ -196,17 +196,17 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
       assert Ecto.Changeset.fetch_field!(changeset, :status) == :pending
     end
 
-    test "accepts workflow_code field" do
+    test "accepts code field" do
       changeset =
         ChatMessage.changeset(%ChatMessage{}, %{
           content: "Test message",
           role: :assistant,
-          workflow_code: "defmodule MyWorkflow do\nend"
+          code: "defmodule MyWorkflow do\nend"
         })
 
       assert changeset.valid?
 
-      assert Ecto.Changeset.fetch_field!(changeset, :workflow_code) ==
+      assert Ecto.Changeset.fetch_field!(changeset, :code) ==
                "defmodule MyWorkflow do\nend"
     end
 
@@ -359,7 +359,7 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
 
       attrs = %{
         content: "Help me create a workflow",
-        workflow_code: nil,
+        code: nil,
         role: :user,
         status: :pending,
         is_deleted: false,
@@ -374,7 +374,7 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
       assert Ecto.Changeset.fetch_field!(changeset, :content) ==
                "Help me create a workflow"
 
-      assert Ecto.Changeset.fetch_field!(changeset, :workflow_code) == nil
+      assert Ecto.Changeset.fetch_field!(changeset, :code) == nil
       assert Ecto.Changeset.fetch_field!(changeset, :role) == :user
       assert Ecto.Changeset.fetch_field!(changeset, :status) == :pending
       assert Ecto.Changeset.fetch_field!(changeset, :is_deleted) == false
@@ -388,11 +388,11 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
 
     test "creates valid assistant message with workflow code" do
       chat_session_id = Ecto.UUID.generate()
-      workflow_code = "defmodule MyWorkflow do\n  def run, do: :ok\nend"
+      code = "defmodule MyWorkflow do\n  def run, do: :ok\nend"
 
       attrs = %{
         content: "Here's your workflow...",
-        workflow_code: workflow_code,
+        code: code,
         role: :assistant,
         chat_session_id: chat_session_id
       }
@@ -403,8 +403,7 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
       assert Ecto.Changeset.fetch_field!(changeset, :content) ==
                "Here's your workflow..."
 
-      assert Ecto.Changeset.fetch_field!(changeset, :workflow_code) ==
-               workflow_code
+      assert Ecto.Changeset.fetch_field!(changeset, :code) == code
 
       assert Ecto.Changeset.fetch_field!(changeset, :role) == :assistant
       # Default for assistant

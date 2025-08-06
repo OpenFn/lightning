@@ -3,7 +3,7 @@ defmodule Lightning.Repo.Migrations.AddWorkflowSupportToAiChat do
 
   def change do
     alter table(:ai_chat_messages) do
-      add :workflow_code, :text
+      add :code, :text
     end
 
     alter table(:ai_chat_sessions) do
