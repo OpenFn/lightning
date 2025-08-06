@@ -54,7 +54,6 @@ export default function MiniHistory({
       className={`absolute left-2 top-2 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${isCollapsed ? 'w-44' : 'w-88'
         }`}
     >
-      {/* Header */}
       <div
         className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 ${isCollapsed ? 'border-b-0' : 'border-b'
           }`}
@@ -85,7 +84,6 @@ export default function MiniHistory({
         </div>
       </div>
 
-      {/* Content */}
       <div
         className={`overflow-y-auto no-scrollbar ${isCollapsed ? 'h-0' : 'h-82'
           }`}
@@ -102,7 +100,6 @@ export default function MiniHistory({
           <div className="divide-y divide-gray-100">
             {history.map(workorder => (
               <div key={workorder.id}>
-                {/* Workorder Row */}
                 <div className={`px-3 py-2 hover:bg-gray-50 transition-colors`}>
                   <div
                     className="flex items-center justify-between cursor-pointer"
@@ -138,7 +135,6 @@ export default function MiniHistory({
                   </div>
                 </div>
 
-                {/* Runs */}
                 {(expandedWorder === workorder.id || workorder.selected) &&
                   workorder.runs.map(run => (
                     <div
