@@ -3,11 +3,13 @@
  */
 
 import type { AwarenessUser } from './session';
+import type * as Y from 'yjs';
 
-export interface WorkflowJob {
+// Job data structure as plain JS object (for React state)
+export interface WorkflowJobData {
   id: string;
   name: string;
-  body: string;
+  body: string; // For display purposes, actual body is Y.Text
 }
 
 export interface Workflow {
@@ -17,11 +19,13 @@ export interface Workflow {
 
 export interface WorkflowStore {
   workflow: Workflow | null;
-  jobs: WorkflowJob[];
+  jobs: WorkflowJobData[]; // React state uses plain JS objects for display
   selectedJobId: string | null;
   selectJob: (id: string | null) => void;
   updateJobName: (id: string, name: string) => void;
   updateJobBody: (id: string, body: string) => void;
+  getJobBodyYText: (id: string) => Y.Text | null;
+  getYjsJob: (id: string) => YjsWorkflowJob | null; // Access to actual Y.Map
   users: AwarenessUser[];
   isConnected: boolean;
   isSynced: boolean;

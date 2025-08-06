@@ -64,17 +64,6 @@ export const CollaborativeEditor: WithActionProps<
           userId={userId}
           userName={userName}
         >
-          {/* Keep TodoStoreProvider as reference during development */}
-          <TodoStoreProvider>
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
-                📝 Todo Reference Implementation
-              </h2>
-              <ConnectionStatus />
-              <TodoList />
-            </div>
-          </TodoStoreProvider>
-
           {/* New WorkflowStoreProvider for workflow editing */}
           <WorkflowStoreProvider>
             <div className="mb-8">
@@ -85,6 +74,17 @@ export const CollaborativeEditor: WithActionProps<
               <WorkflowEditor />
             </div>
           </WorkflowStoreProvider>
+
+          {/* Keep TodoStoreProvider as reference during development */}
+          <TodoStoreProvider>
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                📝 Todo Reference Implementation
+              </h2>
+              <ConnectionStatus />
+              <TodoList />
+            </div>
+          </TodoStoreProvider>
         </SessionProvider>
       </SocketProvider>
     </div>
