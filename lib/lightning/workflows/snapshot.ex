@@ -29,6 +29,7 @@ defmodule Lightning.Workflows.Snapshot do
     belongs_to :workflow, Workflow
     field :name, :string
     field :lock_version, :integer
+    field :positions, :map, default: nil
 
     embeds_many :jobs, Job, primary_key: false do
       field :id, :binary_id, primary_key: true
