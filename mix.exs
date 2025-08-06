@@ -131,7 +131,7 @@ defmodule Lightning.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tesla, "~> 1.13"},
-      {:tidewave, "~> 0.1.0", only: :dev},
+      {:tidewave, "~> 0.3.0", only: :dev},
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
