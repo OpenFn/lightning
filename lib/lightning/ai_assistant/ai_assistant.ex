@@ -99,7 +99,6 @@ defmodule Lightning.AiAssistant do
 
     case read_at && DateTime.from_unix(read_at) do
       {:ok, datetime} ->
-        # Disclaimer is valid for 24 hours
         DateTime.diff(DateTime.utc_now(), datetime, :hour) < 24
 
       _error ->

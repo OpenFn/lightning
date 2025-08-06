@@ -119,12 +119,6 @@ defmodule LightningWeb.AiAssistant.Quotes do
   ]
 
   @doc """
-  Returns all quotes.
-  """
-  @spec all() :: [quote()]
-  def all, do: @quotes
-
-  @doc """
   Returns enabled quotes only.
   """
   @spec enabled() :: [quote()]
@@ -142,37 +136,4 @@ defmodule LightningWeb.AiAssistant.Quotes do
     enabled()
     |> Enum.random()
   end
-
-  @doc """
-  Returns a random enabled quote with error handling.
-  """
-  @spec safe_random_enabled() :: {:ok, quote()} | {:error, :no_quotes_available}
-  def safe_random_enabled do
-    case enabled() do
-      [] -> {:error, :no_quotes_available}
-      quotes -> {:ok, Enum.random(quotes)}
-    end
-  end
-
-  @doc """
-  Returns quotes by author.
-  """
-  @spec by_author(String.t()) :: [quote()]
-  def by_author(author_name) do
-    Enum.filter(@quotes, fn quote ->
-      quote.author == author_name
-    end)
-  end
-
-  @doc """
-  Counts total quotes.
-  """
-  @spec count() :: non_neg_integer()
-  def count, do: length(@quotes)
-
-  @doc """
-  Counts enabled quotes.
-  """
-  @spec enabled_count() :: non_neg_integer()
-  def enabled_count, do: length(enabled())
 end

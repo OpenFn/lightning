@@ -122,13 +122,11 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       ) do
     options = extract_form_options(changeset)
 
-    # Preserve existing meta and add message options
     updated_meta =
       session.meta
       |> Kernel.||(%{})
       |> Map.put("message_options", Enum.into(options, %{}))
 
-    # Add follow_run_id if follow_run exists in assigns
     updated_meta =
       case assigns do
         %{follow_run: %{id: run_id}} ->
