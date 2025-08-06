@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-31CF9A10.js"></script>
+    <script defer src="dist/sidebar_items-D528D2BB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -93,9 +93,7 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Centralized registry for managing AI Assistant interaction modes.</p><p>This module provides a pluggable architecture for AI Assistant modes, enabling
-dynamic mode discovery, configuration, and management. It serves as the central
-coordination point for all AI assistance capabilities within Lightning.</p>
+<p>Registry for AI Assistant interaction modes.</p><p>Manages mode discovery, metadata retrieval, and feature detection.</p>
     </section>
 
 </div>
@@ -107,6 +105,36 @@ coordination point for all AI assistance capabilities within Lightning.</p>
       </a>
       <span class="text">Summary</span>
     </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:mode_id/0" data-no-tooltip="" translate="no">mode_id()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:mode_metadata/0" data-no-tooltip="" translate="no">mode_metadata()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:mode_module/0" data-no-tooltip="" translate="no">mode_module()</a>
+
+      </div>
+
+    </div>
+
+</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
@@ -114,51 +142,11 @@ coordination point for all AI assistance capabilities within Lightning.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#available_modes/0" data-no-tooltip="" translate="no">available_modes()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Returns a comprehensive list of all available modes with their metadata.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#default_mode/0" data-no-tooltip="" translate="no">default_mode()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Returns the default mode identifier for fallback scenarios.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#get_handler/1" data-no-tooltip="" translate="no">get_handler(mode)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Retrieves the handler module for a specific AI Assistant mode.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#get_mode_metadata/1" data-no-tooltip="" translate="no">get_mode_metadata(mode)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Retrieves complete metadata for a specific mode.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#mode_exists?/1" data-no-tooltip="" translate="no">mode_exists?(mode)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Validates that a mode exists in the registry.</p></div>
+        <div class="summary-synopsis"><p>Gets the handler module for a mode.</p></div>
 
     </div>
 
@@ -168,17 +156,7 @@ coordination point for all AI assistance capabilities within Lightning.</p>
 
       </div>
 
-        <div class="summary-synopsis"><p>Returns the complete registry of available AI Assistant modes.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#supports_template_generation?/1" data-no-tooltip="" translate="no">supports_template_generation?(mode)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Checks if a specific mode supports template generation capabilities.</p></div>
+        <div class="summary-synopsis"><p>Returns all registered modes.</p></div>
 
     </div>
 
@@ -186,6 +164,110 @@ coordination point for all AI assistance capabilities within Lightning.</p>
 
   </section>
 
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:mode_id/0">
+
+  <div class="detail-header">
+    <a href="#t:mode_id/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">mode_id()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L11" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> mode_id() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:mode_metadata/0">
+
+  <div class="detail-header">
+    <a href="#t:mode_metadata/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">mode_metadata()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L13" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> mode_metadata() :: %{
+  optional(:features) =&gt; [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()],
+  optional(:category) =&gt; <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  id: <a href="#t:mode_id/0">mode_id</a>(),
+  name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  description: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  icon: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  chat_param: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:mode_module/0">
+
+  <div class="detail-header">
+    <a href="#t:mode_module/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">mode_module()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L12" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> mode_module() :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">module</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -195,99 +277,6 @@ coordination point for all AI assistance capabilities within Lightning.</p>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="available_modes/0">
-
-  <div class="detail-header">
-    <a href="#available_modes/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">available_modes()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L159" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> available_modes() :: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()]</pre>
-
-      </div>
-
-<p>Returns a comprehensive list of all available modes with their metadata.</p><p>Aggregates metadata from all registered modes to provide rich information
-for UI generation, feature detection, and mode selection interfaces.</p><h2 id="available_modes/0-returns" class="section-heading"><a href="#available_modes/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A list of maps, each containing:</p><ul><li><code class="inline">:id</code> - Mode identifier for programmatic access</li><li><code class="inline">:name</code> - Human-readable mode name for display</li><li><code class="inline">:description</code> - Brief explanation of mode capabilities</li><li><code class="inline">:icon</code> - UI icon class for visual representation</li><li><code class="inline">:category</code> - Optional grouping category</li><li><code class="inline">:features</code> - Optional list of supported features</li></ul><h2 id="available_modes/0-examples" class="section-heading"><a href="#available_modes/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">available_modes</span><span class="p" data-group-id="5185974131-1">(</span><span class="p" data-group-id="5185974131-1">)</span><span class="w">
-</span><span class="c1"># =&gt; [</span><span class="w">
-</span><span class="c1">#   %{</span><span class="w">
-</span><span class="c1">#     id: :job,</span><span class="w">
-</span><span class="c1">#     name: &quot;Job Code Assistant&quot;,</span><span class="w">
-</span><span class="c1">#     description: &quot;Get help with job code, debugging, and adaptors&quot;,</span><span class="w">
-</span><span class="c1">#     icon: &quot;hero-cpu-chip&quot;,</span><span class="w">
-</span><span class="c1">#     category: &quot;development&quot;,</span><span class="w">
-</span><span class="c1">#     features: [&quot;code_assistance&quot;, &quot;debugging&quot;, &quot;adaptor_guidance&quot;]</span><span class="w">
-</span><span class="c1">#   },</span><span class="w">
-</span><span class="c1">#   %{</span><span class="w">
-</span><span class="c1">#     id: :workflow,</span><span class="w">
-</span><span class="c1">#     name: &quot;Workflow Builder&quot;,</span><span class="w">
-</span><span class="c1">#     description: &quot;Generate complete workflows from descriptions&quot;,</span><span class="w">
-</span><span class="c1">#     icon: &quot;hero-cpu-chip&quot;,</span><span class="w">
-</span><span class="c1">#     category: &quot;creation&quot;,</span><span class="w">
-</span><span class="c1">#     features: [&quot;template_generation&quot;, &quot;yaml_creation&quot;]</span><span class="w">
-</span><span class="c1">#   }</span><span class="w">
-</span><span class="c1"># ]</span></code></pre><h2 id="available_modes/0-usage-patterns" class="section-heading"><a href="#available_modes/0-usage-patterns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage Patterns</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Generate mode selection dropdown</span><span class="w">
-</span><span class="n">available_modes</span><span class="p" data-group-id="6352564617-1">(</span><span class="p" data-group-id="6352564617-1">)</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="6352564617-2">(</span><span class="k" data-group-id="6352564617-3">fn</span><span class="w"> </span><span class="n">mode</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-  </span><span class="p" data-group-id="6352564617-4">{</span><span class="n">mode</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">mode</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="6352564617-4">}</span><span class="w">
-</span><span class="k" data-group-id="6352564617-3">end</span><span class="p" data-group-id="6352564617-2">)</span><span class="w">
-
-</span><span class="c1"># Filter modes by category</span><span class="w">
-</span><span class="n">available_modes</span><span class="p" data-group-id="6352564617-5">(</span><span class="p" data-group-id="6352564617-5">)</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="6352564617-6">(</span><span class="o">&amp;</span><span class="p" data-group-id="6352564617-7">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">category</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;development&quot;</span><span class="p" data-group-id="6352564617-7">)</span><span class="p" data-group-id="6352564617-6">)</span><span class="w">
-
-</span><span class="c1"># Find modes with specific features</span><span class="w">
-</span><span class="n">available_modes</span><span class="p" data-group-id="6352564617-8">(</span><span class="p" data-group-id="6352564617-8">)</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="6352564617-9">(</span><span class="o">&amp;</span><span class="p" data-group-id="6352564617-10">(</span><span class="s">&quot;template_generation&quot;</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="p" data-group-id="6352564617-11">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">features</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p" data-group-id="6352564617-12">[</span><span class="p" data-group-id="6352564617-12">]</span><span class="p" data-group-id="6352564617-11">)</span><span class="p" data-group-id="6352564617-10">)</span><span class="p" data-group-id="6352564617-9">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="default_mode/0">
-
-  <div class="detail-header">
-    <a href="#default_mode/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">default_mode()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L275" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> default_mode() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
-
-      </div>
-
-<p>Returns the default mode identifier for fallback scenarios.</p><p>Provides a programmatic way to access the default mode used when
-explicit mode selection fails or is unavailable.</p><h2 id="default_mode/0-returns" class="section-heading"><a href="#default_mode/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>The mode identifier atom for the default mode (currently <code class="inline">:job</code>).</p><h2 id="default_mode/0-examples" class="section-heading"><a href="#default_mode/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">default_mode</span><span class="p" data-group-id="7334726505-1">(</span><span class="p" data-group-id="7334726505-1">)</span><span class="w">
-</span><span class="c1"># =&gt; :job</span><span class="w">
-
-</span><span class="c1"># Use for initialization</span><span class="w">
-</span><span class="n">initial_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">default_mode</span><span class="p" data-group-id="7334726505-2">(</span><span class="p" data-group-id="7334726505-2">)</span><span class="w">
-</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="7334726505-3">(</span><span class="n">initial_mode</span><span class="p" data-group-id="7334726505-3">)</span></code></pre>
-  </section>
-</section>
 <section class="detail" id="get_handler/1">
 
   <div class="detail-header">
@@ -298,7 +287,7 @@ explicit mode selection fails or is unavailable.</p><h2 id="default_mode/0-retur
       <h1 class="signature" translate="no">get_handler(mode)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L100" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L39" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -309,119 +298,11 @@ explicit mode selection fails or is unavailable.</p><h2 id="default_mode/0-retur
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_handler(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">module</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_handler(<a href="#t:mode_id/0">mode_id</a>()) :: <a href="#t:mode_module/0">mode_module</a>()</pre>
 
       </div>
 
-<p>Retrieves the handler module for a specific AI Assistant mode.</p><p>Provides the primary lookup mechanism for mode delegation, with built-in
-fallback handling to ensure system stability even when invalid modes are requested.</p><h2 id="get_handler/1-parameters" class="section-heading"><a href="#get_handler/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom (e.g., <code class="inline">:job</code>, <code class="inline">:workflow</code>, <code class="inline">:custom</code>)</li></ul><h2 id="get_handler/1-returns" class="section-heading"><a href="#get_handler/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>The module implementing <code class="inline">ModeBehavior</code> for the requested mode, or the default
-<code class="inline">JobCode</code> mode if the requested mode is not found.</p><h2 id="get_handler/1-fallback-strategy" class="section-heading"><a href="#get_handler/1-fallback-strategy" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fallback Strategy</span></h2><p>When an unknown mode is requested:</p><ol><li>Registry lookup fails for the specified mode</li><li>System automatically falls back to <code class="inline">JobCode</code> mode</li><li>User receives basic AI assistance instead of error</li><li>Graceful degradation maintains system functionality</li></ol><h2 id="get_handler/1-examples" class="section-heading"><a href="#get_handler/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Get handler for known mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="6498531185-1">(</span><span class="ss">:job</span><span class="p" data-group-id="6498531185-1">)</span><span class="w">
-</span><span class="c1"># =&gt; LightningWeb.Live.AiAssistant.Modes.JobCode</span><span class="w">
-
-</span><span class="c1"># Get handler for workflow mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="6498531185-2">(</span><span class="ss">:workflow</span><span class="p" data-group-id="6498531185-2">)</span><span class="w">
-</span><span class="c1"># =&gt; LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate</span><span class="w">
-
-</span><span class="c1"># Fallback for unknown mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="6498531185-3">(</span><span class="ss">:nonexistent</span><span class="p" data-group-id="6498531185-3">)</span><span class="w">
-</span><span class="c1"># =&gt; LightningWeb.Live.AiAssistant.Modes.JobCode (default fallback)</span><span class="w">
-
-</span><span class="c1"># Use handler for delegation</span><span class="w">
-</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_handler</span><span class="p" data-group-id="6498531185-4">(</span><span class="n">current_mode</span><span class="p" data-group-id="6498531185-4">)</span><span class="w">
-</span><span class="p" data-group-id="6498531185-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="6498531185-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handler</span><span class="o">.</span><span class="n">create_session</span><span class="p" data-group-id="6498531185-6">(</span><span class="n">assigns</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p" data-group-id="6498531185-6">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="get_mode_metadata/1">
-
-  <div class="detail-header">
-    <a href="#get_mode_metadata/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get_mode_metadata(mode)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L208" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get_mode_metadata(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
-
-      </div>
-
-<p>Retrieves complete metadata for a specific mode.</p><p>Provides detailed information about a single mode's capabilities,
-configuration, and UI requirements for focused mode operations.</p><h2 id="get_mode_metadata/1-parameters" class="section-heading"><a href="#get_mode_metadata/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom to look up</li></ul><h2 id="get_mode_metadata/1-returns" class="section-heading"><a href="#get_mode_metadata/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A map containing the mode's metadata with the ID field automatically included.
-If the mode is not found, returns metadata for the default mode.</p><h2 id="get_mode_metadata/1-examples" class="section-heading"><a href="#get_mode_metadata/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Get metadata for job mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8377374843-1">(</span><span class="ss">:job</span><span class="p" data-group-id="8377374843-1">)</span><span class="w">
-</span><span class="c1"># =&gt; %{</span><span class="w">
-</span><span class="c1">#   id: :job,</span><span class="w">
-</span><span class="c1">#   name: &quot;Job Code Assistant&quot;,</span><span class="w">
-</span><span class="c1">#   description: &quot;Get help with job code, debugging, and OpenFn adaptors&quot;,</span><span class="w">
-</span><span class="c1">#   icon: &quot;hero-cpu-chip&quot;,</span><span class="w">
-</span><span class="c1">#   category: &quot;development&quot;</span><span class="w">
-</span><span class="c1"># }</span><span class="w">
-
-</span><span class="c1"># Get metadata for workflow mode</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8377374843-2">(</span><span class="ss">:workflow</span><span class="p" data-group-id="8377374843-2">)</span><span class="w">
-</span><span class="c1"># =&gt; %{</span><span class="w">
-</span><span class="c1">#   id: :workflow,</span><span class="w">
-</span><span class="c1">#   name: &quot;Workflow Builder&quot;,</span><span class="w">
-</span><span class="c1">#   description: &quot;Generate complete workflows from your descriptions&quot;,</span><span class="w">
-</span><span class="c1">#   icon: &quot;hero-cpu-chip&quot;,</span><span class="w">
-</span><span class="c1">#   category: &quot;creation&quot;</span><span class="w">
-</span><span class="c1"># }</span><span class="w">
-
-</span><span class="c1"># Use metadata for UI rendering</span><span class="w">
-</span><span class="n">mode_meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_mode_metadata</span><span class="p" data-group-id="8377374843-3">(</span><span class="n">current_mode</span><span class="p" data-group-id="8377374843-3">)</span><span class="w">
-</span><span class="n">render_mode_header</span><span class="p" data-group-id="8377374843-4">(</span><span class="n">mode_meta</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">mode_meta</span><span class="o">.</span><span class="n">icon</span><span class="p" data-group-id="8377374843-4">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="mode_exists?/1">
-
-  <div class="detail-header">
-    <a href="#mode_exists?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">mode_exists?(mode)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L307" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> mode_exists?(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
-
-      </div>
-
-<p>Validates that a mode exists in the registry.</p><p>Provides explicit validation for mode identifiers before attempting
-operations, enabling better error handling and user feedback.</p><h2 id="mode_exists?/1-parameters" class="section-heading"><a href="#mode_exists?/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom to validate</li></ul><h2 id="mode_exists?/1-returns" class="section-heading"><a href="#mode_exists?/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">true</code> if mode exists in registry, <code class="inline">false</code> otherwise.</p><h2 id="mode_exists?/1-examples" class="section-heading"><a href="#mode_exists?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="5831737136-1">(</span><span class="ss">:job</span><span class="p" data-group-id="5831737136-1">)</span><span class="w">
-</span><span class="c1"># =&gt; true</span><span class="w">
-
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="5831737136-2">(</span><span class="ss">:nonexistent</span><span class="p" data-group-id="5831737136-2">)</span><span class="w">
-</span><span class="c1"># =&gt; false</span><span class="w">
-
-</span><span class="c1"># Validation before operation</span><span class="w">
-</span><span class="k">if</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">mode_exists?</span><span class="p" data-group-id="5831737136-3">(</span><span class="n">requested_mode</span><span class="p" data-group-id="5831737136-3">)</span><span class="w"> </span><span class="k" data-group-id="5831737136-4">do</span><span class="w">
-  </span><span class="n">proceed_with_mode</span><span class="p" data-group-id="5831737136-5">(</span><span class="n">requested_mode</span><span class="p" data-group-id="5831737136-5">)</span><span class="w">
-</span><span class="k" data-group-id="5831737136-4">else</span><span class="w">
-  </span><span class="n">show_mode_selection_error</span><span class="p" data-group-id="5831737136-6">(</span><span class="p" data-group-id="5831737136-6">)</span><span class="w">
-</span><span class="k" data-group-id="5831737136-4">end</span></code></pre>
+<p>Gets the handler module for a mode.</p>
   </section>
 </section>
 <section class="detail" id="register_modes/0">
@@ -434,7 +315,7 @@ operations, enabling better error handling and user feedback.</p><h2 id="mode_ex
       <h1 class="signature" translate="no">register_modes()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L54" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L27" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -445,78 +326,11 @@ operations, enabling better error handling and user feedback.</p><h2 id="mode_ex
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> register_modes() :: %{required(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">module</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> register_modes() :: %{required(<a href="#t:mode_id/0">mode_id</a>()) =&gt; <a href="#t:mode_module/0">mode_module</a>()}</pre>
 
       </div>
 
-<p>Returns the complete registry of available AI Assistant modes.</p><p>Retrieves mode mappings from application configuration, providing the
-foundation for all mode-related operations. The registry can be customized
-through application configuration to enable/disable modes or add custom implementations.</p><h2 id="register_modes/0-configuration" class="section-heading"><a href="#register_modes/0-configuration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Configuration</span></h2><p>Modes are configured in application config:</p><pre><code class="makeup elixir" translate="no"><span class="n">config</span><span class="w"> </span><span class="ss">:lightning</span><span class="p">,</span><span class="w"> </span><span class="ss">:ai_assistant_modes</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3701606452-1">%{</span><span class="w">
-  </span><span class="ss">job</span><span class="p">:</span><span class="w"> </span><span class="nc">LightningWeb.Live.AiAssistant.Modes.JobCode</span><span class="p">,</span><span class="w">
-  </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="nc">LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate</span><span class="p">,</span><span class="w">
-  </span><span class="ss">custom</span><span class="p">:</span><span class="w"> </span><span class="nc">MyApp.CustomAIMode</span><span class="w">
-</span><span class="p" data-group-id="3701606452-1">}</span></code></pre><h2 id="register_modes/0-returns" class="section-heading"><a href="#register_modes/0-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A map where:</p><ul><li><strong>Keys</strong> are mode identifiers (atoms) used for selection and routing</li><li><strong>Values</strong> are module names implementing the <code class="inline">ModeBehavior</code> protocol</li></ul><h2 id="register_modes/0-examples" class="section-heading"><a href="#register_modes/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Default configuration</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">register_modes</span><span class="p" data-group-id="0748859024-1">(</span><span class="p" data-group-id="0748859024-1">)</span><span class="w">
-</span><span class="c1"># =&gt; %{</span><span class="w">
-</span><span class="c1">#   job: LightningWeb.Live.AiAssistant.Modes.JobCode,</span><span class="w">
-</span><span class="c1">#   workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate</span><span class="w">
-</span><span class="c1"># }</span><span class="w">
-
-</span><span class="c1"># With custom mode added</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">register_modes</span><span class="p" data-group-id="0748859024-2">(</span><span class="p" data-group-id="0748859024-2">)</span><span class="w">
-</span><span class="c1"># =&gt; %{</span><span class="w">
-</span><span class="c1">#   job: LightningWeb.Live.AiAssistant.Modes.JobCode,</span><span class="w">
-</span><span class="c1">#   workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate,</span><span class="w">
-</span><span class="c1">#   analytics: MyApp.AnalyticsMode</span><span class="w">
-</span><span class="c1"># }</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="supports_template_generation?/1">
-
-  <div class="detail-header">
-    <a href="#supports_template_generation?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">supports_template_generation?(mode)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/mode_registry.ex#L251" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> supports_template_generation?(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
-
-      </div>
-
-<p>Checks if a specific mode supports template generation capabilities.</p><p>Provides capability detection for UI features that depend on template
-generation, such as &quot;Apply Template&quot; buttons, template preview panels,
-and workflow export functionality.</p><h2 id="supports_template_generation?/1-parameters" class="section-heading"><a href="#supports_template_generation?/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">mode</code> - Mode identifier atom to check</li></ul><h2 id="supports_template_generation?/1-returns" class="section-heading"><a href="#supports_template_generation?/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p><code class="inline">true</code> if the mode supports template generation, <code class="inline">false</code> otherwise.</p><h2 id="supports_template_generation?/1-examples" class="section-heading"><a href="#supports_template_generation?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Check workflow mode (supports templates)</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="0655561905-1">(</span><span class="ss">:workflow</span><span class="p" data-group-id="0655561905-1">)</span><span class="w">
-</span><span class="c1"># =&gt; true</span><span class="w">
-
-</span><span class="c1"># Check job mode (doesn&#39;t support templates)</span><span class="w">
-</span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="0655561905-2">(</span><span class="ss">:job</span><span class="p" data-group-id="0655561905-2">)</span><span class="w">
-</span><span class="c1"># =&gt; false</span><span class="w">
-
-</span><span class="c1"># Conditional UI rendering</span><span class="w">
-</span><span class="k">if</span><span class="w"> </span><span class="nc">ModeRegistry</span><span class="o">.</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="0655561905-3">(</span><span class="n">current_mode</span><span class="p" data-group-id="0655561905-3">)</span><span class="w"> </span><span class="k" data-group-id="0655561905-4">do</span><span class="w">
-  </span><span class="n">render_template_actions</span><span class="p" data-group-id="0655561905-5">(</span><span class="p" data-group-id="0655561905-5">)</span><span class="w">
-</span><span class="k" data-group-id="0655561905-4">else</span><span class="w">
-  </span><span class="n">render_assistance_actions</span><span class="p" data-group-id="0655561905-6">(</span><span class="p" data-group-id="0655561905-6">)</span><span class="w">
-</span><span class="k" data-group-id="0655561905-4">end</span><span class="w">
-
-</span><span class="c1"># Filter modes for template features</span><span class="w">
-</span><span class="n">template_modes</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="n">available_modes</span><span class="p" data-group-id="0655561905-7">(</span><span class="p" data-group-id="0655561905-7">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">filter</span><span class="p" data-group-id="0655561905-8">(</span><span class="o">&amp;</span><span class="n">supports_template_generation?</span><span class="p" data-group-id="0655561905-9">(</span><span class="ni">&amp;1</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="0655561905-9">)</span><span class="p" data-group-id="0655561905-8">)</span></code></pre>
+<p>Returns all registered modes.</p>
   </section>
 </section>
 

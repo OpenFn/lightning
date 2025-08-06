@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-31CF9A10.js"></script>
+    <script defer src="dist/sidebar_items-D528D2BB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -95,7 +95,7 @@ Lightning
     <section id="moduledoc">
 <p>Represents a chat session for AI assistance, including job code and workflow templates.</p><p>This module defines the schema and changeset for chat sessions, including
 relationships to users, jobs, projects, and workflows. It also includes custom
-validation logic to ensure that the correct fields are populated based on the session type.</p><h2 id="module-session-types" class="section-heading"><a href="#module-session-types" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Session Types</span></h2><ul><li><code class="inline">&quot;job_code&quot;</code> - Sessions focused on generating or modifying code for specific jobs</li><li><code class="inline">&quot;workflow_template&quot;</code> - Sessions for creating workflow templates within a project</li></ul><h2 id="module-schema-fields" class="section-heading"><a href="#module-schema-fields" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Schema Fields</span></h2><h3 id="module-core-fields" class="section-heading"><a href="#module-core-fields" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Core Fields</span></h3><ul><li><code class="inline">title</code> - Human-readable title for the session (required)</li><li><code class="inline">session_type</code> - Type of session, defaults to &quot;job_code&quot;</li><li><code class="inline">meta</code> - Additional metadata stored as a map</li><li><code class="inline">is_public</code> - Whether the session is publicly visible (defaults to false)</li><li><code class="inline">is_deleted</code> - Soft deletion flag (defaults to false)</li></ul><h3 id="module-associations" class="section-heading"><a href="#module-associations" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Associations</span></h3><ul><li><code class="inline">user_id</code> - The user who owns this session (required)</li><li><code class="inline">job_id</code> - Associated job (required for &quot;job_code&quot; sessions)</li><li><code class="inline">project_id</code> - Associated project (required for &quot;workflow_template&quot; sessions)</li><li><code class="inline">workflow_id</code> - Associated workflow (optional)</li></ul><h3 id="module-virtual-fields-runtime-only" class="section-heading"><a href="#module-virtual-fields-runtime-only" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Virtual Fields (Runtime Only)</span></h3><ul><li><code class="inline">expression</code> - Current job expression for context</li><li><code class="inline">adaptor</code> - Current job adaptor for context</li><li><code class="inline">message_count</code> - Number of messages in the session</li></ul><h2 id="module-validation-rules" class="section-heading"><a href="#module-validation-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Validation Rules</span></h2><h3 id="module-session-type-requirements" class="section-heading"><a href="#module-session-type-requirements" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Session Type Requirements</span></h3><ul><li><strong>job_code sessions</strong>: Must have a <code class="inline">job_id</code></li><li><strong>workflow_template sessions</strong>: Must have a <code class="inline">project_id</code></li></ul>
+validation logic to ensure that the correct fields are populated based on the session type.</p>
     </section>
 
 </div>
@@ -117,22 +117,6 @@ validation logic to ensure that the correct fields are populated based on the se
         <a href="#t:t/0" data-no-tooltip="" translate="no">t()</a>
 
       </div>
-
-    </div>
-
-</div>
-<div class="summary-functions summary">
-  <h2>
-    <a href="#functions">Functions</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#changeset/2" data-no-tooltip="" translate="no">changeset(chat_session, attrs)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Creates a changeset for a chat session.</p></div>
 
     </div>
 
@@ -159,7 +143,7 @@ validation logic to ensure that the correct fields are populated based on the se
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_session.ex#L52" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_session.ex#L21" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -198,65 +182,6 @@ validation logic to ensure that the correct fields are populated based on the se
       </div>
 
 
-  </section>
-</section>
-
-    </div>
-  </section>
-
-  <section id="functions" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Functions</span>
-    </h1>
-    <div class="functions-list">
-<section class="detail" id="changeset/2">
-
-  <div class="detail-header">
-    <a href="#changeset/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">changeset(chat_session, attrs)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_session.ex#L143" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Creates a changeset for a chat session.</p><h2 id="changeset/2-parameters" class="section-heading"><a href="#changeset/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">chat_session</code> - The ChatSession struct to update (typically <code class="inline">%ChatSession{}</code>)</li><li><code class="inline">attrs</code> - Map of attributes to set/update</li></ul><h2 id="changeset/2-validation-rules" class="section-heading"><a href="#changeset/2-validation-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Validation Rules</span></h2><ul><li><code class="inline">title</code> and <code class="inline">user_id</code> are required</li><li><code class="inline">session_type</code> must be one of: # {inspect(@valid_session_types)}</li><li><strong>job_code sessions</strong> require <code class="inline">job_id</code></li><li><strong>workflow_template sessions</strong> require <code class="inline">project_id</code></li><li>Associated messages are cast and validated</li></ul><h2 id="changeset/2-examples" class="section-heading"><a href="#changeset/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Valid job code session</span><span class="w">
-</span><span class="nc">ChatSession</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="1775407024-1">(</span><span class="p" data-group-id="1775407024-2">%</span><span class="nc" data-group-id="1775407024-2">ChatSession</span><span class="p" data-group-id="1775407024-2">{</span><span class="p" data-group-id="1775407024-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1775407024-3">%{</span><span class="w">
-  </span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Fix data transformation&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">session_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;job_code&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span><span class="w">
-  </span><span class="ss">job_id</span><span class="p">:</span><span class="w"> </span><span class="n">job</span><span class="o">.</span><span class="n">id</span><span class="w">
-</span><span class="p" data-group-id="1775407024-3">}</span><span class="p" data-group-id="1775407024-1">)</span><span class="w">
-
-</span><span class="c1"># Valid workflow template session</span><span class="w">
-</span><span class="nc">ChatSession</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="1775407024-4">(</span><span class="p" data-group-id="1775407024-5">%</span><span class="nc" data-group-id="1775407024-5">ChatSession</span><span class="p" data-group-id="1775407024-5">{</span><span class="p" data-group-id="1775407024-5">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1775407024-6">%{</span><span class="w">
-  </span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Customer onboarding flow&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">session_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;workflow_template&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span><span class="w">
-  </span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="n">id</span><span class="p">,</span><span class="w">
-  </span><span class="ss">is_public</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
-</span><span class="p" data-group-id="1775407024-6">}</span><span class="p" data-group-id="1775407024-4">)</span><span class="w">
-
-</span><span class="c1"># With nested messages</span><span class="w">
-</span><span class="nc">ChatSession</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="1775407024-7">(</span><span class="p" data-group-id="1775407024-8">%</span><span class="nc" data-group-id="1775407024-8">ChatSession</span><span class="p" data-group-id="1775407024-8">{</span><span class="p" data-group-id="1775407024-8">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1775407024-9">%{</span><span class="w">
-  </span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Debug session&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span><span class="w">
-  </span><span class="ss">job_id</span><span class="p">:</span><span class="w"> </span><span class="n">job</span><span class="o">.</span><span class="n">id</span><span class="p">,</span><span class="w">
-  </span><span class="ss">messages</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1775407024-10">[</span><span class="w">
-    </span><span class="p" data-group-id="1775407024-11">%{</span><span class="ss">content</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Help me fix this error&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="1775407024-11">}</span><span class="w">
-  </span><span class="p" data-group-id="1775407024-10">]</span><span class="w">
-</span><span class="p" data-group-id="1775407024-9">}</span><span class="p" data-group-id="1775407024-7">)</span></code></pre><h2 id="changeset/2-errors" class="section-heading"><a href="#changeset/2-errors" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Errors</span></h2><p>Returns a changeset with errors if:</p><ul><li>Required fields are missing</li><li>Invalid session_type is provided</li><li>Session type requirements aren't met (e.g., job_code without job_id)</li></ul>
   </section>
 </section>
 

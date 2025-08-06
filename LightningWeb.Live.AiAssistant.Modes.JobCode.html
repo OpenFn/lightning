@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-31CF9A10.js"></script>
+    <script defer src="dist/sidebar_items-D528D2BB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -93,9 +93,8 @@ Lightning
 
 
     <section id="moduledoc">
-<p>AI Assistant mode for job-specific code assistance and debugging.</p><p>This mode provides intelligent assistance for developing, debugging, and optimizing
-job code within Lightning workflows. It leverages job-specific context including
-the expression code and adaptor information to provide targeted AI assistance.</p>
+<p>AI mode for job-specific code assistance and debugging.</p><p>Provides context-aware help for job code, including adaptor usage,
+debugging support, and optional log attachment.</p>
     </section>
 
 </div>
@@ -107,158 +106,40 @@ the expression code and adaptor information to provide targeted AI assistance.</
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-functions summary">
+<div class="summary-types summary">
   <h2>
-    <a href="#functions">Functions</a>
+    <a href="#types">Types</a>
   </h2>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#chat_input_disabled?/1" data-no-tooltip="" translate="no">chat_input_disabled?(map)</a>
+        <a href="#t:assigns/0" data-no-tooltip="" translate="no">assigns()</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Determines if the chat input should be disabled for job assistance.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#chat_title/1" data-no-tooltip="" translate="no">chat_title(session)</a>
+        <a href="#t:job/0" data-no-tooltip="" translate="no">job()</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Generates contextual titles for job assistance sessions.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_session/2" data-no-tooltip="" translate="no">create_session(map, content)</a>
+        <a href="#t:session/0" data-no-tooltip="" translate="no">session()</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Creates a new job-specific AI assistance session.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#disabled_tooltip_message/1" data-no-tooltip="" translate="no">disabled_tooltip_message(assigns)</a>
+        <a href="#t:user/0" data-no-tooltip="" translate="no">user()</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Generates appropriate tooltip messages when chat input is disabled.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#error_message/1" data-no-tooltip="" translate="no">error_message(error)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Formats errors consistently for job assistance mode.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#get_session!/1" data-no-tooltip="" translate="no">get_session!(assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Retrieves and enriches a session with job-specific context.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#handle_response_generated/3" data-no-tooltip="" translate="no">handle_response_generated(assigns, session_or_message, ui_callback)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Default: no special response handling needed.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#input_placeholder/0" data-no-tooltip="" translate="no">input_placeholder()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Provides job-specific placeholder text for the chat input.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#list_sessions/3" data-no-tooltip="" translate="no">list_sessions(map, sort_direction, opts \\ [])</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Lists job-specific AI assistance sessions with pagination.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#metadata/0" data-no-tooltip="" translate="no">metadata()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Provides metadata for the job assistance mode.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#more_sessions?/2" data-no-tooltip="" translate="no">more_sessions?(map, current_count)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Checks if more sessions exist for the current job.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#on_session_start/2" data-no-tooltip="" translate="no">on_session_start(socket, ui_callback)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Default: no special session start handling needed.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#query/3" data-no-tooltip="" translate="no">query(session, content, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Processes user queries through the job-specific AI assistant.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#save_message/2" data-no-tooltip="" translate="no">save_message(map, content)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Saves a user message to the job assistance session.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#supports_template_generation?/0" data-no-tooltip="" translate="no">supports_template_generation?()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Indicates that job assistance doesn't generate templates.</p></div>
 
     </div>
 
@@ -267,25 +148,25 @@ the expression code and adaptor information to provide targeted AI assistance.</
   </section>
 
 
-  <section id="functions" class="details-list">
+  <section id="types" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
+      <a class="hover-link" href="#types">
         <i class="ri-link-m" aria-hidden="true"></i>
       </a>
-      <span class="text">Functions</span>
+      <span class="text">Types</span>
     </h1>
-    <div class="functions-list">
-<section class="detail" id="chat_input_disabled?/1">
+    <div class="types-list">
+<section class="detail" id="t:assigns/0">
 
   <div class="detail-header">
-    <a href="#chat_input_disabled?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#t:assigns/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">chat_input_disabled?(map)</h1>
+      <h1 class="signature" translate="no">assigns()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L259" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L68" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -296,43 +177,24 @@ the expression code and adaptor information to provide targeted AI assistance.</
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> chat_input_disabled?(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> assigns() :: %{required(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
 
       </div>
 
-<p>Determines if the chat input should be disabled for job assistance.</p><p>Evaluates multiple conditions to ensure AI assistance is only available
-when appropriate permissions, limits, and job state allow it.</p><h2 id="chat_input_disabled?/1-examples" class="section-heading"><a href="#chat_input_disabled?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Input disabled due to unsaved job</span><span class="w">
-</span><span class="n">chat_input_disabled?</span><span class="p" data-group-id="0908100010-1">(</span><span class="p" data-group-id="0908100010-2">%{</span><span class="w">
-  </span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0908100010-3">%{</span><span class="ss">__meta__</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0908100010-4">%{</span><span class="ss">state</span><span class="p">:</span><span class="w"> </span><span class="ss">:built</span><span class="p" data-group-id="0908100010-4">}</span><span class="p" data-group-id="0908100010-3">}</span><span class="p">,</span><span class="w">
-  </span><span class="ss">can_edit_workflow</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
-  </span><span class="ss">ai_limit_result</span><span class="p">:</span><span class="w"> </span><span class="ss">:ok</span><span class="p">,</span><span class="w">
-  </span><span class="ss">endpoint_available?</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
-  </span><span class="ss">pending_message</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0908100010-5">%{</span><span class="ss">loading</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="0908100010-5">}</span><span class="w">
-</span><span class="p" data-group-id="0908100010-2">}</span><span class="p" data-group-id="0908100010-1">)</span><span class="w">
-</span><span class="c1"># =&gt; true</span><span class="w">
 
-</span><span class="c1"># Input enabled for saved job with permissions</span><span class="w">
-</span><span class="n">chat_input_disabled?</span><span class="p" data-group-id="0908100010-6">(</span><span class="p" data-group-id="0908100010-7">%{</span><span class="w">
-  </span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0908100010-8">%{</span><span class="ss">__meta__</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0908100010-9">%{</span><span class="ss">state</span><span class="p">:</span><span class="w"> </span><span class="ss">:loaded</span><span class="p" data-group-id="0908100010-9">}</span><span class="p" data-group-id="0908100010-8">}</span><span class="p">,</span><span class="w">
-  </span><span class="ss">can_edit_workflow</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
-  </span><span class="ss">ai_limit_result</span><span class="p">:</span><span class="w"> </span><span class="ss">:ok</span><span class="p">,</span><span class="w">
-  </span><span class="ss">endpoint_available?</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
-  </span><span class="ss">pending_message</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0908100010-10">%{</span><span class="ss">loading</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="0908100010-10">}</span><span class="w">
-</span><span class="p" data-group-id="0908100010-7">}</span><span class="p" data-group-id="0908100010-6">)</span><span class="w">
-</span><span class="c1"># =&gt; false</span></code></pre>
   </section>
 </section>
-<section class="detail" id="chat_title/1">
+<section class="detail" id="t:job/0">
 
   <div class="detail-header">
-    <a href="#chat_title/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#t:job/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">chat_title(session)</h1>
+      <h1 class="signature" translate="no">job()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L315" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L65" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -343,35 +205,24 @@ when appropriate permissions, limits, and job state allow it.</p><h2 id="chat_in
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> chat_title(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> job() :: <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()</pre>
 
       </div>
 
-<p>Generates contextual titles for job assistance sessions.</p><p>Creates descriptive titles that include job context when available,
-making it easier to identify sessions in lists.</p><h2 id="chat_title/1-examples" class="section-heading"><a href="#chat_title/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># With custom title</span><span class="w">
-</span><span class="n">chat_title</span><span class="p" data-group-id="8414209420-1">(</span><span class="p" data-group-id="8414209420-2">%{</span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Debug HTTP 401 error&quot;</span><span class="p" data-group-id="8414209420-2">}</span><span class="p" data-group-id="8414209420-1">)</span><span class="w">
-</span><span class="c1"># =&gt; &quot;Debug HTTP 401 error&quot;</span><span class="w">
 
-</span><span class="c1"># With job context</span><span class="w">
-</span><span class="n">chat_title</span><span class="p" data-group-id="8414209420-3">(</span><span class="p" data-group-id="8414209420-4">%{</span><span class="ss">job</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8414209420-5">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Fetch Salesforce Data&quot;</span><span class="p" data-group-id="8414209420-5">}</span><span class="p" data-group-id="8414209420-4">}</span><span class="p" data-group-id="8414209420-3">)</span><span class="w">
-</span><span class="c1"># =&gt; &quot;Help with Fetch Salesforce Data&quot;</span><span class="w">
-
-</span><span class="c1"># Fallback</span><span class="w">
-</span><span class="n">chat_title</span><span class="p" data-group-id="8414209420-6">(</span><span class="p" data-group-id="8414209420-7">%{</span><span class="p" data-group-id="8414209420-7">}</span><span class="p" data-group-id="8414209420-6">)</span><span class="w">
-</span><span class="c1"># =&gt; &quot;Job Code Help&quot;</span></code></pre>
   </section>
 </section>
-<section class="detail" id="create_session/2">
+<section class="detail" id="t:session/0">
 
   <div class="detail-header">
-    <a href="#create_session/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#t:session/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">create_session(map, content)</h1>
+      <h1 class="signature" translate="no">session()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L77" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L67" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -382,29 +233,24 @@ making it easier to identify sessions in lists.</p><h2 id="chat_title/1-examples
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> create_session(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+          <pre translate="no"><span class="attribute">@type</span> session() :: <a href="Lightning.AiAssistant.ChatSession.html#t:t/0">Lightning.AiAssistant.ChatSession.t</a>()</pre>
 
       </div>
 
-<p>Creates a new job-specific AI assistance session.</p><p>Initializes a session with job context, including the job's expression code
-and adaptor information for targeted AI assistance.</p><h2 id="create_session/2-required-assigns" class="section-heading"><a href="#create_session/2-required-assigns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Required Assigns</span></h2><ul><li><code class="inline">:selected_job</code> - The job struct to provide assistance for</li><li><code class="inline">:current_user</code> - The user creating the session</li></ul><h2 id="create_session/2-examples" class="section-heading"><a href="#create_session/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Create session for debugging help</span><span class="w">
-</span><span class="p" data-group-id="9606382700-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="9606382700-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobCode</span><span class="o">.</span><span class="n">create_session</span><span class="p" data-group-id="9606382700-2">(</span><span class="w">
-  </span><span class="p" data-group-id="9606382700-3">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="9606382700-3">}</span><span class="p">,</span><span class="w">
-  </span><span class="s">&quot;Help me debug this HTTP request error&quot;</span><span class="w">
-</span><span class="p" data-group-id="9606382700-2">)</span></code></pre>
+
   </section>
 </section>
-<section class="detail" id="disabled_tooltip_message/1">
+<section class="detail" id="t:user/0">
 
   <div class="detail-header">
-    <a href="#disabled_tooltip_message/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#t:user/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">disabled_tooltip_message(assigns)</h1>
+      <h1 class="signature" translate="no">user()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L383" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L66" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -415,359 +261,11 @@ and adaptor information for targeted AI assistance.</p><h2 id="create_session/2-
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> disabled_tooltip_message(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil</pre>
+          <pre translate="no"><span class="attribute">@type</span> user() :: <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()</pre>
 
       </div>
 
-<p>Generates appropriate tooltip messages when chat input is disabled.</p><p>Provides specific explanations for why AI assistance is unavailable,
-helping users understand what actions they need to take.</p><h2 id="disabled_tooltip_message/1-parameters" class="section-heading"><a href="#disabled_tooltip_message/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">assigns</code> - Map containing permission and state information</li></ul><h2 id="disabled_tooltip_message/1-returns" class="section-heading"><a href="#disabled_tooltip_message/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>String explanation or <code class="inline">nil</code> if input should be enabled.</p><h2 id="disabled_tooltip_message/1-examples" class="section-heading"><a href="#disabled_tooltip_message/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Permission denied</span><span class="w">
-</span><span class="n">disabled_tooltip_message</span><span class="p" data-group-id="5206686991-1">(</span><span class="p" data-group-id="5206686991-2">%{</span><span class="ss">can_edit_workflow</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="5206686991-2">}</span><span class="p" data-group-id="5206686991-1">)</span><span class="w">
-</span><span class="c1"># =&gt; &quot;You are not authorized to use the AI Assistant&quot;</span><span class="w">
 
-</span><span class="c1"># Usage limit reached</span><span class="w">
-</span><span class="n">disabled_tooltip_message</span><span class="p" data-group-id="5206686991-3">(</span><span class="p" data-group-id="5206686991-4">%{</span><span class="ss">ai_limit_result</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5206686991-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:limit_exceeded</span><span class="p" data-group-id="5206686991-5">}</span><span class="p" data-group-id="5206686991-4">}</span><span class="p" data-group-id="5206686991-3">)</span><span class="w">
-</span><span class="c1"># =&gt; &quot;Monthly AI usage limit exceeded&quot;</span><span class="w">
-
-</span><span class="c1"># Unsaved job</span><span class="w">
-</span><span class="n">disabled_tooltip_message</span><span class="p" data-group-id="5206686991-6">(</span><span class="p" data-group-id="5206686991-7">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5206686991-8">%{</span><span class="ss">__meta__</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5206686991-9">%{</span><span class="ss">state</span><span class="p">:</span><span class="w"> </span><span class="ss">:built</span><span class="p" data-group-id="5206686991-9">}</span><span class="p" data-group-id="5206686991-8">}</span><span class="p" data-group-id="5206686991-7">}</span><span class="p" data-group-id="5206686991-6">)</span><span class="w">
-</span><span class="c1"># =&gt; &quot;Save your workflow first to use the AI Assistant&quot;</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="error_message/1">
-
-  <div class="detail-header">
-    <a href="#error_message/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">error_message(error)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L423" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> error_message(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
-
-          <pre translate="no"><span class="attribute">@spec</span> error_message(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
-
-      </div>
-
-<p>Formats errors consistently for job assistance mode.</p><p>Leverages shared error handling to provide user-friendly error messages
-for various failure scenarios.</p><h2 id="error_message/1-parameters" class="section-heading"><a href="#error_message/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">error</code> - Error to format (changeset, atom, string, etc.)</li></ul><h2 id="error_message/1-returns" class="section-heading"><a href="#error_message/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>Human-readable error message string.</p><h2 id="error_message/1-examples" class="section-heading"><a href="#error_message/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">error_message</span><span class="p" data-group-id="7232292396-1">(</span><span class="p" data-group-id="7232292396-2">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:timeout</span><span class="p" data-group-id="7232292396-2">}</span><span class="p" data-group-id="7232292396-1">)</span><span class="w">
-</span><span class="c1"># =&gt; &quot;Request timed out. Please try again.&quot;</span><span class="w">
-
-</span><span class="n">error_message</span><span class="p" data-group-id="7232292396-3">(</span><span class="p" data-group-id="7232292396-4">%</span><span class="nc" data-group-id="7232292396-4">Ecto.Changeset</span><span class="p" data-group-id="7232292396-4">{</span><span class="p" data-group-id="7232292396-4">}</span><span class="p" data-group-id="7232292396-3">)</span><span class="w">
-</span><span class="c1"># =&gt; &quot;Validation failed: [specific field errors]&quot;</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="get_session!/1">
-
-  <div class="detail-header">
-    <a href="#get_session!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get_session!(assigns)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L98" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get_session!(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
-
-      </div>
-
-<p>Retrieves and enriches a session with job-specific context.</p><p>Loads the session and adds the current job's expression and adaptor
-information, enabling the AI to provide contextual assistance.</p><h2 id="get_session!/1-required-assigns" class="section-heading"><a href="#get_session!/1-required-assigns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Required Assigns</span></h2><ul><li><code class="inline">:selected_job</code> - The job struct to provide context from</li></ul><h2 id="get_session!/1-examples" class="section-heading"><a href="#get_session!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobCode</span><span class="o">.</span><span class="n">get_session!</span><span class="p" data-group-id="6702245315-1">(</span><span class="n">session_id</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6702245315-2">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="n">current_job</span><span class="p" data-group-id="6702245315-2">}</span><span class="p" data-group-id="6702245315-1">)</span><span class="w">
-</span><span class="c1"># session now includes job.body as expression and job.adaptor</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="handle_response_generated/3">
-
-  <div class="detail-header">
-    <a href="#handle_response_generated/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">handle_response_generated(assigns, session_or_message, ui_callback)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L10" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Default: no special response handling needed.</p>
-  </section>
-</section>
-<section class="detail" id="input_placeholder/0">
-
-  <div class="detail-header">
-    <a href="#input_placeholder/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">input_placeholder()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L281" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> input_placeholder() :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
-
-      </div>
-
-<p>Provides job-specific placeholder text for the chat input.</p><p>Guides users on the types of assistance available for job development
-and debugging.</p>
-  </section>
-</section>
-<section class="detail" id="list_sessions/3">
-
-    <span id="list_sessions/2"></span>
-
-  <div class="detail-header">
-    <a href="#list_sessions/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">list_sessions(map, sort_direction, opts \\ [])</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L139" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> list_sessions(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: %{
-  sessions: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()],
-  pagination: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
-}</pre>
-
-      </div>
-
-<p>Lists job-specific AI assistance sessions with pagination.</p><p>Retrieves sessions associated with the currently selected job,
-ordered by recency for easy access to recent conversations.</p><h2 id="list_sessions/3-required-assigns" class="section-heading"><a href="#list_sessions/3-required-assigns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Required Assigns</span></h2><ul><li><code class="inline">:selected_job</code> - The job to filter sessions by</li></ul><h2 id="list_sessions/3-examples" class="section-heading"><a href="#list_sessions/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Load recent sessions for current job</span><span class="w">
-</span><span class="p" data-group-id="2966620114-1">%{</span><span class="ss">sessions</span><span class="p">:</span><span class="w"> </span><span class="n">sessions</span><span class="p">,</span><span class="w"> </span><span class="ss">pagination</span><span class="p">:</span><span class="w"> </span><span class="n">meta</span><span class="p" data-group-id="2966620114-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobCode</span><span class="o">.</span><span class="n">list_sessions</span><span class="p" data-group-id="2966620114-2">(</span><span class="w">
-  </span><span class="p" data-group-id="2966620114-3">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="n">job</span><span class="p" data-group-id="2966620114-3">}</span><span class="p">,</span><span class="w">
-  </span><span class="ss">:desc</span><span class="p">,</span><span class="w">
-  </span><span class="ss">limit</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w">
-</span><span class="p" data-group-id="2966620114-2">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="metadata/0">
-
-  <div class="detail-header">
-    <a href="#metadata/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">metadata()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L346" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> metadata() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
-
-      </div>
-
-<p>Provides metadata for the job assistance mode.</p><p>Returns information used by the UI to display mode selection options
-and identify the mode's capabilities.</p>
-  </section>
-</section>
-<section class="detail" id="more_sessions?/2">
-
-  <div class="detail-header">
-    <a href="#more_sessions?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">more_sessions?(map, current_count)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L161" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> more_sessions?(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
-
-      </div>
-
-<p>Checks if more sessions exist for the current job.</p><p>Determines if additional sessions are available beyond the current count
-for implementing &quot;Load More&quot; functionality.</p><h2 id="more_sessions?/2-required-assigns" class="section-heading"><a href="#more_sessions?/2-required-assigns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Required Assigns</span></h2><ul><li><code class="inline">:selected_job</code> - The job to check session count for</li></ul><h2 id="more_sessions?/2-examples" class="section-heading"><a href="#more_sessions?/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="k">if</span><span class="w"> </span><span class="nc">JobCode</span><span class="o">.</span><span class="n">more_sessions?</span><span class="p" data-group-id="7927034105-1">(</span><span class="p" data-group-id="7927034105-2">%{</span><span class="ss">selected_job</span><span class="p">:</span><span class="w"> </span><span class="n">job</span><span class="p" data-group-id="7927034105-2">}</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p" data-group-id="7927034105-1">)</span><span class="w"> </span><span class="k" data-group-id="7927034105-3">do</span><span class="w">
-  </span><span class="c1"># Show &quot;Load More&quot; button</span><span class="w">
-</span><span class="k" data-group-id="7927034105-3">end</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="on_session_start/2">
-
-  <div class="detail-header">
-    <a href="#on_session_start/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">on_session_start(socket, ui_callback)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L10" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Default: no special session start handling needed.</p>
-  </section>
-</section>
-<section class="detail" id="query/3">
-
-  <div class="detail-header">
-    <a href="#query/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">query(session, content, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L220" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> query(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
-
-      </div>
-
-<p>Processes user queries through the job-specific AI assistant.</p><p>Sends the user's question along with job context (expression and adaptor)
-to the AI service for targeted code assistance and debugging help.</p><h2 id="query/3-parameters" class="section-heading"><a href="#query/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session</code> - Session with job context (expression and adaptor)</li><li><code class="inline">content</code> - User's question or request for assistance</li></ul><h2 id="query/3-examples" class="section-heading"><a href="#query/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Get help with specific code issue</span><span class="w">
-</span><span class="p" data-group-id="5807186655-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="5807186655-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobCode</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="5807186655-2">(</span><span class="w">
-  </span><span class="n">session</span><span class="p">,</span><span class="w">
-  </span><span class="s">&quot;Why is my data transformation returning undefined?&quot;</span><span class="w">
-</span><span class="p" data-group-id="5807186655-2">)</span><span class="w">
-
-</span><span class="c1"># Request adaptor-specific guidance</span><span class="w">
-</span><span class="p" data-group-id="5807186655-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="5807186655-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobCode</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="5807186655-4">(</span><span class="w">
-  </span><span class="n">session</span><span class="p">,</span><span class="w">
-  </span><span class="s">&quot;What&#39;s the best way to handle errors in HTTP requests?&quot;</span><span class="w">
-</span><span class="p" data-group-id="5807186655-4">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="save_message/2">
-
-  <div class="detail-header">
-    <a href="#save_message/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">save_message(map, content)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L185" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> save_message(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
-
-      </div>
-
-<p>Saves a user message to the job assistance session.</p><p>Adds the user's message to the conversation history with proper
-role and user attribution for AI processing.</p><h2 id="save_message/2-required-assigns" class="section-heading"><a href="#save_message/2-required-assigns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Required Assigns</span></h2><ul><li><code class="inline">:session</code> - The target session</li><li><code class="inline">:current_user</code> - The user sending the message</li></ul><h2 id="save_message/2-examples" class="section-heading"><a href="#save_message/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="1556833100-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">updated_session</span><span class="p" data-group-id="1556833100-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">JobCode</span><span class="o">.</span><span class="n">save_message</span><span class="p" data-group-id="1556833100-2">(</span><span class="w">
-  </span><span class="p" data-group-id="1556833100-3">%{</span><span class="ss">session</span><span class="p">:</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="1556833100-3">}</span><span class="p">,</span><span class="w">
-  </span><span class="s">&quot;How do I handle this API error?&quot;</span><span class="w">
-</span><span class="p" data-group-id="1556833100-2">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="supports_template_generation?/0">
-
-  <div class="detail-header">
-    <a href="#supports_template_generation?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">supports_template_generation?()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/ai_assistant/modes/job_code.ex#L336" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> supports_template_generation?() :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
-
-      </div>
-
-<p>Indicates that job assistance doesn't generate templates.</p><p>Job mode focuses on helping with existing code rather than generating
-new templates or workflows.</p>
   </section>
 </section>
 

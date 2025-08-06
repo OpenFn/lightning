@@ -14,6 +14,7 @@ Lightning.AdaptorService.html
 Lightning.AiAssistant.ChatMessage.html
 Lightning.AiAssistant.ChatSession.html
 Lightning.AiAssistant.Limiter.html
+Lightning.AiAssistant.MessageProcessor.html
 Lightning.AiAssistant.html
 Lightning.ApolloClient.html
 Lightning.Auditing.Audit.html
@@ -206,6 +207,7 @@ Lightning.Workflows.Audit.html
 Lightning.Workflows.Edge.html
 Lightning.Workflows.Job.html
 Lightning.Workflows.Node.html
+Lightning.Workflows.ParamsComparator.html
 Lightning.Workflows.Presence.html
 Lightning.Workflows.Query.html
 Lightning.Workflows.Scheduler.html
@@ -230,6 +232,7 @@ LightningWeb.API.RegistrationController.html
 LightningWeb.API.WorkflowsController.html
 LightningWeb.AccountConfirmationModal.html
 LightningWeb.AiAssistant.Component.html
+LightningWeb.AiAssistant.Quotes.html
 LightningWeb.AuditLive.Index.html
 LightningWeb.AuthProvidersLive.FormComponent.html
 LightningWeb.AuthProvidersLive.Index.html
@@ -358,6 +361,7 @@ LightningWeb.WorkflowLive.Helpers.html
 LightningWeb.WorkflowLive.JobView.html
 LightningWeb.WorkflowLive.NewManualRun.html
 LightningWeb.WorkflowLive.NewWorkflowComponent.html
+LightningWeb.WorkflowLive.WorkflowAiChatComponent.html
 LightningWeb.WorkflowNewLive.WorkflowParams.html
 LightningWeb.html
 Mix.Tasks.Lightning.DownloadAdaptorRegistryCache.html
@@ -382,8 +386,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-172AA982.js
-dist/sidebar_items-31CF9A10.js
+dist/search_data-6DBE70DD.js
+dist/sidebar_items-D528D2BB.js
 index.html
 provisioning.html
 readme.html
