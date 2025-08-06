@@ -106,6 +106,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :available_projects, :list, required: true
   attr :projects, :list, required: true
   attr :selected_projects, :list, required: true
+  attr :workflows_using_credentials, :map, default: %{}
   attr :selected, :string, required: true
   attr :phx_target, :any, default: nil
 
@@ -172,6 +173,7 @@ defmodule LightningWeb.Components.Credentials do
               phx-click="remove_selected_project"
               type="button"
               class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+              {if(@workflows_using_credentials[project.id], do: %{"data-confirm": "Warning: This credential is in use by the following workflows: #{Enum.join(@workflows_using_credentials[project.id], ", ")}. If you revoke access to the \"#{project.name}\" project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"}, else: %{})}
             >
               <span class="sr-only">Remove</span>
               <Heroicons.x_mark solid class="w-4 h-4" />

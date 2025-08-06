@@ -17,8 +17,10 @@ and this project adheres to
 
 ### Added
 
-- AI Assistant for editing workflows
+- Extended the AI Assistant to support editing existing workflows
   [#3247](https://github.com/OpenFn/lightning/issues/3247)
+- Alert that workflows may break before letting users revoke access to a project
+  for their credential [#537](https://github.com/OpenFn/lightning/issues/537)
 
 ### Changed
 
