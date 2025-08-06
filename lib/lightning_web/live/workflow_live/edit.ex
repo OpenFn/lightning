@@ -2807,7 +2807,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         handle_method_assignment(socket, method)
 
       %{"m" => "history", "a" => run_id, "v" => version_tag, "s" => selected_id}
-      when not is_nil(version_tag) ->
+      when is_binary(version_tag) ->
         handle_run_selection_history(socket, run_id, version_tag, selected_id)
 
       %{"s" => nil} ->
