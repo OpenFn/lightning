@@ -192,22 +192,26 @@ defmodule Lightning.Collaboration.Session do
           Yex.Map.set(workflow_map, "id", workflow.id)
           Yex.Map.set(workflow_map, "name", workflow.name || "")
 
-          # Create and populate jobs array
+          # Create and populate jobs array (metadata only)
           jobs_array = Yex.Doc.get_array(doc, "jobs")
 
-          # Add each job to the array
+          # Create job bodies map for Y.Text instances
+          # job_bodies_map = Yex.Doc.get_map(doc, "jobBodies")
+
+          # Add each job to the arrays
           Enum.each(workflow.jobs || [], fn job ->
-            job_map = %{
+            # Job metadata (no body here)
+            job_map = Yex.MapPrelim.from(%{
               "id" => job.id,
               "name" => job.name || "",
-              "body" => job.body || ""
-            }
+              "body" => Yex.TextPrelim.from(job.body || "")
+            })
 
             Yex.Array.push(jobs_array, job_map)
           end)
 
           Logger.info(
-            "Initialized workflow document with #{length(workflow.jobs || [])} jobs"
+            "Initialized workflow document with #{length(workflow.jobs || [])} jobs and their Y.Text bodies"
           )
         end)
     end

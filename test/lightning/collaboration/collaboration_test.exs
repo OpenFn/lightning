@@ -110,6 +110,16 @@ defmodule Lightning.CollaborationTest do
 
       # Check jobs array exists and has correct data
       jobs_array = Yex.Doc.get_array(shared_doc, "jobs")
+
+      for {job, i} <- workflow.jobs |> Enum.with_index() do
+        job_map = Yex.Array.fetch!(jobs_array, i)
+        assert Yex.Map.fetch!(job_map, "id") == job.id
+        assert Yex.Map.fetch!(job_map, "name") == job.name
+        body = Yex.Map.fetch!(job_map, "body")
+
+        assert Yex.Text.to_string(body) == job.body
+      end
+
       jobs_data = Yex.Array.to_json(jobs_array)
 
       assert length(jobs_data) == 2
