@@ -496,33 +496,24 @@ defmodule Lightning.WorkOrders do
       from(wo in WorkOrder,
         join: r in assoc(wo, :runs),
         where: wo.workflow_id == ^workflow_id,
-        preload: [:snapshot, runs: [:steps]],
+        preload: [:snapshot, :runs],
         distinct: wo.id,
         limit: 20
       )
 
-    workorder_with_run =
-      if run_id do
-        from([wo, r] in main_query,
-          where: r.id != ^run_id
-        )
-      else
+    query =
+      if is_nil(run_id) do
         main_query
-      end
-
-    final_query =
-      if run_id do
+      else
         from(wo in WorkOrder,
           join: r in assoc(wo, :runs),
           where: r.id == ^run_id and wo.workflow_id == ^workflow_id,
-          preload: [:snapshot, runs: [:steps]],
-          union: ^workorder_with_run
+          preload: [:snapshot, :runs],
+          union: ^main_query
         )
-      else
-        workorder_with_run
       end
 
-    final_query
+    query
     |> order_by(desc: fragment("last_activity"))
     |> Repo.all()
   end
