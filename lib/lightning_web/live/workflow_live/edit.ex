@@ -2195,6 +2195,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
     }
   end
 
+  defp get_workflow_run_history(workflow_id, includes_run_id) do
+    WorkOrders.get_workorders_with_runs(workflow_id, includes_run_id)
+    |> Enum.map(fn worder ->
+      %{
+        runs:
+          worder.runs
+          |> Enum.map(fn run ->
+            Map.take(run, [:id, :state, :error_type, :started_at, :finished_at])
+          end),
+        version: worder.snapshot.lock_version,
+        state: worder.state,
+        last_activity: worder.last_activity,
+        id: worder.id
+      }
+    end)
+  end
+
   defp get_run_steps_and_history(workflow_id, run_id) do
     empty_resp = %{start_from: nil, steps: [], isTrigger: true, inserted_at: nil}
 
@@ -2225,7 +2242,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       end
       |> Map.update!(:steps, fn steps -> Enum.map(steps, &format_step/1) end)
 
-    history = WorkOrders.get_workorders_with_runs(workflow_id, run_id)
+    history = get_workflow_run_history(workflow_id, run_id)
 
     %{run_steps: run_steps, history: history}
   end
