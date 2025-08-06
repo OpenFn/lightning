@@ -2185,6 +2185,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
+  defp format_step(step) do
+    %{
+      job_id: step.job_id,
+      error_type: step.error_type,
+      exit_reason: step.exit_reason,
+      started_at: step.started_at,
+      finished_at: step.finished_at
+    }
+  end
+
   defp get_run_steps_and_history(workflow_id, run_id) do
     empty_resp = %{start_from: nil, steps: [], isTrigger: true, inserted_at: nil}
 
@@ -2213,17 +2223,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
         end
       end
-      |> Map.update!(:steps, fn steps ->
-        Enum.map(steps, fn step ->
-          %{
-            job_id: step.job_id,
-            error_type: step.error_type,
-            exit_reason: step.exit_reason,
-            started_at: step.started_at,
-            finished_at: step.finished_at
-          }
-        end)
-      end)
+      |> Map.update!(:steps, fn steps -> Enum.map(steps, &format_step/1) end)
 
     history = WorkOrders.get_workorders_with_runs(workflow_id, run_id)
 
