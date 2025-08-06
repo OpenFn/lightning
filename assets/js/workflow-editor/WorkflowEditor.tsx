@@ -8,7 +8,6 @@ import tippy, { type Placement } from 'tippy.js';
 export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) => {
   const { getItem, forceFit, updateRuns } = useWorkflowStore();
 
-  // TODO to be moved to a higher level
   React.useEffect(() => {
     const globalMouseEnterHandler = (e: MouseEvent<HTMLElement>) => {
       const target = e.target as HTMLElement;

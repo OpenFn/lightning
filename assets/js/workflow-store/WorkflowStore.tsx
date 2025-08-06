@@ -165,7 +165,6 @@ export const WorkflowStore: WithActionProps = props => {
 
   React.useEffect(() => {
     return props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
-      console.log("disabled:", response)
       setDisabled(response.disabled);
     });
   }, [props, setDisabled]);
