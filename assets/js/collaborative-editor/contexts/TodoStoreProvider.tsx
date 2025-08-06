@@ -44,7 +44,9 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [awareness, setAwareness] =
     useState<awarenessProtocol.Awareness | null>(null);
-  const [provider, setProvider] = useState<PhoenixChannelProvider | null>(null);
+  const [_provider, setProvider] = useState<PhoenixChannelProvider | null>(
+    null
+  );
   const [todoItems, setTodoItems] = useState<Y.Map<TodoItem> | null>(null);
   const [todoOrder, setTodoOrder] = useState<Y.Array<string> | null>(null);
 
@@ -76,6 +78,7 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
     };
 
     awarenessInstance.setLocalStateField('user', userData);
+    awarenessInstance.setLocalStateField('lastSeen', Date.now());
 
     // Create the Yjs channel provider with the reference implementation
     const roomname = `workflow:collaborate:${workflowId}`;
@@ -89,7 +92,7 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
       connect: true,
     });
 
-    console.log('🔗 PhoenixChannelProvider created:', channelProvider);
+    console.debug('PhoenixChannelProvider: created', channelProvider);
 
     // Listen to React state sync
     const syncTodos = () => {
@@ -122,7 +125,7 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
 
     // Try different approaches to event listening
     const statusHandler = (...args: any[]) => {
-      console.log('📡 PhoenixChannelProvider status event (all args):', args);
+      console.debug('PhoenixChannelProvider: status event', args);
       if (args.length > 0 && Array.isArray(args[0])) {
         const statusEvents = args[0];
         if (
@@ -131,31 +134,26 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
           'status' in statusEvents[0]
         ) {
           const status = (statusEvents[0] as { status: string }).status;
-          console.log(
-            '📡 Setting provider connected to:',
-            status === 'connected'
+          console.debug(
+            'PhoenixChannelProvider: setIsProviderConnected',
+            status
           );
           setIsProviderConnected(status === 'connected');
         }
       }
     };
 
-    const syncHandler = (...args: any[]) => {
-      console.log('🔄 PhoenixChannelProvider synced event (all args):', args);
-      if (args.length > 0 && Array.isArray(args[0])) {
-        setIsSynced(args[0][0] === true);
-      }
+    const syncHandler = (synced: boolean) => {
+      console.debug('PhoenixChannelProvider: synced event', synced);
+      setIsSynced(synced);
     };
 
     // Listen to provider status (reference implementation uses different event structure)
-    (channelProvider as any).on('status', statusHandler);
-    (channelProvider as any).on('synced', syncHandler);
-
-    // Also listen to sync events (might be different)
-    (channelProvider as any).on('sync', syncHandler);
+    channelProvider.on('status', statusHandler);
+    channelProvider.on('sync', syncHandler);
 
     // Also log initial provider state
-    console.log('🚀 PhoenixChannelProvider initial state:', {
+    console.debug('PhoenixChannelProvider: initial state', {
       roomname,
       shouldConnect: channelProvider.shouldConnect,
       channel: channelProvider.channel,
@@ -163,25 +161,34 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
       socketConnected: socket.isConnected(),
     });
 
-    // Check the provider's current connection status periodically
-    const statusCheckInterval = setInterval(() => {
-      const currentStatus = {
-        channel: channelProvider.channel?.state,
-        synced: channelProvider.synced,
-        socketConnected: socket.isConnected(),
-      };
-      console.log('🔍 Provider status check:', currentStatus);
-
-      // Manually update connection status based on channel state
-      if (channelProvider.channel?.state === 'joined') {
-        setIsProviderConnected(true);
-      } else {
-        setIsProviderConnected(false);
+    // Listen directly to channel for 'joined' state detection
+    const cleanupJoinListener = setupJoinListener(
+      channelProvider,
+      isConnected => {
+        setIsProviderConnected(isConnected);
       }
+    );
 
-      // Update sync status
-      setIsSynced(channelProvider.synced);
-    }, 2000); // Check every 2 seconds
+    // TODO: I don't think we need to check this, the status handler should be enough.
+    // Check the provider's current connection status periodically
+    // const statusCheckInterval = setInterval(() => {
+    //   const currentStatus = {
+    //     channel: channelProvider.channel?.state,
+    //     synced: channelProvider.synced,
+    //     socketConnected: socket.isConnected(),
+    //   };
+    //   console.log('🔍 Provider status check:', currentStatus);
+
+    //   // Manually update connection status based on channel state
+    //   if (channelProvider.channel?.state === 'joined') {
+    //     setIsProviderConnected(true);
+    //   } else {
+    //     setIsProviderConnected(false);
+    //   }
+
+    //   // Update sync status
+    //   setIsSynced(channelProvider.synced);
+    // }, 2000); // Check every 2 seconds
 
     // Store state
     setYdoc(doc);
@@ -192,14 +199,23 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
 
     // Provider auto-connects if connect: true is passed
 
+    // Set up lastSeen timer - updates every 10 seconds
+    const cleanupLastSeenTimer = setupLastSeenTimer(awarenessInstance);
+
     // Initial sync
     syncTodos();
     syncUsers();
 
     // Cleanup function
     return () => {
-      console.log('🧹 Cleaning up Yjs document');
-      clearInterval(statusCheckInterval);
+      console.debug('PhoenixChannelProvider: cleaning up');
+
+      cleanupJoinListener();
+      cleanupLastSeenTimer();
+
+      channelProvider.off('status', statusHandler);
+      channelProvider.off('sync', syncHandler);
+
       channelProvider.destroy();
       doc.destroy();
       setYdoc(null);
@@ -328,4 +344,32 @@ function generateUserColor(userId: string): string {
   }, 0);
 
   return colors[Math.abs(hash) % colors.length] || '#999999';
+}
+
+function setupJoinListener(
+  channelProvider: PhoenixChannelProvider,
+  callback: (isConnected: boolean) => void
+) {
+  const ref = channelProvider.channel?.on('phx_reply', (payload, ref) => {
+    if (
+      payload.status === 'ok' &&
+      channelProvider.channel?.state === 'joined'
+    ) {
+      callback(true);
+    }
+  });
+
+  return () => {
+    channelProvider.channel?.off('phx_reply', ref);
+  };
+}
+
+function setupLastSeenTimer(awarenessInstance: awarenessProtocol.Awareness) {
+  const lastSeenTimer = setInterval(() => {
+    awarenessInstance.setLocalStateField('lastSeen', Date.now());
+  }, 10000);
+
+  return () => {
+    clearInterval(lastSeenTimer);
+  };
 }
