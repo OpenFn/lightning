@@ -37,11 +37,11 @@ export interface TodoStore {
 }
 
 export interface YjsCollaborativeHookEvents {
-  'yjs_update': (message: any) => void;
-  'yjs_awareness': (message: any) => void;
-  'sync_request': (message: any) => void;
-  'yjs_response': (message: any) => void;
-  'yjs_query_awareness': (message: any) => void;
+  yjs_update: (message: any) => void;
+  yjs_awareness: (message: any) => void;
+  sync_request: (message: any) => void;
+  yjs_response: (message: any) => void;
+  yjs_query_awareness: (message: any) => void;
 }
 
 // Data attributes passed from LiveView template to React component
