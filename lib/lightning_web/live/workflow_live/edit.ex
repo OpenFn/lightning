@@ -3119,36 +3119,53 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign_show_workflow_ai_chat()
   end
 
+  defp apply_mode_and_selection(
+         %{assigns: %{query_params: %{"m" => "workflow_input", "s" => s}}} =
+           socket
+       )
+       when not is_nil(s) do
+    handle_selection_with_mode(socket, s, "workflow_input")
+  end
+
+  defp apply_mode_and_selection(
+         %{assigns: %{query_params: %{"m" => "expand", "s" => s}}} = socket
+       )
+       when not is_nil(s) do
+    handle_selection_with_mode(socket, s, "expand")
+  end
+
+  defp apply_mode_and_selection(
+         %{assigns: %{query_params: %{"m" => "settings"}}} = socket
+       ) do
+    handle_settings_mode(socket)
+  end
+
+  defp apply_mode_and_selection(
+         %{assigns: %{query_params: %{"m" => "code"}}} = socket
+       ) do
+    handle_code_mode(socket)
+  end
+
+  defp apply_mode_and_selection(
+         %{
+           assigns: %{
+             query_params: %{"m" => "history", "v" => v, "a" => a, "s" => s}
+           }
+         } = socket
+       )
+       when not is_nil(v) do
+    handle_run_selection_history(socket, a, v, s)
+  end
+
+  defp apply_mode_and_selection(
+         %{assigns: %{query_params: %{"s" => s} = params}} = socket
+       )
+       when not is_nil(s) do
+    handle_selection_with_mode(socket, s, params["m"])
+  end
+
   defp apply_mode_and_selection(socket) do
-    %{query_params: params} = socket.assigns
-
-    cond do
-      params["m"] == "workflow_input" && params["s"] ->
-        handle_selection_with_mode(socket, params["s"], "workflow_input")
-
-      params["m"] == "expand" && params["s"] ->
-        handle_selection_with_mode(socket, params["s"], "expand")
-
-      params["m"] == "settings" ->
-        handle_settings_mode(socket)
-
-      params["m"] == "code" ->
-        handle_code_mode(socket)
-
-      params["m"] == "history" && !is_nil(params["v"]) ->
-        handle_run_selection_history(
-          socket,
-          params["a"],
-          params["v"],
-          params["s"]
-        )
-
-      params["s"] ->
-        handle_selection_with_mode(socket, params["s"], params["m"])
-
-      true ->
-        handle_no_selection(socket)
-    end
+    handle_no_selection(socket)
   end
 
   defp handle_selection_with_mode(socket, nil, mode) do
