@@ -26,36 +26,53 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
   const monacoRef = useRef<Monaco>();
   const bindingRef = useRef<MonacoBinding>();
 
-  const handleOnMount = useCallback((editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
-    console.log('🚀 Monaco editor mounted, ytext available:', !!ytext, 'awareness available:', !!awareness);
-    editorRef.current = editor;
-    monacoRef.current = monaco;
-    
-    // Set theme
-    setTheme(monaco);
-
-    // Set language based on adaptor
-    const language = getLanguageFromAdaptor(adaptor);
-    monaco.editor.setModelLanguage(editor.getModel()!, language);
-
-    // Create initial binding if ytext and awareness are available
-    if (ytext && awareness) {
-      console.log('🔄 Creating initial Monaco binding on mount');
-      const binding = new MonacoBinding(
-        ytext,
-        editor.getModel()!,
-        new Set([editor]),
-        awareness
+  const handleOnMount = useCallback(
+    (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+      console.log(
+        '🚀 Monaco editor mounted, ytext available:',
+        !!ytext,
+        'awareness available:',
+        !!awareness
       );
-      bindingRef.current = binding;
-      console.log('✅ Initial Monaco binding created successfully');
-    }
-  }, [adaptor, ytext, awareness]);
+      editorRef.current = editor;
+      monacoRef.current = monaco;
+
+      // Set theme
+      setTheme(monaco);
+
+      // Set language based on adaptor
+      const language = getLanguageFromAdaptor(adaptor);
+      monaco.editor.setModelLanguage(editor.getModel()!, language);
+
+      // Create initial binding if ytext and awareness are available
+      if (ytext && awareness) {
+        console.log('🔄 Creating initial Monaco binding on mount');
+        const binding = new MonacoBinding(
+          ytext,
+          editor.getModel()!,
+          new Set([editor]),
+          awareness
+        );
+        bindingRef.current = binding;
+        console.log('✅ Initial Monaco binding created successfully');
+      }
+    },
+    [adaptor, ytext, awareness]
+  );
 
   // Effect to handle Y.Text binding changes after mount
   useEffect(() => {
-    console.log('🔄 Monaco binding effect running - editor ready:', !!editorRef.current, 'ytext:', !!ytext, 'awareness:', !!awareness, 'existing binding:', !!bindingRef.current);
-    
+    console.log(
+      '🔄 Monaco binding effect running - editor ready:',
+      !!editorRef.current,
+      'ytext:',
+      !!ytext,
+      'awareness:',
+      !!awareness,
+      'existing binding:',
+      !!bindingRef.current
+    );
+
     if (!editorRef.current || !ytext || !awareness) {
       console.log('❌ Monaco binding effect - missing requirements');
       // If editor is ready but ytext is not, clear any existing binding
@@ -66,7 +83,11 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
       return;
     }
 
-    console.log('🔄 Creating Monaco binding for Y.Text in effect:', ytext, ytext.toString());
+    console.log(
+      '🔄 Creating Monaco binding for Y.Text in effect:',
+      ytext,
+      ytext.toString()
+    );
 
     // Destroy existing binding if it exists (for job switching)
     if (bindingRef.current) {
