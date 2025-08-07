@@ -97,7 +97,20 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
     console.debug('PhoenixChannelProvider: created', channelProvider);
 
+    // IDEA: We could have two different states here, one for just the user
+    // information, that is uniqued (in case they have more than one session)
+    // and one for the cursor information.
+
+    // TODO: Add an idle hook that both controls the updating of 'lastSeen'
+    // and can mark a user as idle.
+
+    // IDEA: perhaps take a note from LiveBlocks and their 'useSelf' hook
+    // and have a 'useAwareness' hook that can be used to get the awareness
+    // state for the current user.
+
     // Sync users from awareness
+    // TODO: Perhaps move this this a hook, with a store or something immuatable?
+    // The data changes very very frequently and we want to avoid re-rendering
     const syncUsers = () => {
       const userList: AwarenessUser[] = [];
       awarenessInstance.getStates().forEach((state, clientId) => {
@@ -105,6 +118,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
           userList.push({
             clientId,
             user: state['user'],
+            selection: state['selection'],
             cursor: state['cursor'],
           });
         }

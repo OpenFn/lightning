@@ -4,6 +4,7 @@ import type { editor } from 'monaco-editor';
 import { MonacoBinding } from 'y-monaco';
 import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness';
+import { Cursors } from './Cursors';
 
 interface CollaborativeMonacoProps {
   ytext: Y.Text;
@@ -150,6 +151,7 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
 
   return (
     <div className={className || 'h-full w-full'}>
+      <Cursors />
       <MonacoEditor
         onMount={handleOnMount}
         options={editorOptions}
