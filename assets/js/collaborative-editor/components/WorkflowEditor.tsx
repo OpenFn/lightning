@@ -35,7 +35,7 @@ export const WorkflowEditor: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 px-4">
         {/* Jobs List Sidebar */}
         <div className="flex-none w-80 border-r border-gray-200 overflow-y-auto">
           <JobsList />
@@ -51,27 +51,40 @@ export const WorkflowEditor: React.FC = () => {
           )}
         </div>
 
-        {/* Job Editor */}
-        <div className="flex-1 min-w-0">
-          {selectedJob && selectedJobYText && awareness ? (
-            <CollaborativeMonaco
-              ytext={selectedJobYText}
-              awareness={awareness}
-              adaptor="common"
-              disabled={false}
-              className="h-full w-full"
-            />
-          ) : (
+        {/* Right Panel - Split vertically */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Top Right Component */}
+          <div className="flex-none h-1/3 border-b border-gray-200">
             <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">
-                <p className="text-lg">Select a job to edit</p>
-                <p className="text-sm">
-                  Choose a job from the sidebar to start editing with the
-                  collaborative Monaco editor
-                </p>
+                <p className="text-lg">Top Component</p>
+                <p className="text-sm">Placeholder for new component</p>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Bottom Right - Monaco Editor */}
+          <div className="flex-1 min-h-0">
+            {selectedJob && selectedJobYText && awareness ? (
+              <CollaborativeMonaco
+                ytext={selectedJobYText}
+                awareness={awareness}
+                adaptor="common"
+                disabled={false}
+                className="h-full w-full"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <p className="text-lg">Select a job to edit</p>
+                  <p className="text-sm">
+                    Choose a job from the sidebar to start editing with the
+                    collaborative Monaco editor
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
