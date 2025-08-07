@@ -91,9 +91,7 @@ defmodule Lightning.CollaborationTest do
     test "SharedDoc is initialized with workflow data" do
       # Create a workflow with jobs
       workflow =
-        build(:workflow, name: "Test Workflow")
-        |> with_job(build(:job, name: "Job 1", body: "console.log('job1')"))
-        |> with_job(build(:job, name: "Job 2", body: "console.log('job2')"))
+        build(:complex_workflow, name: "Test Workflow")
         |> insert()
 
       # Start a session - this should initialize the SharedDoc with workflow data
@@ -110,28 +108,70 @@ defmodule Lightning.CollaborationTest do
 
       # Check jobs array exists and has correct data
       jobs_array = Yex.Doc.get_array(shared_doc, "jobs")
+      assert Yex.Array.length(jobs_array) == 7
 
-      for {job, i} <- workflow.jobs |> Enum.with_index() do
-        job_map = Yex.Array.fetch!(jobs_array, i)
-        assert Yex.Map.fetch!(job_map, "id") == job.id
-        assert Yex.Map.fetch!(job_map, "name") == job.name
-        body = Yex.Map.fetch!(job_map, "body")
-
-        assert Yex.Text.to_string(body) == job.body
+      for i <- 0..(Yex.Array.length(jobs_array) - 1) do
+        assert Enum.find(
+                 workflow.jobs,
+                 &(&1.id == Yex.Array.fetch!(jobs_array, i)["id"])
+               ),
+               "Job #{Yex.Array.fetch!(jobs_array, i)["id"]} not found in doc"
       end
 
-      jobs_data = Yex.Array.to_json(jobs_array)
-
-      assert length(jobs_data) == 2
-
-      # Verify job data
-      job_ids = Enum.map(jobs_data, & &1["id"])
-      assert workflow.jobs |> Enum.map(& &1.id) == job_ids
-
       for job <- workflow.jobs do
-        job_data = Enum.find(jobs_data, &(&1["id"] == job.id))
-        assert job_data["name"] == job.name
-        assert job_data["body"] == job.body
+        assert job_data = find_in_ydoc_array(jobs_array, job.id),
+               "Job #{job.id} not found in doc"
+
+        ~w(id name body)
+        |> Enum.each(fn key ->
+          assert get_ydoc_map_value(job_data, key) ==
+                   get_expected_value(job, key)
+        end)
+      end
+
+      edges_array = Yex.Doc.get_array(shared_doc, "edges")
+      assert Yex.Array.length(edges_array) == 7
+
+      for i <- 0..(Yex.Array.length(edges_array) - 1) do
+        assert Enum.find(
+                 workflow.edges,
+                 &(&1.id == Yex.Array.fetch!(edges_array, i)["id"])
+               ),
+               "Edge #{Yex.Array.fetch!(edges_array, i)["id"]} not found in doc"
+      end
+
+      for workflow_edge <- workflow.edges do
+        assert edge_data = find_in_ydoc_array(edges_array, workflow_edge.id),
+               "Edge #{workflow_edge.id} not found in doc"
+
+        ~w(enabled source_job_id source_trigger_id target_job_id condition_expression condition_label condition_type)
+        |> Enum.each(fn key ->
+          doc_value = edge_data[key]
+
+          expected_value = get_expected_value(workflow_edge, key)
+
+          assert doc_value == expected_value,
+                 "Edge #{key} mismatch: expected #{expected_value |> inspect}, got #{doc_value |> inspect}"
+        end)
+      end
+
+      triggers_array = Yex.Doc.get_array(shared_doc, "triggers")
+
+      assert Yex.Array.length(triggers_array) == 1
+
+      for trigger <- workflow.triggers do
+        assert doc_trigger = find_in_ydoc_array(triggers_array, trigger.id),
+               "Trigger #{trigger.id} not found in doc"
+
+        ~w(cron_expression enabled has_auth_method id type)
+        |> Enum.each(fn key ->
+          doc_value = Yex.Map.fetch!(doc_trigger, key)
+
+          expected_value = get_expected_value(trigger, key)
+
+          assert doc_value == expected_value,
+                 "Trigger #{key} mismatch: expected #{expected_value |> inspect}, got #{doc_value |> inspect}"
+        end)
       end
     end
 
@@ -198,6 +238,7 @@ defmodule Lightning.CollaborationTest do
         assert Yex.Map.fetch!(workflow_map, "name") == "Sync Test Workflow"
 
         jobs_data = Yex.Array.to_json(jobs_array)
+
         assert length(jobs_data) == 1
         assert List.first(jobs_data)["name"] == job.name
         assert List.first(jobs_data)["body"] == job.body
@@ -260,5 +301,43 @@ defmodule Lightning.CollaborationTest do
       #     %{}
       # )
     end
+  end
+
+  defp get_expected_value(model, key) do
+    Map.fetch!(model, key |> String.to_existing_atom())
+    |> case do
+      v when is_nil(v) or is_boolean(v) ->
+        v
+
+      v when is_atom(v) ->
+        v |> to_string()
+
+      v ->
+        v
+    end
+  end
+
+  defp get_ydoc_map_value(map, key) do
+    Yex.Map.fetch!(map, key)
+    |> case do
+      %Yex.Text{} = text ->
+        Yex.Text.to_string(text)
+
+      v ->
+        v
+    end
+  end
+
+  defp find_in_ydoc_array(array, id) do
+    0..Yex.Array.length(array)
+    |> Enum.reduce_while({:not_found, nil}, fn index, {:not_found, _} ->
+      item = Yex.Array.fetch!(array, index)
+
+      if Yex.Map.fetch!(item, "id") == id do
+        {:halt, item}
+      else
+        {:cont, {:not_found, nil}}
+      end
+    end)
   end
 end

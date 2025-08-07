@@ -174,7 +174,9 @@ defmodule Lightning.Collaboration.Session do
     Logger.info("Initializing SharedDoc with workflow data for #{workflow_id}")
 
     # Fetch workflow from database
-    case Lightning.Workflows.get_workflow(workflow_id, include: [:jobs]) do
+    case Lightning.Workflows.get_workflow(workflow_id,
+           include: [:jobs, :edges, :triggers]
+         ) do
       nil ->
         Logger.warning(
           "Workflow #{workflow_id} not found, initializing empty document"
@@ -192,25 +194,54 @@ defmodule Lightning.Collaboration.Session do
           Yex.Map.set(workflow_map, "id", workflow.id)
           Yex.Map.set(workflow_map, "name", workflow.name || "")
 
-          # Create and populate jobs array (metadata only)
           jobs_array = Yex.Doc.get_array(doc, "jobs")
 
-          # Create job bodies map for Y.Text instances
-          # job_bodies_map = Yex.Doc.get_map(doc, "jobBodies")
-
-          # Add each job to the arrays
           Enum.each(workflow.jobs || [], fn job ->
-            # Job metadata (no body here)
-            job_map = Yex.MapPrelim.from(%{
-              "id" => job.id,
-              "name" => job.name || "",
-              "body" => Yex.TextPrelim.from(job.body || "")
-            })
+            job_map =
+              Yex.MapPrelim.from(%{
+                "id" => job.id,
+                "name" => job.name || "",
+                "body" => Yex.TextPrelim.from(job.body || "")
+              })
 
             Yex.Array.push(jobs_array, job_map)
           end)
 
-          Logger.info(
+          edges_array = Yex.Doc.get_array(doc, "edges")
+
+          Enum.each(workflow.edges || [], fn edge ->
+            edge_map =
+              Yex.MapPrelim.from(%{
+                "condition_expression" => edge.condition_expression,
+                "condition_label" => edge.condition_label,
+                "condition_type" => edge.condition_type |> to_string(),
+                "enabled" => edge.enabled,
+                # "errors" => edge.errors,
+                "id" => edge.id,
+                "source_job_id" => edge.source_job_id,
+                "source_trigger_id" => edge.source_trigger_id,
+                "target_job_id" => edge.target_job_id
+              })
+
+            Yex.Array.push(edges_array, edge_map)
+          end)
+
+          triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+          Enum.each(workflow.triggers || [], fn trigger ->
+            trigger_map =
+              Yex.MapPrelim.from(%{
+                "cron_expression" => trigger.cron_expression,
+                "enabled" => trigger.enabled,
+                "has_auth_method" => trigger.has_auth_method,
+                "id" => trigger.id,
+                "type" => trigger.type |> to_string()
+              })
+
+            Yex.Array.push(triggers_array, trigger_map)
+          end)
+
+          Logger.debug(
             "Initialized workflow document with #{length(workflow.jobs || [])} jobs and their Y.Text bodies"
           )
         end)
