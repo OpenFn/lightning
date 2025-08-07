@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTodoStore } from '../contexts/TodoStoreProvider';
-import { TodoItem } from './TodoItem';
 import { TodoInput } from './TodoInput';
+import { TodoItem } from './TodoItem';
 import { UserAwareness } from './UserAwareness';
 
 export const TodoList: React.FC = () => {
