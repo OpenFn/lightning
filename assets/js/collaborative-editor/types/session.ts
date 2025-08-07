@@ -1,3 +1,5 @@
+import type { RelativePosition } from 'yjs';
+
 export interface AwarenessUser {
   clientId: number;
   user: {
@@ -8,5 +10,9 @@ export interface AwarenessUser {
   cursor?: {
     x: number;
     y: number;
+  };
+  selection?: {
+    anchor: RelativePosition;
+    head: RelativePosition;
   };
 }
