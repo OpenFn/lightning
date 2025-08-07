@@ -5,8 +5,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as Y from 'yjs';
-import { useSession } from './SessionProvider';
 import type { TodoItem, TodoStore } from '../types/todo';
+import { useSession } from './SessionProvider';
 
 interface TodoStoreContextValue extends TodoStore {
   // Domain-specific todo operations only

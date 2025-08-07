@@ -4,10 +4,10 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import * as Y from 'yjs';
-import * as awarenessProtocol from 'y-protocols/awareness';
-import { useSocket } from '../../react/contexts/SocketProvider';
 import { PhoenixChannelProvider } from 'y-phoenix-channel';
+import * as awarenessProtocol from 'y-protocols/awareness';
+import * as Y from 'yjs';
+import { useSocket } from '../../react/contexts/SocketProvider';
 import type { AwarenessUser } from '../types/session';
 
 export interface SessionContextValue {

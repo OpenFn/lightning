@@ -3,11 +3,11 @@
  * Bridges between Yjs CRDT and React components
  */
 
-import { create } from 'zustand';
-import * as Y from 'yjs';
+import { YjsPhoenixProvider } from 'y-phoenix-channel';
 import * as awarenessProtocol from 'y-protocols/awareness';
-import type { TodoItem, AwarenessUser, TodoStore } from '../types/todo';
-import { YjsPhoenixProvider } from '../lib/yjs-phoenix-provider';
+import * as Y from 'yjs';
+import { create } from 'zustand';
+import type { AwarenessUser, TodoItem, TodoStore } from '../types/todo';
 
 interface TodoStoreState extends TodoStore {
   // Internal state

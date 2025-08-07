@@ -3,8 +3,8 @@
  */
 
 import React from 'react';
-import type { WorkflowJob } from '../types/workflow';
 import { useWorkflowStore } from '../contexts/WorkflowStoreProvider';
+import type { WorkflowJob } from '../types/workflow';
 
 interface JobItemProps {
   job: WorkflowJob;

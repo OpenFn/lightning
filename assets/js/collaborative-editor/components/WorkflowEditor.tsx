@@ -4,12 +4,13 @@
  */
 
 import React from 'react';
-import { useWorkflowStore } from '../contexts/WorkflowStoreProvider';
 import { useSession } from '../contexts/SessionProvider';
-import { WorkflowHeader } from './WorkflowHeader';
-import { UserAwareness } from './UserAwareness';
-import { JobsList } from './JobsList';
+import { useWorkflowStore } from '../contexts/WorkflowStoreProvider';
 import { CollaborativeMonaco } from './CollaborativeMonaco';
+import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
+import { JobsList } from './JobsList';
+import { UserAwareness } from './UserAwareness';
+import { WorkflowHeader } from './WorkflowHeader';
 
 export const WorkflowEditor: React.FC = () => {
   const { workflow, jobs, selectedJobId, getJobBodyYText } = useWorkflowStore();
