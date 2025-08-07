@@ -16,6 +16,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   require Logger
 
+  @timeout_buffer_percentage 10
+  @minimum_buffer_ms 1000
+
   @doc """
   Processes an AI assistant message asynchronously.
 
@@ -73,8 +76,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @impl Oban.Worker
   @spec timeout(Oban.Job.t()) :: pos_integer()
   def timeout(_job) do
-    apollo_timeout_ms = Lightning.Config.apollo(:timeout) || 30_000
-    apollo_timeout_ms + 1000
+    apollo_timeout_ms = Lightning.Config.apollo(:timeout)
+    buffer_ms = round(apollo_timeout_ms * @timeout_buffer_percentage / 100)
+    apollo_timeout_ms + max(buffer_ms, @minimum_buffer_ms)
   end
 
   @doc false
@@ -158,7 +162,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       |> Ecto.Changeset.change(changes)
       |> Repo.update()
 
-    broadcast_status(session.id, {status, session})
+    updated_session = AiAssistant.get_session!(session.id)
+
+    broadcast_status(session.id, {status, updated_session})
 
     {:ok, updated_message}
   end
