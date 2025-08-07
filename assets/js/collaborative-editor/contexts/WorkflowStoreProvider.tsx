@@ -12,6 +12,7 @@ import type {
   WorkflowStore,
 } from '../types/workflow';
 import type { TypedMap, TypedArray, TypedDoc } from 'yjs-types';
+import { useURLState } from '#/react/lib/use-url-state';
 
 interface WorkflowStoreContextValue extends WorkflowStore {
   // Domain-specific workflow operations only
@@ -56,7 +57,13 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
   // Domain-specific React state
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [jobs, setJobs] = useState<WorkflowJobData[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+  const { searchParams, updateSearchParams } = useURLState();
+  const selectedJobId = searchParams.get('job');
+
+  const setSelectedJobId = (jobId: string) => {
+    updateSearchParams({ job: jobId });
+  };
 
   // Initialize domain-specific Yjs maps when ydoc is available
   useEffect(() => {
