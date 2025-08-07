@@ -5,16 +5,22 @@
 
 import React from 'react';
 import { useWorkflowStore } from '../contexts/WorkflowStoreProvider';
+import { useSession } from '../contexts/SessionProvider';
 import { WorkflowHeader } from './WorkflowHeader';
 import { UserAwareness } from './UserAwareness';
 import { JobsList } from './JobsList';
-import { CollaborativeJobEditor } from './CollaborativeJobEditor';
+import { CollaborativeMonaco } from './CollaborativeMonaco';
 
 export const WorkflowEditor: React.FC = () => {
-  const { workflow, jobs, selectedJobId } = useWorkflowStore();
+  const { workflow, jobs, selectedJobId, getJobBodyYText } = useWorkflowStore();
+  const { awareness } = useSession();
 
   const selectedJob = selectedJobId
     ? jobs.find(job => job.id === selectedJobId)
+    : null;
+
+  const selectedJobYText = selectedJobId
+    ? getJobBodyYText(selectedJobId)
     : null;
 
   return (
@@ -47,11 +53,13 @@ export const WorkflowEditor: React.FC = () => {
 
         {/* Job Editor */}
         <div className="flex-1 min-w-0">
-          {selectedJob ? (
-            <CollaborativeJobEditor
-              jobId={selectedJob.id}
+          {selectedJob && selectedJobYText && awareness ? (
+            <CollaborativeMonaco
+              ytext={selectedJobYText}
+              awareness={awareness}
               adaptor="common"
               disabled={false}
+              className="h-full w-full"
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
