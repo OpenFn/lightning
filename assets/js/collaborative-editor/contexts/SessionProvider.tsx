@@ -12,7 +12,7 @@ import type { AwarenessUser } from '../types/session';
 
 export interface SessionContextValue {
   // Yjs infrastructure
-  ydoc: Y.Doc  | null;
+  ydoc: Y.Doc | null;
   awareness: awarenessProtocol.Awareness | null;
 
   // Connection state

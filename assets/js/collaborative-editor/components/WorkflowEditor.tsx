@@ -33,7 +33,7 @@ export const WorkflowEditor: React.FC = () => {
         {/* Jobs List Sidebar */}
         <div className="flex-none w-80 border-r border-gray-200 overflow-y-auto">
           <JobsList />
-          
+
           {/* Workflow statistics */}
           {workflow && (
             <div className="p-4 border-t border-gray-200">
@@ -57,7 +57,10 @@ export const WorkflowEditor: React.FC = () => {
             <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">
                 <p className="text-lg">Select a job to edit</p>
-                <p className="text-sm">Choose a job from the sidebar to start editing with the collaborative Monaco editor</p>
+                <p className="text-sm">
+                  Choose a job from the sidebar to start editing with the
+                  collaborative Monaco editor
+                </p>
               </div>
             </div>
           )}
