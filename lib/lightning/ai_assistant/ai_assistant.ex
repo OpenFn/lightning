@@ -505,10 +505,7 @@ defmodule Lightning.AiAssistant do
       if message.role == :user && message.status == :pending do
         Oban.insert(
           Lightning.Oban,
-          MessageProcessor.new(%{
-            message_id: message.id,
-            session_id: session.id
-          })
+          MessageProcessor.new(%{message_id: message.id})
         )
       else
         {:ok, nil}
@@ -688,10 +685,7 @@ defmodule Lightning.AiAssistant do
     )
     |> Multi.insert(
       :oban_job,
-      MessageProcessor.new(%{
-        message_id: message.id,
-        session_id: message.chat_session_id
-      })
+      MessageProcessor.new(%{message_id: message.id})
     )
     |> Repo.transaction()
     |> case do

@@ -12,6 +12,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatMessage
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.Repo
 
   require Logger
@@ -36,17 +37,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   """
   @impl Oban.Worker
   @spec perform(Oban.Job.t()) :: :ok
-  def perform(%Oban.Job{
-        args: %{"message_id" => message_id, "session_id" => session_id}
-      }) do
+  def perform(%Oban.Job{args: %{"message_id" => message_id}}) do
     Logger.info("[MessageProcessor] Processing message: #{message_id}")
 
-    message = Repo.get!(ChatMessage, message_id)
-    session = AiAssistant.get_session!(session_id)
-
-    {:ok, _} = update_message_status(message, :processing, session)
-
-    case process_message(session, message) do
+    case process_message(message_id) do
       {:ok, _updated_session} ->
         Logger.info(
           "[MessageProcessor] Successfully processed message: #{message_id}"
@@ -82,9 +76,14 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   @doc false
-  @spec process_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
+  @spec process_message(String.t()) ::
           {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
-  defp process_message(session, message) do
+  defp process_message(message_id) do
+    {:ok, session, message} =
+      ChatMessage
+      |> Repo.get!(message_id)
+      |> update_message_status(:processing)
+
     result =
       case session.session_type do
         "job_code" ->
@@ -95,12 +94,16 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       end
 
     case result do
-      {:ok, updated_session} ->
-        {:ok, _} = update_message_status(message, :success, updated_session)
+      {:ok, _} ->
+        {:ok, updated_session, _updated_message} =
+          update_message_status(message, :success)
+
         {:ok, updated_session}
 
       {:error, error_message} ->
-        {:ok, _} = update_message_status(message, :error, session)
+        {:ok, _updated_session, _updated_message} =
+          update_message_status(message, :error)
+
         {:error, error_message}
     end
   end
@@ -147,26 +150,41 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     )
   end
 
-  @doc false
+  @doc """
+  Updates a message's status and broadcasts the change.
+
+  This function updates the message status in the database, fetches the updated
+  session with all associations, and broadcasts the status change to connected
+  clients via Phoenix PubSub.
+
+  ## Parameters
+
+    - `message` - The `ChatMessage` struct to update
+    - `status` - The new status atom (`:processing`, `:success`, or `:error`)
+
+  ## Returns
+
+    `{:ok, updated_session, updated_message}` - Tuple with the updated session
+    and message structs
+  """
   @spec update_message_status(
           ChatMessage.t(),
-          atom(),
-          AiAssistant.ChatSession.t()
+          atom()
         ) ::
-          {:ok, ChatMessage.t()}
-  defp update_message_status(message, status, session) do
+          {:ok, ChatSession.t(), ChatMessage.t()}
+  def update_message_status(message, status) do
     changes = build_status_changes(status)
 
-    {:ok, updated_message} =
+    updated_message =
       message
       |> Ecto.Changeset.change(changes)
-      |> Repo.update()
+      |> Repo.update!()
 
-    updated_session = AiAssistant.get_session!(session.id)
+    updated_session = AiAssistant.get_session!(updated_message.chat_session_id)
 
-    broadcast_status(session.id, {status, updated_session})
+    broadcast_status(updated_session.id, {status, updated_session})
 
-    {:ok, updated_message}
+    {:ok, updated_session, updated_message}
   end
 
   @doc false
