@@ -36,7 +36,7 @@ interface WorkflowStoreProviderProps {
   children: React.ReactNode;
 }
 
-// TODO: move this somewhere else, but take note that we are using a 3rd party 
+// TODO: move this somewhere else, but take note that we are using a 3rd party
 // library to type the Yjs document.
 type WorkflowDoc = TypedDoc<
   { workflow: TypedMap<{ id: string; name: string }> },
