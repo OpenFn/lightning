@@ -125,10 +125,8 @@ export function Cursors() {
 
           // If cursor is within 30px of the top of the editor, add the class
           if (relativeTop < 30) {
-            console.log('cursor-at-top');
             cursor.classList.add('cursor-at-top');
           } else {
-            console.log('cursor-at-bottom');
             cursor.classList.remove('cursor-at-top');
           }
         }
@@ -140,6 +138,8 @@ export function Cursors() {
     // We need to pass in the editor element to the component.
     const editorElement = document.querySelector('.monaco-editor');
     editorElement?.addEventListener('scroll', checkCursorPositions);
+
+    checkCursorPositions();
 
     return () => {
       editorElement?.removeEventListener('scroll', checkCursorPositions);
