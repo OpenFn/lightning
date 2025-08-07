@@ -48,10 +48,22 @@ export default function MiniHistory({
     setIsCollapsed(p => !p);
   }
 
+  const gotoHistory = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentUrl = new URL(window.location.href);
+    const nextUrl = new URL(currentUrl);
+    const paths = nextUrl.pathname.split("/");
+    const wIdx = paths.indexOf("w");
+    const workflowPaths = paths.splice(wIdx, paths.length - wIdx)
+    nextUrl.pathname = paths.join("/") + `/history`;
+    nextUrl.search = `?filters[workflow_id]=${workflowPaths[workflowPaths.length - 1]}`;
+    window.location = nextUrl.toString();
+  }
 
   return (
     <div
-      className={`absolute left-2 top-2 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${isCollapsed ? 'w-44' : 'w-88'
+      className={`absolute left-2 top-2 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40 ${isCollapsed ? 'w-44' : 'w-88'
         }`}
     >
       <div
@@ -63,13 +75,13 @@ export default function MiniHistory({
           <h3 className="text-sm font-medium text-gray-700">
             {isCollapsed ? 'View History' : 'Recent Activity'}
           </h3>
-          <a
-            href={`#`}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+          <div
+            className="text-gray-400 hover:text-gray-600 transition-colors flex items-center"
             title="View full history for this workflow"
+            onClick={gotoHistory}
           >
             <span className="hero-arrow-top-right-on-square w-4 h-4"></span>
-          </a>
+          </div>
         </div>
 
         <div
@@ -85,13 +97,13 @@ export default function MiniHistory({
       </div>
 
       <div
-        className={`overflow-y-auto no-scrollbar ${isCollapsed ? 'h-0' : 'h-82'
+        className={`overflow-y-auto no-scrollbar max-h-82 ${isCollapsed ? 'hidden' : 'block'
           }`}
       >
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-gray-500">
             <span className="hero-clock w-8 h-8 mb-2 opacity-50"></span>
-            <p className="text-sm font-medium">No recent activity</p>
+            <p className="text-sm font-medium">No related activity</p>
             <p className="text-xs text-gray-400 mt-1">
               Run your workflow to see execution history
             </p>
