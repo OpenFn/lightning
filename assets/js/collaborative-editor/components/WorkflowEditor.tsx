@@ -54,14 +54,9 @@ export const WorkflowEditor: React.FC = () => {
 
         {/* Right Panel - Split vertically */}
         <div className="flex-1 min-w-0 flex flex-col">
-          {/* Top Right Component */}
+          {/* Workflow Diagram */}
           <div className="flex-none h-1/3 border-b border-gray-200">
-            <div className="flex items-center justify-center h-full text-gray-500">
-              <div className="text-center">
-                <p className="text-lg">Top Component</p>
-                <p className="text-sm">Placeholder for new component</p>
-              </div>
-            </div>
+            <CollaborativeWorkflowDiagram />
           </div>
 
           {/* Bottom Right - Monaco Editor */}
