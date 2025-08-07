@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useCallback } from 'react';
-import { MonacoEditor, setTheme, type Monaco } from '../../monaco';
 import type { editor } from 'monaco-editor';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { MonacoBinding } from 'y-monaco';
-import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness';
+import * as Y from 'yjs';
+import { MonacoEditor, setTheme, type Monaco } from '../../monaco';
 import { Cursors } from './Cursors';
 
 interface CollaborativeMonacoProps {

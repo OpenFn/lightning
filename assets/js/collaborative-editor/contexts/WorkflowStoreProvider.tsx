@@ -3,16 +3,14 @@
  * Uses SessionProvider for shared Yjs/Phoenix Channel infrastructure
  */
 
+import { useURLState } from '#/react/lib/use-url-state';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as Y from 'yjs';
+import type { TypedMap } from 'yjs-types';
+import type { Lightning } from '../../workflow-diagram/types';
+import type { Session } from '../types/session';
+import type { Workflow, WorkflowStore } from '../types/workflow';
 import { useSession } from './SessionProvider';
-import type {
-  WorkflowJobData,
-  Workflow,
-  WorkflowStore,
-} from '../types/workflow';
-import type { TypedMap, TypedArray, TypedDoc } from 'yjs-types';
-import { useURLState } from '#/react/lib/use-url-state';
 
 interface WorkflowStoreContextValue extends WorkflowStore {
   // Domain-specific workflow operations only
@@ -37,18 +35,11 @@ interface WorkflowStoreProviderProps {
   children: React.ReactNode;
 }
 
-// TODO: move this somewhere else, but take note that we are using a 3rd party
-// library to type the Yjs document.
-type WorkflowDoc = TypedDoc<
-  { workflow: TypedMap<{ id: string; name: string }> },
-  { jobs: TypedArray<Y.Map<{ id: string; name: string; body: Y.Text }>> }
->;
-
 export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
   children,
 }) => {
   const { ydoc: ydoc_, isConnected, isSynced, users } = useSession();
-  const ydoc = ydoc_ as WorkflowDoc;
+  const ydoc = ydoc_ as Session.WorkflowDoc;
 
   // Domain-specific Yjs state
   const [_workflowMap, setWorkflowMap] = useState<Y.Map<any> | null>(null);
@@ -56,12 +47,13 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
 
   // Domain-specific React state
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
-  const [jobs, setJobs] = useState<WorkflowJobData[]>([]);
+  const [jobs, setJobs] = useState<Session.Job[]>([]);
+  const [edges, setEdges] = useState<Session.Edge[]>([]);
 
   const { searchParams, updateSearchParams } = useURLState();
   const selectedJobId = searchParams.get('job');
 
-  const setSelectedJobId = (jobId: string) => {
+  const selectJob = (jobId: string | null) => {
     updateSearchParams({ job: jobId });
   };
 
@@ -71,15 +63,14 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
       return;
     }
 
-    console.log('🚀 Initializing WorkflowStore domain maps');
-
     // Get domain-specific Yjs maps
     const workflowMapInstance = ydoc.getMap('workflow');
     const jobsArrayInstance = ydoc.getArray('jobs');
+    const edgesArrayInstance = ydoc.getArray('edges');
 
     // Sync workflow state to React
     const syncWorkflow = () => {
-      const workflowData = workflowMapInstance.toJSON();
+      const workflowData = workflowMapInstance.toJSON() as Session.Workflow;
       if (workflowData.id && workflowData.name !== undefined) {
         setWorkflow({
           id: workflowData.id,
@@ -92,8 +83,11 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
 
     // Sync jobs state to React
     const syncJobs = () => {
-      const yjsJobs = jobsArrayInstance.toArray(); // Array of Y.Map objects
-      const jobsData: WorkflowJobData[] = yjsJobs.map(yjsJob => {
+      const yjsJobs = jobsArrayInstance.toArray() as TypedMap<
+        Session.Job & { body: Y.Text }
+      >[];
+      const jobsData: Session.Job[] = yjsJobs.map(yjsJob => {
+        // TODO: try toJSON(), see if it handles the Y.Text case
         const yText = yjsJob.get('body') as Y.Text;
         return {
           id: yjsJob.get('id') as string,
@@ -104,11 +98,29 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
       setJobs(jobsData);
     };
 
+    const syncEdges = () => {
+      function onEdgeChange() {
+        const yjsEdges =
+          edgesArrayInstance.toArray() as TypedMap<Session.Edge>[];
+        const edgesData: Session.Edge[] = yjsEdges.map(yjsEdge => {
+          return yjsEdge.toJSON() as Session.Edge;
+        });
+        setEdges(edgesData);
+      }
+
+      edgesArrayInstance.observe(onEdgeChange);
+
+      return () => {
+        edgesArrayInstance.unobserve(onEdgeChange);
+        setEdges([]);
+      };
+    };
+
     // Set up observers on Y.Text bodies within jobs for real-time updates
     const setupJobBodyObservers = () => {
-      const yjsJobs = jobsArrayInstance.toArray();
+      const yjsJobs = jobsArrayInstance.toArray() as TypedMap<Session.Job>[];
       yjsJobs.forEach(yjsJob => {
-        const ytext = yjsJob.get('body') as Y.Text;
+        const ytext = yjsJob.get('body');
         if (ytext) {
           ytext.observe(() => {
             // Trigger syncJobs to update React state when job body changes
@@ -124,6 +136,7 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
     // Re-setup observers when jobs array changes
     jobsArrayInstance.observe(() => {
       syncJobs();
+      // Do we need to re-setup job body observers?
       setupJobBodyObservers();
     });
 
@@ -137,6 +150,8 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
     syncWorkflow();
     syncJobs();
 
+    const cleanupEdges = syncEdges();
+
     // Cleanup function
     return () => {
       console.debug('WorkflowStore: cleaning up domain maps');
@@ -144,14 +159,10 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
       setJobsArray(null);
       setWorkflow(null);
       setJobs([]);
-      setSelectedJobId(null);
+      selectJob(null);
+      cleanupEdges();
     };
   }, [ydoc]);
-
-  // Workflow operations
-  const selectJob = (id: string | null) => {
-    setSelectedJobId(id);
-  };
 
   const updateJobName = (id: string, name: string) => {
     if (!jobsArray) return;
@@ -210,9 +221,21 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
     return jobs.find(job => job.id === id) || null;
   };
 
+  // Transform collaborative jobs to Lightning format for WorkflowDiagram
+  const getLightningJobs = (): Lightning.JobNode[] => {
+    return jobs.map(job => ({
+      id: job.id,
+      name: job.name,
+      workflow_id: workflow?.id || '',
+      body: job.body,
+      adaptor: 'common',
+    }));
+  };
+
   const value: WorkflowStoreContextValue = {
     workflow,
     jobs,
+    edges,
     selectedJobId,
     users,
     isConnected,
@@ -222,6 +245,23 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
     updateJobBody,
     getJobBodyYText,
     getYjsJob,
+    // WorkflowDiagram compatibility
+    getLightningJobs,
+    triggers: [], // Phase 1: empty
+    disabled: false, // Phase 1: always enabled
+    positions: null, // Phase 1: auto-layout
+    updatePositions: () => {
+      console.log('Phase 1: updatePositions not implemented');
+    },
+    updatePosition: () => {
+      console.log('Phase 1: updatePosition not implemented');
+    },
+    undo: () => {
+      console.log('Phase 1: undo not implemented');
+    },
+    redo: () => {
+      console.log('Phase 1: redo not implemented');
+    },
   };
 
   return (
