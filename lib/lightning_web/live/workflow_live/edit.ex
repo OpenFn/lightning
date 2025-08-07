@@ -1593,7 +1593,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("get-current-state", _params, socket) do
-    {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
+    run_id = socket.assigns.selected_run
+
+    %{run_steps: run_steps, history: history} =
+      get_run_steps_and_history(
+        socket.assigns.workflow.id,
+        run_id
+      )
+
+    # don't forget to send update state of disabled
+    {:reply,
+     %{
+       workflow_params: socket.assigns.workflow_params,
+       run_steps: run_steps,
+       run_id: run_id,
+       history: history
+     }, maybe_disable_canvas(socket)}
   end
 
   def handle_event(
@@ -1983,7 +1998,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     # the changeset/validation.
     patches = WorkflowParams.to_patches(params, socket.assigns.workflow_params)
 
-    {:reply, %{patches: patches}, socket |> apply_query_params()}
+    {:reply, %{patches: patches}, socket}
   end
 
   def handle_event("copied_to_clipboard", _, socket) do
@@ -2326,6 +2341,68 @@ defmodule LightningWeb.WorkflowLive.Edit do
       end
 
     assign_changeset(socket, changeset)
+  end
+
+  defp format_step(step) do
+    %{
+      job_id: step.job_id,
+      error_type: step.error_type,
+      exit_reason: step.exit_reason,
+      started_at: step.started_at,
+      finished_at: step.finished_at
+    }
+  end
+
+  defp get_workflow_run_history(workflow_id, includes_run_id) do
+    WorkOrders.get_workorders_with_runs(workflow_id, includes_run_id)
+    |> Enum.map(fn worder ->
+      %{
+        runs:
+          worder.runs
+          |> Enum.map(fn run ->
+            Map.take(run, [:id, :state, :error_type, :started_at, :finished_at])
+          end),
+        version: worder.snapshot.lock_version,
+        state: worder.state,
+        last_activity: worder.last_activity,
+        id: worder.id
+      }
+    end)
+  end
+
+  defp get_run_steps_and_history(workflow_id, run_id) do
+    empty_resp = %{start_from: nil, steps: [], isTrigger: true, inserted_at: nil}
+
+    run_steps =
+      if run_id == nil do
+        empty_resp
+      else
+        WorkOrders.get_run_steps(run_id)
+        |> case do
+          nil ->
+            empty_resp
+
+          %{
+            steps: run_steps,
+            starting_trigger_id: trigger_id,
+            starting_job_id: job_id
+          } =
+              data ->
+            %{
+              start_from: job_id || trigger_id,
+              steps: run_steps,
+              isTrigger: !!trigger_id,
+              inserted_at: data.inserted_at,
+              run_by:
+                if(is_nil(data.created_by), do: nil, else: data.created_by.email)
+            }
+        end
+      end
+      |> Map.update!(:steps, fn steps -> Enum.map(steps, &format_step/1) end)
+
+    history = get_workflow_run_history(workflow_id, run_id)
+
+    %{run_steps: run_steps, history: history}
   end
 
   defp save_workflow(socket, submitted_params) do
@@ -3058,6 +3135,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       params["m"] == "code" ->
         handle_code_mode(socket)
 
+      params["m"] == "history" && !is_nil(params["v"]) ->
+        handle_run_selection_history(
+          socket,
+          params["a"],
+          params["v"],
+          params["s"]
+        )
+
       params["s"] ->
         handle_selection_with_mode(socket, params["s"], params["m"])
 
@@ -3068,7 +3153,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp handle_selection_with_mode(socket, nil, mode) do
     socket
-    |> set_mode(if mode in ["expand", "workflow_input"], do: mode, else: nil)
+    |> set_mode(
+      if mode in ["expand", "workflow_input", "history"], do: mode, else: nil
+    )
   end
 
   defp handle_selection_with_mode(socket, selected_id, mode) do
@@ -3077,7 +3164,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> set_selected_node(type, selected)
         |> set_mode(
-          if mode in ["expand", "workflow_input", "settings"],
+          if mode in ["expand", "workflow_input", "settings", "history"],
             do: mode,
             else: nil
         )
@@ -3110,6 +3197,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  # version_tag will never be nil here
+  defp handle_run_selection_history(socket, run_id, version_tag, selected_id) do
+    workflow_id = socket.assigns.workflow.id
+
+    %{run_steps: run_steps} =
+      get_run_steps_and_history(workflow_id, run_id)
+
+    snapshot = snapshot_by_version(workflow_id, version_tag)
+
+    # pushing the snapshot state before pushing the runs for it
+    socket
+    |> handle_selection_with_mode(selected_id, "history")
+    |> assign(selected_run: run_id)
+    |> assign_workflow(socket.assigns.workflow, snapshot)
+    |> push_patches_applied(socket.assigns.workflow_params, false)
+    |> push_event("patch-runs", %{
+      run_id: run_id,
+      run_steps: run_steps
+    })
+    |> maybe_disable_canvas()
+  end
+
   defp switch_changeset(socket) do
     %{changeset: changeset, workflow: workflow, snapshot: snapshot} =
       socket.assigns
@@ -3133,13 +3242,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
     )
   end
 
-  defp push_patches_applied(socket, initial_params) do
+  defp push_patches_applied(socket, initial_params, inverse \\ true) do
     next_params = socket.assigns.workflow_params
 
     patches =
       WorkflowParams.to_patches(initial_params, next_params)
 
-    inverse_patches = WorkflowParams.to_patches(next_params, initial_params)
+    inverse_patches =
+      if inverse == true,
+        do: WorkflowParams.to_patches(next_params, initial_params),
+        else: []
 
     if length(patches) > 0 do
       socket
@@ -3183,7 +3295,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp set_mode(socket, mode) do
-    if mode in [nil, "expand", "settings", "code", "workflow_input"] do
+    if mode in [nil, "expand", "settings", "code", "workflow_input", "history"] do
       socket
       |> assign(selection_mode: mode)
     else
