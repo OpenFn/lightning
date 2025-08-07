@@ -21,6 +21,16 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.14.1-pre1] - 2025-08-07
+
+### Fixed
+
+- Restored historical migration (⚠️ if you ran migrations on `v2.14.1-pre` by
+  editing your DB directly or dropping your DB first, you must undo those
+  changes by hand before running this migration) and added a migration to change
+  `:workflow_code` to `:code` on the AI Chat Messages table
+  [3495](https://github.com/OpenFn/lightning/issues/3495)
+
 ## [v2.14.1-pre] - 2025-08-06
 
 ### Added
