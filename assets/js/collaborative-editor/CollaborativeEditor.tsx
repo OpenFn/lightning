@@ -1,13 +1,12 @@
-import React from 'react';
-import type { WithActionProps } from '../react/lib/with-props';
-import type { CollaborativeEditorDataProps } from './types/workflow';
 import { SocketProvider } from '../react/contexts/SocketProvider';
+import type { WithActionProps } from '../react/lib/with-props';
+import { ConnectionStatus } from './components/ConnectionStatus';
+import { TodoList } from './components/TodoList';
+import { WorkflowEditor } from './components/WorkflowEditor';
 import { SessionProvider } from './contexts/SessionProvider';
 import { TodoStoreProvider } from './contexts/TodoStoreProvider';
 import { WorkflowStoreProvider } from './contexts/WorkflowStoreProvider';
-import { TodoList } from './components/TodoList';
-import { WorkflowEditor } from './components/WorkflowEditor';
-import { ConnectionStatus } from './components/ConnectionStatus';
+import type { CollaborativeEditorDataProps } from './types/workflow';
 
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
