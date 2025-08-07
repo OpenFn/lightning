@@ -2658,7 +2658,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> push_patches_applied(prev_params)
       |> maybe_disable_canvas()
       |> push_patch(
-        to: Helpers.build_url(socket.assigns, Helpers.standard_params())
+        to: Helpers.build_url(socket.assigns, Helpers.to_latest_params())
       )
     end
   end
@@ -2674,7 +2674,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign_workflow(workflow, snapshot)
     |> push_patches_applied(prev_params)
     |> push_patch(
-      to: Helpers.build_url(socket.assigns, Helpers.standard_params())
+      to: Helpers.build_url(socket.assigns, Helpers.to_latest_params())
     )
   end
 
