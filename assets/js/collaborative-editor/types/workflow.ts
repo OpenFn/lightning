@@ -2,8 +2,9 @@
  * TypeScript interfaces for the collaborative workflow editor system
  */
 
-import type { AwarenessUser } from './session';
+import type { Positions } from '#/workflow-diagram/types';
 import type * as Y from 'yjs';
+import type { AwarenessUser, Session } from './session';
 
 // Job data structure as plain JS object (for React state)
 export interface WorkflowJobData {
@@ -19,7 +20,7 @@ export interface Workflow {
 
 export interface WorkflowStore {
   workflow: Workflow | null;
-  jobs: WorkflowJobData[]; // React state uses plain JS objects for display
+  jobs: Session.Job[]; // React state uses plain JS objects for display
   selectedJobId: string | null;
   selectJob: (id: string | null) => void;
   updateJobName: (id: string, name: string) => void;
@@ -29,6 +30,16 @@ export interface WorkflowStore {
   users: AwarenessUser[];
   isConnected: boolean;
   isSynced: boolean;
+  // WorkflowDiagram compatibility - Phase 1 stubs
+  // getLightningJobs: () => Lightning.JobNode[];
+  triggers: Session.Trigger[];
+  edges: Session.Edge[];
+  disabled: boolean;
+  positions: Positions | null;
+  updatePositions: (positions: Positions) => void;
+  updatePosition: (nodeId: string, position: { x: number; y: number }) => void;
+  undo: () => void;
+  redo: () => void;
 }
 
 export interface YjsCollaborativeHookEvents {
