@@ -15,6 +15,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Helpers
   alias Lightning.Repo
+
+  setup :stub_apollo_unavailable
   alias Lightning.Workflows
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Snapshot
@@ -49,6 +51,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert has_element?(view, "#job-pane-#{job.id}")
 
+      view |> element("#new-credential-button") |> render_click()
+
       assert has_element?(view, "#credential-schema-picker")
       view |> CredentialLiveHelpers.select_credential_type("http")
       view |> CredentialLiveHelpers.click_continue()
@@ -69,6 +73,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           on_error: :raise
         )
 
+      view |> element("#new-credential-button") |> render_click()
+
       view |> CredentialLiveHelpers.select_credential_type("raw")
       view |> CredentialLiveHelpers.click_continue()
 
@@ -84,11 +90,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute has_element?(view, "#credential-form")
 
       assert view
-             |> element(
-               ~S{[name='workflow[jobs][0][project_credential_id]'] option[selected="selected"]}
-             )
-             |> render() =~ "newly created credential",
-             "Should have the project credential selected"
+             |> has_element?(
+               ~S{select[name='credential_selector'] option},
+               "newly created credential"
+             ),
+             "Should have the project credential available"
     end
   end
 
@@ -109,6 +115,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         %{
           patches: [
             %{op: "add", path: "/jobs/0/project_credential_id", value: nil},
+            %{op: "add", path: "/jobs/0/keychain_credential_id", value: nil},
             %{
               op: "add",
               path: "/jobs/0/errors",
@@ -130,7 +137,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                 %{
                   "body" => ["Code editor cannot be empty."],
                   "name" => ["Job name can't be blank."]
-                }
+                },
+                %{}
               ]
             }
           ]
@@ -145,13 +153,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
-      select_template(view, "base-webhook-template")
-
-      assert view |> push_patches_to_view(initial_workflow_patchset(project))
+      {view, parsed_template} = select_template(view, "base-webhook-template")
 
       workflow_name = view |> get_workflow_params() |> Map.get("name")
 
-      assert workflow_name == ""
+      assert workflow_name == parsed_template["name"]
 
       # save button is not present
       refute view
@@ -182,7 +188,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "form#choose-workflow-template-form")
 
       # click continue
-      view |> element("button#create_workflow_btn") |> render_click()
+      view |> render_click("save")
+
+      workflow = get_assigns(view) |> Map.get(:workflow)
 
       # now let's fill in the name
       workflow_name = "My Workflow"
@@ -208,7 +216,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # selecting a job now opens the panel
       {job, _, _} = select_first_job(view)
       path = assert_patch(view)
-      assert path == ~p"/projects/#{project.id}/w/new?s=#{job.id}&v=0"
+
+      assert path ==
+               ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&v=#{workflow.lock_version - 1}"
+
       assert render(view) =~ "Job Name"
       assert has_element?(view, "input[name='workflow[jobs][0][name]']")
 
@@ -219,6 +230,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> selected_adaptor_version_element(job) |> render() =~
                ~r(value="@openfn/[a-z-]+@latest"),
              "should have @latest selected by default"
+
+      view |> element("#new-credential-button") |> render_click()
 
       view |> CredentialLiveHelpers.select_credential_type("dhis2")
 
@@ -233,7 +246,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> CredentialLiveHelpers.click_save()
 
-      assert view |> selected_credential(job) =~ "My Credential"
+      assert view |> selected_credential_name(job) == "My Credential"
 
       # Editing the Jobs' body
       view |> click_edit(job)
@@ -273,9 +286,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         1,
-        fn %{type: :activate_workflow}, _context ->
-          :ok
-        end
+        fn %{type: :activate_workflow}, _context -> :ok end
       )
 
       # subscribe to workflow events
@@ -509,12 +520,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new")
 
-      select_template(view, "base-cron-template")
+      {view, _parsed_workflow} = select_template(view, "base-cron-template")
 
-      assert view |> push_patches_to_view(initial_workflow_patchset(project))
-
-      # click continue
-      view |> element("button#create_workflow_btn") |> render_click()
+      view |> render_click("save")
 
       workflow_name = "My Workflow"
 
@@ -525,6 +533,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {job, _, _} = view |> select_first_job()
 
       view |> fill_job_fields(job, %{name: "My Job"})
+
+      view |> element("#new-credential-button") |> render_click()
 
       view |> CredentialLiveHelpers.select_credential_type("dhis2")
 
@@ -544,7 +554,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> change_editor_text("some body")
 
-      trigger_save(view)
+      view |> render_click("save")
 
       assert %{id: workflow_id} =
                Lightning.Repo.one(
@@ -556,13 +566,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       audit_query = from(a in Audit, where: a.event == "snapshot_created")
 
-      audit_event = Lightning.Repo.one(audit_query)
+      audit_events = Lightning.Repo.all(audit_query)
 
-      assert %{
-               actor_id: ^user_id,
-               item_id: ^workflow_id,
-               item_type: "workflow"
-             } = audit_event
+      # There should be 2 audit events - one for initial creation, one for save-and-sync
+      assert length(audit_events) == 2
+
+      Enum.each(audit_events, fn audit_event ->
+        assert %{
+                 actor_id: ^user_id,
+                 item_id: ^workflow_id,
+                 item_type: "workflow"
+               } = audit_event
+      end)
     end
 
     @tag role: :viewer
@@ -774,7 +789,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> has_element?(
-               "[id='canvas-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at)}']",
+               "[id='canvas-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at, "%F at %T")}']",
                version
              )
 
@@ -798,15 +813,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         assert view |> has_element?("[id='adaptor-version'][disabled]")
 
         assert view
-               |> has_element?(
-                 "select[name='snapshot[jobs][#{idx}][project_credential_id]'][disabled]"
-               )
+               |> has_element?("select[name='credential_selector'][disabled]")
 
         view |> click_edit(job)
 
         assert view
                |> has_element?(
-                 "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at)}']",
+                 "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at, "%F at %T")}']",
                  version
                )
 
@@ -1045,7 +1058,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> has_element?(
-               "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(run_1.snapshot.inserted_at)}']",
+               "[id='inspector-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(run_1.snapshot.inserted_at, "%F at %T")}']",
                run_1_version
              )
 
@@ -1235,8 +1248,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> form("#workflow-form", %{"workflow" => %{"concurrency" => "5"}})
              |> render_change() =~ "No more than 5 runs at a time"
 
-      assert view |> element("#workflow-form") |> render_submit() =~
-               "Workflow saved"
+      # the current implmentation simply sends `save` the event, it does
+      # not submit the form. I'm mimicking that here
+      assert view |> render_submit("save") =~ "Workflow saved"
+
+      assert Lightning.Repo.reload(workflow).concurrency == 5
 
       assert assert_patch(view) =~
                ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
@@ -1363,8 +1379,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert workflow.enable_job_logs == true
 
-        # submit the form
-        view |> element("#workflow-form") |> render_submit()
+        # send a save event
+        view |> render_submit("save")
 
         assert assert_patch(view) =~
                  ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
@@ -2445,6 +2461,93 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert capture_log(fun) =~ ~r/foo-bar-event/
       assert capture_log(fun) =~ ~r/#{workflow_id}/
     end
+
+    @tag role: :editor
+    test "can change job name, adaptor, version, and credential sequentially", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential: build(:credential)
+        )
+
+      keychain_credential =
+        insert(:keychain_credential, project: project)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
+        )
+
+      # Select the first job
+      job = hd(workflow.jobs)
+      view |> select_node(job, workflow.lock_version)
+
+      # Step 1: Change job name
+      new_job_name = "Updated Job Name"
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{
+          "jobs" => %{
+            "0" => %{
+              "name" => new_job_name
+            }
+          }
+        }
+      })
+      |> render_change()
+
+      # Step 2: Change adaptor
+      view |> change_adaptor(job, "@openfn/language-dhis2")
+      view |> trigger_save()
+
+      # Step 3: Change adaptor version to something specific (not @latest)
+      specific_version = "@openfn/language-dhis2@3.0.4"
+      view |> change_adaptor_version(specific_version)
+
+      assert view
+             |> credential_options()
+             |> Enum.reject(&(&1.text == "")) ==
+               [
+                 %{
+                   text: project_credential.credential.name,
+                   value: project_credential.id
+                 },
+                 %{text: keychain_credential.name, value: keychain_credential.id}
+               ]
+
+      view |> change_credential(job, project_credential)
+
+      assert view |> selected_credential_name() ==
+               project_credential.credential.name
+
+      view |> trigger_save()
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job.id, v: workflow.lock_version]}"
+      )
+
+      job = Lightning.Repo.reload(job)
+      assert job.adaptor == specific_version
+      assert job.name == new_job_name
+      assert job.project_credential_id == project_credential.id
+
+      view |> change_credential(job, keychain_credential)
+      assert view |> selected_credential_name() == keychain_credential.name
+
+      view |> trigger_save()
+
+      job = Lightning.Repo.reload(job)
+      assert job.project_credential_id == nil
+      assert job.keychain_credential_id == keychain_credential.id
+    end
   end
 
   describe "Save and Sync to Github" do
@@ -2490,12 +2593,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
-      select_template(view, "base-webhook-template")
+      {view, _parsed_workflow} = select_template(view, "base-webhook-template")
 
-      assert view |> push_patches_to_view(initial_workflow_patchset(project))
+      view |> render_click("save")
 
-      # click continue
-      view |> element("button#create_workflow_btn") |> render_click()
+      workflow = get_assigns(view) |> Map.get(:workflow)
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}"
+      )
 
       workflow_name = "My Workflow"
 
@@ -2656,6 +2763,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute has_element?(view, "#github-sync-modal")
     end
 
+    @tag :capture_log
     test "does not close the github modal when Github sync fails", %{
       conn: conn,
       project: project,
@@ -2719,7 +2827,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id, v: workflow.lock_version]}"
       )
 
       assert render(view) =~
@@ -3578,6 +3686,362 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_redirected(view, ~p"/projects/#{project}/runs/#{created_run}")
     end
+
+    test "searches for dataclips by name prefix",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create named dataclips
+      %{id: named_dataclip_id} =
+        insert(:dataclip,
+          name: "My Test Dataclip",
+          body: %{"body-field" => "body-value"},
+          type: :http_request,
+          project: project
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      %{id: other_named_dataclip_id} =
+        insert(:dataclip,
+          name: "Another Dataclip",
+          body: %{"body-field" => "body-value2"},
+          type: :http_request,
+          project: project
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      # Create dataclip without name
+      insert(:dataclip,
+        name: nil,
+        body: %{"body-field" => "body-value3"},
+        type: :http_request,
+        project: project
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      # Test searching by name prefix "My"
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=My",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [%{id: ^named_dataclip_id}]})
+
+      # Test searching by name prefix "Another"
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=Another",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [%{id: ^other_named_dataclip_id}]})
+
+      # Test case insensitive search
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=my",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: [%{id: ^named_dataclip_id}]})
+
+      # Test no matches
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "query=nonexistent",
+          "limit" => 5
+        }
+      )
+
+      assert_reply(view, %{dataclips: []})
+    end
+
+    test "searches for dataclips using named_only filter",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create named dataclips
+      %{id: named_dataclip1_id} =
+        insert(:dataclip,
+          name: "First Named",
+          body: %{"body-field" => "body-value1"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      %{id: named_dataclip2_id} =
+        insert(:dataclip,
+          name: "Second Named",
+          body: %{"body-field" => "body-value2"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      # Create dataclips without names
+      insert(:dataclip,
+        name: nil,
+        body: %{"body-field" => "body-value3"},
+        request: %{"headers" => "list"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      insert(:dataclip,
+        name: nil,
+        body: %{"body-field" => "body-value4"},
+        request: %{"headers" => "list"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      # Test named_only filter
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "named_only=true",
+          "limit" => 10
+        }
+      )
+
+      # Should return only named dataclips, ordered by inserted_at desc
+      assert_reply(view, %{
+        dataclips: [%{id: ^named_dataclip2_id}, %{id: ^named_dataclip1_id}]
+      })
+
+      # Test without named_only filter - should return all dataclips
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "",
+          "limit" => 10
+        }
+      )
+
+      # Should return all 4 dataclips
+      assert_reply(view, %{dataclips: dataclips})
+      assert length(dataclips) == 4
+    end
+
+    test "update-dataclip-name event fails when user cannot edit workflow",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      # Set up user with viewer permission
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create a dataclip
+      dataclip =
+        insert(:dataclip,
+          name: "Original Name",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+
+      # Try to update the dataclip name
+      render_hook(
+        view,
+        "update-dataclip-name",
+        %{
+          "dataclip_id" => dataclip.id,
+          "name" => "New Name"
+        }
+      )
+
+      # Should return error message
+      assert_reply(view, %{
+        error: "You are not authorized to perform this action"
+      })
+
+      # Verify dataclip name was not changed in database
+      updated_dataclip = Lightning.Repo.reload!(dataclip)
+      assert updated_dataclip.name == "Original Name"
+    end
+
+    test "update-dataclip-name event fails when dataclip name is already in use",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create a dataclip
+      dataclip =
+        insert(:dataclip,
+          name: "Original Name",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request,
+          project: project
+        )
+
+      another_dataclip =
+        insert(:dataclip,
+          name: "Another Name",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request,
+          project: project
+        )
+
+      # Try to update the dataclip name
+      render_hook(
+        view,
+        "update-dataclip-name",
+        %{
+          "dataclip_id" => dataclip.id,
+          "name" => another_dataclip.name
+        }
+      )
+
+      # Should return error message
+      assert_reply(view, %{
+        error: "dataclip name already in use"
+      })
+
+      # Verify dataclip name was not changed in database
+      updated_dataclip = Lightning.Repo.reload!(dataclip)
+      assert updated_dataclip.name == "Original Name"
+    end
+
+    test "update-dataclip-name event updates dataclip name successfully",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      # Create a dataclip
+      dataclip =
+        insert(:dataclip,
+          name: "Original Name",
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+
+      # Update the dataclip name
+      assert render_hook(
+               view,
+               "update-dataclip-name",
+               %{
+                 "dataclip_id" => dataclip.id,
+                 "name" => "New Name"
+               }
+             ) =~ "Label created. Dataclip will be saved permanently"
+
+      # Should return updated dataclip
+      assert_reply(view, %{dataclip: %{name: "New Name"}})
+
+      # Verify dataclip name was changed in database
+      updated_dataclip = Lightning.Repo.reload!(dataclip)
+      assert updated_dataclip.name == "New Name"
+
+      audit =
+        Lightning.Repo.get_by(Lightning.Auditing.Audit,
+          event: "label_created",
+          item_id: dataclip.id
+        )
+
+      assert match?(
+               %{
+                 before: %{"name" => "Original Name"},
+                 after: %{"name" => "New Name"}
+               },
+               audit.changes
+             )
+
+      # clear the dataclip name
+      assert render_hook(
+               view,
+               "update-dataclip-name",
+               %{
+                 "dataclip_id" => dataclip.id,
+                 "name" => ""
+               }
+             ) =~
+               "Label deleted. Dataclip will be purged when your retention policy limit is reached"
+
+      audit =
+        Lightning.Repo.get_by(Lightning.Auditing.Audit,
+          event: "label_deleted",
+          item_id: dataclip.id
+        )
+
+      assert match?(
+               %{
+                 before: %{"name" => "New Name"},
+                 after: %{"name" => nil}
+               },
+               audit.changes
+             )
+    end
   end
 
   defp log_viewer_selected_level(log_viewer) do
@@ -3624,5 +4088,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     dataclip
     |> Map.put(:body, body)
     |> Map.put(:request, nil)
+  end
+
+  defp stub_apollo_unavailable(_context) do
+    stub(Lightning.MockConfig, :apollo, fn key ->
+      case key do
+        :endpoint -> "http://localhost:3000"
+        :ai_assistant_api_key -> "test_api_key"
+      end
+    end)
+
+    stub(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
+      {:error, :econnrefused}
+    end)
+
+    :ok
   end
 end

@@ -133,7 +133,10 @@ defmodule LightningWeb.DashboardLive.Components do
                 </.td>
                 <.td>
                   <%= if project.last_updated_at do %>
-                    {Lightning.Helpers.format_date(project.last_updated_at)}
+                    <Common.datetime
+                      datetime={project.last_updated_at}
+                      format={:relative}
+                    />
                   <% else %>
                     N/A
                   <% end %>

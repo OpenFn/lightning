@@ -101,32 +101,52 @@ defmodule Lightning.Credentials.Schema do
   defp error_to_changeset(%{path: path, error: error}, changeset) do
     field = String.slice(path, 2..-1//1) |> String.to_existing_atom()
 
-    case error do
-      %{expected: format} when format in @expected_formats ->
-        error_msg = Map.fetch!(@error_messages, format)
-        Changeset.add_error(changeset, field, error_msg)
+    handle_error(error, changeset, field)
+  end
 
-      %{any_of: formats} ->
-        formats =
-          formats
-          |> Enum.map_join(" or ", fn
-            "uri" -> "a URI"
-            <<"ipv", char>> -> "an IPv#{char - ?0} address"
-          end)
+  defp handle_error(%{expected: format}, changeset, field)
+       when format in @expected_formats do
+    error_msg = Map.fetch!(@error_messages, format)
+    Changeset.add_error(changeset, field, error_msg)
+  end
 
-        Changeset.add_error(changeset, field, "expected to be #{formats}")
+  defp handle_error(%{any_of: formats}, changeset, field) do
+    formatted_types =
+      formats
+      |> Enum.map_join(" or ", fn
+        "uri" -> "a URI"
+        <<"ipv", char>> -> "an IPv#{char - ?0} address"
+      end)
 
-      %{missing: fields} ->
-        Enum.reduce(fields, changeset, fn field, changeset ->
-          Changeset.add_error(changeset, field, "can't be blank")
-        end)
+    Changeset.add_error(changeset, field, "expected to be #{formatted_types}")
+  end
 
-      %{actual: 0, expected: _} ->
-        Changeset.add_error(changeset, field, "can't be blank")
+  defp handle_error(%{missing: fields}, changeset, _field) do
+    Enum.reduce(fields, changeset, fn field, changeset ->
+      Changeset.add_error(changeset, field, "can't be blank")
+    end)
+  end
 
-      %{actual: "null", expected: expected} when is_list(expected) ->
-        Changeset.add_error(changeset, field, "can't be blank")
+  defp handle_error(%{actual: 0, expected: _}, changeset, field) do
+    Changeset.add_error(changeset, field, "can't be blank")
+  end
+
+  defp handle_error(%{actual: "null", expected: expected}, changeset, field)
+       when is_list(expected) do
+    Changeset.add_error(changeset, field, "can't be blank")
+  end
+
+  defp handle_error(%{expected: ["object"], actual: "string"}, changeset, field) do
+    value = Changeset.get_field(changeset, field)
+
+    case validate_json_object(value) do
+      :ok -> changeset
+      :error -> Changeset.add_error(changeset, field, "invalid JSON")
     end
+  end
+
+  defp handle_error(%{expected: ["object"], actual: _}, changeset, field) do
+    Changeset.add_error(changeset, field, "must be an object")
   end
 
   # can be ignored since not near to atom limit
@@ -136,7 +156,11 @@ defmodule Lightning.Credentials.Schema do
     |> Map.get("properties", [])
     |> Enum.map(fn {field, properties} ->
       # credo:disable-for-next-line
-      type = properties |> Map.get("type", "string") |> String.to_atom()
+      type =
+        properties
+        |> Map.get("type", "string")
+        |> then(fn type -> if type == "object", do: "map", else: type end)
+        |> String.to_atom()
 
       {String.to_existing_atom(field), type}
     end)
@@ -152,4 +176,14 @@ defmodule Lightning.Credentials.Schema do
         Map.put(acc, key, value)
     end)
   end
+
+  defp validate_json_object(value) when is_binary(value) do
+    case Jason.decode(value) do
+      {:ok, decoded} when is_map(decoded) -> :ok
+      {:ok, _} -> :error
+      {:error, _} -> :error
+    end
+  end
+
+  defp validate_json_object(_), do: :error
 end

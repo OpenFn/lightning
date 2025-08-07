@@ -498,13 +498,12 @@ defmodule LightningWeb.DashboardLiveTest do
              collaborator_count |> to_string()
            )
 
-    formatted_date =
-      Lightning.Helpers.format_date(max_updated_at)
+    formatted_date = Calendar.strftime(max_updated_at, "%Y-%m-%d %H:%M:%S UTC")
 
     assert has_element?(
              view,
-             "tr#projects-table-row-#{project.id} > td:nth-child(5)",
-             formatted_date
+             "tr#projects-table-row-#{project.id} > td:nth-child(5) span[data-iso-timestamp='#{formatted_date}']",
+             NaiveDateTime.to_iso8601(max_updated_at)
            )
   end
 

@@ -17,6 +17,7 @@ defmodule Lightning.Credentials.Credential do
   schema "credentials" do
     field :name, :string
     field :body, Lightning.Encrypted.Map, redact: true
+    field :external_id, :string
     field :production, :boolean, default: false
     field :schema, :string
     field :scheduled_deletion, :utc_datetime
@@ -37,6 +38,7 @@ defmodule Lightning.Credentials.Credential do
     |> cast(attrs, [
       :name,
       :body,
+      :external_id,
       :production,
       :user_id,
       :oauth_token_id,

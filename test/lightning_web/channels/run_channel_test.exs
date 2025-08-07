@@ -568,6 +568,7 @@ defmodule LightningWeb.RunChannelTest do
       assert Map.has_key?(response, "expires_at")
     end
 
+    @tag capture_log: true
     test "translates error messages properly", %{
       credential: credential,
       user: user

@@ -14,6 +14,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   alias Lightning.WorkflowTemplates
   alias LightningWeb.API.ProvisioningJSON
   alias LightningWeb.Live.AiAssistant.ModeRegistry
+  alias Phoenix.LiveView.JS
+
+  require Logger
 
   @impl true
   def mount(socket) do
@@ -26,7 +29,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> assign(search_term: "")
      |> assign(chat_session_id: nil)
      |> assign(selected_template: nil)
-     |> assign(template_generated: nil)
+     |> assign(workflow_code: nil)
+     |> assign(session_or_message: nil)
      |> assign(validation_failed: true)
      |> assign(selected_method: "template")
      |> assign(base_templates: base_templates)
@@ -36,25 +40,23 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   end
 
   @impl true
-  def update(%{action: :template_selected, template: nil}, socket) do
-    notify_parent(:canvas_state_changed, %{
-      show_canvas_placeholder: true,
-      show_template_tooltip: nil
-    })
-
-    {:ok, socket |> assign(template_generated: nil)}
-  end
-
-  def update(%{action: :template_selected, template: template}, socket) do
-    notify_parent(:canvas_state_changed, %{
-      show_canvas_placeholder: false,
-      show_template_tooltip: nil
-    })
-
+  def update(
+        %{
+          action: :workflow_code_generated,
+          workflow_code: code,
+          session_or_message: session_or_message
+        },
+        socket
+      ) do
     {:ok,
      socket
-     |> assign(template_generated: template)
-     |> push_event("template_selected", %{template: template.code})}
+     |> assign(session_or_message: session_or_message)
+     |> assign(workflow_code: code)
+     |> then(fn s ->
+       if code,
+         do: push_event(s, "template_selected", %{template: code}),
+         else: s
+     end)}
   end
 
   def update(assigns, socket) do
@@ -68,29 +70,15 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   @impl true
   def handle_event("choose-another-method", %{"method" => method}, socket) do
+    socket =
+      assign(socket, changeset: Workflow.changeset(socket.assigns.workflow, %{}))
+
     case method do
       "ai" ->
         handle_ai_method_selection(socket)
 
       _ ->
         handle_regular_method_selection(socket, method)
-    end
-  end
-
-  def handle_event("create_workflow", _, socket) do
-    case create_disabled?(socket.assigns) do
-      true ->
-        {:noreply,
-         socket
-         |> put_flash(:error, error_flash_message(socket.assigns))
-         |> push_patch(
-           to:
-             "/projects/#{socket.assigns.project.id}/w/new?method=#{socket.assigns.selected_method}"
-         )}
-
-      false ->
-        notify_parent(:toggle_workflow_panel, %{})
-        {:noreply, socket}
     end
   end
 
@@ -135,16 +123,13 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         show_template_tooltip: template_for_tooltip
       })
 
-      notify_parent(:form_changed, %{
-        "workflow" => params,
-        "opts" => [push_patches: false]
-      })
+      notify_parent(:workflow_params_changed, %{"workflow" => params})
 
       {:noreply,
        socket
        |> assign(changeset: changeset)
        |> assign(validation_failed: false)
-       |> push_event("workflow-validated", %{"state" => params})
+       |> push_event("workflow-validated", %{})
        |> push_event("state-applied", %{"state" => params})
        |> push_event("force-fit", %{})}
     else
@@ -155,6 +140,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
       {:noreply,
        socket
+       |> assign(changeset: changeset)
        |> assign(validation_failed: true)
        |> assign_error_changeset(changeset, event_name)
        |> push_event(
@@ -162,6 +148,15 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
          ProvisioningJSON.error(%{changeset: changeset})
        )}
     end
+  end
+
+  def handle_event("template-parse-error", %{"error" => error}, socket) do
+    notify_parent(:canvas_state_changed, %{
+      show_canvas_placeholder: true,
+      show_template_tooltip: nil
+    })
+
+    {:noreply, send_error(socket, error)}
   end
 
   def handle_event(
@@ -182,6 +177,20 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   def handle_event(_event, _params, socket) do
     {:noreply, socket}
+  end
+
+  defp send_error(socket, error) do
+    Logger.error("Workflow code parse failed: #{inspect(error)}")
+
+    send_update(
+      LightningWeb.AiAssistant.Component,
+      id: socket.assigns.ai_assistant_component_id,
+      action: :code_error,
+      error: error,
+      session_or_message: socket.assigns.session_or_message
+    )
+
+    socket
   end
 
   defp ensure_unique_name(params, project) do
@@ -258,7 +267,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   defp filter_templates(templates, _), do: templates
 
   defp notify_parent(action, payload) do
-    send(self(), {:workflow_component_event, action, payload})
+    send(self(), {:ai_assistant, action, payload})
   end
 
   defp handle_ai_method_selection(socket) do
@@ -280,7 +289,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
            |> assign(search_term: nil)
            |> push_patch(
              to:
-               "/projects/#{socket.assigns.project.id}/w/new?method=ai&chat=#{session_id}"
+               "/projects/#{socket.assigns.project.id}/w/new?method=ai&w-chat=#{session_id}"
            )}
 
         {:error, reason} ->
@@ -315,8 +324,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
     session_assigns = %{
       project: assigns.project,
-      current_user: assigns.current_user,
-      mode: :workflow
+      user: assigns.user
     }
 
     case handler.create_session(session_assigns, input_value) do
@@ -363,10 +371,14 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             :if={@selected_method == "ai"}
             parent_id={@id}
             project={@project}
-            current_user={@current_user}
+            user={@user}
+            can_edit={@can_edit}
             chat_session_id={@chat_session_id}
+            query_params={@query_params}
+            workflow_code={@workflow_code}
             base_url={@base_url}
             search_term={@search_term}
+            ai_assistant_component_id={@ai_assistant_component_id}
           />
         </div>
         <div class="px-4 py-4 sm:p-3 flex flex-row justify-end gap-2 h-max border-t">
@@ -399,8 +411,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             type="button"
             theme="primary"
             class="inline-flex gap-x-1 px-4"
-            phx-click="create_workflow"
-            phx-target={@myself}
+            {if !create_disabled?(assigns), do: ["phx-click": JS.push("save")], else: []}
+            phx-disconnected={JS.set_attribute({"disabled", ""})}
+            phx-connected={
+              !create_disabled?(assigns) && JS.remove_attribute("disabled")
+            }
             disabled={create_disabled?(assigns)}
           >
             Create
@@ -630,7 +645,36 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     """
   end
 
+  @spec build_ai_callbacks(String.t()) :: map()
+  defp build_ai_callbacks(parent_id) do
+    %{
+      on_session_close: fn ->
+        notify_parent(:canvas_state_changed, %{
+          show_canvas_placeholder: true,
+          show_template_tooltip: nil
+        })
+
+        send_workflow_update(parent_id, nil, nil)
+      end,
+      on_session_open: &send_workflow_update(parent_id, &1, &2),
+      on_message_selected: &send_workflow_update(parent_id, &1, &2),
+      on_message_received: &send_workflow_update(parent_id, &1, &2)
+    }
+  end
+
+  @spec send_workflow_update(String.t(), String.t() | nil, any()) :: :ok
+  defp send_workflow_update(parent_id, code, session_or_message) do
+    send_update(__MODULE__,
+      id: parent_id,
+      action: :workflow_code_generated,
+      workflow_code: code,
+      session_or_message: session_or_message
+    )
+  end
+
   defp create_workflow_via_ai(assigns) do
+    assigns = assign(assigns, :callbacks, build_ai_callbacks(assigns.parent_id))
+
     ~H"""
     <div
       class="flex-grow overflow-hidden"
@@ -640,16 +684,16 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       <.live_component
         module={LightningWeb.AiAssistant.Component}
         mode={:workflow}
-        can_edit_workflow={true}
+        can_edit={@can_edit}
         project={@project}
-        current_user={@current_user}
+        user={@user}
         chat_session_id={@chat_session_id}
-        query_params={%{"method" => "ai"}}
+        code={@workflow_code}
+        query_params={@query_params}
         base_url={@base_url}
-        input_value={@search_term}
         action={if(@chat_session_id, do: :show, else: :new)}
-        parent_component_id={@parent_id}
-        id="workflow-ai-assistant"
+        callbacks={@callbacks}
+        id={@ai_assistant_component_id}
       />
     </div>
     """
@@ -718,20 +762,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     case assigns.selected_method do
       "import" -> !assigns.changeset.valid? or assigns.validation_failed
       "template" -> is_nil(assigns.selected_template)
-      "ai" -> is_nil(assigns.template_generated)
-    end
-  end
-
-  defp error_flash_message(assigns) do
-    case assigns.selected_method do
-      "import" ->
-        "Please fix the validation errors before creating the workflow."
-
-      "template" ->
-        "Please select a template to continue."
-
-      "ai" ->
-        "Please generate a workflow using the AI assistant first."
+      "ai" -> is_nil(assigns.workflow_code) or !assigns.changeset.valid?
     end
   end
 end

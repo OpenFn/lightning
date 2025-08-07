@@ -44,7 +44,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   """
   def apply_patches(current_params, patches) do
     Jsonpatch.apply_patch(
-      patches |> Enum.map(&Jsonpatch.Mapper.from_map/1),
+      patches,
       current_params
     )
   end
@@ -58,7 +58,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   """
   def to_patches(initial_params, target_params) do
     Jsonpatch.diff(initial_params, target_params)
-    |> Jsonpatch.Mapper.to_map()
   end
 
   @doc """
@@ -87,7 +86,14 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   defp to_serializable(%Ecto.Changeset{} = changeset, accessor)
        when is_function(accessor) do
     Map.merge(
-      changeset |> to_serializable([:project_id, :name, :positions]),
+      changeset
+      |> to_serializable([
+        :project_id,
+        :name,
+        :concurrency,
+        :enable_job_logs,
+        :positions
+      ]),
       %{
         jobs:
           changeset
@@ -98,7 +104,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :name,
             :adaptor,
             :body,
-            :project_credential_id
+            :project_credential_id,
+            :keychain_credential_id
           ]),
         triggers:
           changeset

@@ -10,6 +10,7 @@ defmodule Lightning.Workflows.Snapshot do
 
   alias Ecto.Multi
 
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Workflows.WebhookAuthMethod
@@ -39,6 +40,9 @@ defmodule Lightning.Workflows.Snapshot do
       belongs_to :project_credential, ProjectCredential, define_field: false
       field :project_credential_id, :binary_id
       has_one :credential, through: [:project_credential, :credential]
+
+      belongs_to :keychain_credential, KeychainCredential, define_field: false
+      field :keychain_credential_id, :binary_id
 
       field :inserted_at, :utc_datetime_usec
       field :updated_at, :utc_datetime_usec

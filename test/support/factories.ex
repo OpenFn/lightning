@@ -215,6 +215,16 @@ defmodule Lightning.Factories do
     }
   end
 
+  def keychain_credential_factory do
+    %Lightning.Credentials.KeychainCredential{
+      name: sequence(:credential_name, &"keychain-credential-#{&1}"),
+      path: "$.user_id",
+      created_by: build(:user),
+      project: build(:project),
+      default_credential: nil
+    }
+  end
+
   def oauth_client_factory do
     %Lightning.Credentials.OauthClient{
       name: sequence(:oauth_client_name, &"oauth-client#{&1}"),
@@ -269,6 +279,18 @@ defmodule Lightning.Factories do
     }
   end
 
+  def with_personal_access_token(user_token) do
+    %{
+      user_token
+      | token:
+          Lightning.Tokens.PersonalAccessToken.generate_and_sign!(
+            %{"sub" => "user:#{user_token.user.id}"},
+            Lightning.Config.token_signer()
+          ),
+        context: "api"
+    }
+  end
+
   def backup_code_factory do
     %Lightning.Accounts.UserBackupCode{
       code: Lightning.Accounts.UserBackupCode.generate_backup_code()
@@ -314,7 +336,6 @@ defmodule Lightning.Factories do
     %Lightning.AiAssistant.ChatSession{
       id: fn -> Ecto.UUID.generate() end,
       title: sequence(:session_title, &"Chat Session #{&1}"),
-      # Explicit default
       session_type: "job_code",
       expression: "fn(state => state)",
       adaptor: "@openfn/language-common@latest",
@@ -336,18 +357,14 @@ defmodule Lightning.Factories do
     build(:chat_session, %{
       session_type: "workflow_template",
       project: build(:project),
-      # Workflow sessions don't have jobs
       job: nil,
-      # Workflow sessions don't have expressions
       expression: nil,
-      # Workflow sessions don't have adaptors
       adaptor: nil,
       title:
         sequence(:workflow_session_title, &"Workflow Template Session #{&1}")
     })
   end
 
-  # Enhanced chat_message_factory with better defaults
   def chat_message_factory do
     %Lightning.AiAssistant.ChatMessage{
       content: sequence(:message_content, &"Message content #{&1}"),
@@ -355,7 +372,7 @@ defmodule Lightning.Factories do
       status: :success,
       is_deleted: false,
       is_public: false,
-      workflow_code: nil,
+      code: nil,
       user: build(:user),
       chat_session: build(:chat_session)
     }
@@ -382,7 +399,7 @@ defmodule Lightning.Factories do
   def workflow_assistant_message_factory do
     build(:assistant_chat_message, %{
       content: "Here's your generated workflow:",
-      workflow_code: """
+      code: """
       name: Generated Workflow
       jobs:
         process_data:
@@ -557,7 +574,7 @@ defmodule Lightning.Factories do
     |> with_edge({trigger, job})
   ```
   """
-  def with_job(workflow, job) do
+  def with_job(workflow, job \\ %{}) do
     %{
       workflow
       | jobs: merge_assoc(workflow.jobs, merge_attributes(job, %{workflow: nil}))

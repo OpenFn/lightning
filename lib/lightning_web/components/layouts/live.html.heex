@@ -61,7 +61,10 @@
       >
         {@inner_content}
       </.live_nav_block>
-      <.live_component module={LightningWeb.ModalPortal} id="modal-portal" />
+      <.live_component
+        module={LightningWeb.LiveComponentPortal}
+        id="component-portal"
+      />
       <.live_component
         :if={assigns[:account_confirmation_required?]}
         module={LightningWeb.AccountConfirmationModal}

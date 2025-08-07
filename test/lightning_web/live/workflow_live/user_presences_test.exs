@@ -6,6 +6,12 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
   import Lightning.Factories
   import Eventually
 
+  setup do
+    Lightning.AiAssistantHelpers.stub_online()
+
+    :ok
+  end
+
   describe "When only one visitor, no presence is detected" do
     test "in canvas", %{conn: conn} do
       amy =

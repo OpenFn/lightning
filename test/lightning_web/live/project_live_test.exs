@@ -26,9 +26,7 @@ defmodule LightningWeb.ProjectLiveTest do
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
 
-  @create_attrs %{
-    raw_name: "some name"
-  }
+  @create_attrs %{raw_name: "some name"}
   @invalid_attrs %{raw_name: nil}
 
   describe "Index as a regular user" do
@@ -711,7 +709,7 @@ defmodule LightningWeb.ProjectLiveTest do
           "#project_users_table tbody tr"
         )
 
-      # First click sorts in descending order: Charlie, Bob, Alice  
+      # First click sorts in descending order: Charlie, Bob, Alice
       assert charlie_pos < bob_pos
       assert bob_pos < alice_pos
     end
@@ -963,7 +961,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Name"
       assert html =~ "Type"
       assert html =~ "Owner"
-      assert html =~ "Production"
+      assert html =~ "Environment"
 
       assert html =~
                credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
@@ -994,6 +992,8 @@ defmodule LightningWeb.ProjectLiveTest do
         credential_name = Lightning.Name.generate()
 
         refute html =~ credential_name
+
+        view |> element("#new-credential-option-menu-item") |> render_click()
 
         view |> select_credential_type("http")
         view |> click_continue()
@@ -1043,6 +1043,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute html =~ credential_name
 
+      # button is not disabled
+      refute view |> element("#new-credential-option-menu-item") |> render() =~
+               "disabled"
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+
       view |> select_credential_type("http")
       view |> click_continue()
 
@@ -1078,38 +1084,24 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :viewer}]
         )
 
-      {:ok, view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
-      credential_name = "My Credential"
+      # button appears disabled
+      assert view |> element("#new-credential-option-menu-item") |> render() =~
+               "cursor-not-allowed"
 
-      refute html =~ credential_name
+      # send event anyway
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("show_modal", %{"target" => "new_credential"})
 
-      view |> select_credential_type("http")
-      view |> click_continue()
+      # for some reason the #credentials is not included in the url in tests
+      assert_patched(view, ~p"/projects/#{project}/settings")
 
-      assert view
-             |> fill_credential(%{
-               name: credential_name,
-               body: %{
-                 username: "foo",
-                 password: "bar",
-                 baseUrl: "http://localhost"
-               }
-             })
-
-      {:ok, _view, html} =
-        view
-        |> click_save()
-        |> follow_redirect(
-          conn,
-          ~p"/projects/#{project}/settings#credentials"
-        )
-
-      assert html =~ "You are not authorized to perform this action."
-      refute html =~ credential_name
+      assert render(view) =~ "You are not authorized to perform this action"
     end
 
     test "click on cancel button to close credential creation modal", %{
@@ -1119,21 +1111,327 @@ defmodule LightningWeb.ProjectLiveTest do
       project =
         insert(:project,
           name: "project-1",
-          project_users: [%{user_id: user.id, role: :viewer}]
+          project_users: [%{user_id: user.id, role: :owner}]
         )
 
-      credential_name = "My Credential"
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # open modal
+      view |> element("#new-credential-option-menu-item") |> render_click()
+
+      assert has_element?(view, "#new-credential-modal")
+
+      view
+      |> element("#cancel-credential-type-picker", "Cancel")
+      |> render_click()
+
+      refute has_element?(view, "#new-credential-modal")
+    end
+
+    test "project admin can see keychain credential option in dropdown menu",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Verify the new keychain credential option is in the page
+      assert has_element?(
+               view,
+               "#new-keychain-credential-option-menu-item",
+               "Keychain"
+             )
+    end
+
+    test "project admin can view keychain credentials table", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: user
+        )
+
+      # Create another project and keychain credential that should NOT be visible
+      other_project =
+        insert(:project,
+          name: "other-project",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      other_keychain_credential =
+        insert(:keychain_credential,
+          name: "Other Project Keychain",
+          path: "$.user.department",
+          project: other_project,
+          created_by: user
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ "Keychain Credentials"
+      # Should see the keychain credential for this project
+      assert html =~ keychain_credential.name
+      assert html =~ keychain_credential.path
+      # Should NOT see the keychain credential from the other project
+      refute html =~ other_keychain_credential.name
+      refute html =~ other_keychain_credential.path
+    end
+
+    test "project admin can edit keychain credentials", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: user
+        )
 
       {:ok, view, html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
-      refute html =~ credential_name
+      # Verify the keychain credential appears with edit actions
+      assert html =~ "Test Keychain"
+      assert html =~ "$.organization.id"
+      assert html =~ "Actions"
 
-      refute view
-             |> element("#cancel-credential-type-picker", "Cancel")
-             |> render_click() =~ credential_name
+      html =
+        view
+        |> element("#keychain-credential-actions-#{keychain_credential.id}-edit")
+        |> render_click()
+
+      # Verify that edit modal component is present in the page
+      assert html =~ "edit-keychain-credential-#{keychain_credential.id}-modal"
+    end
+
+    test "project viewer cannot edit keychain credentials", %{
+      conn: conn,
+      user: user
+    } do
+      admin_user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [
+            %{user_id: user.id, role: :viewer},
+            %{user_id: admin_user.id, role: :admin}
+          ]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: admin_user
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ "Keychain Credentials"
+      assert html =~ keychain_credential.name
+      # Verify the actions dropdown is not present for viewers
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+    end
+
+    test "project admin can delete keychain credentials", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: user
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Verify the keychain credential appears with delete actions
+      assert html =~ keychain_credential.name
+      assert html =~ "Actions"
+
+      html =
+        view
+        |> element(
+          "#keychain-credential-actions-#{keychain_credential.id}-delete"
+        )
+        |> render_click()
+
+      # Verify that delete modal component is present in the page
+      assert html =~ "delete-keychain-credential-#{keychain_credential.id}-modal"
+
+      html =
+        view
+        |> element(
+          "#delete-keychain-credential-#{keychain_credential.id}-modal_confirm_button"
+        )
+        |> render_click()
+
+      # close the modal, which gets the
+      # view
+      # |> with_target("#credentials-index-component")
+      # |> render_hook("close_active_modal", %{})
+
+      # open_browser(view)
+      # Verify the flash message appears
+      assert html =~ "Keychain credential deleted"
+
+      html =
+        view
+        |> element("#keychain-credentials-table-container")
+        |> render()
+
+      # Verify the keychain credential is removed from the UI
+      refute html =~ keychain_credential.name
+    end
+
+    test "project editor cannot edit keychain credentials", %{
+      conn: conn,
+      user: user
+    } do
+      admin_user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [
+            %{user_id: user.id, role: :editor},
+            %{user_id: admin_user.id, role: :admin}
+          ]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: admin_user
+        )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ "Keychain Credentials"
+      assert html =~ keychain_credential.name
+
+      # Verify the actions dropdown is not present for editors (only owners/admins)
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+    end
+
+    test "keychain credential delete permissions by role via UI", %{
+      conn: conn,
+      user: user
+    } do
+      admin_user = insert(:user)
+      editor_user = insert(:user)
+      viewer_user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [
+            %{user_id: user.id, role: :owner},
+            %{user_id: admin_user.id, role: :admin},
+            %{user_id: editor_user.id, role: :editor},
+            %{user_id: viewer_user.id, role: :viewer}
+          ]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.organization.id",
+          project: project,
+          created_by: admin_user
+        )
+
+      # Test as owner - should see actions dropdown
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials")
+
+      assert html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+
+      # Test as admin - should see actions dropdown
+      admin_conn = log_in_user(build_conn(), admin_user)
+
+      {:ok, _view, html} =
+        live(admin_conn, ~p"/projects/#{project}/settings#credentials")
+
+      assert html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+
+      # Test as editor - should NOT see actions dropdown
+      editor_conn = log_in_user(build_conn(), editor_user)
+
+      {:ok, _view, html} =
+        live(editor_conn, ~p"/projects/#{project}/settings#credentials")
+
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+
+      # Test as viewer - should NOT see actions dropdown
+      viewer_conn = log_in_user(build_conn(), viewer_user)
+
+      {:ok, _view, html} =
+        live(viewer_conn, ~p"/projects/#{project}/settings#credentials")
+
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
     end
 
     test "project admin can't edit project name and description with invalid data",
@@ -4425,6 +4723,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(submit_btn) =~ "disabled=\"disabled\""
     end
 
+    @tag :capture_log
     test "all users can see a saved repo connection", %{conn: conn} do
       project = insert(:project)
 
@@ -4539,6 +4838,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "authorized users cannot reconnect project if they don't have access to the installation",
          %{conn: conn} do
       project = insert(:project)
@@ -4930,6 +5230,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "unauthorized users cannot remove github connection", %{conn: conn} do
       project = insert(:project)
 
@@ -4992,6 +5293,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "authorized users who have not setup github accounts can remove github connection",
          %{conn: conn} do
       project = insert(:project)
@@ -5047,6 +5349,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "authorized users with valid github oauth can remove github connection even when undoing some github actions fail",
          %{conn: conn} do
       project = insert(:project)
@@ -5130,6 +5433,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    @tag :capture_log
     test "unauthorized users cannot initiate github sync", %{conn: conn} do
       project = insert(:project)
 

@@ -1,11 +1,13 @@
-
 import type { WithActionProps } from '#/react/lib/with-props';
 import React from 'react';
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
 import { RUNS_TMP, useWorkflowStore } from '../workflow-store/store';
 import tippy, { type Placement } from 'tippy.js';
 
-export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) => {
+export const WorkflowEditor: WithActionProps<{
+  selection: string, showAiAssistant?: boolean;
+  aiAssistantId?: string;
+}> = (props) => {
   const { getItem, forceFit, updateRuns } = useWorkflowStore();
 
   React.useEffect(() => {
@@ -62,7 +64,7 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
     ) {
       props.navigate(nextUrl.toString());
     }
-  }
+  };
 
   const onRunChangeHandler = (id: string, version: number) => {
     const currentUrl = new URL(window.location.href);
@@ -86,13 +88,17 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
     props.navigate(nextUrl.toString());
   }
 
-  return <WorkflowDiagram
-    el={props.el}
-    containerEl={props.containerEl}
-    selection={props.selection}
-    onSelectionChange={onSelectionChange}
-    forceFit={forceFit}
-    onRunChange={onRunChangeHandler}
-    onCollapseHistory={onCollapseHistory}
-  />
-}
+  return (
+    <WorkflowDiagram
+      el={props.el}
+      containerEl={props.containerEl}
+      selection={props.selection}
+      onSelectionChange={onSelectionChange}
+      onRunChange={onRunChangeHandler}
+      onCollapseHistory={onCollapseHistory}
+      forceFit={forceFit}
+      showAiAssistant={props.showAiAssistant}
+      aiAssistantId={props.aiAssistantId}
+    />
+  );
+};

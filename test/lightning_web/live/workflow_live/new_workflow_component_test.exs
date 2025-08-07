@@ -3,11 +3,16 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.WorkflowLive.Helpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
-  setup %{project: project} do
+  setup %{project: project} = tags do
+    if Map.get(tags, :stub_apollo, true) do
+      Lightning.AiAssistantHelpers.stub_online()
+    end
+
     # Create 5 distinct templates using factories
     templates = [
       insert(:workflow_template, %{
@@ -53,6 +58,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
   end
 
   describe "workflow creation methods" do
+    @tag stub_apollo: false
     test "displays template and import options", %{conn: conn, project: project} do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
@@ -62,6 +68,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       refute view |> element("#workflow-importer") |> has_element?()
     end
 
+    @tag stub_apollo: false
     test "switches to import view when import button is clicked", %{
       conn: conn,
       project: project
@@ -341,10 +348,16 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       assert view |> element("#workflow-file") |> has_element?()
     end
 
+    @tag stub_apollo: false
     test "dropzone has proper attributes for drag and drop", %{
       conn: conn,
       project: project
     } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Switch to import view
@@ -360,6 +373,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
   end
 
   describe "AI method integration" do
+    @tag stub_apollo: false
     test "switching to AI method without search term shows AI interface", %{
       conn: conn,
       project: project,
@@ -368,11 +382,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      ai_assistant = element(view, "#workflow-ai-assistant")
+      ai_assistant = element(view, "#new-workflow-panel-assistant")
 
       refute has_element?(ai_assistant)
 
@@ -389,6 +404,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       assert html =~ "Start a conversation to see your chat history appear here"
     end
 
+    @tag stub_apollo: false
     test "switching to AI method with search term creates session and shows AI interface",
          %{
            conn: conn,
@@ -398,11 +414,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :ai_assistant_api_key -> "ai_assistant_api_key"
+        :timeout -> 5_000
       end)
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      ai_assistant = element(view, "#workflow-ai-assistant")
+      ai_assistant = element(view, "#new-workflow-panel-assistant")
 
       refute has_element?(ai_assistant)
 
@@ -427,35 +444,45 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+          case key do
+            :endpoint -> "http://localhost:3000"
+            :ai_assistant_api_key -> "api_key"
+            :timeout -> 5_000
+          end
+        end)
 
-      view
-      |> form("#search-templates-form", %{"search" => "process webhook data"})
-      |> render_change()
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      build_with_button = element(view, "#template-label-ai-dynamic-template")
+        view
+        |> form("#search-templates-form", %{"search" => "process webhook data"})
+        |> render_change()
 
-      html = render(build_with_button)
-      assert html =~ "process webhook data"
-      assert html =~ "Build with AI ✨"
+        build_with_button = element(view, "#template-label-ai-dynamic-template")
 
-      sessions_before =
-        Lightning.AiAssistant.list_sessions(project)
-        |> Map.get(:sessions)
+        html = render(build_with_button)
+        assert html =~ "process webhook data"
+        assert html =~ "Build with AI ✨"
 
-      assert Enum.empty?(sessions_before)
+        sessions_before =
+          Lightning.AiAssistant.list_sessions(project)
+          |> Map.get(:sessions)
 
-      build_with_button |> render_click()
+        assert Enum.empty?(sessions_before)
 
-      assert view |> element("#create_workflow_via_ai") |> has_element?()
+        build_with_button |> render_click()
 
-      sessions_after =
-        Lightning.AiAssistant.list_sessions(project)
-        |> Map.get(:sessions)
+        assert view |> element("#create_workflow_via_ai") |> has_element?()
 
-      refute Enum.empty?(sessions_after)
+        sessions_after =
+          Lightning.AiAssistant.list_sessions(project)
+          |> Map.get(:sessions)
 
-      assert sessions_after |> Enum.any?(&(&1.title == "process webhook data"))
+        refute Enum.empty?(sessions_after)
+
+        assert sessions_after |> Enum.any?(&(&1.title == "process webhook data"))
+      end)
     end
 
     test "AI template card shows default text when no search term", %{
@@ -546,9 +573,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      view
-      |> element("#choose-workflow-template-form")
-      |> render_change(%{"template_id" => "base-webhook-template"})
+      {view, _parsed_template} = select_template(view, "base-webhook-template")
 
       refute view
              |> element("#create_workflow_btn[disabled]")
@@ -569,11 +594,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       assert element(view, "#create_workflow_btn[disabled]") |> has_element?()
 
       view
-      |> with_target("#new-workflow-panel")
-      |> render_click("create_workflow", %{})
+      |> render_click("save", %{})
 
-      assert_patch(view, ~p"/projects/#{project.id}/w/new?method=template")
-      assert render(view) =~ "Please select a template to continue."
+      assert render(view) =~ "Workflow could not be saved"
     end
 
     test "create button disabled in import mode when validation fails", %{
@@ -593,9 +616,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       view
       |> with_target("#new-workflow-panel")
       |> render_click("create_workflow", %{})
-
-      assert render(view) =~
-               "Please fix the validation errors before creating the workflow."
     end
 
     test "create button disabled in AI mode when no template generated", %{
@@ -613,11 +633,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
              |> has_element?()
 
       view
-      |> with_target("#new-workflow-panel")
-      |> render_click("create_workflow", %{})
+      |> render_click("save")
 
       assert render(view) =~
-               "Please generate a workflow using the AI assistant first."
+               "Workflow could not be saved"
     end
   end
 end

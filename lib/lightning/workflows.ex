@@ -57,6 +57,29 @@ defmodule Lightning.Workflows do
     |> Repo.all()
   end
 
+  @spec project_workflows_using_credentials([
+          project_credential :: Ecto.UUID.t(),
+          ...
+        ]) ::
+          %{
+            optional(project :: Ecto.UUID.t()) => [
+              workflow_name :: binary(),
+              ...
+            ]
+          }
+  def project_workflows_using_credentials(project_credential_ids) do
+    query =
+      from w in Workflow,
+        join: j in assoc(w, :jobs),
+        where: j.project_credential_id in ^project_credential_ids,
+        select: %{name: w.name, project_id: w.project_id},
+        distinct: true
+
+    query
+    |> Repo.all()
+    |> Enum.group_by(& &1.project_id, & &1.name)
+  end
+
   @doc """
   Gets a single workflow with optional preloads.
 
@@ -452,7 +475,7 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Gets a Single Edge by it's webhook trigger.
+  Gets a single Webhook Trigger by its `custom_path` or `id`.
   """
   def get_webhook_trigger(path, opts \\ []) when is_binary(path) do
     preloads = opts |> Keyword.get(:include, [])
@@ -463,36 +486,8 @@ defmodule Lightning.Workflows do
           "coalesce(?, ?)",
           t.custom_path,
           type(t.id, :string)
-        ) == ^path,
+        ) == ^path and t.type == :webhook,
       preload: ^preloads
-    )
-    |> Repo.one()
-  end
-
-  @doc """
-  Gets a single `Trigger` by its `custom_path` or `id`.
-
-  ## Parameters
-  - `path`: A binary string representing the `custom_path` or `id` of the trigger.
-
-  ## Returns
-  - Returns a `Trigger` struct if a trigger is found.
-  - Returns `nil` if no trigger is found for the given `path`.
-
-  ## Examples
-
-  ```
-  Lightning.Workflows.get_trigger_by_webhook("some_path_or_id")
-  # => %Trigger{id: 1, custom_path: "some_path_or_id", ...}
-
-  Lightning.Workflows.get_trigger_by_webhook("non_existent_path_or_id")
-  # => nil
-  ```
-  """
-  def get_trigger_by_webhook(path) when is_binary(path) do
-    from(t in Trigger,
-      where:
-        fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path
     )
     |> Repo.one()
   end

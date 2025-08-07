@@ -116,19 +116,66 @@ defmodule Lightning.WorkflowLive.Helpers do
     link |> render_click()
   end
 
+  def change_adaptor(view, job, adaptor) do
+    {job, adaptor}
+
+    view
+    |> element("#job-pane-#{job.id} select[name='adaptor_picker[adaptor_name]']")
+    |> render_change(%{
+      "adaptor_picker" => %{"adaptor_name" => adaptor}
+    })
+  end
+
+  def change_adaptor_version(view, version) do
+    idx = get_index_of_job(view)
+
+    view
+    |> form("#workflow-form", %{
+      "workflow" => %{"jobs" => %{"#{idx}" => %{"adaptor" => version}}}
+    })
+    |> render_change()
+  end
+
+  def change_credential(view, job, credential) do
+    idx = get_index_of_job(view, job)
+
+    case credential do
+      %Lightning.Projects.ProjectCredential{} ->
+        view
+        |> form("#workflow-form")
+        |> render_change(%{
+          "workflow" => %{
+            "jobs" => %{
+              "#{idx}" => %{
+                "project_credential_id" => credential.id,
+                "keychain_credential_id" => ""
+              }
+            }
+          }
+        })
+
+      %Lightning.Credentials.KeychainCredential{} ->
+        view
+        |> form("#workflow-form")
+        |> render_change(%{
+          "workflow" => %{
+            "jobs" => %{
+              "#{idx}" => %{
+                "keychain_credential_id" => credential.id,
+                "project_credential_id" => ""
+              }
+            }
+          }
+        })
+    end
+  end
+
   @doc """
   Change the text of the selected job's body, just like the React component
   does.
   """
   def change_editor_text(view, text) do
-    assigns = :sys.get_state(view.pid).socket.assigns
-
-    selected_job = assigns.selected_job
-
-    # find the index of the selected job
-    idx =
-      assigns.workflow_params["jobs"]
-      |> Enum.find_index(fn j -> j["id"] == selected_job.id end)
+    idx = get_index_of_job(view)
 
     view
     |> element("[phx-hook='ReactComponent'][data-react-name='JobEditor']")
@@ -246,6 +293,84 @@ defmodule Lightning.WorkflowLive.Helpers do
     view
     |> form("#choose-workflow-template-form", %{template_id: template_id})
     |> render_change()
+
+    job_id = Ecto.UUID.generate()
+    trigger_id = Ecto.UUID.generate()
+
+    parsed_workflow =
+      case template_id do
+        "base-webhook-template" ->
+          %{
+            "name" => "Event-based Workflow",
+            "jobs" => [
+              %{
+                "id" => job_id,
+                "name" => "Transform data",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" =>
+                  "// Check out the Job Writing Guide for help getting started:\n// https://docs.openfn.org/documentation/jobs/job-writing-guide"
+              }
+            ],
+            "triggers" => [
+              %{
+                "id" => trigger_id,
+                "type" => "webhook",
+                "enabled" => false
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => Ecto.UUID.generate(),
+                "source_trigger_id" => trigger_id,
+                "target_job_id" => job_id,
+                "condition_type" => "always",
+                "enabled" => true
+              }
+            ]
+          }
+
+        "base-cron-template" ->
+          %{
+            "name" => "Scheduled Workflow",
+            "jobs" => [
+              %{
+                "id" => job_id,
+                "name" => "Get data",
+                "adaptor" => "@openfn/language-http@7.0.3",
+                "body" =>
+                  "// Check out the Job Writing Guide for help getting started:\n// https://docs.openfn.org/documentation/jobs/job-writing-guide\nget('https://docs.openfn.org/documentation');"
+              }
+            ],
+            "triggers" => [
+              %{
+                "id" => trigger_id,
+                "type" => "cron",
+                "cron_expression" => "*/15 * * * *",
+                "enabled" => false
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => Ecto.UUID.generate(),
+                "source_trigger_id" => trigger_id,
+                "target_job_id" => job_id,
+                "condition_type" => "always",
+                "enabled" => true
+              }
+            ]
+          }
+
+        _ ->
+          raise "Unknown template: #{template_id}"
+      end
+
+    view
+    |> with_target("#new-workflow-panel")
+    |> render_hook("template-parsed", %{"workflow" => parsed_workflow})
+
+    _ = render(view)
+
+    {view, parsed_workflow}
   end
 
   def add_job_patch(name \\ "", id \\ Ecto.UUID.generate()) do
@@ -253,15 +378,17 @@ defmodule Lightning.WorkflowLive.Helpers do
       %{jobs: []},
       %{jobs: [%{id: id, name: name}]}
     )
-    |> Jsonpatch.Mapper.to_map()
     |> List.first()
     |> Lightning.Helpers.json_safe()
   end
 
-  def get_index_of_job(view, job) do
+  def get_index_of_job(view, job \\ nil) do
+    job_id =
+      (job && job.id) || :sys.get_state(view.pid).socket.assigns.selected_job.id
+
     :sys.get_state(view.pid).socket.assigns.workflow_params
     |> Map.get("jobs")
-    |> Enum.find_index(fn j -> j["id"] == job.id end)
+    |> Enum.find_index(fn j -> j["id"] == job_id end)
   end
 
   def get_index_of_edge(view, edge) do
@@ -316,7 +443,6 @@ defmodule Lightning.WorkflowLive.Helpers do
         "project_id" => project.id
       }
     )
-    |> Jsonpatch.Mapper.to_map()
     |> Enum.map(&Lightning.Helpers.json_safe/1)
   end
 
@@ -327,7 +453,7 @@ defmodule Lightning.WorkflowLive.Helpers do
 
     view
     |> element(
-      ~s{input[name='workflow[jobs][#{idx}][#{field}]'] ~ .error-space [data-tag="error_message"]},
+      ~s{div[phx-feedback-for="workflow[jobs][#{idx}][#{field}]"] .error-space [data-tag="error_message"]},
       error
     )
     |> has_element?()
@@ -357,10 +483,17 @@ defmodule Lightning.WorkflowLive.Helpers do
   def input_is_disabled?(view, %Job{} = job, field) do
     idx = get_index_of_job(view, job)
 
+    selector =
+      case field do
+        "project_credential_id" ->
+          "#job-pane-#{job.id} [name='credential_selector']"
+
+        _ ->
+          "#job-pane-#{job.id} [name='workflow[jobs][#{idx}][#{field}]']"
+      end
+
     view
-    |> input_is_disabled?(
-      "#job-pane-#{job.id} [name='workflow[jobs][#{idx}][#{field}]']"
-    )
+    |> input_is_disabled?(selector)
   end
 
   def input_is_disabled?(view, selector) do
@@ -422,10 +555,51 @@ defmodule Lightning.WorkflowLive.Helpers do
     view |> element("#job-pane-#{job.id} #adaptor-version option[selected]")
   end
 
-  def selected_credential(view, job) do
+  def credential_options(view, job \\ nil) do
+    job_id =
+      (job && job.id) || :sys.get_state(view.pid).socket.assigns.selected_job.id
+
     view
-    |> element("#job-pane-#{job.id} select[id$=credential_id] option[selected]")
+    |> element("#job-pane-#{job_id} select[name='credential_selector']")
     |> render()
+    |> Floki.parse_document!()
+    |> Floki.find("option")
+    |> Enum.map(fn option ->
+      %{
+        text: Floki.text(option),
+        value: Floki.attribute(option, "value") |> List.first()
+      }
+    end)
+  end
+
+  def selected_credential_name(view, job \\ nil) do
+    job_id =
+      (job && job.id) || :sys.get_state(view.pid).socket.assigns.selected_job.id
+
+    # Check hidden field value since the JavaScript populates it
+    credential_id =
+      ["project_credential_id", "keychain_credential_id"]
+      |> Enum.map(fn key ->
+        view
+        |> element("#job-pane-#{job_id} input[type='hidden'][name$='[#{key}]']")
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("value")
+        |> List.first()
+      end)
+      |> Enum.find(& &1)
+
+    if credential_id do
+      # Find the option with this value and return its html
+      view
+      |> element("#job-pane-#{job_id} select[name='credential_selector']")
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.find("option[value='#{credential_id}']")
+      |> Floki.text()
+    else
+      ""
+    end
   end
 
   def job_panel_element(view, job) do

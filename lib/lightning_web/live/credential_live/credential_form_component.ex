@@ -10,8 +10,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   alias LightningWeb.CredentialLive.GenericOauthComponent
   alias LightningWeb.CredentialLive.Helpers
 
-  alias Phoenix.LiveView.JS
-
   @impl true
   def mount(%{assigns: init_assigns} = socket) do
     allow_credential_transfer =
@@ -20,6 +18,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     mount_assigns = %{
       on_save: nil,
+      on_modal_close: nil,
       scopes: [],
       scopes_changed: false,
       sandbox_changed: false,
@@ -27,6 +26,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       project: nil,
       available_projects: [],
       selected_projects: [],
+      workflows_using_credentials: %{},
       oauth_clients: [],
       allow_credential_transfer: allow_credential_transfer
     }
@@ -177,27 +177,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     end
   end
 
-  def handle_event("reset_state", _, socket) do
-    reset_assigns =
-      Map.take(socket.assigns, [
-        :init_assigns,
-        :mount_assigns,
-        :component_assigns
-      ])
-
-    assigns =
-      reset_assigns.init_assigns
-      |> Map.merge(reset_assigns.mount_assigns)
-      |> Map.merge(reset_assigns.component_assigns)
-
-    socket =
-      %{socket | assigns: assigns}
-      |> assign(reset_assigns)
-      |> assigns_for_action(reset: true)
-
-    {:noreply, socket}
-  end
-
   @impl true
   def render(%{page: :first} = assigns) do
     assigns =
@@ -208,21 +187,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     ~H"""
     <div class="text-xs text-left">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
+      <Components.Credentials.credential_modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 max-w-full"
+        {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
+      >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title action={@action} /></span>
-            <button
-              id="close-credential-modal-type-picker"
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          <.modal_title action={@action} />
         </:title>
         <div class="container mx-auto">
           <.form
@@ -258,7 +229,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         </div>
         <.modal_footer>
           <.button
-            type="submit"
+            type="button"
             theme="primary"
             disabled={!@schema}
             phx-click="change_page"
@@ -266,16 +237,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           >
             Configure credential
           </.button>
-          <.button
+          <Components.Credentials.cancel_button
             id="cancel-credential-type-picker"
-            type="button"
-            phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
-            theme="secondary"
-          >
-            Cancel
-          </.button>
+            modal_id={@id}
+            {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
+          />
         </.modal_footer>
-      </.modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -283,21 +251,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second, schema: "oauth"} = assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
+      <Components.Credentials.credential_modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 w-[300px]"
+        {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
+      >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title action={@action} /></span>
-            <button
-              id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          <.modal_title action={@action} />
         </:title>
         <LightningWeb.Components.Oauth.missing_client_warning :if={
           !@selected_oauth_client
@@ -314,8 +274,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           on_save={@on_save}
           allow_credential_transfer={@allow_credential_transfer}
           return_to={@return_to}
+          modal_id={@id}
+          on_modal_close={@on_modal_close}
         />
-      </.modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -323,21 +285,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def render(%{page: :second} = assigns) do
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
+      <Components.Credentials.credential_modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 w-[300px]"
+        {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
+      >
         <:title>
-          <div class="flex justify-between">
-            <span class="font-bold"><.modal_title action={@action} /></span>
-            <button
-              id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
-              type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-              aria-label={gettext("close")}
-            >
-              <span class="sr-only">Close</span>
-              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-            </button>
-          </div>
+          <.modal_title action={@action} />
         </:title>
         <.form
           :let={f}
@@ -347,7 +301,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           phx-change="validate"
           phx-submit="save"
         >
-          <LightningWeb.Components.Credentials.form_component
+          <Components.Credentials.form_component
             :let={{fieldset, _valid?}}
             id={@credential.id || "new"}
             form={f}
@@ -360,10 +314,17 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                     <NewInputs.input type="text" field={f[:name]} label="Name" />
                   </div>
                   <div>
-                    <LightningWeb.Components.Form.check_box
-                      form={f}
-                      field={:production}
+                    <NewInputs.input
+                      type="text"
+                      field={f[:external_id]}
+                      label="External ID"
                     />
+                    <p class="mt-1 text-sm text-gray-500">
+                      Optional identifier for this credential in external systems
+                    </p>
+                  </div>
+                  <div>
+                    <Components.Form.check_box form={f} field={:production} />
                   </div>
                 </div>
               </fieldset>
@@ -386,13 +347,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                     Control which projects have access to this credentials
                   </p>
                   <div class="mt-4">
-                    <LightningWeb.Components.Credentials.projects_picker
+                    <Components.Credentials.projects_picker
                       id={@credential.id || "new"}
                       type={:credential}
                       available_projects={@available_projects}
                       selected_projects={@selected_projects}
                       projects={@projects}
                       selected={@selected_project}
+                      workflows_using_credentials={@workflows_using_credentials}
                       phx_target={@myself}
                     />
                   </div>
@@ -402,13 +364,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                 :if={@action == :edit and @allow_credential_transfer}
                 class="space-y-4"
               >
-                <LightningWeb.Components.Credentials.credential_transfer
-                  form={f}
-                  users={@users}
-                />
+                <Components.Credentials.credential_transfer form={f} users={@users} />
               </div>
             </div>
-          </LightningWeb.Components.Credentials.form_component>
+          </Components.Credentials.form_component>
           <.modal_footer>
             <.button
               id={"save-credential-button-#{@credential.id || "new"}"}
@@ -418,16 +377,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             >
               Save
             </.button>
-            <.button
-              type="button"
-              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
-              theme="secondary"
-            >
-              Cancel
-            </.button>
+            <Components.Credentials.cancel_button
+              modal_id={@id}
+              {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
+            />
           </.modal_footer>
         </.form>
-      </.modal>
+      </Components.Credentials.credential_modal>
     </div>
     """
   end
@@ -620,6 +576,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       |> Lightning.Repo.preload(:project)
       |> Enum.map(fn poc -> poc.project end)
 
+    workflows_using_credentials =
+      changeset
+      |> Ecto.Changeset.get_assoc(:project_credentials, :struct)
+      |> Enum.map(& &1.id)
+      |> Lightning.Workflows.project_workflows_using_credentials()
+
     available_projects =
       Helpers.filter_available_projects(
         projects,
@@ -649,6 +611,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       schema: schema,
       selected_project: nil,
       selected_projects: selected_projects,
+      workflows_using_credentials: workflows_using_credentials,
       available_projects: available_projects
     )
   end

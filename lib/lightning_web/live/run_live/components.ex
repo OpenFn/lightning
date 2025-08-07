@@ -5,17 +5,40 @@ defmodule LightningWeb.RunLive.Components do
   alias Lightning.WorkOrders.SearchParams
   alias Phoenix.LiveView.JS
 
-  attr :run, Lightning.Run, required: true
+  attr :item, :map,
+    required: true,
+    doc: "An item with id, started_at, and finished_at fields"
 
+  attr :context, :string, default: "", doc: "Optional context to make IDs unique"
+
+  @type item_with_timestamps :: %{
+          id: String.t(),
+          started_at: DateTime.t() | nil,
+          finished_at: DateTime.t() | nil
+        }
+
+  @spec elapsed_indicator(%{item: item_with_timestamps()}) ::
+          Phoenix.LiveView.Rendered.t()
   def elapsed_indicator(assigns) do
     ~H"""
     <div
       phx-hook="ElapsedIndicator"
-      data-start-time={as_timestamp(@run.started_at)}
-      data-finish-time={as_timestamp(@run.finished_at)}
-      id={"elapsed-indicator-#{@run.id}"}
+      data-start-time={as_timestamp(@item.started_at)}
+      data-finish-time={as_timestamp(@item.finished_at)}
+      id={build_elapsed_indicator_id(@item, @context)}
     />
     """
+  end
+
+  defp build_elapsed_indicator_id(item, context) do
+    base_id = "elapsed-indicator"
+
+    context_part = if context != "", do: "-#{context}", else: ""
+
+    case Map.get(item, :run_id) do
+      nil -> "#{base_id}#{context_part}-#{item.id}"
+      run_id -> "#{base_id}#{context_part}-#{run_id}-#{item.id}"
+    end
   end
 
   defp as_timestamp(datetime) do
@@ -140,6 +163,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :job_id, :string, default: nil
   attr :selected, :boolean, default: false
   attr :class, :string, default: ""
+  attr :context, :string, default: ""
   attr :rest, :global
 
   def step_item(assigns) do
@@ -210,24 +234,10 @@ defmodule LightningWeb.RunLive.Components do
           <% end %>
         </div>
         <div class="flex-grow whitespace-nowrap text-right text-sm text-gray-500">
-          <.step_duration step={@step} />
+          <.elapsed_indicator item={@step} context={@context} />
         </div>
       </div>
     </div>
-    """
-  end
-
-  defp step_duration(assigns) do
-    ~H"""
-    <%= cond do %>
-      <% is_nil(@step.started_at) -> %>
-        Unknown
-      <% is_nil(@step.finished_at) -> %>
-        Running...
-      <% true -> %>
-        {DateTime.to_unix(@step.finished_at, :millisecond) -
-          DateTime.to_unix(@step.started_at, :millisecond)} ms
-    <% end %>
     """
   end
 
@@ -275,7 +285,7 @@ defmodule LightningWeb.RunLive.Components do
 
   def async_filler(assigns) do
     ~H"""
-    <div data-entity="work_order" class={["bg-gray-50", @class]}>
+    <div data-entity="work_order" class={@class}>
       <div class="py-3 text-center text-gray-500">{@message}</div>
     </div>
     """
@@ -302,7 +312,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"run-#{@run.id}"}
       data-entity="run"
-      class="bg-gray-100"
+      class={["bg-gray-100", @step_list != [] && "border-t border-gray-300"]}
     >
       <%= for step <- @step_list do %>
         <.step_list_item
@@ -335,10 +345,10 @@ defmodule LightningWeb.RunLive.Components do
       DateTime.compare(assigns.step.inserted_at, assigns.run.inserted_at) ==
         :lt
 
-    base_classes = ~w(grid grid-cols-6 items-center)
-
     step_item_classes =
-      if is_clone, do: base_classes ++ ~w(opacity-50), else: base_classes
+      if is_clone,
+        do: ~w(flex items-center w-full opacity-50 group),
+        else: ~w(flex items-center w-full group)
 
     assigns =
       assign(assigns,
@@ -351,11 +361,11 @@ defmodule LightningWeb.RunLive.Components do
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
       <div
         role="cell"
-        class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="flex-1 py-2 text-xs font-normal text-gray-500 text-left group-hover:bg-white"
       >
-        <div class="flex pl-4">
+        <div class="flex items-center pl-4">
           <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
-          <div class="text-gray-800 flex gap-2 text-sm">
+          <div class="text-gray-800 flex items-center gap-2 text-xs">
             <.link
               navigate={
                 ~p"/projects/#{@project_id}/runs/#{@run}?#{%{step: @step.id}}"
@@ -366,68 +376,54 @@ defmodule LightningWeb.RunLive.Components do
             </.link>
 
             <%= if @is_clone do %>
-              <div class="flex gap-1">
-                <span
-                  class="cursor-pointer"
-                  id={"clone_" <> @run.id <> "_" <> @step.id}
-                  aria-label="This step was originally executed in a previous run.
-                    It was skipped in this run; the original output has been
-                    used as the starting point for downstream jobs."
-                  phx-hook="Tooltip"
-                  data-placement="right"
-                >
-                  <Heroicons.paper_clip
-                    mini
-                    class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
-                  />
-                </span>
-              </div>
+              <span
+                class="cursor-pointer"
+                id={"clone_" <> @run.id <> "_" <> @step.id}
+                aria-label="This step was originally executed in a previous run.
+                  It was skipped in this run; the original output has been
+                  used as the starting point for downstream jobs."
+                phx-hook="Tooltip"
+                data-placement="right"
+              >
+                <Heroicons.paper_clip
+                  mini
+                  class="h-3 w-3 flex-shrink-0 text-gray-500"
+                />
+              </span>
             <% end %>
-
-            <%= if @can_run_workflow && @step.exit_reason do %>
-              <.step_rerun_tag {assigns} />
-            <% end %>
-            <.link
-              id={"inspect-step-#{@step.id}"}
-              phx-hook="Tooltip"
-              aria-label="Inspect this step"
-              class="cursor-pointer"
-              navigate={
-                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run.id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
-                  <> "#log"
-              }
-            >
-              <.icon
-                naked
-                name="hero-document-magnifying-glass-mini"
-                class="h-5 w-5"
-              />
-            </.link>
+            &bull;
+            <span class="text-xs text-gray-500">
+              started
+              <Common.datetime datetime={@step.started_at} format={:time_only} />
+            </span>
           </div>
         </div>
       </div>
       <div
-        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
+        class="flex-shrink-0 py-2 px-4 text-right group-hover:bg-white"
       >
-        <.timestamp
-          tooltip_prefix="Step started at"
-          timestamp={@step.started_at}
-          style={:wrapped}
-        />
-      </div>
-      <div
-        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-        role="cell"
-      >
-        <.timestamp
-          tooltip_prefix="Step finished at"
-          timestamp={@step.finished_at}
-          style={:wrapped}
-        />
-      </div>
-      <div class="ml-3 py-2 px-4 text-xs text-gray-500 font-mono" role="cell">
-        {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
+        <div class="flex items-center justify-end gap-3 text-xs text-gray-500">
+          <%= if @can_run_workflow && @step.exit_reason do %>
+            <.step_rerun_tag {assigns} />
+          <% end %>
+          <.link
+            id={"inspect-step-#{@step.id}"}
+            phx-hook="Tooltip"
+            aria-label="Inspect this step"
+            class="cursor-pointer"
+            navigate={
+              ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run.id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
+                <> "#log"
+            }
+          >
+            <.icon naked name="hero-document-magnifying-glass-mini" class="h-5 w-5" />
+          </.link>
+          <.elapsed_indicator item={@step} context="list" />
+          <span class="font-mono">
+            {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
+          </span>
+        </div>
       </div>
     </div>
     """
@@ -453,7 +449,7 @@ defmodule LightningWeb.RunLive.Components do
           name="hero-play-circle-mini"
           class={"h-5 w-5 #{if not @deleted,
             do: "hover:text-primary-400 cursor-pointer",
-            else: "text-gray-400 hover:text-gray-400"
+            else: "text-gray-400 hover:text-gray-400 cursor-not-allowed"
         }"}
         />
       </span>
@@ -464,6 +460,7 @@ defmodule LightningWeb.RunLive.Components do
         phx-hook="Tooltip"
         data-placement="top"
         data-allow-html="true"
+        data-interactive={@can_edit_data_retention && "true"}
         aria-label={
           rerun_zero_persistence_tooltip_message(
             @project_id,
@@ -471,7 +468,10 @@ defmodule LightningWeb.RunLive.Components do
           )
         }
       >
-        <Heroicons.arrow_path class="h-5 w-5" />
+        <.icon
+          name="hero-play-circle-mini"
+          class="h-5 w-5 cursor-not-allowed text-gray-400"
+        />
       </span>
     <% end %>
     """
@@ -496,59 +496,8 @@ defmodule LightningWeb.RunLive.Components do
       </a>
       """
     else
-      "For more information, contact one of your project admins"
+      "For more information, contact one of your project admins."
     end
-  end
-
-  attr :timestamp, :map, required: true
-  attr :style, :atom, default: :default, values: [:default, :wrapped, :time_only]
-  attr :tooltip_prefix, :string, default: ""
-
-  def timestamp(assigns) do
-    assigns =
-      assign_new(assigns, :tooltip_id, fn ->
-        "tooltip-" <> Base.encode16(:crypto.strong_rand_bytes(3))
-      end)
-
-    ~H"""
-    <%= if is_nil(@timestamp) do %>
-      <%= case @style do %>
-        <% :wrapped -> %>
-          <span>--</span>
-          <br />
-          <span class="font-medium text-gray-700">--</span>
-        <% :default -> %>
-          <span>--</span>
-        <% :time_only -> %>
-          <span>--</span>
-      <% end %>
-    <% else %>
-      <Common.wrapper_tooltip
-        id={@tooltip_id}
-        tooltip={"#{@tooltip_prefix} #{DateTime.to_iso8601(@timestamp)}"}
-      >
-        <%= case @style do %>
-          <% :default -> %>
-            {Timex.format!(
-              @timestamp,
-              "%d/%b/%y, %H:%M:%S",
-              :strftime
-            )}
-          <% :wrapped -> %>
-            {Timex.format!(
-              @timestamp,
-              "%d/%b/%y",
-              :strftime
-            )}<br />
-            <span class="font-medium text-gray-700">
-              {Timex.format!(@timestamp, "%H:%M:%S", :strftime)}
-            </span>
-          <% :time_only -> %>
-            {Timex.format!(@timestamp, "%H:%M:%S", :strftime)}
-        <% end %>
-      </Common.wrapper_tooltip>
-    <% end %>
-    """
   end
 
   @spec step_icon(%{
@@ -669,6 +618,7 @@ defmodule LightningWeb.RunLive.Components do
               <.button
                 type="button"
                 theme="primary"
+                id="rerun-selected-from-start"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
                 phx-disable-with="Running..."
@@ -682,6 +632,7 @@ defmodule LightningWeb.RunLive.Components do
               <.button
                 type="button"
                 theme="primary"
+                id="rerun-all-matching-from-start"
                 phx-click="bulk-rerun"
                 phx-value-type="all"
                 phx-disable-with="Running..."

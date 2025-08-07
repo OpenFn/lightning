@@ -466,8 +466,8 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
     setState(value) {
       undos = [];
       redos = [];
-      set(value);
       get().updateRuns(RUNS_TMP, null);
+      set(value);
     },
     setSelection(value) {
       set(state => ({
