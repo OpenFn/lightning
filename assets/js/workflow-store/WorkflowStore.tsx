@@ -147,6 +147,8 @@ export const WorkflowStore: WithActionProps = props => {
       'get-current-state',
       {},
       (response: { workflow_params: WorkflowProps }) => {
+        console.log('🚀 ~ response:', response);
+
         const { workflow_params } = response;
         // workflow_params can contain an empty array of nodes and edges (empty workflow)
         setState(workflow_params);

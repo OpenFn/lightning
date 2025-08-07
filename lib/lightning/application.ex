@@ -114,6 +114,7 @@ defmodule Lightning.Application do
         {Phoenix.PubSub, name: Lightning.PubSub},
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
+        {Lightning.Collaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
