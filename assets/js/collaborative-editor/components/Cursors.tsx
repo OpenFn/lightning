@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from '../contexts/SessionProvider';
 import type { AwarenessUser } from '../types/session';
-import type { RelativePosition } from 'yjs';
 
 function BaseStyles() {
   const baseStyles = `
