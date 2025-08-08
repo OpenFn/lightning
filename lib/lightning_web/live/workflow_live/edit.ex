@@ -264,7 +264,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <div class="flex items-center gap-2">
 
                 <span class="text-sm font-medium text-gray-700">
-                  <%= if @show_workflow_ai_chat, do: "Close Assistant", else: "AI Assistant" %>
+                  AI Assistant
+                  <%!-- <%= if @show_workflow_ai_chat, do: "Close AI Assistant", else: "Open AI Assistant" %> --%>
                 </span>
               </div>
               <.icon name={if @show_workflow_ai_chat, do: "hero-chevron-left", else: "hero-chevron-right"} class="w-4 h-4 text-gray-400 ml-3" />
