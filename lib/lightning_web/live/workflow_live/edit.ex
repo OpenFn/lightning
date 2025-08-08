@@ -242,12 +242,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div
             :if={
               @snapshot_version_tag == "latest" && @can_edit_workflow &&
-                @ai_assistant_enabled && @live_action == :edit &&
-                !@show_workflow_ai_chat
+                @ai_assistant_enabled && @live_action == :edit
             }
             phx-hook="Tooltip"
-            aria-label="Click to open the AI Assistant"
-            class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+            aria-label={if @show_workflow_ai_chat, do: "Click to close the AI Assistant", else: "Click to open the AI Assistant"}
+            class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-transform duration-500 ease-in-out"
             id="workflow-ai-chat-toggle-floating"
             phx-mounted={
               JS.transition(
@@ -264,9 +263,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
             >
               <div class="flex items-center gap-2">
                 <.icon name="hero-chat-bubble-left-right" class="w-4 h-4 text-indigo-600" />
-                <span class="text-sm font-medium text-gray-700">AI Assistant</span>
+                <span class="text-sm font-medium text-gray-700">
+                  <%= if @show_workflow_ai_chat, do: "Close Assistant", else: "AI Assistant" %>
+                </span>
               </div>
-              <.icon name="hero-chevron-right" class="w-4 h-4 text-gray-400 ml-3" />
+              <.icon name={if @show_workflow_ai_chat, do: "hero-chevron-left", else: "hero-chevron-right"} class="w-4 h-4 text-gray-400 ml-3" />
             </button>
           </div>
           <.selected_template_label

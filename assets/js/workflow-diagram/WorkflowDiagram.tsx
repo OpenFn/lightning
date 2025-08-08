@@ -432,6 +432,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     return () => { window.removeEventListener('keydown', keyHandler); }
   }, [redo, undo]);
 
+  // Update AI Assistant toggle button position when drawerWidth changes
+  React.useEffect(() => {
+    const aiToggle = document.getElementById('workflow-ai-chat-toggle-floating');
+    if (aiToggle) {
+      aiToggle.style.transform = `translateX(${drawerWidth}px)`;
+    }
+  }, [drawerWidth]);
+
   return (
     <ReactFlowProvider>
       <ReactFlow
@@ -529,6 +537,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         onCollapseHistory={onCollapseHistory}
         drawerWidth={drawerWidth}
       />
+
     </ReactFlowProvider >
   );
 }
