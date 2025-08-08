@@ -70,7 +70,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @impl Oban.Worker
   @spec timeout(Oban.Job.t()) :: pos_integer()
   def timeout(_job) do
-    apollo_timeout_ms = Lightning.Config.apollo(:timeout)
+    apollo_timeout_ms = Lightning.Config.apollo(:timeout) || 30_000
     buffer_ms = round(apollo_timeout_ms * @timeout_buffer_percentage / 100)
     apollo_timeout_ms + max(buffer_ms, @minimum_buffer_ms)
   end
