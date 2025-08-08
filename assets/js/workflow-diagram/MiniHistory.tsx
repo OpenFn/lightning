@@ -71,7 +71,7 @@ export default function MiniHistory({
   return (
     <div
       className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40 ${
-        isCollapsed ? 'w-44' : 'w-88'
+        isCollapsed ? 'w-auto' : 'w-88'
       }`}
       style={{
         transform: `translateX(${drawerWidth}px)`,
@@ -98,7 +98,7 @@ export default function MiniHistory({
         </div>
 
         <div
-          className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+          className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer ml-3"
           title="Collapse panel"
         >
           {isCollapsed ? (

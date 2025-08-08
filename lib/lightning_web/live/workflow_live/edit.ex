@@ -247,7 +247,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
             phx-hook="Tooltip"
             aria-label="Click to open the AI Assistant"
-            class="absolute top-4 left-4 z-30"
+            class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
             id="workflow-ai-chat-toggle-floating"
             phx-mounted={
               JS.transition(
@@ -260,9 +260,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <button
               type="button"
               phx-click="toggle-workflow-ai-chat"
-              class="p-2 rounded-full transition-all duration-200 text-white ai-bg-gradient shadow-md"
+              class="flex items-center justify-between pl-3 pr-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors w-full text-left"
             >
-              <.icon name="hero-chat-bubble-left-right" class="w-6 h-6" />
+              <div class="flex items-center gap-2">
+                <.icon name="hero-chat-bubble-left-right" class="w-4 h-4 text-indigo-600" />
+                <span class="text-sm font-medium text-gray-700">AI Assistant</span>
+              </div>
+              <.icon name="hero-chevron-right" class="w-4 h-4 text-gray-400 ml-3" />
             </button>
           </div>
           <.selected_template_label
