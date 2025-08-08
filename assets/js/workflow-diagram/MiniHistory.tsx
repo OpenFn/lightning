@@ -265,7 +265,7 @@ export default function MiniHistory({
                           <span className="text-xs text-gray-800">&bull;</span>
                           <span className="text-gray-400 text-xs">
                             {!run.started_at || !run.finished_at
-                              ? '-ms'
+                              ? 'Not started'
                               : duration(run.started_at, run.finished_at)}
                           </span>
                         </div>
