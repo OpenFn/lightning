@@ -26,6 +26,7 @@ export const renderIcon = (
   type: keyof typeof STATE_COLORS,
   options: Partial<{ tooltip: string; size: number }> = {}
 ) => {
+  console.log('renderIcon', type, options);
   const { tooltip, size = 8 } = options;
   if (!(type in STATE_COLORS)) {
     console.error('ERROR: Unknown run state:', type);

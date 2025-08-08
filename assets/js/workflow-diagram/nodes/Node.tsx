@@ -173,7 +173,7 @@ const Node = ({
           {runData && !isTriggerNode ? (
             <div className="absolute -left-2 -top-2">
               {renderIcon(mapReason(runData.exit_reason ?? 'pending'), {
-                tooltip: runData?.error_type ?? 'Successful run',
+                tooltip: runData?.error_type ?? 'Step completed successfully',
               })}
             </div>
           ) : null}
