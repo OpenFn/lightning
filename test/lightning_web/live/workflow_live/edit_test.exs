@@ -4296,7 +4296,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job1, m: "expand"]}",
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job1, m: "history"]}",
           on_error: :raise
         )
 
