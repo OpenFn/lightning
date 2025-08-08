@@ -73,6 +73,12 @@ const fromWorkflow = (
     return a;
   }, {} as Record<string, RunStep>)
 
+  // Count duplicate steps for each job_id
+  const duplicateCounts = runSteps.steps.reduce((counts, step) => {
+    counts[step.job_id] = (counts[step.job_id] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
+
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
     collection: Array<Flow.Node | Flow.Edge>,
@@ -105,6 +111,9 @@ const fromWorkflow = (
         model.data.allowPlaceholder = allowPlaceholder;
         model.data.isRun = isRun;
         model.data.runData = runStepsObj[node.id];
+        // Add duplicate step information
+        model.data.hasDuplicateSteps = duplicateCounts[node.id] > 1;
+        model.data.duplicateStepCount = duplicateCounts[node.id] || 0;
         if (item.id === runSteps.start_from) {
           const startBy = type === "trigger" ? "Trigger" : (runSteps.run_by || "unknown")
           model.data.startInfo = {

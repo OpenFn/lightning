@@ -197,6 +197,17 @@ const Node = ({
               })}
             </div>
           ) : null}
+          {data.hasDuplicateSteps && !isTriggerNode ? (
+            <div
+              className="absolute -right-1 -top-2"
+              data-tooltip={`This step ran ${data.duplicateStepCount} times; view other executions via the Inspector or History page.`}
+              data-tooltip-placement="top"
+            >
+              <div className="flex justify-center items-center w-7 h-7 rounded-full text-white bg-primary-600 shadow-sm">
+                <span className="text-xs font-bold">{data.duplicateStepCount}</span>
+              </div>
+            </div>
+          ) : null}
           {startInfo ? (
             <div
               className={`absolute -top-2 flex gap-2 items-center`}
