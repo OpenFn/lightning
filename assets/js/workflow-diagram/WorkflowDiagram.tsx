@@ -527,7 +527,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         history={someHistory}
         selectRunHandler={onRunChange}
         onCollapseHistory={onCollapseHistory}
-      ></MiniHistory>
+        drawerWidth={drawerWidth}
+      />
     </ReactFlowProvider >
   );
 }
