@@ -111,6 +111,35 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     [jobs, triggers, edges, disabled]
   );
 
+  // Check for snapshot mismatch (more run steps than visible nodes)
+  const hasSnapshotMismatch = React.useMemo(() => {
+    if (!runSteps.start_from || runSteps.steps.length === 0) return false;
+    
+    const visibleNodeIds = new Set([
+      ...jobs.map(job => job.id),
+      ...triggers.map(trigger => trigger.id)
+    ]);
+    
+    const runStepJobIds = new Set(runSteps.steps.map(step => step.job_id));
+    const missingNodeIds = [...runStepJobIds].filter(id => !visibleNodeIds.has(id));
+    
+    return missingNodeIds.length > 0;
+  }, [runSteps, jobs, triggers]);
+
+  const missingNodeCount = React.useMemo(() => {
+    if (!hasSnapshotMismatch) return 0;
+    
+    const visibleNodeIds = new Set([
+      ...jobs.map(job => job.id),
+      ...triggers.map(trigger => trigger.id)
+    ]);
+    
+    const runStepJobIds = new Set(runSteps.steps.map(step => step.job_id));
+    const missingNodeIds = [...runStepJobIds].filter(id => !visibleNodeIds.has(id));
+    
+    return missingNodeIds.length;
+  }, [hasSnapshotMismatch, runSteps, jobs, triggers]);
+
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
     positions: {},
@@ -536,6 +565,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         selectRunHandler={onRunChange}
         onCollapseHistory={onCollapseHistory}
         drawerWidth={drawerWidth}
+        hasSnapshotMismatch={hasSnapshotMismatch}
+        missingNodeCount={missingNodeCount}
       />
 
     </ReactFlowProvider >

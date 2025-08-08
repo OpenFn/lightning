@@ -6,7 +6,6 @@ import { formatRelative } from 'date-fns';
 import React, { useState } from 'react';
 import { duration } from '../utils/duration';
 import truncateUid from '../utils/truncateUID';
-import { renderIcon } from './components/RunIcons';
 
 const CHIP_STYLES: Record<string, string> = {
   // only workorder states...
@@ -81,6 +80,8 @@ interface MiniHistoryProps {
   drawerWidth: number;
   selectRunHandler: (runId: string, version: number) => void;
   onCollapseHistory: () => void;
+  hasSnapshotMismatch?: boolean;
+  missingNodeCount?: number;
 }
 
 export default function MiniHistory({
@@ -89,6 +90,8 @@ export default function MiniHistory({
   collapsed = true,
   onCollapseHistory,
   drawerWidth,
+  hasSnapshotMismatch = false,
+  missingNodeCount = 0,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
@@ -269,7 +272,18 @@ export default function MiniHistory({
                               : duration(run.started_at, run.finished_at)}
                           </span>
                         </div>
-                        <StatePill state={run.state} mini={true} />
+                        <div className="flex items-center gap-1">
+                          <StatePill state={run.state} mini={true} />
+                          {hasSnapshotMismatch && run.selected && (
+                            <div
+                              className="flex items-center justify-center"
+                              data-tooltip={`This run had ${missingNodeCount} step${missingNodeCount !== 1 ? 's' : ''} that are no longer visible in the current workflow version`}
+                              data-tooltip-placement="right"
+                            >
+                              <span className="hero-exclamation-triangle-mini w-3 h-3 text-yellow-600"></span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
