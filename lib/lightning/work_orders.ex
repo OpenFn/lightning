@@ -484,13 +484,6 @@ defmodule Lightning.WorkOrders do
     {:ok, 0, 0}
   end
 
-  def get_run_steps(run_id) do
-    Run
-    |> where([r], r.id == ^run_id)
-    |> preload([:created_by, :steps])
-    |> Repo.one()
-  end
-
   def get_workorders_with_runs(workflow_id, run_id) do
     # First, get workorder IDs we want
     workorder_ids =

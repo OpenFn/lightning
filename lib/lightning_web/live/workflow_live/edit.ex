@@ -2377,7 +2377,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       if run_id == nil do
         empty_resp
       else
-        WorkOrders.get_run_steps(run_id)
+        Runs.get(run_id, include: [:created_by, :steps])
         |> case do
           nil ->
             empty_resp
