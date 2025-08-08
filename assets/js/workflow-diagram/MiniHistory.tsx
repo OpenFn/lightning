@@ -277,8 +277,9 @@ export default function MiniHistory({
                           {hasSnapshotMismatch && run.selected && (
                             <div
                               className="flex items-center justify-center"
-                              data-tooltip={`This run had ${missingNodeCount} step${missingNodeCount !== 1 ? 's' : ''} that are no longer visible in the current workflow version`}
-                              data-tooltip-placement="right"
+                              phx-hook="Tooltip"
+                              data-placement="right"
+                              aria-label={`This run had ${missingNodeCount} step${missingNodeCount !== 1 ? 's' : ''} that ${missingNodeCount !== 1 ? 'are' : 'is'} no longer visible in the current workflow version.`}
                             >
                               <span className="hero-exclamation-triangle-mini w-3 h-3 text-yellow-600"></span>
                             </div>
