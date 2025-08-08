@@ -79,7 +79,7 @@ export default function MiniHistory({
       }}
     >
       <div
-        className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 ${
+        className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors ${
           isCollapsed ? 'border-b-0' : 'border-b'
         }`}
         onClick={() => historyToggle()}
