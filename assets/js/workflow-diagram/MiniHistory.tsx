@@ -1,9 +1,10 @@
+import { relativeLocale } from '../hooks';
 import type {
   WorkflowRunHistory,
   WorkOrderStates,
 } from '#/workflow-store/store';
+import { formatRelative } from 'date-fns';
 import React, { useState } from 'react';
-import formatDate from '../utils/formatDate';
 import { duration } from '../utils/duration';
 import truncateUid from '../utils/truncateUID';
 import { renderIcon } from './components/RunIcons';
@@ -27,6 +28,8 @@ export default function MiniHistory({
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
+
+  const now = new Date();
 
   // to ensure panel is not collapsed when there's a selected item in history
   // at time this component will be rendered before data reaches store. that makes the panel collapse
@@ -140,7 +143,7 @@ export default function MiniHistory({
                         {truncateUid(workorder.id)}
                       </span>
                       <span className="text-xs text-gray-500 font-mono">
-                        {formatDate(new Date(workorder.last_activity))}
+                        {formatRelative(new Date(workorder.last_activity), now, { locale: relativeLocale })}
                       </span>
                     </div>
                     <StatePill key={workorder.id} state={workorder.state} />
@@ -167,8 +170,9 @@ export default function MiniHistory({
                           </span>
                           <span className="text-gray-500 font-mono">
                             {run.started_at
-                              ? formatDate(new Date(run.started_at))
-                              : formatDate(new Date(run.finished_at))}
+                              ? formatRelative(new Date(run.started_at), now, { locale: relativeLocale })
+                              : formatRelative(new Date(run.finished_at), now, { locale: relativeLocale })
+                            }
                           </span>
                           <span className="text-gray-400 text-xs">
                             {!run.started_at || !run.finished_at

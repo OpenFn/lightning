@@ -908,7 +908,7 @@ export const TypewriterHook = {
   },
 };
 
-const relativeLocale = {
+export const relativeLocale = {
   ...enUS,
   formatRelative: (token, date, baseDate, options) => {
     const formatters = {
