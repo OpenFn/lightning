@@ -30,13 +30,33 @@ type LabelProps = React.PropsWithChildren<{
   hasErrors?: boolean;
 }>;
 
-const reasonMap = {
-  fail: 'failed',
-  crash: 'crashed',
-};
-
-const mapReason = (reason: string) => {
-  return reasonMap[reason] ?? reason;
+const mapReason = (
+  reason: string
+):
+  | 'pending'
+  | 'success'
+  | 'fail'
+  | 'crash'
+  | 'cancel'
+  | 'shield'
+  | 'clock'
+  | 'circle_ex'
+  | 'triangle_ex' => {
+  // Map the exit reason to the expected icon state
+  switch (reason) {
+    case 'fail':
+      return 'fail';
+    case 'crash':
+      return 'crash';
+    case 'success':
+      return 'success';
+    case 'cancel':
+      return 'cancel';
+    case 'pending':
+      return 'pending';
+    default:
+      return 'pending';
+  }
 };
 
 function errorsMessage(errors: ErrorObject): string {
@@ -321,9 +341,10 @@ const Node = ({
             justifyContent: 'center',
           }}
           className={`flex flex-row items-center
-                    opacity-0  ${(!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-            ''
-            }
+                    opacity-0  ${
+                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+                      ''
+                    }
                     transition duration-150 ease-in-out`}
         >
           {toolbar()}

@@ -26,7 +26,6 @@ export const renderIcon = (
   type: keyof typeof STATE_COLORS,
   options: Partial<{ tooltip: string; size: number }> = {}
 ) => {
-  console.log('renderIcon', type, options);
   const { tooltip, size = 8 } = options;
   if (!(type in STATE_COLORS)) {
     console.error('ERROR: Unknown run state:', type);
@@ -35,9 +34,15 @@ export const renderIcon = (
   }
   return (
     <div className="relative">
-      <div className={`absolute inset-0 bg-white rounded-full ml-1 mt-1 w-${(size - 2).toString()} h-${(size - 2).toString()}`}></div>
       <div
-        className={`relative flex justify-center items-center w-${size.toString()} h-${size.toString()} rounded-full ${STATE_COLORS[type]}`}
+        className={`absolute inset-0 bg-white rounded-full ml-1 mt-1 w-${(
+          size - 2
+        ).toString()} h-${(size - 2).toString()}`}
+      ></div>
+      <div
+        className={`relative flex justify-center items-center w-${size.toString()} h-${size.toString()} rounded-full ${
+          STATE_COLORS[type]
+        }`}
       >
         <span
           data-tooltip={tooltip}

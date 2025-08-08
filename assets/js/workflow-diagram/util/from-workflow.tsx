@@ -63,7 +63,7 @@ const fromWorkflow = (
 
   const runStepsObj = runSteps.steps.reduce((a, b) => {
     const exists = a[b.job_id];
-    // to make sure that a pre-existing error state pre-empts the sucess. 
+    // to make sure that a pre-existing error state preempts the success. 
     // this is for nodes that run multiple times
     // TODO: we might want to show a state for the multiple runs of the step later on.
     let step_value: RunStep;
