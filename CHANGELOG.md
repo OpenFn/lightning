@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix Oban crash when Apollo times out
+  [#3497](https://github.com/OpenFn/lightning/issues/3497)
+
 ## [v2.14.1-pre1] - 2025-08-07
 
 ### Fixed

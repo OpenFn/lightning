@@ -508,10 +508,7 @@ defmodule Lightning.AiAssistantTest do
 
         assert_enqueued(
           worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{
-            "session_id" => session.id,
-            "message_id" => message.id
-          }
+          args: %{"message_id" => message.id}
         )
       end)
     end
@@ -527,10 +524,7 @@ defmodule Lightning.AiAssistantTest do
 
         assert_enqueued(
           worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{
-            "session_id" => session.id,
-            "message_id" => message.id
-          }
+          args: %{"message_id" => message.id}
         )
       end)
     end
@@ -694,10 +688,7 @@ defmodule Lightning.AiAssistantTest do
 
         assert_enqueued(
           worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{
-            "session_id" => session.id,
-            "message_id" => new_message.id
-          }
+          args: %{"message_id" => new_message.id}
         )
       end)
     end
@@ -1067,10 +1058,7 @@ defmodule Lightning.AiAssistantTest do
 
       assert_enqueued(
         worker: Lightning.AiAssistant.MessageProcessor,
-        args: %{
-          "message_id" => message.id,
-          "session_id" => session.id
-        }
+        args: %{"message_id" => message.id}
       )
     end
 
@@ -1422,10 +1410,7 @@ defmodule Lightning.AiAssistantTest do
 
         assert_enqueued(
           worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{
-            "session_id" => session.id,
-            "message_id" => initial_message.id
-          }
+          args: %{"message_id" => initial_message.id}
         )
       end)
     end
@@ -1449,10 +1434,7 @@ defmodule Lightning.AiAssistantTest do
         # Verify the job was enqueued
         assert_enqueued(
           worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{
-            "session_id" => session.id,
-            "message_id" => message.id
-          }
+          args: %{"message_id" => message.id}
         )
       end)
     end

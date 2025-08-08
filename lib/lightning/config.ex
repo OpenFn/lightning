@@ -345,6 +345,11 @@ defmodule Lightning.Config do
     end
 
     defp metrics_config, do: Application.get_env(:lightning, :metrics)
+
+    @impl true
+    def sentry do
+      Application.get_env(:lightning, :sentry, Sentry)
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -400,6 +405,7 @@ defmodule Lightning.Config do
   @callback external_metrics_module() :: module() | nil
   @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
+  @callback sentry() :: module()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -632,6 +638,10 @@ defmodule Lightning.Config do
 
   def per_workflow_claim_limit do
     impl().per_workflow_claim_limit()
+  end
+
+  def sentry do
+    impl().sentry()
   end
 
   defp impl do
