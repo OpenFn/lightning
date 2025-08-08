@@ -59,12 +59,17 @@ const displayTextFromState = (state: string): string => {
   }
 };
 
-const StatePill: React.FC<{ state: string }> = ({ state }) => {
+const StatePill: React.FC<{ state: string; mini?: boolean }> = ({ state, mini = false }) => {
   const classes = CHIP_STYLES[state] || CHIP_STYLES['pending'];
   const text = displayTextFromState(state);
   
+  const baseClasses = "my-auto whitespace-nowrap rounded-full text-center align-baseline font-medium leading-none";
+  const sizeClasses = mini 
+    ? "py-1 px-2 text-[10px]" 
+    : "py-2 px-4 text-xs";
+  
   return (
-    <span className={`my-auto whitespace-nowrap rounded-full py-2 px-4 text-center align-baseline text-xs font-medium leading-none ${classes}`}>
+    <span className={`${baseClasses} ${sizeClasses} ${classes}`}>
       {text}
     </span>
   );
@@ -217,7 +222,7 @@ export default function MiniHistory({
                         )}
                       </span>
                     </div>
-                    <StatePill key={workorder.id} state={workorder.state} />
+                    <StatePill key={workorder.id} state={workorder.state} mini={true} />
                   </div>
                 </div>
 
@@ -264,7 +269,7 @@ export default function MiniHistory({
                               : duration(run.started_at, run.finished_at)}
                           </span>
                         </div>
-                        <StatePill state={run.state} />
+                        <StatePill state={run.state} mini={true} />
                       </div>
                     </div>
                   ))}
