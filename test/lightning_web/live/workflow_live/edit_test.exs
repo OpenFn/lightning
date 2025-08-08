@@ -4044,6 +4044,475 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
+  describe "get-current-state event" do
+    setup :create_workflow
+
+    test "returns workflow params when no run is selected", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
+
+      render_hook(view, "get-current-state", %{})
+
+      assert_reply(view, %{
+        workflow_params: %{},
+        run_steps: %{
+          start_from: nil,
+          steps: [],
+          isTrigger: true,
+          inserted_at: nil
+        },
+        run_id: nil,
+        history: []
+      })
+    end
+
+    test "returns workflow params with run steps and history when run is selected",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow,
+           snapshot: snapshot
+         } do
+      %{triggers: [trigger], jobs: [job | _]} = workflow
+
+      dataclip = insert(:dataclip, project: project, body: %{"test" => "data"})
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip,
+          state: :success,
+          last_activity: DateTime.utc_now()
+        )
+
+      started_at = DateTime.utc_now() |> DateTime.add(-60, :second)
+      finished_at = DateTime.utc_now() |> DateTime.add(-30, :second)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          state: :success,
+          started_at: started_at,
+          finished_at: finished_at,
+          inserted_at: started_at
+        )
+
+      insert(:step,
+        job: job,
+        # Pass as a list
+        runs: [run],
+        snapshot: snapshot,
+        input_dataclip: dataclip,
+        started_at: started_at,
+        finished_at: finished_at,
+        exit_reason: "success",
+        error_type: nil
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      render_hook(view, "get-current-state", %{})
+
+      assert_reply(view, %{
+        workflow_params: _workflow_params,
+        run_steps: run_steps,
+        run_id: run_id,
+        history: history
+      })
+
+      assert run_id == run.id
+      assert run_steps.start_from == trigger.id
+      assert run_steps.isTrigger == true
+      assert run_steps.inserted_at == started_at
+      assert run_steps.run_by == nil
+
+      assert length(run_steps.steps) == 1
+      [step_data] = run_steps.steps
+      assert step_data.job_id == job.id
+      assert step_data.error_type == nil
+      assert step_data.exit_reason == "success"
+      assert step_data.started_at == started_at
+      assert step_data.finished_at == finished_at
+
+      assert length(history) == 1
+      [work_order_data] = history
+      assert work_order_data.id == work_order.id
+      assert work_order_data.version == snapshot.lock_version
+      assert work_order_data.state == :success
+      assert work_order_data.last_activity == work_order.last_activity
+
+      assert length(work_order_data.runs) == 1
+      [run_data] = work_order_data.runs
+      assert run_data.id == run.id
+      assert run_data.state == :success
+      assert run_data.error_type == nil
+      assert run_data.started_at == started_at
+      assert run_data.finished_at == finished_at
+    end
+
+    test "returns run steps with created_by user email when present", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      snapshot: snapshot,
+      user: user
+    } do
+      %{triggers: [trigger], jobs: [job | _]} = workflow
+
+      dataclip = insert(:dataclip, project: project, body: %{"test" => "data"})
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          created_by: user
+        )
+
+      insert(:step, job: job, runs: [run], snapshot: snapshot)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      render_hook(view, "get-current-state", %{})
+
+      assert_reply(view, %{run_steps: %{run_by: email}})
+      assert email == user.email
+    end
+
+    test "handles job-started runs correctly", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      snapshot: snapshot
+    } do
+      %{jobs: [job | _]} = workflow
+
+      dataclip = insert(:dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_job: job,
+          starting_trigger: nil,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:step, job: job, runs: [run], snapshot: snapshot)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      render_hook(view, "get-current-state", %{})
+
+      assert_reply(view, %{run_steps: run_steps})
+      assert run_steps.start_from == job.id
+      assert run_steps.isTrigger == false
+    end
+
+    test "handles runs with multiple steps and error states", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      snapshot: snapshot
+    } do
+      %{triggers: [trigger], jobs: [job1, job2 | _]} = workflow
+
+      dataclip = insert(:dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip,
+          state: :failed
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          state: :failed,
+          error_type: "RuntimeError"
+        )
+
+      insert(:step,
+        job: job1,
+        runs: [run],
+        snapshot: snapshot,
+        exit_reason: "success",
+        error_type: nil
+      )
+
+      insert(:step,
+        job: job2,
+        runs: [run],
+        snapshot: snapshot,
+        exit_reason: "fail",
+        error_type: "RuntimeError"
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job1, m: "expand"]}",
+          on_error: :raise
+        )
+
+      render_hook(view, "get-current-state", %{})
+
+      assert_reply(view, %{run_steps: %{steps: steps}})
+      assert length(steps) == 2
+
+      [step1, step2] = steps
+      assert step1.exit_reason == "success"
+      assert step1.error_type == nil
+
+      assert step2.exit_reason == "fail"
+      assert step2.error_type == "RuntimeError"
+    end
+
+    test "returns multiple work orders in history", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      snapshot: snapshot1,
+      user: user
+    } do
+      %{triggers: [trigger], jobs: [job | _]} = workflow
+
+      {:ok, updated_workflow} =
+        Workflows.change_workflow(workflow, %{name: "Updated Workflow"})
+        |> Workflows.save_workflow(user)
+
+      snapshot2 = Lightning.Workflows.Snapshot.get_current_for(updated_workflow)
+
+      dataclip = insert(:dataclip, project: project)
+
+      work_order1 =
+        insert(:workorder,
+          workflow: updated_workflow,
+          snapshot: snapshot1,
+          dataclip: dataclip,
+          state: :success
+        )
+
+      run1 =
+        insert(:run,
+          work_order: work_order1,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot1,
+          state: :success
+        )
+
+      work_order2 =
+        insert(:workorder,
+          workflow: updated_workflow,
+          snapshot: snapshot2,
+          dataclip: dataclip,
+          state: :pending
+        )
+
+      run2 =
+        insert(:run,
+          work_order: work_order2,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot2,
+          state: :started
+        )
+
+      insert(:step, job: job, runs: [run1], snapshot: snapshot1)
+      insert(:step, job: job, runs: [run2], snapshot: snapshot2)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{updated_workflow}?#{[a: run2, s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      render_hook(view, "get-current-state", %{})
+
+      assert_reply(view, %{history: history})
+      assert length(history) == 2
+
+      versions = Enum.map(history, & &1.version)
+      assert snapshot1.lock_version in versions
+      assert snapshot2.lock_version in versions
+    end
+
+    test "canvas is disabled when appropriate", %{
+      conn: conn,
+      project: project
+    } do
+      workflow =
+        insert(:simple_workflow,
+          project: project,
+          deleted_at: DateTime.utc_now()
+        )
+
+      {:ok, _snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
+
+      render_hook(view, "get-current-state", %{})
+
+      assert_push_event(view, "set-disabled", %{disabled: true})
+    end
+  end
+
+  describe "run selection history mode" do
+    setup :create_workflow
+
+    test "loads historical run data when accessing history mode", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      snapshot: snapshot
+    } do
+      %{triggers: [trigger], jobs: [job | _]} = workflow
+
+      dataclip = insert(:dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:step,
+        job: job,
+        runs: [run],
+        snapshot: snapshot,
+        exit_reason: "success"
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?m=history&v=#{snapshot.lock_version}&a=#{run.id}&s=#{job.id}"
+        )
+
+      assert_push_event(view, "patch-runs", %{
+        run_id: run_id,
+        run_steps: run_steps
+      })
+
+      assert run_id == run.id
+      assert run_steps.start_from == trigger.id
+      assert length(run_steps.steps) == 1
+    end
+
+    test "handles history mode without selected job", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      snapshot: snapshot
+    } do
+      %{triggers: [trigger]} = workflow
+
+      dataclip = insert(:dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?m=history&v=#{snapshot.lock_version}&a=#{run.id}"
+        )
+
+      expected_run_id = run.id
+      assert_push_event(view, "patch-runs", %{run_id: actual_run_id})
+      assert actual_run_id == expected_run_id
+    end
+
+    test "canvas is disabled when workflow is deleted", %{
+      conn: conn,
+      project: project
+    } do
+      workflow =
+        insert(:simple_workflow,
+          project: project,
+          deleted_at: DateTime.utc_now()
+        )
+
+      {:ok, _snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      assert_push_event(view, "set-disabled", %{disabled: true})
+    end
+  end
+
   defp log_viewer_selected_level(log_viewer) do
     log_viewer
     |> render()
