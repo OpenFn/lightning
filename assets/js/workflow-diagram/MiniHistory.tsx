@@ -1,7 +1,5 @@
 import { relativeLocale } from '../hooks';
-import type {
-  WorkflowRunHistory,
-} from '#/workflow-store/store';
+import type { WorkflowRunHistory } from '#/workflow-store/store';
 import { formatRelative } from 'date-fns';
 import React, { useState } from 'react';
 import { duration } from '../utils/duration';
@@ -9,20 +7,20 @@ import truncateUid from '../utils/truncateUID';
 
 const CHIP_STYLES: Record<string, string> = {
   // only workorder states...
-  rejected: "bg-red-300 text-gray-800",
-  pending: "bg-gray-200 text-gray-800",
-  running: "bg-blue-200 text-blue-800",
+  rejected: 'bg-red-300 text-gray-800',
+  pending: 'bg-gray-200 text-gray-800',
+  running: 'bg-blue-200 text-blue-800',
   //  run and workorder states...
-  available: "bg-gray-200 text-gray-800",
-  claimed: "bg-blue-200 text-blue-800",
-  started: "bg-blue-200 text-blue-800",
-  success: "bg-green-200 text-green-800",
-  failed: "bg-red-200 text-red-800",
-  crashed: "bg-orange-200 text-orange-800",
-  cancelled: "bg-gray-500 text-gray-800",
-  killed: "bg-yellow-200 text-yellow-800",
-  exception: "bg-gray-800 text-white",
-  lost: "bg-gray-800 text-white"
+  available: 'bg-gray-200 text-gray-800',
+  claimed: 'bg-blue-200 text-blue-800',
+  started: 'bg-blue-200 text-blue-800',
+  success: 'bg-green-200 text-green-800',
+  failed: 'bg-red-200 text-red-800',
+  crashed: 'bg-orange-200 text-orange-800',
+  cancelled: 'bg-gray-500 text-gray-800',
+  killed: 'bg-yellow-200 text-yellow-800',
+  exception: 'bg-gray-800 text-white',
+  lost: 'bg-gray-800 text-white',
 };
 
 const displayTextFromState = (state: string): string => {
@@ -58,19 +56,19 @@ const displayTextFromState = (state: string): string => {
   }
 };
 
-const StatePill: React.FC<{ state: string; mini?: boolean }> = ({ state, mini = false }) => {
+const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
+  state,
+  mini = false,
+}) => {
   const classes = CHIP_STYLES[state] || CHIP_STYLES['pending'];
   const text = displayTextFromState(state);
-  
-  const baseClasses = "my-auto whitespace-nowrap rounded-full text-center align-baseline font-medium leading-none";
-  const sizeClasses = mini 
-    ? "py-1 px-2 text-[10px]" 
-    : "py-2 px-4 text-xs";
-  
+
+  const baseClasses =
+    'my-auto whitespace-nowrap rounded-full text-center align-baseline font-medium leading-none';
+  const sizeClasses = mini ? 'py-1 px-2 text-[10px]' : 'py-2 px-4 text-xs';
+
   return (
-    <span className={`${baseClasses} ${sizeClasses} ${classes}`}>
-      {text}
-    </span>
+    <span className={`${baseClasses} ${sizeClasses} ${classes}`}>{text}</span>
   );
 };
 
@@ -118,7 +116,7 @@ export default function MiniHistory({
     setIsCollapsed(p => !p);
   };
 
-  const gotoHistory = (e: MouseEvent) => {
+  const gotoHistory = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const currentUrl = new URL(window.location.href);
@@ -133,7 +131,10 @@ export default function MiniHistory({
     window.location = nextUrl.toString();
   };
 
-  const navigateToWorkorderHistory = (e: React.MouseEvent, workorderId: string) => {
+  const navigateToWorkorderHistory = (
+    e: React.MouseEvent,
+    workorderId: string
+  ) => {
     e.preventDefault();
     e.stopPropagation();
     const currentUrl = new URL(window.location.href);
@@ -141,7 +142,7 @@ export default function MiniHistory({
     const paths = nextUrl.pathname.split('/');
     const projectIndex = paths.indexOf('projects');
     const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
-    
+
     if (projectId) {
       nextUrl.pathname = `/projects/${projectId}/history`;
       nextUrl.search = `?filters[workorder_id]=${workorderId}`;
@@ -158,7 +159,7 @@ export default function MiniHistory({
     const paths = nextUrl.pathname.split('/');
     const projectIndex = paths.indexOf('projects');
     const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
-    
+
     if (projectId) {
       nextUrl.pathname = `/projects/${projectId}/runs/${runId}`;
       window.history.pushState({}, '', nextUrl.toString());
@@ -182,15 +183,24 @@ export default function MiniHistory({
       >
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-gray-700">
-            {isCollapsed ? 'View History' : 'Recent Activity'}
+            {isCollapsed ? 'View History' : 'Recent History'}
           </h3>
-          <div
+          <button
+            type="button"
             className="text-gray-400 hover:text-gray-600 transition-colors flex items-center"
-            title="View full history for this workflow"
+            phx-hook="Tooltip"
+            data-placement="top"
+            aria-label="View full history for this workflow"
             onClick={gotoHistory}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                gotoHistory(e);
+              }
+            }}
           >
-            <span className="hero-arrow-top-right-on-square w-4 h-4"></span>
-          </div>
+            <span className="hero-rectangle-stack w-4 h-4"></span>
+          </button>
         </div>
 
         <div
@@ -212,11 +222,9 @@ export default function MiniHistory({
       >
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-gray-500">
-            <span className="hero-clock w-8 h-8 mb-2 opacity-50"></span>
-            <p className="text-sm font-medium">No related activity</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Run your workflow to see execution history
-            </p>
+            <span className="hero-rectangle-stack w-8 h-8 mb-2 opacity-50"></span>
+            <p className="text-sm font-medium">No related history</p>
+            <p className="text-xs text-gray-400 mt-1">Why not run it a few times to see some history?</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -247,7 +255,9 @@ export default function MiniHistory({
                         )}
                       </button>
                       <button
-                        onClick={(e) => navigateToWorkorderHistory(e, workorder.id)}
+                        onClick={e =>
+                          navigateToWorkorderHistory(e, workorder.id)
+                        }
                         className="link-uuid"
                         title={workorder.id}
                       >
@@ -262,7 +272,11 @@ export default function MiniHistory({
                         )}
                       </span>
                     </div>
-                    <StatePill key={workorder.id} state={workorder.state} mini={true} />
+                    <StatePill
+                      key={workorder.id}
+                      state={workorder.state}
+                      mini={true}
+                    />
                   </div>
                 </div>
 
@@ -290,7 +304,7 @@ export default function MiniHistory({
                             }`}
                           ></span>
                           <button
-                            onClick={(e) => navigateToRunView(e, run.id)}
+                            onClick={e => navigateToRunView(e, run.id)}
                             className="link-uuid"
                             title={run.id}
                           >
@@ -320,7 +334,11 @@ export default function MiniHistory({
                               className="flex items-center justify-center"
                               phx-hook="Tooltip"
                               data-placement="right"
-                              aria-label={`This run had ${missingNodeCount} step${missingNodeCount !== 1 ? 's' : ''} that ${missingNodeCount !== 1 ? 'are' : 'is'} no longer visible in the current workflow version.`}
+                              aria-label={`This run had ${missingNodeCount} step${
+                                missingNodeCount !== 1 ? 's' : ''
+                              } that ${
+                                missingNodeCount !== 1 ? 'are' : 'is'
+                              } no longer visible in the current workflow version.`}
                             >
                               <span className="hero-exclamation-triangle-mini w-3 h-3 text-yellow-600"></span>
                             </div>
