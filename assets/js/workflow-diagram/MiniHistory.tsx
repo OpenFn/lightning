@@ -70,9 +70,7 @@ export default function MiniHistory({
 
   return (
     <div
-      className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40 ${
-        isCollapsed ? 'w-auto' : 'w-88'
-      }`}
+      className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40}`}
       style={{
         transform: `translateX(${drawerWidth}px)`,
         transition: 'transform 300ms ease-in-out',
@@ -115,7 +113,7 @@ export default function MiniHistory({
         }`}
       >
         {history.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+          <div className="flex flex-col items-center justify-center p-8 text-gray-500">
             <span className="hero-clock w-8 h-8 mb-2 opacity-50"></span>
             <p className="text-sm font-medium">No related activity</p>
             <p className="text-xs text-gray-400 mt-1">
@@ -131,7 +129,7 @@ export default function MiniHistory({
                     className="flex items-center justify-between cursor-pointer"
                     onClick={() => expandWorkorderHandler(workorder)}
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
                       <button
                         onClick={e => {
                           e.preventDefault();
@@ -150,10 +148,11 @@ export default function MiniHistory({
                           <span className="hero-chevron-right w-4 h-4"></span>
                         )}
                       </button>
-                      <span className="text-xs text-gray-500 truncate">
+                      <span className="text-xs text-gray-500 truncate font-mono">
                         {truncateUid(workorder.id)}
                       </span>
-                      <span className="text-xs text-gray-500 font-mono">
+                      <span className="text-xs text-gray-800">&bull;</span>
+                      <span className="text-xs text-gray-500">
                         {formatRelative(
                           new Date(workorder.last_activity),
                           now,
@@ -181,7 +180,7 @@ export default function MiniHistory({
                           : selectRunHandler(run.id, workorder.version)
                       }
                     >
-                      <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center justify-between w-full mr-2">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <span
                             className={`hero-x-mark w-4 h-4 text-gray-400 ${
@@ -191,7 +190,8 @@ export default function MiniHistory({
                           <span className="text-gray-500 truncate">
                             {truncateUid(run.id)}
                           </span>
-                          <span className="text-gray-500 font-mono">
+                          <span className="text-xs text-gray-800">&bull;</span>
+                          <span className="text-gray-500">
                             {run.started_at
                               ? formatRelative(new Date(run.started_at), now, {
                                   locale: relativeLocale,
@@ -200,6 +200,7 @@ export default function MiniHistory({
                                   locale: relativeLocale,
                                 })}
                           </span>
+                          <span className="text-xs text-gray-800">&bull;</span>
                           <span className="text-gray-400 text-xs">
                             {!run.started_at || !run.finished_at
                               ? '-ms'
