@@ -134,9 +134,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
             theme="primary"
             phx-click="switch-version"
             phx-value-type="commit"
+            class="mr-4"
           >
             Switch to latest version
           </.button>
+
 
           <div class="flex flex-row gap-2">
             <.icon
