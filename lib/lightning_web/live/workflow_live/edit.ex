@@ -247,7 +247,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
             phx-hook="Tooltip"
             aria-label="Click to open the AI Assistant"
-            class="absolute top-16 left-4 z-30"
+            class="absolute top-4 left-4 z-30"
             id="workflow-ai-chat-toggle-floating"
             phx-mounted={
               JS.transition(

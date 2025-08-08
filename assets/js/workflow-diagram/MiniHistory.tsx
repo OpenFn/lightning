@@ -70,7 +70,7 @@ export default function MiniHistory({
 
   return (
     <div
-      className={`absolute left-2 top-2 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40 ${
+      className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40 ${
         isCollapsed ? 'w-44' : 'w-88'
       }`}
       style={{
