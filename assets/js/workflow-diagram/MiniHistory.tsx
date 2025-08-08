@@ -133,6 +133,39 @@ export default function MiniHistory({
     window.location = nextUrl.toString();
   };
 
+  const navigateToWorkorderHistory = (e: React.MouseEvent, workorderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentUrl = new URL(window.location.href);
+    const nextUrl = new URL(currentUrl);
+    const paths = nextUrl.pathname.split('/');
+    const projectIndex = paths.indexOf('projects');
+    const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
+    
+    if (projectId) {
+      nextUrl.pathname = `/projects/${projectId}/history`;
+      nextUrl.search = `?filters[workorder_id]=${workorderId}`;
+      window.history.pushState({}, '', nextUrl.toString());
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  };
+
+  const navigateToRunView = (e: React.MouseEvent, runId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentUrl = new URL(window.location.href);
+    const nextUrl = new URL(currentUrl);
+    const paths = nextUrl.pathname.split('/');
+    const projectIndex = paths.indexOf('projects');
+    const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
+    
+    if (projectId) {
+      nextUrl.pathname = `/projects/${projectId}/runs/${runId}`;
+      window.history.pushState({}, '', nextUrl.toString());
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  };
+
   return (
     <div
       className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40}`}
@@ -213,9 +246,13 @@ export default function MiniHistory({
                           <span className="hero-chevron-right w-4 h-4"></span>
                         )}
                       </button>
-                      <span className="text-xs text-gray-500 truncate font-mono">
+                      <button
+                        onClick={(e) => navigateToWorkorderHistory(e, workorder.id)}
+                        className="link-uuid"
+                        title={workorder.id}
+                      >
                         {truncateUid(workorder.id)}
-                      </span>
+                      </button>
                       <span className="text-xs text-gray-800">&bull;</span>
                       <span className="text-xs text-gray-500">
                         {formatRelative(
@@ -252,9 +289,13 @@ export default function MiniHistory({
                               run.selected ? 'visible' : 'invisible'
                             }`}
                           ></span>
-                          <span className="text-gray-500 truncate">
+                          <button
+                            onClick={(e) => navigateToRunView(e, run.id)}
+                            className="link-uuid"
+                            title={run.id}
+                          >
                             {truncateUid(run.id)}
-                          </span>
+                          </button>
                           <span className="text-xs text-gray-800">&bull;</span>
                           <span className="text-gray-500">
                             {run.started_at
