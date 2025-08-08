@@ -1,33 +1,35 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ReactFlow,
+  Background,
+  ControlButton,
   Controls,
+  MiniMap,
+  ReactFlow,
   ReactFlowProvider,
   applyNodeChanges,
   getNodesBounds,
   type NodeChange,
   type ReactFlowInstance,
   type Rect,
-  ControlButton,
-  Background,
-  MiniMap,
 } from '@xyflow/react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useWorkflowStore } from '../workflow-store/store';
+import MiniMapNode from './components/MiniMapNode';
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import edgeTypes from './edges';
 import layout from './layout';
+import MiniHistory from './MiniHistory';
 import nodeTypes from './nodes';
+import type { Flow, Positions } from './types';
 import useConnect from './useConnect';
 import usePlaceholders from './usePlaceholders';
 import fromWorkflow from './util/from-workflow';
 import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
-import tippy from 'tippy.js';
-import { useWorkflowStore } from '../workflow-store/store';
-import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
-import MiniMapNode from './components/MiniMapNode';
+
+const controlButtonStyle = (disabled: boolean) => disabled ? { background: "#eee", cursor: "not-allowed", color: "#818181" } : { color: "#000" };
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -35,6 +37,8 @@ type WorkflowDiagramProps = {
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   forceFit?: boolean;
+  onRunChange: (id: string, version: number) => void;
+  onCollapseHistory: () => void;
   showAiAssistant?: boolean;
   aiAssistantId?: string;
 };
@@ -48,32 +52,6 @@ type ChartCache = {
 
 const LAYOUT_DURATION = 300;
 
-// Simple React hook for Tippy tooltips that finds buttons by their content
-const useTippyForControls = (isManualLayout: boolean) => {
-  useEffect(() => {
-    // Find the control buttons and initialize tooltips based on their dataset attributes
-    const buttons = document.querySelectorAll('.react-flow__controls button');
-
-    const cleaner: (() => void)[] = [];
-    buttons.forEach(button => {
-      if (button instanceof HTMLElement && button.dataset.tooltip) {
-        const tp = tippy(button, {
-          content: button.dataset.tooltip,
-          placement: 'right',
-          animation: false,
-          allowHTML: false,
-        });
-        cleaner.push(tp.destroy.bind(tp));
-      }
-    });
-
-    return () => {
-      cleaner.forEach(f => {
-        f();
-      });
-    };
-  }, [isManualLayout]); // Only run once on mount
-};
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const {
@@ -85,11 +63,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updatePositions,
     updatePosition,
     undo,
-    redo
+    redo,
+    runSteps,
+    history: someHistory,
   } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
-  const { selection, onSelectionChange, containerEl: el } = props;
+  const { selection, onSelectionChange, containerEl: el, onRunChange, onCollapseHistory } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   const [drawerWidth, setDrawerWidth] = useState(0);
@@ -167,6 +147,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         workflow,
         positions,
         placeholders,
+        runSteps,
         // Re-render the model based on whatever was last selected
         // This handles first load and new node safely
         lastSelection
@@ -225,7 +206,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection]);
+  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection, runSteps]);
 
   // This effect only runs when AI assistant visibility changes, not on every selection change
   useEffect(() => {
@@ -430,8 +411,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     },
     flow
   );
-  // Set up tooltips for control buttons
-  useTippyForControls(isManualLayout);
 
   // undo/redo keyboard shortcuts
   React.useEffect(() => {
@@ -484,8 +463,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             transition: 'transform 500ms ease-in-out',
           }}
         >
-          <ControlButton onClick={handleFitView} data-tooltip="Fit view">
-            <span className="text-black hero-viewfinder-circle w-4 h-4" />
+          <ControlButton
+            onClick={handleFitView}
+            data-tooltip="Fit view"
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
+          >
+            <span className="hero-viewfinder-circle w-4 h-4" />
           </ControlButton>
 
           <ControlButton
@@ -495,30 +479,38 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
                 ? 'Switch to auto layout mode'
                 : 'Switch to manual layout mode'
             }
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
           >
             {isManualLayout ? (
-              <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
+              <span className="hero-cursor-arrow-rays w-4 h-4" />
             ) : (
-              <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
+              <span className="hero-cursor-arrow-ripple w-4 h-4" />
             )}
           </ControlButton>
           <ControlButton
             onClick={forceLayout}
             data-tooltip="Run auto layout (override manual positions)"
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
           >
-            <span className="text-black hero-squares-2x2 w-4 h-4" />
+            <span className="hero-squares-2x2 w-4 h-4" />
           </ControlButton>
           <ControlButton
             onClick={undo}
             data-tooltip="Undo"
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
           >
-            <span className="text-black hero-arrow-uturn-left w-4 h-4" />
+            <span className="hero-arrow-uturn-left w-4 h-4" />
           </ControlButton>
           <ControlButton
             onClick={redo}
             data-tooltip="Redo"
+            disabled={disabled}
+            style={controlButtonStyle(disabled)}
           >
-            <span className="text-black hero-arrow-uturn-right w-4 h-4" />
+            <span className="hero-arrow-uturn-right w-4 h-4" />
           </ControlButton>
 
         </Controls>
@@ -530,6 +522,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           nodeComponent={MiniMapNode}
         />
       </ReactFlow>
-    </ReactFlowProvider>
+      <MiniHistory
+        collapsed={!runSteps.start_from}
+        history={someHistory}
+        selectRunHandler={onRunChange}
+        onCollapseHistory={onCollapseHistory}
+      ></MiniHistory>
+    </ReactFlowProvider >
   );
 }
