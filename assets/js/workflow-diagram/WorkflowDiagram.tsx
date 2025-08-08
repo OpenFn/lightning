@@ -468,7 +468,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           showFitView={false}
           style={{
             transform: `translateX(${drawerWidth}px)`,
-            transition: 'transform 500ms ease-in-out',
+            transition: 'transform 300ms ease-in-out',
           }}
         >
           <ControlButton

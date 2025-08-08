@@ -246,11 +246,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
             phx-hook="Tooltip"
             aria-label={if @show_workflow_ai_chat, do: "Click to close the AI Assistant", else: "Click to open the AI Assistant"}
-            class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-transform duration-500 ease-in-out"
+            class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-transform duration-300 ease-in-out"
             id="workflow-ai-chat-toggle-floating"
             phx-mounted={
               JS.transition(
-                {"transition-opacity duration-300 delay-500", "opacity-0",
+                {"transition-opacity duration-500", "opacity-0",
                  "opacity-100"},
                 time: 500
               )
@@ -262,7 +262,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               class="flex items-center justify-between pl-3 pr-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors w-full text-left"
             >
               <div class="flex items-center gap-2">
-                <.icon name="hero-chat-bubble-left-right" class="w-4 h-4 text-indigo-600" />
+
                 <span class="text-sm font-medium text-gray-700">
                   <%= if @show_workflow_ai_chat, do: "Close Assistant", else: "AI Assistant" %>
                 </span>
