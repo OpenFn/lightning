@@ -1,7 +1,6 @@
 import { relativeLocale } from '../hooks';
 import type {
   WorkflowRunHistory,
-  WorkOrderStates,
 } from '#/workflow-store/store';
 import { formatRelative } from 'date-fns';
 import React, { useState } from 'react';
@@ -9,8 +8,66 @@ import { duration } from '../utils/duration';
 import truncateUid from '../utils/truncateUID';
 import { renderIcon } from './components/RunIcons';
 
-const StatePill: React.FC<{ state: WorkOrderStates }> = ({ state }) => {
-  return renderIcon(state, { size: 6 });
+const CHIP_STYLES: Record<string, string> = {
+  // only workorder states...
+  rejected: "bg-red-300 text-gray-800",
+  pending: "bg-gray-200 text-gray-800",
+  running: "bg-blue-200 text-blue-800",
+  //  run and workorder states...
+  available: "bg-gray-200 text-gray-800",
+  claimed: "bg-blue-200 text-blue-800",
+  started: "bg-blue-200 text-blue-800",
+  success: "bg-green-200 text-green-800",
+  failed: "bg-red-200 text-red-800",
+  crashed: "bg-orange-200 text-orange-800",
+  cancelled: "bg-gray-500 text-gray-800",
+  killed: "bg-yellow-200 text-yellow-800",
+  exception: "bg-gray-800 text-white",
+  lost: "bg-gray-800 text-white"
+};
+
+const displayTextFromState = (state: string): string => {
+  switch (state) {
+    case 'rejected':
+      return 'Rejected';
+    case 'pending':
+      return 'Pending';
+    case 'running':
+      return 'Running';
+    case 'available':
+      return 'Available';
+    case 'claimed':
+      return 'Claimed';
+    case 'started':
+      return 'Started';
+    case 'success':
+      return 'Success';
+    case 'failed':
+      return 'Failed';
+    case 'crashed':
+      return 'Crashed';
+    case 'cancelled':
+      return 'Cancelled';
+    case 'killed':
+      return 'Killed';
+    case 'exception':
+      return 'Exception';
+    case 'lost':
+      return 'Lost';
+    default:
+      return state;
+  }
+};
+
+const StatePill: React.FC<{ state: string }> = ({ state }) => {
+  const classes = CHIP_STYLES[state] || CHIP_STYLES['pending'];
+  const text = displayTextFromState(state);
+  
+  return (
+    <span className={`my-auto whitespace-nowrap rounded-full py-2 px-4 text-center align-baseline text-xs font-medium leading-none ${classes}`}>
+      {text}
+    </span>
+  );
 };
 
 interface MiniHistoryProps {
@@ -72,7 +129,7 @@ export default function MiniHistory({
     <div
       className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40}`}
       style={{
-        transform: `translateX(${drawerWidth}px)`,
+        transform: `translateX(${drawerWidth.toString()}px)`,
         transition: 'transform 300ms ease-in-out',
       }}
     >
