@@ -2525,4 +2525,401 @@ defmodule Lightning.WorkOrdersTest do
       assert work_order.state == :running
     end
   end
+
+  describe "get_run_steps/1" do
+    test "returns a run with its steps and created_by user" do
+      user = insert(:user)
+      workflow = insert(:simple_workflow)
+      job = hd(workflow.jobs)
+      trigger = hd(workflow.triggers)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      dataclip = insert(:dataclip)
+      output_dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          created_by: user,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          snapshot: snapshot,
+          steps: [
+            insert(:step,
+              job: job,
+              input_dataclip: dataclip,
+              output_dataclip: output_dataclip
+            ),
+            insert(:step,
+              job: job,
+              input_dataclip: output_dataclip
+            )
+          ]
+        )
+
+      result = WorkOrders.get_run_steps(run.id)
+
+      assert result.id == run.id
+      assert result.created_by.id == user.id
+      assert length(result.steps) == 2
+      assert Enum.all?(result.steps, &(&1.job_id == job.id))
+    end
+
+    test "returns nil when run doesn't exist" do
+      non_existent_id = Ecto.UUID.generate()
+      assert is_nil(WorkOrders.get_run_steps(non_existent_id))
+    end
+
+    test "returns run even if it has no steps" do
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+      dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          snapshot: snapshot,
+          steps: []
+        )
+
+      result = WorkOrders.get_run_steps(run.id)
+
+      assert result.id == run.id
+      assert result.steps == []
+    end
+  end
+
+  describe "get_workorders_with_runs/2" do
+    setup do
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot}
+    end
+
+    test "returns empty list when no workorders exist for workflow", %{
+      workflow: workflow
+    } do
+      results = WorkOrders.get_workorders_with_runs(workflow.id, nil)
+      assert results == []
+    end
+
+    test "returns empty list for non-existent workflow" do
+      non_existent_id = Ecto.UUID.generate()
+      results = WorkOrders.get_workorders_with_runs(non_existent_id, nil)
+      assert results == []
+    end
+
+    test "returns workorders for a workflow without specific run_id", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      # Create multiple workorders with runs
+      _workorders =
+        for _ <- 1..3 do
+          dataclip = insert(:dataclip)
+
+          insert(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            dataclip: dataclip,
+            snapshot: snapshot,
+            runs: [
+              %{
+                dataclip: dataclip,
+                starting_trigger: trigger,
+                snapshot: snapshot,
+                state: :available
+              }
+            ]
+          )
+        end
+
+      # Create a workorder for a different workflow
+      other_workflow = insert(:simple_workflow)
+      other_trigger = hd(other_workflow.triggers)
+      {:ok, other_snapshot} = Lightning.Workflows.Snapshot.create(other_workflow)
+      other_dataclip = insert(:dataclip)
+
+      insert(:workorder,
+        workflow: other_workflow,
+        trigger: other_trigger,
+        dataclip: other_dataclip,
+        snapshot: other_snapshot,
+        runs: [
+          %{
+            dataclip: other_dataclip,
+            starting_trigger: other_trigger,
+            snapshot: other_snapshot,
+            state: :available
+          }
+        ]
+      )
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, nil)
+
+      assert length(results) == 3
+      assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+      assert Enum.all?(results, &Ecto.assoc_loaded?(&1.snapshot))
+      assert Enum.all?(results, &Ecto.assoc_loaded?(&1.runs))
+    end
+
+    test "returns specific workorder when run_id is provided", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      dataclip1 = insert(:dataclip)
+      dataclip2 = insert(:dataclip)
+
+      # Create multiple workorders
+      workorder1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip1,
+          snapshot: snapshot
+        )
+
+      workorder2 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip2,
+          snapshot: snapshot
+        )
+
+      run1 =
+        insert(:run,
+          work_order: workorder1,
+          dataclip: dataclip1,
+          starting_trigger: trigger,
+          snapshot: snapshot
+        )
+
+      _run2 =
+        insert(:run,
+          work_order: workorder2,
+          dataclip: dataclip2,
+          starting_trigger: trigger,
+          snapshot: snapshot
+        )
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, run1.id)
+
+      # Should include the specific workorder plus up to 20 others
+      assert Enum.any?(results, &(&1.id == workorder1.id))
+      assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+    end
+
+    test "respects the limit of 20 workorders", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      # Create 25 workorders
+      for _ <- 1..25 do
+        dataclip = insert(:dataclip)
+
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          runs: [
+            %{
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+      end
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, nil)
+
+      assert length(results) == 20
+    end
+
+    test "orders workorders by last_activity descending" do
+      # Create isolated workflow to prevent interference from other tests
+      # This ensures the test is not flaky due to shared data
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+      dataclip1 = insert(:dataclip)
+      dataclip2 = insert(:dataclip)
+      dataclip3 = insert(:dataclip)
+
+      # Create workorders with different last_activity times
+      old_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip1,
+          snapshot: snapshot,
+          last_activity: ~U[2024-01-01 10:00:00Z],
+          runs: [
+            %{
+              dataclip: dataclip1,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+
+      new_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip2,
+          snapshot: snapshot,
+          last_activity: ~U[2024-01-01 12:00:00Z],
+          runs: [
+            %{
+              dataclip: dataclip2,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+
+      middle_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip3,
+          snapshot: snapshot,
+          last_activity: ~U[2024-01-01 11:00:00Z],
+          runs: [
+            %{
+              dataclip: dataclip3,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, nil)
+
+      # Should only have our 3 workorders since we created a unique workflow
+      assert length(results) == 3
+
+      # They should be ordered by last_activity descending
+      assert [new_workorder.id, middle_workorder.id, old_workorder.id] ==
+               Enum.map(results, & &1.id)
+    end
+
+    test "returns distinct workorders even with multiple runs", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      # Insert multiple runs for the same workorder
+      for _ <- 1..3 do
+        run_dataclip = insert(:dataclip)
+
+        insert(:run,
+          work_order: workorder,
+          dataclip: run_dataclip,
+          starting_trigger: trigger,
+          snapshot: snapshot
+        )
+      end
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, nil)
+
+      assert length(results) == 1
+      assert hd(results).id == workorder.id
+      assert length(hd(results).runs) == 3
+    end
+
+    test "returns specific workorder plus others when run_id is provided", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      target_dataclip = insert(:dataclip)
+
+      # Create a workorder with a specific run
+      target_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: target_dataclip,
+          snapshot: snapshot
+        )
+
+      target_run =
+        insert(:run,
+          work_order: target_workorder,
+          dataclip: target_dataclip,
+          starting_trigger: trigger,
+          snapshot: snapshot
+        )
+
+      # Create other workorders
+      for _ <- 1..5 do
+        dataclip = insert(:dataclip)
+
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          runs: [
+            %{
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+      end
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, target_run.id)
+
+      # Should include the target workorder
+      assert Enum.any?(results, &(&1.id == target_workorder.id))
+      # Should include other workorders up to the limit
+      # 1 from specific query + up to 20 from main query
+      assert length(results) <= 21
+    end
+  end
 end

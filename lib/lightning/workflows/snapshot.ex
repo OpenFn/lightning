@@ -23,7 +23,8 @@ defmodule Lightning.Workflows.Snapshot do
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t(),
           jobs: [%Lightning.Workflows.Snapshot.Job{}],
           triggers: [%Lightning.Workflows.Snapshot.Trigger{}],
-          edges: [%Lightning.Workflows.Snapshot.Edge{}]
+          edges: [%Lightning.Workflows.Snapshot.Edge{}],
+          positions: map() | nil
         }
 
   schema "workflow_snapshots" do
@@ -87,7 +88,12 @@ defmodule Lightning.Workflows.Snapshot do
   end
 
   def new(workflow) do
-    cast(%__MODULE__{}, workflow, [:name, :lock_version, :workflow_id])
+    cast(%__MODULE__{}, workflow, [
+      :name,
+      :lock_version,
+      :workflow_id,
+      :positions
+    ])
     |> validate_required([:name, :lock_version, :workflow_id])
     |> unique_constraint([:workflow_id, :lock_version],
       error_key: :lock_version,
@@ -133,7 +139,7 @@ defmodule Lightning.Workflows.Snapshot do
         field when field in @associations_to_include ->
           {field, Enum.map(value, &Map.from_struct/1)}
 
-        field when field in [:name, :lock_version] ->
+        field when field in [:name, :lock_version, :positions] ->
           {field, value}
 
         :id ->
