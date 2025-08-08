@@ -36,19 +36,30 @@ defmodule Lightning.ObanManager do
     timeout? = Map.get(error, :reason) == :timeout
 
     if timeout? do
-      Sentry.capture_message("Processor Timeout",
+      Lightning.Sentry.capture_message("Processor Timeout",
         level: :warning,
         extra: Map.merge(context, %{exception: inspect(error)}),
         tags: %{type: "timeout"}
       )
     else
-      Sentry.capture_exception(error,
+      Lightning.Sentry.capture_exception(error,
         stacktrace: meta.stacktrace,
         extra: context,
         tags: %{type: "oban"}
       )
     end
   end
+
+  def handle_event(
+        [:oban, :job, :stop],
+        measure,
+        %{job: %{queue: "ai_assistant"}} = meta,
+        _pid
+      ) do
+    handle_ai_assistant_stop(measure, meta)
+  end
+
+  def handle_event([:oban, :job, :stop], _measure, _meta, _pid), do: :ok
 
   defp handle_ai_assistant_exception(measure, meta) do
     job = meta.job
@@ -74,10 +85,7 @@ defmodule Lightning.ObanManager do
         )
 
         {:ok, _updated_session, _updated_message} =
-          MessageProcessor.update_message_status(
-            message,
-            :error
-          )
+          MessageProcessor.update_message_status(message, :error)
 
       %ChatMessage{id: message_id, status: status} ->
         Logger.debug(
@@ -96,7 +104,7 @@ defmodule Lightning.ObanManager do
     }
 
     if timeout? do
-      Sentry.capture_message("AI Assistant Timeout: #{job.worker}",
+      Lightning.Sentry.capture_message("AI Assistant Timeout: #{job.worker}",
         level: :warning,
         extra: Map.merge(context, %{error: inspect(error)}),
         tags: %{
@@ -106,7 +114,7 @@ defmodule Lightning.ObanManager do
         }
       )
     else
-      Sentry.capture_exception(error,
+      Lightning.Sentry.capture_exception(error,
         stacktrace: meta.stacktrace,
         extra: context,
         tags: %{
@@ -115,6 +123,59 @@ defmodule Lightning.ObanManager do
           worker: job.worker
         }
       )
+    end
+  end
+
+  defp handle_ai_assistant_stop(measure, meta) do
+    case meta.state do
+      :success ->
+        :ok
+
+      other ->
+        Logger.error("""
+        AI Assistant stop (non-success):
+        Worker: #{meta.job.worker}
+        State: #{inspect(other)}
+        Args: #{inspect(meta.job.args)}
+        Duration: #{measure.duration / 1_000_000}ms
+        """)
+
+        ChatMessage
+        |> Repo.get!(meta.job.args["message_id"])
+        |> case do
+          %ChatMessage{id: message_id, status: status} = message
+          when status in [:pending, :processing] ->
+            Logger.info(
+              "[AI Assistant] Updating message #{message_id} to error status after stop=#{other}"
+            )
+
+            {:ok, _sess, _msg} =
+              MessageProcessor.update_message_status(message, :error)
+
+          _ ->
+            :ok
+        end
+
+        Lightning.Sentry.capture_message(
+          "AI Assistant Stop (#{other}): #{meta.job.worker}",
+          level: :warning,
+          extra: %{
+            worker: meta.job.worker,
+            args: meta.job.args,
+            job_id: meta.job.id,
+            queue: meta.job.queue,
+            state: other,
+            duration_ms: measure.duration / 1_000_000,
+            memory: measure.memory,
+            reductions: measure.reductions
+          },
+          tags: %{
+            type: "ai_stop",
+            queue: "ai_assistant",
+            worker: meta.job.worker,
+            state: other
+          }
+        )
     end
   end
 end
