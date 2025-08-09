@@ -134,6 +134,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             theme="primary"
             phx-click="switch-version"
             phx-value-type="commit"
+            class="mr-4"
           >
             Switch to latest version
           </.button>
@@ -242,17 +243,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div
             :if={
               @snapshot_version_tag == "latest" && @can_edit_workflow &&
-                @ai_assistant_enabled && @live_action == :edit &&
-                !@show_workflow_ai_chat
+                @ai_assistant_enabled && @live_action == :edit
             }
             phx-hook="Tooltip"
-            aria-label="Click to open the AI Assistant"
-            class="absolute top-16 left-4 z-30"
+            aria-label={
+              if @show_workflow_ai_chat,
+                do: "Click to close the AI Assistant",
+                else: "Click to open the AI Assistant"
+            }
+            class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-transform duration-300 ease-in-out"
             id="workflow-ai-chat-toggle-floating"
             phx-mounted={
               JS.transition(
-                {"transition-opacity duration-300 delay-500", "opacity-0",
-                 "opacity-100"},
+                {"transition-opacity duration-500", "opacity-0", "opacity-100"},
                 time: 500
               )
             }
@@ -260,9 +263,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <button
               type="button"
               phx-click="toggle-workflow-ai-chat"
-              class="p-2 rounded-full transition-all duration-200 text-white ai-bg-gradient shadow-md"
+              class="flex items-center justify-between pl-3 pr-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors w-full text-left"
             >
-              <.icon name="hero-chat-bubble-left-right" class="w-6 h-6" />
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-gray-700">
+                  AI Assistant
+                  <%!-- <%= if @show_workflow_ai_chat, do: "Close AI Assistant", else: "Open AI Assistant" %> --%>
+                </span>
+              </div>
+              <.icon
+                name={
+                  if @show_workflow_ai_chat,
+                    do: "hero-chevron-left",
+                    else: "hero-chevron-right"
+                }
+                class="w-4 h-4 text-gray-400 ml-3"
+              />
             </button>
           </div>
           <.selected_template_label

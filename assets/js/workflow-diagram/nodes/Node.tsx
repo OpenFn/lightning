@@ -30,13 +30,33 @@ type LabelProps = React.PropsWithChildren<{
   hasErrors?: boolean;
 }>;
 
-const reasonMap = {
-  fail: 'failed',
-  crash: 'crashed',
-};
-
-const mapReason = (reason: string) => {
-  return reasonMap[reason] ?? reason;
+const mapReason = (
+  reason: string
+):
+  | 'pending'
+  | 'success'
+  | 'fail'
+  | 'crash'
+  | 'cancel'
+  | 'shield'
+  | 'clock'
+  | 'circle_ex'
+  | 'triangle_ex' => {
+  // Map the exit reason to the expected icon state
+  switch (reason) {
+    case 'fail':
+      return 'fail';
+    case 'crash':
+      return 'crash';
+    case 'success':
+      return 'success';
+    case 'cancel':
+      return 'cancel';
+    case 'pending':
+      return 'pending';
+    default:
+      return 'pending';
+  }
 };
 
 function errorsMessage(errors: ErrorObject): string {
@@ -173,8 +193,19 @@ const Node = ({
           {runData && !isTriggerNode ? (
             <div className="absolute -left-2 -top-2">
               {renderIcon(mapReason(runData.exit_reason ?? 'pending'), {
-                tooltip: runData?.error_type ?? 'Successful run',
+                tooltip: runData?.error_type ?? 'Step completed successfully',
               })}
+            </div>
+          ) : null}
+          {data.hasDuplicateSteps && !isTriggerNode ? (
+            <div
+              className="absolute -right-1 -top-2"
+              data-tooltip={`This step ran ${data.duplicateStepCount} times; view other executions via the Inspector or History page.`}
+              data-tooltip-placement="top"
+            >
+              <div className="flex justify-center items-center w-7 h-7 rounded-full text-white bg-primary-600 shadow-sm">
+                <span className="text-xs font-bold">{data.duplicateStepCount}</span>
+              </div>
             </div>
           ) : null}
           {startInfo ? (
@@ -321,9 +352,10 @@ const Node = ({
             justifyContent: 'center',
           }}
           className={`flex flex-row items-center
-                    opacity-0  ${(!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-            ''
-            }
+                    opacity-0  ${
+                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+                      ''
+                    }
                     transition duration-150 ease-in-out`}
         >
           {toolbar()}

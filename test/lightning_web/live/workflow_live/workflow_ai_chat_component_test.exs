@@ -44,7 +44,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
 
       assert has_element?(view, "#workflow-ai-chat-panel")
-      assert has_element?(view, "#close-ai-assistant-panel")
+      assert has_element?(view, "#workflow-ai-chat-toggle-floating")
       assert has_element?(view, "#workflow-ai-chat-panel-assistant")
     end
 
@@ -59,10 +59,10 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
 
-      assert has_element?(view, "#close-ai-assistant-panel button")
+      assert has_element?(view, "#workflow-ai-chat-toggle-floating button")
 
       view
-      |> element("#close-ai-assistant-panel button")
+      |> element("#workflow-ai-chat-toggle-floating button")
       |> render_click()
 
       assert_patch(view, ~p"/projects/#{project}/w/#{workflow}")
