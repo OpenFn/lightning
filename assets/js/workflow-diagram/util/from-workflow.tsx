@@ -63,15 +63,16 @@ const fromWorkflow = (
 
   const runStepsObj = runSteps.steps.reduce((a, b) => {
     const exists = a[b.job_id];
-    // to make sure that a pre-existing error state preempts the success. 
+    // to make sure that a pre-existing error state preempts the success.
     // this is for nodes that run multiple times
     // TODO: we might want to show a state for the multiple runs of the step later on.
     let step_value: RunStep;
-    if (b.exit_reason === "success" && exists?.exit_reason === "fail") step_value = exists;
+    if (b.exit_reason === 'success' && exists?.exit_reason === 'fail')
+      step_value = exists;
     else step_value = b;
     a[b.job_id] = { ...step_value };
     return a;
-  }, {} as Record<string, RunStep>)
+  }, {} as Record<string, RunStep>);
 
   // Count duplicate steps for each job_id
   const duplicateCounts = runSteps.steps.reduce((counts, step) => {
@@ -111,15 +112,14 @@ const fromWorkflow = (
         model.data.allowPlaceholder = allowPlaceholder;
         model.data.isRun = isRun;
         model.data.runData = runStepsObj[node.id];
-        // Add duplicate step information
-        model.data.hasDuplicateSteps = duplicateCounts[node.id] > 1;
-        model.data.duplicateStepCount = duplicateCounts[node.id] || 0;
+        model.data.duplicateRunCount = duplicateCounts[node.id] || 0;
         if (item.id === runSteps.start_from) {
-          const startBy = type === "trigger" ? "Trigger" : (runSteps.run_by || "unknown")
+          const startBy =
+            type === 'trigger' ? 'Trigger' : runSteps.run_by || 'unknown';
           model.data.startInfo = {
             started_at: runSteps.inserted_at,
-            startBy
-          }
+            startBy,
+          };
         }
 
         if (type === 'trigger') {
@@ -149,7 +149,11 @@ const fromWorkflow = (
           enabled: edge.enabled ?? true,
           label,
           isRun,
-          didRun: !!((runStepsObj[edge.source_job_id] || edge.source_trigger_id === runSteps.start_from) && runStepsObj[edge.target_job_id])
+          didRun: !!(
+            (runStepsObj[edge.source_job_id] ||
+              edge.source_trigger_id === runSteps.start_from) &&
+            runStepsObj[edge.target_job_id]
+          ),
         };
 
         // Note: we don't allow the user to disable the edge that goes from a
