@@ -14,6 +14,7 @@
   },
   "license": "LGPLv3",
   "dependencies": {
+    "@headlessui/react": "^2.2.7",
     "@heroicons/react": "^2.1.1",
     "@monaco-editor/react": "^4.7.0",
     "@openfn/describe-package": "^0.1.3",
