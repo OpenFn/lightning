@@ -1,6 +1,6 @@
-import type { RelativePosition } from 'yjs';
-import * as Y from 'yjs';
-import type { TypedArray, TypedDoc, TypedMap } from 'yjs-types';
+import type * as Y from "yjs";
+import type { RelativePosition } from "yjs";
+import type { TypedArray, TypedDoc, TypedMap } from "yjs-types";
 
 export interface AwarenessUser {
   clientId: number;

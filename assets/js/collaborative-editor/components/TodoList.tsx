@@ -1,13 +1,13 @@
-import React from 'react';
-import { useTodoStore } from '../contexts/TodoStoreProvider';
-import { TodoInput } from './TodoInput';
-import { TodoItem } from './TodoItem';
-import { UserAwareness } from './UserAwareness';
+import type React from "react";
+import { useTodoStore } from "../contexts/TodoStoreProvider";
+import { TodoInput } from "./TodoInput";
+import { TodoItem } from "./TodoItem";
+import { UserAwareness } from "./UserAwareness";
 
 export const TodoList: React.FC = () => {
   const { todos } = useTodoStore();
 
-  const completedCount = todos.filter(todo => todo.completed).length;
+  const completedCount = todos.filter((todo) => todo.completed).length;
   const totalCount = todos.length;
 
   return (

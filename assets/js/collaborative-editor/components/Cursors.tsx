@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSession } from '../contexts/SessionProvider';
-import type { AwarenessUser } from '../types/session';
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "../contexts/SessionProvider";
+import type { AwarenessUser } from "../types/session";
 
 function BaseStyles() {
   const baseStyles = `
@@ -49,32 +49,32 @@ export function Cursors() {
     Map<number, AwarenessUser>
   >(new Map());
 
-  const [selections, setSelections] = useState<AwarenessUser['selection'][]>(
-    []
+  const [selections, setSelections] = useState<AwarenessUser["selection"][]>(
+    [],
   );
 
   useEffect(() => {
     if (!awareness) return;
 
-    awareness.on('change', () => {
+    awareness.on("change", () => {
       const newStates = awareness.getStates() as Map<number, AwarenessUser>;
       setAwarenessUsers(newStates);
 
       // Update cursor states
       const newSelections = Array.from(newStates.values()).map(
-        user => user.selection
+        (user) => user.selection,
       );
       setSelections(newSelections);
     });
 
     return () => {
-      awareness.off('change', () => {});
+      awareness.off("change", () => {});
     };
   }, [awareness]);
 
   // Dynamic user-specific cursor styles
   const userStyles = useMemo(() => {
-    let cursorStyles = '';
+    let cursorStyles = "";
 
     for (const [clientId, client] of awarenessUsers) {
       if (client?.user) {
@@ -110,12 +110,12 @@ export function Cursors() {
   useEffect(() => {
     const checkCursorPositions = () => {
       const cursors = document.querySelectorAll(
-        '[class*="yRemoteSelectionHead-"]'
+        '[class*="yRemoteSelectionHead-"]',
       );
-      cursors.forEach(cursor => {
+      cursors.forEach((cursor) => {
         const rect = cursor.getBoundingClientRect();
         const editorContainer =
-          cursor.closest('.monaco-editor') ||
+          cursor.closest(".monaco-editor") ||
           cursor.closest('[data-mode-id="javascript"]');
 
         if (editorContainer) {
@@ -124,9 +124,9 @@ export function Cursors() {
 
           // If cursor is within 30px of the top of the editor, add the class
           if (relativeTop < 30) {
-            cursor.classList.add('cursor-at-top');
+            cursor.classList.add("cursor-at-top");
           } else {
-            cursor.classList.remove('cursor-at-top');
+            cursor.classList.remove("cursor-at-top");
           }
         }
       });
@@ -135,13 +135,13 @@ export function Cursors() {
     // Also check on scroll events
     // FIXME: This references the first editor anywhere on the page.
     // We need to pass in the editor element to the component.
-    const editorElement = document.querySelector('.monaco-editor');
-    editorElement?.addEventListener('scroll', checkCursorPositions);
+    const editorElement = document.querySelector(".monaco-editor");
+    editorElement?.addEventListener("scroll", checkCursorPositions);
 
     checkCursorPositions();
 
     return () => {
-      editorElement?.removeEventListener('scroll', checkCursorPositions);
+      editorElement?.removeEventListener("scroll", checkCursorPositions);
     };
   }, [selections]);
 

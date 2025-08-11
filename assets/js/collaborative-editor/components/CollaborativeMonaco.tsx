@@ -1,10 +1,11 @@
-import type { editor } from 'monaco-editor';
-import React, { useCallback, useEffect, useRef } from 'react';
-import { MonacoBinding } from 'y-monaco';
-import { Awareness } from 'y-protocols/awareness';
-import * as Y from 'yjs';
-import { MonacoEditor, setTheme, type Monaco } from '../../monaco';
-import { Cursors } from './Cursors';
+import type { editor } from "monaco-editor";
+import type React from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { MonacoBinding } from "y-monaco";
+import type { Awareness } from "y-protocols/awareness";
+import type * as Y from "yjs";
+import { type Monaco, MonacoEditor, setTheme } from "../../monaco";
+import { Cursors } from "./Cursors";
 
 interface CollaborativeMonacoProps {
   ytext: Y.Text;
@@ -18,7 +19,7 @@ interface CollaborativeMonacoProps {
 export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
   ytext,
   awareness,
-  adaptor = 'common',
+  adaptor = "common",
   disabled = false,
   className,
   options = {},
@@ -30,10 +31,10 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
   const handleOnMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
       console.log(
-        '🚀 Monaco editor mounted, ytext available:',
+        "🚀 Monaco editor mounted, ytext available:",
         !!ytext,
-        'awareness available:',
-        !!awareness
+        "awareness available:",
+        !!awareness,
       );
       editorRef.current = editor;
       monacoRef.current = monaco;
@@ -47,35 +48,35 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
 
       // Create initial binding if ytext and awareness are available
       if (ytext && awareness) {
-        console.log('🔄 Creating initial Monaco binding on mount');
+        console.log("🔄 Creating initial Monaco binding on mount");
         const binding = new MonacoBinding(
           ytext,
           editor.getModel()!,
           new Set([editor]),
-          awareness
+          awareness,
         );
         bindingRef.current = binding;
-        console.log('✅ Initial Monaco binding created successfully');
+        console.log("✅ Initial Monaco binding created successfully");
       }
     },
-    [adaptor, ytext, awareness]
+    [adaptor, ytext, awareness],
   );
 
   // Effect to handle Y.Text binding changes after mount
   useEffect(() => {
     console.log(
-      '🔄 Monaco binding effect running - editor ready:',
+      "🔄 Monaco binding effect running - editor ready:",
       !!editorRef.current,
-      'ytext:',
+      "ytext:",
       !!ytext,
-      'awareness:',
+      "awareness:",
       !!awareness,
-      'existing binding:',
-      !!bindingRef.current
+      "existing binding:",
+      !!bindingRef.current,
     );
 
     if (!editorRef.current || !ytext || !awareness) {
-      console.log('❌ Monaco binding effect - missing requirements');
+      console.log("❌ Monaco binding effect - missing requirements");
       // If editor is ready but ytext is not, clear any existing binding
       if (bindingRef.current && !ytext) {
         bindingRef.current.destroy();
@@ -85,14 +86,14 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
     }
 
     console.log(
-      '🔄 Creating Monaco binding for Y.Text in effect:',
+      "🔄 Creating Monaco binding for Y.Text in effect:",
       ytext,
-      ytext.toString()
+      ytext.toString(),
     );
 
     // Destroy existing binding if it exists (for job switching)
     if (bindingRef.current) {
-      console.log('🗑️ Destroying existing Monaco binding for job switch');
+      console.log("🗑️ Destroying existing Monaco binding for job switch");
       bindingRef.current.destroy();
       bindingRef.current = undefined;
     }
@@ -102,15 +103,15 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
       ytext,
       editorRef.current.getModel()!,
       new Set([editorRef.current]),
-      awareness
+      awareness,
     );
     bindingRef.current = binding;
 
-    console.log('✅ Monaco binding created successfully in effect');
+    console.log("✅ Monaco binding created successfully in effect");
 
     // Clean up binding when ytext or awareness changes
     return () => {
-      console.log('🧹 Cleaning up Monaco binding from effect');
+      console.log("🧹 Cleaning up Monaco binding from effect");
       if (bindingRef.current) {
         bindingRef.current.destroy();
         bindingRef.current = undefined;
@@ -138,10 +139,10 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
     fontSize: 14,
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
-    wordWrap: 'on',
-    lineNumbers: 'on',
+    wordWrap: "on",
+    lineNumbers: "on",
     folding: true,
-    renderWhitespace: 'selection',
+    renderWhitespace: "selection",
     tabSize: 2,
     insertSpaces: true,
     automaticLayout: true,
@@ -150,7 +151,7 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
   };
 
   return (
-    <div className={className || 'h-full w-full'}>
+    <div className={className || "h-full w-full"}>
       <Cursors />
       <MonacoEditor
         onMount={handleOnMount}
@@ -166,19 +167,19 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
 function getLanguageFromAdaptor(adaptor: string): string {
   // Map adaptor types to Monaco languages
   switch (adaptor) {
-    case 'javascript':
-    case 'js':
-      return 'javascript';
-    case 'typescript':
-    case 'ts':
-      return 'typescript';
-    case 'json':
-      return 'json';
-    case 'html':
-      return 'html';
-    case 'css':
-      return 'css';
+    case "javascript":
+    case "js":
+      return "javascript";
+    case "typescript":
+    case "ts":
+      return "typescript";
+    case "json":
+      return "json";
+    case "html":
+      return "html";
+    case "css":
+      return "css";
     default:
-      return 'javascript'; // Default to JavaScript
+      return "javascript"; // Default to JavaScript
   }
 }
