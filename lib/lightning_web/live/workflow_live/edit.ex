@@ -248,10 +248,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
             phx-hook="Tooltip"
             aria-label={
               if @snapshot_version_tag != "latest",
-                do: "Switch to the latest version of this workflow to use the AI Assistant.",
-                else: (if @show_workflow_ai_chat,
-                  do: "Click to close the AI Assistant",
-                  else: "Click to open the AI Assistant")
+                do:
+                  "Switch to the latest version of this workflow to use the AI Assistant.",
+                else:
+                  if(@show_workflow_ai_chat,
+                    do: "Click to close the AI Assistant",
+                    else: "Click to open the AI Assistant"
+                  )
             }
             class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-transform duration-300 ease-in-out"
             id="workflow-ai-chat-toggle-floating"
