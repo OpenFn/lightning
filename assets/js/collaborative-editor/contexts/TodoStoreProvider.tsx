@@ -3,10 +3,11 @@
  * Uses SessionProvider for shared Yjs/Phoenix Channel infrastructure
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import * as Y from 'yjs';
-import type { TodoItem, TodoStore } from '../types/todo';
-import { useSession } from './SessionProvider';
+import type React from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import type * as Y from "yjs";
+import type { TodoItem, TodoStore } from "../types/todo";
+import { useSession } from "./SessionProvider";
 
 interface TodoStoreContextValue extends TodoStore {
   // Domain-specific todo operations only
@@ -18,7 +19,7 @@ const TodoStoreContext = createContext<TodoStoreContextValue | null>(null);
 export const useTodoStore = () => {
   const context = useContext(TodoStoreContext);
   if (!context) {
-    throw new Error('useTodoStore must be used within a TodoStoreProvider');
+    throw new Error("useTodoStore must be used within a TodoStoreProvider");
   }
   return context;
 };
@@ -38,13 +39,13 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
 
   // Domain-specific React state
   const [todos, setTodos] = useState<TodoItem[]>([]);
-  const [userId, setUserId] = useState<string>('');
+  const [userId, setUserId] = useState<string>("");
 
   // Get userId from session users (current user)
   useEffect(() => {
     if (users.length > 0) {
       // Find the current user (the local user)
-      const currentUser = users.find(u => u.user.id);
+      const currentUser = users.find((u) => u.user.id);
       if (currentUser) {
         setUserId(currentUser.user.id);
       }
@@ -57,19 +58,19 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
       return;
     }
 
-    console.log('🚀 Initializing TodoStore domain maps');
+    console.log("🚀 Initializing TodoStore domain maps");
 
     // Get domain-specific Yjs maps
-    const items = ydoc.getMap<TodoItem>('todoItems');
-    const order = ydoc.getArray<string>('todoOrder');
+    const items = ydoc.getMap<TodoItem>("todoItems");
+    const order = ydoc.getArray<string>("todoOrder");
 
     // Sync todos to React state
     const syncTodos = () => {
       const todoMap = items.toJSON() as Record<string, TodoItem>;
       const orderArray = order.toArray();
       const orderedTodos = orderArray
-        .map(id => todoMap[id])
-        .filter(todo => todo !== undefined);
+        .map((id) => todoMap[id])
+        .filter((todo) => todo !== undefined);
       setTodos(orderedTodos);
     };
 
@@ -86,7 +87,7 @@ export const TodoStoreProvider: React.FC<TodoStoreProviderProps> = ({
 
     // Cleanup function
     return () => {
-      console.debug('TodoStore: cleaning up domain maps');
+      console.debug("TodoStore: cleaning up domain maps");
       setTodoItems(null);
       setTodoOrder(null);
       setTodos([]);

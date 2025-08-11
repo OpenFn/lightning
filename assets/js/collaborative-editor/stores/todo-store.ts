@@ -3,11 +3,11 @@
  * Bridges between Yjs CRDT and React components
  */
 
-import { YjsPhoenixProvider } from 'y-phoenix-channel';
-import * as awarenessProtocol from 'y-protocols/awareness';
-import * as Y from 'yjs';
-import { create } from 'zustand';
-import type { AwarenessUser, TodoItem, TodoStore } from '../types/todo';
+import { YjsPhoenixProvider } from "y-phoenix-channel";
+import * as awarenessProtocol from "y-protocols/awareness";
+import * as Y from "yjs";
+import { create } from "zustand";
+import type { AwarenessUser, TodoItem, TodoStore } from "../types/todo";
 
 interface TodoStoreState extends TodoStore {
   // Internal state
@@ -31,18 +31,18 @@ export const useTodoStore = create<TodoStoreState>((set, get) => ({
   // Setup functions
   initializeYjs: (hook: any, userId: string, userName: string) => {
     console.log(
-      'DEBUG: Initializing Yjs with userId:',
+      "DEBUG: Initializing Yjs with userId:",
       userId,
-      'userName:',
-      userName
+      "userName:",
+      userName,
     );
     const ydoc = new Y.Doc();
-    const todoItems = ydoc.getMap<TodoItem>('todoItems');
-    const todoOrder = ydoc.getArray<string>('todoOrder');
+    const todoItems = ydoc.getMap<TodoItem>("todoItems");
+    const todoOrder = ydoc.getArray<string>("todoOrder");
     const awareness = new awarenessProtocol.Awareness(ydoc);
 
     // Set up awareness with user info
-    awareness.setLocalStateField('user', {
+    awareness.setLocalStateField("user", {
       id: userId,
       name: userName,
       color: generateUserColor(userId),
@@ -60,16 +60,16 @@ export const useTodoStore = create<TodoStoreState>((set, get) => ({
     });
 
     // Listen to awareness changes
-    awareness.on('change', () => {
+    awareness.on("change", () => {
       syncUsersFromAwareness(awareness, set);
     });
 
     // Listen to provider status
-    provider.on('status', ({ status }: { status: string }) => {
-      set({ isConnected: status === 'connected' });
+    provider.on("status", ({ status }: { status: string }) => {
+      set({ isConnected: status === "connected" });
     });
 
-    provider.on('synced', (synced: boolean) => {
+    provider.on("synced", (synced: boolean) => {
       set({ isSynced: synced });
     });
 
@@ -184,20 +184,22 @@ export const useTodoStore = create<TodoStoreState>((set, get) => ({
 function syncTodosFromYjs(
   todoItems: Y.Map<TodoItem>,
   todoOrder: Y.Array<string>,
-  set: (state: Partial<TodoStoreState>) => void
+  set: (state: Partial<TodoStoreState>) => void,
 ) {
   const todoMap = todoItems.toJSON() as Record<string, TodoItem>;
   const order = todoOrder.toArray();
 
   // Create ordered todos array
-  const todos = order.map(id => todoMap[id]).filter(todo => todo !== undefined);
+  const todos = order
+    .map((id) => todoMap[id])
+    .filter((todo) => todo !== undefined);
 
   set({ todos });
 }
 
 function syncUsersFromAwareness(
   awareness: awarenessProtocol.Awareness,
-  set: (state: Partial<TodoStoreState>) => void
+  set: (state: Partial<TodoStoreState>) => void,
 ) {
   const users: AwarenessUser[] = [];
 
@@ -220,17 +222,17 @@ function generateTodoId(): string {
 
 function generateUserColor(userId: string): string {
   const colors = [
-    '#FF6B6B',
-    '#4ECDC4',
-    '#45B7D1',
-    '#FFA07A',
-    '#98D8C8',
-    '#FFCF56',
-    '#FF8B94',
-    '#AED581',
+    "#FF6B6B",
+    "#4ECDC4",
+    "#45B7D1",
+    "#FFA07A",
+    "#98D8C8",
+    "#FFCF56",
+    "#FF8B94",
+    "#AED581",
   ];
 
-  const hash = userId.split('').reduce((a, b) => {
+  const hash = userId.split("").reduce((a, b) => {
     a = (a << 5) - a + b.charCodeAt(0);
     return a & a;
   }, 0);
@@ -240,6 +242,6 @@ function generateUserColor(userId: string): string {
 
 function getCurrentUserId(): string {
   // This will be set by the provider initialization
-  const element = document.querySelector('[data-user-id]') as HTMLElement;
-  return element?.dataset?.userId || 'anonymous';
+  const element = document.querySelector("[data-user-id]") as HTMLElement;
+  return element?.dataset?.userId || "anonymous";
 }

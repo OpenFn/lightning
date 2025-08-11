@@ -2,8 +2,8 @@
  * WorkflowHeader - Displays workflow id and name
  */
 
-import React from 'react';
-import { useWorkflowStore } from '../contexts/WorkflowStoreProvider';
+import type React from "react";
+import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
 
 export const WorkflowHeader: React.FC = () => {
   const { workflow } = useWorkflowStore();
@@ -22,7 +22,7 @@ export const WorkflowHeader: React.FC = () => {
   return (
     <div className="mb-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-2">
-        {workflow.name || 'Untitled Workflow'}
+        {workflow.name || "Untitled Workflow"}
       </h2>
       <p className="text-gray-600">
         Workflow ID: {workflow.id} • Real-time collaborative editing

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { useTodoStore } from '../contexts/TodoStoreProvider';
-import type { TodoItem as TodoItemType } from '../types/todo';
+import type React from "react";
+import { useState } from "react";
+import { useTodoStore } from "../contexts/TodoStoreProvider";
+import type { TodoItem as TodoItemType } from "../types/todo";
 
 interface TodoItemProps {
   todo: TodoItemType;
@@ -30,16 +31,16 @@ export const TodoItem: React.FC<TodoItemProps> = ({ todo }) => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSave();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       handleCancel();
     }
   };
 
   // Find the creator user info
-  const creator = users.find(user => user.user.id === todo.createdBy);
-  const creatorColor = creator?.user.color || '#gray';
+  const creator = users.find((user) => user.user.id === todo.createdBy);
+  const creatorColor = creator?.user.color || "#gray";
 
   return (
     <div
@@ -60,7 +61,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({ todo }) => {
           <input
             type="text"
             value={editText}
-            onChange={e => setEditText(e.target.value)}
+            onChange={(e) => setEditText(e.target.value)}
             onBlur={handleSave}
             onKeyDown={handleKeyDown}
             className="w-full px-2 py-1 border rounded text-gray-900 
@@ -70,7 +71,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({ todo }) => {
         ) : (
           <span
             className={`block text-gray-900 cursor-pointer ${
-              todo.completed ? 'line-through text-gray-500' : ''
+              todo.completed ? "line-through text-gray-500" : ""
             }`}
             onClick={handleEdit}
           >
@@ -83,7 +84,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({ todo }) => {
           <span
             className="inline-block w-2 h-2 rounded-full"
             style={{ backgroundColor: creatorColor }}
-            title={`Created by ${creator?.user.name || 'Unknown'}`}
+            title={`Created by ${creator?.user.name || "Unknown"}`}
           />
           <span>{new Date(todo.createdAt).toLocaleTimeString()}</span>
           {todo.updatedAt !== todo.createdAt && (
