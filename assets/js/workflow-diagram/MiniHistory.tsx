@@ -116,8 +116,7 @@ export default function MiniHistory({
     if (projectId) {
       nextUrl.pathname = `/projects/${projectId}/history`;
       nextUrl.search = `?filters[workorder_id]=${workorderId}`;
-      window.history.pushState({}, '', nextUrl.toString());
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      window.location = nextUrl.toString();
     }
   };
 
@@ -132,8 +131,7 @@ export default function MiniHistory({
 
     if (projectId) {
       nextUrl.pathname = `/projects/${projectId}/runs/${runId}`;
-      window.history.pushState({}, '', nextUrl.toString());
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      window.location = nextUrl.toString();
     }
   };
 
