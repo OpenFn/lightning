@@ -1,18 +1,25 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
 export function useURLState() {
   const [searchParams, setSearchParams] = useState(
-    () => new URLSearchParams(window.location.search)
+    () => new URLSearchParams(window.location.search),
   );
 
   // Listen for browser back/forward
   useEffect(() => {
     const handlePopState = () => {
-      setSearchParams(new URLSearchParams(window.location.search));
+      const newParams = new URLSearchParams(window.location.search);
+      setSearchParams((current) => {
+        // Only update if the params actually changed
+        if (current.toString() !== newParams.toString()) {
+          return newParams;
+        }
+        return current;
+      });
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   // Update URL without page refresh
@@ -30,10 +37,17 @@ export function useURLState() {
 
       const newURL = new URL(window.location.pathname, window.location.origin);
       newURL.search = newParams.toString();
-      window.history.pushState({}, '', newURL);
-      setSearchParams(new URLSearchParams(newParams));
+      window.history.pushState({}, "", newURL);
+
+      setSearchParams((current) => {
+        // Only update if the params actually changed
+        if (current.toString() !== newParams.toString()) {
+          return newParams;
+        }
+        return current;
+      });
     },
-    []
+    [],
   );
 
   return { searchParams, updateSearchParams };
