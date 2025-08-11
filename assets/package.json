@@ -29,7 +29,6 @@
     "esbuild-postcss": "^0.0.4",
     "immer": "^10.1.1",
     "jsonpath": "^1.1.1",
-    "lib0": "^0.2.114",
     "marked": "^4.2.4",
     "monaco-editor": "^0.52.2",
     "morphdom": "^2.7.5",
@@ -52,6 +51,7 @@
     "zustand": "^4.3.7"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.1.4",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.4.1",
     "@eslint/js": "^9.21.0",
     "@openfn/ws-worker": "^1.13.2",
@@ -79,6 +79,7 @@
     "eslint-plugin-react-compiler": "^19.0.0-beta-40c6c23-20250301",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^16.0.0",
+    "prettier": "^3.6.2",
     "tap-xunit": "^2.4.1",
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
