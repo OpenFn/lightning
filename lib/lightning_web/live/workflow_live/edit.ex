@@ -242,14 +242,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
           />
           <div
             :if={
-              @snapshot_version_tag == "latest" && @can_edit_workflow &&
+              @can_edit_workflow &&
                 @ai_assistant_enabled && @live_action == :edit
             }
             phx-hook="Tooltip"
             aria-label={
-              if @show_workflow_ai_chat,
-                do: "Click to close the AI Assistant",
-                else: "Click to open the AI Assistant"
+              if @snapshot_version_tag != "latest",
+                do: "Switch to the latest version of this workflow to use the AI Assistant.",
+                else: (if @show_workflow_ai_chat,
+                  do: "Click to close the AI Assistant",
+                  else: "Click to open the AI Assistant")
             }
             class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-transform duration-300 ease-in-out"
             id="workflow-ai-chat-toggle-floating"
@@ -263,12 +265,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <button
               type="button"
               phx-click="toggle-workflow-ai-chat"
-              class="flex items-center justify-between pl-3 pr-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors w-full text-left"
+              disabled={@snapshot_version_tag != "latest"}
+              class={
+                "flex items-center justify-between pl-3 pr-3 py-2 transition-colors w-full text-left " <>
+                if @snapshot_version_tag != "latest",
+                  do: "bg-gray-100 text-gray-400 cursor-not-allowed",
+                  else: "bg-gray-50 hover:bg-gray-100 text-gray-700"
+              }
             >
               <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-gray-700">
+                <span class="text-sm font-medium">
                   AI Assistant
-                  <%!-- <%= if @show_workflow_ai_chat, do: "Close AI Assistant", else: "Open AI Assistant" %> --%>
                 </span>
               </div>
               <.icon
@@ -277,7 +284,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     do: "hero-chevron-left",
                     else: "hero-chevron-right"
                 }
-                class="w-4 h-4 text-gray-400 ml-3"
+                class={
+                  "w-4 h-4 ml-3 " <>
+                  if @snapshot_version_tag == "latest",
+                    do: "text-gray-300",
+                    else: "text-gray-400"
+                }
               />
             </button>
           </div>
