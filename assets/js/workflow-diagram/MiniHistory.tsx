@@ -1,23 +1,55 @@
 import { relativeLocale } from '../hooks';
-import type {
-  WorkflowRunHistory,
-  WorkOrderStates,
-} from '#/workflow-store/store';
+import type { WorkflowRunHistory } from '#/workflow-store/store';
 import { formatRelative } from 'date-fns';
 import React, { useState } from 'react';
 import { duration } from '../utils/duration';
 import truncateUid from '../utils/truncateUID';
-import { renderIcon } from './components/RunIcons';
 
-const StatePill: React.FC<{ state: WorkOrderStates }> = ({ state }) => {
-  return renderIcon(state, { size: 6 });
+const CHIP_STYLES: Record<string, string> = {
+  // only workorder states...
+  rejected: 'bg-red-300 text-gray-800',
+  pending: 'bg-gray-200 text-gray-800',
+  running: 'bg-blue-200 text-blue-800',
+  //  run and workorder states...
+  available: 'bg-gray-200 text-gray-800',
+  claimed: 'bg-blue-200 text-blue-800',
+  started: 'bg-blue-200 text-blue-800',
+  success: 'bg-green-200 text-green-800',
+  failed: 'bg-red-200 text-red-800',
+  crashed: 'bg-orange-200 text-orange-800',
+  cancelled: 'bg-gray-500 text-gray-800',
+  killed: 'bg-yellow-200 text-yellow-800',
+  exception: 'bg-gray-800 text-white',
+  lost: 'bg-gray-800 text-white',
+};
+
+const displayTextFromState = (state: string): string =>
+  `${state[0]?.toUpperCase()}${state.substring(1)}`;
+
+const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
+  state,
+  mini = false,
+}) => {
+  const classes = CHIP_STYLES[state] || CHIP_STYLES['pending'];
+  const text = displayTextFromState(state);
+
+  const baseClasses =
+    'my-auto whitespace-nowrap rounded-full text-center align-baseline font-medium leading-none';
+  const sizeClasses = mini ? 'py-1 px-2 text-[10px]' : 'py-2 px-4 text-xs';
+
+  return (
+    <span className={`${baseClasses} ${sizeClasses} ${classes}`}>{text}</span>
+  );
 };
 
 interface MiniHistoryProps {
   collapsed: boolean;
   history: WorkflowRunHistory;
+  drawerWidth: number;
   selectRunHandler: (runId: string, version: number) => void;
   onCollapseHistory: () => void;
+  hasSnapshotMismatch?: boolean;
+  missingNodeCount?: number;
 }
 
 export default function MiniHistory({
@@ -25,6 +57,9 @@ export default function MiniHistory({
   selectRunHandler,
   collapsed = true,
   onCollapseHistory,
+  drawerWidth,
+  hasSnapshotMismatch = false,
+  missingNodeCount = 0,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
@@ -49,46 +84,95 @@ export default function MiniHistory({
 
   const historyToggle = () => {
     setIsCollapsed(p => !p);
-  }
+  };
 
-  const gotoHistory = (e: MouseEvent) => {
+  const gotoHistory = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const currentUrl = new URL(window.location.href);
     const nextUrl = new URL(currentUrl);
-    const paths = nextUrl.pathname.split("/");
-    const wIdx = paths.indexOf("w");
-    const workflowPaths = paths.splice(wIdx, paths.length - wIdx)
-    nextUrl.pathname = paths.join("/") + `/history`;
-    nextUrl.search = `?filters[workflow_id]=${workflowPaths[workflowPaths.length - 1]}`;
+    const paths = nextUrl.pathname.split('/');
+    const wIdx = paths.indexOf('w');
+    const workflowPaths = paths.splice(wIdx, paths.length - wIdx);
+    nextUrl.pathname = paths.join('/') + `/history`;
+    nextUrl.search = `?filters[workflow_id]=${
+      workflowPaths[workflowPaths.length - 1]
+    }`;
     window.location = nextUrl.toString();
-  }
+  };
+
+  const navigateToWorkorderHistory = (
+    e: React.MouseEvent,
+    workorderId: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentUrl = new URL(window.location.href);
+    const nextUrl = new URL(currentUrl);
+    const paths = nextUrl.pathname.split('/');
+    const projectIndex = paths.indexOf('projects');
+    const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
+
+    if (projectId) {
+      nextUrl.pathname = `/projects/${projectId}/history`;
+      nextUrl.search = `?filters[workorder_id]=${workorderId}`;
+      window.location = nextUrl.toString();
+    }
+  };
+
+  const navigateToRunView = (e: React.MouseEvent, runId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentUrl = new URL(window.location.href);
+    const nextUrl = new URL(currentUrl);
+    const paths = nextUrl.pathname.split('/');
+    const projectIndex = paths.indexOf('projects');
+    const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
+
+    if (projectId) {
+      nextUrl.pathname = `/projects/${projectId}/runs/${runId}`;
+      window.location = nextUrl.toString();
+    }
+  };
 
   return (
     <div
-      className={`absolute left-2 top-2 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40 ${isCollapsed ? 'w-44' : 'w-88'
-        }`}
+      className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40}`}
+      style={{
+        transform: `translateX(${drawerWidth.toString()}px)`,
+        transition: 'transform 300ms ease-in-out',
+      }}
     >
       <div
-        className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 ${isCollapsed ? 'border-b-0' : 'border-b'
-          }`}
+        className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors ${
+          isCollapsed ? 'border-b-0' : 'border-b'
+        }`}
         onClick={() => historyToggle()}
       >
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-gray-700">
-            {isCollapsed ? 'View History' : 'Recent Activity'}
+            {isCollapsed ? 'View History' : 'Recent History'}
           </h3>
-          <div
+          <button
+            type="button"
             className="text-gray-400 hover:text-gray-600 transition-colors flex items-center"
-            title="View full history for this workflow"
+            phx-hook="Tooltip"
+            data-placement="top"
+            aria-label="View full history for this workflow"
             onClick={gotoHistory}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                gotoHistory(e);
+              }
+            }}
           >
-            <span className="hero-arrow-top-right-on-square w-4 h-4"></span>
-          </div>
+            <span className="hero-rectangle-stack w-4 h-4"></span>
+          </button>
         </div>
 
         <div
-          className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+          className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer ml-3"
           title="Collapse panel"
         >
           {isCollapsed ? (
@@ -100,15 +184,16 @@ export default function MiniHistory({
       </div>
 
       <div
-        className={`overflow-y-auto no-scrollbar max-h-82 ${isCollapsed ? 'hidden' : 'block'
-          }`}
+        className={`overflow-y-auto no-scrollbar max-h-82 ${
+          isCollapsed ? 'hidden' : 'block'
+        }`}
       >
         {history.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-            <span className="hero-clock w-8 h-8 mb-2 opacity-50"></span>
-            <p className="text-sm font-medium">No related activity</p>
+          <div className="flex flex-col items-center justify-center p-8 text-gray-500">
+            <span className="hero-rectangle-stack w-8 h-8 mb-2 opacity-50"></span>
+            <p className="text-sm font-medium">No related history</p>
             <p className="text-xs text-gray-400 mt-1">
-              Run your workflow to see execution history
+              Why not run it a few times to see some history?
             </p>
           </div>
         ) : (
@@ -120,7 +205,7 @@ export default function MiniHistory({
                     className="flex items-center justify-between cursor-pointer"
                     onClick={() => expandWorkorderHandler(workorder)}
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
                       <button
                         onClick={e => {
                           e.preventDefault();
@@ -139,14 +224,29 @@ export default function MiniHistory({
                           <span className="hero-chevron-right w-4 h-4"></span>
                         )}
                       </button>
-                      <span className="text-xs text-gray-500 truncate">
+                      <button
+                        onClick={e =>
+                          navigateToWorkorderHistory(e, workorder.id)
+                        }
+                        className="link-uuid"
+                        title={workorder.id}
+                      >
                         {truncateUid(workorder.id)}
-                      </span>
-                      <span className="text-xs text-gray-500 font-mono">
-                        {formatRelative(new Date(workorder.last_activity), now, { locale: relativeLocale })}
+                      </button>
+                      <span className="text-xs text-gray-800">&bull;</span>
+                      <span className="text-xs text-gray-500">
+                        {formatRelative(
+                          new Date(workorder.last_activity),
+                          now,
+                          { locale: relativeLocale }
+                        )}
                       </span>
                     </div>
-                    <StatePill key={workorder.id} state={workorder.state} />
+                    <StatePill
+                      key={workorder.id}
+                      state={workorder.state}
+                      mini={true}
+                    />
                   </div>
                 </div>
 
@@ -155,32 +255,65 @@ export default function MiniHistory({
                     <div
                       key={run.id}
                       className={[
-                        "px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors cursor-pointer border-l-2",
+                        'px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors cursor-pointer border-l-2',
                         run.selected
-                          ? "bg-indigo-50 border-l-indigo-500"
-                          : " border-l-transparent",
-                      ].join(" ")}
-                      onClick={() => run.selected ? onCollapseHistory() : selectRunHandler(run.id, workorder.version)}
+                          ? 'bg-indigo-50 border-l-indigo-500'
+                          : ' border-l-transparent',
+                      ].join(' ')}
+                      onClick={() =>
+                        run.selected
+                          ? onCollapseHistory()
+                          : selectRunHandler(run.id, workorder.version)
+                      }
                     >
-                      <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center justify-between w-full mr-2">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className={`hero-x-mark w-4 h-4 text-gray-400 ${run.selected ? "visible" : "invisible"}`}></span>
-                          <span className="text-gray-500 truncate">
+                          <span
+                            className={`hero-x-mark w-4 h-4 text-gray-400 ${
+                              run.selected ? 'visible' : 'invisible'
+                            }`}
+                          ></span>
+                          <button
+                            onClick={e => navigateToRunView(e, run.id)}
+                            className="link-uuid"
+                            title={run.id}
+                          >
                             {truncateUid(run.id)}
-                          </span>
-                          <span className="text-gray-500 font-mono">
+                          </button>
+                          <span className="text-xs text-gray-800">&bull;</span>
+                          <span className="text-gray-500">
                             {run.started_at
-                              ? formatRelative(new Date(run.started_at), now, { locale: relativeLocale })
-                              : formatRelative(new Date(run.finished_at), now, { locale: relativeLocale })
-                            }
+                              ? formatRelative(new Date(run.started_at), now, {
+                                  locale: relativeLocale,
+                                })
+                              : formatRelative(new Date(run.finished_at), now, {
+                                  locale: relativeLocale,
+                                })}
                           </span>
+                          <span className="text-xs text-gray-800">&bull;</span>
                           <span className="text-gray-400 text-xs">
                             {!run.started_at || !run.finished_at
-                              ? '-ms'
+                              ? 'Not started'
                               : duration(run.started_at, run.finished_at)}
                           </span>
                         </div>
-                        <StatePill state={run.state} />
+                        <div className="flex items-center gap-1">
+                          <StatePill state={run.state} mini={true} />
+                          {hasSnapshotMismatch && run.selected && (
+                            <div
+                              className="flex items-center justify-center"
+                              phx-hook="Tooltip"
+                              data-placement="right"
+                              aria-label={`This run had ${missingNodeCount} step${
+                                missingNodeCount !== 1 ? 's' : ''
+                              } that ${
+                                missingNodeCount !== 1 ? 'are' : 'is'
+                              } no longer visible in the current workflow version.`}
+                            >
+                              <span className="hero-exclamation-triangle-mini w-3 h-3 text-yellow-600"></span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

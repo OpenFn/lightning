@@ -1,24 +1,25 @@
 const STATE_ICONS = {
-  rejected: 'hero-x-circle',
-  pending: 'hero-clock',
-  running: 'hero-play-circle',
-  available: 'hero-clock',
-  claimed: 'hero-arrow-right-circle',
-  started: 'hero-play-circle',
-  success: 'hero-check-circle',
-  failed: 'hero-x-circle',
-  crashed: 'hero-exclamation-triangle',
-  cancelled: 'hero-no-symbol',
-  killed: 'hero-shield-exclamation',
-  exception: 'hero-exclamation-circle',
-  lost: 'hero-question-mark-circle',
+  pending: 'hero-ellipsis-horizontal-circle-solid',
+  success: 'hero-check-circle-solid',
+  fail: 'hero-x-circle-solid',
+  crash: 'hero-x-circle-solid',
+  cancel: 'hero-no-symbol-solid',
+  shield: 'hero-shield-exclamation-solid',
+  clock: 'hero-clock-solid',
+  circle_ex: 'hero-exclamation-circle-solid',
+  triangle_ex: 'hero-exclamation-triangle-solid',
 };
 
 const STATE_COLORS = {
-  success: 'bg-green-200 text-green-500',
-  failed: 'bg-red-200 text-red-500',
-  crashed: 'bg-orange-200 text-orange-500 p-px',
-  pending: 'bg-gray-600 text-white',
+  pending: 'text-gray-400',
+  success: 'text-green-500',
+  fail: 'text-red-500',
+  crash: 'text-orange-800',
+  cancel: 'text-grey-600',
+  shield: 'text-yellow-800',
+  clock: 'text-yellow-800',
+  circle_ex: 'text-yellow-800',
+  triangle_ex: 'text-black-800',
 };
 
 export const renderIcon = (
@@ -26,20 +27,28 @@ export const renderIcon = (
   options: Partial<{ tooltip: string; size: number }> = {}
 ) => {
   const { tooltip, size = 8 } = options;
+  const bgSize = size - 2;
   if (!(type in STATE_COLORS)) {
     console.error('ERROR: Unknown run state:', type);
     // what do we do here?
     type = 'success';
   }
   return (
-    <div
-      className={`flex justify-center items-center  w-${size} h-${size} rounded-full ${STATE_COLORS[type]}`}
-    >
-      <span
-        data-tooltip={tooltip}
-        data-tooltip-placement="top"
-        className={`${STATE_ICONS[type]} w-full h-full`}
-      ></span>
+    <div className="relative">
+      {/* Draw a solid background behind the icon with a white fill */}
+      <div
+        className={`absolute inset-0 bg-white rounded-full ml-1 mt-1 w-${bgSize} h-${bgSize}`}
+      ></div>
+      {/* Render the icon itself */}
+      <div
+        className={`relative flex justify-center items-center w-${size} h-${size} rounded-full ${STATE_COLORS[type]}`}
+      >
+        <span
+          data-tooltip={tooltip}
+          data-tooltip-placement="top"
+          className={`${STATE_ICONS[type]} w-full h-full`}
+        ></span>
+      </div>
     </div>
   );
 };
