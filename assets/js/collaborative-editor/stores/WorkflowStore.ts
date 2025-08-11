@@ -24,6 +24,7 @@ export const createWorkflowStore = () => {
         workflow: null,
         jobs: [],
         edges: [],
+        triggers: [],
         selectedJobId: null,
 
         // Actions
