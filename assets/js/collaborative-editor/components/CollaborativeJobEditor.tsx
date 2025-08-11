@@ -15,6 +15,7 @@ import Metadata from "../../metadata-explorer/Explorer";
 import { useSession } from "../contexts/SessionProvider";
 import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
+import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 
 enum SettingsKeys {
   ORIENTATION = "lightning.collaborative-job-editor.orientation",
@@ -106,69 +107,73 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
 
   return (
     <>
-      <div className="cursor-pointer"></div>
-      <div className={`flex h-full flex-${vertical ? "col" : "row"}`}>
-        <div className="flex-1 rounded-md overflow-hidden">
-          <CollaborativeMonaco
-            ytext={jobBodyYText}
-            awareness={awareness}
-            adaptor={adaptor}
-            disabled={disabled}
-            className="h-full w-full"
-          />
-          {disabled && disabledMessage && (
-            <div className="absolute inset-0 bg-gray-50 bg-opacity-90 flex items-center justify-center">
-              <div className="bg-white p-4 rounded-lg shadow-lg">
-                <p className="text-gray-700">{disabledMessage}</p>
-              </div>
-            </div>
-          )}
-        </div>
-        <div
-          className={`${
-            showPanel ? "flex flex-col flex-1 z-10 overflow-hidden" : ""
-          } ${vertical ? "pt-2" : "pl-2"} bg-white`}
-        >
-          <div className={`relative flex`}>
-            <Tabs
-              options={[
-                { label: "Docs", id: "docs", icon: DocumentTextIcon },
-                { label: "Metadata", id: "metadata", icon: SparklesIcon },
-              ]}
-              initialSelection={selectedTab}
-              onSelectionChange={handleSelectionChange}
-              collapsedVertical={!vertical && !showPanel}
+      <div className="h-full w-full">
+        <CollaborativeWorkflowDiagram />
+      </div>
+      {false && (
+        <div className={`flex h-full flex-${vertical ? "col" : "row"}`}>
+          <div className="flex-1 rounded-md overflow-hidden">
+            <CollaborativeMonaco
+              ytext={jobBodyYText}
+              awareness={awareness}
+              adaptor={adaptor}
+              disabled={disabled}
+              className="h-full w-full"
             />
-            {/* Floating controls in top right corner */}
-            {showPanel && (
-              <div className="bg-white rounded-lg p-1 flex space-x-1 z-20 items-center">
-                <ViewColumnsIcon
-                  className={`${iconStyle} ${!vertical ? "rotate-90" : ""}`}
-                  onClick={toggleOrientiation}
-                  title="Toggle panel orientation"
-                />
-                <CollapseIcon
-                  className={iconStyle}
-                  onClick={toggleShowPanel}
-                  title="Collapse panel"
-                />
+            {disabled && disabledMessage && (
+              <div className="absolute inset-0 bg-gray-50 bg-opacity-90 flex items-center justify-center">
+                <div className="bg-white p-4 rounded-lg shadow-lg">
+                  <p className="text-gray-700">{disabledMessage}</p>
+                </div>
               </div>
             )}
           </div>
-          {showPanel && (
-            <div
-              className={`flex flex-1 mt-1 ${
-                vertical ? "overflow-auto" : "overflow-hidden"
-              }`}
-            >
-              {selectedTab === "docs" && <Docs adaptor={adaptor} />}
-              {selectedTab === "metadata" && (
-                <Metadata adaptor={adaptor} metadata={metadata} />
+          <div
+            className={`${
+              showPanel ? "flex flex-col flex-1 z-10 overflow-hidden" : ""
+            } ${vertical ? "pt-2" : "pl-2"} bg-white`}
+          >
+            <div className={`relative flex`}>
+              <Tabs
+                options={[
+                  { label: "Docs", id: "docs", icon: DocumentTextIcon },
+                  { label: "Metadata", id: "metadata", icon: SparklesIcon },
+                ]}
+                initialSelection={selectedTab}
+                onSelectionChange={handleSelectionChange}
+                collapsedVertical={!vertical && !showPanel}
+              />
+              {/* Floating controls in top right corner */}
+              {showPanel && (
+                <div className="bg-white rounded-lg p-1 flex space-x-1 z-20 items-center">
+                  <ViewColumnsIcon
+                    className={`${iconStyle} ${!vertical ? "rotate-90" : ""}`}
+                    onClick={toggleOrientiation}
+                    title="Toggle panel orientation"
+                  />
+                  <CollapseIcon
+                    className={iconStyle}
+                    onClick={toggleShowPanel}
+                    title="Collapse panel"
+                  />
+                </div>
               )}
             </div>
-          )}
+            {showPanel && (
+              <div
+                className={`flex flex-1 mt-1 ${
+                  vertical ? "overflow-auto" : "overflow-hidden"
+                }`}
+              >
+                {selectedTab === "docs" && <Docs adaptor={adaptor} />}
+                {selectedTab === "metadata" && (
+                  <Metadata adaptor={adaptor} metadata={metadata} />
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 };
