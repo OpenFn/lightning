@@ -43,6 +43,10 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
   const storeRef = useRef<ReturnType<typeof createWorkflowStore>>();
   const store = (storeRef.current ||= createWorkflowStore());
 
+  // TODO: make this only available in development or if debug is enabled
+  // consider "Lightning.debug" or some collection of helpers
+  window.store = store;
+
   // Set up URL ↔ Store sync for selected job
   useURLJobSync(store);
 

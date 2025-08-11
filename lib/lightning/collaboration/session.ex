@@ -201,7 +201,8 @@ defmodule Lightning.Collaboration.Session do
               Yex.MapPrelim.from(%{
                 "id" => job.id,
                 "name" => job.name || "",
-                "body" => Yex.TextPrelim.from(job.body || "")
+                "body" => Yex.TextPrelim.from(job.body || ""),
+                "adaptor" => job.adaptor
               })
 
             Yex.Array.push(jobs_array, job_map)
