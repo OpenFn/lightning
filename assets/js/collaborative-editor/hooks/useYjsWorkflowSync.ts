@@ -67,14 +67,8 @@ export const useYjsWorkflowSync = (
           jobsArray as Y.Array<Y.Map<unknown>>
         ).toArray() as TypedMap<Session.Job & { body: Y.Text }>[];
 
-        const jobsData: Session.Job[] = yjsJobs.map((yjsJob) => {
-          // TODO: try toJSON(), see if it handles the Y.Text case
-          const yText = yjsJob.get("body") as Y.Text;
-          return {
-            id: yjsJob.get("id") as string,
-            name: yjsJob.get("name") as string,
-            body: yText ? yText.toString() : "", // Convert Y.Text to string for display
-          };
+        const jobsData: Workflow.Job[] = yjsJobs.map((yjsJob) => {
+          return yjsJob.toJSON() as Workflow.Job;
         });
 
         store.setState({ jobs: jobsData });

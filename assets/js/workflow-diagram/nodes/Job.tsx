@@ -47,6 +47,8 @@ function getAdaptorIcon(
   adaptor: string,
   adaptorIconsData: AdaptorIconData | null
 ) {
+  console.log({ adaptorIconsData, adaptor });
+
   try {
     if (
       adaptorIconsData &&
