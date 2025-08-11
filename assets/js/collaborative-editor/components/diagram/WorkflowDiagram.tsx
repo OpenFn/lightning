@@ -89,12 +89,22 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const undo = () => {};
   const redo = () => {};
 
-  const workflow = useWorkflowStore((state) => ({
+  const { jobs, triggers, edges, disabled } = useWorkflowStore((state) => ({
     jobs: state.jobs,
     triggers: state.triggers,
     edges: state.edges,
     disabled: state.disabled,
   }));
+
+  const workflow = React.useMemo(
+    () => ({
+      jobs,
+      triggers,
+      edges,
+      disabled,
+    }),
+    [jobs, triggers, edges, disabled],
+  );
 
   const isManualLayout = !!fixedPositions;
 
@@ -128,8 +138,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     cancel: cancelPlaceholder,
     updatePlaceholderPosition,
   } = usePlaceholders(el, isManualLayout, updateSelection);
-
-  console.log("workflow", workflow);
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
@@ -298,7 +306,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   useEffect(() => {
     if (props.forceFit && flow && model.nodes.length > 0) {
-      console.log("model", model);
       // Immediately fit to bounds when forceFit becomes true
       const bounds = getNodesBounds(model.nodes);
       flow
