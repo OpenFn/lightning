@@ -2,12 +2,18 @@
  * JobsList - List of jobs with selection capabilities
  */
 
-import React from 'react';
-import { useWorkflowStore } from '../contexts/WorkflowStoreProvider';
-import { JobItem } from './JobItem';
+import type React from "react";
+import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
+import { JobItem } from "./JobItem";
 
 export const JobsList: React.FC = () => {
-  const { jobs, selectedJobId, selectJob } = useWorkflowStore();
+  const { jobs, selectedJobId, selectJob } = useWorkflowStore((state) => ({
+    jobs: state.jobs,
+    selectedJobId: state.selectedJobId,
+  }));
+
+  console.log("JobsList: selectedJobId", selectedJobId);
+  console.log("JobsList: jobs", jobs);
 
   const clearSelection = () => {
     selectJob(null);

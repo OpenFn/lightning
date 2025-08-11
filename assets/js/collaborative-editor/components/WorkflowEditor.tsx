@@ -3,21 +3,27 @@
  * Replaces TodoList with workflow-specific functionality
  */
 
-import React from 'react';
-import { useSession } from '../contexts/SessionProvider';
-import { useWorkflowStore } from '../contexts/WorkflowStoreProvider';
-import { CollaborativeMonaco } from './CollaborativeMonaco';
-import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
-import { JobsList } from './JobsList';
-import { UserAwareness } from './UserAwareness';
-import { WorkflowHeader } from './WorkflowHeader';
+import type React from "react";
+import { useSession } from "../contexts/SessionProvider";
+import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
+import { CollaborativeMonaco } from "./CollaborativeMonaco";
+import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
+import { JobsList } from "./JobsList";
+import { UserAwareness } from "./UserAwareness";
+import { WorkflowHeader } from "./WorkflowHeader";
 
 export const WorkflowEditor: React.FC = () => {
-  const { workflow, jobs, selectedJobId, getJobBodyYText } = useWorkflowStore();
+  const workflow = useWorkflowStore((state) => state.workflow);
+  const jobs = useWorkflowStore((state) => state.jobs);
+  const selectedJobId = useWorkflowStore((state) => state.selectedJobId);
+  const getJobBodyYText = useWorkflowStore((state) => state.getJobBodyYText);
+
+  console.log({ workflow, jobs, selectedJobId });
+
   const { awareness } = useSession();
 
   const selectedJob = selectedJobId
-    ? jobs.find(job => job.id === selectedJobId)
+    ? jobs.find((job) => job.id === selectedJobId)
     : null;
 
   const selectedJobYText = selectedJobId

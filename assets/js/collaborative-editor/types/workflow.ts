@@ -2,9 +2,9 @@
  * TypeScript interfaces for the collaborative workflow editor system
  */
 
-import type { Positions } from '#/workflow-diagram/types';
-import type * as Y from 'yjs';
-import type { AwarenessUser, Session } from './session';
+import type * as Y from "yjs";
+import type { Positions } from "#/workflow-diagram/types";
+import type { AwarenessUser, Session } from "./session";
 
 // Job data structure as plain JS object (for React state)
 export interface WorkflowJobData {
@@ -23,8 +23,6 @@ export interface WorkflowStore {
   jobs: Session.Job[]; // React state uses plain JS objects for display
   selectedJobId: string | null;
   selectJob: (id: string | null) => void;
-  updateJobName: (id: string, name: string) => void;
-  updateJobBody: (id: string, body: string) => void;
   getJobBodyYText: (id: string) => Y.Text | null;
   getYjsJob: (id: string) => YjsWorkflowJob | null; // Access to actual Y.Map
   users: AwarenessUser[];
@@ -53,8 +51,8 @@ export interface YjsCollaborativeHookEvents {
 // Data attributes passed from LiveView template to React component
 // TODO: where should this go, not in here thats for sure.
 export interface CollaborativeEditorDataProps {
-  'data-workflow-id': string;
-  'data-workflow-name': string;
-  'data-user-id': string;
-  'data-user-name': string;
+  "data-workflow-id": string;
+  "data-workflow-name": string;
+  "data-user-id": string;
+  "data-user-name": string;
 }

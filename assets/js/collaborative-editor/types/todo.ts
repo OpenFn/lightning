@@ -46,8 +46,8 @@ export interface YjsCollaborativeHookEvents {
 
 // Data attributes passed from LiveView template to React component
 export interface CollaborativeEditorDataProps {
-  'data-workflow-id': string;
-  'data-workflow-name': string;
-  'data-user-id': string;
-  'data-user-name': string;
+  "data-workflow-id": string;
+  "data-workflow-name": string;
+  "data-user-id": string;
+  "data-user-name": string;
 }

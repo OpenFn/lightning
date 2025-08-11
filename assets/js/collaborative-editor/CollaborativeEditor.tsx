@@ -1,21 +1,21 @@
-import { SocketProvider } from '../react/contexts/SocketProvider';
-import type { WithActionProps } from '../react/lib/with-props';
-import { ConnectionStatus } from './components/ConnectionStatus';
-import { TodoList } from './components/TodoList';
-import { WorkflowEditor } from './components/WorkflowEditor';
-import { SessionProvider } from './contexts/SessionProvider';
-import { TodoStoreProvider } from './contexts/TodoStoreProvider';
-import { WorkflowStoreProvider } from './contexts/WorkflowStoreProvider';
-import type { CollaborativeEditorDataProps } from './types/workflow';
+import { SocketProvider } from "../react/contexts/SocketProvider";
+import type { WithActionProps } from "../react/lib/with-props";
+import { ConnectionStatus } from "./components/ConnectionStatus";
+import { TodoList } from "./components/TodoList";
+import { WorkflowEditor } from "./components/WorkflowEditor";
+import { SessionProvider } from "./contexts/SessionProvider";
+import { TodoStoreProvider } from "./contexts/TodoStoreProvider";
+import { WorkflowStoreProvider } from "./contexts/WorkflowStoreProvider";
+import type { CollaborativeEditorDataProps } from "./types/workflow";
 
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
-> = props => {
+> = (props) => {
   // Extract data from props (ReactComponent hook passes data attributes as props)
-  const workflowId = props['data-workflow-id'];
-  const workflowName = props['data-workflow-name'];
-  const userId = props['data-user-id'];
-  const userName = props['data-user-name'];
+  const workflowId = props["data-workflow-id"];
+  const workflowName = props["data-workflow-name"];
+  const userId = props["data-user-id"];
+  const userName = props["data-user-name"];
 
   if (!workflowId || !userId || !userName) {
     return (
@@ -25,9 +25,9 @@ export const CollaborativeEditor: WithActionProps<
             ⚠️ Missing Required Data
           </h3>
           <div className="text-sm text-red-700">
-            <p>workflowId: {workflowId || 'missing'}</p>
-            <p>userId: {userId || 'missing'}</p>
-            <p>userName: {userName || 'missing'}</p>
+            <p>workflowId: {workflowId || "missing"}</p>
+            <p>userId: {userId || "missing"}</p>
+            <p>userName: {userName || "missing"}</p>
           </div>
         </div>
       </div>

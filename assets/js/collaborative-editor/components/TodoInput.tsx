@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { useTodoStore } from '../contexts/TodoStoreProvider';
+import type React from "react";
+import { useState } from "react";
+import { useTodoStore } from "../contexts/TodoStoreProvider";
 
 export const TodoInput: React.FC = () => {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const { addTodo, isConnected } = useTodoStore();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (text.trim()) {
       addTodo(text.trim());
-      setText('');
+      setText("");
     }
   };
 
@@ -19,7 +20,7 @@ export const TodoInput: React.FC = () => {
         <input
           type="text"
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={(e) => setText(e.target.value)}
           placeholder="Add a new todo..."
           className="flex-1 px-3 py-2 border border-gray-300 rounded-md 
                      focus:outline-none focus:ring-2 focus:ring-blue-500 

@@ -3,9 +3,10 @@
  * Phase 1: Basic rendering only - maps collaborative data to diagram format
  */
 
-import React, { useState } from 'react';
-import { useWorkflowStore } from '../../contexts/WorkflowStoreProvider';
-import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
+import type React from "react";
+import { useState } from "react";
+import { useWorkflowStore } from "../../contexts/WorkflowStoreProvider";
+import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
 
 interface CollaborativeWorkflowDiagramProps {
   className?: string;
@@ -13,7 +14,7 @@ interface CollaborativeWorkflowDiagramProps {
 
 export const CollaborativeWorkflowDiagram: React.FC<
   CollaborativeWorkflowDiagramProps
-> = ({ className = 'h-full w-full' }) => {
+> = ({ className = "h-full w-full" }) => {
   const { workflow } = useWorkflowStore();
   const [selection, setSelection] = useState<string | null>(null);
 
