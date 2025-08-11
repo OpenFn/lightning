@@ -32,17 +32,8 @@ export const WorkflowEditor: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header Section */}
-      <div className="flex-none p-4 border-b border-gray-200">
-        {/* Workflow Header */}
-        <WorkflowHeader />
-
-        {/* User awareness */}
-        <UserAwareness />
-      </div>
-
       {/* Main Content */}
-      <div className="flex flex-1 min-h-0 px-4">
+      <div className="flex flex-1 min-h-0">
         {/* Jobs List Sidebar */}
         <div className="flex-none w-80 border-r border-gray-200 overflow-y-auto">
           <JobsList />
@@ -59,7 +50,7 @@ export const WorkflowEditor: React.FC = () => {
         </div>
 
         {/* Right Panel - Split vertically */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
           {/* Workflow Diagram */}
           <div className="flex-none h-1/3 border-b border-gray-200">
             <CollaborativeWorkflowDiagram />
