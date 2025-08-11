@@ -8,7 +8,6 @@ import ErrorMessage from '../components/ErrorMessage';
 import Shape from '../components/Shape';
 import { renderIcon } from '../components/RunIcons';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
-import { RUN_DATA_ICON } from './Node.styles';
 
 type NodeData = any;
 
@@ -29,35 +28,6 @@ type ErrorObject = {
 type LabelProps = React.PropsWithChildren<{
   hasErrors?: boolean;
 }>;
-
-const mapReason = (
-  reason: string
-):
-  | 'pending'
-  | 'success'
-  | 'fail'
-  | 'crash'
-  | 'cancel'
-  | 'shield'
-  | 'clock'
-  | 'circle_ex'
-  | 'triangle_ex' => {
-  // Map the exit reason to the expected icon state
-  switch (reason) {
-    case 'fail':
-      return 'fail';
-    case 'crash':
-      return 'crash';
-    case 'success':
-      return 'success';
-    case 'cancel':
-      return 'cancel';
-    case 'pending':
-      return 'pending';
-    default:
-      return 'pending';
-  }
-};
 
 function errorsMessage(errors: ErrorObject): string {
   const messages = Object.entries(errors).map(([key, errorArray]) => {
@@ -192,7 +162,7 @@ const Node = ({
           )}
           {runData && !isTriggerNode ? (
             <div className="absolute -left-2 -top-2">
-              {renderIcon(mapReason(runData.exit_reason ?? 'pending'), {
+              {renderIcon(runData.exit_reason ?? 'pending', {
                 tooltip: runData?.error_type ?? 'Step completed successfully',
               })}
             </div>

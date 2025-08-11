@@ -23,38 +23,8 @@ const CHIP_STYLES: Record<string, string> = {
   lost: 'bg-gray-800 text-white',
 };
 
-const displayTextFromState = (state: string): string => {
-  switch (state) {
-    case 'rejected':
-      return 'Rejected';
-    case 'pending':
-      return 'Pending';
-    case 'running':
-      return 'Running';
-    case 'available':
-      return 'Available';
-    case 'claimed':
-      return 'Claimed';
-    case 'started':
-      return 'Started';
-    case 'success':
-      return 'Success';
-    case 'failed':
-      return 'Failed';
-    case 'crashed':
-      return 'Crashed';
-    case 'cancelled':
-      return 'Cancelled';
-    case 'killed':
-      return 'Killed';
-    case 'exception':
-      return 'Exception';
-    case 'lost':
-      return 'Lost';
-    default:
-      return state;
-  }
-};
+const displayTextFromState = (state: string): string =>
+  `${state[0]?.toUpperCase()}${state.substring(1)}`;
 
 const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
   state,
@@ -224,7 +194,9 @@ export default function MiniHistory({
           <div className="flex flex-col items-center justify-center p-8 text-gray-500">
             <span className="hero-rectangle-stack w-8 h-8 mb-2 opacity-50"></span>
             <p className="text-sm font-medium">No related history</p>
-            <p className="text-xs text-gray-400 mt-1">Why not run it a few times to see some history?</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Why not run it a few times to see some history?
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
