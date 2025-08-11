@@ -9,7 +9,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   ## Schema Fields
 
   * `content` - The text content of the message (required, 1-10,000 characters)
-  * `workflow_code` - Optional code associated with the message (e.g., generated workflows)
+  * `code` - Optional code associated with the message (e.g., generated workflows)
   * `role` - Who sent the message: `:user` or `:assistant`
   * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
   * `is_deleted` - Soft deletion flag (defaults to false)
@@ -23,16 +23,18 @@ defmodule Lightning.AiAssistant.ChatMessage do
   import Lightning.Validators, only: [validate_required_assoc: 2]
 
   @type role() :: :user | :assistant
-  @type status() :: :pending | :success | :error | :cancelled
+  @type status() :: :pending | :processing | :success | :error | :cancelled
 
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
           content: String.t() | nil,
-          workflow_code: String.t() | nil,
+          code: String.t() | nil,
           role: role(),
           status: status(),
           is_deleted: boolean(),
           is_public: boolean(),
+          processing_started_at: DateTime.t() | nil,
+          processing_completed_at: DateTime.t() | nil,
           chat_session_id: Ecto.UUID.t(),
           user_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t(),
@@ -41,11 +43,16 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   schema "ai_chat_messages" do
     field :content, :string
-    field :workflow_code, :string
+    field :code, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
-    field :status, Ecto.Enum, values: [:pending, :success, :error, :cancelled]
+
+    field :status, Ecto.Enum,
+      values: [:pending, :processing, :success, :error, :cancelled]
+
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
+    field :processing_started_at, :utc_datetime_usec
+    field :processing_completed_at, :utc_datetime_usec
 
     belongs_to :chat_session, Lightning.AiAssistant.ChatSession
     belongs_to :user, Lightning.Accounts.User
@@ -68,42 +75,19 @@ defmodule Lightning.AiAssistant.ChatMessage do
   * User messages (role: `:user`) require an associated user
   * Status defaults based on role: `:pending` for users, `:success` for assistant
   * If status is explicitly provided, it takes precedence over role-based defaults
-
-  ## Examples
-
-      # Valid user message
-      ChatMessage.changeset(%ChatMessage{}, %{
-        content: "Hello AI",
-        role: :user,
-        user: %User{id: "123"},
-        chat_session_id: "session-456"
-      })
-
-      # Valid assistant message
-      ChatMessage.changeset(%ChatMessage{}, %{
-        content: "Hello! How can I help?",
-        role: :assistant,
-        chat_session_id: "session-456"
-      })
-
-      # With explicit status (overrides default)
-      ChatMessage.changeset(%ChatMessage{}, %{
-        content: "Processing...",
-        role: :assistant,
-        status: :pending,
-        chat_session_id: "session-456"
-      })
   """
   def changeset(chat_message, attrs) do
     chat_message
     |> cast(attrs, [
       :content,
-      :workflow_code,
+      :code,
       :role,
       :status,
       :is_deleted,
       :is_public,
-      :chat_session_id
+      :chat_session_id,
+      :processing_started_at,
+      :processing_completed_at
     ])
     |> validate_required([:content, :role])
     |> validate_length(:content, min: 1, max: 10_000)
@@ -132,7 +116,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
       ChatMessage.status_changeset(message, :error)
   """
   def status_changeset(chat_message, status)
-      when status in [:pending, :success, :error, :cancelled] do
+      when status in [:pending, :processing, :success, :error, :cancelled] do
     chat_message
     |> change(%{status: status})
   end

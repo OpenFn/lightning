@@ -1,16 +1,21 @@
 defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   @moduledoc """
-  AI Assistant mode for job-specific code assistance and debugging.
+  AI mode for job-specific code assistance and debugging.
 
-  This mode provides intelligent assistance for developing, debugging, and optimizing
-  job code within Lightning workflows. It leverages job-specific context including
-  the expression code and adaptor information to provide targeted AI assistance.
+  Provides context-aware help for job code, including adaptor usage,
+  debugging support, and optional log attachment.
   """
-
   use LightningWeb.Live.AiAssistant.ModeBehavior
 
+  import Phoenix.Component
+  import LightningWeb.Components.Icons
+  import LightningWeb.Components.NewInputs
+
+  alias Lightning.Accounts.User
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.Invocation
+  alias Lightning.Workflows.Job
   alias LightningWeb.Live.AiAssistant.ErrorHandler
 
   defmodule Form do
@@ -23,7 +28,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     embedded_schema do
       field :content, :string
 
-      embeds_one :options, Options, defaults_to_struct: true do
+      embeds_one :options, Options, on_replace: :update do
         field :code, :boolean, default: true
         field :input, :boolean, default: false
         field :output, :boolean, default: false
@@ -31,251 +36,140 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
       end
     end
 
+    @spec changeset(map()) :: Ecto.Changeset.t()
     def changeset(params) do
       %__MODULE__{}
       |> cast(params, [:content])
       |> cast_embed(:options, with: &options_changeset/2)
     end
 
+    @spec options_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
     defp options_changeset(schema, params) do
-      schema
-      |> cast(params, [:code, :logs])
+      cast(schema, params, [:code, :input, :output, :logs])
     end
 
-    def get_options(changeset) do
+    @spec extract_options(Ecto.Changeset.t()) :: Keyword.t()
+    def extract_options(changeset) do
       data = apply_changes(changeset)
 
       if data.options do
-        Map.from_struct(data.options)
+        data.options
+        |> Map.from_struct()
+        |> Map.to_list()
       else
-        %{}
+        []
       end
     end
   end
 
-  @doc """
-  Creates a new job-specific AI assistance session.
+  @type job :: Job.t()
+  @type user :: User.t()
+  @type session :: ChatSession.t()
+  @type assigns :: %{atom() => any()}
 
-  Initializes a session with job context, including the job's expression code
-  and adaptor information for targeted AI assistance.
-
-  ## Required Assigns
-
-  - `:selected_job` - The job struct to provide assistance for
-  - `:current_user` - The user creating the session
-
-  ## Examples
-
-      # Create session for debugging help
-      {:ok, session} = JobCode.create_session(
-        %{selected_job: job, current_user: user},
-        "Help me debug this HTTP request error"
-      )
-  """
   @impl true
-  @spec create_session(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def create_session(%{selected_job: job, current_user: user}, content) do
-    AiAssistant.create_session(job, user, content)
+  @spec create_session(assigns(), String.t(), Keyword.t()) ::
+          {:ok, session()} | {:error, term()}
+  def create_session(
+        %{selected_job: job, user: user, changeset: changeset} = assigns,
+        content,
+        opts \\ []
+      ) do
+    form_options = extract_form_options(changeset)
+
+    meta = %{"message_options" => Enum.into(form_options, %{})}
+
+    meta =
+      case assigns do
+        %{follow_run: %{id: run_id}} -> Map.put(meta, "follow_run_id", run_id)
+        _ -> meta
+      end
+
+    final_opts = Keyword.put(opts, :meta, meta)
+
+    AiAssistant.create_session(job, user, content, final_opts)
   end
 
-  @doc """
-  Retrieves and enriches a session with job-specific context.
-
-  Loads the session and adds the current job's expression and adaptor
-  information, enabling the AI to provide contextual assistance.
-
-  ## Required Assigns
-
-  - `:selected_job` - The job struct to provide context from
-
-  ## Examples
-
-      session = JobCode.get_session!(session_id, %{selected_job: current_job})
-      # session now includes job.body as expression and job.adaptor
-  """
   @impl true
-  @spec get_session!(map()) :: map()
+  @spec get_session!(assigns()) :: session()
   def get_session!(%{chat_session_id: session_id, selected_job: job} = assigns) do
     AiAssistant.get_session!(session_id)
     |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
-    |> then(fn session ->
-      follow_run = assigns[:follow_run]
-
-      if follow_run do
-        logs =
-          Invocation.assemble_logs_for_job_and_run(job.id, follow_run.id)
-
-        %{session | logs: logs}
-      else
-        session
-      end
-    end)
+    |> maybe_add_run_logs(job, assigns[:follow_run])
   end
 
-  @doc """
-  Lists job-specific AI assistance sessions with pagination.
-
-  Retrieves sessions associated with the currently selected job,
-  ordered by recency for easy access to recent conversations.
-
-  ## Required Assigns
-
-  - `:selected_job` - The job to filter sessions by
-
-  ## Examples
-
-      # Load recent sessions for current job
-      %{sessions: sessions, pagination: meta} = JobCode.list_sessions(
-        %{selected_job: job},
-        :desc,
-        limit: 10
-      )
-  """
   @impl true
-  @spec list_sessions(map(), atom(), keyword()) :: %{
-          sessions: [map()],
+  @spec list_sessions(assigns(), :asc | :desc, Keyword.t()) :: %{
+          sessions: [session()],
           pagination: map()
         }
   def list_sessions(%{selected_job: job}, sort_direction, opts \\ []) do
     AiAssistant.list_sessions(job, sort_direction, opts)
   end
 
-  @doc """
-  Checks if more sessions exist for the current job.
-
-  Determines if additional sessions are available beyond the current count
-  for implementing "Load More" functionality.
-
-  ## Required Assigns
-
-  - `:selected_job` - The job to check session count for
-
-  ## Examples
-
-      if JobCode.more_sessions?(%{selected_job: job}, 20) do
-        # Show "Load More" button
-      end
-  """
   @impl true
-  @spec more_sessions?(map(), integer()) :: boolean()
+  @spec more_sessions?(assigns(), integer()) :: boolean()
   def more_sessions?(%{selected_job: job}, current_count) do
     AiAssistant.has_more_sessions?(job, current_count)
   end
 
-  @doc """
-  Saves a user message to the job assistance session.
-
-  Adds the user's message to the conversation history with proper
-  role and user attribution for AI processing.
-
-  ## Required Assigns
-
-  - `:session` - The target session
-  - `:current_user` - The user sending the message
-
-  ## Examples
-
-      {:ok, updated_session} = JobCode.save_message(
-        %{session: session, current_user: user},
-        "How do I handle this API error?"
-      )
-  """
   @impl true
-  @spec save_message(map(), String.t()) :: {:ok, map()} | {:error, any()}
-  def save_message(%{session: session, current_user: user}, content) do
-    AiAssistant.save_message(session, %{
-      role: :user,
-      content: content,
-      user: user
-    })
+  @spec save_message(assigns(), String.t()) ::
+          {:ok, session()} | {:error, term()}
+  def save_message(
+        %{session: session, user: user, changeset: changeset} = assigns,
+        content
+      ) do
+    options = extract_form_options(changeset)
+
+    updated_meta =
+      session.meta
+      |> Kernel.||(%{})
+      |> Map.put("message_options", Enum.into(options, %{}))
+
+    updated_meta =
+      case assigns do
+        %{follow_run: %{id: run_id}} ->
+          Map.put(updated_meta, "follow_run_id", run_id)
+
+        _ ->
+          updated_meta
+      end
+
+    AiAssistant.save_message(
+      session,
+      %{
+        role: :user,
+        content: content,
+        user: user
+      },
+      meta: updated_meta
+    )
   end
 
-  @doc """
-  Processes user queries through the job-specific AI assistant.
-
-  Sends the user's question along with job context (expression and adaptor)
-  to the AI service for targeted code assistance and debugging help.
-
-  ## Parameters
-
-  - `session` - Session with job context (expression and adaptor)
-  - `content` - User's question or request for assistance
-
-  ## Examples
-
-      # Get help with specific code issue
-      {:ok, updated_session} = JobCode.query(
-        session,
-        "Why is my data transformation returning undefined?"
-      )
-
-      # Request adaptor-specific guidance
-      {:ok, updated_session} = JobCode.query(
-        session,
-        "What's the best way to handle errors in HTTP requests?"
-      )
-  """
   @impl true
-  @spec query(map(), String.t(), map()) :: {:ok, map()} | {:error, any()}
+  @spec query(session(), String.t(), Keyword.t()) ::
+          {:ok, session()} | {:error, term()}
   def query(session, content, opts) do
     AiAssistant.query(session, content, opts)
   end
 
   @impl true
-  def query_options(changeset) do
-    Form.get_options(changeset)
-  end
-
-  @doc """
-  Determines if the chat input should be disabled for job assistance.
-
-  Evaluates multiple conditions to ensure AI assistance is only available
-  when appropriate permissions, limits, and job state allow it.
-
-  ## Examples
-
-      # Input disabled due to unsaved job
-      chat_input_disabled?(%{
-        selected_job: %{__meta__: %{state: :built}},
-        can_edit_workflow: true,
-        ai_limit_result: :ok,
-        endpoint_available?: true,
-        pending_message: %{loading: nil}
-      })
-      # => true
-
-      # Input enabled for saved job with permissions
-      chat_input_disabled?(%{
-        selected_job: %{__meta__: %{state: :loaded}},
-        can_edit_workflow: true,
-        ai_limit_result: :ok,
-        endpoint_available?: true,
-        pending_message: %{loading: nil}
-      })
-      # => false
-  """
-  @impl true
-  @spec chat_input_disabled?(map()) :: boolean()
+  @spec chat_input_disabled?(assigns()) :: boolean()
   def chat_input_disabled?(%{
-        selected_job: selected_job,
-        can_edit_workflow: can_edit_workflow,
-        ai_limit_result: ai_limit_result,
-        endpoint_available?: endpoint_available?,
-        pending_message: pending_message
+        selected_job: job,
+        can_edit: can_edit,
+        ai_limit_result: limit_result,
+        endpoint_available: available?,
+        pending_message: pending
       }) do
-    !can_edit_workflow or
-      has_reached_limit?(ai_limit_result) or
-      !endpoint_available? or
-      !is_nil(pending_message.loading) or
-      job_is_unsaved?(selected_job)
+    !can_edit or
+      limit_result != :ok or
+      !available? or
+      !is_nil(pending.loading) or
+      job_is_unsaved?(job)
   end
 
-  @doc """
-  Provides job-specific placeholder text for the chat input.
-
-  Guides users on the types of assistance available for job development
-  and debugging.
-  """
   @impl true
   @spec input_placeholder() :: String.t()
   def input_placeholder do
@@ -283,35 +177,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   end
 
   @impl true
-  def validate_form_changeset(params) do
-    Form.changeset(params)
-  end
-
-  @impl true
-  def enable_attachment_options_component?, do: true
-
-  @doc """
-  Generates contextual titles for job assistance sessions.
-
-  Creates descriptive titles that include job context when available,
-  making it easier to identify sessions in lists.
-
-  ## Examples
-
-      # With custom title
-      chat_title(%{title: "Debug HTTP 401 error"})
-      # => "Debug HTTP 401 error"
-
-      # With job context
-      chat_title(%{job: %{name: "Fetch Salesforce Data"}})
-      # => "Help with Fetch Salesforce Data"
-
-      # Fallback
-      chat_title(%{})
-      # => "Job Code Help"
-  """
-  @impl true
-  @spec chat_title(map()) :: String.t()
+  @spec chat_title(session()) :: String.t()
   def chat_title(session) do
     case session do
       %{title: title} when is_binary(title) and title != "" ->
@@ -325,64 +191,21 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     end
   end
 
-  @doc """
-  Indicates that job assistance doesn't generate templates.
-
-  Job mode focuses on helping with existing code rather than generating
-  new templates or workflows.
-  """
-  @impl true
-  @spec supports_template_generation?() :: boolean()
-  def supports_template_generation?, do: false
-
-  @doc """
-  Provides metadata for the job assistance mode.
-
-  Returns information used by the UI to display mode selection options
-  and identify the mode's capabilities.
-  """
   @impl true
   @spec metadata() :: map()
   def metadata do
     %{
       name: "Job Code Assistant",
       description: "Get help with job code, debugging, and OpenFn adaptors",
-      icon: "hero-cpu-chip"
+      icon: "hero-cpu-chip",
+      chat_param: "j-chat"
     }
   end
 
-  @doc """
-  Generates appropriate tooltip messages when chat input is disabled.
-
-  Provides specific explanations for why AI assistance is unavailable,
-  helping users understand what actions they need to take.
-
-  ## Parameters
-
-  - `assigns` - Map containing permission and state information
-
-  ## Returns
-
-  String explanation or `nil` if input should be enabled.
-
-  ## Examples
-
-      # Permission denied
-      disabled_tooltip_message(%{can_edit_workflow: false})
-      # => "You are not authorized to use the AI Assistant"
-
-      # Usage limit reached
-      disabled_tooltip_message(%{ai_limit_result: {:error, :limit_exceeded}})
-      # => "Monthly AI usage limit exceeded"
-
-      # Unsaved job
-      disabled_tooltip_message(%{selected_job: %{__meta__: %{state: :built}}})
-      # => "Save your workflow first to use the AI Assistant"
-  """
-  @spec disabled_tooltip_message(map()) :: String.t() | nil
+  @impl true
+  @spec disabled_tooltip_message(assigns()) :: String.t() | nil
   def disabled_tooltip_message(assigns) do
-    case {assigns.can_edit_workflow, assigns.ai_limit_result,
-          assigns.selected_job} do
+    case {assigns.can_edit, assigns.ai_limit_result, assigns.selected_job} do
       {false, _, _} ->
         "You are not authorized to use the AI Assistant"
 
@@ -397,37 +220,53 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
     end
   end
 
-  @doc """
-  Formats errors consistently for job assistance mode.
+  @impl true
+  @spec form_module() :: module()
+  def form_module, do: Form
 
-  Leverages shared error handling to provide user-friendly error messages
-  for various failure scenarios.
-
-  ## Parameters
-
-  - `error` - Error to format (changeset, atom, string, etc.)
-
-  ## Returns
-
-  Human-readable error message string.
-
-  ## Examples
-
-      error_message({:error, :timeout})
-      # => "Request timed out. Please try again."
-
-      error_message(%Ecto.Changeset{})
-      # => "Validation failed: [specific field errors]"
-  """
-  @spec error_message(any()) :: String.t()
-  def error_message(error) do
-    ErrorHandler.format_error(error)
+  @impl true
+  @spec validate_form(map()) :: Ecto.Changeset.t()
+  def validate_form(params) do
+    Form.changeset(params)
   end
 
-  defp has_reached_limit?(ai_limit_result) do
-    ai_limit_result != :ok
+  @impl true
+  @spec extract_form_options(Ecto.Changeset.t()) :: Keyword.t()
+  def extract_form_options(changeset) do
+    Form.extract_options(changeset)
   end
 
+  @impl true
+  @spec render_config_form(assigns()) :: Phoenix.LiveView.Rendered.t() | nil
+  def render_config_form(assigns) do
+    if assigns[:handler] && assigns.handler.form_module() == Form do
+      ~H"""
+      <div class="mt-2 flex gap-2 content-center">
+        <span class="place-content-center">
+          <.icon name="hero-paper-clip" class="size-4" /> Attach:
+        </span>
+        <.inputs_for :let={options} field={@form[:options]}>
+          <.input type="checkbox" label="Code" field={options[:code]} />
+          <.input type="checkbox" label="Logs" field={options[:logs]} />
+        </.inputs_for>
+      </div>
+      """
+    else
+      nil
+    end
+  end
+
+  @doc false
+  @spec maybe_add_run_logs(session(), job(), map() | nil) :: session()
+  defp maybe_add_run_logs(session, _job, nil), do: session
+
+  defp maybe_add_run_logs(session, job, run) do
+    logs = Invocation.assemble_logs_for_job_and_run(job.id, run.id)
+    %{session | logs: logs}
+  end
+
+  @doc false
+  @spec job_is_unsaved?(job()) :: boolean()
   defp job_is_unsaved?(%{__meta__: %{state: :built}}), do: true
   defp job_is_unsaved?(_job), do: false
 end

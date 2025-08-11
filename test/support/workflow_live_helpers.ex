@@ -293,6 +293,84 @@ defmodule Lightning.WorkflowLive.Helpers do
     view
     |> form("#choose-workflow-template-form", %{template_id: template_id})
     |> render_change()
+
+    job_id = Ecto.UUID.generate()
+    trigger_id = Ecto.UUID.generate()
+
+    parsed_workflow =
+      case template_id do
+        "base-webhook-template" ->
+          %{
+            "name" => "Event-based Workflow",
+            "jobs" => [
+              %{
+                "id" => job_id,
+                "name" => "Transform data",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" =>
+                  "// Check out the Job Writing Guide for help getting started:\n// https://docs.openfn.org/documentation/jobs/job-writing-guide"
+              }
+            ],
+            "triggers" => [
+              %{
+                "id" => trigger_id,
+                "type" => "webhook",
+                "enabled" => false
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => Ecto.UUID.generate(),
+                "source_trigger_id" => trigger_id,
+                "target_job_id" => job_id,
+                "condition_type" => "always",
+                "enabled" => true
+              }
+            ]
+          }
+
+        "base-cron-template" ->
+          %{
+            "name" => "Scheduled Workflow",
+            "jobs" => [
+              %{
+                "id" => job_id,
+                "name" => "Get data",
+                "adaptor" => "@openfn/language-http@7.0.3",
+                "body" =>
+                  "// Check out the Job Writing Guide for help getting started:\n// https://docs.openfn.org/documentation/jobs/job-writing-guide\nget('https://docs.openfn.org/documentation');"
+              }
+            ],
+            "triggers" => [
+              %{
+                "id" => trigger_id,
+                "type" => "cron",
+                "cron_expression" => "*/15 * * * *",
+                "enabled" => false
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => Ecto.UUID.generate(),
+                "source_trigger_id" => trigger_id,
+                "target_job_id" => job_id,
+                "condition_type" => "always",
+                "enabled" => true
+              }
+            ]
+          }
+
+        _ ->
+          raise "Unknown template: #{template_id}"
+      end
+
+    view
+    |> with_target("#new-workflow-panel")
+    |> render_hook("template-parsed", %{"workflow" => parsed_workflow})
+
+    _ = render(view)
+
+    {view, parsed_workflow}
   end
 
   def add_job_patch(name \\ "", id \\ Ecto.UUID.generate()) do

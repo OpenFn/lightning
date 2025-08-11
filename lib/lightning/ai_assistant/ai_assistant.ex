@@ -19,6 +19,7 @@ defmodule Lightning.AiAssistant do
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
+  alias Lightning.AiAssistant.MessageProcessor
   alias Lightning.ApolloClient
   alias Lightning.Projects.Project
   alias Lightning.Repo
@@ -30,15 +31,12 @@ defmodule Lightning.AiAssistant do
   require Logger
 
   @title_max_length 40
+  @success_status_range 200..299
+
+  @type opts :: keyword()
 
   @doc """
   Returns the maximum allowed length for chat session titles.
-
-  ## Examples
-
-      iex> Lightning.AiAssistant.title_max_length()
-      40
-
   """
   @spec title_max_length() :: non_neg_integer()
   def title_max_length, do: @title_max_length
@@ -52,15 +50,6 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   `true` if AI assistant is properly configured and enabled, `false` otherwise.
-
-  ## Examples
-
-      if AiAssistant.enabled?() do
-        # Show AI assistant UI elements
-      else
-        # Hide AI features or show configuration message
-      end
-
   """
   @spec enabled?() :: boolean()
   def enabled? do
@@ -78,16 +67,6 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   `true` if the Apollo endpoint responds successfully, `false` otherwise.
-
-  ## Examples
-
-      case AiAssistant.endpoint_available?() do
-        true ->
-          # Proceed with AI queries
-        false ->
-          # Show service unavailable message
-      end
-
   """
   @spec endpoint_available?() :: boolean()
   def endpoint_available? do
@@ -107,15 +86,6 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   `true` if disclaimer was read within 24 hours, `false` otherwise.
-
-  ## Examples
-
-      if AiAssistant.user_has_read_disclaimer?(current_user) do
-        # User can access AI features
-      else
-        # Show disclaimer dialog
-      end
-
   """
   @spec user_has_read_disclaimer?(User.t()) :: boolean()
   def user_has_read_disclaimer?(user) do
@@ -129,7 +99,6 @@ defmodule Lightning.AiAssistant do
 
     case read_at && DateTime.from_unix(read_at) do
       {:ok, datetime} ->
-        # Disclaimer is valid for 24 hours
         DateTime.diff(DateTime.utc_now(), datetime, :hour) < 24
 
       _error ->
@@ -150,11 +119,6 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   `{:ok, user}` - Successfully recorded disclaimer acceptance.
-
-  ## Examples
-
-      {:ok, updated_user} = AiAssistant.mark_disclaimer_read(current_user)
-
   """
   @spec mark_disclaimer_read(User.t()) :: {:ok, User.t()}
   def mark_disclaimer_read(user) do
@@ -171,10 +135,9 @@ defmodule Lightning.AiAssistant do
   Creates a new chat session for job-specific AI assistance.
 
   Initializes a new session with:
-  - Generated UUID
   - Association with the specified job and user
   - Auto-generated title from the initial message content
-  - Job's expression and adaptor context
+  - Job's expression and adaptor context (virtual fields)
   - The initial user message
 
   ## Parameters
@@ -182,78 +145,98 @@ defmodule Lightning.AiAssistant do
   - `job` - The `%Job{}` struct this session will assist with
   - `user` - The `%User{}` creating the session
   - `content` - Initial message content that will become the session title
+  - `opts` - Keyword list of options:
+    - `:meta` - Optional metadata for the session
+    - `:code` - Optional workflow code for the initial message
 
   ## Returns
 
   - `{:ok, session}` - Successfully created session with initial message
   - `{:error, changeset}` - Validation errors during creation
-
-  ## Examples
-
-      case AiAssistant.create_session(job, current_user, "Help debug my HTTP request") do
-        {:ok, session} ->
-          # Session created successfully
-        {:error, changeset} ->
-          # Handle validation errors
-      end
-
   """
-  @spec create_session(Job.t(), User.t(), String.t()) ::
+  @spec create_session(Job.t(), User.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def create_session(job, user, content) do
-    %ChatSession{
-      id: Ecto.UUID.generate(),
+  def create_session(job, user, content, opts \\ []) do
+    meta = Keyword.get(opts, :meta, %{})
+
+    session_attrs = %{
       job_id: job.id,
       user_id: user.id,
       title: create_title(content),
-      messages: []
+      session_type: "job_code",
+      meta: meta
     }
-    |> put_expression_and_adaptor(job.body, job.adaptor)
-    |> save_message(%{role: :user, content: content, user: user})
+
+    Multi.new()
+    |> Multi.insert(
+      :session,
+      ChatSession.changeset(%ChatSession{}, session_attrs)
+    )
+    |> Multi.run(:session_with_message, fn repo, %{session: session} ->
+      session
+      |> repo.preload(:messages)
+      |> put_expression_and_adaptor(job.body, job.adaptor)
+      |> save_message(%{role: :user, content: content, user: user}, opts)
+    end)
+    |> Repo.transaction()
+    |> handle_transaction_result()
   end
 
   @doc """
   Creates a new chat session for workflow template generation.
 
   Initializes a session specifically for creating workflow templates:
-  - Associates with a project rather than a specific job
+  - Associates with a project and optionally an existing workflow
   - Sets session type to "workflow_template"
   - Includes the initial user message describing the desired workflow
 
   ## Parameters
 
   - `project` - The `%Project{}` struct where the workflow will be created
+  - `workflow` - The `%Workflow{}` struct to associate with the session, or `nil` for new workflows
   - `user` - The `%User{}` requesting the workflow template
   - `content` - Description of the desired workflow functionality
+  - `opts` - Keyword list of options:
+    - `:meta` - Optional metadata for the session
+    - `:code` - Optional workflow code for the initial message
 
   ## Returns
 
-  - `{:ok, session}` - Successfully created workflow session
+  - `{:ok, session}` - Successfully created workflow session with initial message
   - `{:error, changeset}` - Validation errors during creation
-
-  ## Examples
-
-      case AiAssistant.create_workflow_session(project, user, "Create a daily data sync from Salesforce to PostgreSQL") do
-        {:ok, session} ->
-          # Ready to generate workflow template
-        {:error, changeset} ->
-          # Handle errors
-      end
-
   """
-  @spec create_workflow_session(Project.t(), User.t(), String.t()) ::
+  @spec create_workflow_session(
+          Project.t(),
+          Workflow.t() | nil,
+          User.t(),
+          String.t(),
+          opts()
+        ) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def create_workflow_session(project, user, content) do
-    %ChatSession{
-      id: Ecto.UUID.generate(),
+  def create_workflow_session(project, workflow, user, content, opts \\ []) do
+    meta = Keyword.get(opts, :meta, %{})
+
+    session_attrs = %{
       project_id: project.id,
+      workflow_id: workflow && workflow.id,
       session_type: "workflow_template",
       user_id: user.id,
       title: create_title(content),
-      meta: %{},
-      messages: []
+      meta: meta
     }
-    |> save_message(%{role: :user, content: content, user: user})
+
+    Multi.new()
+    |> Multi.insert(
+      :session,
+      ChatSession.changeset(%ChatSession{}, session_attrs)
+    )
+    |> Multi.run(:session_with_message, fn repo, %{session: session} ->
+      session
+      |> repo.preload(:messages)
+      |> save_message(%{role: :user, content: content, user: user}, opts)
+    end)
+    |> Repo.transaction()
+    |> handle_transaction_result()
   end
 
   @doc """
@@ -277,28 +260,29 @@ defmodule Lightning.AiAssistant do
   ## Raises
 
   `Ecto.NoResultsError` if no session exists with the given ID.
-
-  ## Examples
-
-      # Job session
-      session = AiAssistant.get_session!("123e4567-e89b-12d3-a456-426614174000")
-      IO.puts("Session has # {length(session.messages)} messages")
-
-      # Workflow template session (includes project)
-      session = AiAssistant.get_session!("workflow-session-id")
-      IO.puts("Workflow for project: # {session.project.name}")
-
   """
   def get_session!(id) do
     session =
       ChatSession
       |> Repo.get!(id)
-      |> Repo.preload(messages: {session_messages_query(), :user})
+      |> Repo.preload([:user, messages: {session_messages_query(), :user}])
 
     if session.session_type == "workflow_template" do
       Repo.preload(session, :project)
     else
       session
+    end
+  end
+
+  def get_session(id) do
+    case Repo.get(ChatSession, id) do
+      nil ->
+        {:error, :not_found}
+
+      session ->
+        {:ok,
+         session
+         |> Repo.preload([:user, messages: {session_messages_query(), :user}])}
     end
   end
 
@@ -329,19 +313,8 @@ defmodule Lightning.AiAssistant do
   A map containing:
   - `:sessions` - List of `ChatSession` structs with preloaded data
   - `:pagination` - `PaginationMeta` struct with navigation information
-
-  ## Examples
-
-      # Get recent sessions for a project
-      %{sessions: sessions, pagination: meta} =
-        AiAssistant.list_sessions(project, :desc, offset: 0, limit: 10)
-
-      # Get older sessions for a job
-      %{sessions: sessions, pagination: meta} =
-        AiAssistant.list_sessions(job, :asc, offset: 10, limit: 5)
-
   """
-  @spec list_sessions(Project.t() | Job.t(), :asc | :desc, keyword()) :: %{
+  @spec list_sessions(Project.t() | Job.t(), :asc | :desc, opts()) :: %{
           sessions: [ChatSession.t()],
           pagination: PaginationMeta.t()
         }
@@ -352,8 +325,11 @@ defmodule Lightning.AiAssistant do
     {sessions, total_count} =
       case resource do
         %{__struct__: Lightning.Projects.Project} = project ->
+          workflow = Keyword.get(opts, :workflow)
+
           get_workflow_sessions_with_count(
             project,
+            workflow,
             sort_direction,
             offset,
             limit
@@ -387,13 +363,6 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   `true` if more sessions exist, `false` otherwise.
-
-  ## Examples
-
-      if AiAssistant.has_more_sessions?(project, 20) do
-        # Show "Load More" button
-      end
-
   """
   @spec has_more_sessions?(Project.t() | Job.t(), integer()) :: boolean()
   def has_more_sessions?(resource, current_count) do
@@ -419,15 +388,6 @@ defmodule Lightning.AiAssistant do
 
   An updated `ChatSession` struct with `:expression` and `:adaptor` fields populated.
   The adaptor is resolved through `Lightning.AdaptorRegistry`.
-
-  ## Examples
-
-      enhanced_session = AiAssistant.put_expression_and_adaptor(
-        session,
-        "fn(state) => { return {...state, processed: true}; }",
-        "@openfn/language-http"
-      )
-
   """
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
@@ -438,6 +398,41 @@ defmodule Lightning.AiAssistant do
         adaptor: Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
     }
   end
+
+  @doc """
+  Enriches a chat session with job-specific context.
+
+  Loads the associated job and enriches the session with:
+  - Job expression code and adaptor information
+  - Run logs if following a specific run (via session.meta["follow_run_id"])
+
+  ## Parameters
+  - `session` - The chat session to enrich
+
+  ## Returns
+  The enriched session with job context loaded
+  """
+  @spec enrich_session_with_job_context(ChatSession.t()) :: ChatSession.t()
+  def enrich_session_with_job_context(%{job_id: nil} = session), do: session
+
+  def enrich_session_with_job_context(session) do
+    job = Repo.get!(Lightning.Workflows.Job, session.job_id)
+
+    session
+    |> put_expression_and_adaptor(job.body, job.adaptor)
+    |> maybe_add_run_logs()
+  end
+
+  @doc false
+  defp maybe_add_run_logs(%{meta: %{"follow_run_id" => run_id}} = session)
+       when not is_nil(run_id) do
+    logs =
+      Lightning.Invocation.assemble_logs_for_job_and_run(session.job_id, run_id)
+
+    %{session | logs: logs}
+  end
+
+  defp maybe_add_run_logs(session), do: session
 
   @doc """
   Associates a workflow with a chat session.
@@ -454,11 +449,6 @@ defmodule Lightning.AiAssistant do
 
   - `{:ok, session}` - Successfully linked workflow to session
   - `{:error, changeset}` - Association failed with validation errors
-
-  ## Examples
-
-      {:ok, updated_session} = AiAssistant.associate_workflow(session, new_workflow)
-
   """
   @spec associate_workflow(ChatSession.t(), Workflow.t()) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
@@ -477,51 +467,63 @@ defmodule Lightning.AiAssistant do
   ## Parameters
 
   - `session` - The target `%ChatSession{}`
-  - `message` - Map containing message data with keys like `:role`, `:content`, `:user`
-  - `usage` - Map containing AI usage metrics (default: `%{}`)
-  - `meta` - Optional metadata to update on the session (default: `nil`)
+  - `message_attrs` - Map containing message data with keys like `:role`, `:content`, `:user`
+  - `opts` - Keyword list of options:
+    - `:usage` - Map containing AI usage metrics (default: `%{}`)
+    - `:meta` - Session metadata to update (default: keeps existing)
+    - `:code` - Optional workflow code to attach to the message
 
   ## Returns
 
   - `{:ok, session}` - Successfully saved message and updated session
   - `{:error, changeset}` - Validation or database errors
-
-  ## Examples
-
-      # Save user message
-      {:ok, updated_session} = AiAssistant.save_message(session, %{
-        role: :user,
-        content: "How do I handle errors?",
-        user: current_user
-      })
-
-      # Save assistant response with usage tracking
-      {:ok, updated_session} = AiAssistant.save_message(session, %{
-        role: :assistant,
-        content: "Here's how to handle errors..."
-      }, %{tokens_used: 150, cost: 0.003})
-
   """
-  @spec save_message(ChatSession.t(), map(), map(), map() | nil) ::
+  @spec save_message(ChatSession.t(), map(), opts()) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def save_message(session, message, usage \\ %{}, meta \\ nil) do
-    messages = Enum.map(session.messages, &Map.take(&1, [:id]))
+  def save_message(session, message_attrs, opts \\ []) do
+    usage = Keyword.get(opts, :usage, %{})
+    meta = Keyword.get(opts, :meta)
+    code = Keyword.get(opts, :code)
+
+    message_attrs =
+      message_attrs
+      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
+      |> Map.put("chat_session_id", session.id)
+      |> Map.put("code", code)
 
     Multi.new()
     |> Multi.put(:usage, usage)
-    |> Multi.put(:message, message)
-    |> Multi.insert_or_update(
-      :upsert,
-      ChatSession.changeset(session, %{
-        messages: messages ++ [message],
-        meta: meta || session.meta
-      })
+    |> Multi.insert(
+      :message,
+      ChatMessage.changeset(%ChatMessage{}, message_attrs)
     )
+    |> Multi.update(:session, fn %{message: _message} ->
+      ChatSession.changeset(session, %{meta: meta || session.meta})
+    end)
     |> Multi.merge(&maybe_increment_ai_usage/1)
+    |> Multi.run(:enqueue_if_user_message, fn _repo, %{message: message} ->
+      if message.role == :user && message.status == :pending do
+        Oban.insert(
+          Lightning.Oban,
+          MessageProcessor.new(%{
+            message_id: message.id,
+            session_id: session.id
+          })
+        )
+      else
+        {:ok, nil}
+      end
+    end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{upsert: session}} -> {:ok, session}
-      {:error, _operation, changeset, _changes} -> {:error, changeset}
+      {:ok, %{session: session}} ->
+        {:ok, Repo.preload(session, [messages: :user], force: true)}
+
+      {:error, :message, changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, :session, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 
@@ -541,28 +543,11 @@ defmodule Lightning.AiAssistant do
 
   - `{:ok, session}` - Successfully updated message, returns refreshed session
   - `{:error, changeset}` - Update failed with validation errors
-
-  ## Examples
-
-      # Mark a pending message as successful
-      {:ok, updated_session} = AiAssistant.update_message_status(
-        session,
-        pending_message,
-        :success
-      )
-
-      # Mark a message as cancelled
-      {:ok, updated_session} = AiAssistant.update_message_status(
-        session,
-        message,
-        :cancelled
-      )
-
   """
   @spec update_message_status(ChatSession.t(), ChatMessage.t(), atom()) ::
           {:ok, ChatSession.t()} | {:error, Changeset.t()}
   def update_message_status(session, message, status) do
-    case Repo.update(ChatMessage.changeset(message, %{status: status})) do
+    case Repo.update(ChatMessage.status_changeset(message, status)) do
       {:ok, _updated_message} ->
         {:ok,
          session
@@ -588,20 +573,11 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   List of `%ChatMessage{}` structs with `:role` of `:user` and `:status` of `:pending`.
-
-  ## Examples
-
-      pending_messages = AiAssistant.find_pending_user_messages(session)
-
-      if length(pending_messages) > 0 do
-        # Handle stuck messages
-      end
-
   """
   @spec find_pending_user_messages(ChatSession.t()) :: [ChatMessage.t()]
   def find_pending_user_messages(session) do
-    session.messages
-    |> Enum.filter(&(&1.role == :user && &1.status == :pending))
+    messages = session.messages || []
+    Enum.filter(messages, &(&1.role == :user && &1.status == :pending))
   end
 
   @doc """
@@ -620,24 +596,11 @@ defmodule Lightning.AiAssistant do
 
   - `{:ok, session}` - AI responded successfully, session updated with response
   - `{:error, reason}` - Query failed, reason is either a string error message or changeset
-
-  ## Examples
-
-      case AiAssistant.query(session, "Why is my HTTP request failing?") do
-        {:ok, updated_session} ->
-          # AI provided assistance, check session.messages for response
-        {:error, "Request timed out. Please try again."} ->
-          # Handle timeout
-        {:error, changeset} ->
-          # Handle validation errors
-      end
-
   """
-  @spec query(ChatSession.t(), String.t(), map()) ::
+  @spec query(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
-  def query(session, content, opts \\ %{}) do
+  def query(session, content, opts \\ []) do
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
-    pending_user_message = find_pending_user_message(session, content)
 
     context =
       build_context(
@@ -649,13 +612,16 @@ defmodule Lightning.AiAssistant do
         opts
       )
 
-    ApolloClient.query(
+    history = build_history(session)
+    meta = session.meta || %{}
+
+    ApolloClient.job_chat(
       content,
-      context,
-      build_history(session),
-      session.meta || %{}
+      context: context,
+      history: history,
+      meta: meta
     )
-    |> handle_apollo_resp(session, pending_user_message)
+    |> handle_ai_response(session, &build_job_message/1)
   end
 
   defp build_context(context, opts) do
@@ -681,67 +647,96 @@ defmodule Lightning.AiAssistant do
 
   - `session` - The workflow template `%ChatSession{}`
   - `content` - User's description of desired workflow functionality or modifications
-  - `errors` - Optional string containing validation errors from previous workflow attempts
+  - `opts` - Keyword list of options:
+    - `:code` - Current YAML to modify (default: uses latest from session)
+    - `:errors` - Validation errors from previous workflow attempts
+    - `:meta` - Additional metadata to pass to the AI service (default: session.meta)
 
   ## Returns
 
   - `{:ok, session}` - Workflow template generated successfully
   - `{:error, reason}` - Generation failed, reason is either a string error message or changeset
-
-  ## Examples
-
-      # Initial workflow request
-      {:ok, session} = AiAssistant.query_workflow(
-        session,
-        "Create a workflow that syncs Salesforce contacts to a Google Sheet daily"
-      )
-
-      # Request with error corrections
-      {:ok, session} = AiAssistant.query_workflow(
-        session,
-        "Fix the validation errors",
-        "Invalid cron expression: '0 0 * * 8'"
-      )
-
   """
-  @spec query_workflow(ChatSession.t(), String.t(), String.t() | nil) ::
+  @spec query_workflow(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
-  def query_workflow(session, content, errors \\ nil) do
-    pending_user_message = find_pending_user_message(session, content)
+  def query_workflow(session, content, opts \\ []) do
+    code = Keyword.get(opts, :code)
+    errors = Keyword.get(opts, :errors)
+    meta = Keyword.get(opts, :meta, session.meta || %{})
 
-    latest_yaml = get_latest_workflow_yaml(session)
+    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
     ApolloClient.workflow_chat(
       content,
-      latest_yaml,
-      errors,
-      build_history(session),
-      session.meta || %{}
+      code: code,
+      errors: errors,
+      history: build_history(session),
+      meta: meta
     )
-    |> handle_workflow_response(session, pending_user_message)
+    |> handle_ai_response(session, &build_workflow_message/1)
   end
 
-  defp get_workflow_sessions_with_count(project, sort_direction, offset, limit) do
-    total_count =
+  @doc """
+  Resets a message status to pending and enqueues it for reprocessing.
+  Handles both the database update and Oban job creation atomically.
+  """
+  def retry_message(message) do
+    Multi.new()
+    |> Multi.update(
+      :message,
+      Ecto.Changeset.change(message, %{status: :pending})
+    )
+    |> Multi.insert(
+      :oban_job,
+      MessageProcessor.new(%{
+        message_id: message.id,
+        session_id: message.chat_session_id
+      })
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{message: message, oban_job: oban_job}} ->
+        {:ok, {message, oban_job}}
+
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
+  defp get_workflow_sessions_with_count(
+         project,
+         workflow,
+         sort_direction,
+         offset,
+         limit
+       ) do
+    base_query =
       from(s in ChatSession,
         where:
-          s.project_id == ^project.id and s.session_type == "workflow_template",
-        select: count(s.id)
+          s.project_id == ^project.id and s.session_type == "workflow_template"
       )
+
+    query =
+      if workflow do
+        where(base_query, [s], s.workflow_id == ^workflow.id)
+      else
+        where(base_query, [s], is_nil(s.workflow_id))
+      end
+
+    total_count =
+      query
+      |> select([s], count(s.id))
       |> Repo.one()
 
     sessions =
-      from(s in ChatSession,
-        where:
-          s.project_id == ^project.id and s.session_type == "workflow_template",
-        left_join: m in assoc(s, :messages),
-        group_by: [s.id, s.title, s.updated_at, s.inserted_at],
-        select: %{s | message_count: count(m.id)},
-        order_by: [{^sort_direction, s.updated_at}],
-        preload: [:user],
-        limit: ^limit,
-        offset: ^offset
-      )
+      query
+      |> join(:left, [s], m in assoc(s, :messages))
+      |> group_by([s, m], [s.id, s.title, s.updated_at, s.inserted_at])
+      |> select([s, m], %{s | message_count: count(m.id)})
+      |> order_by([s, m], [{^sort_direction, s.updated_at}])
+      |> preload([:user, :project])
+      |> limit(^limit)
+      |> offset(^offset)
       |> Repo.all()
 
     {sessions, total_count}
@@ -794,131 +789,74 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  defp handle_apollo_resp(
-         {:ok, %Tesla.Env{status: status, body: body}},
-         session,
-         pending_user_message
-       )
-       when status in 200..299 do
-    message = body["history"] |> Enum.reverse() |> hd()
+  defp handle_ai_response(response, session, message_builder) do
+    case response do
+      {:ok, %Tesla.Env{status: status, body: body}}
+      when status in @success_status_range ->
+        {message_attrs, opts} = message_builder.(body)
+        save_message(session, message_attrs, opts)
 
-    case save_message(session, message, body["usage"], body["meta"]) do
-      {:ok, updated_session} ->
-        if pending_user_message do
-          update_message_status(updated_session, pending_user_message, :success)
-        else
-          {:ok, updated_session}
-        end
-
-      {:error, changeset} ->
-        {:error, changeset}
+      error ->
+        handle_error_response(error, session)
     end
   end
 
-  defp handle_apollo_resp(error_response, session, pending_user_message) do
-    if pending_user_message do
-      update_message_status(session, pending_user_message, :error)
-    end
-
+  defp handle_error_response(error_response, session) do
     case error_response do
       {:ok, %Tesla.Env{status: status, body: body}}
-      when status not in 200..299 ->
+      when status not in @success_status_range ->
         error_message = body["message"]
 
-        Logger.error("AI query failed for session: #{error_message}")
+        Logger.error(
+          "AI query failed for session #{session.id}: #{error_message}"
+        )
 
         {:error, error_message}
 
       {:error, :timeout} ->
-        Logger.error("AI query timed out")
+        Logger.error("AI query timed out for session #{session.id}")
         {:error, "Request timed out. Please try again."}
 
       {:error, :econnrefused} ->
-        Logger.error("Connection refused to AI server")
+        Logger.error("Connection refused to AI server for session #{session.id}")
         {:error, "Unable to reach the AI server. Please try again later."}
 
       unexpected_error ->
-        Logger.error("Unexpected error: #{inspect(unexpected_error)}")
+        Logger.error(
+          "Unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
+        )
 
         {:error, "Oops! Something went wrong. Please try again."}
     end
   end
 
-  defp handle_workflow_response(
-         {:ok, %Tesla.Env{status: status, body: body}},
-         session,
-         pending_user_message
-       )
-       when status in 200..299 do
-    case save_message(
-           session,
-           %{
-             role: :assistant,
-             content: body["response"],
-             workflow_code: body["response_yaml"]
-           },
-           body["usage"] || %{}
-         ) do
-      {:ok, updated_session} ->
-        if pending_user_message do
-          update_message_status(updated_session, pending_user_message, :success)
-        else
-          {:ok, updated_session}
-        end
+  defp build_job_message(body) do
+    message = body["history"] |> Enum.reverse() |> hd()
+    message_attrs = Map.take(message, ["role", "content"])
+    opts = [usage: body["usage"] || %{}, meta: body["meta"]]
 
-      {:error, changeset} ->
-        {:error, changeset}
-    end
+    {message_attrs, opts}
   end
 
-  defp handle_workflow_response(error_response, session, pending_user_message) do
-    if pending_user_message do
-      update_message_status(session, pending_user_message, :error)
-    end
+  defp build_workflow_message(body) do
+    message_attrs = %{
+      role: :assistant,
+      content: body["response"]
+    }
 
-    case error_response do
-      {:ok, %Tesla.Env{status: status, body: body}}
-      when status not in 200..299 ->
-        error_message = body["message"]
+    opts = [
+      usage: body["usage"] || %{},
+      meta: body["meta"],
+      code: body["response_yaml"]
+    ]
 
-        Logger.error(
-          "Workflow AI query failed for session #{session.id}: #{error_message}"
-        )
-
-        {:error, error_message}
-
-      {:error, reason} ->
-        Logger.error(
-          "Workflow AI query failed for session #{session.id}: #{inspect(reason)}"
-        )
-
-        error_message =
-          case reason do
-            :timeout ->
-              "Request timed out. Please try again."
-
-            :econnrefused ->
-              "Unable to reach the AI server. Please try again later."
-
-            _ ->
-              "Oops! Something went wrong. Please try again."
-          end
-
-        {:error, error_message}
-    end
-  end
-
-  defp get_latest_workflow_yaml(session) do
-    session.messages
-    |> Enum.reverse()
-    |> Enum.find_value(nil, fn
-      %{role: :assistant, workflow_code: yaml} when not is_nil(yaml) -> yaml
-      _ -> nil
-    end)
+    {message_attrs, opts}
   end
 
   defp build_history(session) do
-    case Enum.reverse(session.messages) do
+    messages = session.messages || []
+
+    case Enum.reverse(messages) do
       [%{role: :user} | other] ->
         other
         |> Enum.reverse()
@@ -929,29 +867,20 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  defp find_pending_user_message(session, content) do
-    session.messages
-    |> Enum.find(fn message ->
-      message.role == :user &&
-        message.status == :pending &&
-        message.content == content
-    end)
-  end
-
   defp maybe_increment_ai_usage(%{
-         upsert: session,
+         session: session,
          message: %{"role" => "assistant"},
          usage: usage
        }) do
     maybe_increment_ai_usage(%{
-      upsert: session,
+      session: session,
       message: %{role: :assistant},
       usage: usage
     })
   end
 
   defp maybe_increment_ai_usage(%{
-         upsert: session,
+         session: session,
          message: %{role: :assistant},
          usage: usage
        }) do
@@ -960,5 +889,13 @@ defmodule Lightning.AiAssistant do
 
   defp maybe_increment_ai_usage(_user_role) do
     Multi.new()
+  end
+
+  defp handle_transaction_result(result, success_key \\ :session_with_message) do
+    case result do
+      {:ok, %{^success_key => session}} -> {:ok, session}
+      {:error, :session, changeset, _changes} -> {:error, changeset}
+      {:error, ^success_key, changeset, _changes} -> {:error, changeset}
+    end
   end
 end
