@@ -8,7 +8,7 @@ import { createContext, useContext, useRef } from "react";
 import { useStore } from "zustand";
 import { useURLJobSync } from "../hooks/useURLJobSync";
 import { useYjsWorkflowSync } from "../hooks/useYjsWorkflowSync";
-import { createWorkflowStore } from "../stores/workflow-store";
+import { createWorkflowStore } from "../stores/WorkflowStore";
 import type { Workflow } from "../types";
 import type { Session } from "../types/session";
 import { useSession } from "./SessionProvider";
