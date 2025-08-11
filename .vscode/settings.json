@@ -6,11 +6,28 @@
   "[phoenix-heex]": {
     "editor.defaultFormatter": "JakeBecker.elixir-ls"
   },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
   "files.associations": {
     "*.heex": "phoenix-heex",
     "app.css": "tailwindcss"
   },
   "emmet.includeLanguages": {
     "phoenix-heex": "html"
+  },
+  "biome.configurationPath": "./assets/biome.json",
+  "biome.lsp.bin": {
+    "linux-x64": "assets/node_modules/.bin/biome",
+    "darwin-arm64": "assets/node_modules/.bin/biome"
   }
 }
