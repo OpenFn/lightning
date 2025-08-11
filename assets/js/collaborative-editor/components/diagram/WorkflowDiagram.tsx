@@ -89,7 +89,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const undo = () => {};
   const redo = () => {};
 
-  const { jobs, triggers, edges, disabled } = useWorkflowStore((state) => ({
+  const workflow = useWorkflowStore((state) => ({
     jobs: state.jobs,
     triggers: state.triggers,
     edges: state.edges,
@@ -128,16 +128,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     cancel: cancelPlaceholder,
     updatePlaceholderPosition,
   } = usePlaceholders(el, isManualLayout, updateSelection);
-
-  const workflow = React.useMemo(
-    () => ({
-      jobs,
-      triggers,
-      edges,
-      disabled,
-    }),
-    [jobs, triggers, edges, disabled],
-  );
 
   console.log("workflow", workflow);
 

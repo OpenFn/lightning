@@ -56,8 +56,9 @@ export namespace Workflow {
   export interface Store {
     // React state - using Session types as that's what's implemented
     workflow: Session.Workflow | null;
-    jobs: Session.Job[];
-    edges: Session.Edge[];
+    jobs: Job[];
+    edges: Edge[];
+    triggers: Trigger[];
     selectedJobId: string | null;
 
     // Actions
