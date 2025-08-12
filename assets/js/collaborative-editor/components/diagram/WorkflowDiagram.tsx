@@ -122,15 +122,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     [onSelectionChange],
   );
 
-  // selection can be null give 2 events
-  // 1. we click empty space on editor (client event)
-  // 2. selection prop becomes null (server event)
-  // on option 2. chartCache isn't updated. Hence we call updateSelection to do that
+  // Update cache when selection prop changes (from URL)
+  // Don't trigger callback to avoid circular updates
   useEffect(() => {
-    // we know selection from server has changed when it's not equal to the one on client
-    if (selection !== chartCache.current.lastSelection)
-      updateSelection(selection);
-  }, [selection, updateSelection]);
+    chartCache.current.lastSelection = selection;
+  }, [selection]);
 
   const {
     placeholders,
