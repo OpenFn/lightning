@@ -1,16 +1,13 @@
 import { useMemo } from "react";
 import { SocketProvider } from "../react/contexts/SocketProvider";
 import type { WithActionProps } from "../react/lib/with-props";
-import {
-  BreadcrumbLink,
-  BreadcrumbText,
-} from "./components/Breadcrumbs";
+import { BreadcrumbLink, BreadcrumbText } from "./components/Breadcrumbs";
 import { CollaborationWidget } from "./components/CollaborationWidget";
+import { Header } from "./components/Header";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { WorkflowStoreProvider } from "./contexts/WorkflowStoreProvider";
 import type { CollaborativeEditorDataProps } from "./types/workflow";
-import { Header } from "./components/Header";
 
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
@@ -57,7 +54,6 @@ export const CollaborativeEditor: WithActionProps<
 
   return (
     <div className="collaborative-editor h-full flex flex-col">
-      <Header>{breadcrumbElements}</Header>
       <SocketProvider>
         <SessionProvider
           workflowId={workflowId}
@@ -66,6 +62,7 @@ export const CollaborativeEditor: WithActionProps<
         >
           {/* New WorkflowStoreProvider for workflow editing */}
           <WorkflowStoreProvider>
+            <Header>{breadcrumbElements}</Header>
             <div className="flex-1 min-h-0 overflow-hidden">
               <WorkflowEditor />
               <CollaborationWidget />

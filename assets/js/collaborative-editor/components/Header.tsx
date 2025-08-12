@@ -1,5 +1,7 @@
-import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { Switch } from "./inputs/Switch";
 
 const userNavigation = [
   { label: "User Profile", url: "/profile", icon: "hero-user-circle" },
@@ -11,7 +13,13 @@ const userNavigation = [
     icon: "hero-arrow-right-on-rectangle",
   },
 ];
-export function Header({ children }: { children: React.ReactNode[]; }) {
+
+export function Header({ children }: { children: React.ReactNode[] }) {
+  const { enabled, setEnabled } = useWorkflowStore((state) => ({
+    enabled: state.enabled,
+    setEnabled: state.setEnabled,
+  }));
+
   return (
     <div className="flex-none bg-white shadow-xs border-b border-gray-200">
       <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
@@ -21,51 +29,8 @@ export function Header({ children }: { children: React.ReactNode[]; }) {
 
         <div className="flex flex-row gap-2">
           <div className="flex flex-row m-auto gap-2">
-            <div
-              id="toggle-container-workflow"
-              className="flex flex-col gap-1 "
-              phx-hook="Tooltip"
-              aria-label="This workflow is active (webhook trigger enabled)"
-            >
-              <div
-                id="toggle-control-workflow"
-                className="flex items-center gap-3"
-                phx-click="[[&quot;push&quot;,{&quot;value&quot;:{&quot;value_key&quot;:&quot;&quot;,&quot;_target&quot;:&quot;workflow_state&quot;,&quot;workflow_state&quot;:false},&quot;event&quot;:&quot;toggle_workflow_state&quot;}]]"
-              >
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="hidden" name="workflow_state" value="false" />
-                  <input
-                    type="checkbox"
-                    id="workflow"
-                    name="workflow_state"
-                    value="true"
-                    className="sr-only peer"
-                    checked="" />
+            <Switch checked={enabled ?? false} onChange={setEnabled} />
 
-                  <div
-                    tabindex="0"
-                    role="switch"
-                    aria-checked=""
-                    className="relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 ease-in-out border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 bg-indigo-600 cursor-pointer"
-                  >
-                    <span className="pointer-events-none absolute h-5 w-5 inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-5">
-                      <span
-                        className="absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in opacity-0"
-                        aria-hidden="true"
-                      >
-                        <span className="hero-x-mark-micro h-4 w-4 text-gray-400"></span>
-                      </span>
-                      <span
-                        className="absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in opacity-100"
-                        aria-hidden="true"
-                      >
-                        <span className="hero-check-micro h-4 w-4 text-indigo-600"></span>
-                      </span>
-                    </span>
-                  </div>
-                </label>
-              </div>
-            </div>
             <div>
               <a
                 href="/projects/4adf2644-ed4e-4f97-a24c-ab35b3cb1efa/w/2356a807-f8db-4097-b474-f37579fd0898?m=settings"
