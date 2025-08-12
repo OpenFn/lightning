@@ -21,6 +21,12 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.14.1-pre2] - 2025-08-12
+
+### Fixed
+
+- Fix workflow diagram collapsing in on itself to become a neutron star
+  [#3506](https://github.com/OpenFn/lightning/issues/3506)
 - Fix Oban crash when Apollo times out
   [#3497](https://github.com/OpenFn/lightning/issues/3497)
 - Fix PostgreSQL UTF-8 error when inserting log lines with null bytes
