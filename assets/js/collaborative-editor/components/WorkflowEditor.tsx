@@ -23,11 +23,18 @@ export const WorkflowEditor: React.FC = () => {
   };
 
   return (
-    <div className="relative h-full w-full flex">
-      <div className="flex-1 min-w-0">
-        <CollaborativeWorkflowDiagram />
+    <div className="relative h-full w-full">
+      <CollaborativeWorkflowDiagram />
+      {/* Inspector slides in from the right and appears on top */}
+      <div
+        className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
+          currentNode.node
+            ? "translate-x-0"
+            : "translate-x-full pointer-events-none"
+        }`}
+      >
+        <Inspector currentNode={currentNode} onClose={handleCloseInspector} />
       </div>
-      <Inspector currentNode={currentNode} onClose={handleCloseInspector} />
       {false && ( // Leaving this here for now, but we'll remove/replace it in the future
         <div className="flex flex-col h-full">
           {/* Main Content */}
