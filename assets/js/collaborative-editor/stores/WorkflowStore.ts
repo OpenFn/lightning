@@ -11,7 +11,7 @@ export const createWorkflowStore = () => {
   return create<Workflow.Store>()(
     devtools(
       subscribeWithSelector(
-        immer((set, _get) => ({
+        immer((set, get) => ({
           // Initial state
           workflow: null,
           jobs: [],
