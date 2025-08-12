@@ -4,8 +4,10 @@
  */
 
 import type React from "react";
-import { useState } from "react";
-import { useWorkflowStore } from "../../contexts/WorkflowStoreProvider";
+import { 
+  useNodeSelection,
+  useWorkflowStore 
+} from "../../contexts/WorkflowStoreProvider";
 import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
 
 interface CollaborativeWorkflowDiagramProps {
@@ -15,13 +17,11 @@ interface CollaborativeWorkflowDiagramProps {
 export const CollaborativeWorkflowDiagram: React.FC<
   CollaborativeWorkflowDiagramProps
 > = ({ className = "h-full w-full" }) => {
-  const { workflow } = useWorkflowStore();
-  const [selection, setSelection] = useState<string | null>(null);
-
-  const handleSelectionChange = (id: string | null) => {
-    setSelection(id);
-    // TODO: In Phase 2, sync this with collaborative selection
-  };
+  const { workflow } = useWorkflowStore((state) => ({
+    workflow: state.workflow,
+  }));
+  
+  const { currentNode, selectNode } = useNodeSelection();
 
   // Don't render if no workflow data yet
   if (!workflow) {
@@ -37,8 +37,8 @@ export const CollaborativeWorkflowDiagram: React.FC<
   return (
     <div className={className}>
       <CollaborativeWorkflowDiagramImpl
-        selection={selection}
-        onSelectionChange={handleSelectionChange}
+        selection={currentNode.id}
+        onSelectionChange={selectNode}
         forceFit={true}
         showAiAssistant={false}
       />

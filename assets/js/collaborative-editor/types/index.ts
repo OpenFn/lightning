@@ -47,6 +47,10 @@ export namespace Workflow {
     // ... other existing fields
   }
 
+  export type NodeType = "job" | "trigger" | "edge";
+  
+  export type Node = Job | Trigger | Edge;
+
   export interface Store {
     // React state - using Session types as that's what's implemented
     workflow: Workflow | null;
