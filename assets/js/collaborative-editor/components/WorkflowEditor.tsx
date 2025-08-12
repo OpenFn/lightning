@@ -24,9 +24,12 @@ export const WorkflowEditor: React.FC = () => {
 
   return (
     <div className="relative h-full w-full">
-      <CollaborativeWorkflowDiagram />
-      {/* Inspector slides in from the right and appears on top */}
+      <CollaborativeWorkflowDiagram inspectorId="inspector" />
+      {/* Inspector slides in from the right and appears on top
+          This div is also the wrapper which is used to calculate the overlap
+          between the inspector and the diagram.  */}
       <div
+        id="inspector"
         className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
           currentNode.node
             ? "translate-x-0"
