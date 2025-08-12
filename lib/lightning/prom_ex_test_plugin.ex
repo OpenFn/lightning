@@ -19,6 +19,11 @@ defmodule Lightning.PromExTestPlugin do
             @event_name ++ [:count],
             description:
               "A counter that can be triggered arbitrarily for test purposes."
+          ),
+          Metrics.last_value(
+            @event_name ++ [:last_value],
+            description:
+              "A gauge that can be triggered arbitrarily for test purposes."
           )
         ]
       )
@@ -29,6 +34,14 @@ defmodule Lightning.PromExTestPlugin do
     :telemetry.execute(
       @event_name,
       %{count: 1},
+      %{}
+    )
+  end
+
+  def fire_gauge_event(last_value) do
+    :telemetry.execute(
+      @event_name,
+      %{last_value: last_value},
       %{}
     )
   end
