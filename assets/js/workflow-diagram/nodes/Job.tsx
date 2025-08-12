@@ -1,9 +1,9 @@
-import { memo } from 'react';
-import { Position, type NodeProps } from '@xyflow/react';
-import Node from './Node';
-import PathButton from '../components/PathButton';
-import getAdaptorName from '../util/get-adaptor-name';
-import useAdaptorIcons, { type AdaptorIconData } from '../useAdaptorIcons';
+import { memo } from "react";
+import { Position, type NodeProps } from "@xyflow/react";
+import Node from "./Node";
+import PathButton from "../components/PathButton";
+import getAdaptorName from "../util/get-adaptor-name";
+import useAdaptorIcons, { type AdaptorIconData } from "../useAdaptorIcons";
 
 type NodeData = any;
 
@@ -14,8 +14,8 @@ const JobNode = ({
 }: NodeProps<NodeData>) => {
   const toolbar = () => [
     props.data?.allowPlaceholder && [
-      <PathButton key="+path" id='node-connector' >
-        <span className='hero-plus h-4 w-4 pointer-events-none'></span>
+      <PathButton key="+path" id="node-connector">
+        <span className="hero-plus h-4 w-4 pointer-events-none"></span>
       </PathButton>,
     ],
   ];
@@ -41,14 +41,12 @@ const JobNode = ({
   );
 };
 
-JobNode.displayName = 'JobNode';
+JobNode.displayName = "JobNode";
 
 function getAdaptorIcon(
   adaptor: string,
-  adaptorIconsData: AdaptorIconData | null
+  adaptorIconsData: AdaptorIconData | null,
 ) {
-  console.log({ adaptorIconsData, adaptor });
-
   try {
     if (
       adaptorIconsData &&

@@ -5,29 +5,20 @@
 
 import type React from "react";
 import { useSession } from "../contexts/SessionProvider";
-import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
+import {
+  useCurrentJob,
+  useWorkflowStore,
+} from "../contexts/WorkflowStoreProvider";
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
-import { UserAwareness } from "./UserAwareness";
-import { WorkflowHeader } from "./WorkflowHeader";
 
 export const WorkflowEditor: React.FC = () => {
   const workflow = useWorkflowStore((state) => state.workflow);
-  const jobs = useWorkflowStore((state) => state.jobs);
-  const selectedJobId = useWorkflowStore((state) => state.selectedJobId);
-  const getJobBodyYText = useWorkflowStore((state) => state.getJobBodyYText);
+  const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
 
-  console.log({ workflow, jobs, selectedJobId });
+  console.debug("WorkflowEditor", { workflow, currentJob, currentJobYText });
 
   const { awareness } = useSession();
-
-  const selectedJob = selectedJobId
-    ? jobs.find((job) => job.id === selectedJobId)
-    : null;
-
-  const selectedJobYText = selectedJobId
-    ? getJobBodyYText(selectedJobId)
-    : null;
 
   return (
     <div className="h-full w-full">
@@ -45,9 +36,9 @@ export const WorkflowEditor: React.FC = () => {
 
             {/* Bottom Right - Monaco Editor */}
             <div className="flex-1 min-h-0">
-              {selectedJob && selectedJobYText && awareness ? (
+              {currentJob && currentJobYText && awareness ? (
                 <CollaborativeMonaco
-                  ytext={selectedJobYText}
+                  ytext={currentJobYText}
                   awareness={awareness}
                   adaptor="common"
                   disabled={false}
