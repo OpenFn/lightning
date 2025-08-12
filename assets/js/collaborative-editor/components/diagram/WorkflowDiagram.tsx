@@ -30,6 +30,7 @@ import {
   getVisibleRect,
   isPointInRect,
 } from "#/workflow-diagram/util/viewport";
+import { useInspectorOverlap } from "./useInspectorOverlap";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -39,6 +40,8 @@ type WorkflowDiagramProps = {
   forceFit?: boolean;
   showAiAssistant?: boolean;
   aiAssistantId?: string;
+  showInspector?: boolean;
+  inspectorId?: string | undefined;
 };
 
 type ChartCache = {
@@ -80,7 +83,7 @@ const useTippyForControls = (isManualLayout: boolean) => {
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
-  const { selection, onSelectionChange, containerEl: el } = props;
+  const { selection, onSelectionChange, containerEl: el, inspectorId } = props;
 
   // TODO: implement these
   const updatePositions = () => {};
@@ -111,6 +114,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   const [drawerWidth, setDrawerWidth] = useState(0);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
+
+  // Use custom hook for inspector overlap calculation
+  const inspectorWidth = useInspectorOverlap(inspectorId, workflowDiagramRef);
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -448,7 +454,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   useTippyForControls(isManualLayout);
 
   // undo/redo keyboard shortcuts
-  React.useEffect(() => {
+  useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
       const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "z";
       const isRedo =
@@ -538,6 +544,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           pannable
           className="border-2 border-gray-200"
           nodeComponent={MiniMapNode}
+          style={{
+            transform: `translateX(-${inspectorWidth}px)`,
+            transition: "transform duration-300 ease-in-out",
+          }}
         />
       </ReactFlow>
     </ReactFlowProvider>

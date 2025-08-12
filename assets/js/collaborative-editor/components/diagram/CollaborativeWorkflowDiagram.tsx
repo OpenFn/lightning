@@ -12,11 +12,12 @@ import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
 
 interface CollaborativeWorkflowDiagramProps {
   className?: string;
+  inspectorId?: string;
 }
 
 export const CollaborativeWorkflowDiagram: React.FC<
   CollaborativeWorkflowDiagramProps
-> = ({ className = "h-full w-full" }) => {
+> = ({ className = "h-full w-full", inspectorId }) => {
   const { workflow } = useWorkflowStore((state) => ({
     workflow: state.workflow,
   }));
@@ -41,6 +42,7 @@ export const CollaborativeWorkflowDiagram: React.FC<
         onSelectionChange={selectNode}
         forceFit={true}
         showAiAssistant={false}
+        inspectorId={inspectorId}
       />
     </div>
   );
