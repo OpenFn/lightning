@@ -15,15 +15,19 @@ import { Inspector } from "./Inspector";
 
 export const WorkflowEditor: React.FC = () => {
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
-  const { currentNode } = useNodeSelection();
+  const { currentNode, selectNode } = useNodeSelection();
   const { awareness } = useSession();
+
+  const handleCloseInspector = () => {
+    selectNode(null);
+  };
 
   return (
     <div className="relative h-full w-full flex">
       <div className="flex-1 min-w-0">
         <CollaborativeWorkflowDiagram />
       </div>
-      <Inspector currentNode={currentNode} />
+      <Inspector currentNode={currentNode} onClose={handleCloseInspector} />
       {false && ( // Leaving this here for now, but we'll remove/replace it in the future
         <div className="flex flex-col h-full">
           {/* Main Content */}
