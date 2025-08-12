@@ -138,6 +138,26 @@ defmodule Lightning.EctoTypesTest do
       {:ok, out} = LogMessage.cast(s)
       assert out == s
     end
+
+    test "dump sanitizes non-binary list input via cast path" do
+      assert {:ok, "Processing Found�null Continuing"} ==
+               LogMessage.dump(["Processing", "Found\x00null", "Continuing"])
+    end
+
+    test "dump sanitizes non-binary map input via JSON path" do
+      assert {:ok, ~s({"m":"bad � here"})} ==
+               LogMessage.dump(%{"m" => "bad \x00 here"})
+    end
+
+    test "dump returns {:error, _} when JSON encoding fails" do
+      invalid_map = %{key: {:tuple, "value"}}
+      assert {:error, _} = LogMessage.dump(invalid_map)
+    end
+
+    test "dump falls back to :string dump for unsupported type" do
+      assert :error == Ecto.Type.dump(:string, fn -> :ok end)
+      assert :error == LogMessage.dump(fn -> :ok end)
+    end
   end
 
   describe "UnixDateTime" do

@@ -144,7 +144,16 @@ defmodule Lightning.LogMessage do
   end
 
   def dump(d) do
-    Ecto.Type.dump(:string, d)
+    case cast(d) do
+      {:ok, s} when is_binary(s) ->
+        {:ok, s}
+
+      {:error, _} = err ->
+        err
+
+      _other ->
+        Ecto.Type.dump(:string, d)
+    end
   end
 
   defp sanitize_string(string) when is_binary(string) do
