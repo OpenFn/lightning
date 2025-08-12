@@ -60,7 +60,6 @@ export const CollaborativeEditor: WithActionProps<
           userId={userId}
           userName={userName}
         >
-          {/* New WorkflowStoreProvider for workflow editing */}
           <WorkflowStoreProvider>
             <Header>{breadcrumbElements}</Header>
             <div className="flex-1 min-h-0 overflow-hidden">
