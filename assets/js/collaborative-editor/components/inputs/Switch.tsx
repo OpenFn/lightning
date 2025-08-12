@@ -7,7 +7,12 @@ interface SwitchProps {
   className?: string;
 }
 
-export function Switch({ checked, onChange, disabled, className }: SwitchProps) {
+export function Switch({
+  checked,
+  onChange,
+  disabled,
+  className,
+}: SwitchProps) {
   return (
     <HeadlessSwitch
       checked={checked}

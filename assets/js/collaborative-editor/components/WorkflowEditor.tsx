@@ -7,23 +7,24 @@ import type React from "react";
 import { useSession } from "../contexts/SessionProvider";
 import {
   useCurrentJob,
-  useWorkflowStore,
+  useNodeSelection,
 } from "../contexts/WorkflowStoreProvider";
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
+import { Inspector } from "./Inspector";
 
 export const WorkflowEditor: React.FC = () => {
-  const workflow = useWorkflowStore((state) => state.workflow);
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
-
-  console.debug("WorkflowEditor", { workflow, currentJob, currentJobYText });
-
+  const { currentNode } = useNodeSelection();
   const { awareness } = useSession();
 
   return (
-    <div className="h-full w-full">
-      <CollaborativeWorkflowDiagram />
-      {false && (
+    <div className="relative h-full w-full flex">
+      <div className="flex-1 min-w-0">
+        <CollaborativeWorkflowDiagram />
+      </div>
+      <Inspector currentNode={currentNode} />
+      {false && ( // Leaving this here for now, but we'll remove/replace it in the future
         <div className="flex flex-col h-full">
           {/* Main Content */}
 

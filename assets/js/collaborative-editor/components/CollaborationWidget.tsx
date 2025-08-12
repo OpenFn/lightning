@@ -26,8 +26,10 @@ export const CollaborationWidget: React.FC = () => {
 
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-      <div className="flex items-center gap-3 px-3 py-2 bg-white border 
-                      border-gray-200 rounded-full shadow-md text-xs">
+      <div
+        className="flex items-center gap-3 px-3 py-2 bg-white border 
+                      border-gray-200 rounded-full shadow-md text-xs"
+      >
         {/* Connection status */}
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
@@ -35,9 +37,7 @@ export const CollaborationWidget: React.FC = () => {
         </div>
 
         {/* Separator */}
-        {users.length > 0 && (
-          <div className="w-px h-3 bg-gray-300" />
-        )}
+        {users.length > 0 && <div className="w-px h-3 bg-gray-300" />}
 
         {/* Online users */}
         {users.length > 0 && (
@@ -75,8 +75,8 @@ export const CollaborationWidget: React.FC = () => {
         {connectionError && (
           <>
             <div className="w-px h-3 bg-gray-300" />
-            <span 
-              className="text-red-600 cursor-help" 
+            <span
+              className="text-red-600 cursor-help"
               title={`Error: ${connectionError}`}
             >
               ⚠️
