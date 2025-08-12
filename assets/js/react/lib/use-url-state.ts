@@ -5,12 +5,10 @@ export function useURLState() {
     () => new URLSearchParams(window.location.search),
   );
 
-  // Listen for browser back/forward
   useEffect(() => {
-    const handlePopState = () => {
+    const updateParams = () => {
       const newParams = new URLSearchParams(window.location.search);
       setSearchParams((current) => {
-        // Only update if the params actually changed
         if (current.toString() !== newParams.toString()) {
           return newParams;
         }
@@ -18,11 +16,38 @@ export function useURLState() {
       });
     };
 
+    // Listen for browser back/forward
+    const handlePopState = updateParams;
+
+    // Listen for programmatic navigation
+    const handleNavigation = updateParams;
+
+    // Monkey-patch history methods to dispatch custom events
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+
+    history.pushState = (...args) => {
+      originalPushState.apply(history, args);
+      window.dispatchEvent(new Event('urlchange'));
+    };
+
+    history.replaceState = (...args) => {
+      originalReplaceState.apply(history, args);
+      window.dispatchEvent(new Event('urlchange'));
+    };
+
     window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    window.addEventListener("urlchange", handleNavigation);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("urlchange", handleNavigation);
+      history.pushState = originalPushState;
+      history.replaceState = originalReplaceState;
+    };
   }, []);
 
-  // Update URL without page refresh
   const updateSearchParams = useCallback(
     (updates: Record<string, string | null>) => {
       const newParams = new URLSearchParams(window.location.search);
@@ -37,15 +62,7 @@ export function useURLState() {
 
       const newURL = new URL(window.location.pathname, window.location.origin);
       newURL.search = newParams.toString();
-      window.history.pushState({}, "", newURL);
-
-      setSearchParams((current) => {
-        // Only update if the params actually changed
-        if (current.toString() !== newParams.toString()) {
-          return newParams;
-        }
-        return current;
-      });
+      history.pushState({}, "", newURL); // This will now trigger our custom event
     },
     [],
   );
