@@ -48,7 +48,7 @@ export namespace Workflow {
   }
 
   export type NodeType = "job" | "trigger" | "edge";
-  
+
   export type Node = Job | Trigger | Edge;
 
   export interface Store {
@@ -65,7 +65,7 @@ export namespace Workflow {
     connectToYjs: (bridge: YjsBridge) => void;
 
     // Yjs-backed operations (matching actual implementation)
-    getJobBodyYText: (id: string) => any; // Y.Text | null
+    getJobBodyYText: (id: string) => Y.Text | null;
     updateJobName: (id: string, name: string) => void;
     updateJobBody: (id: string, body: string) => void;
     addJob: (job: Partial<Session.Job>) => void;
