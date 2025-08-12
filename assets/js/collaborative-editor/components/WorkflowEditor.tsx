@@ -11,7 +11,7 @@ import {
 } from "../contexts/WorkflowStoreProvider";
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
-import { Inspector } from "./Inspector";
+import { Inspector } from "./inspector";
 
 export const WorkflowEditor: React.FC = () => {
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();

@@ -33,9 +33,7 @@ export function Header({ children }: { children: React.ReactNode[] }) {
 
             <div>
               <a
-                href="/projects/4adf2644-ed4e-4f97-a24c-ab35b3cb1efa/w/2356a807-f8db-4097-b474-f37579fd0898?m=settings"
-                data-phx-link="patch"
-                data-phx-link-state="push"
+                href="#settings"
                 id="toggle-settings"
                 className="w-5 h-5 place-self-center cursor-pointer text-slate-500 hover:text-slate-400"
               >
