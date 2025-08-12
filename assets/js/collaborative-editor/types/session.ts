@@ -26,12 +26,19 @@ export namespace Session {
     {
       jobs: TypedArray<TypedMap<Job & { body: Y.Text }>>;
       edges: TypedArray<TypedMap<Edge>>;
+      triggers: TypedArray<TypedMap<Trigger>>;
     }
   >;
 
   export type Workflow = { id: string; name: string };
 
   export type Job = { id: string; name: string; body: string };
+
+  export type Trigger = {
+    id: string;
+    cron_expression: string;
+    enabled: boolean;
+  };
 
   // This could be a common type if we take the inner type out of Y.Map
   export type Edge = {

@@ -1,16 +1,8 @@
 import { useEffect } from "react";
 import type * as Y from "yjs";
 import type { TypedMap } from "yjs-types";
-import type { Store, Workflow } from "../types";
+import type { Store, Workflow, YjsBridge } from "../types";
 import type { Session } from "../types/session";
-
-interface YjsBridge {
-  workflowMap: Y.Map<unknown>;
-  jobsArray: Y.Array<Y.Map<unknown>>;
-  edgesArray: Y.Array<Y.Map<unknown>>;
-  getYjsJob: (id: string) => Y.Map<unknown> | null;
-  getJobBodyText: (id: string) => Y.Text | null;
-}
 
 /**
  * Sets up bidirectional sync between Yjs document and Zustand store
@@ -27,12 +19,14 @@ export const useYjsWorkflowSync = (
     const workflowMap = ydoc.getMap("workflow");
     const jobsArray = ydoc.getArray("jobs");
     const edgesArray = ydoc.getArray("edges");
+    const triggersArray = ydoc.getArray("triggers");
 
     // Create bridge for Yjs operations
     const yjsBridge: YjsBridge = {
       workflowMap: workflowMap as Y.Map<unknown>,
       jobsArray: jobsArray as Y.Array<Y.Map<unknown>>,
       edgesArray: edgesArray as Y.Array<Y.Map<unknown>>,
+      triggersArray: triggersArray as Y.Array<Y.Map<unknown>>,
       getYjsJob: (id: string) => {
         const jobs = jobsArray.toArray();
         return jobs.find((job) => job.get("id") === id) || null;
@@ -41,6 +35,12 @@ export const useYjsWorkflowSync = (
         const jobs = jobsArray.toArray();
         const yjsJob = jobs.find((job) => job.get("id") === id);
         return (yjsJob?.get("body") as Y.Text) || null;
+      },
+      setEnabled: (enabled: boolean) => {
+        const triggers = triggersArray.toArray();
+        triggers.forEach((trigger) => {
+          trigger.set("enabled", enabled);
+        });
       },
     };
 
@@ -75,6 +75,24 @@ export const useYjsWorkflowSync = (
       },
     );
 
+    const cleanupTriggersSync = observeY(
+      triggersArray as Y.Array<unknown>,
+      (triggersArray) => {
+        const yjsTriggers = (
+          triggersArray as Y.Array<Y.Map<unknown>>
+        ).toArray() as TypedMap<Session.Trigger>[];
+
+        const triggersData: Workflow.Trigger[] = yjsTriggers.map(
+          (yjsTrigger) => {
+            return yjsTrigger.toJSON() as Workflow.Trigger;
+          },
+        );
+
+        const enabled = triggersData.some((trigger) => trigger.enabled);
+        store.setState({ triggers: triggersData, enabled });
+      },
+    );
+
     const cleanupEdgesSync = observeY(
       edgesArray as Y.Array<unknown>,
       (edgesArray) => {
@@ -90,9 +108,10 @@ export const useYjsWorkflowSync = (
 
     // Cleanup function
     return () => {
-      console.debug("WorkflowStore: cleaning up domain maps");
+      console.debug("WorkflowStore: cleaning up YjsWorkflowSync");
       cleanupWorkflowSync();
       cleanupJobsSync();
+      cleanupTriggersSync();
       cleanupEdgesSync();
     };
   }, [ydoc, store]);
@@ -107,9 +126,11 @@ function observeY<T extends Y.Map<unknown> | Y.Array<unknown>>(
     callback(sharedType);
   }
 
-  sharedType.observe(onChange);
+  // NOTE: we need to use observeDeep to catch changes to nested maps and arrays
+  // If this is too aggressive, we can use observe instead (optionally for certain types)
+  sharedType.observeDeep(onChange);
 
   return () => {
-    sharedType.unobserve(onChange);
+    sharedType.unobserveDeep(onChange);
   };
 }
