@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-export function Breadcrumbs({ children }: { children: React.ReactNode[]; }) {
+export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
   const items = useMemo(() => {
     const result: React.ReactNode[] = [];
     children.forEach((child, i) => {
@@ -8,13 +8,14 @@ export function Breadcrumbs({ children }: { children: React.ReactNode[]; }) {
         result.push(
           <span
             key={`chevron-${i}`}
-            className="hero-chevron-right-mini w-5 h-5 text-secondary-500" />
+            className="hero-chevron-right-mini w-5 h-5 text-secondary-500"
+          />,
         );
       }
       result.push(
         <li key={`breadcrumb-${i}`} className="flex items-center">
           {child}
-        </li>
+        </li>,
       );
     });
     return result;
@@ -27,7 +28,9 @@ export function Breadcrumbs({ children }: { children: React.ReactNode[]; }) {
   );
 }
 export function BreadcrumbLink({
-  href, icon, children,
+  href,
+  icon,
+  children,
 }: {
   href: string;
   icon?: string;
@@ -46,7 +49,8 @@ export function BreadcrumbLink({
   );
 }
 export function BreadcrumbText({
-  icon, children,
+  icon,
+  children,
 }: {
   icon?: string;
   children: React.ReactNode;
