@@ -4,9 +4,9 @@
  */
 
 import type React from "react";
-import { 
+import {
   useNodeSelection,
-  useWorkflowStore 
+  useWorkflowStore,
 } from "../../contexts/WorkflowStoreProvider";
 import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
 
@@ -20,7 +20,7 @@ export const CollaborativeWorkflowDiagram: React.FC<
   const { workflow } = useWorkflowStore((state) => ({
     workflow: state.workflow,
   }));
-  
+
   const { currentNode, selectNode } = useNodeSelection();
 
   // Don't render if no workflow data yet
