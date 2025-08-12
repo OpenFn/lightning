@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-082F5B34.js"></script>
+    <script defer src="dist/sidebar_items-BD0F9DB4.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -114,6 +114,26 @@ web request lifecycle, providing better user experience and system resilience.</
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#handle_ai_assistant_exception/2" data-no-tooltip="" translate="no">handle_ai_assistant_exception(measure, meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Handles exceptions for <code class="inline">ai_assistant</code> Oban jobs.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#handle_ai_assistant_stop/2" data-no-tooltip="" translate="no">handle_ai_assistant_stop(measure, meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Handles <code class="inline">:stop</code> events for <code class="inline">ai_assistant</code> Oban jobs.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#perform/1" data-no-tooltip="" translate="no">perform(job)</a>
 
       </div>
@@ -132,6 +152,16 @@ web request lifecycle, providing better user experience and system resilience.</
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update_message_status/2" data-no-tooltip="" translate="no">update_message_status(message, status)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Updates a message's status and broadcasts the change.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -145,6 +175,51 @@ web request lifecycle, providing better user experience and system resilience.</
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="handle_ai_assistant_exception/2">
+
+  <div class="detail-header">
+    <a href="#handle_ai_assistant_exception/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">handle_ai_assistant_exception(measure, meta)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/message_processor.ex#L232" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Handles exceptions for <code class="inline">ai_assistant</code> Oban jobs.</p><h2 id="handle_ai_assistant_exception/2-parameters" class="section-heading"><a href="#handle_ai_assistant_exception/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">measure</code> — A map containing job execution metrics (<code class="inline">duration</code>, <code class="inline">memory</code>, <code class="inline">reductions</code>).</li><li><code class="inline">meta</code> — A map containing job metadata (<code class="inline">job</code>, <code class="inline">error</code>, <code class="inline">stacktrace</code>, etc.).</li></ul>
+  </section>
+</section>
+<section class="detail" id="handle_ai_assistant_stop/2">
+
+  <div class="detail-header">
+    <a href="#handle_ai_assistant_stop/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">handle_ai_assistant_stop(measure, meta)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/message_processor.ex#L309" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Handles <code class="inline">:stop</code> events for <code class="inline">ai_assistant</code> Oban jobs.</p><p>This function is invoked when a job in the <code class="inline">ai_assistant</code> queue stops with a non-success state
+(e.g., <code class="inline">:discard</code>, <code class="inline">:cancelled</code>, or other custom stop reasons).</p><p>Jobs with the <code class="inline">:success</code> state are ignored.</p><h2 id="handle_ai_assistant_stop/2-parameters" class="section-heading"><a href="#handle_ai_assistant_stop/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">measure</code> — A map containing job execution metrics (<code class="inline">duration</code>, <code class="inline">memory</code>, <code class="inline">reductions</code>).</li><li><code class="inline">meta</code> — A map containing job metadata (<code class="inline">job</code>, <code class="inline">state</code>, etc.).</li></ul>
+  </section>
+</section>
 <section class="detail" id="perform/1">
 
   <div class="detail-header">
@@ -155,7 +230,7 @@ web request lifecycle, providing better user experience and system resilience.</
       <h1 class="signature" translate="no">perform(job)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/message_processor.ex#L36" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/message_processor.ex#L40" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -185,7 +260,7 @@ Errors are handled by updating message status and logging.</p>
       <h1 class="signature" translate="no">timeout(job)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/message_processor.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/message_processor.ex#L72" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -202,6 +277,42 @@ Errors are handled by updating message status and logging.</p>
 
 <p>Defines the job timeout based on Apollo configuration.</p><p>Adds a 10-second buffer to the Apollo timeout to account for
 network overhead and processing time.</p><h2 id="timeout/1-returns" class="section-heading"><a href="#timeout/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>Timeout in milliseconds</p>
+  </section>
+</section>
+<section class="detail" id="update_message_status/2">
+
+  <div class="detail-header">
+    <a href="#update_message_status/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_message_status(message, status)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/message_processor.ex#L175" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> update_message_status(
+  <a href="Lightning.AiAssistant.ChatMessage.html#t:t/0">Lightning.AiAssistant.ChatMessage.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()
+) ::
+  {:ok, <a href="Lightning.AiAssistant.ChatSession.html#t:t/0">Lightning.AiAssistant.ChatSession.t</a>(),
+   <a href="Lightning.AiAssistant.ChatMessage.html#t:t/0">Lightning.AiAssistant.ChatMessage.t</a>()}</pre>
+
+      </div>
+
+<p>Updates a message's status and broadcasts the change.</p><p>This function updates the message status in the database, fetches the updated
+session with all associations, and broadcasts the status change to connected
+clients via Phoenix PubSub.</p><h2 id="update_message_status/2-parameters" class="section-heading"><a href="#update_message_status/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">message</code> - The <code class="inline">ChatMessage</code> struct to update</li><li><code class="inline">status</code> - The new status atom (<code class="inline">:processing</code>, <code class="inline">:success</code>, or <code class="inline">:error</code>)</li></ul><h2 id="update_message_status/2-returns" class="section-heading"><a href="#update_message_status/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  <code class="inline">{:ok, updated_session, updated_message}</code> - Tuple with the updated session
+  and message structs</p>
   </section>
 </section>
 
