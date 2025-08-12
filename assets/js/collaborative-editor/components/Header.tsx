@@ -22,7 +22,7 @@ export function Header({ children }: { children: React.ReactNode[] }) {
 
   return (
     <div className="flex-none bg-white shadow-xs border-b border-gray-200">
-      <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
+      <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
         <Breadcrumbs>{children}</Breadcrumbs>
 
         <div className="grow"></div>
@@ -85,7 +85,7 @@ export function Header({ children }: { children: React.ReactNode[] }) {
             <span className="sr-only">Open user menu</span>
             <div className="inline-flex items-center justify-center align-middle">
               <div className="size-8 rounded-full bg-gray-100">
-                <div className="size-full flex items-center justify-center text-sm text-gray-500">
+                <div className="size-full flex items-center justify-center text-sm font-semibold text-gray-500">
                   AA
                 </div>
               </div>
