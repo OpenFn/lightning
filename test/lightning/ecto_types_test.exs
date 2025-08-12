@@ -122,6 +122,22 @@ defmodule Lightning.EctoTypesTest do
 
       assert {:ok, "  "} = LogMessage.cast(invalid_list)
     end
+
+    test "sanitizes mixed-case unicode escapes (raw JSON)" do
+      samples = ["\\u0000", "\\u000B", "\\u000C", "\\u001F", "\\u007F"]
+
+      for raw <- samples do
+        mixed = mixcase(raw)
+        {:ok, out} = LogMessage.cast(%{"m" => "bad #{mixed} here"})
+        assert out =~ ~r/"m":"bad \\� here"/
+      end
+    end
+
+    test "pre-serialized JSON string is treated opaquely" do
+      s = ~s({"m":"bad \\u0000 here"})
+      {:ok, out} = LogMessage.cast(s)
+      assert out == s
+    end
   end
 
   describe "UnixDateTime" do
@@ -140,5 +156,16 @@ defmodule Lightning.EctoTypesTest do
     test "raises an error when the string is invalid" do
       assert UnixDateTime.cast("invalid timestamp") == :error
     end
+  end
+
+  defp mixcase(s) do
+    s
+    |> String.graphemes()
+    |> Enum.map(fn ch ->
+      if ch =~ ~r/[A-Za-z]/,
+        do: Enum.random([String.upcase(ch), String.downcase(ch)]),
+        else: ch
+    end)
+    |> IO.iodata_to_binary()
   end
 end

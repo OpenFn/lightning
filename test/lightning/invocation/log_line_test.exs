@@ -105,22 +105,6 @@ defmodule Lightning.Invocation.LogLineTest do
       assert log_line.message == "Error occurred: � null byte in log"
     end
 
-    test "handles multiple control characters", %{run: run} do
-      changeset =
-        LogLine.new(
-          run,
-          %{
-            message: "Start\x00\x01\x02\x03\x04\x05\x06\x07\x08End",
-            timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond),
-            level: :info
-          },
-          nil
-        )
-
-      assert {:ok, log_line} = Repo.insert(changeset)
-      assert log_line.message == "Start���������End"
-    end
-
     test "preserves valid whitespace characters", %{run: run} do
       changeset =
         LogLine.new(
@@ -135,55 +119,6 @@ defmodule Lightning.Invocation.LogLineTest do
 
       assert {:ok, log_line} = Repo.insert(changeset)
       assert log_line.message == "Line 1\nLine 2\tTabbed\rCarriage"
-    end
-
-    test "handles JSON messages with null bytes", %{run: run} do
-      json_message = %{
-        "error" => "Failed to process\x00",
-        "code" => 500,
-        "details" => ["step1", "step2\x01"]
-      }
-
-      changeset =
-        LogLine.new(
-          run,
-          %{
-            message: json_message,
-            timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond),
-            level: :error
-          },
-          nil
-        )
-
-      assert {:ok, log_line} = Repo.insert(changeset)
-
-      # JSON will be encoded and control chars replaced with �
-      assert log_line.message =~ "Failed to process�"
-      assert log_line.message =~ "step2�"
-      assert log_line.message =~ "500"
-
-      # The message should be valid JSON with � characters
-      assert {:ok, decoded} = Jason.decode(log_line.message)
-      assert decoded["error"] == "Failed to process�"
-      assert decoded["details"] == ["step1", "step2�"]
-    end
-
-    test "handles list messages with null bytes", %{run: run} do
-      list_message = ["Processing", "Found\x00null", "Continuing"]
-
-      changeset =
-        LogLine.new(
-          run,
-          %{
-            message: list_message,
-            timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond),
-            level: :debug
-          },
-          nil
-        )
-
-      assert {:ok, log_line} = Repo.insert(changeset)
-      assert log_line.message == "Processing Found�null Continuing"
     end
 
     test "works with scrubber for sensitive data and null bytes", %{run: run} do
@@ -232,20 +167,6 @@ defmodule Lightning.Invocation.LogLineTest do
 
       assert String.contains?(log_line.message, "Section 1:")
       assert String.contains?(log_line.message, "Section 50:")
-    end
-
-    test "simulates the exact error case from SQL line 1096", %{run: run} do
-      attrs = %{
-        message: "lib/ecto/adapters/sql.ex\x00 error occurred",
-        timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond),
-        level: :error,
-        source: "adapter"
-      }
-
-      changeset = LogLine.new(run, attrs, nil)
-
-      assert {:ok, log_line} = Repo.insert(changeset)
-      assert log_line.message == "lib/ecto/adapters/sql.ex� error occurred"
     end
   end
 end

@@ -128,7 +128,7 @@ defmodule Lightning.LogMessage do
       {:ok, json_string} ->
         {:ok, sanitize_json_string(json_string)}
 
-      {:error, _} = error ->
+      error ->
         error
     end
   end
