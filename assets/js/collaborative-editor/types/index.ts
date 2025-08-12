@@ -1,3 +1,4 @@
+import type * as Y from "yjs";
 import type { Session } from "./session";
 
 // Generic store interface for Zustand stores with Immer middleware
@@ -33,6 +34,7 @@ export namespace Workflow {
     id: string;
     name: string;
     type: string;
+    enabled: boolean;
     // ... other existing fields
   }
 
@@ -45,25 +47,18 @@ export namespace Workflow {
     // ... other existing fields
   }
 
-  // Y.js escape hatch interface
-  export interface YDocRefs {
-    workflowMap: any; // Y.Map<any>
-    getJobBodyText: (jobId: string) => any | null; // Y.Text | null
-    getTriggerMap: (triggerId: string) => any | null; // Y.Map<any> | null
-    getJobMap: (jobId: string) => any | null; // Y.Map<any> | null
-  }
-
   export interface Store {
     // React state - using Session types as that's what's implemented
-    workflow: Session.Workflow | null;
+    workflow: Workflow | null;
     jobs: Job[];
     edges: Edge[];
     triggers: Trigger[];
     selectedJobId: string | null;
+    enabled: boolean | null;
 
     // Actions
     selectJob: (id: string | null) => void;
-    connectToYjs: (bridge: any) => void;
+    connectToYjs: (bridge: YjsBridge) => void;
 
     // Yjs-backed operations (matching actual implementation)
     getJobBodyYText: (id: string) => any; // Y.Text | null
@@ -72,5 +67,16 @@ export namespace Workflow {
     addJob: (job: Partial<Session.Job>) => void;
     removeJob: (id: string) => void;
     updateJob: (id: string, updates: Partial<Session.Job>) => void;
+    setEnabled: (enabled: boolean) => void;
   }
+}
+
+export interface YjsBridge {
+  workflowMap: Y.Map<unknown>;
+  jobsArray: Y.Array<Y.Map<unknown>>;
+  edgesArray: Y.Array<Y.Map<unknown>>;
+  triggersArray: Y.Array<Y.Map<unknown>>;
+  getYjsJob: (id: string) => Y.Map<unknown> | null;
+  getJobBodyText: (id: string) => Y.Text | null;
+  setEnabled: (enabled: boolean) => void;
 }
