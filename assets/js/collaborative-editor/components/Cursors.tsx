@@ -148,6 +148,7 @@ export function Cursors() {
   return (
     <>
       <BaseStyles />
+      {/** biome-ignore lint/security/noDangerouslySetInnerHtml: We're using a dynamic style tag */}
       <style dangerouslySetInnerHTML={userStyles} />
     </>
   );
