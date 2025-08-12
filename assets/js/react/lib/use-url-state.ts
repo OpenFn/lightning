@@ -1,71 +1,81 @@
-import { useCallback, useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-export function useURLState() {
-  const [searchParams, setSearchParams] = useState(
-    () => new URLSearchParams(window.location.search),
-  );
+// External store - created once, shared by all hook instances
+class URLStore {
+  private listeners = new Set<() => void>();
+  private searchParams = new URLSearchParams(window.location.search);
 
-  useEffect(() => {
+  constructor() {
+    this.setupListeners();
+  }
+
+  private setupListeners() {
     const updateParams = () => {
       const newParams = new URLSearchParams(window.location.search);
-      setSearchParams((current) => {
-        if (current.toString() !== newParams.toString()) {
-          return newParams;
-        }
-        return current;
-      });
+      if (this.searchParams.toString() !== newParams.toString()) {
+        this.searchParams = newParams;
+        this.notifyListeners();
+      }
     };
 
-    // Listen for browser back/forward
-    const handlePopState = updateParams;
-
-    // Listen for programmatic navigation
-    const handleNavigation = updateParams;
-
-    // Monkey-patch history methods to dispatch custom events
+    // Monkey-patch history methods
     const originalPushState = history.pushState;
     const originalReplaceState = history.replaceState;
 
     history.pushState = (...args) => {
       originalPushState.apply(history, args);
-      window.dispatchEvent(new Event('urlchange'));
+      updateParams();
     };
 
     history.replaceState = (...args) => {
       originalReplaceState.apply(history, args);
-      window.dispatchEvent(new Event('urlchange'));
+      updateParams();
     };
 
-    window.addEventListener("popstate", handlePopState);
-    window.addEventListener("urlchange", handleNavigation);
+    window.addEventListener("popstate", updateParams);
+  }
 
-    // Cleanup
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-      window.removeEventListener("urlchange", handleNavigation);
-      history.pushState = originalPushState;
-      history.replaceState = originalReplaceState;
-    };
-  }, []);
+  private notifyListeners() {
+    this.listeners.forEach((listener) => listener());
+  }
 
-  const updateSearchParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const newParams = new URLSearchParams(window.location.search);
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
 
-      Object.entries(updates).forEach(([key, value]) => {
-        if (value === null) {
-          newParams.delete(key);
-        } else {
-          newParams.set(key, value);
-        }
-      });
+  getSnapshot = () => this.searchParams;
 
-      const newURL = new URL(window.location.pathname, window.location.origin);
-      newURL.search = newParams.toString();
-      history.pushState({}, "", newURL); // This will now trigger our custom event
-    },
-    [],
+  updateSearchParams = (updates: Record<string, string | null>) => {
+    const newParams = new URLSearchParams(window.location.search);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null) {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value);
+      }
+    });
+
+    const newURL = new URL(window.location.pathname, window.location.origin);
+    newURL.search = newParams.toString();
+    history.pushState({}, "", newURL);
+  };
+}
+
+// Single instance shared across all components
+const urlStore = new URLStore();
+
+// Hook that uses the shared store
+export function useURLState() {
+  const searchParams = useSyncExternalStore(
+    urlStore.subscribe,
+    urlStore.getSnapshot,
+    urlStore.getSnapshot, // Server-side snapshot (same as client for this use case)
   );
 
-  return { searchParams, updateSearchParams };
+  return {
+    searchParams,
+    updateSearchParams: urlStore.updateSearchParams,
+  };
 }
