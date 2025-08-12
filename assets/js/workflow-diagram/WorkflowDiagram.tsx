@@ -85,7 +85,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updatePositions,
     updatePosition,
     undo,
-    redo
+    redo,
   } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
@@ -111,8 +111,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // on option 2. chartCache isn't updated. Hence we call updateSelection to do that
   useEffect(() => {
     // we know selection from server has changed when it's not equal to the one on client
-    if (selection !== chartCache.current.lastSelection) updateSelection(selection);
-  }, [selection, updateSelection])
+    if (selection !== chartCache.current.lastSelection)
+      updateSelection(selection);
+  }, [selection, updateSelection]);
 
   const {
     placeholders,
@@ -209,15 +210,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             chartCache.current.positions = positions;
           });
         }
-      } else {
-        // If layout is id, ensure nodes have positions
-        // This is really only needed when there's a single trigger node
+      } else if (isManualLayout) {
+        // if isManualLayout, then we use values from store instead
         newModel.nodes.forEach(n => {
-          // if isManualLayout, then we use values from store instead
-          if (isManualLayout && n.type !== 'placeholder')
+          if (isManualLayout && n.type !== 'placeholder') {
             n.position = fixedPositions[n.id];
-          if (!n.position) {
-            n.position = { x: 0, y: 0 };
           }
         });
         setModel(newModel);
@@ -225,13 +222,21 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection]);
+  }, [
+    workflow,
+    flow,
+    placeholders,
+    el,
+    isManualLayout,
+    fixedPositions,
+    selection,
+  ]);
 
   // This effect only runs when AI assistant visibility changes, not on every selection change
   useEffect(() => {
     if (!props.showAiAssistant) {
       setDrawerWidth(0);
-      
+
       // Fit view when AI assistant panel closes
       if (flow && model.nodes.length > 0) {
         setTimeout(() => {
@@ -242,7 +247,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           });
         }, 510);
       }
-      
+
       return;
     }
 
@@ -266,7 +271,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         });
         observer.observe(drawer);
         setDrawerWidth(drawer.getBoundingClientRect().width);
-        
+
         // Fit view when AI assistant panel opens
         if (flow && model.nodes.length > 0) {
           setTimeout(() => {
@@ -292,12 +297,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (props.forceFit && flow && model.nodes.length > 0) {
       // Immediately fit to bounds when forceFit becomes true
       const bounds = getNodesBounds(model.nodes);
-      flow.fitBounds(bounds, {
-        duration: FIT_DURATION,
-        padding: FIT_PADDING,
-      }).catch((error) => {
-        console.error('Failed to fit bounds:', error);
-      });
+      flow
+        .fitBounds(bounds, {
+          duration: FIT_DURATION,
+          padding: FIT_PADDING,
+        })
+        .catch(error => {
+          console.error('Failed to fit bounds:', error);
+        });
     }
   }, [props.forceFit, flow, model.nodes]);
 
@@ -437,7 +444,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   React.useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
       const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z';
-      const isRedo = ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
+      const isRedo =
+        ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
         ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z');
 
       if (isUndo) {
@@ -448,9 +456,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         e.preventDefault();
         redo();
       }
-    }
+    };
     window.addEventListener('keydown', keyHandler);
-    return () => { window.removeEventListener('keydown', keyHandler); }
+    return () => {
+      window.removeEventListener('keydown', keyHandler);
+    };
   }, [redo, undo]);
 
   return (
@@ -508,19 +518,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           >
             <span className="text-black hero-squares-2x2 w-4 h-4" />
           </ControlButton>
-          <ControlButton
-            onClick={undo}
-            data-tooltip="Undo"
-          >
+          <ControlButton onClick={undo} data-tooltip="Undo">
             <span className="text-black hero-arrow-uturn-left w-4 h-4" />
           </ControlButton>
-          <ControlButton
-            onClick={redo}
-            data-tooltip="Redo"
-          >
+          <ControlButton onClick={redo} data-tooltip="Redo">
             <span className="text-black hero-arrow-uturn-right w-4 h-4" />
           </ControlButton>
-
         </Controls>
         <Background />
         <MiniMap
