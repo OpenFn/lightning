@@ -14,6 +14,7 @@ export interface Store<T> {
 // Legacy interface - will be replaced by Workflow.Store
 
 export interface Workflow {
+  name: string;
   jobs: Workflow.Job[];
   triggers: Workflow.Trigger[];
   edges: Workflow.Edge[];
