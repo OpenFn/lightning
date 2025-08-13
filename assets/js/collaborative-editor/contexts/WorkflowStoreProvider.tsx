@@ -11,6 +11,11 @@ import { useYjsWorkflowSync } from "../hooks/useYjsWorkflowSync";
 import { createWorkflowStore } from "../stores/WorkflowStore";
 import type { Workflow } from "../types";
 import type { Session } from "../types/session";
+import {
+  createDefaultTrigger,
+  TriggerValidation,
+  type ValidatedTrigger,
+} from "../validation/TriggerValidation";
 import { useSession } from "./SessionProvider";
 
 const WorkflowStoreContext = createContext<ReturnType<
@@ -62,6 +67,110 @@ export const useCurrentJob = () => {
   const ytext = job ? getJobBodyYText(job.id) : null;
 
   return { job, ytext };
+};
+
+/**
+ * Hook for accessing the currently selected trigger.
+ *
+ * @returns Object containing:
+ *   - trigger: The currently selected trigger object, or null if none selected
+ *
+ * @example
+ * ```typescript
+ * const { trigger } = useCurrentTrigger();
+ *
+ * if (trigger) {
+ *   console.log(`Editing trigger: ${trigger.name}`);
+ * }
+ * ```
+ */
+export const useCurrentTrigger = () => {
+  const { currentNode } = useNodeSelection();
+
+  return {
+    trigger:
+      currentNode.type === "trigger"
+        ? (currentNode.node as Workflow.Trigger)
+        : null,
+  };
+};
+
+/**
+ * Hook for accessing memoized trigger validation schemas.
+ *
+ * @returns Object containing validation schemas for trigger forms
+ *
+ * @example
+ * ```typescript
+ * const { triggerSchema } = useTriggerValidationSchema();
+ * ```
+ */
+export const useTriggerValidationSchema = () => {
+  return useMemo(
+    () => ({
+      triggerSchema: TriggerValidation,
+    }),
+    [],
+  );
+};
+
+/**
+ * Hook for trigger form actions following CQS pattern.
+ * Provides command functions for managing trigger forms.
+ *
+ * @returns Object containing:
+ *   - createTriggerForm: Function that creates a TanStack Form instance for triggers
+ *
+ * @example
+ * ```typescript
+ * const { createTriggerForm } = useTriggerFormActions();
+ * const form = createTriggerForm(currentTrigger);
+ * ```
+ */
+export const useTriggerFormActions = () => {
+  const { currentNode } = useNodeSelection();
+
+  const createTriggerForm = useCallback(
+    (trigger: Workflow.Trigger | null) => {
+      // Create default values based on trigger type or default to webhook
+      const triggerType =
+        (trigger?.type as "webhook" | "cron" | "kafka") || "webhook";
+      const defaultValues = trigger
+        ? {
+            id: trigger.id,
+            type: trigger.type,
+            enabled: trigger.enabled,
+            // Map existing trigger data to form schema - casting needed for legacy type compatibility
+            cron_expression:
+              trigger.type === "cron"
+                ? ((trigger as unknown as Record<string, unknown>)[
+                    "cron_expression"
+                  ] as string)
+                : null,
+            kafka_configuration:
+              trigger.type === "kafka"
+                ? (trigger as unknown as Record<string, unknown>)[
+                    "kafka_configuration"
+                  ]
+                : null,
+          }
+        : createDefaultTrigger(triggerType);
+
+      // Return form factory function - simplified without validation for now
+      return {
+        defaultValues: defaultValues as ValidatedTrigger,
+        onSubmit: async ({ value }: { value: ValidatedTrigger }) => {
+          if (currentNode.type === "trigger" && currentNode.id) {
+            // TODO: Implement updateTrigger in WorkflowStore
+            console.log("Trigger form submission:", value);
+          }
+        },
+      };
+    },
+    [currentNode],
+  );
+
+  return { createTriggerForm };
 };
 
 /**
