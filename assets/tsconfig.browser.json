@@ -39,7 +39,6 @@
   "include": [
     "js/**/*",
     "vendor/**/*",
-    "dev-server/**/*",
     "*.d.ts",
     "../deps/phoenix/assets/js/phoenix/**/*",
     "../deps/phoenix_live_view/assets/js/types/**/*",
