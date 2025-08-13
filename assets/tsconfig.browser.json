@@ -45,6 +45,6 @@
     "../deps/phoenix_live_view/assets/js/phoenix_live_view/**/*"
   ],
   "exclude": [
-    "node_modules/**"
+    "node_modules/**",
   ]
 }
