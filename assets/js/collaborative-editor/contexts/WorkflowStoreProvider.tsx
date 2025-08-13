@@ -4,7 +4,7 @@
  */
 
 import type React from "react";
-import { createContext, useContext, useRef } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef } from "react";
 import { useStore } from "zustand";
 import { useURLState } from "#/react/lib/use-url-state";
 import { useYjsWorkflowSync } from "../hooks/useYjsWorkflowSync";
@@ -104,6 +104,7 @@ export const useNodeSelection = (): {
   selectNode: (id: string | null) => void;
 } => {
   const { searchParams, updateSearchParams } = useURLState();
+
   const { jobs, triggers, edges } = useWorkflowStore((state) => ({
     jobs: state.jobs,
     triggers: state.triggers,
@@ -117,67 +118,53 @@ export const useNodeSelection = (): {
 
   const currentNodeId = jobId || triggerId || edgeId;
 
-  // Resolve current selection
-  let currentNode: {
-    node: Workflow.Node | null;
-    type: Workflow.NodeType | null;
-    id: string | null;
-  };
+  // Resolve current selection with memoization
+  const currentNode = useMemo(() => {
+    if (!currentNodeId) {
+      return { node: null, type: null, id: null };
+    } else if (jobId) {
+      const node = jobs.find((job) => job.id === jobId) || null;
+      return { node, type: "job" as const, id: jobId };
+    } else if (triggerId) {
+      const node = triggers.find((trigger) => trigger.id === triggerId) || null;
+      return { node, type: "trigger" as const, id: triggerId };
+    } else if (edgeId) {
+      const node = edges.find((edge) => edge.id === edgeId) || null;
+      return { node, type: "edge" as const, id: edgeId };
+    } else {
+      return { node: null, type: null, id: null };
+    }
+  }, [currentNodeId, jobId, triggerId, edgeId, jobs, triggers, edges]);
 
-  if (!currentNodeId) {
-    currentNode = { node: null, type: null, id: null };
-  } else if (jobId) {
-    const node = jobs.find((job) => job.id === jobId) || null;
-    currentNode = { node, type: "job", id: jobId };
-  } else if (triggerId) {
-    const node = triggers.find((trigger) => trigger.id === triggerId) || null;
-    currentNode = { node, type: "trigger", id: triggerId };
-  } else if (edgeId) {
-    const node = edges.find((edge) => edge.id === edgeId) || null;
-    currentNode = { node, type: "edge", id: edgeId };
-  } else {
-    currentNode = { node: null, type: null, id: null };
-  }
+  // IDEA: if selectNode took a 'currentNode' object we wouldn't need to do the
+  // find-by-id logic in the selectNode function. That would arguably require us
+  // to keep the currentNode in the store and set/update it using immer.
 
   // Selection function
-  const selectNode = (id: string | null) => {
-    if (!id) {
-      updateSearchParams({ job: null, trigger: null, edge: null });
-      return;
-    }
+  const selectNode = useCallback(
+    (id: string | null) => {
+      if (!id) {
+        updateSearchParams({ job: null, trigger: null, edge: null });
+        return;
+      }
 
-    // Determine node type and update appropriate URL parameter
-    if (jobs.find((job) => job.id === id)) {
-      updateSearchParams({ job: id, trigger: null, edge: null });
-    } else if (triggers.find((trigger) => trigger.id === id)) {
-      updateSearchParams({ trigger: id, job: null, edge: null });
-    } else if (edges.find((edge) => edge.id === id)) {
-      updateSearchParams({ edge: id, job: null, trigger: null });
-    }
-  };
+      // Determine node type and update appropriate URL parameter
+      const foundJob = jobs.find((job) => job.id === id);
+      const foundTrigger = triggers.find((trigger) => trigger.id === id);
+      const foundEdge = edges.find((edge) => edge.id === id);
+
+      if (foundJob) {
+        updateSearchParams({ job: id, trigger: null, edge: null });
+      } else if (foundTrigger) {
+        updateSearchParams({ trigger: id, job: null, edge: null });
+      } else if (foundEdge) {
+        updateSearchParams({ edge: id, job: null, trigger: null });
+      }
+    },
+    [updateSearchParams, jobs, triggers, edges],
+  );
 
   return { currentNode, selectNode };
-};
-
-/**
- * Convenience hook for components that only need the current node selection data.
- *
- * This is a lightweight alternative to useNodeSelection when you don't need the selectNode function.
- *
- * @returns The current node selection object with node, type, and id
- *
- * @example
- * ```typescript
- * const currentNode = useCurrentNode();
- *
- * if (currentNode.type === 'edge') {
- *   // Handle edge selection
- * }
- * ```
- */
-export const useCurrentNode = () => {
-  const { currentNode } = useNodeSelection();
-  return currentNode;
 };
 
 interface WorkflowStoreProviderProps {
@@ -193,10 +180,6 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
   // Create store only once using lazy ref initialization
   const storeRef = useRef<ReturnType<typeof createWorkflowStore>>();
   const store = (storeRef.current ||= createWorkflowStore());
-
-  // TODO: make this only available in development or if debug is enabled
-  // consider "Lightning.debug" or some collection of helpers
-  window.store = store;
 
   // Set up Yjs ↔ Store sync for workflow data
   useYjsWorkflowSync(ydoc, store);
