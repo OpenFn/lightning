@@ -36,6 +36,20 @@ export const useYjsWorkflowSync = (
         const yjsJob = jobs.find((job) => job.get("id") === id);
         return (yjsJob?.get("body") as Y.Text) || null;
       },
+      getYjsTrigger: (id: string) => {
+        const triggers = triggersArray.toArray();
+        return triggers.find((trigger) => trigger.get("id") === id) || null;
+      },
+      updateTrigger: (id: string, updates: Partial<Session.Trigger>) => {
+        const yjsTrigger = yjsBridge.getYjsTrigger(id);
+        if (yjsTrigger) {
+          yjsTrigger.doc.transact(() => {
+            Object.entries(updates).forEach(([key, value]) => {
+              yjsTrigger.set(key, value);
+            });
+          });
+        }
+      },
       setEnabled: (enabled: boolean) => {
         const triggers = triggersArray.toArray();
         triggers.forEach((trigger) => {
@@ -52,7 +66,7 @@ export const useYjsWorkflowSync = (
       (workflowMap) => {
         const workflow = workflowMap.toJSON() as Session.Workflow;
         if (workflow.id && workflow.name !== undefined) {
-          store.setState({ workflow });
+          store.setState({ workflow: workflow as any });
         } else {
           store.setState({ workflow: null });
         }

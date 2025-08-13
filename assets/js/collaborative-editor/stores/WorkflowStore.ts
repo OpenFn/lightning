@@ -11,7 +11,7 @@ export const createWorkflowStore = () => {
   return create<Workflow.Store>()(
     devtools(
       subscribeWithSelector(
-        immer((set, get) => ({
+        immer((set, _get) => ({
           // Initial state
           workflow: null,
           jobs: [],
@@ -28,6 +28,11 @@ export const createWorkflowStore = () => {
           // Method to connect Yjs bridge after provider setup
           connectToYjs: (bridge: YjsBridge) => {
             yjsBridge = bridge;
+          },
+
+          // Method to access Yjs bridge
+          getYjsBridge: () => {
+            return yjsBridge;
           },
 
           setEnabled: (enabled: boolean) => {
@@ -100,6 +105,12 @@ export const createWorkflowStore = () => {
                 ytext.delete(0, ytext.length);
                 ytext.insert(0, body);
               }
+            }
+          },
+
+          updateTrigger: (id, updates) => {
+            if (yjsBridge) {
+              yjsBridge.updateTrigger(id, updates);
             }
           },
         })),
