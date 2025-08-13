@@ -29,6 +29,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
     .min(1, "Cron expression is required")
     .refine(
       (expr) => {
+        console.log("validating cron expression", expr);
         // Use cron-validator for professional validation
         return isValidCron(expr, {
           seconds: false, // Standard 5-field format without seconds

@@ -64,6 +64,7 @@ export namespace Workflow {
     // Actions
     selectJob: (id: string | null) => void;
     connectToYjs: (bridge: YjsBridge) => void;
+    getYjsBridge: () => YjsBridge | null;
 
     // Yjs-backed operations (matching actual implementation)
     getJobBodyYText: (id: string) => Y.Text | null;
@@ -72,6 +73,7 @@ export namespace Workflow {
     addJob: (job: Partial<Session.Job>) => void;
     removeJob: (id: string) => void;
     updateJob: (id: string, updates: Partial<Session.Job>) => void;
+    updateTrigger: (id: string, updates: Partial<Session.Trigger>) => void;
     setEnabled: (enabled: boolean) => void;
   }
 }
@@ -83,5 +85,7 @@ export interface YjsBridge {
   triggersArray: Y.Array<Y.Map<unknown>>;
   getYjsJob: (id: string) => Y.Map<unknown> | null;
   getJobBodyText: (id: string) => Y.Text | null;
+  getYjsTrigger: (id: string) => Y.Map<unknown> | null;
+  updateTrigger: (id: string, updates: Partial<Session.Trigger>) => void;
   setEnabled: (enabled: boolean) => void;
 }
