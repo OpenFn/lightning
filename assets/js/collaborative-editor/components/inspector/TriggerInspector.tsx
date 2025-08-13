@@ -13,13 +13,18 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
   trigger,
 }) => {
   const { createTriggerForm } = useTriggerFormActions();
-  const formConfig = createTriggerForm(trigger);
   const [copySuccess, setCopySuccess] = useState<string>("");
+
+  // Create form config with Yjs integration
+  const formConfig = createTriggerForm(trigger);
 
   const form = useForm(formConfig);
 
   // Generate webhook URL based on trigger ID
-  const webhookUrl = `/i/${trigger.id}`;
+  const webhookUrl = new URL(
+    `/i/${trigger.id}`,
+    window.location.origin,
+  ).toString();
 
   // Copy to clipboard function
   const copyToClipboard = async (text: string) => {
@@ -44,7 +49,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
           onSubmit={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            form.handleSubmit();
+            // form.handleSubmit();
           }}
           className="space-y-4"
         >
@@ -168,34 +173,414 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                       </h4>
 
                       {/* Cron Expression Field */}
-                      <form.Field name="cron_expression">
-                        {(cronField) => (
-                          <div>
-                            <label
-                              htmlFor={cronField.name}
-                              className="block text-xs font-medium text-gray-500 mb-1"
-                            >
-                              Schedule Expression
-                            </label>
-                            <CronFieldBuilder
-                              value={cronField.state.value || "0 0 * * *"}
-                              onChange={(cronExpr) =>
-                                cronField.handleChange(cronExpr)
-                              }
-                              onBlur={cronField.handleBlur}
-                              className=""
-                            />
-                            {cronField.state.meta.errors.map((error) => (
-                              <p
-                                key={error}
-                                className="mt-1 text-xs text-red-600"
+                      <form.Field
+                        name="cron_expression"
+                        listeners={{ onChangeDebounceMs: 2000 }}
+                      >
+                        {(cronField) => {
+                          console.log(cronField.state);
+                          return (
+                            <div>
+                              <label
+                                htmlFor={cronField.name}
+                                className="block text-xs font-medium text-gray-500 mb-1"
                               >
-                                {error}
-                              </p>
-                            ))}
-                          </div>
-                        )}
+                                Schedule Expression
+                              </label>
+                              <CronFieldBuilder
+                                value={cronField.state.value}
+                                onChange={(cronExpr) =>
+                                  cronField.handleChange(cronExpr)
+                                }
+                                onBlur={cronField.handleBlur}
+                                className=""
+                              />
+                              {cronField.state.meta.errors.map((error) => (
+                                <p
+                                  key={error}
+                                  className="mt-1 text-xs text-red-600"
+                                >
+                                  {error.message}
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        }}
                       </form.Field>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (currentType === "kafka") {
+                return (
+                  <div className="space-y-4">
+                    <div className="border-t pt-4">
+                      <h4 className="text-xs font-medium text-gray-700 mb-3">
+                        Kafka Connection Configuration
+                      </h4>
+
+                      {/* Connection Settings */}
+                      <div className="space-y-4">
+                        {/* Hosts Field */}
+                        <form.Field name="kafka_configuration.hosts">
+                          {(field) => (
+                            <div>
+                              <label
+                                htmlFor={field.name}
+                                className="block text-xs font-medium text-gray-500 mb-1"
+                              >
+                                Kafka Hosts
+                              </label>
+                              <input
+                                id={field.name}
+                                type="text"
+                                value={field.state.value || ""}
+                                onChange={(e) =>
+                                  field.handleChange(e.target.value)
+                                }
+                                onBlur={field.handleBlur}
+                                placeholder="localhost:9092,broker2:9092"
+                                className={`
+                                  block w-full px-3 py-2 border rounded-md text-sm
+                                  ${
+                                    field.state.meta.errors.length > 0
+                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                      : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                  }
+                                  focus:outline-none focus:ring-1
+                                `}
+                              />
+                              <p className="mt-1 text-xs text-gray-500">
+                                Comma-separated list of host:port pairs
+                              </p>
+                              {field.state.meta.errors.map((error) => (
+                                <p
+                                  key={error}
+                                  className="mt-1 text-xs text-red-600"
+                                >
+                                  {error}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </form.Field>
+
+                        {/* Topics Field */}
+                        <form.Field name="kafka_configuration.topics">
+                          {(field) => (
+                            <div>
+                              <label
+                                htmlFor={field.name}
+                                className="block text-xs font-medium text-gray-500 mb-1"
+                              >
+                                Topics
+                              </label>
+                              <input
+                                id={field.name}
+                                type="text"
+                                value={field.state.value || ""}
+                                onChange={(e) =>
+                                  field.handleChange(e.target.value)
+                                }
+                                onBlur={field.handleBlur}
+                                placeholder="topic1,topic2,topic3"
+                                className={`
+                                  block w-full px-3 py-2 border rounded-md text-sm
+                                  ${
+                                    field.state.meta.errors.length > 0
+                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                      : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                  }
+                                  focus:outline-none focus:ring-1
+                                `}
+                              />
+                              <p className="mt-1 text-xs text-gray-500">
+                                Comma-separated list of topic names
+                              </p>
+                              {field.state.meta.errors.map((error) => (
+                                <p
+                                  key={error}
+                                  className="mt-1 text-xs text-red-600"
+                                >
+                                  {error}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </form.Field>
+
+                        {/* SSL Configuration */}
+                        <form.Field name="kafka_configuration.ssl">
+                          {(field) => (
+                            <div className="flex items-center">
+                              <input
+                                id={field.name}
+                                type="checkbox"
+                                checked={field.state.value || false}
+                                onChange={(e) =>
+                                  field.handleChange(e.target.checked)
+                                }
+                                onBlur={field.handleBlur}
+                                className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                              />
+                              <label
+                                htmlFor={field.name}
+                                className="ml-2 text-xs font-medium text-gray-700"
+                              >
+                                Enable SSL/TLS encryption
+                              </label>
+                            </div>
+                          )}
+                        </form.Field>
+
+                        {/* SASL Configuration */}
+                        <form.Field name="kafka_configuration.sasl">
+                          {(field) => (
+                            <div>
+                              <label
+                                htmlFor={field.name}
+                                className="block text-xs font-medium text-gray-500 mb-1"
+                              >
+                                SASL Authentication
+                              </label>
+                              <select
+                                id={field.name}
+                                value={field.state.value || "none"}
+                                onChange={(e) =>
+                                  field.handleChange(
+                                    e.target.value as
+                                      | "none"
+                                      | "plain"
+                                      | "scram_sha_256"
+                                      | "scram_sha_512",
+                                  )
+                                }
+                                onBlur={field.handleBlur}
+                                className={`
+                                  block w-full px-3 py-2 border rounded-md text-sm
+                                  ${
+                                    field.state.meta.errors.length > 0
+                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                      : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                  }
+                                  focus:outline-none focus:ring-1
+                                `}
+                              >
+                                <option value="none">No Authentication</option>
+                                <option value="plain">PLAIN</option>
+                                <option value="scram_sha_256">
+                                  SCRAM-SHA-256
+                                </option>
+                                <option value="scram_sha_512">
+                                  SCRAM-SHA-512
+                                </option>
+                              </select>
+                              {field.state.meta.errors.map((error) => (
+                                <p
+                                  key={error}
+                                  className="mt-1 text-xs text-red-600"
+                                >
+                                  {error}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </form.Field>
+
+                        {/* Conditional Username/Password Fields */}
+                        <form.Field name="kafka_configuration.sasl">
+                          {(saslField) => {
+                            const requiresAuth =
+                              saslField.state.value !== "none";
+
+                            if (!requiresAuth) return null;
+
+                            return (
+                              <div className="space-y-4 pl-4 border-l-2 border-gray-200">
+                                {/* Username Field */}
+                                <form.Field name="kafka_configuration.username">
+                                  {(field) => (
+                                    <div>
+                                      <label
+                                        htmlFor={field.name}
+                                        className="block text-xs font-medium text-gray-500 mb-1"
+                                      >
+                                        Username
+                                      </label>
+                                      <input
+                                        id={field.name}
+                                        type="text"
+                                        value={field.state.value || ""}
+                                        onChange={(e) =>
+                                          field.handleChange(e.target.value)
+                                        }
+                                        onBlur={field.handleBlur}
+                                        className={`
+                                          block w-full px-3 py-2 border rounded-md text-sm
+                                          ${
+                                            field.state.meta.errors.length > 0
+                                              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                              : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                          }
+                                          focus:outline-none focus:ring-1
+                                        `}
+                                      />
+                                      {field.state.meta.errors.map((error) => (
+                                        <p
+                                          key={error}
+                                          className="mt-1 text-xs text-red-600"
+                                        >
+                                          {error}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </form.Field>
+
+                                {/* Password Field */}
+                                <form.Field name="kafka_configuration.password">
+                                  {(field) => (
+                                    <div>
+                                      <label
+                                        htmlFor={field.name}
+                                        className="block text-xs font-medium text-gray-500 mb-1"
+                                      >
+                                        Password
+                                      </label>
+                                      <input
+                                        id={field.name}
+                                        type="password"
+                                        value={field.state.value || ""}
+                                        onChange={(e) =>
+                                          field.handleChange(e.target.value)
+                                        }
+                                        onBlur={field.handleBlur}
+                                        className={`
+                                          block w-full px-3 py-2 border rounded-md text-sm
+                                          ${
+                                            field.state.meta.errors.length > 0
+                                              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                              : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                          }
+                                          focus:outline-none focus:ring-1
+                                        `}
+                                      />
+                                      {field.state.meta.errors.map((error) => (
+                                        <p
+                                          key={error}
+                                          className="mt-1 text-xs text-red-600"
+                                        >
+                                          {error}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </form.Field>
+                              </div>
+                            );
+                          }}
+                        </form.Field>
+
+                        {/* Advanced Settings */}
+                        <div className="border-t pt-4">
+                          <h5 className="text-xs font-medium text-gray-700 mb-3">
+                            Advanced Settings
+                          </h5>
+
+                          {/* Initial Offset Reset Policy */}
+                          <form.Field name="kafka_configuration.initial_offset_reset_policy">
+                            {(field) => (
+                              <div>
+                                <label
+                                  htmlFor={field.name}
+                                  className="block text-xs font-medium text-gray-500 mb-1"
+                                >
+                                  Initial Offset Reset Policy
+                                </label>
+                                <select
+                                  id={field.name}
+                                  value={field.state.value || "latest"}
+                                  onChange={(e) =>
+                                    field.handleChange(
+                                      e.target.value as "earliest" | "latest",
+                                    )
+                                  }
+                                  onBlur={field.handleBlur}
+                                  className={`
+                                    block w-full px-3 py-2 border rounded-md text-sm
+                                    ${
+                                      field.state.meta.errors.length > 0
+                                        ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                        : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                    }
+                                    focus:outline-none focus:ring-1
+                                  `}
+                                >
+                                  <option value="latest">Latest</option>
+                                  <option value="earliest">Earliest</option>
+                                </select>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  What to do when there is no initial offset
+                                </p>
+                                {field.state.meta.errors.map((error) => (
+                                  <p
+                                    key={error}
+                                    className="mt-1 text-xs text-red-600"
+                                  >
+                                    {error}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </form.Field>
+
+                          {/* Connect Timeout */}
+                          <form.Field name="kafka_configuration.connect_timeout">
+                            {(field) => (
+                              <div>
+                                <label
+                                  htmlFor={field.name}
+                                  className="block text-xs font-medium text-gray-500 mb-1"
+                                >
+                                  Connect Timeout (ms)
+                                </label>
+                                <input
+                                  id={field.name}
+                                  type="number"
+                                  min="1000"
+                                  value={field.state.value || 30000}
+                                  onChange={(e) =>
+                                    field.handleChange(Number(e.target.value))
+                                  }
+                                  onBlur={field.handleBlur}
+                                  className={`
+                                    block w-full px-3 py-2 border rounded-md text-sm
+                                    ${
+                                      field.state.meta.errors.length > 0
+                                        ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                        : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                    }
+                                    focus:outline-none focus:ring-1
+                                  `}
+                                />
+                                <p className="mt-1 text-xs text-gray-500">
+                                  Connection timeout in milliseconds (minimum
+                                  1000)
+                                </p>
+                                {field.state.meta.errors.map((error) => (
+                                  <p
+                                    key={error}
+                                    className="mt-1 text-xs text-red-600"
+                                  >
+                                    {error}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </form.Field>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
