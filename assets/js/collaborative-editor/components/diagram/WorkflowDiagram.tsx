@@ -13,7 +13,7 @@ import {
 } from "@xyflow/react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import tippy from "tippy.js";
-import { useWorkflowStore } from "#/collaborative-editor/contexts/WorkflowStoreProvider";
+import { useWorkflowState } from "#/collaborative-editor/hooks/Workflow";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
 import edgeTypes from "#/workflow-diagram/edges";
@@ -92,12 +92,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const undo = () => {};
   const redo = () => {};
 
-  const { jobs, triggers, edges, disabled } = useWorkflowStore((state) => ({
+  const { jobs, triggers, edges } = useWorkflowState((state) => ({
     jobs: state.jobs,
     triggers: state.triggers,
     edges: state.edges,
-    disabled: state.disabled,
   }));
+
+  // TODO: implement disabled state - not currently available in WorkflowState
+  const disabled = false;
 
   const workflow = React.useMemo(
     () => ({

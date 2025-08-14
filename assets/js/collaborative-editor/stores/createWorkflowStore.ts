@@ -1,11 +1,108 @@
 /**
- * New workflow store implementation using useSyncExternalStore + Immer + Y.Doc pattern
- * 
- * This replaces the Zustand + YjsBridge anti-pattern with a clean composition that:
- * - Uses Y.Doc as the authoritative source for workflow data
- * - Provides referentially stable state through Immer
- * - Separates collaborative data from local UI state
- * - Implements three clear update patterns
+ * # WorkflowStore
+ *
+ * This store implements a pattern combining useSyncExternalStore + Immer + Y.Doc
+ * for optimal performance in collaborative editing scenarios.
+ *
+ * ## Core Principles:
+ * - Y.Doc as the single source of truth for collaborative data
+ * - Immer for referentially stable state updates
+ * - Clear separation between collaborative data and local UI state
+ * - Command Query Separation (CQS) for predictable state mutations
+ *
+ * ## Three Update Patterns:
+ *
+ * ### Pattern 1: Y.Doc → Observer → Immer → Notify (Collaborative Data)
+ * **When to use**: All collaborative workflow data (jobs, triggers, edges, workflow metadata)
+ * **Flow**: User action → Y.Doc transaction → Y.js observer fires → Immer update → React notification
+ * **Benefits**: Automatic conflict resolution, real-time collaboration, persistence
+ *
+ * ```typescript
+ * // Example: Update a job name
+ * const updateJobName = (id: string, name: string) => {
+ *   if (!ydoc) return;
+ *
+ *   const jobsArray = ydoc.getArray("jobs");
+ *   const job = findJobById(jobsArray, id);
+ *
+ *   ydoc.transact(() => {
+ *     job.set("name", name);  // Y.Doc update
+ *   });
+ *   // Observer automatically handles: Y.Doc → Immer → notify()
+ * };
+ * ```
+ *
+ * ### Pattern 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations)
+ * **When to use**: Operations that affect both collaborative data AND local UI state
+ * **Flow**: Y.Doc transaction + immediate local state update + notify
+ * **Benefits**: Atomic operations, immediate UI feedback, maintains consistency
+ * **Note**: This pattern should be used sparingly - evaluate if Pattern 1 or 3 is more appropriate
+ *
+ * ```typescript
+ * // Example: Remove job and clear selection if it was selected
+ * const removeJobAndClearSelection = (id: string) => {
+ *   // 1. Update Y.Doc first (will trigger observer)
+ *   removeJob(id);
+ *
+ *   // 2. Immediately update local UI state
+ *   state = produce(state, (draft) => {
+ *     if (draft.selectedJobId === id) {
+ *       draft.selectedJobId = null;
+ *       updateDerivedState(draft);
+ *     }
+ *   });
+ *   notify();
+ *
+ *   // Note: Y.Doc observer will also fire and update the jobs array
+ * };
+ * ```
+ *
+ * ### Pattern 3: Direct Immer → Notify (Local UI State)
+ * **When to use**: Local UI state that doesn't need collaboration (selections, UI preferences)
+ * **Flow**: Direct Immer update → React notification
+ * **Benefits**: Immediate response, no network overhead, simple implementation
+ *
+ * ```typescript
+ * // Example: Select a job (local UI state only)
+ * const selectJob = (id: string | null) => {
+ *   state = produce(state, (draft) => {
+ *     draft.selectedJobId = id;
+ *     draft.selectedTriggerId = null; // Clear other selections
+ *     draft.selectedEdgeId = null;
+ *     updateDerivedState(draft); // Update computed properties
+ *   });
+ *   notify(); // Trigger React re-renders
+ * };
+ * ```
+ *
+ * ## Pattern Selection Guidelines:
+ *
+ * **Use Pattern 1 for:**
+ * - Job body content (collaborative editing with Y.Text)
+ * - Job/trigger/edge names and properties
+ * - Workflow metadata
+ * - Any data that needs to be shared between users
+ *
+ * **Use Pattern 2 for:**
+ * - Operations that span collaborative + local state
+ * - Atomic operations requiring immediate UI feedback
+ * - Complex workflows where Pattern 1 + Pattern 3 would be insufficient
+ * - **Evaluate carefully** - often Pattern 1 or 3 alone is better
+ *
+ * **Use Pattern 3 for:**
+ * - Node selection (selectedJobId, selectedTriggerId, selectedEdgeId)
+ * - UI preferences and local settings
+ * - Computed derived state (selectedNode, selectedEdge)
+ * - Any state that should NOT be synchronized between users
+ *
+ * ## Implementation Notes:
+ * - All patterns use Immer for immutable updates and referential stability
+ * - Y.Doc observers use `observeDeep()` for nested object changes
+ * - `updateDerivedState()` maintains computed properties consistently
+ * - The store is designed for use with `useSyncExternalStore` hook
+ *
+ * @see ../hooks/Workflow.ts for React hook implementations
+ * @see ../contexts/WorkflowStoreProvider.tsx for provider setup
  */
 
 import { produce } from "immer";
@@ -21,15 +118,16 @@ export const createWorkflowStore = () => {
   // Helper to update derived state (defined first to avoid hoisting issues)
   const updateDerivedState = (draft: Workflow.WorkflowState) => {
     // Compute enabled from triggers
-    draft.enabled = draft.triggers.length > 0
-      ? draft.triggers.some((t) => t.enabled)
-      : null;
+    draft.enabled =
+      draft.triggers.length > 0 ? draft.triggers.some((t) => t.enabled) : null;
 
     // Compute selected node
     if (draft.selectedJobId) {
-      draft.selectedNode = draft.jobs.find((j) => j.id === draft.selectedJobId) || null;
+      draft.selectedNode =
+        draft.jobs.find((j) => j.id === draft.selectedJobId) || null;
     } else if (draft.selectedTriggerId) {
-      draft.selectedNode = draft.triggers.find((t) => t.id === draft.selectedTriggerId) || null;
+      draft.selectedNode =
+        draft.triggers.find((t) => t.id === draft.selectedTriggerId) || null;
     } else {
       draft.selectedNode = null;
     }
@@ -39,7 +137,7 @@ export const createWorkflowStore = () => {
       ? draft.edges.find((e) => e.id === draft.selectedEdgeId) || null
       : null;
 
-    // Compute collaboration status  
+    // Compute collaboration status
     draft.isCollaborating = draft.connectedUsers.length > 1;
   };
 
@@ -67,7 +165,7 @@ export const createWorkflowStore = () => {
     (draft) => {
       // Compute derived state on initialization
       updateDerivedState(draft);
-    }
+    },
   );
 
   const listeners = new Set<() => void>();
@@ -83,6 +181,27 @@ export const createWorkflowStore = () => {
 
   // Returns the current Immer state (referentially stable)
   const getSnapshot = (): Workflow.WorkflowState => state;
+
+  // withSelector utility - creates memoized selectors for referential stability
+  const withSelector = <T>(selector: (state: Workflow.WorkflowState) => T) => {
+    let lastResult: T;
+    let lastState: Workflow.WorkflowState | undefined;
+
+    return (): T => {
+      const currentState = getSnapshot();
+
+      // Only recompute if state reference actually changed
+      if (currentState !== lastState) {
+        const newResult = selector(currentState);
+
+        // Always update result when state changes (Immer guarantees stable references)
+        lastResult = newResult;
+        lastState = currentState;
+      }
+
+      return lastResult;
+    };
+  };
 
   // Connect Y.Doc and set up observers
   const connectYDoc = (doc: Session.WorkflowDoc, users: AwarenessUser[]) => {
@@ -118,7 +237,9 @@ export const createWorkflowStore = () => {
     const triggersObserver = () => {
       state = produce(state, (draft) => {
         const yjsTriggers = triggersArray.toArray() as Y.Map<unknown>[];
-        draft.triggers = yjsTriggers.map((yjsTrigger) => yjsTrigger.toJSON() as Workflow.Trigger);
+        draft.triggers = yjsTriggers.map(
+          (yjsTrigger) => yjsTrigger.toJSON() as Workflow.Trigger,
+        );
         updateDerivedState(draft);
       });
       notify();
@@ -127,7 +248,9 @@ export const createWorkflowStore = () => {
     const edgesObserver = () => {
       state = produce(state, (draft) => {
         const yjsEdges = edgesArray.toArray() as Y.Map<unknown>[];
-        draft.edges = yjsEdges.map((yjsEdge) => yjsEdge.toJSON() as Workflow.Edge);
+        draft.edges = yjsEdges.map(
+          (yjsEdge) => yjsEdge.toJSON() as Workflow.Edge,
+        );
         updateDerivedState(draft);
       });
       notify();
@@ -175,7 +298,11 @@ export const createWorkflowStore = () => {
     notify();
   };
 
-  // Pattern 1: Y.Doc update → observer → immer update → notify
+  // =============================================================================
+  // PATTERN 1: Y.Doc → Observer → Immer → Notify (Collaborative Data)
+  // =============================================================================
+  // These methods update Y.Doc, which triggers observers that update Immer state
+
   const updateJob = (id: string, updates: Partial<Session.Job>) => {
     if (!ydoc) {
       // Fallback to direct state update if Y.Doc not connected
@@ -258,7 +385,9 @@ export const createWorkflowStore = () => {
 
     const triggersArray = ydoc.getArray("triggers");
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
-    const triggerIndex = triggers.findIndex((trigger) => trigger.get("id") === id);
+    const triggerIndex = triggers.findIndex(
+      (trigger) => trigger.get("id") === id,
+    );
 
     if (triggerIndex >= 0) {
       const yjsTrigger = triggers[triggerIndex];
@@ -295,7 +424,11 @@ export const createWorkflowStore = () => {
     return yjsJob ? (yjsJob.get("body") as Y.Text) : null;
   };
 
-  // Pattern 3: Direct immer update → notify (local UI state)
+  // =============================================================================
+  // PATTERN 3: Direct Immer → Notify (Local UI State)
+  // =============================================================================
+  // These methods directly update Immer state without Y.Doc involvement
+
   const selectJob = (id: string | null) => {
     state = produce(state, (draft) => {
       draft.selectedJobId = id;
@@ -336,7 +469,12 @@ export const createWorkflowStore = () => {
     notify();
   };
 
-  // Pattern 2: Y.Doc + immediate immer update → notify (rare)
+  // =============================================================================
+  // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations)
+  // =============================================================================
+  // These methods combine Y.Doc updates with immediate local state updates
+  // Use sparingly - consider if Pattern 1 or 3 alone would be better
+
   const removeJobAndClearSelection = (id: string) => {
     // Update Y.Doc first
     removeJob(id);
@@ -354,8 +492,10 @@ export const createWorkflowStore = () => {
   };
 
   return {
+    // Core store interface
     subscribe,
     getSnapshot, // Returns current Immer state (referentially stable)
+    withSelector, // Creates memoized selectors for referential stability
 
     // Y.Doc connection management
     connectYDoc,
@@ -367,7 +507,9 @@ export const createWorkflowStore = () => {
       return ydoc;
     },
 
-    // Pattern 1: Y.Doc → observer → immer
+    // =============================================================================
+    // PATTERN 1: Y.Doc → Observer → Immer → Notify (Collaborative Data)
+    // =============================================================================
     updateJob,
     updateJobName,
     updateJobBody,
@@ -377,14 +519,18 @@ export const createWorkflowStore = () => {
     setEnabled,
     getJobBodyYText,
 
-    // Pattern 3: Direct immer
+    // =============================================================================
+    // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations - Use Sparingly)
+    // =============================================================================
+    removeJobAndClearSelection,
+
+    // =============================================================================
+    // PATTERN 3: Direct Immer → Notify (Local UI State)
+    // =============================================================================
     selectJob,
     selectTrigger,
     selectEdge,
     clearSelection,
-
-    // Pattern 2: Y.Doc + immediate immer (rare)
-    removeJobAndClearSelection,
   };
 };
 

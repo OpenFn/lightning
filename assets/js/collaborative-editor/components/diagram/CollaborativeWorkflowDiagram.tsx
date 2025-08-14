@@ -4,10 +4,7 @@
  */
 
 import type React from "react";
-import {
-  useNodeSelection,
-  useWorkflowStore,
-} from "../../contexts/WorkflowStoreProvider";
+import { useNodeSelection, useWorkflowState } from "../../hooks/Workflow";
 import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
 
 interface CollaborativeWorkflowDiagramProps {
@@ -18,9 +15,7 @@ interface CollaborativeWorkflowDiagramProps {
 export const CollaborativeWorkflowDiagram: React.FC<
   CollaborativeWorkflowDiagramProps
 > = ({ className = "h-full w-full", inspectorId }) => {
-  const { workflow } = useWorkflowStore((state) => ({
-    workflow: state.workflow,
-  }));
+  const workflow = useWorkflowState((state) => state.workflow);
 
   const { currentNode, selectNode } = useNodeSelection();
 

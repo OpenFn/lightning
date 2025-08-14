@@ -3,10 +3,10 @@
  */
 
 import type React from "react";
-import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
+import { useWorkflowState } from "../hooks/Workflow";
 
 export const WorkflowHeader: React.FC = () => {
-  const { workflow } = useWorkflowStore();
+  const workflow = useWorkflowState((state) => state.workflow);
 
   if (!workflow) {
     return (
