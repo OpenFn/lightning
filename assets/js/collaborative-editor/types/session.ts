@@ -32,7 +32,13 @@ export namespace Session {
 
   export type Workflow = { id: string; name: string };
 
-  export type Job = { id: string; name: string; body: string };
+  export type Job = {
+    id: string;
+    name: string;
+    body: string;
+    adaptor: string;
+    enabled: boolean;
+  };
 
   export type Trigger = {
     id: string;

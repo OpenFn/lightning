@@ -3,7 +3,7 @@ import { z } from "zod";
 
 // Base trigger fields common to all trigger types
 const baseTriggerSchema = z.object({
-  id: z.string().optional(),
+  id: z.uuid({ message: "Invalid UUID format" }).optional(),
   enabled: z.boolean().default(true),
 });
 
