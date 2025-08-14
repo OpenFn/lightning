@@ -1,5 +1,5 @@
 import type React from "react";
-import type { Workflow } from "../types";
+import type { Workflow } from "../../types/workflow";
 
 interface JobInspectorProps {
   job: Workflow.Job;
