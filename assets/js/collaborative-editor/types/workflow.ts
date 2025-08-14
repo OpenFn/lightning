@@ -5,19 +5,13 @@
  */
 
 import type * as Y from "yjs";
+import type { Job as JobType } from "./job";
 import type { AwarenessUser, Session } from "./session";
 import type { Trigger as TriggerType } from "./trigger";
 
 export namespace Workflow {
-  // Domain objects (existing interfaces, kept for compatibility)
-  export interface Job {
-    id: string;
-    name: string;
-    body: string;
-    adaptor: string;
-    enabled: boolean;
-    // ... other existing fields can be added as needed
-  }
+  // Domain objects - use comprehensive Job type from job.ts
+  export type Job = JobType;
 
   export type Trigger = TriggerType;
 
@@ -80,40 +74,4 @@ export namespace Workflow {
     // Y.js specific operations
     getJobBodyYText: (id: string) => Y.Text | null;
   }
-
-  // Legacy Store interface - keep for backward compatibility during migration
-  export interface Store {
-    workflow: Workflow.Job | null; // This seems wrong in original, keeping for compatibility
-    jobs: Job[];
-    edges: Edge[];
-    triggers: Trigger[];
-    selectedJobId: string | null;
-    enabled: boolean | null;
-
-    // Legacy actions - keep for backward compatibility
-    selectJob: (id: string | null) => void;
-    connectToYjs: (bridge: YjsBridge) => void;
-    getYjsBridge: () => YjsBridge | null;
-    getJobBodyYText: (id: string) => Y.Text | null;
-    updateJobName: (id: string, name: string) => void;
-    updateJobBody: (id: string, body: string) => void;
-    addJob: (job: Partial<Session.Job>) => void;
-    removeJob: (id: string) => void;
-    updateJob: (id: string, updates: Partial<Session.Job>) => void;
-    updateTrigger: (id: string, updates: Partial<Session.Trigger>) => void;
-    setEnabled: (enabled: boolean) => void;
-  }
-}
-
-// Legacy YjsBridge interface - keep for backward compatibility
-export interface YjsBridge {
-  workflowMap: Y.Map<unknown>;
-  jobsArray: Y.Array<Y.Map<unknown>>;
-  edgesArray: Y.Array<Y.Map<unknown>>;
-  triggersArray: Y.Array<Y.Map<unknown>>;
-  getYjsJob: (id: string) => Y.Map<unknown> | null;
-  getJobBodyText: (id: string) => Y.Text | null;
-  getYjsTrigger: (id: string) => Y.Map<unknown> | null;
-  updateTrigger: (id: string, updates: Partial<Session.Trigger>) => void;
-  setEnabled: (enabled: boolean) => void;
 }
