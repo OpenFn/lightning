@@ -1,5 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
+import { useWorkflowEnabled } from "../hooks/Workflow";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { Switch } from "./inputs/Switch";
 
@@ -15,10 +15,8 @@ const userNavigation = [
 ];
 
 export function Header({ children }: { children: React.ReactNode[] }) {
-  const { enabled, setEnabled } = useWorkflowStore((state) => ({
-    enabled: state.enabled,
-    setEnabled: state.setEnabled,
-  }));
+  // Separate queries and commands for proper CQS
+  const { enabled, setEnabled } = useWorkflowEnabled();
 
   return (
     <div className="flex-none bg-white shadow-xs border-b border-gray-200">
