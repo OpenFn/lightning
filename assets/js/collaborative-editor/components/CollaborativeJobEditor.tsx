@@ -13,7 +13,7 @@ import Docs from "../../adaptor-docs/Docs";
 import { Tabs } from "../../components/Tabs";
 import Metadata from "../../metadata-explorer/Explorer";
 import { useSession } from "../contexts/SessionProvider";
-import { useWorkflowStore } from "../contexts/WorkflowStoreProvider";
+import { useWorkflowSelector } from "../hooks/Workflow";
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 
@@ -57,8 +57,6 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
   metadata,
 }) => {
   const { awareness } = useSession();
-  const { getJobBodyYText } = useWorkflowStore();
-
   const [vertical, setVertical] = useState(
     () => settings[SettingsKeys.ORIENTATION] === "v",
   );
@@ -67,12 +65,14 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
   );
   const [selectedTab, setSelectedTab] = useState("docs");
 
-  // Get Y.Text for this job from WorkflowStore
-  const jobBodyYText = useMemo(() => {
-    if (!jobId) return null;
-    const ytext = getJobBodyYText(jobId);
-    return ytext;
-  }, [jobId, getJobBodyYText]);
+  // Get Y.Text for this job using useWorkflowSelector for store method access
+  const jobBodyYText = useWorkflowSelector(
+    (state, store) => {
+      if (!jobId) return null;
+      return store.getJobBodyYText(jobId);
+    },
+    [jobId],
+  );
 
   const toggleOrientiation = useCallback(() => {
     setVertical(!vertical);
