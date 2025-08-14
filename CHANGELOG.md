@@ -19,10 +19,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.14.1] - 2025-08-14
+
+### Changed
+
 - Removed impeded project metric until performance improvements can be made.
   [#3519](https://github.com/OpenFn/lightning/issues/3519)
-
-### Fixed
 
 ## [v2.14.1-pre2] - 2025-08-12
 
