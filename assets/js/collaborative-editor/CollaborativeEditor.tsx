@@ -7,7 +7,13 @@ import { Header } from "./components/Header";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { WorkflowStoreProvider } from "./contexts/WorkflowStoreProvider";
-import type { CollaborativeEditorDataProps } from "./types/workflow";
+
+export interface CollaborativeEditorDataProps {
+  "data-workflow-id": string;
+  "data-workflow-name": string;
+  "data-user-id": string;
+  "data-user-name": string;
+}
 
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps

@@ -1,6 +1,5 @@
 /**
  * WorkflowEditor - Main workflow editing component
- * Replaces TodoList with workflow-specific functionality
  */
 
 import type React from "react";
