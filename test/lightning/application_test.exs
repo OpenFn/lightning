@@ -36,7 +36,7 @@ defmodule Lightning.ApplicationTest do
     end
   end
 
-  describe "add_additional_libcluster_topology/2" do
+  describe "add_additional_libcluster_topology/3" do
     setup do
       topologies =
         [
@@ -53,10 +53,11 @@ defmodule Lightning.ApplicationTest do
       %{topologies: topologies}
     end
 
-    test "adds libcluster_postgres if cross-clusters comms are required", %{
+    test "adds libcluster_postgres if discovery via postgres is required", %{
       topologies: input_topologies
     } do
-      cross_cluster_comms_required = true
+      discovery_via_postgres_enabled = true
+      channel_name = "my-lightning-channel"
 
       expected_topologies = [
         dns: [
@@ -67,12 +68,12 @@ defmodule Lightning.ApplicationTest do
             polling_interval: 5_000
           ]
         ],
-        cross_cluster: [
+        postgres: [
           strategy: LibclusterPostgres.Strategy,
           config:
             Keyword.merge(
               Lightning.Repo.config(),
-              channel_name: "lightning-cluster"
+              channel_name: channel_name
             )
         ]
       ]
@@ -80,7 +81,8 @@ defmodule Lightning.ApplicationTest do
       actual_topologies =
         Lightning.Application.add_additional_libcluster_topology(
           input_topologies,
-          cross_cluster_comms_required
+          discovery_via_postgres_enabled,
+          channel_name
         )
 
       assert actual_topologies == expected_topologies
@@ -89,12 +91,14 @@ defmodule Lightning.ApplicationTest do
     test "does not add libcluster_postgres if not required", %{
       topologies: input_topologies
     } do
-      cross_cluster_comms_required = false
+      discovery_via_postgres_enabled = false
+      channel_name = "my-lightning-channel"
 
       actual_topologies =
         Lightning.Application.add_additional_libcluster_topology(
           input_topologies,
-          cross_cluster_comms_required
+          discovery_via_postgres_enabled,
+          channel_name
         )
 
       assert actual_topologies == input_topologies
