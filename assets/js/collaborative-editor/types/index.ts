@@ -1,5 +1,6 @@
 import type * as Y from "yjs";
 import type { Session } from "./session";
+import type { Trigger as TriggerType } from "./trigger";
 
 // Generic store interface for Zustand stores with Immer middleware
 export interface Store<T> {
@@ -31,13 +32,7 @@ export namespace Workflow {
     // ... other existing fields
   }
 
-  export interface Trigger {
-    id: string;
-    name: string;
-    type: string;
-    enabled: boolean;
-    // ... other existing fields
-  }
+  export type Trigger = TriggerType;
 
   export interface Edge {
     id: string;
