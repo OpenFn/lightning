@@ -172,7 +172,9 @@ export const createWorkflowStore = () => {
   const listeners = new Set<() => void>();
 
   const notify = () => {
-    listeners.forEach((listener) => listener());
+    listeners.forEach((listener) => {
+      listener();
+    });
   };
 
   const subscribe = (listener: () => void) => {
@@ -269,7 +271,9 @@ export const createWorkflowStore = () => {
 
   // Disconnect Y.Doc and clean up observers
   const disconnectYDoc = () => {
-    observerCleanups.forEach((cleanup) => cleanup());
+    observerCleanups.forEach((cleanup) => {
+      cleanup();
+    });
     observerCleanups = [];
     ydoc = null;
 

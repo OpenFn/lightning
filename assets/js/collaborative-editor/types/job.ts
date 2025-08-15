@@ -1,13 +1,5 @@
 import { z } from "zod";
-
-/**
- * Comprehensive Job validation schema following Lightning's backend validation
- * rules. This replaces the simple Job type and provides runtime validation
- * for all job fields with proper error messages that match the backend.
- */
-
-// UUID validation helper
-const uuidSchema = z.uuid({ message: "Invalid UUID format" }).optional();
+import { isoDateTimeSchema, uuidSchema } from "./common";
 
 // NPM package format validation for adaptor field
 const adaptorSchema = z
@@ -33,8 +25,8 @@ export const JobSchema = z
     adaptor: adaptorSchema.default("@openfn/language-common@latest"),
 
     // Credential fields (mutually exclusive)
-    project_credential_id: uuidSchema,
-    keychain_credential_id: uuidSchema,
+    project_credential_id: uuidSchema.nullable(),
+    keychain_credential_id: uuidSchema.nullable(),
 
     // Association fields
     workflow_id: uuidSchema,
@@ -43,12 +35,8 @@ export const JobSchema = z
     delete: z.boolean().optional(),
 
     // Timestamps (optional for new jobs)
-    inserted_at: z.iso
-      .datetime({ message: "Invalid datetime format" })
-      .optional(),
-    updated_at: z.iso
-      .datetime({ message: "Invalid datetime format" })
-      .optional(),
+    inserted_at: isoDateTimeSchema.optional(),
+    updated_at: isoDateTimeSchema.optional(),
 
     // Additional fields that may be needed for UI state
     enabled: z.boolean().default(true),

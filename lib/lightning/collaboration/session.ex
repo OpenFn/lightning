@@ -202,7 +202,9 @@ defmodule Lightning.Collaboration.Session do
                 "id" => job.id,
                 "name" => job.name || "",
                 "body" => Yex.TextPrelim.from(job.body || ""),
-                "adaptor" => job.adaptor
+                "adaptor" => job.adaptor,
+                "project_credential_id" => job.project_credential_id,
+                "keychain_credential_id" => job.keychain_credential_id
               })
 
             Yex.Array.push(jobs_array, job_map)
