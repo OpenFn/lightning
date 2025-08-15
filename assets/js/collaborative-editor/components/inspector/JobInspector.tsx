@@ -1,6 +1,9 @@
+import { useStore } from "@tanstack/react-form";
 import type React from "react";
+import { useCallback, useMemo } from "react";
 import type { ZodSchema } from "zod";
 import { useAppForm } from "#/collaborative-editor/components/form";
+import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import { useWorkflowActions } from "#/collaborative-editor/hooks/Workflow";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
@@ -32,15 +35,94 @@ const createZodValidator = <T, S extends ZodSchema>(schema: S) => {
   };
 };
 
+/**
+ * Resolves an adaptor specifier into its package name and version
+ * @param adaptor - Full NPM package string like "@openfn/language-common@1.4.3"
+ * @returns Tuple of package name and version, or null if parsing fails
+ */
+function resolveAdaptor(adaptor: string): {
+  package: string | null;
+  version: string | null;
+} {
+  const regex = /^(@[^@]+)@(.+)$/;
+  const match = adaptor.match(regex);
+  if (!match) return { package: null, version: null };
+  const [, packageName, version] = match;
+
+  return {
+    package: packageName || null,
+    version: version || null,
+  };
+}
+
+function extractAdaptorName(str: string): string | null {
+  const match = str.match(/language-(.+)$/);
+  return match ? match[1] || null : null;
+}
+
+function useAdaptorVersionOptions(adaptorPackage: string | null) {
+  const adaptors = useAdaptors();
+
+  const adaptor = useMemo(() => {
+    if (!adaptorPackage) return null;
+    return adaptors.find((adaptor) => adaptor.name === adaptorPackage) || null;
+  }, [adaptorPackage, adaptors]);
+
+  const adaptorVersionOptions = useMemo(() => {
+    if (!adaptorPackage || !adaptor) return [];
+
+    return [
+      {
+        value: `${adaptor.name}@latest`,
+        label: `latest (≥ ${adaptor.latest})`,
+      },
+      ...adaptor.versions.map(({ version }) => ({
+        value: `${adaptor.name}@${version}`,
+        label: version,
+      })),
+    ];
+  }, [adaptorPackage, adaptor]);
+
+  const getLatestVersion = useCallback(
+    (packageName: string) => {
+      const adaptor = adaptors.find((adaptor) => adaptor.name === packageName);
+      if (!adaptor) return null;
+      return `${adaptor.name}@${adaptor.latest}`;
+    },
+    [adaptors],
+  );
+
+  const adaptorPackageOptions = useMemo(() => {
+    return adaptors
+      .map((adaptor) => {
+        const label = extractAdaptorName(adaptor.name);
+        if (!label) return null;
+        return {
+          value: adaptor.name,
+          label,
+        };
+      })
+      .filter((option) => option !== null);
+  }, [adaptors]);
+
+  return { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion };
+}
+
 export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
   const { updateJob } = useWorkflowActions();
+
+  // Parse initial adaptor value to get separate package and version
+  const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
+  const { package: initialAdaptorPackage } = resolveAdaptor(initialAdaptor);
 
   const form = useAppForm({
     defaultValues: {
       id: job.id || "",
       name: job.name || "",
       body: job.body || "",
-      adaptor: job.adaptor || "@openfn/language-common@latest",
+      adaptor: initialAdaptor,
+      // Virtual fields for UI only
+      adaptor_package: initialAdaptorPackage,
       project_credential_id: job.project_credential_id || undefined,
       keychain_credential_id: job.keychain_credential_id || undefined,
       workflow_id: job.workflow_id || undefined,
@@ -61,6 +143,14 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
     },
   });
 
+  const adaptorPackage = useStore(
+    form.store,
+    (state) => state.values.adaptor_package,
+  );
+
+  const { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion } =
+    useAdaptorVersionOptions(adaptorPackage);
+
   return (
     <div className="">
       <div className="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
@@ -69,7 +159,56 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
             {(field) => <field.TextField label="Name" />}
           </form.AppField>
         </div>
+
+        {/* Adaptor Package Dropdown */}
+        <div className="col-span-6">
+          <form.AppField
+            name="adaptor_package"
+            listeners={{
+              onChange: ({ value, fieldApi }) => {
+                if (value) {
+                  const latestVersion = getLatestVersion(value);
+                  if (latestVersion) {
+                    fieldApi.form.setFieldValue("adaptor", latestVersion);
+                  }
+                }
+              },
+            }}
+          >
+            {(field) => (
+              <field.SelectField
+                label="Adaptor"
+                options={adaptorPackageOptions}
+              />
+            )}
+          </form.AppField>
+        </div>
+
+        {/* Adaptor Version Dropdown - dependent on package selection */}
+        <div className="col-span-6">
+          <form.AppField name="adaptor">
+            {(field) => {
+              return (
+                <field.SelectField
+                  label="Version"
+                  options={adaptorVersionOptions}
+                />
+              );
+            }}
+          </form.AppField>
+        </div>
+
+        {/* Display current full adaptor specifier for debugging */}
+        <div className="col-span-6">
+          <span className="text-xs text-gray-500 mb-1 block">
+            Current Adaptor Specifier
+          </span>
+          <div className="bg-gray-50 p-2 rounded text-xs font-mono">
+            <code className="text-gray-700">{form.state.values.adaptor}</code>
+          </div>
+        </div>
       </div>
+
       <div className="col-span-6">
         <label htmlFor="body" className="text-xs text-gray-500 mb-1 block">
           Body Preview

@@ -26,7 +26,7 @@ export interface SessionContextValue {
   users: AwarenessUser[];
 
   // Adaptor management
-  adaptorStore: AdaptorStoreInstance | null;
+  adaptorStore: AdaptorStoreInstance;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
