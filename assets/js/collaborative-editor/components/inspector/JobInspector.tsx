@@ -1,5 +1,6 @@
-import { useForm } from "@tanstack/react-form";
 import type React from "react";
+import type { ZodSchema } from "zod";
+import { useAppForm } from "#/collaborative-editor/components/form";
 import { useWorkflowActions } from "#/collaborative-editor/hooks/Workflow";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
@@ -15,7 +16,7 @@ interface JobInspectorProps {
  * @param schema - Zod schema to use for validation
  * @returns TanStack Form compatible validator function
  */
-const createZodValidator = <T,>(schema: any) => {
+const createZodValidator = <T, S extends ZodSchema>(schema: S) => {
   return ({ value }: { value: T }) => {
     const result = schema.safeParse(value);
     if (!result.success) {
@@ -34,7 +35,7 @@ const createZodValidator = <T,>(schema: any) => {
 export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
   const { updateJob } = useWorkflowActions();
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: {
       id: job.id || "",
       name: job.name || "",
@@ -64,41 +65,9 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
     <div className="">
       <div className="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
         <div className="col-span-6">
-          <form.Field name="name">
-            {(field) => (
-              <div>
-                <label
-                  htmlFor={field.name}
-                  className="text-xs text-gray-500 mb-1 block"
-                >
-                  Name
-                </label>
-                <input
-                  type="text"
-                  id={field.name}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6 phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 border-slate-300 focus:border-slate-400 focus:outline-indigo-600"
-                />
-                {field.state.meta.errors?.map((error, i) => {
-                  const errorMessage =
-                    typeof error === "string"
-                      ? error
-                      : (error as any)?.message || "Invalid input";
-                  return (
-                    <p
-                      key={`error-${field.name}-${i}`}
-                      data-tag="error_message"
-                      className="mt-1 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
-                    >
-                      <span className="hero-exclamation-circle size-4"></span>
-                      {errorMessage}
-                    </p>
-                  );
-                }) || null}
-              </div>
-            )}
-          </form.Field>
+          <form.AppField name="name">
+            {(field) => <field.TextField label="Name" />}
+          </form.AppField>
         </div>
       </div>
       <div className="col-span-6">
