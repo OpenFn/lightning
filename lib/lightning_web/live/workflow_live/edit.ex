@@ -257,7 +257,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               class={[
                 "fixed left-0 top-0 right-0 bottom-0 flex-wrap",
                 "hidden opacity-0",
-                "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
+                "bg-white inset-0 z-45 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
               ]}
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
@@ -2619,8 +2619,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       changeset: prev_changeset,
       workflow: workflow,
-      selected_job: selected_job,
-      show_workflow_ai_chat: show_workflow_ai_chat
+      selected_job: selected_job
     } = socket.assigns
 
     if job_deleted?(selected_job, workflow) do
@@ -2635,10 +2634,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       prev_params = WorkflowParams.to_map(prev_changeset)
       next_params = WorkflowParams.to_map(next_changeset)
 
-      remove_ai_method = fn params ->
-        Enum.reject(params, &(&1 == {"method", "ai"}))
-      end
-
       if version != "latest" do
         Presence.untrack_user_presence(
           socket.assigns.current_user,
@@ -2647,20 +2642,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
         )
       end
 
-      {url_params, show_workflow_ai_chat} =
-        case {version, show_workflow_ai_chat} do
-          {"latest", true} ->
-            {Helpers.to_latest_params(), true}
-
-          {_latest_or_snapshot, _show_workflow_ai_chat} ->
-            {Helpers.to_latest_params() |> remove_ai_method.(), false}
-        end
+      url_params =
+        Helpers.to_latest_params()
+        |> Enum.reject(fn
+          [name: "method", value: _] -> true
+          [name: "w-chat", value: _] -> true
+          [name: "j-chat", value: _] -> true
+          _ -> false
+        end)
 
       socket
       |> assign(changeset: next_changeset)
       |> assign(workflow_params: next_params)
       |> assign(snapshot_version_tag: version)
-      |> assign(show_workflow_ai_chat: show_workflow_ai_chat)
       |> push_patches_applied(prev_params)
       |> maybe_disable_canvas()
       |> push_patch(to: Helpers.build_url(socket.assigns, url_params))
