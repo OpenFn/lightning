@@ -4,11 +4,13 @@
  */
 
 import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as awarenessProtocol from "y-protocols/awareness";
 import * as Y from "yjs";
 import { useSocket } from "../../react/contexts/SocketProvider";
+import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
+import { createAdaptorStore } from "../stores/createAdaptorStore";
 import type { AwarenessUser } from "../types/session";
 
 export interface SessionContextValue {
@@ -22,6 +24,9 @@ export interface SessionContextValue {
 
   // User awareness
   users: AwarenessUser[];
+
+  // Adaptor management
+  adaptorStore: AdaptorStoreInstance | null;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -61,6 +66,12 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
   const [users, setUsers] = useState<AwarenessUser[]>([]);
   const [isProviderConnected, setIsProviderConnected] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
+
+  // Adaptor store - created once and reused
+  const adaptorStoreRef = useRef<AdaptorStoreInstance | null>(null);
+  if (!adaptorStoreRef.current) {
+    adaptorStoreRef.current = createAdaptorStore();
+  }
 
   // Initialize Yjs when socket is connected
   useEffect(() => {
@@ -173,8 +184,21 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       channelProvider,
       (isConnected) => {
         setIsProviderConnected(isConnected);
+
+        // Request adaptors when channel is successfully joined
+        if (isConnected && adaptorStoreRef.current) {
+          console.log("🎯 Channel joined, requesting adaptors");
+          adaptorStoreRef.current.requestAdaptors();
+        }
       },
     );
+
+    // Connect adaptor store to channel provider for real-time updates
+    let cleanupAdaptorChannel: (() => void) | undefined;
+    if (adaptorStoreRef.current) {
+      cleanupAdaptorChannel =
+        adaptorStoreRef.current._internal.connectChannel(channelProvider);
+    }
 
     // Store state
     setYdoc(doc);
@@ -193,6 +217,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
       cleanupJoinListener();
       cleanupLastSeenTimer();
+      cleanupAdaptorChannel?.();
 
       channelProvider.off("status", statusHandler);
       channelProvider.off("sync", syncHandler);
@@ -214,6 +239,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     isConnected: isProviderConnected,
     isSynced,
     users,
+    adaptorStore: adaptorStoreRef.current,
   };
 
   return (
@@ -246,17 +272,40 @@ function setupJoinListener(
   channelProvider: PhoenixChannelProvider,
   callback: (isConnected: boolean) => void,
 ) {
-  const ref = channelProvider.channel?.on("phx_reply", (payload, ref) => {
-    if (
-      payload.status === "ok" &&
-      channelProvider.channel?.state === "joined"
-    ) {
+  // TODO: don't bother setting up a listener if unless we are _not_ in a joined
+  // state.
+  // TODO: need to see what happens when the socket disconnects.
+  const onJoinReceived = () => {
+    if (channelProvider.channel?.state === "joined") {
       callback(true);
     }
-  });
+  };
+  channelProvider.channel?.joinPush.receive("ok", onJoinReceived);
+
+  // let hasTriggered = false;
+  // const ref = channelProvider.channel?.on(
+  //   "phx_reply",
+  //   (payload: { status: string }, _ref: number) => {
+  //     if (
+  //       !hasTriggered &&
+  //       payload.status === "ok" &&
+  //     ) {e
+  //       hasTriggered = true;
+  //       callback(true);
+  //     }
+  //   },
+  // );
 
   return () => {
-    channelProvider.channel?.off("phx_reply", ref);
+    const hook = channelProvider.channel?.joinPush.recHooks.find(
+      (hook) => hook.callback === onJoinReceived,
+    );
+    if (hook) {
+      channelProvider.channel?.joinPush.recHooks.splice(
+        channelProvider.channel?.joinPush.recHooks.indexOf(hook),
+        1,
+      );
+    }
   };
 }
 

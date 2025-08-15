@@ -52,6 +52,12 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("request_adaptors", _payload, socket) do
+    adaptors = Lightning.AdaptorRegistry.all()
+    {:reply, {:ok, %{adaptors: adaptors}}, socket}
+  end
+
+  @impl true
   def handle_in("yjs_sync", {:binary, chunk}, socket) do
     Session.start_sync(socket.assigns.session_pid, chunk)
     {:noreply, socket}
