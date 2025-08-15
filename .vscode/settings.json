@@ -24,10 +24,5 @@
   },
   "emmet.includeLanguages": {
     "phoenix-heex": "html"
-  },
-  "biome.configurationPath": "./assets/biome.json",
-  "biome.lsp.bin": {
-    "linux-x64": "assets/node_modules/.bin/biome",
-    "darwin-arm64": "assets/node_modules/.bin/biome"
   }
 }
