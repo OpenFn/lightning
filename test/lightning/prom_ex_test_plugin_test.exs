@@ -12,16 +12,50 @@ defmodule Lightning.PromExPluginTest do
              ] = PromExTestPlugin.event_metrics([])
     end
 
-    test "returns event metrics useful for manual/integration testing" do
-      [%{metrics: [metric]}] = PromExTestPlugin.event_metrics([])
+    test "contains a counter metric for test purposes" do
+      expected_name = [:lightning, :prom_ex_test, :count]
 
-      assert %Telemetry.Metrics.Counter{} = metric
-      assert metric.name == [:lightning, :prom_ex_test, :count]
+      expected_description =
+        "A counter that can be triggered arbitrarily for test purposes."
 
-      assert metric.description ==
-               "A counter that can be triggered arbitrarily for test purposes."
+      PromExTestPlugin.event_metrics([])
+      |> assert_counter(expected_name, expected_description)
+    end
 
-      assert metric.tags == []
+    test "contains a last value metric for test purposes" do
+      expected_name = [:lightning, :prom_ex_test, :last_value]
+
+      expected_description =
+        "A gauge that can be triggered arbitrarily for test purposes."
+
+      PromExTestPlugin.event_metrics([])
+      |> assert_last_value(expected_name, expected_description)
+    end
+
+    def assert_counter([%{metrics: metrics}], name, description) do
+      assert [counter] =
+               metrics
+               |> Enum.filter(fn
+                 %Telemetry.Metrics.Counter{} -> true
+                 _ -> false
+               end)
+
+      assert counter.name == name
+      assert counter.description == description
+      assert counter.tags == []
+    end
+
+    def assert_last_value([%{metrics: metrics}], name, description) do
+      assert [last_value] =
+               metrics
+               |> Enum.filter(fn
+                 %Telemetry.Metrics.LastValue{} -> true
+                 _ -> false
+               end)
+
+      assert last_value.name == name
+      assert last_value.description == description
+      assert last_value.tags == []
     end
   end
 
@@ -54,6 +88,23 @@ defmodule Lightning.PromExPluginTest do
         ^event,
         ^ref,
         %{count: 1},
+        %{}
+      }
+    end
+  end
+
+  describe "fire_gauge_event/1" do
+    test "sets the gauge event value" do
+      event = [:lightning, :prom_ex_test]
+
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      PromExTestPlugin.fire_gauge_event(42)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{last_value: 42},
         %{}
       }
     end

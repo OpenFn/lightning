@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Add test gauge metric that can be used to set arbitrary values for the purposes
+  of triggering behaviour in metric consumers.
+  [3510](https://github.com/OpenFn/lightning/issues/3510)
+
 ### Changed
 
 ### Fixed
