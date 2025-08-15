@@ -7,9 +7,7 @@ import { z } from "zod";
  */
 
 // UUID validation helper
-const uuidSchema = z
-  .uuid({ message: "Invalid UUID format" })
-  .optional();
+const uuidSchema = z.uuid({ message: "Invalid UUID format" }).optional();
 
 // NPM package format validation for adaptor field
 const adaptorSchema = z
