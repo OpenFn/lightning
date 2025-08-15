@@ -82,7 +82,9 @@ export const createAdaptorStore = (): AdaptorStore => {
   const listeners = new Set<() => void>();
 
   const notify = () => {
-    listeners.forEach((listener) => listener());
+    listeners.forEach((listener) => {
+      listener();
+    });
   };
 
   // =============================================================================
@@ -129,8 +131,14 @@ export const createAdaptorStore = (): AdaptorStore => {
     const result = AdaptorsListSchema.safeParse(rawData);
 
     if (result.success) {
+      const adaptors = result.data;
+      for (const adaptor of adaptors) {
+        adaptor.versions.sort((a, b) => b.version.localeCompare(a.version));
+      }
+      adaptors.sort((a, b) => a.name.localeCompare(b.name));
+
       state = produce(state, (draft) => {
-        draft.adaptors = result.data;
+        draft.adaptors = adaptors;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();

@@ -5,7 +5,10 @@ export function TextField({ label }: { label: string }) {
   const field = useFieldContext<string>();
   return (
     <div>
-      <label htmlFor={field.name} className="text-xs text-gray-500 mb-1 block">
+      <label
+        htmlFor={field.name}
+        className="text-sm/6 font-medium text-slate-800 mb-2"
+      >
         {label}
       </label>
       <input

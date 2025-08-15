@@ -5,7 +5,7 @@
  * from the SessionProvider context using the useSyncExternalStore pattern.
  */
 
-import { useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useSession } from "../contexts/SessionProvider";
 import type { Adaptor, AdaptorState } from "../types/adaptor";
 
@@ -17,28 +17,50 @@ export const useAdaptorState = (): AdaptorState | null => {
   const { adaptorStore } = useSession();
 
   return useSyncExternalStore(
-    adaptorStore?.subscribe ?? (() => () => {}),
-    adaptorStore?.getSnapshot ?? (() => null),
-    adaptorStore?.getSnapshot ?? (() => null), // SSR snapshot
+    adaptorStore.subscribe ?? (() => () => {}),
+    adaptorStore.getSnapshot ?? (() => null),
+    adaptorStore.getSnapshot ?? (() => null), // SSR snapshot
   );
 };
 
-/**
- * Hook to get just the adaptors list
- * Automatically memoized for referential stability
- */
-export const useAdaptors = () => {
+function defaultSelector(state: AdaptorState): Adaptor[] {
+  return state.adaptors;
+}
+
+export function useAdaptors(): Adaptor[];
+export function useAdaptors<T>(
+  selector: (state: AdaptorState) => T,
+  deps?: React.DependencyList,
+): T;
+
+export function useAdaptors<T = Adaptor[]>(
+  selector: (state: AdaptorState) => T = defaultSelector as (
+    state: AdaptorState,
+  ) => T,
+  deps: React.DependencyList = [],
+): T {
   const { adaptorStore } = useSession();
 
-  const selector = adaptorStore?.withSelector((state) => state.adaptors);
+  const memoizedSelector = useMemo(() => {
+    let lastState: AdaptorState | undefined;
+    let lastResult: T;
 
-  return useSyncExternalStore(
-    adaptorStore?.subscribe ?? (() => () => {}),
-    selector ?? (() => []),
-    selector ?? (() => []), // SSR snapshot
+    return (state: AdaptorState): T => {
+      if (state !== lastState) {
+        lastResult = selector(state);
+        lastState = state;
+      }
+      return lastResult;
+    };
+  }, [selector, ...deps]);
+
+  const getSnapshot = useCallback(
+    () => memoizedSelector(adaptorStore.getSnapshot()),
+    [adaptorStore, memoizedSelector],
   );
-};
 
+  return useSyncExternalStore(adaptorStore.subscribe, getSnapshot);
+}
 /**
  * Hook to get loading state
  */
@@ -48,7 +70,7 @@ export const useAdaptorsLoading = (): boolean => {
   const selector = adaptorStore?.withSelector((state) => state.isLoading);
 
   return useSyncExternalStore(
-    adaptorStore?.subscribe ?? (() => () => {}),
+    adaptorStore.subscribe ?? (() => () => {}),
     selector ?? (() => false),
     selector ?? (() => false), // SSR snapshot
   );
@@ -63,7 +85,7 @@ export const useAdaptorsError = (): string | null => {
   const selector = adaptorStore?.withSelector((state) => state.error);
 
   return useSyncExternalStore(
-    adaptorStore?.subscribe ?? (() => () => {}),
+    adaptorStore.subscribe ?? (() => () => {}),
     selector ?? (() => null),
     selector ?? (() => null), // SSR snapshot
   );
@@ -107,7 +129,7 @@ export const useAdaptor = (name: string): Adaptor | null => {
   );
 
   return useSyncExternalStore(
-    adaptorStore?.subscribe ?? (() => () => {}),
+    adaptorStore.subscribe ?? (() => () => {}),
     selector ?? (() => null),
     selector ?? (() => null), // SSR snapshot
   );
