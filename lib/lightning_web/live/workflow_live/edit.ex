@@ -1675,6 +1675,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do
+    dbg(type)
+
     updated_socket =
       case type do
         "commit" -> commit_latest_version(socket)
@@ -2650,10 +2652,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {"latest", true} ->
             {Helpers.to_latest_params(), true}
 
-          {"latest", false} ->
-            {Helpers.to_latest_params() |> remove_ai_method.(), false}
-
-          {_snapshot, _} ->
+          {_latest_or_snapshot, _show_workflow_ai_chat} ->
             {Helpers.to_latest_params() |> remove_ai_method.(), false}
         end
 
@@ -2677,7 +2676,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     url_params =
       Helpers.orthogonal_params()
       |> Enum.reject(fn
-        {"method", "ai"} -> true
+        [name: "method", value: _] -> true
+        [name: "w-chat", value: _] -> true
+        [name: "j-chat", value: _] -> true
         _ -> false
       end)
 
