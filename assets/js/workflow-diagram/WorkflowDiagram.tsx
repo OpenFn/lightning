@@ -28,8 +28,12 @@ import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
 import { getVisibleRect, isPointInRect } from './util/viewport';
+import { AiAssistantToggle } from './AiAssistantToggle';
 
-const controlButtonStyle = (disabled: boolean) => disabled ? { background: "#eee", cursor: "not-allowed", color: "#818181" } : { color: "#000" };
+const controlButtonStyle = (disabled: boolean) =>
+  disabled
+    ? { background: '#eee', cursor: 'not-allowed', color: '#818181' }
+    : { color: '#000' };
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -41,6 +45,10 @@ type WorkflowDiagramProps = {
   onCollapseHistory: () => void;
   showAiAssistant?: boolean;
   aiAssistantId?: string;
+  canEditWorkflow?: boolean;
+  snapshotVersionTag?: string;
+  aiAssistantEnabled?: boolean;
+  liveAction?: string;
 };
 
 type ChartCache = {
@@ -51,7 +59,6 @@ type ChartCache = {
 };
 
 const LAYOUT_DURATION = 300;
-
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const {
@@ -69,7 +76,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   } = useWorkflowStore();
   const isManualLayout = !!fixedPositions;
   // value of select in props seems same as select in store. one in props is always set on initial render. (helps with refresh)
-  const { selection, onSelectionChange, containerEl: el, onRunChange, onCollapseHistory } = props;
+  const {
+    selection,
+    onSelectionChange,
+    containerEl: el,
+    onRunChange,
+    onCollapseHistory,
+    showAiAssistant = false,
+    aiAssistantId,
+    canEditWorkflow = true,
+    snapshotVersionTag = 'latest',
+    aiAssistantEnabled = true,
+    liveAction = 'edit',
+    onToggleAiAssistant,
+  } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   const [drawerWidth, setDrawerWidth] = useState(0);
@@ -91,8 +111,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // on option 2. chartCache isn't updated. Hence we call updateSelection to do that
   useEffect(() => {
     // we know selection from server has changed when it's not equal to the one on client
-    if (selection !== chartCache.current.lastSelection) updateSelection(selection);
-  }, [selection, updateSelection])
+    if (selection !== chartCache.current.lastSelection)
+      updateSelection(selection);
+  }, [selection, updateSelection]);
 
   const {
     placeholders,
@@ -114,29 +135,33 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // Check for snapshot mismatch (more run steps than visible nodes)
   const hasSnapshotMismatch = React.useMemo(() => {
     if (!runSteps.start_from || runSteps.steps.length === 0) return false;
-    
+
     const visibleNodeIds = new Set([
       ...jobs.map(job => job.id),
-      ...triggers.map(trigger => trigger.id)
+      ...triggers.map(trigger => trigger.id),
     ]);
-    
+
     const runStepJobIds = new Set(runSteps.steps.map(step => step.job_id));
-    const missingNodeIds = [...runStepJobIds].filter(id => !visibleNodeIds.has(id));
-    
+    const missingNodeIds = [...runStepJobIds].filter(
+      id => !visibleNodeIds.has(id)
+    );
+
     return missingNodeIds.length > 0;
   }, [runSteps, jobs, triggers]);
 
   const missingNodeCount = React.useMemo(() => {
     if (!hasSnapshotMismatch) return 0;
-    
+
     const visibleNodeIds = new Set([
       ...jobs.map(job => job.id),
-      ...triggers.map(trigger => trigger.id)
+      ...triggers.map(trigger => trigger.id),
     ]);
-    
+
     const runStepJobIds = new Set(runSteps.steps.map(step => step.job_id));
-    const missingNodeIds = [...runStepJobIds].filter(id => !visibleNodeIds.has(id));
-    
+    const missingNodeIds = [...runStepJobIds].filter(
+      id => !visibleNodeIds.has(id)
+    );
+
     return missingNodeIds.length;
   }, [hasSnapshotMismatch, runSteps, jobs, triggers]);
 
@@ -235,13 +260,22 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, isManualLayout, fixedPositions, selection, runSteps]);
+  }, [
+    workflow,
+    flow,
+    placeholders,
+    el,
+    isManualLayout,
+    fixedPositions,
+    selection,
+    runSteps,
+  ]);
 
   // This effect only runs when AI assistant visibility changes, not on every selection change
   useEffect(() => {
     if (!props.showAiAssistant) {
       setDrawerWidth(0);
-      
+
       // Fit view when AI assistant panel closes
       if (flow && model.nodes.length > 0) {
         setTimeout(() => {
@@ -252,7 +286,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           });
         }, 510);
       }
-      
+
       return;
     }
 
@@ -276,7 +310,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         });
         observer.observe(drawer);
         setDrawerWidth(drawer.getBoundingClientRect().width);
-        
+
         // Fit view when AI assistant panel opens
         if (flow && model.nodes.length > 0) {
           setTimeout(() => {
@@ -302,12 +336,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (props.forceFit && flow && model.nodes.length > 0) {
       // Immediately fit to bounds when forceFit becomes true
       const bounds = getNodesBounds(model.nodes);
-      flow.fitBounds(bounds, {
-        duration: FIT_DURATION,
-        padding: FIT_PADDING,
-      }).catch((error) => {
-        console.error('Failed to fit bounds:', error);
-      });
+      flow
+        .fitBounds(bounds, {
+          duration: FIT_DURATION,
+          padding: FIT_PADDING,
+        })
+        .catch(error => {
+          console.error('Failed to fit bounds:', error);
+        });
     }
   }, [props.forceFit, flow, model.nodes]);
 
@@ -445,7 +481,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   React.useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
       const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z';
-      const isRedo = ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
+      const isRedo =
+        ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
         ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z');
 
       if (isUndo) {
@@ -456,18 +493,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         e.preventDefault();
         redo();
       }
-    }
+    };
     window.addEventListener('keydown', keyHandler);
-    return () => { window.removeEventListener('keydown', keyHandler); }
+    return () => {
+      window.removeEventListener('keydown', keyHandler);
+    };
   }, [redo, undo]);
-
-  // Update AI Assistant toggle button position when drawerWidth changes
-  React.useEffect(() => {
-    const aiToggle = document.getElementById('workflow-ai-chat-toggle-floating');
-    if (aiToggle) {
-      aiToggle.style.transform = `translateX(${drawerWidth}px)`;
-    }
-  }, [drawerWidth]);
 
   return (
     <ReactFlowProvider>
@@ -549,7 +580,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           >
             <span className="hero-arrow-uturn-right w-4 h-4" />
           </ControlButton>
-
         </Controls>
         <Background />
         <MiniMap
@@ -559,6 +589,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           nodeComponent={MiniMapNode}
         />
       </ReactFlow>
+      <AiAssistantToggle
+        showAiAssistant={showAiAssistant || false}
+        canEditWorkflow={canEditWorkflow || true}
+        snapshotVersionTag={snapshotVersionTag || "latest"}
+        aiAssistantEnabled={aiAssistantEnabled || true}
+        liveAction={liveAction || "edit"}
+        drawerWidth={drawerWidth}
+      />
       <MiniHistory
         collapsed={!runSteps.start_from}
         history={someHistory}
@@ -568,7 +606,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         hasSnapshotMismatch={hasSnapshotMismatch}
         missingNodeCount={missingNodeCount}
       />
-
-    </ReactFlowProvider >
+    </ReactFlowProvider>
   );
 }

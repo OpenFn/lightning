@@ -137,7 +137,7 @@ export default function MiniHistory({
 
   return (
     <div
-      className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40}`}
+      className={`absolute left-4 top-16 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden z-40`}
       style={{
         transform: `translateX(${drawerWidth.toString()}px)`,
         transition: 'transform 300ms ease-in-out',
@@ -154,6 +154,7 @@ export default function MiniHistory({
             {isCollapsed ? 'View History' : 'Recent History'}
           </h3>
           <button
+            id="view-history"
             type="button"
             className="text-gray-400 hover:text-gray-600 transition-colors flex items-center"
             phx-hook="Tooltip"

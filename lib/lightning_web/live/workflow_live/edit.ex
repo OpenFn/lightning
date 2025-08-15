@@ -45,6 +45,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :selection, :string, required: false
   attr :aiAssistantId, :string, required: false
   attr :showAiAssistant, :boolean, default: false
+  attr :canEditWorkflow, :boolean, default: true
+  attr :snapshotVersionTag, :string, default: "latest"
+  attr :aiAssistantEnabled, :boolean, default: true
+  attr :liveAction, :string, default: "edit"
+
   jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
@@ -240,62 +245,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
             can_edit={@can_edit_workflow}
             class="transition-all duration-300 ease-in-out"
           />
-          <div
-            :if={
-              @can_edit_workflow &&
-                @ai_assistant_enabled && @live_action == :edit
-            }
-            phx-hook="Tooltip"
-            aria-label={
-              if @snapshot_version_tag != "latest",
-                do:
-                  "Switch to the latest version of this workflow to use the AI Assistant.",
-                else:
-                  if(@show_workflow_ai_chat,
-                    do: "Click to close the AI Assistant",
-                    else: "Click to open the AI Assistant"
-                  )
-            }
-            class="absolute top-4 left-4 z-30 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-transform duration-300 ease-in-out"
-            id="workflow-ai-chat-toggle-floating"
-            phx-mounted={
-              JS.transition(
-                {"transition-opacity duration-500", "opacity-0", "opacity-100"},
-                time: 500
-              )
-            }
-          >
-            <button
-              type="button"
-              phx-click="toggle-workflow-ai-chat"
-              disabled={@snapshot_version_tag != "latest"}
-              class={
-                "flex items-center justify-between pl-3 pr-3 py-2 transition-colors w-full text-left " <>
-                if @snapshot_version_tag != "latest",
-                  do: "bg-gray-100 text-gray-400 cursor-not-allowed",
-                  else: "bg-gray-50 hover:bg-gray-100 text-gray-700"
-              }
-            >
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-medium">
-                  AI Assistant
-                </span>
-              </div>
-              <.icon
-                name={
-                  if @show_workflow_ai_chat,
-                    do: "hero-chevron-left",
-                    else: "hero-chevron-right"
-                }
-                class={
-                  "w-4 h-4 ml-3 " <>
-                  if @snapshot_version_tag == "latest",
-                    do: "text-gray-300",
-                    else: "text-gray-400"
-                }
-              />
-            </button>
-          </div>
           <.selected_template_label
             :if={@selected_template && @show_new_workflow_panel}
             template={@selected_template}
@@ -459,7 +408,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
             showAiAssistant={@show_workflow_ai_chat}
             aiAssistantId={@workflow_ai_chat_id}
+            canEditWorkflow={@can_edit_workflow}
+            snapshotVersionTag={@snapshot_version_tag}
+            aiAssistantEnabled={@ai_assistant_enabled}
+            liveAction={Atom.to_string(@live_action)}
           />
+
           <.live_component
             :if={@selected_job && @can_edit_workflow && @show_job_credential_modal}
             id="new-credential-modal"
@@ -1721,6 +1675,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do
+    dbg(type)
+
     updated_socket =
       case type do
         "commit" -> commit_latest_version(socket)
@@ -2044,15 +2000,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("toggle-workflow-ai-chat", _params, socket) do
-    ai_panel_closed = socket.assigns.query_params["method"] != "ai"
+    if socket.assigns.snapshot_version_tag != "latest" do
+      {:noreply, socket}
+    else
+      show_workflow_ai_chat = socket.assigns.show_workflow_ai_chat
 
-    url_params =
-      Helpers.with_params(method: [value: "ai", when: ai_panel_closed])
+      url_params =
+        Helpers.with_params(method: [value: "ai", when: !show_workflow_ai_chat])
 
-    {:noreply,
-     socket
-     |> update(:show_workflow_ai_chat, &(!&1))
-     |> push_patch(to: Helpers.build_url(socket.assigns, url_params))}
+      {:noreply,
+       socket
+       |> assign(show_workflow_ai_chat: !show_workflow_ai_chat)
+       |> push_patch(to: Helpers.build_url(socket.assigns, url_params))}
+    end
   end
 
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
@@ -2659,7 +2619,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       changeset: prev_changeset,
       workflow: workflow,
-      selected_job: selected_job
+      selected_job: selected_job,
+      show_workflow_ai_chat: current_panel_state
     } = socket.assigns
 
     if job_deleted?(selected_job, workflow) do
@@ -2674,23 +2635,51 @@ defmodule LightningWeb.WorkflowLive.Edit do
       prev_params = WorkflowParams.to_map(prev_changeset)
       next_params = WorkflowParams.to_map(next_changeset)
 
-      if version != "latest" do
-        Presence.untrack_user_presence(
-          socket.assigns.current_user,
-          socket.assigns.workflow,
-          self()
-        )
-      end
+      # Determine panel state and URL parameters based on version
+      {clean_params, panel_state} =
+        if version != "latest" do
+          # Switching TO snapshot: close panel, disable button, remove AI method
+          Presence.untrack_user_presence(
+            socket.assigns.current_user,
+            socket.assigns.workflow,
+            self()
+          )
+
+          clean_params =
+            Helpers.to_latest_params()
+            |> Enum.reject(fn
+              {"method", "ai"} -> true
+              _ -> false
+            end)
+
+          {clean_params, false}
+        else
+          # Switching TO latest: preserve current panel state, keep AI method if panel was open
+          clean_params =
+            if current_panel_state do
+              # Panel was open, keep method=ai in URL
+              Helpers.to_latest_params()
+            else
+              # Panel was closed, remove method=ai from URL
+              Helpers.to_latest_params()
+              |> Enum.reject(fn
+                {"method", "ai"} -> true
+                _ -> false
+              end)
+            end
+
+          {clean_params, current_panel_state}
+        end
 
       socket
       |> assign(changeset: next_changeset)
       |> assign(workflow_params: next_params)
       |> assign(snapshot_version_tag: version)
+      # Explicitly set panel state (don't let assign_show_workflow_ai_chat override)
+      |> assign(show_workflow_ai_chat: panel_state)
       |> push_patches_applied(prev_params)
       |> maybe_disable_canvas()
-      |> push_patch(
-        to: Helpers.build_url(socket.assigns, Helpers.to_latest_params())
-      )
+      |> push_patch(to: Helpers.build_url(socket.assigns, clean_params))
     end
   end
 
@@ -2698,15 +2687,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{changeset: prev_changeset, workflow: workflow} = socket.assigns
 
     snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
-
     prev_params = WorkflowParams.to_map(prev_changeset)
+
+    # Clean URL parameters when switching to latest
+    clean_params =
+      Helpers.orthogonal_params()
+      |> Enum.reject(fn
+        {"method", "ai"} -> true
+        _ -> false
+      end)
 
     socket
     |> assign_workflow(workflow, snapshot)
+    # Explicitly close the panel
+    # |> assign(show_workflow_ai_chat: false)
     |> push_patches_applied(prev_params)
-    |> push_patch(
-      to: Helpers.build_url(socket.assigns, Helpers.to_latest_params())
-    )
+    |> push_patch(to: Helpers.build_url(socket.assigns, clean_params))
   end
 
   defp maybe_switch_workflow_version(socket) do
@@ -3113,10 +3109,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
       end
 
+    # Close AI panel if loading a snapshot
+    show_ai_chat =
+      if version == "latest" do
+        Map.get(socket.assigns, :show_workflow_ai_chat, false)
+      else
+        false
+      end
+
     socket
     |> assign(workflow: workflow)
     |> assign(snapshot: snapshot)
     |> assign(snapshot_version_tag: version)
+    |> assign(show_workflow_ai_chat: show_ai_chat)
     |> assign_changeset(changeset)
     |> maybe_disable_canvas()
   end
@@ -3532,9 +3537,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_show_workflow_ai_chat(socket) do
-    show_chat =
+    # Show the chat if method=ai is in URL params and we're on latest version
+    # This works for initial loads, refreshes, and URL changes
+    should_show_chat =
       socket.assigns.live_action == :edit &&
-        socket.assigns.query_params["method"] == "ai"
+        socket.assigns.query_params["method"] == "ai" &&
+        socket.assigns.snapshot_version_tag == "latest"
+
+    # Preserve explicit panel state during version switches
+    # (when assign_workflow is called directly, it will override this)
+    show_chat =
+      if should_show_chat do
+        true
+      else
+        # Preserve current state or default to false
+        Map.get(socket.assigns, :show_workflow_ai_chat, false)
+      end
+
+    IO.puts(
+      "assign_show_workflow_ai_chat: #{show_chat}, method=#{socket.assigns.query_params["method"]}, w-chat=#{socket.assigns.query_params["w-chat"]}"
+    )
 
     assign(socket, show_workflow_ai_chat: show_chat)
   end
