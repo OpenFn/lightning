@@ -62,6 +62,7 @@ import {
   type AdaptorStore,
   AdaptorsListSchema,
 } from "../types/adaptor";
+import { createWithSelector } from "./common";
 
 /**
  * Creates an adaptor store instance with useSyncExternalStore + Immer pattern
@@ -99,25 +100,7 @@ export const createAdaptorStore = (): AdaptorStore => {
   const getSnapshot = (): AdaptorState => state;
 
   // withSelector utility - creates memoized selectors for referential stability
-  const withSelector = <T>(selector: (state: AdaptorState) => T) => {
-    let lastResult: T;
-    let lastState: AdaptorState | undefined;
-
-    return (): T => {
-      const currentState = getSnapshot();
-
-      // Only recompute if state reference actually changed
-      if (currentState !== lastState) {
-        const newResult = selector(currentState);
-
-        // Always update result when state changes (Immer guarantees stable references)
-        lastResult = newResult;
-        lastState = currentState;
-      }
-
-      return lastResult;
-    };
-  };
+  const withSelector = createWithSelector(getSnapshot);
 
   // =============================================================================
   // PATTERN 1: Channel Message → Immer → Notify (Server Updates)
