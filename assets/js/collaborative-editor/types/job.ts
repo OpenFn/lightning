@@ -43,12 +43,10 @@ export const JobSchema = z
     delete: z.boolean().optional(),
 
     // Timestamps (optional for new jobs)
-    inserted_at: z
-      .string()
+    inserted_at: z.iso
       .datetime({ message: "Invalid datetime format" })
       .optional(),
-    updated_at: z
-      .string()
+    updated_at: z.iso
       .datetime({ message: "Invalid datetime format" })
       .optional(),
 
