@@ -1,9 +1,10 @@
 import { isValidCron } from "cron-validator";
 import { z } from "zod";
+import { uuidSchema } from "./common";
 
 // Base trigger fields common to all trigger types
 const baseTriggerSchema = z.object({
-  id: z.uuid({ message: "Invalid UUID format" }).optional(),
+  id: uuidSchema,
   enabled: z.boolean().default(true),
 });
 
