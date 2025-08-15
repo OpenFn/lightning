@@ -1675,8 +1675,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do
-    dbg(type)
-
     updated_socket =
       case type do
         "commit" -> commit_latest_version(socket)
