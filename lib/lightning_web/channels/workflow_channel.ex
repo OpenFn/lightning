@@ -9,6 +9,8 @@ defmodule LightningWeb.WorkflowChannel do
 
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
+  alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Projects.ProjectCredential
 
   require Logger
 
@@ -58,6 +60,22 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("request_credentials", _payload, socket) do
+    credentials =
+      Lightning.Projects.list_project_credentials(
+        socket.assigns.workflow.project
+      )
+      |> Enum.concat(
+        Lightning.Credentials.list_keychain_credentials_for_project(
+          socket.assigns.workflow.project
+        )
+      )
+      |> render_credentials()
+
+    {:reply, {:ok, %{credentials: credentials}}, socket}
+  end
+
+  @impl true
   def handle_in("yjs_sync", {:binary, chunk}, socket) do
     Session.start_sync(socket.assigns.session_pid, chunk)
     {:noreply, socket}
@@ -86,5 +104,46 @@ defmodule LightningWeb.WorkflowChannel do
         socket
       ) do
     {:stop, {:error, "remote process crash"}, socket}
+  end
+
+  defp render_credentials(credentials) do
+    {project_credentials, keychain_credentials} =
+      credentials
+      |> Enum.split_with(fn
+        %ProjectCredential{} -> true
+        %KeychainCredential{} -> false
+      end)
+
+    %{
+      project_credentials:
+        project_credentials
+        |> Enum.map(fn %ProjectCredential{
+                         credential: credential,
+                         id: project_credential_id
+                       } ->
+          %{
+            id: credential.id,
+            project_credential_id: project_credential_id,
+            name: credential.name,
+            external_id: credential.external_id,
+            production: credential.production,
+            schema: credential.schema,
+            inserted_at: credential.inserted_at,
+            updated_at: credential.updated_at
+          }
+        end),
+      keychain_credentials:
+        keychain_credentials
+        |> Enum.map(fn %KeychainCredential{} = keychain_credential ->
+          %{
+            id: keychain_credential.id,
+            name: keychain_credential.name,
+            path: keychain_credential.path,
+            default_credential_id: keychain_credential.default_credential_id,
+            inserted_at: keychain_credential.inserted_at,
+            updated_at: keychain_credential.updated_at
+          }
+        end)
+    }
   end
 end

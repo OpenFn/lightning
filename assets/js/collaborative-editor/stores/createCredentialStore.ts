@@ -57,25 +57,25 @@
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 import {
-  type Adaptor,
-  type AdaptorState,
-  type AdaptorStore,
-  AdaptorsListSchema,
-} from "../types/adaptor";
+  type CredentialState,
+  type CredentialStore,
+  CredentialsListSchema,
+} from "../types/credential";
 import { createWithSelector } from "./common";
 
 /**
- * Creates an adaptor store instance with useSyncExternalStore + Immer pattern
+ * Creates an credential store instance with useSyncExternalStore + Immer pattern
  */
-export const createAdaptorStore = (): AdaptorStore => {
+export const createCredentialStore = (): CredentialStore => {
   // Single Immer-managed state object (referentially stable)
-  let state: AdaptorState = produce(
+  let state: CredentialState = produce(
     {
-      adaptors: [],
+      projectCredentials: [],
+      keychainCredentials: [],
       isLoading: false,
       error: null,
       lastUpdated: null,
-    } as AdaptorState,
+    } as CredentialState,
     // No initial transformations needed
     (draft) => draft,
   );
@@ -97,7 +97,7 @@ export const createAdaptorStore = (): AdaptorStore => {
     return () => listeners.delete(listener);
   };
 
-  const getSnapshot = (): AdaptorState => state;
+  const getSnapshot = (): CredentialState => state;
 
   // withSelector utility - creates memoized selectors for referential stability
   const withSelector = createWithSelector(getSnapshot);
@@ -107,29 +107,33 @@ export const createAdaptorStore = (): AdaptorStore => {
   // =============================================================================
 
   /**
-   * Handle adaptors list received from server
+   * Handle credentials list received from server
    * Validates data with Zod before updating state
    */
-  const handleAdaptorsReceived = (rawData: unknown) => {
-    const result = AdaptorsListSchema.safeParse(rawData);
+  const _handleCredentialsReceived = (rawData: unknown) => {
+    const result = CredentialsListSchema.safeParse(rawData);
 
     if (result.success) {
-      const adaptors = result.data;
-      for (const adaptor of adaptors) {
-        adaptor.versions.sort((a, b) => b.version.localeCompare(a.version));
-      }
-      adaptors.sort((a, b) => a.name.localeCompare(b.name));
+      const credentials = result.data;
+
+      credentials.project_credentials.sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      credentials.keychain_credentials.sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
 
       state = produce(state, (draft) => {
-        draft.adaptors = adaptors;
+        draft.projectCredentials = credentials.project_credentials;
+        draft.keychainCredentials = credentials.keychain_credentials;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();
       });
       notify();
     } else {
-      const errorMessage = `Invalid adaptors data: ${result.error.message}`;
-      console.error("AdaptorStore: Failed to parse adaptors data", {
+      const errorMessage = `Invalid credentials data: ${result.error.message}`;
+      console.error("CredentialStore: Failed to parse credentials data", {
         error: result.error,
         rawData,
       });
@@ -143,11 +147,11 @@ export const createAdaptorStore = (): AdaptorStore => {
   };
 
   /**
-   * Handle real-time adaptors update from server
+   * Handle real-time credentials update from server
    */
-  const handleAdaptorsUpdated = (rawData: unknown) => {
-    // Same validation logic as handleAdaptorsReceived
-    handleAdaptorsReceived(rawData);
+  const _handleCredentialsUpdated = (rawData: unknown) => {
+    // Same validation logic as handleCredentialsReceived
+    _handleCredentialsReceived(rawData);
   };
 
   // =============================================================================
@@ -176,63 +180,60 @@ export const createAdaptorStore = (): AdaptorStore => {
     notify();
   };
 
-  const setAdaptors = (adaptors: Adaptor[]) => {
-    state = produce(state, (draft) => {
-      draft.adaptors = adaptors;
-      draft.lastUpdated = Date.now();
-      draft.error = null;
-    });
-    notify();
-  };
-
   // =============================================================================
   // CHANNEL INTEGRATION
   // =============================================================================
 
-  let channelProvider: PhoenixChannelProvider | null = null;
+  let _channelProvider: PhoenixChannelProvider | null = null;
 
   /**
    * Connect to Phoenix channel provider for real-time updates
    */
-  const connectChannel = (provider: unknown) => {
-    const typedProvider = provider as PhoenixChannelProvider;
-    channelProvider = typedProvider;
+  const _connectChannel = (channelProvider: PhoenixChannelProvider) => {
+    _channelProvider = channelProvider;
+    const channel = channelProvider.channel;
 
-    // Listen for adaptor-related channel messages
-    const adaptorsListHandler = (message: unknown) => {
-      console.debug("AdaptorStore: Received adaptors_list message", message);
-      handleAdaptorsReceived(message);
+    // Listen for credential-related channel messages
+    const credentialsListHandler = (message: unknown) => {
+      console.debug(
+        "CredentialStore: Received credentials_list message",
+        message,
+      );
+      _handleCredentialsReceived(message);
     };
 
-    const adaptorsUpdatedHandler = (message: unknown) => {
-      console.debug("AdaptorStore: Received adaptors_updated message", message);
-      handleAdaptorsUpdated(message);
+    const credentialsUpdatedHandler = (message: unknown) => {
+      console.debug(
+        "CredentialStore: Received credentials_updated message",
+        message,
+      );
+      _handleCredentialsUpdated(message);
     };
 
     // Set up channel listeners
-    if (typedProvider.channel) {
-      typedProvider.channel.on("adaptors_list", adaptorsListHandler);
-      typedProvider.channel.on("adaptors_updated", adaptorsUpdatedHandler);
+    if (channel) {
+      channel.on("credentials_list", credentialsListHandler);
+      channel.on("credentials_updated", credentialsUpdatedHandler);
     }
 
-    requestAdaptors();
+    requestCredentials();
 
     return () => {
-      if (typedProvider.channel) {
-        typedProvider.channel.off("adaptors_list", adaptorsListHandler);
-        typedProvider.channel.off("adaptors_updated", adaptorsUpdatedHandler);
+      if (channel) {
+        channel.off("credentials_list", credentialsListHandler);
+        channel.off("credentials_updated", credentialsUpdatedHandler);
       }
-      channelProvider = null;
+      _channelProvider = null;
     };
   };
 
   /**
-   * Request adaptors from server via channel
+   * Request credentials from server via channel
    */
-  const requestAdaptors = () => {
-    if (!channelProvider?.channel) {
+  const requestCredentials = () => {
+    if (!_channelProvider?.channel) {
       console.warn(
-        "AdaptorStore: Cannot request adaptors - no channel connected",
+        "CredentialStore: Cannot request credentials - no channel connected",
       );
       setError("No connection available");
       return;
@@ -242,50 +243,37 @@ export const createAdaptorStore = (): AdaptorStore => {
     clearError();
 
     // Send request to Phoenix channel
-    channelProvider.channel
-      .push("request_adaptors", {})
+    _channelProvider.channel
+      .push("request_credentials", {})
       .receive("ok", (response: unknown) => {
-        console.debug("AdaptorStore: Adaptor request acknowledged", response);
-        // If response contains adaptors data directly, handle it
+        console.debug(
+          "CredentialStore: Credential request acknowledged",
+          response,
+        );
+        // If response contains credentials data directly, handle it
         if (
           response &&
           typeof response === "object" &&
-          "adaptors" in response
+          "credentials" in response
         ) {
-          handleAdaptorsReceived((response as { adaptors: unknown }).adaptors);
+          _handleCredentialsReceived(
+            (response as { credentials: unknown }).credentials,
+          );
         }
         // Otherwise, response will come through separate channel message
       })
       .receive("error", (error: unknown) => {
-        console.error("AdaptorStore: Adaptor request failed", error);
+        console.error("CredentialStore: Credential request failed", error);
         const errorMessage =
           error && typeof error === "object" && "reason" in error
             ? (error as { reason: string }).reason
             : "Unknown error";
-        setError(`Failed to request adaptors: ${errorMessage}`);
+        setError(`Failed to request credentials: ${errorMessage}`);
       })
       .receive("timeout", () => {
-        console.error("AdaptorStore: Adaptor request timed out");
+        console.error("CredentialStore: Credential request timed out");
         setError("Request timed out");
       });
-  };
-
-  // =============================================================================
-  // QUERY HELPERS
-  // =============================================================================
-
-  const findAdaptorByName = (name: string): Adaptor | null => {
-    return state.adaptors.find((adaptor) => adaptor.name === name) || null;
-  };
-
-  const getLatestVersion = (adaptorName: string): string | null => {
-    const adaptor = findAdaptorByName(adaptorName);
-    return adaptor?.latest || null;
-  };
-
-  const getVersions = (adaptorName: string) => {
-    const adaptor = findAdaptorByName(adaptorName);
-    return adaptor?.versions || [];
   };
 
   // =============================================================================
@@ -299,24 +287,16 @@ export const createAdaptorStore = (): AdaptorStore => {
     withSelector,
 
     // Commands (CQS pattern)
-    requestAdaptors,
-    setAdaptors,
+    requestCredentials,
     setLoading,
     setError,
     clearError,
 
-    // Queries (CQS pattern)
-    findAdaptorByName,
-    getLatestVersion,
-    getVersions,
-
-    // Internal methods (not part of public AdaptorStore interface)
-    _internal: {
-      connectChannel,
-      handleAdaptorsReceived,
-      handleAdaptorsUpdated,
-    },
+    // Internal methods (not part of public CredentialStore interface)
+    _connectChannel,
+    _handleCredentialsReceived,
+    _handleCredentialsUpdated,
   };
 };
 
-export type AdaptorStoreInstance = ReturnType<typeof createAdaptorStore>;
+export type CredentialStoreInstance = ReturnType<typeof createCredentialStore>;

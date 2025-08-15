@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import type { ZodSchema } from "zod";
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
+import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
 import { useWorkflowActions } from "#/collaborative-editor/hooks/Workflow";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
@@ -108,8 +109,38 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
   return { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion };
 }
 
+const useCredentialOptions = () => {
+  const { keychainCredentials, projectCredentials, isLoading } = useCredentials(
+    (state) => ({
+      keychainCredentials: state.keychainCredentials,
+      projectCredentials: state.projectCredentials,
+      isLoading: state.isLoading,
+    }),
+  );
+
+  const credentialOptions = useMemo(() => {
+    return [
+      ...projectCredentials.map((credential) => ({
+        value: credential.project_credential_id,
+        label: credential.name,
+      })),
+      ...keychainCredentials.map((credential) => ({
+        value: credential.id,
+        label: credential.name,
+        group: "Keychain Credentials",
+      })),
+    ];
+  }, [projectCredentials, keychainCredentials]);
+
+  return {
+    credentialOptions,
+    isLoading,
+  };
+};
+
 export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
   const { updateJob } = useWorkflowActions();
+  const { credentialOptions, isLoading } = useCredentialOptions();
 
   // Parse initial adaptor value to get separate package and version
   const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
@@ -123,8 +154,8 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
       adaptor: initialAdaptor,
       // Virtual fields for UI only
       adaptor_package: initialAdaptorPackage,
-      project_credential_id: job.project_credential_id || undefined,
-      keychain_credential_id: job.keychain_credential_id || undefined,
+      project_credential_id: job.project_credential_id,
+      keychain_credential_id: job.keychain_credential_id,
       workflow_id: job.workflow_id || undefined,
       delete: job.delete || false,
       inserted_at: job.inserted_at || undefined,
@@ -192,6 +223,21 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
                 <field.SelectField
                   label="Version"
                   options={adaptorVersionOptions}
+                />
+              );
+            }}
+          </form.AppField>
+        </div>
+
+        <div className="col-span-6">
+          <form.AppField name="project_credential_id">
+            {(field) => {
+              return (
+                <field.SelectField
+                  label="Credential"
+                  placeholder=" "
+                  options={credentialOptions}
+                  disabled={isLoading}
                 />
               );
             }}
