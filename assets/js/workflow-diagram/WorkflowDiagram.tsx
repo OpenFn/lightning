@@ -82,13 +82,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     containerEl: el,
     onRunChange,
     onCollapseHistory,
-    showAiAssistant = false,
-    aiAssistantId,
-    canEditWorkflow = true,
-    snapshotVersionTag = 'latest',
-    aiAssistantEnabled = true,
-    liveAction = 'edit',
-    onToggleAiAssistant,
   } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
@@ -590,11 +583,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         />
       </ReactFlow>
       <AiAssistantToggle
-        showAiAssistant={showAiAssistant || false}
-        canEditWorkflow={canEditWorkflow || true}
-        snapshotVersionTag={snapshotVersionTag || "latest"}
-        aiAssistantEnabled={aiAssistantEnabled || true}
-        liveAction={liveAction || "edit"}
+        showAiAssistant={props.showAiAssistant}
+        canEditWorkflow={props.canEditWorkflow}
+        snapshotVersionTag={props.snapshotVersionTag}
+        aiAssistantEnabled={props.aiAssistantEnabled}
+        liveAction={props.liveAction}
         drawerWidth={drawerWidth}
       />
       <MiniHistory

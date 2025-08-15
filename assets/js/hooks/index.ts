@@ -54,21 +54,6 @@ export {
 
 export { ReactComponent } from '#/react/hooks';
 
-export const AiAssistantToggle = {
-  mounted() {
-    this.handleClick = e => {
-      e.preventDefault();
-      this.pushEvent('toggle-workflow-ai-chat', {});
-    };
-
-    this.el.addEventListener('click', this.handleClick);
-  },
-
-  destroyed() {
-    this.el.removeEventListener('click', this.handleClick);
-  },
-};
-
 export const TabIndent = {
   mounted() {
     this.el.addEventListener('keydown', e => {

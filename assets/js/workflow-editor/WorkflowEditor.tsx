@@ -5,8 +5,13 @@ import { RUNS_TMP, useWorkflowStore } from '../workflow-store/store';
 import tippy, { type Placement } from 'tippy.js';
 
 export const WorkflowEditor: WithActionProps<{
-  selection: string, showAiAssistant?: boolean;
+  selection: string;
+  showAiAssistant?: boolean;
   aiAssistantId?: string;
+  canEditWorkflow?: boolean;
+  snapshotVersionTag?: string;
+  aiAssistantEnabled?: boolean;
+  liveAction?: string;
 }> = (props) => {
   const { getItem, forceFit, updateRuns } = useWorkflowStore();
 
@@ -99,6 +104,10 @@ export const WorkflowEditor: WithActionProps<{
       forceFit={forceFit}
       showAiAssistant={props.showAiAssistant}
       aiAssistantId={props.aiAssistantId}
+      canEditWorkflow={props.canEditWorkflow}
+      snapshotVersionTag={props.snapshotVersionTag}
+      aiAssistantEnabled={props.aiAssistantEnabled}
+      liveAction={props.liveAction}
     />
   );
 };

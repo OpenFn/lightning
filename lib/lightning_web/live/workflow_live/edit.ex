@@ -44,11 +44,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   attr :selection, :string, required: false
   attr :aiAssistantId, :string, required: false
-  attr :showAiAssistant, :boolean, default: false
-  attr :canEditWorkflow, :boolean, default: true
-  attr :snapshotVersionTag, :string, default: "latest"
-  attr :aiAssistantEnabled, :boolean, default: true
-  attr :liveAction, :string, default: "edit"
+  attr :showAiAssistant, :boolean, required: false
+  attr :canEditWorkflow, :boolean, required: false
+  attr :snapshotVersionTag, :string, required: false
+  attr :aiAssistantEnabled, :boolean, required: false
+  attr :liveAction, :string, required: false
 
   jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
@@ -2620,7 +2620,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       changeset: prev_changeset,
       workflow: workflow,
       selected_job: selected_job,
-      show_workflow_ai_chat: current_panel_state
+      show_workflow_ai_chat: show_workflow_ai_chat
     } = socket.assigns
 
     if job_deleted?(selected_job, workflow) do
@@ -2635,51 +2635,38 @@ defmodule LightningWeb.WorkflowLive.Edit do
       prev_params = WorkflowParams.to_map(prev_changeset)
       next_params = WorkflowParams.to_map(next_changeset)
 
-      # Determine panel state and URL parameters based on version
-      {clean_params, panel_state} =
-        if version != "latest" do
-          # Switching TO snapshot: close panel, disable button, remove AI method
-          Presence.untrack_user_presence(
-            socket.assigns.current_user,
-            socket.assigns.workflow,
-            self()
-          )
+      remove_ai_method = fn params ->
+        Enum.reject(params, &(&1 == {"method", "ai"}))
+      end
 
-          clean_params =
-            Helpers.to_latest_params()
-            |> Enum.reject(fn
-              {"method", "ai"} -> true
-              _ -> false
-            end)
+      if version != "latest" do
+        Presence.untrack_user_presence(
+          socket.assigns.current_user,
+          socket.assigns.workflow,
+          self()
+        )
+      end
 
-          {clean_params, false}
-        else
-          # Switching TO latest: preserve current panel state, keep AI method if panel was open
-          clean_params =
-            if current_panel_state do
-              # Panel was open, keep method=ai in URL
-              Helpers.to_latest_params()
-            else
-              # Panel was closed, remove method=ai from URL
-              Helpers.to_latest_params()
-              |> Enum.reject(fn
-                {"method", "ai"} -> true
-                _ -> false
-              end)
-            end
+      {url_params, show_workflow_ai_chat} =
+        case {version, show_workflow_ai_chat} do
+          {_snapshot, _} ->
+            {Helpers.to_latest_params() |> remove_ai_method.(), false}
 
-          {clean_params, current_panel_state}
+          {"latest", true} ->
+            {Helpers.to_latest_params(), true}
+
+          {"latest", false} ->
+            {Helpers.to_latest_params() |> remove_ai_method.(), false}
         end
 
       socket
       |> assign(changeset: next_changeset)
       |> assign(workflow_params: next_params)
       |> assign(snapshot_version_tag: version)
-      # Explicitly set panel state (don't let assign_show_workflow_ai_chat override)
-      |> assign(show_workflow_ai_chat: panel_state)
+      |> assign(show_workflow_ai_chat: show_workflow_ai_chat)
       |> push_patches_applied(prev_params)
       |> maybe_disable_canvas()
-      |> push_patch(to: Helpers.build_url(socket.assigns, clean_params))
+      |> push_patch(to: Helpers.build_url(socket.assigns, url_params))
     end
   end
 
@@ -2689,8 +2676,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
     prev_params = WorkflowParams.to_map(prev_changeset)
 
-    # Clean URL parameters when switching to latest
-    clean_params =
+    url_params =
       Helpers.orthogonal_params()
       |> Enum.reject(fn
         {"method", "ai"} -> true
@@ -2699,10 +2685,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> assign_workflow(workflow, snapshot)
-    # Explicitly close the panel
-    # |> assign(show_workflow_ai_chat: false)
     |> push_patches_applied(prev_params)
-    |> push_patch(to: Helpers.build_url(socket.assigns, clean_params))
+    |> push_patch(to: Helpers.build_url(socket.assigns, url_params))
   end
 
   defp maybe_switch_workflow_version(socket) do
@@ -3109,8 +3093,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
       end
 
-    # Close AI panel if loading a snapshot
-    show_ai_chat =
+    show_workflow_ai_chat =
       if version == "latest" do
         Map.get(socket.assigns, :show_workflow_ai_chat, false)
       else
@@ -3121,7 +3104,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(workflow: workflow)
     |> assign(snapshot: snapshot)
     |> assign(snapshot_version_tag: version)
-    |> assign(show_workflow_ai_chat: show_ai_chat)
+    |> assign(show_workflow_ai_chat: show_workflow_ai_chat)
     |> assign_changeset(changeset)
     |> maybe_disable_canvas()
   end
@@ -3537,28 +3520,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_show_workflow_ai_chat(socket) do
-    # Show the chat if method=ai is in URL params and we're on latest version
-    # This works for initial loads, refreshes, and URL changes
-    should_show_chat =
-      socket.assigns.live_action == :edit &&
-        socket.assigns.query_params["method"] == "ai" &&
-        socket.assigns.snapshot_version_tag == "latest"
+    %{
+      live_action: live_action,
+      query_params: query_params,
+      snapshot_version_tag: version
+    } = socket.assigns
 
-    # Preserve explicit panel state during version switches
-    # (when assign_workflow is called directly, it will override this)
-    show_chat =
-      if should_show_chat do
-        true
-      else
-        # Preserve current state or default to false
+    show_workflow_ai_chat =
+      (live_action == :edit && query_params["method"] == "ai" &&
+         version == "latest") ||
         Map.get(socket.assigns, :show_workflow_ai_chat, false)
-      end
 
-    IO.puts(
-      "assign_show_workflow_ai_chat: #{show_chat}, method=#{socket.assigns.query_params["method"]}, w-chat=#{socket.assigns.query_params["w-chat"]}"
-    )
-
-    assign(socket, show_workflow_ai_chat: show_chat)
+    assign(socket, show_workflow_ai_chat: show_workflow_ai_chat)
   end
 
   defp update_canvas_state(socket, payload) do
