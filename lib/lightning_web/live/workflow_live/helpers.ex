@@ -235,6 +235,18 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   @doc """
+  Creates URL parameters ignoring v (all common params except version tag)
+  """
+  def to_latest_params do
+    [
+      query_param("m"),
+      query_param("s"),
+      query_param("a"),
+      query_param("method")
+    ] ++ chat_params()
+  end
+
+  @doc """
   Creates standard URL parameters (all common params)
   """
   def standard_params do

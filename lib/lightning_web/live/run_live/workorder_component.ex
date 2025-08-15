@@ -177,17 +177,38 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           </span>
         </.td>
         <.td>
-          <Common.wrapper_tooltip
-            id={"workflow-name-#{@work_order.id}"}
-            tooltip={@workflow_name}
-          >
-            <span
-              class="truncate text-gray-900 workflow-name"
-              style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;"
+          <%= if @last_run do %>
+            <.link
+              navigate={
+                ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?a=#{@last_run.id}&v=#{@work_order.snapshot.lock_version}"
+              }
+              class="inline-block"
             >
-              {@workflow_name}
-            </span>
-          </Common.wrapper_tooltip>
+              <Common.wrapper_tooltip
+                id={"workflow-name-#{@work_order.id}"}
+                tooltip={"#{@workflow_name}<br/><span class=\"text-xs text-gray-500\">Click to view</span>"}
+              >
+                <span
+                  class="truncate text-gray-900 workflow-name hover:text-primary-600 cursor-pointer"
+                  style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;"
+                >
+                  {@workflow_name}
+                </span>
+              </Common.wrapper_tooltip>
+            </.link>
+          <% else %>
+            <Common.wrapper_tooltip
+              id={"workflow-name-#{@work_order.id}"}
+              tooltip={@workflow_name}
+            >
+              <span
+                class="truncate text-gray-900 workflow-name"
+                style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;"
+              >
+                {@workflow_name}
+              </span>
+            </Common.wrapper_tooltip>
+          <% end %>
         </.td>
         <.td>
           <.workorder_dataclip_link

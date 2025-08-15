@@ -1,8 +1,12 @@
-import React, { memo } from 'react';
 import { Handle, type NodeProps } from '@xyflow/react';
+import React, { memo } from 'react';
 
-import Shape from '../components/Shape';
+import { duration } from '../../utils/duration';
+import type { RunStep } from '../../workflow-store/store';
+import formatDate from '../../utils/formatDate';
 import ErrorMessage from '../components/ErrorMessage';
+import Shape from '../components/Shape';
+import { renderIcon } from '../components/RunIcons';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
@@ -83,15 +87,32 @@ const Node = ({
   secondaryIcon,
 
   errors,
+  type,
 }: BaseNodeProps) => {
+  const isTriggerNode = type === 'trigger';
+  const runData = data?.runData as RunStep | undefined;
+  const startInfo = data?.startInfo as
+    | { started_at: string; startBy: string }
+    | undefined;
+  const isErrorRun = runData?.exit_reason !== 'success';
+  // TODO: remember triggers
+  const didRun = data.isRun
+    ? !!runData || (!!data?.startInfo && isTriggerNode)
+    : true;
+
   const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
     selected,
-    hasErrors(errors)
+    hasErrors(errors),
+    runData?.exit_reason
   );
 
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
+
   return (
-    <div className="group" data-a-node>
+    <div
+      className={`group ${didRun ? 'opacity-100' : 'opacity-30'}`}
+      data-a-node
+    >
       <div className="flex flex-row cursor-pointer">
         <div className="relative">
           {targetPosition && (
@@ -139,11 +160,68 @@ const Node = ({
               />
             </>
           )}
+          {runData && !isTriggerNode ? (
+            <div className="absolute -left-2 -top-2">
+              {renderIcon(runData.exit_reason ?? 'pending', {
+                tooltip: runData?.error_type ?? 'Step completed successfully',
+              })}
+            </div>
+          ) : null}
+          {data.duplicateRunCount > 1 && !isTriggerNode ? (
+            <div
+              className="absolute -right-1 -top-2"
+              data-tooltip={`This step ran ${data.duplicateRunCount} times; view other executions via the Inspector or History page.`}
+              data-tooltip-placement="top"
+            >
+              <div className="flex justify-center items-center w-7 h-7 rounded-full text-white bg-primary-600 shadow-sm">
+                <span className="text-xs font-bold">
+                  {data.duplicateRunCount}
+                </span>
+              </div>
+            </div>
+          ) : null}
+          {startInfo ? (
+            <div
+              className={`absolute -top-2 flex gap-2 items-center`}
+              style={{
+                left: 'calc(100% - 24px)',
+              }}
+              data-tooltip={`Started by ${startInfo.startBy}`}
+              data-tooltip-placement="top"
+            >
+              <div className="flex justify-center items-center w-7 h-7 rounded-full text-slate-50 border-slate-700 bg-slate-600">
+                <span className="hero-play-solid w-3 h-3"></span>
+              </div>
+            </div>
+          ) : null}
+          {runData?.started_at && runData.finished_at ? (
+            <div
+              className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
+              style={{
+                left: 'calc(100% + 6px)',
+              }}
+            >
+              {isTriggerNode
+                ? formatDate(new Date(runData.started_at))
+                : duration(runData.started_at, runData.finished_at)}
+            </div>
+          ) : null}
+          {isTriggerNode && startInfo?.started_at ? (
+            <div
+              className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
+              style={{
+                left: 'calc(100% + 6px)',
+              }}
+            >
+              {formatDate(new Date(startInfo.started_at))}
+            </div>
+          ) : null}
           <svg
             style={{
               maxWidth: '110px',
               maxHeight: '110px',
               opacity: nodeOpacity,
+              overflow: 'visible',
             }}
           >
             <Shape

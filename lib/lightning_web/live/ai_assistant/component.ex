@@ -1112,7 +1112,7 @@ defmodule LightningWeb.AiAssistant.Component do
               {maybe_show_ellipsis(@handler.chat_title(@session))}
             </h1>
             <p class="text-xs text-gray-500">
-              {message_count_text(@session)} • {format_session_time(
+              {message_count_text(@session)} &bull; {format_session_time(
                 @session.updated_at
               )}
             </p>

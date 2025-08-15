@@ -484,6 +484,55 @@ defmodule Lightning.WorkOrders do
     {:ok, 0, 0}
   end
 
+  def get_workorders_with_runs(workflow_id, run_id) do
+    # First, get workorder IDs we want
+    workorder_ids =
+      if is_nil(run_id) do
+        # Just get top 20 workorders by last_activity
+        from(wo in WorkOrder,
+          join: r in assoc(wo, :runs),
+          where: wo.workflow_id == ^workflow_id,
+          group_by: wo.id,
+          order_by: [desc: wo.last_activity],
+          limit: 20,
+          select: wo.id
+        )
+        |> Repo.all()
+      else
+        # Get the specific workorder for the run
+        specific_wo_id =
+          from(r in Run,
+            where: r.id == ^run_id,
+            select: r.work_order_id
+          )
+          |> Repo.one()
+
+        # Get top 20 workorders
+        other_wo_ids =
+          from(wo in WorkOrder,
+            join: r in assoc(wo, :runs),
+            where: wo.workflow_id == ^workflow_id and wo.id != ^specific_wo_id,
+            group_by: wo.id,
+            order_by: [desc: wo.last_activity],
+            # 19 because we're adding the specific one
+            limit: 19,
+            select: wo.id
+          )
+          |> Repo.all()
+
+        # Combine them
+        [specific_wo_id | other_wo_ids] |> Enum.uniq()
+      end
+
+    # Now fetch the full workorders with preloads
+    from(wo in WorkOrder,
+      where: wo.id in ^workorder_ids,
+      order_by: [desc: wo.last_activity],
+      preload: [:snapshot, :runs]
+    )
+    |> Repo.all()
+  end
+
   def get_last_runs_steps_with_dataclips(workorders, jobs) do
     job_ids = Enum.map(jobs, & &1.id)
 

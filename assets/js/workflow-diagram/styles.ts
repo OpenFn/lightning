@@ -5,10 +5,13 @@
  * This is supposed to make changing simple styles easier. Nore sure
  * if it's going to help yet
  */
+import type { RunStep } from '../workflow-store/store';
 import type { Flow } from './types';
 
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_DISABLED = '#E1E1E1';
+export const EDGE_COLOR_DIDNT_RUN = '#dfe0e3';
+export const EDGE_COLOR_DIDNT_RUN_SELECTED = '#d0d0ea';
 export const EDGE_COLOR_SELECTED = '#4f46e5';
 export const EDGE_COLOR_NEIGHBOUR = '#807CCE';
 export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
@@ -48,17 +51,27 @@ export const edgeLabelTextStyles = {
 export const edgeLabelStyles = (
   selected: boolean | undefined,
   neighbour: boolean | undefined,
-  data?: { enabled?: boolean; errors?: object }
+  data?: {
+    enabled?: boolean;
+    errors?: object;
+    didRun?: boolean;
+    isRun?: boolean;
+  }
 ) => {
-  const { enabled, errors } = data ?? {};
+  const { enabled, errors, didRun, isRun } = data ?? {};
+  const didntRun = isRun && !didRun;
   const primaryColor = (
     selected?: boolean,
     neighbour?: boolean,
-    enabled?: boolean
+    enabled?: boolean,
+    didntRun?: boolean
   ) => {
     if (enabled) {
-      if (neighbour) return EDGE_COLOR_NEIGHBOUR;
-      return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+      if (neighbour)
+        return didntRun ? EDGE_COLOR_DIDNT_RUN_SELECTED : EDGE_COLOR_NEIGHBOUR;
+      if (selected) return didntRun ? EDGE_COLOR_SELECTED : EDGE_COLOR_SELECTED;
+      if (didntRun) return EDGE_COLOR_DIDNT_RUN;
+      return EDGE_COLOR;
     }
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
   };
@@ -74,10 +87,10 @@ export const edgeLabelStyles = (
   return {
     borderColor: hasErrors(errors)
       ? ERROR_COLOR
-      : primaryColor(selected, neighbour, enabled),
+      : primaryColor(selected, neighbour, enabled, didntRun),
     color: hasErrors(errors)
       ? ERROR_COLOR
-      : primaryColor(selected, neighbour, enabled),
+      : primaryColor(selected, neighbour, enabled, didntRun),
     backgroundColor: 'transparent',
     display: 'flex',
     alignItems: 'center',
@@ -143,12 +156,40 @@ export const styleEdge = (edge: Flow.Edge) => {
       color: hasErrors ? ERROR_COLOR : primaryColor,
     };
   }
+  if (edge.data?.isRun && !edge.data.didRun) {
+    edge.style.opacity = 0.3;
+  }
   return edge;
 };
 
-export const nodeIconStyles = (selected?: boolean, hasErrors?: boolean) => {
+const BG_GREEN_100 = '#dcfce7';
+const BG_RED_100 = '#ffe2e2';
+const BG_ORANGE_100 = '#ffedd4';
+const BORDER_GREEN_600 = '#00a63e';
+const BORDER_RED_600 = '#e7000b';
+const BORDER_ORANGE_600 = '#f54a00';
+
+export const nodeIconStyles = (
+  selected?: boolean,
+  hasErrors?: boolean,
+  runReason: RunStep['exit_reason'] = null
+) => {
+  const getNodeBorderColor = (reasons: RunStep['exit_reason']) => {
+    if (reasons === 'success') return BORDER_GREEN_600;
+    else if (reasons === 'fail') return BORDER_RED_600;
+    else if (reasons === 'crash') return BORDER_ORANGE_600;
+  };
+  const getNodeColor = (reasons: RunStep['exit_reason']) => {
+    if (reasons === 'success') return BG_GREEN_100;
+    else if (reasons === 'fail') return BG_RED_100;
+    else if (reasons === 'crash') return BG_ORANGE_100;
+  };
   const size = 100;
-  const primaryColor = selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+  const primaryColor = selected
+    ? EDGE_COLOR_SELECTED
+    : runReason
+    ? getNodeBorderColor(runReason)
+    : EDGE_COLOR;
   return {
     width: size,
     height: size,
@@ -156,7 +197,7 @@ export const nodeIconStyles = (selected?: boolean, hasErrors?: boolean) => {
     strokeWidth: 2,
     style: {
       stroke: hasErrors ? ERROR_COLOR : primaryColor,
-      fill: 'white',
+      fill: runReason ? getNodeColor(runReason) : 'white',
     },
   };
 };
