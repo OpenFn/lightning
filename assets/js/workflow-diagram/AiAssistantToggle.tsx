@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import tippy, { type Instance as TippyInstance } from 'tippy.js';
 
 interface AiAssistantToggleProps {
   showAiAssistant?: boolean | undefined;
@@ -49,12 +50,43 @@ export const AiAssistantToggle: React.FC<AiAssistantToggleProps> = ({
   liveAction,
   drawerWidth,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tippyInstanceRef = useRef<TippyInstance | null>(null);
+
+  const isDisabled = snapshotVersionTag !== 'latest';
+
+  const tooltipText = isDisabled
+    ? 'Switch to the latest version of this workflow to use the AI Assistant.'
+    : showAiAssistant === true
+    ? 'Click to close the AI Assistant'
+    : 'Click to open the AI Assistant';
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    tippyInstanceRef.current = tippy(containerRef.current, {
+      placement: 'right',
+      content: tooltipText,
+    });
+
+    return () => {
+      if (tippyInstanceRef.current) {
+        tippyInstanceRef.current.destroy();
+        tippyInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (tippyInstanceRef.current) {
+      tippyInstanceRef.current.setContent(tooltipText);
+    }
+  }, [tooltipText]);
+
   const shouldShow =
     canEditWorkflow && aiAssistantEnabled && liveAction === 'edit';
 
   if (!shouldShow) return null;
-
-  const isDisabled = snapshotVersionTag !== 'latest';
 
   const buttonClasses = [
     'flex items-center justify-between pl-3 pr-3 py-2 transition-all duration-200 w-full text-left',
@@ -80,6 +112,7 @@ export const AiAssistantToggle: React.FC<AiAssistantToggleProps> = ({
 
   return (
     <div
+      ref={containerRef}
       id="AiAssistantToggle"
       className={containerClasses}
       style={{
