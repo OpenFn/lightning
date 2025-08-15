@@ -218,6 +218,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           }
         });
         setModel(newModel);
+      } else {
+        // When isManualLayout is false and no layout is needed, still update the model
+        // to reflect changes in workflow data (like adaptor changes)
+        setModel(newModel);
       }
     } else {
       chartCache.current.positions = {};
