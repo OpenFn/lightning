@@ -2649,13 +2649,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       {url_params, show_workflow_ai_chat} =
         case {version, show_workflow_ai_chat} do
-          {_snapshot, _} ->
-            {Helpers.to_latest_params() |> remove_ai_method.(), false}
-
           {"latest", true} ->
             {Helpers.to_latest_params(), true}
 
           {"latest", false} ->
+            {Helpers.to_latest_params() |> remove_ai_method.(), false}
+
+          {_snapshot, _} ->
             {Helpers.to_latest_params() |> remove_ai_method.(), false}
         end
 
