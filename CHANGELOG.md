@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed issue where adaptors icons didn't change on the canvas when in
+  auto-layout mode [#3526](https://github.com/OpenFn/lightning/issues/3526)
+
 ## [v2.14.1] - 2025-08-14
 
 ### Changed
