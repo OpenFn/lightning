@@ -4,13 +4,24 @@
  */
 
 import type React from "react";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as awarenessProtocol from "y-protocols/awareness";
 import * as Y from "yjs";
 import { useSocket } from "../../react/contexts/SocketProvider";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
 import { createAdaptorStore } from "../stores/createAdaptorStore";
+import {
+  type CredentialStoreInstance,
+  createCredentialStore,
+} from "../stores/createCredentialStore";
 import type { AwarenessUser } from "../types/session";
 
 export interface SessionContextValue {
@@ -27,6 +38,7 @@ export interface SessionContextValue {
 
   // Adaptor management
   adaptorStore: AdaptorStoreInstance;
+  credentialStore: CredentialStoreInstance;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -68,10 +80,10 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
   const [isSynced, setIsSynced] = useState(false);
 
   // Adaptor store - created once and reused
-  const adaptorStoreRef = useRef<AdaptorStoreInstance | null>(null);
-  if (!adaptorStoreRef.current) {
-    adaptorStoreRef.current = createAdaptorStore();
-  }
+  const adaptorStoreRef = useRef<AdaptorStoreInstance>(createAdaptorStore());
+  const credentialStoreRef = useRef<CredentialStoreInstance>(
+    createCredentialStore(),
+  );
 
   // Initialize Yjs when socket is connected
   useEffect(() => {
@@ -179,6 +191,9 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       socketConnected: socket.isConnected(),
     });
 
+    let cleanupAdaptorChannel: (() => void) | undefined;
+    let cleanupCredentialChannel: (() => void) | undefined;
+
     // Listen directly to channel for 'joined' state detection
     const cleanupJoinListener = setupJoinListener(
       channelProvider,
@@ -187,18 +202,16 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
         // Request adaptors when channel is successfully joined
         if (isConnected && adaptorStoreRef.current) {
-          console.log("🎯 Channel joined, requesting adaptors");
-          adaptorStoreRef.current.requestAdaptors();
+          console.debug("Channel joined, requesting adaptors and credentials");
+
+          cleanupAdaptorChannel =
+            adaptorStoreRef.current._internal.connectChannel(channelProvider);
+
+          cleanupCredentialChannel =
+            credentialStoreRef.current._connectChannel(channelProvider);
         }
       },
     );
-
-    // Connect adaptor store to channel provider for real-time updates
-    let cleanupAdaptorChannel: (() => void) | undefined;
-    if (adaptorStoreRef.current) {
-      cleanupAdaptorChannel =
-        adaptorStoreRef.current._internal.connectChannel(channelProvider);
-    }
 
     // Store state
     setYdoc(doc);
@@ -218,6 +231,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       cleanupJoinListener();
       cleanupLastSeenTimer();
       cleanupAdaptorChannel?.();
+      cleanupCredentialChannel?.();
 
       channelProvider.off("status", statusHandler);
       channelProvider.off("sync", syncHandler);
@@ -233,14 +247,21 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     };
   }, [isConnected, socket, workflowId, userId, userName]);
 
-  const value: SessionContextValue = {
-    ydoc,
-    awareness,
-    isConnected: isProviderConnected,
-    isSynced,
-    users,
-    adaptorStore: adaptorStoreRef.current,
-  };
+  // TODO: we should wrap this in useMemo, immer or something to avoid rerendering
+  // mind you, the awareness state changes very frequently, so we should probably
+  // move that up into a store or hook or something. So only rerenders happen
+  // when things that care about it changing.
+  const value = useMemo<SessionContextValue>(() => {
+    return {
+      ydoc,
+      awareness,
+      isConnected: isProviderConnected,
+      isSynced,
+      users,
+      adaptorStore: adaptorStoreRef.current,
+      credentialStore: credentialStoreRef.current,
+    };
+  }, [ydoc, awareness, isProviderConnected, isSynced, users]);
 
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
