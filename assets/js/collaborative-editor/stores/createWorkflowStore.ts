@@ -109,6 +109,7 @@ import { produce } from "immer";
 import * as Y from "yjs";
 import type { AwarenessUser, Session } from "../types/session";
 import type { Workflow } from "../types/workflow";
+import { createWithSelector } from "./common";
 
 export const createWorkflowStore = () => {
   // Y.Doc will be connected externally via SessionProvider
@@ -183,25 +184,7 @@ export const createWorkflowStore = () => {
   const getSnapshot = (): Workflow.WorkflowState => state;
 
   // withSelector utility - creates memoized selectors for referential stability
-  const withSelector = <T>(selector: (state: Workflow.WorkflowState) => T) => {
-    let lastResult: T;
-    let lastState: Workflow.WorkflowState | undefined;
-
-    return (): T => {
-      const currentState = getSnapshot();
-
-      // Only recompute if state reference actually changed
-      if (currentState !== lastState) {
-        const newResult = selector(currentState);
-
-        // Always update result when state changes (Immer guarantees stable references)
-        lastResult = newResult;
-        lastState = currentState;
-      }
-
-      return lastResult;
-    };
-  };
+  const withSelector = createWithSelector(getSnapshot);
 
   // Connect Y.Doc and set up observers
   const connectYDoc = (doc: Session.WorkflowDoc, users: AwarenessUser[]) => {
