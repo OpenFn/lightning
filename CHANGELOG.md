@@ -23,6 +23,43 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.14.2] - 2025-08-15
+
+## [v2.14.2-pre] - 2025-08-15
+
+### Fixed
+
+- Fixed issue where adaptors icons didn't change on the canvas when in
+  auto-layout mode [#3526](https://github.com/OpenFn/lightning/issues/3526)
+
+## [v2.14.1] - 2025-08-14
+
+### Changed
+
+- Removed impeded project metric until performance improvements can be made.
+  [#3519](https://github.com/OpenFn/lightning/issues/3519)
+
+## [v2.14.1-pre2] - 2025-08-12
+
+### Fixed
+
+- Fix workflow diagram collapsing in on itself to become a neutron star
+  [#3506](https://github.com/OpenFn/lightning/issues/3506)
+- Fix Oban crash when Apollo times out
+  [#3497](https://github.com/OpenFn/lightning/issues/3497)
+- Fix PostgreSQL UTF-8 error when inserting log lines with null bytes
+  [#3090](https://github.com/OpenFn/lightning/issues/3090)
+
+## [v2.14.1-pre1] - 2025-08-07
+
+### Fixed
+
+- Restored historical migration (⚠️ if you ran migrations on `v2.14.1-pre` by
+  editing your DB directly or dropping your DB first, you must undo those
+  changes by hand before running this migration) and added a migration to change
+  `:workflow_code` to `:code` on the AI Chat Messages table
+  [3495](https://github.com/OpenFn/lightning/issues/3495)
+
 ## [v2.14.1-pre] - 2025-08-06
 
 ### Added

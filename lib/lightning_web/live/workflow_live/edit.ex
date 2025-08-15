@@ -144,40 +144,40 @@ defmodule LightningWeb.WorkflowLive.Edit do
             Switch to latest version
           </.button>
 
-          <div class="flex flex-row gap-2">
-            <.icon
-              :if={!@can_edit_workflow}
-              name="hero-lock-closed"
-              class="w-5 h-5 place-self-center text-gray-300"
-            />
-            <div class="flex flex-row m-auto gap-2">
-              <.input
-                id="workflow"
-                type="toggle"
-                name="workflow_state"
-                disabled={@sending_ai_message}
-                value={Helpers.workflow_enabled?(@changeset)}
-                tooltip={Helpers.workflow_state_tooltip(@changeset)}
-                on_click="toggle_workflow_state"
+          <.with_changes_indicator
+            :if={@snapshot_version_tag == "latest" && !@show_new_workflow_panel}
+            changeset={@changeset}
+          >
+            <div class="flex flex-row gap-2">
+              <.icon
+                :if={!@can_edit_workflow}
+                name="hero-lock-closed"
+                class="w-5 h-5 place-self-center text-gray-300"
               />
-              <div>
-                <.settings_icon
-                  :if={!@show_new_workflow_panel}
-                  changeset={@changeset}
-                  selection_mode={@selection_mode}
-                  base_url={@base_url}
-                  query_params={@query_params}
-                  show_workflow_ai_chat={@show_workflow_ai_chat}
-                  workflow_chat_session_id={@workflow_chat_session_id}
-                  job_chat_session_id={@job_chat_session_id}
+              <div class="flex flex-row m-auto gap-2">
+                <.input
+                  id="workflow"
+                  type="toggle"
+                  name="workflow_state"
+                  disabled={@sending_ai_message}
+                  value={Helpers.workflow_enabled?(@changeset)}
+                  tooltip={Helpers.workflow_state_tooltip(@changeset)}
+                  on_click="toggle_workflow_state"
                 />
+                <div>
+                  <.settings_icon
+                    :if={!@show_new_workflow_panel}
+                    changeset={@changeset}
+                    selection_mode={@selection_mode}
+                    base_url={@base_url}
+                    query_params={@query_params}
+                    show_workflow_ai_chat={@show_workflow_ai_chat}
+                    workflow_chat_session_id={@workflow_chat_session_id}
+                    job_chat_session_id={@job_chat_session_id}
+                  />
+                </div>
+                <.offline_indicator />
               </div>
-            </div>
-            <.offline_indicator />
-            <.with_changes_indicator
-              :if={@snapshot_version_tag == "latest" && !@show_new_workflow_panel}
-              changeset={@changeset}
-            >
               <.run_workflow_button
                 base_url={@base_url}
                 show_workflow_ai_chat={@show_workflow_ai_chat}
@@ -205,8 +205,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 project_repo_connection={@project_repo_connection}
                 dropdown_position={:bottom}
               />
-            </.with_changes_indicator>
-          </div>
+            </div>
+          </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
       <.WorkflowStore react-id="workflow-mount" />

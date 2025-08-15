@@ -2,6 +2,7 @@
 # Rexbug.start("ExUnit.Server.add_sync_module/_")
 
 Mox.defmock(Lightning.AuthProviders.OauthHTTPClient.Mock, for: Tesla.Adapter)
+Mox.defmock(Lightning.MockSentry, for: Lightning.SentryBehaviour)
 Mox.defmock(Lightning.Tesla.Mock, for: Tesla.Adapter)
 
 :ok = Application.ensure_started(:ex_machina)

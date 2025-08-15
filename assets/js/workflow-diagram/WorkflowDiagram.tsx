@@ -237,17 +237,17 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             chartCache.current.positions = positions;
           });
         }
-      } else {
-        // If layout is id, ensure nodes have positions
-        // This is really only needed when there's a single trigger node
+      } else if (isManualLayout) {
+        // if isManualLayout, then we use values from store instead
         newModel.nodes.forEach(n => {
-          // if isManualLayout, then we use values from store instead
-          if (isManualLayout && n.type !== 'placeholder')
+          if (isManualLayout && n.type !== 'placeholder') {
             n.position = fixedPositions[n.id];
-          if (!n.position) {
-            n.position = { x: 0, y: 0 };
           }
         });
+        setModel(newModel);
+      } else {
+        // When isManualLayout is false and no layout is needed, still update the model
+        // to reflect changes in workflow data (like adaptor changes)
         setModel(newModel);
       }
     } else {

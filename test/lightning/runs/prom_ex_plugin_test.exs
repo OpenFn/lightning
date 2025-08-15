@@ -226,32 +226,6 @@ defmodule Lightning.Runs.PromExPluginTest do
       )
     end
 
-    test "returns a polling group to count impeded projects" do
-      expected_mfa =
-        {
-          Lightning.Runs.PromExPlugin,
-          :project_metrics,
-          [@unclaimed_run_threshold_seconds]
-        }
-
-      project_polling_group =
-        plugin_config() |> find_metric_group(:lightning_run_project_metrics)
-
-      assert %PromEx.MetricTypes.Polling{
-               poll_rate: @poll_rate,
-               measurements_mfa:
-                 {PromEx.MetricTypes.Polling, :safe_polling_runner,
-                  [^expected_mfa]},
-               metrics: [metric]
-             } = project_polling_group
-
-      assert %Telemetry.Metrics.LastValue{
-               name: [:lightning, :run, :project, :impeded, :count],
-               description:
-                 "The count of projects impeded due to lack of worker capacity"
-             } = metric
-    end
-
     defp find_metric_group(plugin_config, group_name) do
       plugin_config
       |> PromExPlugin.polling_metrics()
