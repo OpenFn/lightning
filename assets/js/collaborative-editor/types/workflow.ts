@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-namespace */
+// What should we do about this?
+
 /**
  * Updated workflow types following useSyncExternalStore + Immer + Y.Doc pattern
  * Provides referentially stable state management with clear separation between
@@ -5,9 +8,17 @@
  */
 
 import type * as Y from "yjs";
+
 import type { Job as JobType } from "./job";
-import type { AwarenessUser, Session } from "./session";
+import type { Session } from "./session";
 import type { Trigger as TriggerType } from "./trigger";
+
+export interface Workflow {
+  name: string;
+  jobs: Workflow.Job[];
+  triggers: Workflow.Trigger[];
+  edges: Workflow.Edge[];
+}
 
 export namespace Workflow {
   // Domain objects - use comprehensive Job type from job.ts
@@ -25,7 +36,6 @@ export namespace Workflow {
     condition_expression?: string;
     condition_label?: string;
     enabled?: boolean;
-    // ... other existing fields
   }
 
   export type NodeType = "job" | "trigger" | "edge";
@@ -48,12 +58,10 @@ export namespace Workflow {
     enabled: boolean | null; // Computed from triggers
     selectedNode: Workflow.Job | Workflow.Trigger | null;
     selectedEdge: Workflow.Edge | null;
-    isCollaborating: boolean;
-    connectedUsers: AwarenessUser[];
   }
 
   export interface WorkflowActions {
-    // Pattern 1: Y.Doc update � observer � immer update
+    // Pattern 1: Y.Doc update → observer → immer update
     updateJob: (id: string, updates: Partial<Session.Job>) => void;
     updateJobName: (id: string, name: string) => void;
     updateJobBody: (id: string, body: string) => void;
@@ -75,3 +83,5 @@ export namespace Workflow {
     getJobBodyYText: (id: string) => Y.Text | null;
   }
 }
+
+/* eslint-enable @typescript-eslint/no-namespace */

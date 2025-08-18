@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
+
 import { useSession } from "../contexts/SessionProvider";
 import type { Adaptor, AdaptorState } from "../types/adaptor";
 
@@ -17,9 +18,9 @@ export const useAdaptorState = (): AdaptorState | null => {
   const { adaptorStore } = useSession();
 
   return useSyncExternalStore(
-    adaptorStore.subscribe ?? (() => () => {}),
-    adaptorStore.getSnapshot ?? (() => null),
-    adaptorStore.getSnapshot ?? (() => null), // SSR snapshot
+    adaptorStore.subscribe,
+    adaptorStore.getSnapshot,
+    adaptorStore.getSnapshot
   );
 };
 
@@ -30,14 +31,14 @@ function defaultSelector(state: AdaptorState): Adaptor[] {
 export function useAdaptors(): Adaptor[];
 export function useAdaptors<T>(
   selector: (state: AdaptorState) => T,
-  deps?: React.DependencyList,
+  deps?: React.DependencyList
 ): T;
 
 export function useAdaptors<T = Adaptor[]>(
   selector: (state: AdaptorState) => T = defaultSelector as (
-    state: AdaptorState,
+    state: AdaptorState
   ) => T,
-  deps: React.DependencyList = [],
+  deps: React.DependencyList = []
 ): T {
   const { adaptorStore } = useSession();
 
@@ -56,7 +57,7 @@ export function useAdaptors<T = Adaptor[]>(
 
   const getSnapshot = useCallback(
     () => memoizedSelector(adaptorStore.getSnapshot()),
-    [adaptorStore, memoizedSelector],
+    [adaptorStore, memoizedSelector]
   );
 
   return useSyncExternalStore(adaptorStore.subscribe, getSnapshot);
@@ -67,13 +68,9 @@ export function useAdaptors<T = Adaptor[]>(
 export const useAdaptorsLoading = (): boolean => {
   const { adaptorStore } = useSession();
 
-  const selector = adaptorStore?.withSelector((state) => state.isLoading);
+  const selector = adaptorStore.withSelector(state => state.isLoading);
 
-  return useSyncExternalStore(
-    adaptorStore.subscribe ?? (() => () => {}),
-    selector ?? (() => false),
-    selector ?? (() => false), // SSR snapshot
-  );
+  return useSyncExternalStore(adaptorStore.subscribe, selector, selector);
 };
 
 /**
@@ -82,13 +79,9 @@ export const useAdaptorsLoading = (): boolean => {
 export const useAdaptorsError = (): string | null => {
   const { adaptorStore } = useSession();
 
-  const selector = adaptorStore?.withSelector((state) => state.error);
+  const selector = adaptorStore.withSelector(state => state.error);
 
-  return useSyncExternalStore(
-    adaptorStore.subscribe ?? (() => () => {}),
-    selector ?? (() => null),
-    selector ?? (() => null), // SSR snapshot
-  );
+  return useSyncExternalStore(adaptorStore.subscribe, selector, selector);
 };
 
 /**
@@ -98,9 +91,9 @@ export const useAdaptorCommands = () => {
   const { adaptorStore } = useSession();
 
   return {
-    requestAdaptors: adaptorStore?.requestAdaptors ?? (() => {}),
-    setAdaptors: adaptorStore?.setAdaptors ?? (() => {}),
-    clearError: adaptorStore?.clearError ?? (() => {}),
+    requestAdaptors: adaptorStore.requestAdaptors,
+    setAdaptors: adaptorStore.setAdaptors,
+    clearError: adaptorStore.clearError,
   };
 };
 
@@ -111,9 +104,9 @@ export const useAdaptorQueries = () => {
   const { adaptorStore } = useSession();
 
   return {
-    findAdaptorByName: adaptorStore?.findAdaptorByName ?? (() => null),
-    getLatestVersion: adaptorStore?.getLatestVersion ?? (() => null),
-    getVersions: adaptorStore?.getVersions ?? (() => []),
+    findAdaptorByName: adaptorStore.findAdaptorByName,
+    getLatestVersion: adaptorStore.getLatestVersion,
+    getVersions: adaptorStore.getVersions,
   };
 };
 
@@ -124,15 +117,11 @@ export const useAdaptorQueries = () => {
 export const useAdaptor = (name: string): Adaptor | null => {
   const { adaptorStore } = useSession();
 
-  const selector = adaptorStore?.withSelector(
-    (state) => state.adaptors.find((adaptor) => adaptor.name === name) || null,
+  const selector = adaptorStore.withSelector(
+    state => state.adaptors.find(adaptor => adaptor.name === name) || null
   );
 
-  return useSyncExternalStore(
-    adaptorStore.subscribe ?? (() => () => {}),
-    selector ?? (() => null),
-    selector ?? (() => null), // SSR snapshot
-  );
+  return useSyncExternalStore(adaptorStore.subscribe, selector, selector);
 };
 
 /**
