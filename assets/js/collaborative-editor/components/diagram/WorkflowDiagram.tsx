@@ -10,29 +10,29 @@ import {
   type ReactFlowInstance,
   ReactFlowProvider,
   type Rect,
-} from '@xyflow/react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import tippy from 'tippy.js';
+} from "@xyflow/react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import tippy from "tippy.js";
 
-import { useWorkflowState } from '#/collaborative-editor/hooks/Workflow';
-import MiniMapNode from '#/workflow-diagram/components/MiniMapNode';
-import { FIT_DURATION, FIT_PADDING } from '#/workflow-diagram/constants';
-import edgeTypes from '#/workflow-diagram/edges';
-import layout from '#/workflow-diagram/layout';
-import nodeTypes from '#/workflow-diagram/nodes';
-import type { Flow, Positions } from '#/workflow-diagram/types';
-import useConnect from '#/workflow-diagram/useConnect';
-import usePlaceholders from '#/workflow-diagram/usePlaceholders';
-import fromWorkflow from '#/workflow-diagram/util/from-workflow';
-import shouldLayout from '#/workflow-diagram/util/should-layout';
-import throttle from '#/workflow-diagram/util/throttle';
-import updateSelectionStyles from '#/workflow-diagram/util/update-selection';
+import { useWorkflowState } from "#/collaborative-editor/hooks/Workflow";
+import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
+import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
+import edgeTypes from "#/workflow-diagram/edges";
+import layout from "#/workflow-diagram/layout";
+import nodeTypes from "#/workflow-diagram/nodes";
+import type { Flow, Positions } from "#/workflow-diagram/types";
+import useConnect from "#/workflow-diagram/useConnect";
+import usePlaceholders from "#/workflow-diagram/usePlaceholders";
+import fromWorkflow from "#/workflow-diagram/util/from-workflow";
+import shouldLayout from "#/workflow-diagram/util/should-layout";
+import throttle from "#/workflow-diagram/util/throttle";
+import updateSelectionStyles from "#/workflow-diagram/util/update-selection";
 import {
   getVisibleRect,
   isPointInRect,
-} from '#/workflow-diagram/util/viewport';
+} from "#/workflow-diagram/util/viewport";
 
-import { useInspectorOverlap } from './useInspectorOverlap';
+import { useInspectorOverlap } from "./useInspectorOverlap";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -59,14 +59,14 @@ const LAYOUT_DURATION = 300;
 const useTippyForControls = (isManualLayout: boolean) => {
   useEffect(() => {
     // Find the control buttons and initialize tooltips based on their dataset attributes
-    const buttons = document.querySelectorAll('.react-flow__controls button');
+    const buttons = document.querySelectorAll(".react-flow__controls button");
 
     const cleaner: (() => void)[] = [];
     buttons.forEach(button => {
       if (button instanceof HTMLElement && button.dataset.tooltip) {
         const tp = tippy(button, {
           content: button.dataset.tooltip,
-          placement: 'right',
+          placement: "right",
           animation: false,
           allowHTML: false,
         });
@@ -181,6 +181,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         workflow,
         positions,
         placeholders,
+        { steps: [] },
         // Re-render the model based on whatever was last selected
         // This handles first load and new node safely
         lastSelection
@@ -206,7 +207,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           const nodesWPos = newModel.nodes.map(node => {
             // during manualLayout. a placeholder wouldn't have position in positions in store
             // hence use the position on the placeholder node
-            const isPlaceholder = node.type === 'placeholder';
+            const isPlaceholder = node.type === "placeholder";
             return {
               ...node,
               position: isPlaceholder ? node.position : fixedPositions[node.id],
@@ -226,7 +227,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       } else {
         // if isManualLayout, then we use values from store instead
         newModel.nodes.forEach(n => {
-          if (isManualLayout && n.type !== 'placeholder') {
+          if (isManualLayout && n.type !== "placeholder") {
             n.position = fixedPositions[n.id];
           }
         });
@@ -316,7 +317,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           padding: FIT_PADDING,
         })
         .catch(error => {
-          console.error('Failed to fit bounds:', error);
+          console.error("Failed to fit bounds:", error);
         });
     }
   }, [props.forceFit, flow, model.nodes]);
@@ -339,7 +340,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // update node position data only on dragstop.
   const onNodeDragStop = useCallback(
     (e: React.MouseEvent, node: Flow.Node) => {
-      if (node.type === 'placeholder') {
+      if (node.type === "placeholder") {
         updatePlaceholderPosition(node.id, node.position);
       } else {
         updatePosition(node.id, node.position);
@@ -351,13 +352,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
       if (
-        (event.target as HTMLElement).getAttribute('data-handleid') ===
-        'node-connector'
+        (event.target as HTMLElement).getAttribute("data-handleid") ===
+        "node-connector"
       ) {
         addPlaceholder(node);
         return;
       }
-      if (node.type !== 'placeholder') cancelPlaceholder();
+      if (node.type !== "placeholder") cancelPlaceholder();
       updateSelection(node.id);
     },
     [updateSelection, cancelPlaceholder, addPlaceholder]
@@ -456,10 +457,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // undo/redo keyboard shortcuts
   useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
-      const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z';
+      const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "z";
       const isRedo =
-        ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
-        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z');
+        ((e.metaKey || e.ctrlKey) && e.key === "y") ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "z");
 
       if (isUndo) {
         e.preventDefault();
@@ -470,9 +471,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         redo();
       }
     };
-    window.addEventListener('keydown', keyHandler);
+    window.addEventListener("keydown", keyHandler);
     return () => {
-      window.removeEventListener('keydown', keyHandler);
+      window.removeEventListener("keydown", keyHandler);
     };
   }, [redo, undo]);
 
@@ -481,7 +482,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       <ReactFlow
         ref={workflowDiagramRef}
         maxZoom={1}
-        proOptions={{ account: 'paid-pro', hideAttribution: true }}
+        proOptions={{ account: "paid-pro", hideAttribution: true }}
         nodes={model.nodes}
         edges={model.edges}
         onNodesChange={onNodesChange}
@@ -504,7 +505,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           showFitView={false}
           style={{
             transform: `translateX(${drawerWidth}px)`,
-            transition: 'transform 500ms ease-in-out',
+            transition: "transform 500ms ease-in-out",
           }}
         >
           <ControlButton onClick={handleFitView} data-tooltip="Fit view">
@@ -515,8 +516,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             onClick={switchLayout}
             data-tooltip={
               isManualLayout
-                ? 'Switch to auto layout mode'
-                : 'Switch to manual layout mode'
+                ? "Switch to auto layout mode"
+                : "Switch to manual layout mode"
             }
           >
             {isManualLayout ? (
@@ -546,7 +547,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           nodeComponent={MiniMapNode}
           style={{
             transform: `translateX(-${inspectorWidth}px)`,
-            transition: 'transform duration-300 ease-in-out',
+            transition: "transform duration-300 ease-in-out",
           }}
         />
       </ReactFlow>
