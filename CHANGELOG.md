@@ -16,6 +16,7 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
 - Visualizing runs on the workflow editor canvas
   [#3387](https://github.com/OpenFn/lightning/issues/3387)
 
