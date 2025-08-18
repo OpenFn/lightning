@@ -57,7 +57,6 @@
     "zustand": "^4.3.7"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.0",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.4.1",
     "@eslint/js": "^9.21.0",
     "@openfn/ws-worker": "^1.13.2",
