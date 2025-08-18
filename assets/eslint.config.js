@@ -77,9 +77,26 @@ export default [
     ...conf,
   })),
   {
-    files: ['**/*.d.ts'],
+    files: ["**/*.d.ts"],
     rules: {
-      '@typescript-eslint/no-floating-promises': 'off',
+      "@typescript-eslint/no-floating-promises": "off",
+    },
+  },
+  {
+    rules: {
+      "@typescript-eslint/no-confusing-void-expression": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "all",
+          argsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
   ...[
