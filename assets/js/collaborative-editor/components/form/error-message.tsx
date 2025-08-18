@@ -1,7 +1,7 @@
 import type { AnyFieldMeta } from "@tanstack/react-form";
 
 export function ErrorMessage({ meta }: { meta: AnyFieldMeta }) {
-  const firstError = meta.errors?.[0];
+  const firstError = meta.errors[0];
   return firstError ? (
     <p
       data-tag="error_message"

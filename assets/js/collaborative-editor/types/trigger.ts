@@ -1,5 +1,6 @@
 import { isValidCron } from "cron-validator";
 import { z } from "zod";
+
 import { uuidSchema } from "./common";
 
 // Base trigger fields common to all trigger types
@@ -22,7 +23,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
     .string()
     .min(1, "Cron expression is required")
     .refine(
-      (expr) => {
+      expr => {
         console.log("validating cron expression", expr);
         // Use cron-validator for professional validation
         return isValidCron(expr, {
@@ -34,7 +35,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
       {
         message:
           "Invalid cron expression. Use format: minute hour day month weekday",
-      },
+      }
     ),
   kafka_configuration: z.null(),
 });
@@ -47,7 +48,7 @@ const kafkaConfigSchema = z
       .min(1, "Kafka hosts are required")
       .regex(
         /^[^,]+:\d+(,[^,]+:\d+)*$/,
-        "Hosts must be in format 'host:port,host:port'",
+        "Hosts must be in format 'host:port,host:port'"
       ),
     topics: z
       .string()
@@ -69,7 +70,7 @@ const kafkaConfigSchema = z
     group_id: z.string().optional(), // Auto-generated as lightning-{uuid}
   })
   .refine(
-    (data) => {
+    data => {
       // If SASL is not "none", username and password are required
       if (data.sasl !== "none") {
         return data.username && data.password;
@@ -80,7 +81,7 @@ const kafkaConfigSchema = z
       message:
         "Username and password are required when SASL authentication is enabled",
       path: ["username"], // Show error on username field
-    },
+    }
   );
 
 // Kafka trigger schema
@@ -101,9 +102,3 @@ export const TriggerSchema = z.discriminatedUnion("type", [
 ]);
 
 export type Trigger = z.infer<typeof TriggerSchema>;
-
-// Export individual schemas for specific use cases
-// export const WebhookValidation = webhookTriggerSchema;
-// export const CronValidation = cronTriggerSchema;
-// export const KafkaValidation = kafkaTriggerSchema;
-// export const KafkaConfigValidation = kafkaConfigSchema;

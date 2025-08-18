@@ -107,9 +107,14 @@
 
 import { produce } from "immer";
 import * as Y from "yjs";
-import type { AwarenessUser, Session } from "../types/session";
+
+import { JobSchema } from "../types/job";
+import type { Session } from "../types/session";
 import type { Workflow } from "../types/workflow";
+
 import { createWithSelector } from "./common";
+
+const JobShape = JobSchema.shape;
 
 export const createWorkflowStore = () => {
   // Y.Doc will be connected externally via SessionProvider
@@ -120,26 +125,23 @@ export const createWorkflowStore = () => {
   const updateDerivedState = (draft: Workflow.WorkflowState) => {
     // Compute enabled from triggers
     draft.enabled =
-      draft.triggers.length > 0 ? draft.triggers.some((t) => t.enabled) : null;
+      draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
 
     // Compute selected node
     if (draft.selectedJobId) {
       draft.selectedNode =
-        draft.jobs.find((j) => j.id === draft.selectedJobId) || null;
+        draft.jobs.find(j => j.id === draft.selectedJobId) || null;
     } else if (draft.selectedTriggerId) {
       draft.selectedNode =
-        draft.triggers.find((t) => t.id === draft.selectedTriggerId) || null;
+        draft.triggers.find(t => t.id === draft.selectedTriggerId) || null;
     } else {
       draft.selectedNode = null;
     }
 
     // Compute selected edge
     draft.selectedEdge = draft.selectedEdgeId
-      ? draft.edges.find((e) => e.id === draft.selectedEdgeId) || null
+      ? draft.edges.find(e => e.id === draft.selectedEdgeId) || null
       : null;
-
-    // Compute collaboration status
-    draft.isCollaborating = draft.connectedUsers.length > 1;
   };
 
   // Single Immer-managed state object (referentially stable)
@@ -160,19 +162,17 @@ export const createWorkflowStore = () => {
       enabled: null,
       selectedNode: null,
       selectedEdge: null,
-      isCollaborating: false,
-      connectedUsers: [],
     } as Workflow.WorkflowState,
-    (draft) => {
+    draft => {
       // Compute derived state on initialization
       updateDerivedState(draft);
-    },
+    }
   );
 
   const listeners = new Set<() => void>();
 
   const notify = () => {
-    listeners.forEach((listener) => {
+    listeners.forEach(listener => {
       listener();
     });
   };
@@ -189,21 +189,21 @@ export const createWorkflowStore = () => {
   const withSelector = createWithSelector(getSnapshot);
 
   // Connect Y.Doc and set up observers
-  const connectYDoc = (doc: Session.WorkflowDoc, users: AwarenessUser[]) => {
+  const connectYDoc = (doc: Session.WorkflowDoc) => {
     // Clean up previous connection
     disconnectYDoc();
 
     ydoc = doc;
 
     // Get Y.js maps and arrays
-    const workflowMap = doc.getMap("workflow");
-    const jobsArray = doc.getArray("jobs");
-    const triggersArray = doc.getArray("triggers");
-    const edgesArray = doc.getArray("edges");
+    const workflowMap = ydoc.getMap("workflow");
+    const jobsArray = ydoc.getArray("jobs");
+    const triggersArray = ydoc.getArray("triggers");
+    const edgesArray = ydoc.getArray("edges");
 
     // Set up observers
     const workflowObserver = () => {
-      state = produce(state, (draft) => {
+      state = produce(state, draft => {
         draft.workflow = workflowMap.toJSON() as Session.Workflow;
         updateDerivedState(draft);
       });
@@ -211,19 +211,19 @@ export const createWorkflowStore = () => {
     };
 
     const jobsObserver = () => {
-      state = produce(state, (draft) => {
+      state = produce(state, draft => {
         const yjsJobs = jobsArray.toArray() as Y.Map<unknown>[];
-        draft.jobs = yjsJobs.map((yjsJob) => yjsJob.toJSON() as Workflow.Job);
+        draft.jobs = yjsJobs.map(yjsJob => yjsJob.toJSON() as Workflow.Job);
         updateDerivedState(draft);
       });
       notify();
     };
 
     const triggersObserver = () => {
-      state = produce(state, (draft) => {
+      state = produce(state, draft => {
         const yjsTriggers = triggersArray.toArray() as Y.Map<unknown>[];
         draft.triggers = yjsTriggers.map(
-          (yjsTrigger) => yjsTrigger.toJSON() as Workflow.Trigger,
+          yjsTrigger => yjsTrigger.toJSON() as Workflow.Trigger
         );
         updateDerivedState(draft);
       });
@@ -231,10 +231,10 @@ export const createWorkflowStore = () => {
     };
 
     const edgesObserver = () => {
-      state = produce(state, (draft) => {
+      state = produce(state, draft => {
         const yjsEdges = edgesArray.toArray() as Y.Map<unknown>[];
         draft.edges = yjsEdges.map(
-          (yjsEdge) => yjsEdge.toJSON() as Workflow.Edge,
+          yjsEdge => yjsEdge.toJSON() as Workflow.Edge
         );
         updateDerivedState(draft);
       });
@@ -255,9 +255,7 @@ export const createWorkflowStore = () => {
       () => edgesArray.unobserveDeep(edgesObserver),
     ];
 
-    // Update connected users
-    state = produce(state, (draft) => {
-      draft.connectedUsers = users;
+    state = produce(state, draft => {
       updateDerivedState(draft);
     });
     notify();
@@ -271,15 +269,14 @@ export const createWorkflowStore = () => {
 
   // Disconnect Y.Doc and clean up observers
   const disconnectYDoc = () => {
-    observerCleanups.forEach((cleanup) => {
+    observerCleanups.forEach(cleanup => {
       cleanup();
     });
     observerCleanups = [];
     ydoc = null;
 
     // Update collaboration status
-    state = produce(state, (draft) => {
-      draft.connectedUsers = [];
+    state = produce(state, draft => {
       updateDerivedState(draft);
     });
     notify();
@@ -291,10 +288,11 @@ export const createWorkflowStore = () => {
   // These methods update Y.Doc, which triggers observers that update Immer state
 
   const updateJob = (id: string, updates: Partial<Session.Job>) => {
+    // TODO: parse through zod to throw out extra fields
     if (!ydoc) {
       // Fallback to direct state update if Y.Doc not connected
-      state = produce(state, (draft) => {
-        const job = draft.jobs.find((j) => j.id === id);
+      state = produce(state, draft => {
+        const job = draft.jobs.find(j => j.id === id);
         if (job) {
           Object.assign(job, updates);
         }
@@ -306,26 +304,27 @@ export const createWorkflowStore = () => {
 
     const jobsArray = ydoc.getArray("jobs");
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
-    const jobIndex = jobs.findIndex((job) => job.get("id") === id);
+    const jobIndex = jobs.findIndex(job => job.get("id") === id);
 
     if (jobIndex >= 0) {
       const yjsJob = jobs[jobIndex];
       if (yjsJob) {
         ydoc.transact(() => {
-          Object.entries(updates).forEach(([key, value]) => {
-            if (key === "body" && typeof value === "string") {
-              const ytext = yjsJob.get("body") as Y.Text;
-              if (ytext) {
+          Object.entries(updates)
+            .filter(([key]) => key in JobShape)
+            .forEach(([key, value]) => {
+              if (key === "body" && typeof value === "string") {
+                const ytext = yjsJob.get("body") as Y.Text;
                 ytext.delete(0, ytext.length);
                 ytext.insert(0, value);
+              } else {
+                yjsJob.set(key, value);
               }
-            } else {
-              yjsJob.set(key, value);
-            }
-          });
+            });
         });
       }
     }
+
     // Observer handles the rest: Y.Doc → immer → notify
   };
 
@@ -358,7 +357,7 @@ export const createWorkflowStore = () => {
 
     const jobsArray = ydoc.getArray("jobs");
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
-    const jobIndex = jobs.findIndex((job) => job.get("id") === id);
+    const jobIndex = jobs.findIndex(job => job.get("id") === id);
 
     if (jobIndex >= 0) {
       ydoc.transact(() => {
@@ -373,7 +372,7 @@ export const createWorkflowStore = () => {
     const triggersArray = ydoc.getArray("triggers");
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
     const triggerIndex = triggers.findIndex(
-      (trigger) => trigger.get("id") === id,
+      trigger => trigger.get("id") === id
     );
 
     if (triggerIndex >= 0) {
@@ -395,7 +394,7 @@ export const createWorkflowStore = () => {
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
 
     ydoc.transact(() => {
-      triggers.forEach((trigger) => {
+      triggers.forEach(trigger => {
         trigger.set("enabled", enabled);
       });
     });
@@ -406,7 +405,7 @@ export const createWorkflowStore = () => {
 
     const jobsArray = ydoc.getArray("jobs");
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
-    const yjsJob = jobs.find((job) => job.get("id") === id);
+    const yjsJob = jobs.find(job => job.get("id") === id);
 
     return yjsJob ? (yjsJob.get("body") as Y.Text) : null;
   };
@@ -417,7 +416,7 @@ export const createWorkflowStore = () => {
   // These methods directly update Immer state without Y.Doc involvement
 
   const selectJob = (id: string | null) => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.selectedJobId = id;
       draft.selectedTriggerId = null;
       draft.selectedEdgeId = null;
@@ -427,7 +426,7 @@ export const createWorkflowStore = () => {
   };
 
   const selectTrigger = (id: string | null) => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.selectedTriggerId = id;
       draft.selectedJobId = null;
       draft.selectedEdgeId = null;
@@ -437,7 +436,7 @@ export const createWorkflowStore = () => {
   };
 
   const selectEdge = (id: string | null) => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.selectedEdgeId = id;
       draft.selectedJobId = null;
       draft.selectedTriggerId = null;
@@ -447,7 +446,7 @@ export const createWorkflowStore = () => {
   };
 
   const clearSelection = () => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.selectedJobId = null;
       draft.selectedTriggerId = null;
       draft.selectedEdgeId = null;
@@ -467,7 +466,7 @@ export const createWorkflowStore = () => {
     removeJob(id);
 
     // Immediately clear selection if this job was selected
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       if (draft.selectedJobId === id) {
         draft.selectedJobId = null;
         updateDerivedState(draft);

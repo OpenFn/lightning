@@ -1,6 +1,6 @@
 import { useStore } from "@tanstack/react-form";
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { ZodSchema } from "zod";
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
@@ -66,7 +66,7 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
 
   const adaptor = useMemo(() => {
     if (!adaptorPackage) return null;
-    return adaptors.find((adaptor) => adaptor.name === adaptorPackage) || null;
+    return adaptors.find(adaptor => adaptor.name === adaptorPackage) || null;
   }, [adaptorPackage, adaptors]);
 
   const adaptorVersionOptions = useMemo(() => {
@@ -86,16 +86,16 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
 
   const getLatestVersion = useCallback(
     (packageName: string) => {
-      const adaptor = adaptors.find((adaptor) => adaptor.name === packageName);
+      const adaptor = adaptors.find(adaptor => adaptor.name === packageName);
       if (!adaptor) return null;
       return `${adaptor.name}@${adaptor.latest}`;
     },
-    [adaptors],
+    [adaptors]
   );
 
   const adaptorPackageOptions = useMemo(() => {
     return adaptors
-      .map((adaptor) => {
+      .map(adaptor => {
         const label = extractAdaptorName(adaptor.name);
         if (!label) return null;
         return {
@@ -103,7 +103,7 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
           label,
         };
       })
-      .filter((option) => option !== null);
+      .filter(option => option !== null);
   }, [adaptors]);
 
   return { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion };
@@ -111,20 +111,20 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
 
 const useCredentialOptions = () => {
   const { keychainCredentials, projectCredentials, isLoading } = useCredentials(
-    (state) => ({
+    state => ({
       keychainCredentials: state.keychainCredentials,
       projectCredentials: state.projectCredentials,
       isLoading: state.isLoading,
-    }),
+    })
   );
 
   const credentialOptions = useMemo(() => {
     return [
-      ...projectCredentials.map((credential) => ({
+      ...projectCredentials.map(credential => ({
         value: credential.project_credential_id,
         label: credential.name,
       })),
-      ...keychainCredentials.map((credential) => ({
+      ...keychainCredentials.map(credential => ({
         value: credential.id,
         label: credential.name,
         group: "Keychain Credentials",
@@ -132,36 +132,69 @@ const useCredentialOptions = () => {
     ];
   }, [projectCredentials, keychainCredentials]);
 
-  return {
-    credentialOptions,
-    isLoading,
-  };
+  const resolveCredentialId = useCallback(
+    (credentialId: string | null) => {
+      if (!credentialId) {
+        return { project_credential_id: null, keychain_credential_id: null };
+      }
+
+      const isProjectCredential = projectCredentials.some(
+        c => c.project_credential_id === credentialId
+      );
+      const isKeychainCredential = keychainCredentials.some(
+        c => c.id === credentialId
+      );
+
+      return {
+        project_credential_id: isProjectCredential ? credentialId : null,
+        keychain_credential_id: isKeychainCredential ? credentialId : null,
+      };
+    },
+    [projectCredentials, keychainCredentials]
+  );
+
+  return useMemo(
+    () => ({
+      credentialOptions,
+      isLoading,
+      resolveCredentialId,
+    }),
+    [credentialOptions, isLoading, resolveCredentialId]
+  );
 };
 
-export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
+export function JobInspector({ job }: JobInspectorProps) {
   const { updateJob } = useWorkflowActions();
-  const { credentialOptions, isLoading } = useCredentialOptions();
+  const { credentialOptions, isLoading, resolveCredentialId } =
+    useCredentialOptions();
 
   // Parse initial adaptor value to get separate package and version
   const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
   const { package: initialAdaptorPackage } = resolveAdaptor(initialAdaptor);
 
-  const form = useAppForm({
-    defaultValues: {
-      id: job.id || "",
-      name: job.name || "",
-      body: job.body || "",
+  // Determine initial credential_id for the dropdown
+  const initialCredentialId =
+    job.project_credential_id || job.keychain_credential_id || null;
+
+  const defaultValues = useMemo(
+    () => ({
+      id: job.id,
+      name: job.name,
+      body: job.body,
       adaptor: initialAdaptor,
       // Virtual fields for UI only
       adaptor_package: initialAdaptorPackage,
+      credential_id: initialCredentialId,
+      delete: job.delete || false,
+
       project_credential_id: job.project_credential_id,
       keychain_credential_id: job.keychain_credential_id,
-      workflow_id: job.workflow_id || undefined,
-      delete: job.delete || false,
-      inserted_at: job.inserted_at || undefined,
-      updated_at: job.updated_at || undefined,
-      enabled: job.enabled ?? true,
-    },
+    }),
+    [job, initialAdaptor, initialAdaptorPackage, initialCredentialId]
+  );
+
+  const form = useAppForm({
+    defaultValues,
     listeners: {
       onChange: ({ formApi }) => {
         if (job.id) {
@@ -174,9 +207,14 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
     },
   });
 
+  // Reset form when job changes
+  useEffect(() => {
+    form.reset();
+  }, [job.id, form]);
+
   const adaptorPackage = useStore(
     form.store,
-    (state) => state.values.adaptor_package,
+    state => state.values.adaptor_package
   );
 
   const { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion } =
@@ -187,7 +225,7 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
       <div className="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
         <div className="col-span-6">
           <form.AppField name="name">
-            {(field) => <field.TextField label="Name" />}
+            {field => <field.TextField label="Name" />}
           </form.AppField>
         </div>
 
@@ -206,7 +244,7 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
               },
             }}
           >
-            {(field) => (
+            {field => (
               <field.SelectField
                 label="Adaptor"
                 options={adaptorPackageOptions}
@@ -218,7 +256,7 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
         {/* Adaptor Version Dropdown - dependent on package selection */}
         <div className="col-span-6">
           <form.AppField name="adaptor">
-            {(field) => {
+            {field => {
               return (
                 <field.SelectField
                   label="Version"
@@ -230,8 +268,23 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
         </div>
 
         <div className="col-span-6">
-          <form.AppField name="project_credential_id">
-            {(field) => {
+          <form.AppField
+            name="credential_id"
+            listeners={{
+              onChange: ({ value, fieldApi }) => {
+                const resolved = resolveCredentialId(value);
+                fieldApi.form.setFieldValue(
+                  "project_credential_id",
+                  resolved.project_credential_id
+                );
+                fieldApi.form.setFieldValue(
+                  "keychain_credential_id",
+                  resolved.keychain_credential_id
+                );
+              },
+            }}
+          >
+            {field => {
               return (
                 <field.SelectField
                   label="Credential"
@@ -267,4 +320,4 @@ export const JobInspector: React.FC<JobInspectorProps> = ({ job }) => {
       </div>
     </div>
   );
-};
+}
