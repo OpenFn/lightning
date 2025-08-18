@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
+
 import { useSession } from "../contexts/SessionProvider";
 import type { CredentialState } from "../types/credential";
 
@@ -15,7 +16,7 @@ type ProjectAndKeychainCredentials = Pick<
 >;
 
 function defaultSelector(
-  state: CredentialState,
+  state: CredentialState
 ): ProjectAndKeychainCredentials {
   return {
     projectCredentials: state.projectCredentials,
@@ -26,14 +27,14 @@ function defaultSelector(
 export function useCredentials(): ProjectAndKeychainCredentials;
 export function useCredentials<T>(
   selector: (state: CredentialState) => T,
-  deps?: React.DependencyList,
+  deps?: React.DependencyList
 ): T;
 
 export function useCredentials<T = ProjectAndKeychainCredentials>(
   selector: (state: CredentialState) => T = defaultSelector as (
-    state: CredentialState,
+    state: CredentialState
   ) => T,
-  deps: React.DependencyList = [],
+  deps: React.DependencyList = []
 ): T {
   const { credentialStore } = useSession();
 
@@ -52,7 +53,7 @@ export function useCredentials<T = ProjectAndKeychainCredentials>(
 
   const getSnapshot = useCallback(
     () => memoizedSelector(credentialStore.getSnapshot()),
-    [credentialStore, memoizedSelector],
+    [credentialStore, memoizedSelector]
   );
 
   return useSyncExternalStore(credentialStore.subscribe, getSnapshot);
@@ -64,12 +65,12 @@ export function useCredentials<T = ProjectAndKeychainCredentials>(
 export const useCredentialsError = (): string | null => {
   const { credentialStore } = useSession();
 
-  const selector = credentialStore?.withSelector((state) => state.error);
+  const selector = credentialStore.withSelector(state => state.error);
 
   return useSyncExternalStore(
-    credentialStore.subscribe ?? (() => () => {}),
-    selector ?? (() => null),
-    selector ?? (() => null), // SSR snapshot
+    credentialStore.subscribe,
+    selector,
+    selector // SSR snapshot
   );
 };
 
@@ -80,7 +81,7 @@ export const useCredentialsCommands = () => {
   const { credentialStore } = useSession();
 
   return {
-    requestCredentials: credentialStore?.requestCredentials ?? (() => {}),
-    clearError: credentialStore?.clearError ?? (() => {}),
+    requestCredentials: credentialStore.requestCredentials,
+    clearError: credentialStore.clearError,
   };
 };

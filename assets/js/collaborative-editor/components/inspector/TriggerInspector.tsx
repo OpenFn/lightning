@@ -1,8 +1,10 @@
 import { useForm } from "@tanstack/react-form";
 import type React from "react";
 import { useState } from "react";
+
 import { useTriggerFormActions } from "../../contexts/WorkflowStoreProvider";
 import type { Workflow } from "../../types/workflow";
+
 import { CronFieldBuilder } from "./CronFieldBuilder";
 
 interface TriggerInspectorProps {

@@ -4,12 +4,15 @@
  */
 
 import type React from "react";
+
 import { useSocket } from "../../react/contexts/SocketProvider";
 import { useSession } from "../contexts/SessionProvider";
+import { useAwarenessUsers } from "../hooks/useAwareness";
 
 export const CollaborationWidget: React.FC = () => {
   const { isConnected: socketConnected, connectionError } = useSocket();
-  const { isConnected: yjsConnected, isSynced, users } = useSession();
+  const { isConnected: yjsConnected, isSynced } = useSession();
+  const users = useAwarenessUsers();
 
   const getStatusColor = () => {
     if (socketConnected && yjsConnected && isSynced) return "bg-green-500";

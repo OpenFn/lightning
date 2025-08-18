@@ -6,40 +6,42 @@ import {
   DocumentTextIcon,
   SparklesIcon,
   ViewColumnsIcon,
-} from "@heroicons/react/24/outline";
-import type React from "react";
-import { useCallback, useMemo, useState } from "react";
-import Docs from "../../adaptor-docs/Docs";
-import { Tabs } from "../../components/Tabs";
-import Metadata from "../../metadata-explorer/Explorer";
-import { useSession } from "../contexts/SessionProvider";
-import { useWorkflowSelector } from "../hooks/Workflow";
-import { CollaborativeMonaco } from "./CollaborativeMonaco";
-import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
+} from '@heroicons/react/24/outline';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
+
+import Docs from '../../adaptor-docs/Docs';
+import { Tabs } from '../../components/Tabs';
+import Metadata from '../../metadata-explorer/Explorer';
+import { useAwarenessReady, useRawAwareness } from '../hooks/useAwareness';
+import { useWorkflowSelector } from '../hooks/Workflow';
+
+import { CollaborativeMonaco } from './CollaborativeMonaco';
+import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
 
 enum SettingsKeys {
-  ORIENTATION = "lightning.collaborative-job-editor.orientation",
-  SHOW_PANEL = "lightning.collaborative-job-editor.showPanel",
-  ACTIVE_TAB = "lightning.collaborative-job-editor.activeTab",
+  ORIENTATION = 'lightning.collaborative-job-editor.orientation',
+  SHOW_PANEL = 'lightning.collaborative-job-editor.showPanel',
+  ACTIVE_TAB = 'lightning.collaborative-job-editor.activeTab',
 }
 
 const persistedSettings = localStorage.getItem(
-  "lightning.collaborative-job-editor.settings",
+  'lightning.collaborative-job-editor.settings'
 );
 const settings = persistedSettings
   ? JSON.parse(persistedSettings)
   : {
-      [SettingsKeys.ORIENTATION]: "h",
+      [SettingsKeys.ORIENTATION]: 'h',
       [SettingsKeys.SHOW_PANEL]: false,
     };
 
 const persistSettings = () =>
   localStorage.setItem(
-    "lightning.collaborative-job-editor.settings",
-    JSON.stringify(settings),
+    'lightning.collaborative-job-editor.settings',
+    JSON.stringify(settings)
   );
 
-const iconStyle = "inline cursor-pointer h-5 w-5 ml-1 hover:text-primary-600";
+const iconStyle = 'inline cursor-pointer h-5 w-5 ml-1 hover:text-primary-600';
 
 type CollaborativeJobEditorProps = {
   jobId: string;
@@ -56,14 +58,17 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
   disabledMessage,
   metadata,
 }) => {
-  const { awareness } = useSession();
+  const awareness = useRawAwareness();
+  const awarenessReady = useAwarenessReady();
+  console.log("awarenessReady", awarenessReady);
+
   const [vertical, setVertical] = useState(
-    () => settings[SettingsKeys.ORIENTATION] === "v",
+    () => settings[SettingsKeys.ORIENTATION] === 'v'
   );
   const [showPanel, setShowPanel] = useState(
-    () => settings[SettingsKeys.SHOW_PANEL],
+    () => settings[SettingsKeys.SHOW_PANEL]
   );
-  const [selectedTab, setSelectedTab] = useState("docs");
+  const [selectedTab, setSelectedTab] = useState('docs');
 
   // Get Y.Text for this job using useWorkflowSelector for store method access
   const jobBodyYText = useWorkflowSelector(
@@ -71,12 +76,12 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
       if (!jobId) return null;
       return store.getJobBodyYText(jobId);
     },
-    [jobId],
+    [jobId]
   );
 
   const toggleOrientiation = useCallback(() => {
     setVertical(!vertical);
-    settings[SettingsKeys.ORIENTATION] = vertical ? "h" : "v";
+    settings[SettingsKeys.ORIENTATION] = vertical ? 'h' : 'v';
     persistSettings();
   }, [vertical]);
 
@@ -101,7 +106,8 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
     }
   }, [vertical, showPanel]);
 
-  if (!jobBodyYText || !awareness) {
+
+  if (!jobBodyYText || !awarenessReady) {
     return <div className="p-4">Loading collaborative editor...</div>;
   }
 
@@ -111,11 +117,11 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
         <CollaborativeWorkflowDiagram />
       </div>
       {false && (
-        <div className={`flex h-full flex-${vertical ? "col" : "row"}`}>
+        <div className={`flex h-full flex-${vertical ? 'col' : 'row'}`}>
           <div className="flex-1 rounded-md overflow-hidden">
             <CollaborativeMonaco
-              ytext={jobBodyYText}
-              awareness={awareness}
+              ytext={jobBodyYText!}
+              awareness={awareness!}
               adaptor={adaptor}
               disabled={disabled}
               className="h-full w-full"
@@ -130,14 +136,14 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
           </div>
           <div
             className={`${
-              showPanel ? "flex flex-col flex-1 z-10 overflow-hidden" : ""
-            } ${vertical ? "pt-2" : "pl-2"} bg-white`}
+              showPanel ? 'flex flex-col flex-1 z-10 overflow-hidden' : ''
+            } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
           >
             <div className={`relative flex`}>
               <Tabs
                 options={[
-                  { label: "Docs", id: "docs", icon: DocumentTextIcon },
-                  { label: "Metadata", id: "metadata", icon: SparklesIcon },
+                  { label: 'Docs', id: 'docs', icon: DocumentTextIcon },
+                  { label: 'Metadata', id: 'metadata', icon: SparklesIcon },
                 ]}
                 initialSelection={selectedTab}
                 onSelectionChange={handleSelectionChange}
@@ -147,7 +153,7 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
               {showPanel && (
                 <div className="bg-white rounded-lg p-1 flex space-x-1 z-20 items-center">
                   <ViewColumnsIcon
-                    className={`${iconStyle} ${!vertical ? "rotate-90" : ""}`}
+                    className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`}
                     onClick={toggleOrientiation}
                     title="Toggle panel orientation"
                   />
@@ -162,11 +168,11 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
             {showPanel && (
               <div
                 className={`flex flex-1 mt-1 ${
-                  vertical ? "overflow-auto" : "overflow-hidden"
+                  vertical ? 'overflow-auto' : 'overflow-hidden'
                 }`}
               >
-                {selectedTab === "docs" && <Docs adaptor={adaptor} />}
-                {selectedTab === "metadata" && (
+                {selectedTab === 'docs' && <Docs adaptor={adaptor} />}
+                {selectedTab === 'metadata' && (
                   <Metadata adaptor={adaptor} metadata={metadata} />
                 )}
               </div>

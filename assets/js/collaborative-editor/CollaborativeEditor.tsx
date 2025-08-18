@@ -1,6 +1,8 @@
 import { useMemo } from "react";
+
 import { SocketProvider } from "../react/contexts/SocketProvider";
 import type { WithActionProps } from "../react/lib/with-props";
+
 import { BreadcrumbLink, BreadcrumbText } from "./components/Breadcrumbs";
 import { CollaborationWidget } from "./components/CollaborationWidget";
 import { Header } from "./components/Header";
@@ -17,12 +19,13 @@ export interface CollaborativeEditorDataProps {
 
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
-> = (props) => {
+> = props => {
   // Extract data from props (ReactComponent hook passes data attributes as props)
   const workflowId = props["data-workflow-id"];
   const workflowName = props["data-workflow-name"];
   const userId = props["data-user-id"];
   const userName = props["data-user-name"];
+  // TODO: use url state to get projectId and get project from server
   const projectId = props["data-project-id"];
   const projectName = props["data-project-name"];
 

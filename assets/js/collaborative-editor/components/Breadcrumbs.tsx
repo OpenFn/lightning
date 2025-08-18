@@ -9,13 +9,13 @@ export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
           <span
             key={`chevron-${i}`}
             className="hero-chevron-right-mini w-5 h-5 text-secondary-500"
-          />,
+          />
         );
       }
       result.push(
         <li key={`breadcrumb-${i}`} className="flex items-center">
           {child}
-        </li>,
+        </li>
       );
     });
     return result;

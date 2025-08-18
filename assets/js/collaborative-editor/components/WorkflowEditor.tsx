@@ -3,11 +3,13 @@
  */
 
 import type React from "react";
+
 import { useSession } from "../contexts/SessionProvider";
 import {
   useCurrentJob,
   useNodeSelection,
 } from "../contexts/WorkflowStoreProvider";
+
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { Inspector } from "./inspector";

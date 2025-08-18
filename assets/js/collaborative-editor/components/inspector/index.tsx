@@ -4,8 +4,10 @@
  */
 
 import type React from "react";
+
 import { useURLState } from "../../../react/lib/use-url-state";
-import type { Workflow } from "../../types";
+import type { Workflow } from "../../types/workflow";
+
 import { EdgeInspector } from "./EdgeInspector";
 import { JobInspector } from "./JobInspector";
 import { TriggerInspector } from "./TriggerInspector";

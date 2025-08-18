@@ -15,30 +15,31 @@ import {
 import { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as awarenessProtocol from "y-protocols/awareness";
 import * as Y from "yjs";
+
 import { useSocket } from "../../react/contexts/SocketProvider";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
 import { createAdaptorStore } from "../stores/createAdaptorStore";
 import {
+  type AwarenessStoreInstance,
+  createAwarenessStore,
+} from "../stores/createAwarenessStore";
+import {
   type CredentialStoreInstance,
   createCredentialStore,
 } from "../stores/createCredentialStore";
-import type { AwarenessUser } from "../types/session";
 
 export interface SessionContextValue {
   // Yjs infrastructure
   ydoc: Y.Doc | null;
-  awareness: awarenessProtocol.Awareness | null;
 
   // Connection state
   isConnected: boolean;
   isSynced: boolean;
 
-  // User awareness
-  users: AwarenessUser[];
-
-  // Adaptor management
+  // Store instances
   adaptorStore: AdaptorStoreInstance;
   credentialStore: CredentialStoreInstance;
+  awarenessStore: AwarenessStoreInstance;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -68,21 +69,22 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
   // Yjs state
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
-  const [awareness, setAwareness] =
-    useState<awarenessProtocol.Awareness | null>(null);
   const [_provider, setProvider] = useState<PhoenixChannelProvider | null>(
-    null,
+    null
   );
 
   // React state
-  const [users, setUsers] = useState<AwarenessUser[]>([]);
   const [isProviderConnected, setIsProviderConnected] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
 
-  // Adaptor store - created once and reused
+  // Store instances - created once and reused
   const adaptorStoreRef = useRef<AdaptorStoreInstance>(createAdaptorStore());
+
   const credentialStoreRef = useRef<CredentialStoreInstance>(
-    createCredentialStore(),
+    createCredentialStore()
+  );
+  const awarenessStoreRef = useRef<AwarenessStoreInstance>(
+    createAwarenessStore()
   );
 
   // Initialize Yjs when socket is connected
@@ -97,15 +99,15 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     const doc = new Y.Doc();
     const awarenessInstance = new awarenessProtocol.Awareness(doc);
 
-    // Set up awareness with user info
+    // Set up user data for awareness
     const userData = {
       id: userId,
       name: userName,
       color: generateUserColor(userId),
     };
 
-    awarenessInstance.setLocalStateField("user", userData);
-    awarenessInstance.setLocalStateField("lastSeen", Date.now());
+    // Initialize awareness store with the awareness instance
+    awarenessStoreRef.current.initializeAwareness(awarenessInstance, userData);
 
     // Create the Yjs channel provider
     const roomname = `workflow:collaborate:${workflowId}`;
@@ -119,39 +121,9 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       connect: true,
     });
 
-    console.debug("PhoenixChannelProvider: created", channelProvider);
-
     // IDEA: We could have two different states here, one for just the user
     // information, that is uniqued (in case they have more than one session)
     // and one for the cursor information.
-
-    // TODO: Add an idle hook that both controls the updating of 'lastSeen'
-    // and can mark a user as idle.
-
-    // IDEA: perhaps take a note from LiveBlocks and their 'useSelf' hook
-    // and have a 'useAwareness' hook that can be used to get the awareness
-    // state for the current user.
-
-    // Sync users from awareness
-    // TODO: Perhaps move this this a hook, with a store or something immuatable?
-    // The data changes very very frequently and we want to avoid re-rendering
-    const syncUsers = () => {
-      const userList: AwarenessUser[] = [];
-      awarenessInstance.getStates().forEach((state, clientId) => {
-        if (state["user"]) {
-          userList.push({
-            clientId,
-            user: state["user"],
-            selection: state["selection"],
-            cursor: state["cursor"],
-          });
-        }
-      });
-      setUsers(userList);
-    };
-
-    // Set up awareness observer
-    awarenessInstance.on("change", syncUsers);
 
     // Provider event handlers
     const statusHandler = (...args: any[]) => {
@@ -166,7 +138,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
           const status = (statusEvents[0] as { status: string }).status;
           console.debug(
             "PhoenixChannelProvider: setIsProviderConnected",
-            status,
+            status
           );
           setIsProviderConnected(status === "connected");
         }
@@ -197,7 +169,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     // Listen directly to channel for 'joined' state detection
     const cleanupJoinListener = setupJoinListener(
       channelProvider,
-      (isConnected) => {
+      isConnected => {
         setIsProviderConnected(isConnected);
 
         // Request adaptors when channel is successfully joined
@@ -210,19 +182,16 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
           cleanupCredentialChannel =
             credentialStoreRef.current._connectChannel(channelProvider);
         }
-      },
+      }
     );
 
     // Store state
     setYdoc(doc);
-    setAwareness(awarenessInstance);
     setProvider(channelProvider);
 
-    // Set up lastSeen timer - updates every 10 seconds
-    const cleanupLastSeenTimer = setupLastSeenTimer(awarenessInstance);
-
-    // Initial sync
-    syncUsers();
+    // Set up automatic last seen updates via awareness store
+    const cleanupLastSeenTimer =
+      awarenessStoreRef.current._internal.setupLastSeenTimer();
 
     // Cleanup function
     return () => {
@@ -236,32 +205,30 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       channelProvider.off("status", statusHandler);
       channelProvider.off("sync", syncHandler);
 
+      // Clean up awareness store
+      awarenessStoreRef.current.destroyAwareness();
+
       channelProvider.destroy();
       doc.destroy();
       setYdoc(null);
-      setAwareness(null);
       setProvider(null);
-      setUsers([]);
       setIsProviderConnected(false);
       setIsSynced(false);
     };
   }, [isConnected, socket, workflowId, userId, userName]);
 
-  // TODO: we should wrap this in useMemo, immer or something to avoid rerendering
-  // mind you, the awareness state changes very frequently, so we should probably
-  // move that up into a store or hook or something. So only rerenders happen
-  // when things that care about it changing.
+  // Context value with improved referential stability
+  // awareness and users are now served by dedicated hooks for better performance
   const value = useMemo<SessionContextValue>(() => {
     return {
       ydoc,
-      awareness,
       isConnected: isProviderConnected,
       isSynced,
-      users,
       adaptorStore: adaptorStoreRef.current,
       credentialStore: credentialStoreRef.current,
+      awarenessStore: awarenessStoreRef.current,
     };
-  }, [ydoc, awareness, isProviderConnected, isSynced, users]);
+  }, [ydoc, isProviderConnected, isSynced]);
 
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
@@ -291,7 +258,7 @@ function generateUserColor(userId: string): string {
 
 function setupJoinListener(
   channelProvider: PhoenixChannelProvider,
-  callback: (isConnected: boolean) => void,
+  callback: (isConnected: boolean) => void
 ) {
   // TODO: don't bother setting up a listener if unless we are _not_ in a joined
   // state.
@@ -319,23 +286,13 @@ function setupJoinListener(
 
   return () => {
     const hook = channelProvider.channel?.joinPush.recHooks.find(
-      (hook) => hook.callback === onJoinReceived,
+      hook => hook.callback === onJoinReceived
     );
     if (hook) {
       channelProvider.channel?.joinPush.recHooks.splice(
-        channelProvider.channel?.joinPush.recHooks.indexOf(hook),
-        1,
+        channelProvider.channel.joinPush.recHooks.indexOf(hook),
+        1
       );
     }
-  };
-}
-
-function setupLastSeenTimer(awarenessInstance: awarenessProtocol.Awareness) {
-  const lastSeenTimer = setInterval(() => {
-    awarenessInstance.setLocalStateField("lastSeen", Date.now());
-  }, 10000);
-
-  return () => {
-    clearInterval(lastSeenTimer);
   };
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { isoDateTimeSchema, uuidSchema } from "./common";
 
 // NPM package format validation for adaptor field
@@ -7,7 +8,7 @@ const adaptorSchema = z
   .min(1, "can't be blank")
   .regex(
     /^@?[a-z0-9-~][a-z0-9-._~]*\/[a-z0-9-~][a-z0-9-._~]*@.+$/i,
-    "Invalid adaptor format. Expected: @scope/package@version",
+    "Invalid adaptor format. Expected: @scope/package@version"
   );
 
 // Main Job schema with comprehensive validation
@@ -20,7 +21,7 @@ export const JobSchema = z
       .min(1, "can't be blank")
       .max(100, "should be at most 100 character(s)")
       .regex(/^[a-zA-Z0-9_\- ]*$/, "has invalid format")
-      .transform((val) => val.trim()), // Auto-trim whitespace like backend
+      .transform(val => val.trim()), // Auto-trim whitespace like backend
     body: z.string().min(1, "can't be blank"),
     adaptor: adaptorSchema.default("@openfn/language-common@latest"),
 
@@ -37,12 +38,9 @@ export const JobSchema = z
     // Timestamps (optional for new jobs)
     inserted_at: isoDateTimeSchema.optional(),
     updated_at: isoDateTimeSchema.optional(),
-
-    // Additional fields that may be needed for UI state
-    enabled: z.boolean().default(true),
   })
   .refine(
-    (data) => {
+    data => {
       // Enforce mutual exclusion of credential types
       const hasProjectCredential = !!data.project_credential_id;
       const hasKeychainCredential = !!data.keychain_credential_id;
@@ -52,7 +50,7 @@ export const JobSchema = z
     {
       message: "cannot be set when the other credential type is also set",
       path: ["project_credential_id"], // Show error on project_credential_id field
-    },
+    }
   );
 
 export type Job = z.infer<typeof JobSchema>;

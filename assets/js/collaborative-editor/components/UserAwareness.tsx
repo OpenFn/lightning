@@ -1,4 +1,5 @@
 import type React from "react";
+
 import { useSession } from "../contexts/SessionProvider";
 
 export const UserAwareness: React.FC = () => {

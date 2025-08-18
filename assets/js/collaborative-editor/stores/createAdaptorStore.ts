@@ -56,12 +56,14 @@
 
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
+
 import {
   type Adaptor,
   type AdaptorState,
   type AdaptorStore,
   AdaptorsListSchema,
 } from "../types/adaptor";
+
 import { createWithSelector } from "./common";
 
 /**
