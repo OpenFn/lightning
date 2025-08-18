@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef } from "react";
 import { MonacoBinding } from "y-monaco";
 import type { Awareness } from "y-protocols/awareness";
 import type * as Y from "yjs";
+
 import { type Monaco, MonacoEditor, setTheme } from "../../monaco";
+
 import { Cursors } from "./Cursors";
 
 interface CollaborativeMonacoProps {

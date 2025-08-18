@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSession } from "../contexts/SessionProvider";
-import type { AwarenessUser } from "../types/session";
+import { useEffect, useMemo } from "react";
+
+import { useUserCursors, useRemoteUsers } from "../hooks/useAwareness";
 
 function BaseStyles() {
   const baseStyles = `
@@ -42,54 +42,39 @@ function BaseStyles() {
   return <style dangerouslySetInnerHTML={{ __html: baseStyles }} />;
 }
 
+/**
+ * Cursors component using awareness hooks for better performance and maintainability
+ * 
+ * Key improvements:
+ * - Uses useUserCursors() hook with memoized Map for efficient lookups
+ * - Uses useRemoteUsers() for selection data (referentially stable)
+ * - Eliminates manual awareness state management and reduces re-renders
+ */
 export function Cursors() {
-  const { awareness } = useSession();
+  // Get cursor data as a Map for efficient clientId lookups
+  const cursorsMap = useUserCursors();
+  
+  // Get remote users for selection data
+  const remoteUsers = useRemoteUsers();
 
-  const [awarenessUsers, setAwarenessUsers] = useState<
-    Map<number, AwarenessUser>
-  >(new Map());
-
-  const [selections, setSelections] = useState<AwarenessUser["selection"][]>(
-    [],
-  );
-
-  useEffect(() => {
-    if (!awareness) return;
-
-    awareness.on("change", () => {
-      const newStates = awareness.getStates() as Map<number, AwarenessUser>;
-      setAwarenessUsers(newStates);
-
-      // Update cursor states
-      const newSelections = Array.from(newStates.values()).map(
-        (user) => user.selection,
-      );
-      setSelections(newSelections);
-    });
-
-    return () => {
-      awareness.off("change", () => {});
-    };
-  }, [awareness]);
-
-  // Dynamic user-specific cursor styles
+  // Dynamic user-specific cursor styles - now using Map entries
   const userStyles = useMemo(() => {
     let cursorStyles = "";
 
-    for (const [clientId, client] of awarenessUsers) {
-      if (client?.user) {
-        cursorStyles += `
+    // Only iterate over users who actually have cursor/selection data
+    for (const [clientId, user] of cursorsMap) {
+      cursorStyles += `
           .yRemoteSelection-${clientId} {
-            background-color: ${client.user.color};
+            background-color: ${user.user.color};
           }
 
           .yRemoteSelectionHead-${clientId} {
-            --user-color: ${client.user.color};
+            --user-color: ${user.user.color};
           }
 
           .yRemoteSelectionHead-${clientId}::after {
-            content: "${client.user.name}";
-            background: ${client.user.color};
+            content: "${user.user.name}";
+            background: ${user.user.color};
           }
 
           .yRemoteSelectionHead-${clientId}.cursor-at-top::after {
@@ -99,20 +84,19 @@ export function Cursors() {
             border-bottom-left-radius: 6px;
           }
         `;
-      }
     }
 
     return { __html: cursorStyles };
-  }, [awarenessUsers.size, ...Array.from(awarenessUsers.keys())]);
+  }, [cursorsMap.size, ...Array.from(cursorsMap.keys())]);
 
   // Detect when a users cursor is near the top of the editor and flip the
   // position of the label to below their position.
   useEffect(() => {
     const checkCursorPositions = () => {
       const cursors = document.querySelectorAll(
-        '[class*="yRemoteSelectionHead-"]',
+        '[class*="yRemoteSelectionHead-"]'
       );
-      cursors.forEach((cursor) => {
+      cursors.forEach(cursor => {
         const rect = cursor.getBoundingClientRect();
         const editorContainer =
           cursor.closest(".monaco-editor") ||
@@ -143,12 +127,11 @@ export function Cursors() {
     return () => {
       editorElement?.removeEventListener("scroll", checkCursorPositions);
     };
-  }, [selections]);
+  }, [remoteUsers.length]); // Only re-run when remote users change
 
   return (
     <>
       <BaseStyles />
-      {/** biome-ignore lint/security/noDangerouslySetInnerHtml: We're using a dynamic style tag */}
       <style dangerouslySetInnerHTML={userStyles} />
     </>
   );

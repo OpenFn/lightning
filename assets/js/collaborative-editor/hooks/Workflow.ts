@@ -34,6 +34,7 @@
 
 import type React from "react";
 import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+
 import { useWorkflowStoreContext } from "../contexts/WorkflowStoreProvider";
 import type { WorkflowStoreInstance } from "../stores/createWorkflowStore";
 import type { Workflow } from "../types/workflow";
@@ -227,7 +228,7 @@ export const useTriggerFormActions = () => {
           defaultValues: trigger || createDefaultTrigger("webhook"),
           listeners: {
             onChange: ({ formApi }: { formApi: any }) => {
-              if (trigger?.id) {
+              if (trigger.id) {
                 const values = formApi.state.values;
                 store.updateTrigger(trigger.id, values);
               }

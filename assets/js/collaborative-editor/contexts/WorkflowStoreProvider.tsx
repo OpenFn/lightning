@@ -46,11 +46,13 @@
 
 import type React from "react";
 import { createContext, useContext, useEffect, useRef } from "react";
+
 import {
   createWorkflowStore,
   type WorkflowStoreInstance,
 } from "../stores/createWorkflowStore";
 import type { Session } from "../types/session";
+
 import { useSession } from "./SessionProvider";
 
 // Re-export hooks from the dedicated hooks module
@@ -70,7 +72,7 @@ export const useWorkflowStoreContext = () => {
   const store = useContext(WorkflowStoreContext);
   if (!store) {
     throw new Error(
-      "useWorkflowStore must be used within WorkflowStoreProvider",
+      "useWorkflowStore must be used within WorkflowStoreProvider"
     );
   }
   return store;
@@ -96,7 +98,7 @@ interface WorkflowStoreProviderProps {
 export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
   children,
 }) => {
-  const { ydoc, users } = useSession();
+  const { ydoc } = useSession();
 
   // Create store only once using lazy ref initialization
   const storeRef = useRef<WorkflowStoreInstance>();
@@ -104,14 +106,14 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
 
   // Connect/disconnect Y.Doc when session changes
   useEffect(() => {
-    if (ydoc && users) {
-      store.connectYDoc(ydoc as Session.WorkflowDoc, users);
+    if (ydoc) {
+      store.connectYDoc(ydoc as Session.WorkflowDoc);
       return () => store.disconnectYDoc();
     } else {
       store.disconnectYDoc();
       return undefined;
     }
-  }, [store, ydoc, users]);
+  }, [store, ydoc]);
 
   return (
     <WorkflowStoreContext.Provider value={store}>
