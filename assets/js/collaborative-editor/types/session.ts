@@ -1,5 +1,4 @@
 import type * as Y from "yjs";
-import type { RelativePosition } from "yjs";
 import type { TypedArray, TypedDoc, TypedMap } from "yjs-types";
 
 export interface AwarenessUser {
@@ -14,8 +13,8 @@ export interface AwarenessUser {
     y: number;
   };
   selection?: {
-    anchor: RelativePosition;
-    head: RelativePosition;
+    anchor: Y.RelativePosition;
+    head: Y.RelativePosition;
   };
 }
 
