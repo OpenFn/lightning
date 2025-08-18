@@ -3,9 +3,11 @@ import React from 'react';
 import {
   useWorkflowStore,
   type ChangeArgs,
+  type RunInfo,
   type PendingAction,
   type ReplayAction,
   type WorkflowProps,
+  type WorkflowRunHistory,
 } from './store';
 import { randomUUID } from '../common';
 import { DEFAULT_TEXT } from '../editor/Editor';
@@ -49,6 +51,7 @@ export const WorkflowStore: WithActionProps = props => {
     setDisabled,
     setForceFit,
     reset,
+    updateRuns
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -133,6 +136,12 @@ export const WorkflowStore: WithActionProps = props => {
     };
   }, [add, props.handleEvent, setSelection, setForceFit]);
 
+  React.useEffect(() => {
+    return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunInfo }) => {
+      updateRuns(response.run_steps, response.run_id);
+    })
+  }, [props.handleEvent, updateRuns])
+
   // Fetch initial state once on mount
   React.useEffect(() => {
     const workflowLoadParamsStart = new Date();
@@ -146,10 +155,11 @@ export const WorkflowStore: WithActionProps = props => {
     props.pushEventTo(
       'get-current-state',
       {},
-      (response: { workflow_params: WorkflowProps }) => {
-        const { workflow_params } = response;
+      (response: { workflow_params: WorkflowProps, run_steps: RunInfo, run_id: string | null, history: WorkflowRunHistory }) => {
+        const { workflow_params, run_steps, run_id, history } = response;
         // workflow_params can contain an empty array of nodes and edges (empty workflow)
         setState(workflow_params);
+        updateRuns(run_steps, run_id, history);
 
         const end = new Date();
         console.debug('current-worflow-params processed', end.toISOString());
@@ -166,7 +176,7 @@ export const WorkflowStore: WithActionProps = props => {
         });
       }
     );
-  }, [props.pushEventTo, setState, add]);
+  }, [props.pushEventTo, setState, add, updateRuns]);
 
   React.useEffect(() => {
     return props.handleEvent(

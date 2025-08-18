@@ -7,6 +7,7 @@ import {
   edgeLabelTextStyles,
 } from '../styles';
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
+import type { RunInfo, RunStep } from '../../workflow-store/store';
 
 function getEdgeLabel(edge: Lightning.Edge) {
   let label: string | JSX.Element = '{ }';
@@ -52,10 +53,32 @@ const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
   placeholders: Flow.Model = { nodes: [], edges: [] },
+  runSteps: RunInfo,
   selectedId: string | null
 ): Flow.Model => {
   const allowPlaceholder =
     placeholders.nodes.length === 0 && !workflow.disabled;
+
+  const isRun = !!runSteps.start_from;
+
+  const runStepsObj = runSteps.steps.reduce((a, b) => {
+    const exists = a[b.job_id];
+    // to make sure that a pre-existing error state preempts the success.
+    // this is for nodes that run multiple times
+    // TODO: we might want to show a state for the multiple runs of the step later on.
+    let step_value: RunStep;
+    if (b.exit_reason === 'success' && exists?.exit_reason === 'fail')
+      step_value = exists;
+    else step_value = b;
+    a[b.job_id] = { ...step_value };
+    return a;
+  }, {} as Record<string, RunStep>);
+
+  // Count duplicate steps for each job_id
+  const duplicateCounts = runSteps.steps.reduce((counts, step) => {
+    counts[step.job_id] = (counts[step.job_id] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
@@ -87,6 +110,17 @@ const fromWorkflow = (
         model.height = NODE_HEIGHT;
 
         model.data.allowPlaceholder = allowPlaceholder;
+        model.data.isRun = isRun;
+        model.data.runData = runStepsObj[node.id];
+        model.data.duplicateRunCount = duplicateCounts[node.id] || 0;
+        if (item.id === runSteps.start_from) {
+          const startBy =
+            type === 'trigger' ? 'Trigger' : runSteps.run_by || 'unknown';
+          model.data.startInfo = {
+            started_at: runSteps.inserted_at,
+            startBy,
+          };
+        }
 
         if (type === 'trigger') {
           model.data.trigger = {
@@ -114,6 +148,12 @@ const fromWorkflow = (
           errors: edge.errors,
           enabled: edge.enabled ?? true,
           label,
+          isRun,
+          didRun: !!(
+            (runStepsObj[edge.source_job_id] ||
+              edge.source_trigger_id === runSteps.start_from) &&
+            runStepsObj[edge.target_job_id]
+          ),
         };
 
         // Note: we don't allow the user to disable the edge that goes from a

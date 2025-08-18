@@ -124,15 +124,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     )
   end
 
-  @spec fade_in_delayed() :: JS.t()
-  defp fade_in_delayed do
-    JS.transition(
-      {"transition-opacity duration-300 ease-in-out delay-300", "opacity-0",
-       "opacity-100"},
-      time: 300
-    )
-  end
-
   @impl true
   def render(assigns) do
     assigns = assign(assigns, :callbacks, build_ai_callbacks(assigns.id))
@@ -141,27 +132,10 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     <div
       id={@id}
       phx-hook="TemplateToWorkflow"
-      class="absolute inset-y-0 left-0 w-[30%] max-w-[30%] z-20 -translate-x-full"
+      class="absolute inset-y-0 left-0 w-[30%] max-w-[30%] z-20 -translate-x-full z-50"
       phx-mounted={slide_in()}
       phx-remove={slide_out()}
     >
-      <div
-        id="close-ai-assistant-panel"
-        class="absolute top-4 -right-8 z-30 opacity-0"
-        phx-mounted={fade_in_delayed()}
-        phx-hook="Tooltip"
-        aria-label="Click to close the AI Assistant panel"
-      >
-        <button
-          type="button"
-          phx-click="toggle-workflow-ai-chat"
-          class="rounded-md text-gray-500 hover:text-gray-700 transition-colors duration-200"
-        >
-          <span class="sr-only">Close panel</span>
-          <.icon name="hero-chevron-double-left" class="h-5 w-5" />
-        </button>
-      </div>
-
       <div class="flex h-full flex-col bg-white shadow-xl border-r border-gray-200 overflow-hidden">
         <div class="flex-1 min-h-0">
           <.live_component
