@@ -70,13 +70,14 @@
 import { produce } from "immer";
 import type { Awareness } from "y-protocols/awareness";
 
-import { createWithSelector } from "./common";
 import type {
   AwarenessState,
   AwarenessStore,
   AwarenessUser,
   LocalUserData,
 } from "../types/awareness";
+
+import { createWithSelector } from "./common";
 
 /**
  * Creates an awareness store instance with useSyncExternalStore + Immer pattern
@@ -292,9 +293,9 @@ export const createAwarenessStore = (): AwarenessStore => {
         );
         if (localUserIndex !== -1 && draft.users[localUserIndex]) {
           if (cursor) {
-            draft.users[localUserIndex]!.cursor = cursor;
+            draft.users[localUserIndex].cursor = cursor;
           } else {
-            delete draft.users[localUserIndex]!.cursor;
+            delete draft.users[localUserIndex].cursor;
           }
         }
       }
@@ -326,9 +327,9 @@ export const createAwarenessStore = (): AwarenessStore => {
         );
         if (localUserIndex !== -1 && draft.users[localUserIndex]) {
           if (selection) {
-            draft.users[localUserIndex]!.selection = selection;
+            draft.users[localUserIndex].selection = selection;
           } else {
-            delete draft.users[localUserIndex]!.selection;
+            delete draft.users[localUserIndex].selection;
           }
         }
       }

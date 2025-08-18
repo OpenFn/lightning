@@ -43,7 +43,9 @@ defmodule LightningWeb.WorkflowChannel do
                    workflow_id: workflow_id,
                    collaboration_topic: topic,
                    workflow: workflow,
-                   session_pid: session_pid
+                   session_pid: session_pid,
+                   pending_adaptors_refs: [],
+                   pending_credentials_refs: []
                  )}
 
               {:error, :unauthorized} ->
@@ -55,24 +57,66 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("request_adaptors", _payload, socket) do
-    adaptors = Lightning.AdaptorRegistry.all()
-    {:reply, {:ok, %{adaptors: adaptors}}, socket}
+    channel_pid = self()
+    socket_ref = socket_ref(socket)
+
+    Task.start_link(fn ->
+      try do
+        adaptors = Lightning.AdaptorRegistry.all()
+
+        send(
+          channel_pid,
+          {:async_reply, socket_ref, "request_adaptors",
+           {:ok, %{adaptors: adaptors}}}
+        )
+      rescue
+        error ->
+          Logger.error("Failed to fetch adaptors: #{inspect(error)}")
+
+          send(
+            channel_pid,
+            {:async_reply, socket_ref, "request_adaptors",
+             {:error, %{reason: "failed to fetch adaptors"}}}
+          )
+      end
+    end)
+
+    {:noreply, socket}
   end
 
   @impl true
   def handle_in("request_credentials", _payload, socket) do
-    credentials =
-      Lightning.Projects.list_project_credentials(
-        socket.assigns.workflow.project
-      )
-      |> Enum.concat(
-        Lightning.Credentials.list_keychain_credentials_for_project(
-          socket.assigns.workflow.project
-        )
-      )
-      |> render_credentials()
+    channel_pid = self()
+    socket_ref = socket_ref(socket)
+    project = socket.assigns.workflow.project
 
-    {:reply, {:ok, %{credentials: credentials}}, socket}
+    Task.start_link(fn ->
+      try do
+        credentials =
+          Lightning.Projects.list_project_credentials(project)
+          |> Enum.concat(
+            Lightning.Credentials.list_keychain_credentials_for_project(project)
+          )
+          |> render_credentials()
+
+        send(
+          channel_pid,
+          {:async_reply, socket_ref, "request_credentials",
+           {:ok, %{credentials: credentials}}}
+        )
+      rescue
+        error ->
+          Logger.error("Failed to fetch credentials: #{inspect(error)}")
+
+          send(
+            channel_pid,
+            {:async_reply, socket_ref, "request_credentials",
+             %{error: %{reason: "failed to fetch credentials"}}}
+          )
+      end
+    end)
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -96,6 +140,23 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:async_reply, socket_ref, event, reply}, socket) do
+    case event do
+      "request_adaptors" ->
+        reply(socket_ref, reply)
+        {:noreply, socket}
+
+      "request_credentials" ->
+        reply(socket_ref, reply)
+        {:noreply, socket}
+
+      _ ->
+        Logger.warning("Unhandled async reply for event: #{event}")
+        {:noreply, socket}
+    end
   end
 
   @impl true
