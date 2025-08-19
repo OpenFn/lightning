@@ -26,6 +26,38 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
+  describe "initial YAML generation (regression)" do
+    setup :create_workflow
+
+    test "pushes generate_workflow_code on first mount", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
+        )
+
+      assert_push_event(view, "generate_workflow_code", %{})
+    end
+
+    test "fires after a new workflow is created on the canvas", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
+
+      select_template(view, "base-webhook-template")
+      render_click(view, "save")
+
+      assert_push_event(view, "generate_workflow_code", %{})
+    end
+  end
+
   describe "New credential from project context " do
     setup %{project: project} do
       %{job: job} = workflow_job_fixture(project_id: project.id)
