@@ -6,7 +6,6 @@ import {
   ReactFlow,
   ReactFlowProvider,
   applyNodeChanges,
-  getNodesBounds,
   type NodeChange,
   type ReactFlowInstance,
   type Rect,
@@ -28,6 +27,12 @@ import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
 import { getVisibleRect, isPointInRect } from './util/viewport';
+import {
+  safeFitBounds,
+  safeGetNodesBounds,
+  safeFitBoundsRect,
+  hasXY,
+} from './util/safe-bounds';
 import { AiAssistantToggle } from './AiAssistantToggle';
 
 const controlButtonStyle = (disabled: boolean) =>
@@ -87,6 +92,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   const [drawerWidth, setDrawerWidth] = useState(0);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
+
+  // Only hand React Flow nodes that have finite x/y positions
+  const rfNodes = React.useMemo(
+    () => model.nodes.filter(hasXY) as unknown as Flow.Node[],
+    [model.nodes]
+  );
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -216,10 +227,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           height: workflowDiagramRef.current?.clientHeight ?? 0,
         };
         if (isManualLayout) {
-          // give nodes positions
           const nodesWPos = newModel.nodes.map(node => {
-            // during manualLayout. a placeholder wouldn't have position in positions in store
-            // hence use the position on the placeholder node
             const isPlaceholder = node.type === 'placeholder';
             return {
               ...node,
@@ -233,21 +241,27 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             duration: props.layoutDuration ?? LAYOUT_DURATION,
             forceFit: props.forceFit,
           }).then(positions => {
-            // Note we don't update positions until the animation has finished
             chartCache.current.positions = positions;
           });
         }
       } else if (isManualLayout) {
-        // if isManualLayout, then we use values from store instead
         newModel.nodes.forEach(n => {
-          if (isManualLayout && n.type !== 'placeholder') {
-            n.position = fixedPositions[n.id];
-          }
+          if (n.type !== 'placeholder') n.position = fixedPositions[n.id];
         });
         setModel(newModel);
+      } else if (newModel.nodes.some(n => !hasXY(n))) {
+        // ✅ fallback: nodes lack positions → run layout now
+        const viewBounds = {
+          width: workflowDiagramRef.current?.clientWidth ?? 0,
+          height: workflowDiagramRef.current?.clientHeight ?? 0,
+        };
+        layout(newModel, setModel, flow, viewBounds, {
+          duration: props.layoutDuration ?? LAYOUT_DURATION,
+          forceFit: props.forceFit,
+        }).then(positions => {
+          chartCache.current.positions = positions;
+        });
       } else {
-        // When isManualLayout is false and no layout is needed, still update the model
-        // to reflect changes in workflow data (like adaptor changes)
         setModel(newModel);
       }
     } else {
@@ -272,8 +286,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // Fit view when AI assistant panel closes
       if (flow && model.nodes.length > 0) {
         setTimeout(() => {
-          const bounds = getNodesBounds(model.nodes);
-          void flow.fitBounds(bounds, {
+          void safeFitBounds(flow, model.nodes, {
             duration: FIT_DURATION,
             padding: FIT_PADDING,
           });
@@ -307,8 +320,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         // Fit view when AI assistant panel opens
         if (flow && model.nodes.length > 0) {
           setTimeout(() => {
-            const bounds = getNodesBounds(model.nodes);
-            void flow.fitBounds(bounds, {
+            void safeFitBounds(flow, model.nodes, {
               duration: FIT_DURATION,
               padding: FIT_PADDING,
             });
@@ -328,15 +340,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   useEffect(() => {
     if (props.forceFit && flow && model.nodes.length > 0) {
       // Immediately fit to bounds when forceFit becomes true
-      const bounds = getNodesBounds(model.nodes);
-      flow
-        .fitBounds(bounds, {
-          duration: FIT_DURATION,
-          padding: FIT_PADDING,
-        })
-        .catch(error => {
-          console.error('Failed to fit bounds:', error);
-        });
+      void safeFitBounds(flow, model.nodes, {
+        duration: FIT_DURATION,
+        padding: FIT_PADDING,
+      }).catch(error => {
+        console.error('Failed to fit bounds:', error);
+      });
     }
   }, [props.forceFit, flow, model.nodes]);
 
@@ -416,14 +425,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             height: el.clientHeight ?? 0,
           };
           const rect = getVisibleRect(flow.getViewport(), viewBounds, 1);
-          const visible = model.nodes.filter(n =>
-            isPointInRect(n.position, rect)
+          const visible = model.nodes.filter(
+            n => n?.position && isPointInRect(n.position, rect)
           );
-          cachedTargetBounds = getNodesBounds(visible);
+          const vb = safeGetNodesBounds(visible);
+          if (vb) cachedTargetBounds = vb;
         }
 
-        // Run an animated fit
-        flow.fitBounds(cachedTargetBounds, {
+        void safeFitBoundsRect(flow, cachedTargetBounds, {
           duration: FIT_DURATION,
           padding: FIT_PADDING,
         });
@@ -451,9 +460,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else updatePositions(chartCache.current.positions);
   };
 
-  const handleFitView = useCallback(async () => {
-    const bounds = getNodesBounds(model.nodes);
-    flow.fitBounds(bounds, {
+  const handleFitView = useCallback(() => {
+    void safeFitBounds(flow, model.nodes, {
       duration: 200,
       padding: FIT_PADDING,
     });
@@ -499,7 +507,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         ref={workflowDiagramRef}
         maxZoom={1}
         proOptions={{ account: 'paid-pro', hideAttribution: true }}
-        nodes={model.nodes}
+        nodes={rfNodes}
         edges={model.edges}
         onNodesChange={onNodesChange}
         onNodeDragStop={onNodeDragStop}
