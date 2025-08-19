@@ -19,6 +19,9 @@ and this project adheres to
 
 - Visualizing runs on the workflow editor canvas
   [#3387](https://github.com/OpenFn/lightning/issues/3387)
+- Add test gauge metric that can be used to set arbitrary values for the purposes
+  of triggering behaviour in metric consumers.
+  [3510](https://github.com/OpenFn/lightning/issues/3510)
 
 ### Changed
 
