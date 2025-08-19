@@ -236,7 +236,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             ai_assistant_component_id={@workflow_ai_assistant_id}
             module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
             workflow={@workflow}
-            workflow_code={@workflow_code_with_ids}
+            workflow_code={@workflow_code_with_ids |> dbg()}
             project={@project}
             base_url={@base_url}
             query_params={@query_params}
@@ -3098,6 +3098,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(show_workflow_ai_chat: show_workflow_ai_chat)
     |> assign_changeset(changeset)
     |> maybe_disable_canvas()
+    |> generate_workflow_code()
   end
 
   defp apply_query_params(socket, params) do
