@@ -50,6 +50,10 @@ defmodule Lightning.Config.Bootstrap do
       """
     end
 
+    # Load storage and webhook retry config early so endpoint can respect it.
+    setup_storage()
+    setup_webhook_retry()
+
     # Merge the configuration from the existing application environment into
     # this processes config dictionary.
     # Without this, values set in the application environment previously
@@ -487,16 +491,20 @@ defmodule Lightning.Config.Bootstrap do
 
       url_scheme = env!("URL_SCHEME", :string, "https")
 
+      retry_timeout_ms = Lightning.Config.webhook_retry(:timeout_ms)
+
+      idle_default_ms = max(60_000, retry_timeout_ms + 15_000)
+
       idle_timeout =
         env!(
           "IDLE_TIMEOUT",
           fn str ->
             case Integer.parse(str) do
-              :error -> 60_000
               {val, _} -> val * 1_000
+              :error -> idle_default_ms
             end
           end,
-          60_000
+          idle_default_ms
         )
 
       config :lightning, LightningWeb.Endpoint,
@@ -516,8 +524,7 @@ defmodule Lightning.Config.Bootstrap do
                 :lightning,
                 :max_dataclip_size_bytes,
                 10_000_000
-              ) *
-                10,
+              ) * 10,
             idle_timeout: idle_timeout
           ]
         ],
@@ -810,6 +817,23 @@ defmodule Lightning.Config.Bootstrap do
       client_id: github_app_client_id,
       client_secret: github_app_client_secret
     ]
+  end
+
+  defp setup_webhook_retry do
+    webhook_retry_config =
+      [
+        max_attempts: env!("WEBHOOK_RETRY_MAX_ATTEMPTS", :integer, nil),
+        initial_delay_ms: env!("WEBHOOK_RETRY_INITIAL_DELAY_MS", :integer, nil),
+        max_delay_ms: env!("WEBHOOK_RETRY_MAX_DELAY_MS", :integer, nil),
+        backoff_factor: env!("WEBHOOK_RETRY_BACKOFF_FACTOR", :float, nil),
+        timeout_ms: env!("WEBHOOK_RETRY_TIMEOUT_MS", :integer, nil),
+        jitter: env!("WEBHOOK_RETRY_JITTER", &Utils.ensure_boolean/1, nil)
+      ]
+      |> Enum.reject(fn {_, value} -> is_nil(value) end)
+
+    if webhook_retry_config != [] do
+      config :lightning, :webhook_retry, webhook_retry_config
+    end
   end
 
   defp release_info do
