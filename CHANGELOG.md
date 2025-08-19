@@ -27,6 +27,8 @@ and this project adheres to
   [#3482](https://github.com/OpenFn/lightning/issues/3482)
 - Remove redundant 'preconnect' link
   [#3532](https://github.com/OpenFn/lightning/issues/3532)
+- Enable X-Content-Type-Options header for static pages.
+  [#3534](https://github.com/OpenFn/lightning/issues/3534)
 
 ### Changed
 

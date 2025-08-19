@@ -36,7 +36,10 @@ defmodule LightningWeb.Endpoint do
     at: "/",
     from: :lightning,
     gzip: true,
-    only: LightningWeb.static_paths()
+    only: LightningWeb.static_paths(),
+    headers: [
+      {"x-content-type-options", "nosniff"}
+    ]
 
   if Code.ensure_loaded?(Tidewave) do
     plug Tidewave
