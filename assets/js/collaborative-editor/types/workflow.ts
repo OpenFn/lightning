@@ -18,6 +18,7 @@ export interface Workflow {
   jobs: Workflow.Job[];
   triggers: Workflow.Trigger[];
   edges: Workflow.Edge[];
+  positions: Workflow.Positions;
 }
 
 export namespace Workflow {
@@ -41,13 +42,15 @@ export namespace Workflow {
   export type NodeType = "job" | "trigger" | "edge";
   export type Node = Job | Trigger | Edge;
 
-  // New referentially stable state interface following context document
-  export interface WorkflowState {
+  export type Positions = Record<string, { x: number; y: number }>;
+
+  export interface State {
     // Y.Doc sourced data (synced via observers)
     workflow: Session.Workflow | null;
     jobs: Workflow.Job[];
     triggers: Workflow.Trigger[];
     edges: Workflow.Edge[];
+    positions: Workflow.Positions;
 
     // Local UI state
     selectedJobId: string | null;

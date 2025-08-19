@@ -122,7 +122,7 @@ export const createWorkflowStore = () => {
   let observerCleanups: (() => void)[] = [];
 
   // Helper to update derived state (defined first to avoid hoisting issues)
-  const updateDerivedState = (draft: Workflow.WorkflowState) => {
+  const updateDerivedState = (draft: Workflow.State) => {
     // Compute enabled from triggers
     draft.enabled =
       draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
@@ -145,13 +145,14 @@ export const createWorkflowStore = () => {
   };
 
   // Single Immer-managed state object (referentially stable)
-  let state: Workflow.WorkflowState = produce(
+  let state: Workflow.State = produce(
     {
       // Initialize with empty data (Y.Doc will sync when connected)
       workflow: null,
       jobs: [],
       triggers: [],
       edges: [],
+      positions: {},
 
       // Initialize UI state
       selectedJobId: null,
@@ -162,7 +163,7 @@ export const createWorkflowStore = () => {
       enabled: null,
       selectedNode: null,
       selectedEdge: null,
-    } as Workflow.WorkflowState,
+    } as Workflow.State,
     draft => {
       // Compute derived state on initialization
       updateDerivedState(draft);
@@ -183,7 +184,7 @@ export const createWorkflowStore = () => {
   };
 
   // Returns the current Immer state (referentially stable)
-  const getSnapshot = (): Workflow.WorkflowState => state;
+  const getSnapshot = (): Workflow.State => state;
 
   // withSelector utility - creates memoized selectors for referential stability
   const withSelector = createWithSelector(getSnapshot);
@@ -200,6 +201,7 @@ export const createWorkflowStore = () => {
     const jobsArray = ydoc.getArray("jobs");
     const triggersArray = ydoc.getArray("triggers");
     const edgesArray = ydoc.getArray("edges");
+    const positionsMap = ydoc.getMap("positions");
 
     // Set up observers
     const workflowObserver = () => {
@@ -241,11 +243,20 @@ export const createWorkflowStore = () => {
       notify();
     };
 
+    const positionsObserver = () => {
+      state = produce(state, draft => {
+        draft.positions = positionsMap.toJSON() as Workflow.Positions;
+        updateDerivedState(draft);
+      });
+      notify();
+    };
+
     // Attach observers with deep observation for nested changes
     workflowMap.observeDeep(workflowObserver);
     jobsArray.observeDeep(jobsObserver);
     triggersArray.observeDeep(triggersObserver);
     edgesArray.observeDeep(edgesObserver);
+    positionsMap.observeDeep(positionsObserver);
 
     // Store cleanup functions
     observerCleanups = [
@@ -253,6 +264,7 @@ export const createWorkflowStore = () => {
       () => jobsArray.unobserveDeep(jobsObserver),
       () => triggersArray.unobserveDeep(triggersObserver),
       () => edgesArray.unobserveDeep(edgesObserver),
+      () => positionsMap.unobserveDeep(positionsObserver),
     ];
 
     state = produce(state, draft => {
@@ -265,6 +277,7 @@ export const createWorkflowStore = () => {
     jobsObserver();
     triggersObserver();
     edgesObserver();
+    positionsObserver();
   };
 
   // Disconnect Y.Doc and clean up observers
@@ -410,6 +423,33 @@ export const createWorkflowStore = () => {
     return yjsJob ? (yjsJob.get("body") as Y.Text) : null;
   };
 
+  const updatePositions = (positions: Workflow.Positions | null) => {
+    if (!ydoc) return;
+
+    const positionsMap = ydoc.getMap("positions");
+
+    ydoc.transact(() => {
+      if (positions === null) {
+        // Clear all positions to switch to auto layout
+        positionsMap.clear();
+      } else {
+        // Update positions with new values
+        Object.entries(positions).forEach(([id, position]) => {
+          positionsMap.set(id, position);
+        });
+      }
+    });
+  };
+
+  const updatePosition = (id: string, position: { x: number; y: number }) => {
+    if (!ydoc) return;
+
+    const positionsMap = ydoc.getMap("positions");
+    ydoc.transact(() => {
+      positionsMap.set(id, position);
+    });
+  };
+
   // =============================================================================
   // PATTERN 3: Direct Immer → Notify (Local UI State)
   // =============================================================================
@@ -504,6 +544,8 @@ export const createWorkflowStore = () => {
     updateTrigger,
     setEnabled,
     getJobBodyYText,
+    updatePositions,
+    updatePosition,
 
     // =============================================================================
     // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations - Use Sparingly)

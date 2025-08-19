@@ -1,7 +1,7 @@
 import { useStore } from "@tanstack/react-form";
-import type React from "react";
 import { useCallback, useEffect, useMemo } from "react";
 import type { ZodSchema } from "zod";
+
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
