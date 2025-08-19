@@ -1,6 +1,9 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
+  require Logger
+
+  alias Lightning.Config
   alias Lightning.Extensions.RateLimiting
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
@@ -8,10 +11,11 @@ defmodule LightningWeb.WebhooksController do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.WorkOrders
+  alias Lightning.Retry
 
   plug :reject_unfetched when action in [:create]
 
-  # Reject requests with unfetched body params, as they are not supported
+  # Reject requests with unfetched body params, as they are not supported.
   # See Plug.Parsers in Endpoint for more information.
   defp reject_unfetched(conn, _) do
     case conn.body_params do
@@ -27,7 +31,7 @@ defmodule LightningWeb.WebhooksController do
     end
   end
 
-  @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
+  @spec check(Plug.Conn.t(), map) :: Plug.Conn.t()
   def check(conn, _params) do
     put_status(conn, :ok)
     |> json(%{
@@ -36,7 +40,7 @@ defmodule LightningWeb.WebhooksController do
     })
   end
 
-  @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
+  @spec create(Plug.Conn.t(), map) :: Plug.Conn.t()
   def create(conn, _params) do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
            trigger <- conn.assigns.trigger,
@@ -47,19 +51,61 @@ defmodule LightningWeb.WebhooksController do
              %RateLimiting.Context{project_id: project_id},
              []
            ) do
-      {:ok, work_order} =
-        WorkOrders.create_for(trigger,
-          workflow: trigger.workflow,
-          dataclip: %{
-            body: conn.body_params,
-            request: build_request(conn),
-            type: :http_request,
-            project_id: project_id
-          },
-          without_run: without_run?
-        )
+      Retry.with_webhook_retry(
+        fn ->
+          WorkOrders.create_for(trigger,
+            workflow: trigger.workflow,
+            dataclip: %{
+              body: conn.body_params,
+              request: build_request(conn),
+              type: :http_request,
+              project_id: project_id
+            },
+            without_run: without_run?
+          )
+        end,
+        context: %{trigger_id: trigger.id, workflow_id: trigger.workflow.id}
+      )
+      |> case do
+        {:ok, work_order} ->
+          json(conn, %{work_order_id: work_order.id})
 
-      conn |> json(%{work_order_id: work_order.id})
+        {:error, %DBConnection.ConnectionError{} = error} ->
+          retry_after =
+            Config.webhook_retry(:timeout_ms)
+            |> div(1000)
+
+          Logger.error("webhook create_workorder exhausted retries",
+            event: :webhook_db_retry_exhausted,
+            trigger_id: trigger.id,
+            workflow_id: trigger.workflow.id,
+            kind: :db_connection_error,
+            error: Exception.message(error)
+          )
+
+          conn
+          |> put_resp_header("retry-after", Integer.to_string(retry_after))
+          |> put_status(:service_unavailable)
+          |> json(%{
+            error: :service_unavailable,
+            message:
+              "Unable to process request due to temporary database issues. Please try again later.",
+            retry_after: retry_after
+          })
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          errors =
+            Ecto.Changeset.traverse_errors(changeset, fn {m, _} -> m end)
+
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{error: :invalid_request, details: errors})
+
+        {:error, reason} when is_atom(reason) ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{error: reason})
+      end
     else
       {:error, reason, %{text: message}} ->
         status =
@@ -69,16 +115,17 @@ defmodule LightningWeb.WebhooksController do
 
         conn
         |> put_status(status)
-        |> json(%{"error" => message})
+        |> json(%{error: reason, message: message})
 
       nil ->
         conn
         |> put_status(:not_found)
-        |> json(%{"error" => "Webhook not found"})
+        |> json(%{error: :webhook_not_found})
 
       _disabled ->
         put_status(conn, :forbidden)
         |> json(%{
+          error: :trigger_disabled,
           message:
             "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
         })
