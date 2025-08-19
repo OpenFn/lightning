@@ -36,7 +36,7 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
         "🚀 Monaco editor mounted, ytext available:",
         !!ytext,
         "awareness available:",
-        !!awareness,
+        !!awareness
       );
       editorRef.current = editor;
       monacoRef.current = monaco;
@@ -55,13 +55,13 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
           ytext,
           editor.getModel()!,
           new Set([editor]),
-          awareness,
+          awareness
         );
         bindingRef.current = binding;
         console.log("✅ Initial Monaco binding created successfully");
       }
     },
-    [adaptor, ytext, awareness],
+    [adaptor, ytext, awareness]
   );
 
   // Effect to handle Y.Text binding changes after mount
@@ -74,7 +74,7 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
       "awareness:",
       !!awareness,
       "existing binding:",
-      !!bindingRef.current,
+      !!bindingRef.current
     );
 
     if (!editorRef.current || !ytext || !awareness) {
@@ -90,7 +90,7 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
     console.log(
       "🔄 Creating Monaco binding for Y.Text in effect:",
       ytext,
-      ytext.toString(),
+      ytext.toString()
     );
 
     // Destroy existing binding if it exists (for job switching)
@@ -105,7 +105,7 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
       ytext,
       editorRef.current.getModel()!,
       new Set([editorRef.current]),
-      awareness,
+      awareness
     );
     bindingRef.current = binding;
 

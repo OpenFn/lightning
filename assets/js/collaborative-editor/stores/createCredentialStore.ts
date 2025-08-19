@@ -79,13 +79,13 @@ export const createCredentialStore = (): CredentialStore => {
       lastUpdated: null,
     } as CredentialState,
     // No initial transformations needed
-    (draft) => draft,
+    draft => draft
   );
 
   const listeners = new Set<() => void>();
 
   const notify = () => {
-    listeners.forEach((listener) => {
+    listeners.forEach(listener => {
       listener();
     });
   };
@@ -119,13 +119,13 @@ export const createCredentialStore = (): CredentialStore => {
       const credentials = result.data;
 
       credentials.project_credentials.sort((a, b) =>
-        a.name.localeCompare(b.name),
+        a.name.localeCompare(b.name)
       );
       credentials.keychain_credentials.sort((a, b) =>
-        a.name.localeCompare(b.name),
+        a.name.localeCompare(b.name)
       );
 
-      state = produce(state, (draft) => {
+      state = produce(state, draft => {
         draft.projectCredentials = credentials.project_credentials;
         draft.keychainCredentials = credentials.keychain_credentials;
         draft.isLoading = false;
@@ -140,7 +140,7 @@ export const createCredentialStore = (): CredentialStore => {
         rawData,
       });
 
-      state = produce(state, (draft) => {
+      state = produce(state, draft => {
         draft.isLoading = false;
         draft.error = errorMessage;
       });
@@ -161,14 +161,14 @@ export const createCredentialStore = (): CredentialStore => {
   // =============================================================================
 
   const setLoading = (loading: boolean) => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.isLoading = loading;
     });
     notify();
   };
 
   const setError = (error: string | null) => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.error = error;
       draft.isLoading = false;
     });
@@ -176,7 +176,7 @@ export const createCredentialStore = (): CredentialStore => {
   };
 
   const clearError = () => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.error = null;
     });
     notify();
@@ -199,7 +199,7 @@ export const createCredentialStore = (): CredentialStore => {
     const credentialsListHandler = (message: unknown) => {
       console.debug(
         "CredentialStore: Received credentials_list message",
-        message,
+        message
       );
       _handleCredentialsReceived(message);
     };
@@ -207,7 +207,7 @@ export const createCredentialStore = (): CredentialStore => {
     const credentialsUpdatedHandler = (message: unknown) => {
       console.debug(
         "CredentialStore: Received credentials_updated message",
-        message,
+        message
       );
       _handleCredentialsUpdated(message);
     };
@@ -235,7 +235,7 @@ export const createCredentialStore = (): CredentialStore => {
   const requestCredentials = () => {
     if (!_channelProvider?.channel) {
       console.warn(
-        "CredentialStore: Cannot request credentials - no channel connected",
+        "CredentialStore: Cannot request credentials - no channel connected"
       );
       setError("No connection available");
       return;
@@ -250,7 +250,7 @@ export const createCredentialStore = (): CredentialStore => {
       .receive("ok", (response: unknown) => {
         console.debug(
           "CredentialStore: Credential request acknowledged",
-          response,
+          response
         );
         // If response contains credentials data directly, handle it
         if (
@@ -259,7 +259,7 @@ export const createCredentialStore = (): CredentialStore => {
           "credentials" in response
         ) {
           _handleCredentialsReceived(
-            (response as { credentials: unknown }).credentials,
+            (response as { credentials: unknown }).credentials
           );
         }
         // Otherwise, response will come through separate channel message

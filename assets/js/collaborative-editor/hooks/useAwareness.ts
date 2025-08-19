@@ -53,7 +53,7 @@ export const useAwareness = () => {
 export const useAwarenessUsers = (): AwarenessUser[] => {
   const { awarenessStore } = useSession();
 
-  const selectUsers = awarenessStore.withSelector((state) => state.users);
+  const selectUsers = awarenessStore.withSelector(state => state.users);
 
   return useSyncExternalStore(awarenessStore.subscribe, selectUsers);
 };
@@ -65,7 +65,7 @@ export const useAwarenessUsers = (): AwarenessUser[] => {
 export const useRemoteUsers = (): AwarenessUser[] => {
   const { awarenessStore } = useSession();
 
-  const selectRemoteUsers = awarenessStore.withSelector((state) => {
+  const selectRemoteUsers = awarenessStore.withSelector(state => {
     if (!state.localUser) return state.users;
     return state.users.filter(user => user.user.id !== state.localUser?.id);
   });
@@ -80,7 +80,7 @@ export const useRemoteUsers = (): AwarenessUser[] => {
 export const useLocalUser = (): LocalUserData | null => {
   const { awarenessStore } = useSession();
 
-  const selectLocalUser = awarenessStore.withSelector((state) => state.localUser);
+  const selectLocalUser = awarenessStore.withSelector(state => state.localUser);
 
   return useSyncExternalStore(awarenessStore.subscribe, selectLocalUser);
 };
@@ -94,7 +94,7 @@ export const useAwarenessConnectionState = (): {
 } => {
   const { awarenessStore } = useSession();
 
-  const selectConnectionState = awarenessStore.withSelector((state) => ({
+  const selectConnectionState = awarenessStore.withSelector(state => ({
     isInitialized: state.isInitialized,
     isConnected: state.isConnected,
   }));
@@ -108,7 +108,7 @@ export const useAwarenessConnectionState = (): {
 export const useUserById = (userId: string | null): AwarenessUser | null => {
   const { awarenessStore } = useSession();
 
-  const selectUser = awarenessStore.withSelector((state) => {
+  const selectUser = awarenessStore.withSelector(state => {
     if (!userId) return null;
     return state.users.find(user => user.user.id === userId) || null;
   });
@@ -123,9 +123,9 @@ export const useUserById = (userId: string | null): AwarenessUser | null => {
 export const useUserCursors = (): Map<number, AwarenessUser> => {
   const { awarenessStore } = useSession();
 
-  const selectCursors = awarenessStore.withSelector((state) => {
+  const selectCursors = awarenessStore.withSelector(state => {
     const cursorsMap = new Map<number, AwarenessUser>();
-    
+
     state.users.forEach(user => {
       if (user.cursor || user.selection) {
         cursorsMap.set(user.clientId, user);
@@ -145,7 +145,9 @@ export const useUserCursors = (): Map<number, AwarenessUser> => {
 export const useRawAwareness = () => {
   const { awarenessStore } = useSession();
 
-  const selectRawAwareness = awarenessStore.withSelector((state) => state.rawAwareness);
+  const selectRawAwareness = awarenessStore.withSelector(
+    state => state.rawAwareness
+  );
 
   return useSyncExternalStore(awarenessStore.subscribe, selectRawAwareness);
 };
@@ -157,8 +159,8 @@ export const useRawAwareness = () => {
 export const useAwarenessReady = (): boolean => {
   const { awarenessStore } = useSession();
 
-  const selectReady = awarenessStore.withSelector((state) => 
-    state.isInitialized && state.rawAwareness !== null
+  const selectReady = awarenessStore.withSelector(
+    state => state.isInitialized && state.rawAwareness !== null
   );
 
   return useSyncExternalStore(awarenessStore.subscribe, selectReady);
