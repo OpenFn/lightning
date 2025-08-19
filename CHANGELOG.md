@@ -26,6 +26,8 @@ and this project adheres to
 ### Changed
 
 ### Fixed
+- Hide Mini-History on new template page
+  [#3531](https://github.com/OpenFn/lightning/pull/3531)
 
 ## [v2.14.2] - 2025-08-15
 
