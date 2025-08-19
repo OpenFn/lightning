@@ -8,8 +8,9 @@ defmodule LightningWeb.RunChannelTest do
   alias Lightning.Workflows
 
   import Ecto.Query
-  import Lightning.TestUtils
   import Lightning.Factories
+  import Lightning.TestUtils
+  import Lightning.Utils.Maps, only: [stringify_keys: 1]
 
   setup do
     Mox.verify_on_exit!()
@@ -1529,10 +1530,6 @@ defmodule LightningWeb.RunChannelTest do
     %{socket: socket}
   end
 
-  defp stringify_keys(map) do
-    Enum.map(map, fn {k, v} -> {Atom.to_string(k), v} end)
-    |> Map.new()
-  end
 
   defp set_google_credential(_context) do
     expires_at =
