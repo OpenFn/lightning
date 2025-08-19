@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
  */
 export function useInspectorOverlap(
   inspectorId: string | undefined,
-  diagramRef: React.RefObject<HTMLDivElement | null>,
+  diagramRef: React.RefObject<HTMLDivElement | null>
 ) {
   const [overlapWidth, setOverlapWidth] = useState(0);
   const inspectorRef = useRef<HTMLElement | null>(null);

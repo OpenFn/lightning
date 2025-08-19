@@ -7,7 +7,7 @@ import type React from "react";
 import { useWorkflowState } from "../hooks/Workflow";
 
 export const WorkflowHeader: React.FC = () => {
-  const workflow = useWorkflowState((state) => state.workflow);
+  const workflow = useWorkflowState(state => state.workflow);
 
   if (!workflow) {
     return (

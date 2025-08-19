@@ -51,5 +51,5 @@ export const createWithSelector = <TState>(getSnapshot: () => TState) => {
  * Type helper for withSelector function signature
  */
 export type WithSelector<TState> = <TResult>(
-  selector: (state: TState) => TResult,
+  selector: (state: TState) => TResult
 ) => () => TResult;

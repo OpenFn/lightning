@@ -43,8 +43,8 @@ export function Header({ children }: { children: React.ReactNode[] }) {
           </div>
           <div
             className="hidden"
-            phx-disconnected="[[&quot;show&quot;,{&quot;transition&quot;:[[&quot;fade-in&quot;],[],[]]}]]"
-            phx-connected="[[&quot;hide&quot;,{&quot;transition&quot;:[[&quot;fade-out&quot;],[],[]]}]]"
+            phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
+            phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
           >
             <span className="hero-signal-slash w-6 h-6 mr-2 text-red-500"></span>
           </div>
@@ -64,11 +64,11 @@ export function Header({ children }: { children: React.ReactNode[] }) {
                 id="top-bar-save-workflow-btn"
                 type="button"
                 className="rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 cursor-pointer disabled:cursor-auto px-3 py-2 bg-primary-600 hover:bg-primary-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 focus:ring-transparent"
-                phx-click="[[&quot;push&quot;,{&quot;event&quot;:&quot;save&quot;}]]"
+                phx-click='[["push",{"event":"save"}]]'
                 phx-hook="InspectorSaveViaCtrlS"
                 phx-disable-with=""
-                phx-connected="[[&quot;remove_attr&quot;,{&quot;attr&quot;:&quot;disabled&quot;}]]"
-                phx-disconnected="[[&quot;set_attr&quot;,{&quot;attr&quot;:[&quot;disabled&quot;,&quot;&quot;]}]]"
+                phx-connected='[["remove_attr",{"attr":"disabled"}]]'
+                phx-disconnected='[["set_attr",{"attr":["disabled",""]}]]'
               >
                 Save
               </button>
@@ -94,7 +94,7 @@ export function Header({ children }: { children: React.ReactNode[] }) {
             transition
             className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg outline outline-black/5 transition data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"
           >
-            {userNavigation.map((item) => (
+            {userNavigation.map(item => (
               <MenuItem key={item.label}>
                 <a
                   href={item.url}

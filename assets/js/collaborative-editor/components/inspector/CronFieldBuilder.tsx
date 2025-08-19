@@ -32,7 +32,7 @@ export const CronFieldBuilder: React.FC<CronFieldBuilderProps> = ({
           id="cron-expression"
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           onBlur={onBlur}
           disabled={disabled}
           placeholder="0 0 * * * (daily at midnight)"

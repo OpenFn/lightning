@@ -79,13 +79,13 @@ export const createAdaptorStore = (): AdaptorStore => {
       lastUpdated: null,
     } as AdaptorState,
     // No initial transformations needed
-    (draft) => draft,
+    draft => draft
   );
 
   const listeners = new Set<() => void>();
 
   const notify = () => {
-    listeners.forEach((listener) => {
+    listeners.forEach(listener => {
       listener();
     });
   };
@@ -122,7 +122,7 @@ export const createAdaptorStore = (): AdaptorStore => {
       }
       adaptors.sort((a, b) => a.name.localeCompare(b.name));
 
-      state = produce(state, (draft) => {
+      state = produce(state, draft => {
         draft.adaptors = adaptors;
         draft.isLoading = false;
         draft.error = null;
@@ -136,7 +136,7 @@ export const createAdaptorStore = (): AdaptorStore => {
         rawData,
       });
 
-      state = produce(state, (draft) => {
+      state = produce(state, draft => {
         draft.isLoading = false;
         draft.error = errorMessage;
       });
@@ -157,14 +157,14 @@ export const createAdaptorStore = (): AdaptorStore => {
   // =============================================================================
 
   const setLoading = (loading: boolean) => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.isLoading = loading;
     });
     notify();
   };
 
   const setError = (error: string | null) => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.error = error;
       draft.isLoading = false;
     });
@@ -172,14 +172,14 @@ export const createAdaptorStore = (): AdaptorStore => {
   };
 
   const clearError = () => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.error = null;
     });
     notify();
   };
 
   const setAdaptors = (adaptors: Adaptor[]) => {
-    state = produce(state, (draft) => {
+    state = produce(state, draft => {
       draft.adaptors = adaptors;
       draft.lastUpdated = Date.now();
       draft.error = null;
@@ -200,7 +200,6 @@ export const createAdaptorStore = (): AdaptorStore => {
     const typedProvider = provider as PhoenixChannelProvider;
     channelProvider = typedProvider;
 
-    // Listen for adaptor-related channel messages
     const adaptorsListHandler = (message: unknown) => {
       console.debug("AdaptorStore: Received adaptors_list message", message);
       handleAdaptorsReceived(message);
@@ -213,7 +212,6 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     // Set up channel listeners
     if (typedProvider.channel) {
-      typedProvider.channel.on("adaptors_list", adaptorsListHandler);
       typedProvider.channel.on("adaptors_updated", adaptorsUpdatedHandler);
     }
 
@@ -234,7 +232,7 @@ export const createAdaptorStore = (): AdaptorStore => {
   const requestAdaptors = () => {
     if (!channelProvider?.channel) {
       console.warn(
-        "AdaptorStore: Cannot request adaptors - no channel connected",
+        "AdaptorStore: Cannot request adaptors - no channel connected"
       );
       setError("No connection available");
       return;
@@ -277,7 +275,7 @@ export const createAdaptorStore = (): AdaptorStore => {
   // =============================================================================
 
   const findAdaptorByName = (name: string): Adaptor | null => {
-    return state.adaptors.find((adaptor) => adaptor.name === name) || null;
+    return state.adaptors.find(adaptor => adaptor.name === name) || null;
   };
 
   const getLatestVersion = (adaptorName: string): string | null => {

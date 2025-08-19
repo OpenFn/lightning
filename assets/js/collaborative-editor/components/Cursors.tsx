@@ -44,7 +44,7 @@ function BaseStyles() {
 
 /**
  * Cursors component using awareness hooks for better performance and maintainability
- * 
+ *
  * Key improvements:
  * - Uses useUserCursors() hook with memoized Map for efficient lookups
  * - Uses useRemoteUsers() for selection data (referentially stable)
@@ -53,7 +53,7 @@ function BaseStyles() {
 export function Cursors() {
   // Get cursor data as a Map for efficient clientId lookups
   const cursorsMap = useUserCursors();
-  
+
   // Get remote users for selection data
   const remoteUsers = useRemoteUsers();
 
