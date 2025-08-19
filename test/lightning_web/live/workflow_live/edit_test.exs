@@ -26,7 +26,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
-  describe "initial YAML generation (regression)" do
+  describe "initial YAML generation" do
     setup :create_workflow
 
     test "pushes generate_workflow_code on first mount", %{
