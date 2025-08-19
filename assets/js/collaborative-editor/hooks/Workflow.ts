@@ -76,15 +76,15 @@ import type { Workflow } from "../types/workflow";
  * @returns T The memoized result of your selector, with referential stability
  */
 export const useWorkflowSelector = <T>(
-  selector: (state: Workflow.WorkflowState, store: WorkflowStoreInstance) => T,
-  deps: React.DependencyList = [],
+  selector: (state: Workflow.State, store: WorkflowStoreInstance) => T,
+  deps: React.DependencyList = []
 ): T => {
   const store = useWorkflowStoreContext();
 
   // Create stable selector function using useCallback
   const stableSelector = useCallback(
-    (state: Workflow.WorkflowState) => selector(state, store),
-    [store, selector, ...deps],
+    (state: Workflow.State) => selector(state, store),
+    [store, selector, ...deps]
   );
 
   // Use store's optimized withSelector method
@@ -149,18 +149,18 @@ export const useWorkflowSelector = <T>(
  * @returns T The memoized result of your selector with referential stability
  */
 export const useWorkflowState = <T>(
-  selector: (state: Workflow.WorkflowState) => T,
-  deps: React.DependencyList = [],
+  selector: (state: Workflow.State) => T,
+  deps: React.DependencyList = []
 ): T => {
   const store = useWorkflowStoreContext();
 
-  // Use React's built-in useMemo for simple selections
+  // Use React's built-in useMemo for simple selections with proper typing
   const memoizedSelector = useMemo(() => {
-    let lastState: Workflow.WorkflowState | undefined;
-    let lastResult: T;
+    let lastState: Workflow.State | undefined;
+    let lastResult: T | undefined;
 
-    return (state: Workflow.WorkflowState): T => {
-      if (state !== lastState) {
+    return (state: Workflow.State): T => {
+      if (state !== lastState || lastResult === undefined) {
         lastResult = selector(state);
         lastState = state;
       }
@@ -169,8 +169,8 @@ export const useWorkflowState = <T>(
   }, [selector, ...deps]);
 
   const getSnapshot = useCallback(
-    () => memoizedSelector(store.getSnapshot()),
-    [store, memoizedSelector],
+    (): T => memoizedSelector(store.getSnapshot()),
+    [store, memoizedSelector]
   );
 
   return useSyncExternalStore(store.subscribe, getSnapshot);
@@ -186,7 +186,7 @@ export const useWorkflowEnabled = () => {
       enabled: state.enabled,
       setEnabled: store.setEnabled,
     }),
-    [],
+    []
   );
 };
 
@@ -205,7 +205,7 @@ export const useCurrentJob = () => {
         ? store.getJobBodyYText(state.selectedJobId)
         : null,
     }),
-    [],
+    []
   );
 };
 
@@ -240,7 +240,7 @@ export const useTriggerFormActions = () => {
         };
       },
     }),
-    [store],
+    [store]
   );
 };
 
@@ -260,7 +260,7 @@ export const useNodeSelection = () => {
 
   // Use useWorkflowState for simple state selection (no store methods needed)
   const stableData = useWorkflowState(
-    (state) => {
+    state => {
       // Resolve current selection with proper typing
       let currentNode: {
         node: Workflow.Job | Workflow.Trigger | Workflow.Edge | null;
@@ -271,14 +271,14 @@ export const useNodeSelection = () => {
       if (!currentNodeId) {
         currentNode = { node: null, type: null, id: null };
       } else if (jobId) {
-        const node = state.jobs.find((job) => job.id === jobId) || null;
+        const node = state.jobs.find(job => job.id === jobId) || null;
         currentNode = { node, type: "job" as const, id: jobId };
       } else if (triggerId) {
         const node =
-          state.triggers.find((trigger) => trigger.id === triggerId) || null;
+          state.triggers.find(trigger => trigger.id === triggerId) || null;
         currentNode = { node, type: "trigger" as const, id: triggerId };
       } else if (edgeId) {
-        const node = state.edges.find((edge) => edge.id === edgeId) || null;
+        const node = state.edges.find(edge => edge.id === edgeId) || null;
         currentNode = { node, type: "edge" as const, id: edgeId };
       } else {
         currentNode = { node: null, type: null, id: null };
@@ -287,7 +287,7 @@ export const useNodeSelection = () => {
       return { currentNode };
     },
     // Dependencies: URL parameters that affect selection
-    [currentNodeId, jobId, triggerId, edgeId],
+    [currentNodeId, jobId, triggerId, edgeId]
   );
 
   // Selection function with stable reference and store access
@@ -302,9 +302,9 @@ export const useNodeSelection = () => {
       // Use current state to determine node type
       const state = store.getSnapshot();
 
-      const foundJob = state.jobs.find((job) => job.id === id);
-      const foundTrigger = state.triggers.find((trigger) => trigger.id === id);
-      const foundEdge = state.edges.find((edge) => edge.id === id);
+      const foundJob = state.jobs.find(job => job.id === id);
+      const foundTrigger = state.triggers.find(trigger => trigger.id === id);
+      const foundEdge = state.edges.find(edge => edge.id === id);
 
       if (foundJob) {
         updateSearchParams({ job: id, trigger: null, edge: null });
@@ -314,7 +314,7 @@ export const useNodeSelection = () => {
         updateSearchParams({ edge: id, job: null, trigger: null });
       }
     },
-    [updateSearchParams, store],
+    [updateSearchParams, store]
   );
 
   return {
@@ -343,6 +343,10 @@ export const useWorkflowActions = () => {
       updateTrigger: store.updateTrigger,
       setEnabled: store.setEnabled,
 
+      // Position actions
+      updatePositions: store.updatePositions,
+      updatePosition: store.updatePosition,
+
       // Selection actions (local UI state)
       selectJob: store.selectJob,
       selectTrigger: store.selectTrigger,
@@ -350,6 +354,6 @@ export const useWorkflowActions = () => {
       clearSelection: store.clearSelection,
       removeJobAndClearSelection: store.removeJobAndClearSelection,
     }),
-    [store],
+    [store]
   );
 };
