@@ -2,6 +2,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import Lightning.Utils.Maps, only: [stringify_keys: 1]
 
   require Lightning.Run
 
@@ -365,24 +366,5 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
 
       assert returned_metadata == metadata
     end
-  end
-
-  # Put this in a helper
-  defp stringify_keys(map) do
-    map
-    |> Map.keys()
-    |> Enum.reduce(%{}, fn key, acc ->
-      acc |> stringify_key(key, map[key])
-    end)
-  end
-
-  defp stringify_key(acc, key, val) when is_map(val) and not is_struct(val) do
-    acc
-    |> Map.merge(%{to_string(key) => stringify_keys(val)})
-  end
-
-  defp stringify_key(acc, key, val) do
-    acc
-    |> Map.merge(%{to_string(key) => val})
   end
 end
