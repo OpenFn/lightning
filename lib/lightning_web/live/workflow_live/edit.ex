@@ -236,7 +236,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             ai_assistant_component_id={@workflow_ai_assistant_id}
             module={LightningWeb.WorkflowLive.WorkflowAiChatComponent}
             workflow={@workflow}
-            workflow_code={@workflow_code_with_ids |> dbg()}
+            workflow_code={@workflow_code_with_ids}
             project={@project}
             base_url={@base_url}
             query_params={@query_params}
