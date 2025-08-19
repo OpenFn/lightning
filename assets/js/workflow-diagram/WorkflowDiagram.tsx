@@ -590,15 +590,18 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         liveAction={props.liveAction}
         drawerWidth={drawerWidth}
       />
-      <MiniHistory
-        collapsed={!runSteps.start_from}
-        history={someHistory}
-        selectRunHandler={onRunChange}
-        onCollapseHistory={onCollapseHistory}
-        drawerWidth={drawerWidth}
-        hasSnapshotMismatch={hasSnapshotMismatch}
-        missingNodeCount={missingNodeCount}
-      />
+      {
+        props.liveAction === 'edit' ?
+          <MiniHistory
+            collapsed={!runSteps.start_from}
+            history={someHistory}
+            selectRunHandler={onRunChange}
+            onCollapseHistory={onCollapseHistory}
+            drawerWidth={drawerWidth}
+            hasSnapshotMismatch={hasSnapshotMismatch}
+            missingNodeCount={missingNodeCount}
+          /> : null
+      }
     </ReactFlowProvider>
   );
 }
