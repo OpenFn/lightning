@@ -14,7 +14,10 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import tippy from "tippy.js";
 
-import { useWorkflowState } from "#/collaborative-editor/hooks/Workflow";
+import {
+  useWorkflowState,
+  useWorkflowActions,
+} from "#/collaborative-editor/hooks/Workflow";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
 import edgeTypes from "#/workflow-diagram/edges";
@@ -44,12 +47,13 @@ type WorkflowDiagramProps = {
   aiAssistantId?: string;
   showInspector?: boolean;
   inspectorId?: string | undefined;
+  layoutDuration?: number;
 };
 
 type ChartCache = {
   positions: Positions;
   lastSelection: string | null;
-  lastLayout?: string;
+  lastLayout?: string | undefined;
   layoutDuration?: number;
 };
 
@@ -63,9 +67,9 @@ const useTippyForControls = (isManualLayout: boolean) => {
 
     const cleaner: (() => void)[] = [];
     buttons.forEach(button => {
-      if (button instanceof HTMLElement && button.dataset.tooltip) {
+      if (button instanceof HTMLElement && button.dataset["tooltip"]) {
         const tp = tippy(button, {
-          content: button.dataset.tooltip,
+          content: button.dataset["tooltip"],
           placement: "right",
           animation: false,
           allowHTML: false,
@@ -87,12 +91,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, inspectorId } = props;
 
+  // Get workflow actions including position updates
+  const { updatePositions, updatePosition } = useWorkflowActions();
+
   // TODO: implement these
-  const updatePositions = () => {};
-  const updatePosition = () => {};
-  const fixedPositions = null;
-  const undo = () => {};
-  const redo = () => {};
+  const undo = useCallback(() => {}, []);
+  const redo = useCallback(() => {}, []);
 
   const { jobs, triggers, edges } = useWorkflowState(state => ({
     jobs: state.jobs,
@@ -109,11 +113,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       triggers,
       edges,
       disabled,
+      positions: workflowPositions,
     }),
-    [jobs, triggers, edges, disabled]
+    [jobs, triggers, edges, disabled, workflowPositions]
   );
 
-  const isManualLayout = !!fixedPositions;
+  const isManualLayout = Object.keys(workflowPositions).length > 0;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   const [drawerWidth, setDrawerWidth] = useState(0);
@@ -156,19 +161,29 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [flow, setFlow] = useState<ReactFlowInstance>();
 
   const forceLayout = useCallback(() => {
+    if (!flow) return Promise.resolve();
+
     const viewBounds = {
       width: workflowDiagramRef.current?.clientWidth ?? 0,
       height: workflowDiagramRef.current?.clientHeight ?? 0,
     };
     return layout(model, setModel, flow, viewBounds, {
       duration: props.layoutDuration ?? LAYOUT_DURATION,
-      forceFit: props.forceFit,
+      forceFit: props.forceFit ?? false,
     }).then(positions => {
       // Note we don't update positions until the animation has finished
       chartCache.current.positions = positions;
       if (isManualLayout) updatePositions(positions);
+      return positions;
     });
-  }, [flow, model, isManualLayout, updatePositions]);
+  }, [
+    flow,
+    model,
+    isManualLayout,
+    updatePositions,
+    props.layoutDuration,
+    props.forceFit,
+  ]);
 
   // Respond to changes pushed into the component from outside
   // This usually means the workflow has changed or its the first load, so we don't want to animate
@@ -210,25 +225,28 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             const isPlaceholder = node.type === "placeholder";
             return {
               ...node,
-              position: isPlaceholder ? node.position : fixedPositions[node.id],
+              position: isPlaceholder
+                ? node.position
+                : workflowPositions[node.id] || { x: 0, y: 0 },
             };
           });
           setModel({ ...newModel, nodes: nodesWPos });
-          chartCache.current.positions = fixedPositions;
+          chartCache.current.positions = workflowPositions;
         } else {
-          layout(newModel, setModel, flow, viewBounds, {
+          void layout(newModel, setModel, flow, viewBounds, {
             duration: props.layoutDuration ?? LAYOUT_DURATION,
-            forceFit: props.forceFit,
+            forceFit: props.forceFit ?? false,
           }).then(positions => {
             // Note we don't update positions until the animation has finished
             chartCache.current.positions = positions;
+            return positions;
           });
         }
       } else {
         // if isManualLayout, then we use values from store instead
         newModel.nodes.forEach(n => {
           if (isManualLayout && n.type !== "placeholder") {
-            n.position = fixedPositions[n.id];
+            n.position = workflowPositions[n.id] || { x: 0, y: 0 };
           }
         });
         setModel(newModel);
@@ -242,7 +260,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     placeholders,
     el,
     isManualLayout,
-    fixedPositions,
+    workflowPositions,
     selection,
   ]);
 
@@ -339,7 +357,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   // update node position data only on dragstop.
   const onNodeDragStop = useCallback(
-    (e: React.MouseEvent, node: Flow.Node) => {
+    (_e: React.MouseEvent, node: Flow.Node) => {
       if (node.type === "placeholder") {
         updatePlaceholderPosition(node.id, node.position);
       } else {
@@ -381,10 +399,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       let isFirstCallback = true;
 
       let cachedTargetBounds: Rect | null = null;
-      let cacheTimeout: any;
+      let cacheTimeout: NodeJS.Timeout | undefined;
 
       const throttledResize = throttle(() => {
-        clearTimeout(cacheTimeout);
+        if (cacheTimeout) clearTimeout(cacheTimeout);
 
         // After 3 seconds, clear the timeout and take a new cache snapshot
         cacheTimeout = setTimeout(() => {
@@ -394,8 +412,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         if (!cachedTargetBounds) {
           // Take a snapshot of what bounds to try and maintain throughout the resize
           const viewBounds = {
-            width: el.clientWidth ?? 0,
-            height: el.clientHeight ?? 0,
+            width: el.clientWidth || 0,
+            height: el.clientHeight || 0,
           };
           const rect = getVisibleRect(flow.getViewport(), viewBounds, 1);
           const visible = model.nodes.filter(n =>
@@ -411,7 +429,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         });
       }, FIT_DURATION * 2);
 
-      const resizeOb = new ResizeObserver(entries => {
+      const resizeOb = new ResizeObserver(_entries => {
         if (!isFirstCallback) {
           // Don't fit when the listener attaches (it callsback immediately)
           throttledResize();
@@ -427,15 +445,18 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }
   }, [flow, model, el]);
 
-  const switchLayout = async () => {
+  const switchLayout = () => {
     if (isManualLayout) {
       updatePositions(null);
-    } else updatePositions(chartCache.current.positions);
+    } else {
+      updatePositions(chartCache.current.positions);
+    }
   };
 
-  const handleFitView = useCallback(async () => {
+  const handleFitView = useCallback(() => {
+    if (!flow) return;
     const bounds = getNodesBounds(model.nodes);
-    flow.fitBounds(bounds, {
+    void flow.fitBounds(bounds, {
       duration: 200,
       padding: FIT_PADDING,
     });
@@ -504,7 +525,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           showInteractive={false}
           showFitView={false}
           style={{
-            transform: `translateX(${drawerWidth}px)`,
+            transform: `translateX(${drawerWidth.toString()}px)`,
             transition: "transform 500ms ease-in-out",
           }}
         >
@@ -513,7 +534,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           </ControlButton>
 
           <ControlButton
-            onClick={switchLayout}
+            onClick={() => switchLayout()}
             data-tooltip={
               isManualLayout
                 ? "Switch to auto layout mode"
@@ -527,15 +548,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             )}
           </ControlButton>
           <ControlButton
-            onClick={forceLayout}
+            onClick={() => void forceLayout()}
             data-tooltip="Run auto layout (override manual positions)"
           >
             <span className="text-black hero-squares-2x2 w-4 h-4" />
           </ControlButton>
-          <ControlButton onClick={undo} data-tooltip="Undo">
+          <ControlButton onClick={() => undo()} data-tooltip="Undo">
             <span className="text-black hero-arrow-uturn-left w-4 h-4" />
           </ControlButton>
-          <ControlButton onClick={redo} data-tooltip="Redo">
+          <ControlButton onClick={() => redo()} data-tooltip="Redo">
             <span className="text-black hero-arrow-uturn-right w-4 h-4" />
           </ControlButton>
         </Controls>
@@ -546,7 +567,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           className="border-2 border-gray-200"
           nodeComponent={MiniMapNode}
           style={{
-            transform: `translateX(-${inspectorWidth}px)`,
+            transform: `translateX(-${inspectorWidth.toString()}px)`,
             transition: "transform duration-300 ease-in-out",
           }}
         />

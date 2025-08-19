@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-namespace */
 import type * as Y from "yjs";
 import type { TypedArray, TypedDoc, TypedMap } from "yjs-types";
 
+import type { Workflow as WorkflowType } from "./workflow";
+
+// Why isn't this used anywhere, it definity was!
 export interface AwarenessUser {
   clientId: number;
   user: {
@@ -21,7 +25,10 @@ export interface AwarenessUser {
 export namespace Session {
   // TODO: note that we are using a 3rd party library to type the Yjs document.
   export type WorkflowDoc = TypedDoc<
-    { workflow: TypedMap<Workflow> },
+    {
+      workflow: TypedMap<Workflow>;
+      positions: TypedMap<WorkflowType.Positions>;
+    },
     {
       jobs: TypedArray<TypedMap<Job & { body: Y.Text }>>;
       edges: TypedArray<TypedMap<Edge>>;
@@ -29,6 +36,7 @@ export namespace Session {
     }
   >;
 
+  // TODO: update with extra fields from the server
   export type Workflow = { id: string; name: string };
 
   export type Job = {
@@ -57,3 +65,5 @@ export namespace Session {
     target_job_id: string;
   };
 }
+
+/* eslint-enable @typescript-eslint/no-namespace */

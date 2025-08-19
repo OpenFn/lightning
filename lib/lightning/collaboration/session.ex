@@ -187,7 +187,6 @@ defmodule Lightning.Collaboration.Session do
       workflow ->
         # Initialize the document with workflow data
         SharedDoc.update_doc(shared_doc_pid, fn doc ->
-          # Create the root workflow map
           workflow_map = Yex.Doc.get_map(doc, "workflow")
 
           # Set workflow properties
@@ -242,6 +241,12 @@ defmodule Lightning.Collaboration.Session do
               })
 
             Yex.Array.push(triggers_array, trigger_map)
+          end)
+
+          positions = Yex.Doc.get_map(doc, "positions")
+
+          Enum.each(workflow.positions || [], fn {id, position} ->
+            Yex.Map.set(positions, id, position)
           end)
 
           Logger.debug(
