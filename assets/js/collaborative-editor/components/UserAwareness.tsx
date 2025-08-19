@@ -36,7 +36,7 @@ export const UserAwareness: React.FC = () => {
           {users.length} user{users.length !== 1 ? "s" : ""} online:
         </span>
         <div className="flex gap-1">
-          {users.map((user) => (
+          {users.map(user => (
             <div
               key={user.clientId}
               className="flex items-center gap-1 px-2 py-1 bg-white 

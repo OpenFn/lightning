@@ -25,7 +25,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
   // Generate webhook URL based on trigger ID
   const webhookUrl = new URL(
     `/i/${trigger.id}`,
-    window.location.origin,
+    window.location.origin
   ).toString();
 
   // Copy to clipboard function
@@ -48,7 +48,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
         </h3>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={e => {
             e.preventDefault();
             e.stopPropagation();
             // form.handleSubmit();
@@ -57,7 +57,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
         >
           {/* Trigger Type Selection */}
           <form.Field name="type">
-            {(field) => (
+            {field => (
               <div>
                 <label
                   htmlFor={field.name}
@@ -68,9 +68,9 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                 <select
                   id={field.name}
                   value={field.state.value}
-                  onChange={(e) =>
+                  onChange={e =>
                     field.handleChange(
-                      e.target.value as "webhook" | "cron" | "kafka",
+                      e.target.value as "webhook" | "cron" | "kafka"
                     )
                   }
                   onBlur={field.handleBlur}
@@ -88,7 +88,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                   <option value="cron">Cron</option>
                   <option value="kafka">Kafka</option>
                 </select>
-                {field.state.meta.errors.map((error) => (
+                {field.state.meta.errors.map(error => (
                   <p key={error} className="mt-1 text-xs text-red-600">
                     {error}
                   </p>
@@ -99,13 +99,13 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
           {/* Enabled Toggle */}
           <form.Field name="enabled">
-            {(field) => (
+            {field => (
               <div className="flex items-center">
                 <input
                   id={field.name}
                   type="checkbox"
                   checked={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.checked)}
+                  onChange={e => field.handleChange(e.target.checked)}
                   onBlur={field.handleBlur}
                   className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
@@ -121,7 +121,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
           {/* Conditional Trigger Type-Specific Fields */}
           <form.Field name="type">
-            {(field) => {
+            {field => {
               const currentType = field.state.value;
 
               if (currentType === "webhook") {
@@ -179,7 +179,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                         name="cron_expression"
                         listeners={{ onChangeDebounceMs: 2000 }}
                       >
-                        {(cronField) => {
+                        {cronField => {
                           console.log(cronField.state);
                           return (
                             <div>
@@ -191,13 +191,13 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                               </label>
                               <CronFieldBuilder
                                 value={cronField.state.value}
-                                onChange={(cronExpr) =>
+                                onChange={cronExpr =>
                                   cronField.handleChange(cronExpr)
                                 }
                                 onBlur={cronField.handleBlur}
                                 className=""
                               />
-                              {cronField.state.meta.errors.map((error) => (
+                              {cronField.state.meta.errors.map(error => (
                                 <p
                                   key={error}
                                   className="mt-1 text-xs text-red-600"
@@ -226,7 +226,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                       <div className="space-y-4">
                         {/* Hosts Field */}
                         <form.Field name="kafka_configuration.hosts">
-                          {(field) => (
+                          {field => (
                             <div>
                               <label
                                 htmlFor={field.name}
@@ -238,7 +238,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                 id={field.name}
                                 type="text"
                                 value={field.state.value || ""}
-                                onChange={(e) =>
+                                onChange={e =>
                                   field.handleChange(e.target.value)
                                 }
                                 onBlur={field.handleBlur}
@@ -256,7 +256,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                               <p className="mt-1 text-xs text-gray-500">
                                 Comma-separated list of host:port pairs
                               </p>
-                              {field.state.meta.errors.map((error) => (
+                              {field.state.meta.errors.map(error => (
                                 <p
                                   key={error}
                                   className="mt-1 text-xs text-red-600"
@@ -270,7 +270,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
                         {/* Topics Field */}
                         <form.Field name="kafka_configuration.topics">
-                          {(field) => (
+                          {field => (
                             <div>
                               <label
                                 htmlFor={field.name}
@@ -282,7 +282,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                 id={field.name}
                                 type="text"
                                 value={field.state.value || ""}
-                                onChange={(e) =>
+                                onChange={e =>
                                   field.handleChange(e.target.value)
                                 }
                                 onBlur={field.handleBlur}
@@ -300,7 +300,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                               <p className="mt-1 text-xs text-gray-500">
                                 Comma-separated list of topic names
                               </p>
-                              {field.state.meta.errors.map((error) => (
+                              {field.state.meta.errors.map(error => (
                                 <p
                                   key={error}
                                   className="mt-1 text-xs text-red-600"
@@ -314,13 +314,13 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
                         {/* SSL Configuration */}
                         <form.Field name="kafka_configuration.ssl">
-                          {(field) => (
+                          {field => (
                             <div className="flex items-center">
                               <input
                                 id={field.name}
                                 type="checkbox"
                                 checked={field.state.value || false}
-                                onChange={(e) =>
+                                onChange={e =>
                                   field.handleChange(e.target.checked)
                                 }
                                 onBlur={field.handleBlur}
@@ -338,7 +338,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
                         {/* SASL Configuration */}
                         <form.Field name="kafka_configuration.sasl">
-                          {(field) => (
+                          {field => (
                             <div>
                               <label
                                 htmlFor={field.name}
@@ -349,13 +349,13 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                               <select
                                 id={field.name}
                                 value={field.state.value || "none"}
-                                onChange={(e) =>
+                                onChange={e =>
                                   field.handleChange(
                                     e.target.value as
                                       | "none"
                                       | "plain"
                                       | "scram_sha_256"
-                                      | "scram_sha_512",
+                                      | "scram_sha_512"
                                   )
                                 }
                                 onBlur={field.handleBlur}
@@ -378,7 +378,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                   SCRAM-SHA-512
                                 </option>
                               </select>
-                              {field.state.meta.errors.map((error) => (
+                              {field.state.meta.errors.map(error => (
                                 <p
                                   key={error}
                                   className="mt-1 text-xs text-red-600"
@@ -392,7 +392,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
                         {/* Conditional Username/Password Fields */}
                         <form.Field name="kafka_configuration.sasl">
-                          {(saslField) => {
+                          {saslField => {
                             const requiresAuth =
                               saslField.state.value !== "none";
 
@@ -402,7 +402,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                               <div className="space-y-4 pl-4 border-l-2 border-gray-200">
                                 {/* Username Field */}
                                 <form.Field name="kafka_configuration.username">
-                                  {(field) => (
+                                  {field => (
                                     <div>
                                       <label
                                         htmlFor={field.name}
@@ -414,7 +414,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                         id={field.name}
                                         type="text"
                                         value={field.state.value || ""}
-                                        onChange={(e) =>
+                                        onChange={e =>
                                           field.handleChange(e.target.value)
                                         }
                                         onBlur={field.handleBlur}
@@ -428,7 +428,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                           focus:outline-none focus:ring-1
                                         `}
                                       />
-                                      {field.state.meta.errors.map((error) => (
+                                      {field.state.meta.errors.map(error => (
                                         <p
                                           key={error}
                                           className="mt-1 text-xs text-red-600"
@@ -442,7 +442,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
                                 {/* Password Field */}
                                 <form.Field name="kafka_configuration.password">
-                                  {(field) => (
+                                  {field => (
                                     <div>
                                       <label
                                         htmlFor={field.name}
@@ -454,7 +454,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                         id={field.name}
                                         type="password"
                                         value={field.state.value || ""}
-                                        onChange={(e) =>
+                                        onChange={e =>
                                           field.handleChange(e.target.value)
                                         }
                                         onBlur={field.handleBlur}
@@ -468,7 +468,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                           focus:outline-none focus:ring-1
                                         `}
                                       />
-                                      {field.state.meta.errors.map((error) => (
+                                      {field.state.meta.errors.map(error => (
                                         <p
                                           key={error}
                                           className="mt-1 text-xs text-red-600"
@@ -492,7 +492,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
                           {/* Initial Offset Reset Policy */}
                           <form.Field name="kafka_configuration.initial_offset_reset_policy">
-                            {(field) => (
+                            {field => (
                               <div>
                                 <label
                                   htmlFor={field.name}
@@ -503,9 +503,9 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                 <select
                                   id={field.name}
                                   value={field.state.value || "latest"}
-                                  onChange={(e) =>
+                                  onChange={e =>
                                     field.handleChange(
-                                      e.target.value as "earliest" | "latest",
+                                      e.target.value as "earliest" | "latest"
                                     )
                                   }
                                   onBlur={field.handleBlur}
@@ -525,7 +525,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                 <p className="mt-1 text-xs text-gray-500">
                                   What to do when there is no initial offset
                                 </p>
-                                {field.state.meta.errors.map((error) => (
+                                {field.state.meta.errors.map(error => (
                                   <p
                                     key={error}
                                     className="mt-1 text-xs text-red-600"
@@ -539,7 +539,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
 
                           {/* Connect Timeout */}
                           <form.Field name="kafka_configuration.connect_timeout">
-                            {(field) => (
+                            {field => (
                               <div>
                                 <label
                                   htmlFor={field.name}
@@ -552,7 +552,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                   type="number"
                                   min="1000"
                                   value={field.state.value || 30000}
-                                  onChange={(e) =>
+                                  onChange={e =>
                                     field.handleChange(Number(e.target.value))
                                   }
                                   onBlur={field.handleBlur}
@@ -570,7 +570,7 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
                                   Connection timeout in milliseconds (minimum
                                   1000)
                                 </p>
-                                {field.state.meta.errors.map((error) => (
+                                {field.state.meta.errors.map(error => (
                                   <p
                                     key={error}
                                     className="mt-1 text-xs text-red-600"

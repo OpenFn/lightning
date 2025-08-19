@@ -49,7 +49,7 @@ export const CollaborationWidget: React.FC = () => {
               {users.length} user{users.length !== 1 ? "s" : ""}:
             </span>
             <div className="flex gap-1">
-              {users.slice(0, 3).map((user) => (
+              {users.slice(0, 3).map(user => (
                 <div
                   key={user.clientId}
                   className="flex items-center gap-1 px-2 py-0.5 
