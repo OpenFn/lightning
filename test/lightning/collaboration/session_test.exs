@@ -1,4 +1,4 @@
-defmodule Lightning.CollaborationTest do
+defmodule Lightning.SessionTest do
   # Tests must be async: false because we put a SharedDoc in a dynamic supervisor
   # that isn't owned by the test process. So we need our Ecto sandbox to be
   # in shared mode.
@@ -16,10 +16,7 @@ defmodule Lightning.CollaborationTest do
     test "when an existing SharedDoc doesn't exist" do
       workflow_id = Ecto.UUID.generate()
 
-      {:ok, pid} = Session.start(workflow_id)
-
-      # Wait a bit for the SharedDoc to be created asynchronously
-      :timer.sleep(100)
+      {:ok, pid} = Session.start(workflow_id) |> Session.ready?()
 
       state = :sys.get_state(pid)
       assert state.workflow_id == workflow_id
@@ -29,13 +26,11 @@ defmodule Lightning.CollaborationTest do
     test "when an existing SharedDoc does exist" do
       workflow_id = Ecto.UUID.generate()
 
-      {:ok, pid1} = Session.start(workflow_id)
+      {:ok, pid1} = Session.start(workflow_id) |> Session.ready?()
+
       state1 = :sys.get_state(pid1)
 
-      # # Let SharedDoc start
-      # :timer.sleep(100)
-
-      {:ok, pid2} = Session.start(workflow_id)
+      {:ok, pid2} = Session.start(workflow_id) |> Session.ready?()
 
       state2 = :sys.get_state(pid2)
 
@@ -50,9 +45,7 @@ defmodule Lightning.CollaborationTest do
 
       client_1 =
         Task.async(fn ->
-          {:ok, pid} = Session.start(workflow.id)
-
-          assert Session.get_doc(pid)
+          {:ok, pid} = Session.start(workflow.id) |> Session.ready?()
 
           pid
         end)
@@ -61,9 +54,7 @@ defmodule Lightning.CollaborationTest do
 
       client_2 =
         Task.async(fn ->
-          {:ok, pid} = Session.start(workflow.id)
-
-          assert Session.get_doc(pid)
+          {:ok, pid} = Session.start(workflow.id) |> Session.ready?()
 
           pid
         end)
@@ -95,10 +86,9 @@ defmodule Lightning.CollaborationTest do
         |> insert()
 
       # Start a session - this should initialize the SharedDoc with workflow data
-      {:ok, session_pid} = Session.start(workflow.id)
+      {:ok, session_pid} = Session.start(workflow.id) |> Session.ready?()
 
       # Send a message to allow :handle_continue to finish
-      :sys.get_state(session_pid)
       shared_doc = Session.get_doc(session_pid)
 
       # Check workflow map exists and has correct data
@@ -144,7 +134,8 @@ defmodule Lightning.CollaborationTest do
         assert edge_data = find_in_ydoc_array(edges_array, workflow_edge.id),
                "Edge #{workflow_edge.id} not found in doc"
 
-        ~w(enabled source_job_id source_trigger_id target_job_id condition_expression condition_label condition_type)
+        ~w(enabled source_job_id source_trigger_id target_job_id
+           condition_expression condition_label condition_type)
         |> Enum.each(fn key ->
           doc_value = edge_data[key]
 
@@ -181,7 +172,7 @@ defmodule Lightning.CollaborationTest do
       insert(:job, workflow: workflow, name: "Original Job", body: "original")
 
       # Start first session
-      {:ok, session1_pid} = Session.start(workflow.id)
+      {:ok, session1_pid} = Session.start(workflow.id) |> Session.ready?()
 
       shared_doc_1 = Session.get_doc(session1_pid)
 
@@ -191,7 +182,7 @@ defmodule Lightning.CollaborationTest do
       end)
 
       # Start second session - should connect to existing SharedDoc
-      {:ok, session2_pid} = Session.start(workflow.id)
+      {:ok, session2_pid} = Session.start(workflow.id) |> Session.ready?()
       shared_doc_2 = Session.get_doc(session2_pid)
 
       assert shared_doc_1 == shared_doc_2
@@ -213,7 +204,7 @@ defmodule Lightning.CollaborationTest do
         )
 
       # Start session to initialize SharedDoc
-      {:ok, session_pid} = Session.start(workflow.id)
+      {:ok, session_pid} = Session.start(workflow.id) |> Session.ready?()
 
       state = :sys.get_state(session_pid)
       shared_doc_pid = state.shared_doc_pid
@@ -285,7 +276,7 @@ defmodule Lightning.CollaborationTest do
     test "when a session is stopped" do
       workflow_id = Ecto.UUID.generate()
 
-      {:ok, pid} = Session.start(workflow_id)
+      {:ok, pid} = Session.start(workflow_id) |> Session.ready?()
       %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(pid)
 
       Session.stop(pid)
@@ -329,15 +320,10 @@ defmodule Lightning.CollaborationTest do
   end
 
   defp find_in_ydoc_array(array, id) do
-    0..Yex.Array.length(array)
-    |> Enum.reduce_while({:not_found, nil}, fn index, {:not_found, _} ->
-      item = Yex.Array.fetch!(array, index)
-
-      if Yex.Map.fetch!(item, "id") == id do
-        {:halt, item}
-      else
-        {:cont, {:not_found, nil}}
-      end
+    array
+    |> Yex.Array.to_list()
+    |> Enum.find(fn item ->
+      Yex.Map.fetch!(item, "id") == id
     end)
   end
 end
