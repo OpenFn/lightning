@@ -102,3 +102,52 @@ export const TriggerSchema = z.discriminatedUnion("type", [
 ]);
 
 export type Trigger = z.infer<typeof TriggerSchema>;
+
+/**
+ * Helper function to create default trigger values by type
+ */
+export const createDefaultTrigger = (
+  type: "webhook" | "cron" | "kafka"
+): Partial<Trigger> => {
+  const base = {
+    enabled: true,
+  };
+
+  switch (type) {
+    case "webhook":
+      return {
+        ...base,
+        type: "webhook" as const,
+        cron_expression: null,
+        kafka_configuration: null,
+      };
+
+    case "cron":
+      return {
+        ...base,
+        type: "cron" as const,
+        cron_expression: "0 0 * * *", // Daily at midnight default
+        kafka_configuration: null,
+      };
+
+    case "kafka":
+      return {
+        ...base,
+        type: "kafka" as const,
+        cron_expression: null,
+        kafka_configuration: {
+          hosts: "",
+          topics: "",
+          ssl: false,
+          sasl: "none" as const,
+          username: "",
+          password: "",
+          initial_offset_reset_policy: "latest" as const,
+          connect_timeout: 30000,
+        },
+      };
+
+    default:
+      return base;
+  }
+};
