@@ -5,7 +5,7 @@
  * from the SessionProvider context using the useSyncExternalStore pattern.
  */
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import { useSession } from "../contexts/SessionProvider";
 import type { CredentialState } from "../types/credential";
@@ -38,23 +38,9 @@ export function useCredentials<T = ProjectAndKeychainCredentials>(
 ): T {
   const { credentialStore } = useSession();
 
-  const memoizedSelector = useMemo(() => {
-    let lastState: CredentialState | undefined;
-    let lastResult: T;
-
-    return (state: CredentialState): T => {
-      if (state !== lastState) {
-        lastResult = selector(state);
-        lastState = state;
-      }
-      return lastResult;
-    };
-  }, [selector, ...deps]);
-
-  const getSnapshot = useCallback(
-    () => memoizedSelector(credentialStore.getSnapshot()),
-    [credentialStore, memoizedSelector]
-  );
+  const getSnapshot = useMemo(() => {
+    return credentialStore.withSelector(selector);
+  }, [credentialStore, selector, ...deps]);
 
   return useSyncExternalStore(credentialStore.subscribe, getSnapshot);
 }

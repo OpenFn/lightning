@@ -5,24 +5,10 @@
  * from the SessionProvider context using the useSyncExternalStore pattern.
  */
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import { useSession } from "../contexts/SessionProvider";
 import type { Adaptor, AdaptorState } from "../types/adaptor";
-
-/**
- * Hook to access the full adaptor state
- * Uses useSyncExternalStore for optimal performance and referential stability
- */
-export const useAdaptorState = (): AdaptorState | null => {
-  const { adaptorStore } = useSession();
-
-  return useSyncExternalStore(
-    adaptorStore.subscribe,
-    adaptorStore.getSnapshot,
-    adaptorStore.getSnapshot
-  );
-};
 
 function defaultSelector(state: AdaptorState): Adaptor[] {
   return state.adaptors;
@@ -42,23 +28,9 @@ export function useAdaptors<T = Adaptor[]>(
 ): T {
   const { adaptorStore } = useSession();
 
-  const memoizedSelector = useMemo(() => {
-    let lastState: AdaptorState | undefined;
-    let lastResult: T;
-
-    return (state: AdaptorState): T => {
-      if (state !== lastState) {
-        lastResult = selector(state);
-        lastState = state;
-      }
-      return lastResult;
-    };
-  }, [selector, ...deps]);
-
-  const getSnapshot = useCallback(
-    () => memoizedSelector(adaptorStore.getSnapshot()),
-    [adaptorStore, memoizedSelector]
-  );
+  const getSnapshot = useMemo(() => {
+    return adaptorStore.withSelector(selector);
+  }, [adaptorStore, selector, ...deps]);
 
   return useSyncExternalStore(adaptorStore.subscribe, getSnapshot);
 }
@@ -98,19 +70,6 @@ export const useAdaptorCommands = () => {
 };
 
 /**
- * Hook to get adaptor query functions
- */
-export const useAdaptorQueries = () => {
-  const { adaptorStore } = useSession();
-
-  return {
-    findAdaptorByName: adaptorStore.findAdaptorByName,
-    getLatestVersion: adaptorStore.getLatestVersion,
-    getVersions: adaptorStore.getVersions,
-  };
-};
-
-/**
  * Hook to find a specific adaptor by name
  * Memoized for performance
  */
@@ -122,31 +81,4 @@ export const useAdaptor = (name: string): Adaptor | null => {
   );
 
   return useSyncExternalStore(adaptorStore.subscribe, selector, selector);
-};
-
-/**
- * Convenience hook that combines all adaptor functionality
- * Use this when you need multiple pieces of adaptor state/functionality
- */
-export const useAdaptorManager = () => {
-  const state = useAdaptorState();
-  const commands = useAdaptorCommands();
-  const queries = useAdaptorQueries();
-
-  return {
-    // State
-    ...state,
-
-    // Commands
-    ...commands,
-
-    // Queries
-    ...queries,
-
-    // Convenience computed properties
-    hasAdaptors: state?.adaptors.length ? state.adaptors.length > 0 : false,
-    isReady: state
-      ? !state.isLoading && !state.error && state.adaptors.length > 0
-      : false,
-  };
 };

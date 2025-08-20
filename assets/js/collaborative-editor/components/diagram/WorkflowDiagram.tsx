@@ -16,7 +16,7 @@ import tippy from "tippy.js";
 
 import {
   useWorkflowState,
-  useWorkflowActions,
+  usePositions,
 } from "#/collaborative-editor/hooks/Workflow";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
@@ -92,7 +92,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { selection, onSelectionChange, containerEl: el, inspectorId } = props;
 
   // Get workflow actions including position updates
-  const { updatePositions, updatePosition } = useWorkflowActions();
+  const {
+    positions: workflowPositions,
+    updatePosition,
+    updatePositions,
+  } = usePositions();
 
   // TODO: implement these
   const undo = useCallback(() => {}, []);
@@ -113,9 +117,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       triggers,
       edges,
       disabled,
-      positions: workflowPositions,
     }),
-    [jobs, triggers, edges, disabled, workflowPositions]
+    [jobs, triggers, edges, disabled]
   );
 
   const isManualLayout = Object.keys(workflowPositions).length > 0;

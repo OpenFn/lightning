@@ -21,9 +21,6 @@
  * - `useWorkflowActions` - All workflow manipulation commands
  * - `useTriggerFormActions` - TanStack Form integration for triggers
  *
- * ### Legacy Compatibility:
- * - `useWorkflowStore` - DEPRECATED, use useWorkflowSelector/useWorkflowState instead
- *
  * ## Store Architecture:
  * The underlying store implements three distinct update patterns for optimal performance
  * and collaboration support. For detailed pattern documentation with examples:
@@ -33,10 +30,13 @@
  */
 
 import type React from "react";
-import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+
+import { useURLState } from "#/react/lib/use-url-state";
 
 import { useWorkflowStoreContext } from "../contexts/WorkflowStoreProvider";
 import type { WorkflowStoreInstance } from "../stores/createWorkflowStore";
+import { createDefaultTrigger, TriggerSchema } from "../types/trigger";
 import type { Workflow } from "../types/workflow";
 
 /**
@@ -154,26 +154,25 @@ export const useWorkflowState = <T>(
 ): T => {
   const store = useWorkflowStoreContext();
 
-  // Use React's built-in useMemo for simple selections with proper typing
-  const memoizedSelector = useMemo(() => {
-    let lastState: Workflow.State | undefined;
-    let lastResult: T | undefined;
-
-    return (state: Workflow.State): T => {
-      if (state !== lastState || lastResult === undefined) {
-        lastResult = selector(state);
-        lastState = state;
-      }
-      return lastResult;
-    };
-  }, [selector, ...deps]);
-
-  const getSnapshot = useCallback(
-    (): T => memoizedSelector(store.getSnapshot()),
-    [store, memoizedSelector]
-  );
+  // Use store's optimized withSelector method combined with useMemo
+  const getSnapshot = useMemo(() => {
+    return store.withSelector(selector);
+  }, [store, selector, ...deps]);
 
   return useSyncExternalStore(store.subscribe, getSnapshot);
+};
+
+export const usePositions = () => {
+  const store = useWorkflowStoreContext();
+
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => ({
+      positions: state.positions,
+      updatePosition: store.updatePosition,
+      updatePositions: store.updatePositions,
+    }))
+  );
 };
 
 // =============================================================================
@@ -219,11 +218,6 @@ export const useTriggerFormActions = () => {
   return useMemo(
     () => ({
       createTriggerForm: (trigger: Workflow.Trigger) => {
-        const {
-          createDefaultTrigger,
-          TriggerValidation,
-        } = require("../validation/TriggerValidation");
-
         return {
           defaultValues: trigger || createDefaultTrigger("webhook"),
           listeners: {
@@ -235,7 +229,7 @@ export const useTriggerFormActions = () => {
             },
           },
           validators: {
-            onChange: TriggerValidation,
+            onChange: TriggerSchema,
           },
         };
       },
@@ -249,7 +243,6 @@ export const useTriggerFormActions = () => {
  * Demonstrates complex selector with external dependencies (URL state).
  */
 export const useNodeSelection = () => {
-  const { useURLState } = require("#/react/lib/use-url-state");
   const { searchParams, updateSearchParams } = useURLState();
 
   // Get current node ID from URL

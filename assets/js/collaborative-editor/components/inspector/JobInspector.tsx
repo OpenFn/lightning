@@ -1,6 +1,6 @@
 import { useStore } from "@tanstack/react-form";
 import { useCallback, useEffect, useMemo } from "react";
-import type { ZodSchema } from "zod";
+import type { z, ZodIssue, ZodSchema } from "zod";
 
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
@@ -20,13 +20,13 @@ interface JobInspectorProps {
  * @param schema - Zod schema to use for validation
  * @returns TanStack Form compatible validator function
  */
-const createZodValidator = <T, S extends ZodSchema>(schema: S) => {
+const createZodValidator = <T, S extends z.ZodType>(schema: S) => {
   return ({ value }: { value: T }) => {
     const result = schema.safeParse(value);
     if (!result.success) {
       // Convert Zod errors to TanStack Form format
       const formErrors: Record<string, string> = {};
-      result.error.issues.forEach((issue: any) => {
+      result.error.issues.forEach((issue: z.core.$ZodIssue) => {
         const path = issue.path.join(".");
         formErrors[path] = issue.message;
       });
