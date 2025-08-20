@@ -1,11 +1,12 @@
 import { useStore } from "@tanstack/react-form";
 import { useCallback, useEffect, useMemo } from "react";
-import type { z, ZodIssue, ZodSchema } from "zod";
+import type { z } from "zod";
 
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
 import { useWorkflowActions } from "#/collaborative-editor/hooks/Workflow";
+import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
 
@@ -207,11 +208,32 @@ export function JobInspector({ job }: JobInspectorProps) {
     },
   });
 
+  useWatchFields(
+    job,
+    changedFields => {
+      Object.entries(changedFields).forEach(([key, value]) => {
+        if (key in form.state.values) {
+          if (key === "adaptor" && value) {
+            const { package: adaptorPackage } = resolveAdaptor(value);
+
+            if (adaptorPackage) {
+              form.setFieldValue("adaptor_package", adaptorPackage);
+            }
+          }
+
+          form.setFieldValue(key as keyof typeof form.state.values, value);
+        }
+      });
+    },
+    ["name", "adaptor", "project_credential_id", "keychain_credential_id"]
+  );
+
   // Reset form when job changes
   useEffect(() => {
     form.reset();
   }, [job.id, form]);
 
+  // Subscribe to changes for the adaptor package
   const adaptorPackage = useStore(
     form.store,
     state => state.values.adaptor_package
@@ -219,6 +241,15 @@ export function JobInspector({ job }: JobInspectorProps) {
 
   const { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion } =
     useAdaptorVersionOptions(adaptorPackage);
+
+  useEffect(() => {
+    if (!adaptorPackage) return;
+    const latestVersion = getLatestVersion(adaptorPackage);
+    if (latestVersion) {
+      form.setFieldValue("adaptor", latestVersion);
+      updateJob(job.id, form.state.values);
+    }
+  }, [adaptorPackage, getLatestVersion, form, job.id, updateJob]);
 
   return (
     <div className="">
@@ -231,19 +262,7 @@ export function JobInspector({ job }: JobInspectorProps) {
 
         {/* Adaptor Package Dropdown */}
         <div className="col-span-6">
-          <form.AppField
-            name="adaptor_package"
-            listeners={{
-              onChange: ({ value, fieldApi }) => {
-                if (value) {
-                  const latestVersion = getLatestVersion(value);
-                  if (latestVersion) {
-                    fieldApi.form.setFieldValue("adaptor", latestVersion);
-                  }
-                }
-              },
-            }}
-          >
+          <form.AppField name="adaptor_package">
             {field => (
               <field.SelectField
                 label="Adaptor"
