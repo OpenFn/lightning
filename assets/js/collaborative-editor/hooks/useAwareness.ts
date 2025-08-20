@@ -39,14 +39,6 @@ import { useSession } from "../contexts/SessionProvider";
 import type { AwarenessUser, LocalUserData } from "../types/awareness";
 
 /**
- * Hook to access the awareness store instance and all its methods
- */
-export const useAwareness = () => {
-  const { awarenessStore } = useSession();
-  return awarenessStore;
-};
-
-/**
  * Hook to get all connected users (including local user)
  * Returns referentially stable array that only changes when users actually change
  */
