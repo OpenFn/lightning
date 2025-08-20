@@ -36,7 +36,7 @@ import { useURLState } from "#/react/lib/use-url-state";
 
 import { useWorkflowStoreContext } from "../contexts/WorkflowStoreProvider";
 import type { WorkflowStoreInstance } from "../stores/createWorkflowStore";
-import { createDefaultTrigger, TriggerSchema } from "../types/trigger";
+import { TriggerSchema } from "../types/trigger";
 import type { Workflow } from "../types/workflow";
 
 /**
@@ -219,9 +219,13 @@ export const useTriggerFormActions = () => {
     () => ({
       createTriggerForm: (trigger: Workflow.Trigger) => {
         return {
-          defaultValues: trigger || createDefaultTrigger("webhook"),
+          defaultValues: trigger,
           listeners: {
-            onChange: ({ formApi }: { formApi: any }) => {
+            onChange: ({
+              formApi,
+            }: {
+              formApi: { state: { values: Record<string, any> } };
+            }) => {
               if (trigger.id) {
                 const values = formApi.state.values;
                 store.updateTrigger(trigger.id, values);
