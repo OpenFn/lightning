@@ -21,10 +21,12 @@ and this project adheres to
   [#3387](https://github.com/OpenFn/lightning/issues/3387)
 - Add test gauge metric that can be used to set arbitrary values for the purposes
   of triggering behaviour in metric consumers.
-  [3510](https://github.com/OpenFn/lightning/issues/3510)
+  [#3510](https://github.com/OpenFn/lightning/issues/3510)
 - Possibly temporary plumbing to allow the use of libcluster_postgres as an
   additional mechanism for discovering Erlang nodes.
-  [3482](https://github.com/OpenFn/lightning/issues/3482)
+  [#3482](https://github.com/OpenFn/lightning/issues/3482)
+- Remove redundant 'preconnect' link
+  [#3532](https://github.com/OpenFn/lightning/issues/3532)
 
 ### Changed
 
