@@ -93,12 +93,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [drawerWidth, setDrawerWidth] = useState(0);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
-  // Only hand React Flow nodes that have finite x/y positions
-  const rfNodes = React.useMemo(
-    () => model.nodes.filter(hasXY) as unknown as Flow.Node[],
-    [model.nodes]
-  );
-
   const updateSelection = useCallback(
     (id?: string | null) => {
       id = id || null;
@@ -515,7 +509,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         ref={workflowDiagramRef}
         maxZoom={1}
         proOptions={{ account: 'paid-pro', hideAttribution: true }}
-        nodes={rfNodes}
+        nodes={model.nodes}
         edges={model.edges}
         onNodesChange={onNodesChange}
         onNodeDragStop={onNodeDragStop}
