@@ -227,7 +227,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           height: workflowDiagramRef.current?.clientHeight ?? 0,
         };
         if (isManualLayout) {
+          // give nodes positions
           const nodesWPos = newModel.nodes.map(node => {
+            // during manualLayout. a placeholder wouldn't have position in positions in store
+            // hence use the position on the placeholder node
             const isPlaceholder = node.type === 'placeholder';
             return {
               ...node,
@@ -241,16 +244,18 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             duration: props.layoutDuration ?? LAYOUT_DURATION,
             forceFit: props.forceFit,
           }).then(positions => {
+            // Note we don't update positions until the animation has finished
             chartCache.current.positions = positions;
           });
         }
       } else if (isManualLayout) {
+        // if isManualLayout, then we use values from store instead
         newModel.nodes.forEach(n => {
           if (n.type !== 'placeholder') n.position = fixedPositions[n.id];
         });
         setModel(newModel);
       } else if (newModel.nodes.some(n => !hasXY(n))) {
-        // ✅ fallback: nodes lack positions → run layout now
+        // fallback: nodes lack positions → run layout now
         const viewBounds = {
           width: workflowDiagramRef.current?.clientWidth ?? 0,
           height: workflowDiagramRef.current?.clientHeight ?? 0,
@@ -262,6 +267,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           chartCache.current.positions = positions;
         });
       } else {
+        // When isManualLayout is false and no layout is needed, still update the model
+        // to reflect changes in workflow data (like adaptor changes)
         setModel(newModel);
       }
     } else {
@@ -432,6 +439,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           if (vb) cachedTargetBounds = vb;
         }
 
+        // Run an animated fit
         void safeFitBoundsRect(flow, cachedTargetBounds, {
           duration: FIT_DURATION,
           padding: FIT_PADDING,
