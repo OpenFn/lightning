@@ -99,6 +99,7 @@ defmodule Lightning.MixProject do
       {:jsonpatch, "~> 2.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:libcluster, "~> 3.3"},
+      {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
