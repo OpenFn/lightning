@@ -80,6 +80,22 @@ defmodule Lightning.Application do
         Application.get_env(:libcluster, :topologies)
       end
 
+    distributed_erlang_config =
+      Application.get_env(:lightning, :distributed_erlang)
+
+    topologies =
+      topologies
+      |> add_additional_libcluster_topology(
+        Keyword.fetch!(
+          distributed_erlang_config,
+          :node_discovery_via_postgres_enabled
+        ),
+        Keyword.fetch!(
+          distributed_erlang_config,
+          :node_discovery_via_postgres_channel_name
+        )
+      )
+
     goth =
       Application.get_env(:lightning, Lightning.Google, [])
       |> then(fn config ->
@@ -237,5 +253,30 @@ defmodule Lightning.Application do
 
     You can do so by setting your `USAGE_TRACKING_ENABLED` environment variable to `true` at any time.
     """)
+  end
+
+  def add_additional_libcluster_topology(
+        topologies,
+        false = _postgres_discovery_enabled,
+        _channel_name
+      ) do
+    topologies
+  end
+
+  def add_additional_libcluster_topology(
+        topologies,
+        true = _postgres_discovery_enabled,
+        channel_name
+      ) do
+    Keyword.merge(
+      topologies,
+      postgres: [
+        strategy: LibclusterPostgres.Strategy,
+        config:
+          Keyword.merge(Lightning.Repo.config(),
+            channel_name: channel_name
+          )
+      ]
+    )
   end
 end

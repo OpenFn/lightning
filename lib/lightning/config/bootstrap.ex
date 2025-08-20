@@ -660,6 +660,20 @@ defmodule Lightning.Config.Bootstrap do
       calendly_url: nil,
       openfn_workflow_url: nil
 
+    config :lightning, :distributed_erlang,
+      node_discovery_via_postgres_enabled:
+        env!(
+          "ERLANG_NODE_DISCOVERY_VIA_POSTGRES_ENABLED",
+          &Utils.ensure_boolean/1,
+          false
+        ),
+      node_discovery_via_postgres_channel_name:
+        env!(
+          "ERLANG_NODE_DISCOVERY_VIA_POSTGRES_CHANNEL_NAME",
+          :string,
+          "lightning-cluster"
+        )
+
     # # ==============================================================================
 
     setup_storage()
