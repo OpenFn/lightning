@@ -41,8 +41,8 @@ defmodule Lightning.Collaboration.Session do
 
   @impl true
   def handle_continue(:start_shared_doc, %{workflow_id: workflow_id} = state) do
-    case :pg.get_members(@pg_scope, workflow_id) do
-      [] ->
+    case lookup_shared_doc(workflow_id) do
+      nil ->
         Logger.info("No existing SharedDoc found for workflow #{workflow_id}")
 
         child_spec =
@@ -72,7 +72,7 @@ defmodule Lightning.Collaboration.Session do
             {:stop, {:shutdown, :shared_doc_start_failed}, state}
         end
 
-      [shared_doc_pid | _] ->
+      shared_doc_pid ->
         Logger.info("Existing SharedDoc found for workflow #{workflow_id}")
         SharedDoc.observe(shared_doc_pid)
         {:noreply, %{state | shared_doc_pid: shared_doc_pid}}
@@ -94,6 +94,52 @@ defmodule Lightning.Collaboration.Session do
   def terminate(reason, _state) do
     Logger.debug("Session terminating: #{inspect({reason})}")
     :ok
+  end
+
+  @doc """
+  Check if the session is ready.
+
+  Sessions handle the creation or joining of the SharedDoc process after startup.
+  We can check if the session is ready by checking if there is a SharedDoc process
+  associated with the session.
+
+  This function will return {:ok, session_pid} if the session is ready, or
+  {:error, :not_ready} if the session is not ready.
+
+  If given a pid, it will return a boolean.
+
+      iex> Session.ready?(session_pid)
+      true
+
+  You can also pipe from the start function:
+
+      iex> Session.start(workflow_id) |> Session.ready?()
+      {:ok, session_pid}
+
+
+  This is useful during tests where other sessions are created quickly and there
+  is a high chance that subsequent sessions will think there are no other
+  SharedDocs available and start their own.
+  """
+  @spec ready?({:ok, pid()} | pid()) ::
+          {:ok, pid()} | {:error, :not_ready} | boolean()
+  def ready?({:ok, session_pid}) do
+    if GenServer.call(session_pid, :ready?) do
+      {:ok, session_pid}
+    else
+      {:error, :not_ready}
+    end
+  end
+
+  def ready?(session_pid) do
+    GenServer.call(session_pid, :ready?)
+  end
+
+  def lookup_shared_doc(workflow_id) do
+    case :pg.get_members(@pg_scope, workflow_id) do
+      [] -> nil
+      [shared_doc_pid | _] -> shared_doc_pid
+    end
   end
 
   # ----------------------------------------------------------------------------
@@ -118,6 +164,11 @@ defmodule Lightning.Collaboration.Session do
   end
 
   # ----------------------------------------------------------------------------
+
+  @impl true
+  def handle_call(:ready?, _from, %{shared_doc_pid: shared_doc_pid} = state) do
+    {:reply, !is_nil(shared_doc_pid), state}
+  end
 
   @impl true
   def handle_call(:get_doc, _from, %{shared_doc_pid: shared_doc_pid} = state) do
