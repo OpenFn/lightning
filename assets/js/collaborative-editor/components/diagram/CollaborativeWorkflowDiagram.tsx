@@ -3,6 +3,7 @@
  * Phase 1: Basic rendering only - maps collaborative data to diagram format
  */
 
+import { ReactFlowProvider } from "@xyflow/react";
 import type React from "react";
 
 import { useNodeSelection, useWorkflowState } from "../../hooks/Workflow";
@@ -33,13 +34,15 @@ export const CollaborativeWorkflowDiagram: React.FC<
 
   return (
     <div className={className}>
-      <CollaborativeWorkflowDiagramImpl
-        selection={currentNode.id}
-        onSelectionChange={selectNode}
-        forceFit={true}
-        showAiAssistant={false}
-        inspectorId={inspectorId}
-      />
+      <ReactFlowProvider>
+        <CollaborativeWorkflowDiagramImpl
+          selection={currentNode.id}
+          onSelectionChange={selectNode}
+          forceFit={true}
+          showAiAssistant={false}
+          inspectorId={inspectorId}
+        />
+      </ReactFlowProvider>
     </div>
   );
 };

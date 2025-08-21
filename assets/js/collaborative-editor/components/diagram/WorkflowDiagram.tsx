@@ -3,13 +3,12 @@ import {
   Background,
   ControlButton,
   Controls,
-  getNodesBounds,
   MiniMap,
   type NodeChange,
   ReactFlow,
-  type ReactFlowInstance,
   ReactFlowProvider,
   type Rect,
+  useReactFlow,
 } from "@xyflow/react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import tippy from "tippy.js";
@@ -87,6 +86,7 @@ const useTippyForControls = (isManualLayout: boolean) => {
 };
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
+  const flow = useReactFlow();
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, inspectorId } = props;
@@ -140,11 +140,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     [onSelectionChange]
   );
 
-  // Update cache when selection prop changes (from URL)
-  // Don't trigger callback to avoid circular updates
+  // selection can be null give 2 events
+  // 1. we click empty space on editor (client event)
+  // 2. selection prop becomes null (server event)
+  // on option 2. chartCache isn't updated. Hence we call updateSelection to do that
   useEffect(() => {
-    chartCache.current.lastSelection = selection;
-  }, [selection]);
+    // we know selection from server has changed when it's not equal to the one on client
+    if (selection !== chartCache.current.lastSelection)
+      updateSelection(selection);
+  }, [selection, updateSelection]);
 
   const {
     placeholders,
@@ -161,10 +165,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     lastLayout: undefined,
   });
 
-  const [flow, setFlow] = useState<ReactFlowInstance>();
-
   const forceLayout = useCallback(() => {
-    if (!flow) return Promise.resolve();
+    // if (!flow) return Promise.resolve();
 
     const viewBounds = {
       width: workflowDiagramRef.current?.clientWidth ?? 0,
@@ -194,6 +196,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   useEffect(() => {
     const { positions, lastSelection } = chartCache.current;
     // create model from workflow and also apply selection styling to the model.
+    console.log("calling fromWorkflow");
+
     const newModel = updateSelectionStyles(
       fromWorkflow(
         workflow,
@@ -206,7 +210,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       ),
       lastSelection
     );
-    if (flow && newModel.nodes.length) {
+    if (newModel.nodes.length) {
       const layoutId = shouldLayout(
         newModel.edges,
         newModel.nodes,
@@ -257,15 +261,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [
-    workflow,
-    flow,
-    placeholders,
-    el,
-    isManualLayout,
-    workflowPositions,
-    selection,
-  ]);
+  }, [workflow, flow, placeholders, el, isManualLayout, workflowPositions]);
 
   // This effect only runs when AI assistant visibility changes, not on every selection change
   useEffect(() => {
@@ -273,9 +269,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       setDrawerWidth(0);
 
       // Fit view when AI assistant panel closes
-      if (flow && model.nodes.length > 0) {
+      if (model.nodes.length > 0) {
         setTimeout(() => {
-          const bounds = getNodesBounds(model.nodes);
+          const bounds = flow.getNodesBounds(model.nodes);
           void flow.fitBounds(bounds, {
             duration: FIT_DURATION,
             padding: FIT_PADDING,
@@ -308,9 +304,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         setDrawerWidth(drawer.getBoundingClientRect().width);
 
         // Fit view when AI assistant panel opens
-        if (flow && model.nodes.length > 0) {
+        if (model.nodes.length > 0) {
           setTimeout(() => {
-            const bounds = getNodesBounds(model.nodes);
+            const bounds = flow.getNodesBounds(model.nodes);
             void flow.fitBounds(bounds, {
               duration: FIT_DURATION,
               padding: FIT_PADDING,
@@ -329,9 +325,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   }, [props.showAiAssistant, props.aiAssistantId]);
 
   useEffect(() => {
-    if (props.forceFit && flow && model.nodes.length > 0) {
+    if (props.forceFit && model.nodes.length > 0) {
       // Immediately fit to bounds when forceFit becomes true
-      const bounds = getNodesBounds(model.nodes);
+      const bounds = flow.getNodesBounds(model.nodes);
       flow
         .fitBounds(bounds, {
           duration: FIT_DURATION,
@@ -398,7 +394,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // when a new resize starts
   // This will be imperfect but stops the user completely losing context
   useEffect(() => {
-    if (flow && el) {
+    if (el) {
       let isFirstCallback = true;
 
       let cachedTargetBounds: Rect | null = null;
@@ -422,7 +418,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           const visible = model.nodes.filter(n =>
             isPointInRect(n.position, rect)
           );
-          cachedTargetBounds = getNodesBounds(visible);
+          cachedTargetBounds = flow.getNodesBounds(visible);
         }
 
         // Run an animated fit
@@ -457,8 +453,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   };
 
   const handleFitView = useCallback(() => {
-    if (!flow) return;
-    const bounds = getNodesBounds(model.nodes);
+    const bounds = flow.getNodesBounds(model.nodes);
     void flow.fitBounds(bounds, {
       duration: 200,
       padding: FIT_PADDING,
@@ -516,7 +511,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         edgeTypes={edgeTypes}
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
-        onInit={setFlow}
         deleteKeyCode={null}
         fitView
         fitViewOptions={{ padding: FIT_PADDING }}
