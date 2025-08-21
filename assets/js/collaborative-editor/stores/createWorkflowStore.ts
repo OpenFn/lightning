@@ -520,8 +520,8 @@ export const createWorkflowStore = () => {
   return {
     // Core store interface
     subscribe,
-    getSnapshot, // Returns current Immer state (referentially stable)
-    withSelector, // Creates memoized selectors for referential stability
+    getSnapshot,
+    withSelector,
 
     // Y.Doc connection management
     connectYDoc,

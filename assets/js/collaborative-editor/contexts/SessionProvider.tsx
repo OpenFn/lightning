@@ -96,8 +96,8 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     console.log("🚀 Initializing Session with PhoenixChannelProvider");
 
     // Create Yjs document and awareness
-    const doc = new Y.Doc();
-    const awarenessInstance = new awarenessProtocol.Awareness(doc);
+    const ydoc = new Y.Doc();
+    const awarenessInstance = new awarenessProtocol.Awareness(ydoc);
 
     // Set up user data for awareness
     const userData = {
@@ -116,7 +116,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       socketConnected: socket.isConnected(),
     });
 
-    const channelProvider = new PhoenixChannelProvider(socket, roomname, doc, {
+    const channelProvider = new PhoenixChannelProvider(socket, roomname, ydoc, {
       awareness: awarenessInstance,
       connect: true,
     });
@@ -163,6 +163,21 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       socketConnected: socket.isConnected(),
     });
 
+    // Testing helper to simulate a reconnect
+    window.triggerSessionReconnect = (timeout = 1000) => {
+      socket.disconnect(
+        () => {
+          console.log("socket disconnected");
+          setTimeout(() => {
+            socket.connect();
+            console.log("socket connected");
+          }, timeout);
+        },
+        undefined,
+        "Testing reconnect"
+      );
+    };
+
     let cleanupAdaptorChannel: (() => void) | undefined;
     let cleanupCredentialChannel: (() => void) | undefined;
 
@@ -186,7 +201,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     );
 
     // Store state
-    setYdoc(doc);
+    setYdoc(ydoc);
     setProvider(channelProvider);
 
     // Set up automatic last seen updates via awareness store
@@ -209,7 +224,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       awarenessStoreRef.current.destroyAwareness();
 
       channelProvider.destroy();
-      doc.destroy();
+      ydoc.destroy();
       setYdoc(null);
       setProvider(null);
       setIsProviderConnected(false);

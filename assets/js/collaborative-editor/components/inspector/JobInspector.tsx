@@ -1,6 +1,5 @@
 import { useStore } from "@tanstack/react-form";
 import { useCallback, useEffect, useMemo } from "react";
-import type { z } from "zod";
 
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
@@ -10,32 +9,11 @@ import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
 
+import { createZodValidator } from "../form/createZodValidator";
+
 interface JobInspectorProps {
   job: Workflow.Job;
 }
-
-/**
- * Creates a TanStack Form validator function using a Zod schema.
- * This approach provides full Zod validation while maintaining TanStack Form compatibility.
- *
- * @param schema - Zod schema to use for validation
- * @returns TanStack Form compatible validator function
- */
-const createZodValidator = <T, S extends z.ZodType>(schema: S) => {
-  return ({ value }: { value: T }) => {
-    const result = schema.safeParse(value);
-    if (!result.success) {
-      // Convert Zod errors to TanStack Form format
-      const formErrors: Record<string, string> = {};
-      result.error.issues.forEach((issue: z.core.$ZodIssue) => {
-        const path = issue.path.join(".");
-        formErrors[path] = issue.message;
-      });
-      return { fields: formErrors };
-    }
-    return undefined;
-  };
-};
 
 /**
  * Resolves an adaptor specifier into its package name and version

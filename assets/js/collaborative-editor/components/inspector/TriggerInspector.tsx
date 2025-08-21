@@ -1,9 +1,12 @@
-import { useForm } from "@tanstack/react-form";
 import type React from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
-import { useTriggerFormActions } from "../../contexts/WorkflowStoreProvider";
+import { TriggerSchema } from "#/collaborative-editor/types/trigger";
+
+import { useWorkflowActions } from "../../hooks/Workflow";
 import type { Workflow } from "../../types/workflow";
+import { useAppForm } from "../form";
+import { createZodValidator } from "../form/createZodValidator";
 
 import { CronFieldBuilder } from "./CronFieldBuilder";
 
@@ -14,13 +17,22 @@ interface TriggerInspectorProps {
 export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
   trigger,
 }) => {
-  const { createTriggerForm } = useTriggerFormActions();
+  const { updateTrigger } = useWorkflowActions();
   const [copySuccess, setCopySuccess] = useState<string>("");
 
-  // Create form config with Yjs integration
-  const formConfig = createTriggerForm(trigger);
-
-  const form = useForm(formConfig);
+  const form = useAppForm({
+    defaultValues: trigger,
+    listeners: {
+      onChange: ({ formApi }) => {
+        if (trigger.id) {
+          updateTrigger(trigger.id, formApi.state.values);
+        }
+      },
+    },
+    validators: {
+      onChange: createZodValidator(TriggerSchema),
+    },
+  });
 
   // Generate webhook URL based on trigger ID
   const webhookUrl = new URL(
@@ -29,16 +41,18 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
   ).toString();
 
   // Copy to clipboard function
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopySuccess("Copied!");
-      setTimeout(() => setCopySuccess(""), 2000);
-    } catch {
-      setCopySuccess("Failed to copy");
-      setTimeout(() => setCopySuccess(""), 2000);
-    }
-  };
+  const copyToClipboard = useCallback((text: string) => {
+    void (async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopySuccess("Copied!");
+        setTimeout(() => setCopySuccess(""), 2000);
+      } catch {
+        setCopySuccess("Failed to copy");
+        setTimeout(() => setCopySuccess(""), 2000);
+      }
+    })();
+  }, []);
 
   return (
     <div className="space-y-4">
