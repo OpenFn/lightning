@@ -3098,6 +3098,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(show_workflow_ai_chat: show_workflow_ai_chat)
     |> assign_changeset(changeset)
     |> maybe_disable_canvas()
+    |> generate_workflow_code()
   end
 
   defp apply_query_params(socket, params) do
