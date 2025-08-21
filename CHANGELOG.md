@@ -38,6 +38,8 @@ and this project adheres to
   [#3482](https://github.com/OpenFn/lightning/issues/3482)
 - Remove redundant 'preconnect' link
   [#3532](https://github.com/OpenFn/lightning/issues/3532)
+- Clean UI for errors with recovery from the errors
+  [#3239](https://github.com/OpenFn/lightning/issues/3239)
 
 ### Fixed
 
