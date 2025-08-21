@@ -36,7 +36,6 @@ import { useURLState } from "#/react/lib/use-url-state";
 
 import { useWorkflowStoreContext } from "../contexts/WorkflowStoreProvider";
 import type { WorkflowStoreInstance } from "../stores/createWorkflowStore";
-import { TriggerSchema } from "../types/trigger";
 import type { Workflow } from "../types/workflow";
 
 /**
@@ -205,40 +204,6 @@ export const useCurrentJob = () => {
         : null,
     }),
     []
-  );
-};
-
-/**
- * Hook for trigger form actions using stable memoization.
- * Uses useMemo since it only provides actions, not reactive state.
- */
-export const useTriggerFormActions = () => {
-  const store = useWorkflowStoreContext();
-
-  return useMemo(
-    () => ({
-      createTriggerForm: (trigger: Workflow.Trigger) => {
-        return {
-          defaultValues: trigger,
-          listeners: {
-            onChange: ({
-              formApi,
-            }: {
-              formApi: { state: { values: Record<string, any> } };
-            }) => {
-              if (trigger.id) {
-                const values = formApi.state.values;
-                store.updateTrigger(trigger.id, values);
-              }
-            },
-          },
-          validators: {
-            onChange: TriggerSchema,
-          },
-        };
-      },
-    }),
-    [store]
   );
 };
 

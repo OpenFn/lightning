@@ -63,7 +63,7 @@ export namespace Workflow {
     selectedEdge: Workflow.Edge | null;
   }
 
-  export interface WorkflowActions {
+  export interface Actions {
     // Pattern 1: Y.Doc update → observer → immer update
     updateJob: (id: string, updates: Partial<Session.Job>) => void;
     updateJobName: (id: string, name: string) => void;
