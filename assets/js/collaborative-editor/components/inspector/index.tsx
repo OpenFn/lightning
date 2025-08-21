@@ -73,15 +73,22 @@ export const Inspector: React.FC<InspectorProps> = ({
             ) : hasSelectedNode ? (
               <>
                 {currentNode.type === "job" && (
-                  <JobInspector job={currentNode.node as Workflow.Job} />
+                  <JobInspector
+                    key={`job-${currentNode.id}`}
+                    job={currentNode.node as Workflow.Job}
+                  />
                 )}
                 {currentNode.type === "trigger" && (
                   <TriggerInspector
+                    key={`trigger-${currentNode.id}`}
                     trigger={currentNode.node as Workflow.Trigger}
                   />
                 )}
                 {currentNode.type === "edge" && (
-                  <EdgeInspector edge={currentNode.node as Workflow.Edge} />
+                  <EdgeInspector
+                    key={`edge-${currentNode.id}`}
+                    edge={currentNode.node as Workflow.Edge}
+                  />
                 )}
               </>
             ) : (
