@@ -1,7 +1,7 @@
-import Dagre from '../../vendor/dagre.cjs';
+import type { ReactFlowInstance } from '@xyflow/react';
 import { timer } from 'd3-timer';
-import { type ReactFlowInstance } from '@xyflow/react';
-import { safeGetNodesBounds } from './util/safe-bounds';
+
+import Dagre from '../../vendor/dagre.cjs';
 
 import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import type { Flow, Positions } from './types';
@@ -199,8 +199,8 @@ export const animate = (
         if (typeof autofit !== 'boolean') {
           fitTarget = autofit;
         }
-        const bounds = safeGetNodesBounds(fitTarget);
-        if (autofit && bounds) {
+        const bounds = flowInstance.getNodesBounds(fitTarget);
+        if (autofit) {
           flowInstance.fitBounds(bounds, {
             duration: typeof duration === 'number' ? duration : 0,
             padding: FIT_PADDING,

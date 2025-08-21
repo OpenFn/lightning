@@ -14,7 +14,7 @@ import {
 } from "react";
 import { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as awarenessProtocol from "y-protocols/awareness";
-import * as Y from "yjs";
+import { Doc as YDoc, encodeStateVector, createDocFromSnapshot } from "yjs";
 
 import { useSocket } from "../../react/contexts/SocketProvider";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
@@ -30,7 +30,7 @@ import {
 
 export interface SessionContextValue {
   // Yjs infrastructure
-  ydoc: Y.Doc | null;
+  ydoc: YDoc | null;
 
   // Connection state
   isConnected: boolean;
@@ -52,6 +52,64 @@ export const useSession = () => {
   return context;
 };
 
+function uint8ArrayToBase64(uint8Array: Uint8Array): string {
+  const binaryString = Array.from(uint8Array, byte =>
+    String.fromCharCode(byte)
+  ).join("");
+  return btoa(binaryString);
+}
+
+const waitForYDocSettled = (
+  channelProvider: PhoenixChannelProvider,
+  ydoc: YDoc
+) => {
+  const controller = new AbortController();
+
+  const channelSyncedPromise = new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      channelProvider.off("sync", handler);
+    };
+
+    const handler = (synced: boolean) => {
+      if (synced) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    controller.signal.addEventListener("abort", () => {
+      cleanup();
+      reject(new Error("Aborted"));
+    });
+    channelProvider.on("sync", handler);
+  });
+
+  const firstUpdatePromise = new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      ydoc.off("update", handler);
+    };
+
+    const handler = (_update: Uint8Array, origin: unknown) => {
+      if (origin === channelProvider) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    controller.signal.addEventListener("abort", () => {
+      cleanup();
+      reject(new Error("Aborted"));
+    });
+
+    ydoc.on("update", handler);
+  });
+
+  return {
+    abort: () => controller.abort(),
+    fufilled: Promise.all([channelSyncedPromise, firstUpdatePromise]),
+  };
+};
+
 interface SessionProviderProps {
   workflowId: string;
   userId: string;
@@ -68,10 +126,31 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
   const { socket, isConnected } = useSocket();
 
   // Yjs state
-  const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
-  const [_provider, setProvider] = useState<PhoenixChannelProvider | null>(
-    null
-  );
+  const [ydoc, setYdoc] = useState<YDoc | null>(null);
+  const [provider, setProvider] = useState<PhoenixChannelProvider | null>(null);
+  const [vectorOnJoin, setVectorOnJoin] = useState<string | null>(null);
+
+  // useEffect(() => {
+  //   if (!snapshot || !ydoc) return;
+
+  //   const restoredDoc = createDocFromSnapshot(ydoc, snapshot);
+  //   restoredDoc.getMap("workflow");
+  //   console.log("restoredDoc", restoredDoc.toJSON());
+
+  //   if (prevSnapshotRef.current === null) {
+  //     prevSnapshotRef.current = snapshot;
+  //     return;
+  //   }
+
+  //   console.log(
+  //     "equalSnapshots",
+  //     Y.equalSnapshots(prevSnapshotRef.current, snapshot)
+  //   );
+
+  //   prevSnapshotRef.current = snapshot;
+
+  //   return () => {};
+  // }, [snapshot, ydoc]);
 
   // React state
   const [isProviderConnected, setIsProviderConnected] = useState(false);
@@ -87,6 +166,21 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     createAwarenessStore()
   );
 
+  useEffect(() => {
+    if (!ydoc || !provider) return;
+    const { abort, fufilled } = waitForYDocSettled(provider, ydoc);
+
+    void fufilled.then(() => {
+      setVectorOnJoin(uint8ArrayToBase64(encodeStateVector(ydoc)));
+
+      return;
+    });
+
+    return () => {
+      abort();
+    };
+  }, [ydoc, provider]);
+
   // Initialize Yjs when socket is connected
   useEffect(() => {
     if (!isConnected || !socket) {
@@ -96,7 +190,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     console.log("🚀 Initializing Session with PhoenixChannelProvider");
 
     // Create Yjs document and awareness
-    const ydoc = new Y.Doc();
+    const ydoc = new YDoc();
     const awarenessInstance = new awarenessProtocol.Awareness(ydoc);
 
     // Set up user data for awareness
@@ -126,7 +220,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     // and one for the cursor information.
 
     // Provider event handlers
-    const statusHandler = (...args: any[]) => {
+    const statusHandler = (...args: unknown[]) => {
       console.debug("PhoenixChannelProvider: status event", args);
       if (args.length > 0 && Array.isArray(args[0])) {
         const statusEvents = args[0];
@@ -234,16 +328,17 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
   // Context value with improved referential stability
   // awareness and users are now served by dedicated hooks for better performance
-  const value = useMemo<SessionContextValue>(() => {
-    return {
+  const value = useMemo<SessionContextValue>(
+    () => ({
       ydoc,
       isConnected: isProviderConnected,
       isSynced,
       adaptorStore: adaptorStoreRef.current,
       credentialStore: credentialStoreRef.current,
       awarenessStore: awarenessStoreRef.current,
-    };
-  }, [ydoc, isProviderConnected, isSynced]);
+    }),
+    [ydoc, isProviderConnected, isSynced]
+  );
 
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
@@ -275,9 +370,6 @@ function setupJoinListener(
   channelProvider: PhoenixChannelProvider,
   callback: (isConnected: boolean) => void
 ) {
-  // TODO: don't bother setting up a listener if unless we are _not_ in a joined
-  // state.
-  // TODO: need to see what happens when the socket disconnects.
   const onJoinReceived = () => {
     if (channelProvider.channel?.state === "joined") {
       callback(true);
@@ -285,29 +377,13 @@ function setupJoinListener(
   };
   channelProvider.channel?.joinPush.receive("ok", onJoinReceived);
 
-  // let hasTriggered = false;
-  // const ref = channelProvider.channel?.on(
-  //   "phx_reply",
-  //   (payload: { status: string }, _ref: number) => {
-  //     if (
-  //       !hasTriggered &&
-  //       payload.status === "ok" &&
-  //     ) {e
-  //       hasTriggered = true;
-  //       callback(true);
-  //     }
-  //   },
-  // );
-
   return () => {
-    const hook = channelProvider.channel?.joinPush.recHooks.find(
-      hook => hook.callback === onJoinReceived
-    );
-    if (hook) {
-      channelProvider.channel?.joinPush.recHooks.splice(
-        channelProvider.channel.joinPush.recHooks.indexOf(hook),
-        1
-      );
+    const hooks = channelProvider.channel?.joinPush.recHooks as
+      | Array<{ callback: () => void }>
+      | undefined;
+    const hook = hooks?.find(hook => hook.callback === onJoinReceived);
+    if (hook && hooks) {
+      hooks.splice(hooks.indexOf(hook), 1);
     }
   };
 }

@@ -230,7 +230,7 @@ export function JobInspector({ job }: JobInspectorProps) {
   }, [adaptorPackage, getLatestVersion, form, job.id, updateJob]);
 
   return (
-    <div className="">
+    <div>
       <div className="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
         <div className="col-span-6">
           <form.AppField name="name">
