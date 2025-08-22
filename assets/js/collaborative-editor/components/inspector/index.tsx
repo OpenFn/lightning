@@ -3,8 +3,6 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
-import type React from "react";
-
 import { useURLState } from "../../../react/lib/use-url-state";
 import type { Workflow } from "../../types/workflow";
 
@@ -23,11 +21,7 @@ interface InspectorProps {
   onClose: () => void;
 }
 
-export const Inspector: React.FC<InspectorProps> = ({
-  workflow,
-  currentNode,
-  onClose,
-}) => {
+export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
   const { hash, updateHash } = useURLState();
 
   const mode = hash === "settings" ? "settings" : "node";
@@ -123,7 +117,7 @@ export const Inspector: React.FC<InspectorProps> = ({
       </div>
     </div>
   );
-};
+}
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {

@@ -1,8 +1,6 @@
-import type React from "react";
-
 import { useSession } from "../contexts/SessionProvider";
 
-export const UserAwareness: React.FC = () => {
+export function UserAwareness() {
   const { users, isConnected, isSynced } = useSession();
 
   return (
@@ -60,4 +58,4 @@ export const UserAwareness: React.FC = () => {
       </div>
     </div>
   );
-};
+}
