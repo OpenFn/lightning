@@ -281,8 +281,7 @@ export const SessionProvider = ({
         if (isConnected) {
           console.debug("Channel joined, requesting adaptors and credentials");
 
-          cleanupAdaptorChannel =
-            adaptorStore._internal.connectChannel(channelProvider);
+          cleanupAdaptorChannel = adaptorStore._connectChannel(channelProvider);
 
           cleanupCredentialChannel =
             credentialStore._connectChannel(channelProvider);
