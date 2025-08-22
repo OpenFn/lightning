@@ -57,6 +57,7 @@
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
+import { channelRequest } from "../hooks/useChannel";
 import {
   type CredentialState,
   type CredentialStore,
@@ -112,7 +113,7 @@ export const createCredentialStore = (): CredentialStore => {
    * Handle credentials list received from server
    * Validates data with Zod before updating state
    */
-  const _handleCredentialsReceived = (rawData: unknown) => {
+  const handleCredentialsReceived = (rawData: unknown) => {
     const result = CredentialsListSchema.safeParse(rawData);
 
     if (result.success) {
@@ -151,9 +152,9 @@ export const createCredentialStore = (): CredentialStore => {
   /**
    * Handle real-time credentials update from server
    */
-  const _handleCredentialsUpdated = (rawData: unknown) => {
+  const handleCredentialsUpdated = (rawData: unknown) => {
     // Same validation logic as handleCredentialsReceived
-    _handleCredentialsReceived(rawData);
+    handleCredentialsReceived(rawData);
   };
 
   // =============================================================================
@@ -201,7 +202,7 @@ export const createCredentialStore = (): CredentialStore => {
         "CredentialStore: Received credentials_list message",
         message
       );
-      _handleCredentialsReceived(message);
+      handleCredentialsReceived(message);
     };
 
     const credentialsUpdatedHandler = (message: unknown) => {
@@ -209,7 +210,7 @@ export const createCredentialStore = (): CredentialStore => {
         "CredentialStore: Received credentials_updated message",
         message
       );
-      _handleCredentialsUpdated(message);
+      handleCredentialsUpdated(message);
     };
 
     // Set up channel listeners
@@ -218,7 +219,7 @@ export const createCredentialStore = (): CredentialStore => {
       channel.on("credentials_updated", credentialsUpdatedHandler);
     }
 
-    requestCredentials();
+    void requestCredentials();
 
     return () => {
       if (channel) {
@@ -232,7 +233,7 @@ export const createCredentialStore = (): CredentialStore => {
   /**
    * Request credentials from server via channel
    */
-  const requestCredentials = () => {
+  const requestCredentials = async (): Promise<void> => {
     if (!_channelProvider?.channel) {
       console.warn(
         "CredentialStore: Cannot request credentials - no channel connected"
@@ -244,38 +245,22 @@ export const createCredentialStore = (): CredentialStore => {
     setLoading(true);
     clearError();
 
-    // Send request to Phoenix channel
-    _channelProvider.channel
-      .push("request_credentials", {})
-      .receive("ok", (response: unknown) => {
-        console.debug(
-          "CredentialStore: Credential request acknowledged",
-          response
-        );
-        // If response contains credentials data directly, handle it
-        if (
-          response &&
-          typeof response === "object" &&
-          "credentials" in response
-        ) {
-          _handleCredentialsReceived(
-            (response as { credentials: unknown }).credentials
-          );
-        }
-        // Otherwise, response will come through separate channel message
-      })
-      .receive("error", (error: unknown) => {
-        console.error("CredentialStore: Credential request failed", error);
-        const errorMessage =
-          error && typeof error === "object" && "reason" in error
-            ? (error as { reason: string }).reason
-            : "Unknown error";
-        setError(`Failed to request credentials: ${errorMessage}`);
-      })
-      .receive("timeout", () => {
-        console.error("CredentialStore: Credential request timed out");
-        setError("Request timed out");
-      });
+    try {
+      console.log("CredentialStore: Requesting credentials");
+      const response = await channelRequest<{ credentials: unknown }>(
+        _channelProvider.channel,
+        "request_credentials",
+        {}
+      );
+
+      if (response.credentials) {
+        handleCredentialsReceived(response.credentials);
+      }
+    } catch (error) {
+      console.error("CredentialStore: Credential request failed", error);
+      setError("Failed to request credentials");
+    }
+
   };
 
   // =============================================================================
@@ -295,9 +280,7 @@ export const createCredentialStore = (): CredentialStore => {
     clearError,
 
     // Internal methods (not part of public CredentialStore interface)
-    _connectChannel,
-    _handleCredentialsReceived,
-    _handleCredentialsUpdated,
+    _connectChannel
   };
 };
 
