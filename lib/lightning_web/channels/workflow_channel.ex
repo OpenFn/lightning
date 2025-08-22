@@ -36,7 +36,7 @@ defmodule LightningWeb.WorkflowChannel do
                  ) do
               :ok ->
                 {:ok, session_pid} =
-                  Session.start(workflow_id)
+                  Session.start(user, workflow_id)
 
                 {:ok,
                  assign(socket,
