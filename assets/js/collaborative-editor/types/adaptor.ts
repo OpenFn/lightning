@@ -116,16 +116,10 @@ export interface AdaptorQueries {
  * Internal methods interface (not part of public API)
  */
 export interface AdaptorInternals {
-  connectChannel: (provider: unknown) => () => void;
-  handleAdaptorsReceived: (rawData: unknown) => void;
-  handleAdaptorsUpdated: (rawData: unknown) => void;
+  _connectChannel: (provider: unknown) => () => void;
 }
 
 /**
  * Complete adaptor store interface combining commands and queries
  */
-export type AdaptorStore = AdaptorCommands &
-  AdaptorQueries & {
-    _internal: AdaptorInternals;
-  };
-
+export type AdaptorStore = AdaptorCommands & AdaptorQueries & AdaptorInternals;
