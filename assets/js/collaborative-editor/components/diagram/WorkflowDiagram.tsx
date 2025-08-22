@@ -16,7 +16,7 @@ import tippy from "tippy.js";
 import {
   useWorkflowState,
   usePositions,
-} from "#/collaborative-editor/hooks/Workflow";
+} from "#/collaborative-editor/hooks/useWorkflow";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
 import edgeTypes from "#/workflow-diagram/edges";
@@ -128,7 +128,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
   // Use custom hook for inspector overlap calculation
-  const inspectorWidth = useInspectorOverlap(inspectorId, workflowDiagramRef);
+  const miniMapRightOffset = useInspectorOverlap(
+    inspectorId,
+    workflowDiagramRef
+  );
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -564,7 +567,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           className="border-2 border-gray-200"
           nodeComponent={MiniMapNode}
           style={{
-            transform: `translateX(-${inspectorWidth.toString()}px)`,
+            transform: `translateX(-${miniMapRightOffset.toString()}px)`,
             transition: "transform duration-300 ease-in-out",
           }}
         />

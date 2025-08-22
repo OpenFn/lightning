@@ -6,7 +6,7 @@
 import { ReactFlowProvider } from "@xyflow/react";
 import type React from "react";
 
-import { useNodeSelection, useWorkflowState } from "../../hooks/Workflow";
+import { useNodeSelection, useWorkflowState } from "../../hooks/useWorkflow";
 
 import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
 
