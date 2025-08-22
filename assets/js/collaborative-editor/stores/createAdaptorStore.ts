@@ -301,11 +301,7 @@ export const createAdaptorStore = (): AdaptorStore => {
     getVersions,
 
     // Internal methods (not part of public AdaptorStore interface)
-    _internal: {
-      connectChannel,
-      handleAdaptorsReceived,
-      handleAdaptorsUpdated,
-    },
+    _connectChannel: connectChannel,
   };
 };
 
