@@ -1,14 +1,10 @@
-import type React from "react";
-
-import type { Workflow } from "../../types";
+import type { Workflow } from "../../types/workflow";
 
 interface WorkflowSettingsProps {
   workflow: Workflow;
 }
 
-export const WorkflowSettings: React.FC<WorkflowSettingsProps> = ({
-  workflow,
-}) => {
+export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -17,7 +13,7 @@ export const WorkflowSettings: React.FC<WorkflowSettingsProps> = ({
         </h3>
         <input
           type="text"
-          defaultValue={workflow?.name}
+          defaultValue={workflow.name}
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
         />
       </div>
@@ -78,4 +74,4 @@ export const WorkflowSettings: React.FC<WorkflowSettingsProps> = ({
       </div>
     </div>
   );
-};
+}

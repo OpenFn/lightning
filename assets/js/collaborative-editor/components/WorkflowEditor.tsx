@@ -2,8 +2,6 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import type React from "react";
-
 import { useSession } from "../contexts/SessionProvider";
 import { useCurrentJob, useNodeSelection } from "../hooks/useWorkflow";
 
@@ -11,7 +9,7 @@ import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { Inspector } from "./inspector";
 
-export const WorkflowEditor: React.FC = () => {
+export function WorkflowEditor() {
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { currentNode, selectNode } = useNodeSelection();
   const { awareness } = useSession();
@@ -74,4 +72,4 @@ export const WorkflowEditor: React.FC = () => {
       )}
     </div>
   );
-};
+}

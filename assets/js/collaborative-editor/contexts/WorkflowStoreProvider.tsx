@@ -92,9 +92,9 @@ interface WorkflowStoreProviderProps {
  *
  * @see ../stores/createWorkflowStore.ts - Complete pattern documentation with examples
  */
-export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
+export function WorkflowStoreProvider({
   children,
-}) => {
+}: WorkflowStoreProviderProps) {
   const { ydoc } = useSession();
 
   // Create store only once using lazy ref initialization
@@ -117,4 +117,4 @@ export const WorkflowStoreProvider: React.FC<WorkflowStoreProviderProps> = ({
       {children}
     </WorkflowStoreContext.Provider>
   );
-};
+}

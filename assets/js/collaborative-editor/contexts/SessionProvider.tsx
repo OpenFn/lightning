@@ -4,17 +4,10 @@
  */
 
 import type React from "react";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as awarenessProtocol from "y-protocols/awareness";
-import { Doc as YDoc, encodeStateVector, createDocFromSnapshot } from "yjs";
+import { Doc as YDoc, encodeStateVector } from "yjs";
 
 import { useSocket } from "../../react/contexts/SocketProvider";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
@@ -117,18 +110,18 @@ interface SessionProviderProps {
   children: React.ReactNode;
 }
 
-export const SessionProvider: React.FC<SessionProviderProps> = ({
+export const SessionProvider = ({
   workflowId,
   userId,
   userName,
   children,
-}) => {
+}: SessionProviderProps) => {
   const { socket, isConnected } = useSocket();
 
   // Yjs state
   const [ydoc, setYdoc] = useState<YDoc | null>(null);
   const [provider, setProvider] = useState<PhoenixChannelProvider | null>(null);
-  const [vectorOnJoin, setVectorOnJoin] = useState<string | null>(null);
+  const [_vectorOnJoin, setVectorOnJoin] = useState<string | null>(null);
 
   // useEffect(() => {
   //   if (!snapshot || !ydoc) return;
@@ -156,13 +149,14 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
   const [isProviderConnected, setIsProviderConnected] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
 
-  // Store instances - created once and reused
-  const adaptorStoreRef = useRef<AdaptorStoreInstance>(createAdaptorStore());
-
-  const credentialStoreRef = useRef<CredentialStoreInstance>(
+  // Store instances - created once and reused using lazy initialization
+  const [adaptorStore] = useState<AdaptorStoreInstance>(() =>
+    createAdaptorStore()
+  );
+  const [credentialStore] = useState<CredentialStoreInstance>(() =>
     createCredentialStore()
   );
-  const awarenessStoreRef = useRef<AwarenessStoreInstance>(
+  const [awarenessStore] = useState<AwarenessStoreInstance>(() =>
     createAwarenessStore()
   );
 
@@ -201,7 +195,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     };
 
     // Initialize awareness store with the awareness instance
-    awarenessStoreRef.current.initializeAwareness(awarenessInstance, userData);
+    awarenessStore.initializeAwareness(awarenessInstance, userData);
 
     // Create the Yjs channel provider
     const roomname = `workflow:collaborate:${workflowId}`;
@@ -263,6 +257,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         () => {
           console.log("socket disconnected");
           setTimeout(() => {
+            // @ts-expect-error - socket.connect is not typed correctly
             socket.connect();
             console.log("socket connected");
           }, timeout);
@@ -282,14 +277,14 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         setIsProviderConnected(isConnected);
 
         // Request adaptors when channel is successfully joined
-        if (isConnected && adaptorStoreRef.current) {
+        if (isConnected) {
           console.debug("Channel joined, requesting adaptors and credentials");
 
           cleanupAdaptorChannel =
-            adaptorStoreRef.current._internal.connectChannel(channelProvider);
+            adaptorStore._internal.connectChannel(channelProvider);
 
           cleanupCredentialChannel =
-            credentialStoreRef.current._connectChannel(channelProvider);
+            credentialStore._connectChannel(channelProvider);
         }
       }
     );
@@ -299,8 +294,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     setProvider(channelProvider);
 
     // Set up automatic last seen updates via awareness store
-    const cleanupLastSeenTimer =
-      awarenessStoreRef.current._internal.setupLastSeenTimer();
+    const cleanupLastSeenTimer = awarenessStore._internal.setupLastSeenTimer();
 
     // Cleanup function
     return () => {
@@ -315,7 +309,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       channelProvider.off("sync", syncHandler);
 
       // Clean up awareness store
-      awarenessStoreRef.current.destroyAwareness();
+      awarenessStore.destroyAwareness();
 
       channelProvider.destroy();
       ydoc.destroy();
@@ -324,7 +318,16 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       setIsProviderConnected(false);
       setIsSynced(false);
     };
-  }, [isConnected, socket, workflowId, userId, userName]);
+  }, [
+    isConnected,
+    socket,
+    workflowId,
+    userId,
+    userName,
+    adaptorStore,
+    credentialStore,
+    awarenessStore,
+  ]);
 
   // Context value with improved referential stability
   // awareness and users are now served by dedicated hooks for better performance
@@ -333,11 +336,18 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       ydoc,
       isConnected: isProviderConnected,
       isSynced,
-      adaptorStore: adaptorStoreRef.current,
-      credentialStore: credentialStoreRef.current,
-      awarenessStore: awarenessStoreRef.current,
+      adaptorStore,
+      credentialStore,
+      awarenessStore,
     }),
-    [ydoc, isProviderConnected, isSynced]
+    [
+      ydoc,
+      isProviderConnected,
+      isSynced,
+      adaptorStore,
+      credentialStore,
+      awarenessStore,
+    ]
   );
 
   return (

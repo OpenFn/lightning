@@ -2,12 +2,10 @@
  * ConnectionStatus - Shows the status of Socket and Yjs connections
  */
 
-import type React from "react";
-
 import { useSocket } from "../../react/contexts/SocketProvider";
 import { useSession } from "../contexts/SessionProvider";
 
-export const ConnectionStatus: React.FC = () => {
+export function ConnectionStatus() {
   const { isConnected: socketConnected, connectionError } = useSocket();
   const { isConnected: yjsConnected, isSynced } = useSession();
 
@@ -51,4 +49,4 @@ export const ConnectionStatus: React.FC = () => {
       )}
     </div>
   );
-};
+}

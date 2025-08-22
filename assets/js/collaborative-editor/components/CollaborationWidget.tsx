@@ -3,13 +3,11 @@
  * and online users
  */
 
-import type React from "react";
-
 import { useSocket } from "../../react/contexts/SocketProvider";
 import { useSession } from "../contexts/SessionProvider";
 import { useAwarenessUsers } from "../hooks/useAwareness";
 
-export const CollaborationWidget: React.FC = () => {
+export function CollaborationWidget() {
   const { isConnected: socketConnected, connectionError } = useSocket();
   const { isConnected: yjsConnected, isSynced } = useSession();
   const users = useAwarenessUsers();
@@ -89,4 +87,4 @@ export const CollaborationWidget: React.FC = () => {
       </div>
     </div>
   );
-};
+}

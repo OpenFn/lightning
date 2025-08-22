@@ -7,7 +7,6 @@ import {
   SparklesIcon,
   ViewColumnsIcon,
 } from "@heroicons/react/24/outline";
-import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 
 import Docs from "../../adaptor-docs/Docs";
@@ -51,13 +50,13 @@ type CollaborativeJobEditorProps = {
   metadata?: object | true;
 };
 
-export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
+export function CollaborativeJobEditor({
   jobId,
   adaptor,
   disabled = false,
   disabledMessage,
   metadata,
-}) => {
+}: CollaborativeJobEditorProps) {
   const awareness = useRawAwareness();
   const awarenessReady = useAwarenessReady();
   console.log("awarenessReady", awarenessReady);
@@ -181,4 +180,4 @@ export const CollaborativeJobEditor: React.FC<CollaborativeJobEditorProps> = ({
       )}
     </>
   );
-};
+}

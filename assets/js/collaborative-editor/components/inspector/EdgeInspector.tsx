@@ -1,12 +1,10 @@
-import type React from "react";
-
 import type { Workflow } from "../types";
 
 interface EdgeInspectorProps {
   edge: Workflow.Edge;
 }
 
-export const EdgeInspector: React.FC<EdgeInspectorProps> = ({ edge }) => {
+export function EdgeInspector({ edge }: EdgeInspectorProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -40,4 +38,4 @@ export const EdgeInspector: React.FC<EdgeInspectorProps> = ({ edge }) => {
       </div>
     </div>
   );
-};
+}
