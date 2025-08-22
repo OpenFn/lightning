@@ -23,7 +23,7 @@
     "@tailwindcss/forms": "^0.5.6",
     "@tanstack/react-form": "^1.19.1",
     "@uidotdev/usehooks": "^2.4.1",
-    "@xyflow/react": "^12.8.2",
+    "@xyflow/react": "^12.8.4",
     "ajv": "^8.17.1",
     "clsx": "^2.1.1",
     "cron-validator": "^1.4.0",
