@@ -302,18 +302,18 @@ export const createWorkflowStore = () => {
 
   const updateJob = (id: string, updates: Partial<Session.Job>) => {
     // TODO: parse through zod to throw out extra fields
-    if (!ydoc) {
-      // Fallback to direct state update if Y.Doc not connected
-      state = produce(state, draft => {
-        const job = draft.jobs.find(j => j.id === id);
-        if (job) {
-          Object.assign(job, updates);
-        }
-        updateDerivedState(draft);
-      });
-      notify();
-      return;
-    }
+    // if (!ydoc) {
+    //   // Fallback to direct state update if Y.Doc not connected
+    //   state = produce(state, draft => {
+    //     const job = draft.jobs.find(j => j.id === id);
+    //     if (job) {
+    //       Object.assign(job, updates);
+    //     }
+    //     updateDerivedState(draft);
+    //   });
+    //   notify();
+    //   return;
+    // }
 
     const jobsArray = ydoc.getArray("jobs");
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];

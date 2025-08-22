@@ -5,10 +5,7 @@
 import type React from "react";
 
 import { useSession } from "../contexts/SessionProvider";
-import {
-  useCurrentJob,
-  useNodeSelection,
-} from "../contexts/WorkflowStoreProvider";
+import { useCurrentJob, useNodeSelection } from "../hooks/useWorkflow";
 
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
