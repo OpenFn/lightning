@@ -57,66 +57,36 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("request_adaptors", _payload, socket) do
-    channel_pid = self()
-    socket_ref = socket_ref(socket)
-
-    Task.start_link(fn ->
-      try do
-        adaptors = Lightning.AdaptorRegistry.all()
-
-        send(
-          channel_pid,
-          {:async_reply, socket_ref, "request_adaptors",
-           {:ok, %{adaptors: adaptors}}}
-        )
-      rescue
-        error ->
-          Logger.error("Failed to fetch adaptors: #{inspect(error)}")
-
-          send(
-            channel_pid,
-            {:async_reply, socket_ref, "request_adaptors",
-             {:error, %{reason: "failed to fetch adaptors"}}}
-          )
-      end
+    async_task(socket, "request_adaptors", fn ->
+      adaptors = Lightning.AdaptorRegistry.all()
+      %{adaptors: adaptors}
     end)
-
-    {:noreply, socket}
   end
 
   @impl true
   def handle_in("request_credentials", _payload, socket) do
-    channel_pid = self()
-    socket_ref = socket_ref(socket)
     project = socket.assigns.workflow.project
 
-    Task.start_link(fn ->
-      try do
-        credentials =
-          Lightning.Projects.list_project_credentials(project)
-          |> Enum.concat(
-            Lightning.Credentials.list_keychain_credentials_for_project(project)
-          )
-          |> render_credentials()
-
-        send(
-          channel_pid,
-          {:async_reply, socket_ref, "request_credentials",
-           {:ok, %{credentials: credentials}}}
+    async_task(socket, "request_credentials", fn ->
+      credentials =
+        Lightning.Projects.list_project_credentials(project)
+        |> Enum.concat(
+          Lightning.Credentials.list_keychain_credentials_for_project(project)
         )
-      rescue
-        error ->
-          Logger.error("Failed to fetch credentials: #{inspect(error)}")
+        |> render_credentials()
 
-          send(
-            channel_pid,
-            {:async_reply, socket_ref, "request_credentials",
-             %{error: %{reason: "failed to fetch credentials"}}}
-          )
-      end
+      %{credentials: credentials}
     end)
+  end
 
-    {:noreply, socket}
+  @impl true
+  def handle_in("request_current_user", _payload, socket) do
+    user = socket.assigns[:current_user]
+
+    async_task(socket, "request_current_user", fn ->
+      current_user = render_current_user(user)
+      %{current_user: current_user}
+    end)
   end
 
   @impl true
@@ -150,6 +120,10 @@ defmodule LightningWeb.WorkflowChannel do
         {:noreply, socket}
 
       "request_credentials" ->
+        reply(socket_ref, reply)
+        {:noreply, socket}
+
+      "request_current_user" ->
         reply(socket_ref, reply)
         {:noreply, socket}
 
@@ -205,6 +179,44 @@ defmodule LightningWeb.WorkflowChannel do
             updated_at: keychain_credential.updated_at
           }
         end)
+    }
+  end
+
+  defp async_task(socket, event, task_fn) do
+    channel_pid = self()
+    socket_ref = socket_ref(socket)
+
+    Task.start_link(fn ->
+      try do
+        result = task_fn.()
+
+        send(
+          channel_pid,
+          {:async_reply, socket_ref, event, {:ok, result}}
+        )
+      rescue
+        error ->
+          Logger.error("Failed to handle #{event}: #{inspect(error)}")
+
+          send(
+            channel_pid,
+            {:async_reply, socket_ref, event,
+             {:error, %{reason: "failed to handle #{event}"}}}
+          )
+      end
+    end)
+
+    {:noreply, socket}
+  end
+
+  defp render_current_user(user) do
+    %{
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      inserted_at: user.inserted_at,
+      updated_at: user.updated_at
     }
   end
 end
