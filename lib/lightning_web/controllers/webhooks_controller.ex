@@ -1,22 +1,20 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  require Logger
-
   alias Lightning.Config
   alias Lightning.Extensions.RateLimiting
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.Retry
   alias Lightning.Services.RateLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.WorkOrders
-  alias Lightning.Retry
+
+  require Logger
 
   plug :reject_unfetched when action in [:create]
 
-  # Reject requests with unfetched body params, as they are not supported.
-  # See Plug.Parsers in Endpoint for more information.
   defp reject_unfetched(conn, _) do
     case conn.body_params do
       %Plug.Conn.Unfetched{} ->
@@ -75,12 +73,8 @@ defmodule LightningWeb.WebhooksController do
             Config.webhook_retry(:timeout_ms)
             |> div(1000)
 
-          Logger.error("webhook create_workorder exhausted retries",
-            event: :webhook_db_retry_exhausted,
-            trigger_id: trigger.id,
-            workflow_id: trigger.workflow.id,
-            kind: :db_connection_error,
-            error: Exception.message(error)
+          Logger.error(
+            "webhook create_workorder exhausted retries trigger_id=#{trigger.id} workflow_id=#{trigger.workflow.id} error=#{Exception.message(error)}"
           )
 
           conn
@@ -94,8 +88,7 @@ defmodule LightningWeb.WebhooksController do
           })
 
         {:error, %Ecto.Changeset{} = changeset} ->
-          errors =
-            Ecto.Changeset.traverse_errors(changeset, fn {m, _} -> m end)
+          errors = Ecto.Changeset.traverse_errors(changeset, fn {m, _} -> m end)
 
           conn
           |> put_status(:unprocessable_entity)
