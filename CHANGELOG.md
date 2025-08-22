@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Enable X-Content-Type-Options header for static pages.
+  [#3534](https://github.com/OpenFn/lightning/issues/3534)
+
 ### Fixed
 
 ## [v2.14.3-pre1] - 2025-08-22
