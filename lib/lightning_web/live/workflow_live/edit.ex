@@ -1314,7 +1314,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div
       id={"selected-template-label-#{@template.id}"}
       phx-mounted={fade_in()}
-      class="absolute z-[9999] m-4 opacity-75 bg-white/100 border border-gray-200 rounded-lg p-6"
+      class="absolute z-40 m-4 opacity-75 bg-white/100 border border-gray-200 rounded-lg p-6"
     >
       <div class="flex items-start gap-3 opacity-100">
         <div class="flex-shrink-0">
@@ -3098,6 +3098,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(show_workflow_ai_chat: show_workflow_ai_chat)
     |> assign_changeset(changeset)
     |> maybe_disable_canvas()
+    |> generate_workflow_code()
   end
 
   defp apply_query_params(socket, params) do

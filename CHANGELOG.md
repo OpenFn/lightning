@@ -17,8 +17,26 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.14.3-pre1] - 2025-08-22
+
+### Fixed
+
+- Clean UI for errors with recovery from the errors
+  [#3239](https://github.com/OpenFn/lightning/issues/3239)
+
+## [v2.14.3-pre] - 2025-08-21
+
+### Added
+
 - Visualizing runs on the workflow editor canvas
   [#3387](https://github.com/OpenFn/lightning/issues/3387)
+- Add test gauge metric that can be used to set arbitrary values for the
+  purposes of triggering behaviour in metric consumers.
+  [3510](https://github.com/OpenFn/lightning/issues/3510)
 - Add test gauge metric that can be used to set arbitrary values for the purposes
   of triggering behaviour in metric consumers.
   [#3510](https://github.com/OpenFn/lightning/issues/3510)
@@ -30,9 +48,10 @@ and this project adheres to
 - Enable X-Content-Type-Options header for static pages.
   [#3534](https://github.com/OpenFn/lightning/issues/3534)
 
-### Changed
-
 ### Fixed
+
+- Fix cannot read properties of undefined (reading 'x') error on canvas
+  [#3530](https://github.com/OpenFn/lightning/issues/3530)
 - Hide Mini-History on new template page
   [#3531](https://github.com/OpenFn/lightning/pull/3531)
 
