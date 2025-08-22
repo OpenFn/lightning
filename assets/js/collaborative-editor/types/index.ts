@@ -6,7 +6,6 @@
 // Re-export session, job, trigger, and adaptor types
 export type {
   Adaptor,
-  AdaptorChannelMessage,
   AdaptorCommands,
   AdaptorInternals,
   AdaptorQueries,

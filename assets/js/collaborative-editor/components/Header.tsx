@@ -1,6 +1,6 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 
-import { useWorkflowEnabled } from "../hooks/useWorkflow";
+import { useWorkflowActions, useWorkflowEnabled } from "../hooks/useWorkflow";
 
 import { Breadcrumbs } from "./Breadcrumbs";
 import { Switch } from "./inputs/Switch";
@@ -19,6 +19,7 @@ const userNavigation = [
 export function Header({ children }: { children: React.ReactNode[] }) {
   // Separate queries and commands for proper CQS
   const { enabled, setEnabled } = useWorkflowEnabled();
+  const { saveWorkflow } = useWorkflowActions();
 
   return (
     <div className="flex-none bg-white shadow-xs border-b border-gray-200">
@@ -61,14 +62,9 @@ export function Header({ children }: { children: React.ReactNode[] }) {
 
             <div className="inline-flex rounded-md shadow-xs z-5">
               <button
-                id="top-bar-save-workflow-btn"
                 type="button"
                 className="rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 cursor-pointer disabled:cursor-auto px-3 py-2 bg-primary-600 hover:bg-primary-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 focus:ring-transparent"
-                phx-click='[["push",{"event":"save"}]]'
-                phx-hook="InspectorSaveViaCtrlS"
-                phx-disable-with=""
-                phx-connected='[["remove_attr",{"attr":"disabled"}]]'
-                phx-disconnected='[["set_attr",{"attr":["disabled",""]}]]'
+                onClick={saveWorkflow}
               >
                 Save
               </button>

@@ -40,7 +40,7 @@ export interface CredentialState {
 }
 
 interface CredentialCommands {
-  requestCredentials: () => void;
+  requestCredentials: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -55,8 +55,6 @@ interface CredentialQueries {
 
 interface CredentialStoreInternals {
   _connectChannel: (provider: PhoenixChannelProvider) => () => void;
-  _handleCredentialsReceived: (rawData: unknown) => void;
-  _handleCredentialsUpdated: (rawData: unknown) => void;
 }
 
 export type CredentialStore = CredentialQueries &

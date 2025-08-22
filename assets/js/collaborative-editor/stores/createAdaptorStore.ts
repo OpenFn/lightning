@@ -57,6 +57,7 @@
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
+import { channelRequest } from "../hooks/useChannel";
 import {
   type Adaptor,
   type AdaptorState,
@@ -215,7 +216,7 @@ export const createAdaptorStore = (): AdaptorStore => {
       typedProvider.channel.on("adaptors_updated", adaptorsUpdatedHandler);
     }
 
-    requestAdaptors();
+    void requestAdaptors();
 
     return () => {
       if (typedProvider.channel) {
@@ -229,7 +230,7 @@ export const createAdaptorStore = (): AdaptorStore => {
   /**
    * Request adaptors from server via channel
    */
-  const requestAdaptors = () => {
+  const requestAdaptors = async (): Promise<void> => {
     if (!channelProvider?.channel) {
       console.warn(
         "AdaptorStore: Cannot request adaptors - no channel connected"
@@ -241,33 +242,22 @@ export const createAdaptorStore = (): AdaptorStore => {
     setLoading(true);
     clearError();
 
-    // Send request to Phoenix channel
-    channelProvider.channel
-      .push("request_adaptors", {})
-      .receive("ok", (response: unknown) => {
-        console.debug("AdaptorStore: Adaptor request acknowledged", response);
-        // If response contains adaptors data directly, handle it
-        if (
-          response &&
-          typeof response === "object" &&
-          "adaptors" in response
-        ) {
-          handleAdaptorsReceived((response as { adaptors: unknown }).adaptors);
-        }
-        // Otherwise, response will come through separate channel message
-      })
-      .receive("error", (error: unknown) => {
-        console.error("AdaptorStore: Adaptor request failed", error);
-        const errorMessage =
-          error && typeof error === "object" && "reason" in error
-            ? (error as { reason: string }).reason
-            : "Unknown error";
-        setError(`Failed to request adaptors: ${errorMessage}`);
-      })
-      .receive("timeout", () => {
-        console.error("AdaptorStore: Adaptor request timed out");
-        setError("Request timed out");
-      });
+    try {
+      const response = await channelRequest<{ adaptors: unknown }>(
+        channelProvider.channel,
+        "request_adaptors",
+        {}
+      );
+
+      if (response.adaptors) {
+        handleAdaptorsReceived(response.adaptors);
+      }
+    } catch (error) {
+      console.error("AdaptorStore: Adaptor request failed", error);
+      setError(
+        `Failed to request adaptors: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
   };
 
   // =============================================================================
