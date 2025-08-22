@@ -45,7 +45,7 @@
  */
 
 import type React from "react";
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import {
   createWorkflowStore,
@@ -96,10 +96,7 @@ export function WorkflowStoreProvider({
   children,
 }: WorkflowStoreProviderProps) {
   const { ydoc } = useSession();
-
-  // Create store only once using lazy ref initialization
-  const storeRef = useRef<WorkflowStoreInstance>();
-  const store = (storeRef.current ||= createWorkflowStore());
+  const [store] = useState(createWorkflowStore());
 
   // Connect/disconnect Y.Doc when session changes
   useEffect(() => {

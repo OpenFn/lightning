@@ -28,6 +28,7 @@ export interface SessionContextValue {
   // Connection state
   isConnected: boolean;
   isSynced: boolean;
+  provider: PhoenixChannelProvider | null;
 
   // Store instances
   adaptorStore: AdaptorStoreInstance;
@@ -319,34 +320,36 @@ export const SessionProvider = ({
       setIsSynced(false);
     };
   }, [
+    adaptorStore,
+    awarenessStore,
+    credentialStore,
     isConnected,
     socket,
-    workflowId,
     userId,
     userName,
-    adaptorStore,
-    credentialStore,
-    awarenessStore,
+    workflowId,
   ]);
 
   // Context value with improved referential stability
   // awareness and users are now served by dedicated hooks for better performance
   const value = useMemo<SessionContextValue>(
     () => ({
-      ydoc,
+      adaptorStore,
+      awarenessStore,
+      credentialStore,
       isConnected: isProviderConnected,
       isSynced,
-      adaptorStore,
-      credentialStore,
-      awarenessStore,
+      provider,
+      ydoc,
     }),
     [
-      ydoc,
+      adaptorStore,
+      awarenessStore,
+      credentialStore,
       isProviderConnected,
       isSynced,
-      adaptorStore,
-      credentialStore,
-      awarenessStore,
+      provider,
+      ydoc,
     ]
   );
 
