@@ -1,5 +1,3 @@
-import type React from "react";
-
 interface CronFieldBuilderProps {
   value: string;
   onChange: (cronExpression: string) => void;
@@ -12,13 +10,13 @@ interface CronFieldBuilderProps {
  * Simple cron expression input field with validation using cron-validator.
  * Provides a text input for entering cron expressions directly.
  */
-export const CronFieldBuilder: React.FC<CronFieldBuilderProps> = ({
+export function CronFieldBuilder({
   value,
   onChange,
   onBlur,
   disabled = false,
   className = "",
-}) => {
+}: CronFieldBuilderProps) {
   return (
     <div className={`space-y-2 ${className}`}>
       <div>

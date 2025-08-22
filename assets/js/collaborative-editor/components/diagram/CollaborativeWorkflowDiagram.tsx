@@ -4,7 +4,6 @@
  */
 
 import { ReactFlowProvider } from "@xyflow/react";
-import type React from "react";
 
 import { useNodeSelection, useWorkflowState } from "../../hooks/useWorkflow";
 
@@ -15,9 +14,10 @@ interface CollaborativeWorkflowDiagramProps {
   inspectorId?: string;
 }
 
-export const CollaborativeWorkflowDiagram: React.FC<
-  CollaborativeWorkflowDiagramProps
-> = ({ className = "h-full w-full", inspectorId }) => {
+export function CollaborativeWorkflowDiagram({ 
+  className = "h-full w-full", 
+  inspectorId 
+}: CollaborativeWorkflowDiagramProps) {
   const workflow = useWorkflowState(state => state.workflow);
   const { currentNode, selectNode } = useNodeSelection();
 
