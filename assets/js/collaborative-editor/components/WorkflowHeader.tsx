@@ -2,11 +2,9 @@
  * WorkflowHeader - Displays workflow id and name
  */
 
-import type React from "react";
-
 import { useWorkflowState } from "../hooks/useWorkflow";
 
-export const WorkflowHeader: React.FC = () => {
+export function WorkflowHeader() {
   const workflow = useWorkflowState(state => state.workflow);
 
   if (!workflow) {
@@ -30,4 +28,4 @@ export const WorkflowHeader: React.FC = () => {
       </p>
     </div>
   );
-};
+}

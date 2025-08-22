@@ -1,5 +1,4 @@
 import type { editor } from "monaco-editor";
-import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { MonacoBinding } from "y-monaco";
 import type { Awareness } from "y-protocols/awareness";
@@ -18,14 +17,14 @@ interface CollaborativeMonacoProps {
   options?: editor.IStandaloneEditorConstructionOptions;
 }
 
-export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
+export function CollaborativeMonaco({
   ytext,
   awareness,
   adaptor = "common",
   disabled = false,
   className,
   options = {},
-}) => {
+}: CollaborativeMonacoProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor>();
   const monacoRef = useRef<Monaco>();
   const bindingRef = useRef<MonacoBinding>();
@@ -164,7 +163,7 @@ export const CollaborativeMonaco: React.FC<CollaborativeMonacoProps> = ({
       />
     </div>
   );
-};
+}
 
 function getLanguageFromAdaptor(adaptor: string): string {
   // Map adaptor types to Monaco languages

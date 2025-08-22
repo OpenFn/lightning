@@ -1,4 +1,3 @@
-import type React from "react";
 import { useCallback, useState } from "react";
 
 import { TriggerSchema } from "#/collaborative-editor/types/trigger";
@@ -14,9 +13,7 @@ interface TriggerInspectorProps {
   trigger: Workflow.Trigger;
 }
 
-export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
-  trigger,
-}) => {
+export function TriggerInspector({ trigger }: TriggerInspectorProps) {
   const { updateTrigger } = useWorkflowActions();
   const [copySuccess, setCopySuccess] = useState<string>("");
 
@@ -619,4 +616,4 @@ export const TriggerInspector: React.FC<TriggerInspectorProps> = ({
       </div>
     </div>
   );
-};
+}
