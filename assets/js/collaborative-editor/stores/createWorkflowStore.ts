@@ -113,6 +113,7 @@ import type { Session } from "../types/session";
 import type { Workflow } from "../types/workflow";
 
 import { createWithSelector } from "./common";
+import { channelRequest } from "../hooks/useChannel";
 
 const JobShape = JobSchema.shape;
 // Helper to update derived state (defined first to avoid hoisting issues)
@@ -497,6 +498,34 @@ export const createWorkflowStore = () => {
     notify();
   };
 
+  const saveWorkflow = async () => {
+    if (!ydoc) return;
+
+    const workflow = ydoc.getMap("workflow").toJSON();
+
+    const jobs = ydoc.getArray("jobs").toJSON();
+    const triggers = ydoc.getArray("triggers").toJSON();
+    const edges = ydoc.getArray("edges").toJSON();
+    const positions = ydoc.getMap("positions").toJSON();
+
+    const payload = {
+      ...workflow,
+      jobs,
+      triggers,
+      edges,
+      positions,
+    };
+
+    // send to the server
+    const response = await channelRequest<{ workflow: unknown }>(
+      ydoc.provider.channel,
+      "save_workflow",
+      payload
+    );
+
+    console.log("Saving workflow", payload);
+  };
+
   // =============================================================================
   // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations)
   // =============================================================================
@@ -561,6 +590,7 @@ export const createWorkflowStore = () => {
     selectTrigger,
     selectEdge,
     clearSelection,
+    saveWorkflow,
   };
 };
 

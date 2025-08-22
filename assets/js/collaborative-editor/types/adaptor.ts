@@ -74,7 +74,7 @@ export interface AdaptorState {
  */
 export interface AdaptorCommands {
   /** Request adaptors list from server */
-  requestAdaptors: () => void;
+  requestAdaptors: () => Promise<void>;
 
   /** Manually set adaptors (for testing/fallback) */
   setAdaptors: (adaptors: AdaptorsList) => void;
@@ -129,37 +129,3 @@ export type AdaptorStore = AdaptorCommands &
     _internal: AdaptorInternals;
   };
 
-// =============================================================================
-// CHANNEL MESSAGE TYPES
-// =============================================================================
-
-/**
- * Message sent to request adaptors from server
- */
-export interface RequestAdaptorsMessage {
-  type: "request_adaptors";
-}
-
-/**
- * Message received with adaptors list from server
- */
-export interface AdaptorsResponseMessage {
-  type: "adaptors_list";
-  adaptors: unknown; // Will be validated with AdaptorsListSchema
-}
-
-/**
- * Message received when adaptors are updated on server
- */
-export interface AdaptorsUpdatedMessage {
-  type: "adaptors_updated";
-  adaptors: unknown; // Will be validated with AdaptorsListSchema
-}
-
-/**
- * Union of all adaptor-related channel messages
- */
-export type AdaptorChannelMessage =
-  | RequestAdaptorsMessage
-  | AdaptorsResponseMessage
-  | AdaptorsUpdatedMessage;

@@ -315,6 +315,9 @@ export const useWorkflowActions = () => {
       selectEdge: store.selectEdge,
       clearSelection: store.clearSelection,
       removeJobAndClearSelection: store.removeJobAndClearSelection,
+
+      // Workflow actions
+      saveWorkflow: store.saveWorkflow,
     }),
     [store]
   );
