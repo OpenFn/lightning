@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
-import { useWorkflowActions } from "#/collaborative-editor/hooks/Workflow";
+import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
