@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 
 import { TriggerSchema } from "#/collaborative-editor/types/trigger";
 
-import { useWorkflowActions } from "../../hooks/Workflow";
+import { useWorkflowActions } from "../../hooks/useWorkflow";
 import type { Workflow } from "../../types/workflow";
 import { useAppForm } from "../form";
 import { createZodValidator } from "../form/createZodValidator";

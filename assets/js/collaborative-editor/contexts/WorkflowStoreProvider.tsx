@@ -55,9 +55,6 @@ import type { Session } from "../types/session";
 
 import { useSession } from "./SessionProvider";
 
-// Re-export hooks from the dedicated hooks module
-export * from "../hooks/Workflow";
-
 const WorkflowStoreContext = createContext<WorkflowStoreInstance | null>(null);
 
 /**
