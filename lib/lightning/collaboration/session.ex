@@ -4,12 +4,13 @@ defmodule Lightning.Collaboration.Session do
   alias Yex.Sync.SharedDoc
   require Logger
 
-  defstruct [:workflow_id, :shared_doc_pid, :cleanup_timer, :parent_pid]
+  defstruct [:cleanup_timer, :parent_pid, :shared_doc_pid, :user, :workflow_id]
 
   @pg_scope :workflow_collaboration
 
-  def start(workflow_id) do
+  def start(user, workflow_id) do
     GenServer.start_link(__MODULE__,
+      user: user,
       workflow_id: workflow_id,
       parent_pid: self()
     )
@@ -24,23 +25,28 @@ defmodule Lightning.Collaboration.Session do
   @impl true
   def init(opts) do
     workflow_id = Keyword.fetch!(opts, :workflow_id)
+    user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
 
     Logger.info("Starting session for workflow #{workflow_id}")
 
     # Just initialize the state, defer SharedDoc creation
     state = %__MODULE__{
-      workflow_id: workflow_id,
-      shared_doc_pid: nil,
       cleanup_timer: nil,
-      parent_pid: parent_pid
+      parent_pid: parent_pid,
+      shared_doc_pid: nil,
+      user: user,
+      workflow_id: workflow_id
     }
 
     {:ok, state, {:continue, :start_shared_doc}}
   end
 
   @impl true
-  def handle_continue(:start_shared_doc, %{workflow_id: workflow_id} = state) do
+  def handle_continue(
+        :start_shared_doc,
+        %{workflow_id: workflow_id, user: user} = state
+      ) do
     case lookup_shared_doc(workflow_id) do
       nil ->
         Logger.info("No existing SharedDoc found for workflow #{workflow_id}")
@@ -55,10 +61,8 @@ defmodule Lightning.Collaboration.Session do
         case Collaboration.Supervisor.start_child(child_spec) do
           {:ok, pid} ->
             :pg.join(@pg_scope, workflow_id, pid)
-            # Initialize the SharedDoc with workflow data
             initialize_workflow_document(pid, workflow_id)
-            # Register the SharedDoc with :pg so other sessions can find it
-            SharedDoc.observe(pid)
+            join_shared_doc(pid, user, workflow_id)
             {:noreply, %{state | shared_doc_pid: pid}}
 
           {:error, {:already_started, pid}} ->
@@ -74,7 +78,7 @@ defmodule Lightning.Collaboration.Session do
 
       shared_doc_pid ->
         Logger.info("Existing SharedDoc found for workflow #{workflow_id}")
-        SharedDoc.observe(shared_doc_pid)
+        join_shared_doc(shared_doc_pid, user, workflow_id)
         {:noreply, %{state | shared_doc_pid: shared_doc_pid}}
     end
   end
@@ -219,6 +223,18 @@ defmodule Lightning.Collaboration.Session do
   end
 
   # ----------------------------------------------------------------------------
+
+  defp join_shared_doc(shared_doc_pid, user, workflow_id) do
+    SharedDoc.observe(shared_doc_pid)
+
+    # We track the user presence here so the the original WorkflowLive.Edit
+    # can be stopped from editing the workflow when someone else is editing it.
+    Lightning.Workflows.Presence.track_user_presence(
+      user,
+      workflow_id,
+      self()
+    )
+  end
 
   # Private function to initialize SharedDoc with workflow data
   defp initialize_workflow_document(shared_doc_pid, workflow_id) do

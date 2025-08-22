@@ -8,29 +8,36 @@ defmodule Lightning.SessionTest do
   import Lightning.Factories
 
   alias Lightning.Collaboration.Session
+  alias Lightning.Workflows.Workflow
+
   # we assume that the WorkflowCollaboration supervisor is up
   # that starts :pg with the :workflow_collaboration scope
   # and a dynamic supervisor called Lightning.WorkflowCollaboration
 
+  setup do
+    user = insert(:user)
+    {:ok, user: user}
+  end
+
   describe "start/1" do
-    test "when an existing SharedDoc doesn't exist" do
+    test "when an existing SharedDoc doesn't exist", %{user: user} do
       workflow_id = Ecto.UUID.generate()
 
-      {:ok, pid} = Session.start(workflow_id) |> Session.ready?()
+      {:ok, pid} = Session.start(user, workflow_id) |> Session.ready?()
 
       state = :sys.get_state(pid)
       assert state.workflow_id == workflow_id
       assert is_pid(state.shared_doc_pid)
     end
 
-    test "when an existing SharedDoc does exist" do
+    test "when an existing SharedDoc does exist", %{user: user} do
       workflow_id = Ecto.UUID.generate()
 
-      {:ok, pid1} = Session.start(workflow_id) |> Session.ready?()
+      {:ok, pid1} = Session.start(user, workflow_id) |> Session.ready?()
 
       state1 = :sys.get_state(pid1)
 
-      {:ok, pid2} = Session.start(workflow_id) |> Session.ready?()
+      {:ok, pid2} = Session.start(user, workflow_id) |> Session.ready?()
 
       state2 = :sys.get_state(pid2)
 
@@ -40,12 +47,13 @@ defmodule Lightning.SessionTest do
   end
 
   describe "joining" do
-    test "with start_link" do
+    test "an existing session", %{user: user} do
+      user2 = insert(:user)
       workflow = insert(:simple_workflow)
 
       client_1 =
         Task.async(fn ->
-          {:ok, pid} = Session.start(workflow.id) |> Session.ready?()
+          {:ok, pid} = Session.start(user, workflow.id) |> Session.ready?()
 
           pid
         end)
@@ -54,12 +62,21 @@ defmodule Lightning.SessionTest do
 
       client_2 =
         Task.async(fn ->
-          {:ok, pid} = Session.start(workflow.id) |> Session.ready?()
+          {:ok, pid} = Session.start(user2, workflow.id) |> Session.ready?()
 
           pid
         end)
 
       client_2 = Task.await(client_2)
+
+      # Check that both users are seen as online
+      assert_eventually(
+        length(
+          Lightning.Workflows.Presence.list_presences_for(%Workflow{
+            id: workflow.id
+          })
+        ) == 2
+      )
 
       GenServer.stop(client_2)
       Process.alive?(client_2)
@@ -79,14 +96,14 @@ defmodule Lightning.SessionTest do
   end
 
   describe "workflow initialization" do
-    test "SharedDoc is initialized with workflow data" do
+    test "SharedDoc is initialized with workflow data", %{user: user} do
       # Create a workflow with jobs
       workflow =
         build(:complex_workflow, name: "Test Workflow")
         |> insert()
 
       # Start a session - this should initialize the SharedDoc with workflow data
-      {:ok, session_pid} = Session.start(workflow.id) |> Session.ready?()
+      {:ok, session_pid} = Session.start(user, workflow.id) |> Session.ready?()
 
       # Send a message to allow :handle_continue to finish
       shared_doc = Session.get_doc(session_pid)
@@ -166,13 +183,13 @@ defmodule Lightning.SessionTest do
       end
     end
 
-    test "existing SharedDoc is not reinitialized" do
+    test "existing SharedDoc is not reinitialized", %{user: user} do
       workflow = insert(:workflow, name: "Test Workflow")
 
       insert(:job, workflow: workflow, name: "Original Job", body: "original")
 
       # Start first session
-      {:ok, session1_pid} = Session.start(workflow.id) |> Session.ready?()
+      {:ok, session1_pid} = Session.start(user, workflow.id) |> Session.ready?()
 
       shared_doc_1 = Session.get_doc(session1_pid)
 
@@ -182,7 +199,7 @@ defmodule Lightning.SessionTest do
       end)
 
       # Start second session - should connect to existing SharedDoc
-      {:ok, session2_pid} = Session.start(workflow.id) |> Session.ready?()
+      {:ok, session2_pid} = Session.start(user, workflow.id) |> Session.ready?()
       shared_doc_2 = Session.get_doc(session2_pid)
 
       assert shared_doc_1 == shared_doc_2
@@ -192,7 +209,7 @@ defmodule Lightning.SessionTest do
       assert Yex.Map.fetch!(workflow_map, "name") == "Modified Name"
     end
 
-    test "client can sync workflow data from SharedDoc" do
+    test "client can sync workflow data from SharedDoc", %{user: user} do
       # Create workflow with jobs
       workflow = insert(:workflow, name: "Sync Test Workflow")
 
@@ -204,7 +221,7 @@ defmodule Lightning.SessionTest do
         )
 
       # Start session to initialize SharedDoc
-      {:ok, session_pid} = Session.start(workflow.id) |> Session.ready?()
+      {:ok, session_pid} = Session.start(user, workflow.id) |> Session.ready?()
 
       state = :sys.get_state(session_pid)
       shared_doc_pid = state.shared_doc_pid
@@ -273,10 +290,10 @@ defmodule Lightning.SessionTest do
   end
 
   describe "teardown" do
-    test "when a session is stopped" do
+    test "when a session is stopped", %{user: user} do
       workflow_id = Ecto.UUID.generate()
 
-      {:ok, pid} = Session.start(workflow_id) |> Session.ready?()
+      {:ok, pid} = Session.start(user, workflow_id) |> Session.ready?()
       %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(pid)
 
       Session.stop(pid)
