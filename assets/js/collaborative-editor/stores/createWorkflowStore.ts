@@ -115,37 +115,31 @@ import type { Workflow } from "../types/workflow";
 import { createWithSelector } from "./common";
 
 const JobShape = JobSchema.shape;
+// Helper to update derived state (defined first to avoid hoisting issues)
+function updateDerivedState(draft: Workflow.State) {
+  // Compute enabled from triggers
+  draft.enabled =
+    draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
 
-export const createWorkflowStore = () => {
-  // Y.Doc will be connected externally via SessionProvider
-  let ydoc: Session.WorkflowDoc | null = null;
-  let observerCleanups: (() => void)[] = [];
+  // Compute selected node
+  if (draft.selectedJobId) {
+    draft.selectedNode =
+      draft.jobs.find(j => j.id === draft.selectedJobId) || null;
+  } else if (draft.selectedTriggerId) {
+    draft.selectedNode =
+      draft.triggers.find(t => t.id === draft.selectedTriggerId) || null;
+  } else {
+    draft.selectedNode = null;
+  }
 
-  // Helper to update derived state (defined first to avoid hoisting issues)
-  const updateDerivedState = (draft: Workflow.State) => {
-    // Compute enabled from triggers
-    draft.enabled =
-      draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
+  // Compute selected edge
+  draft.selectedEdge = draft.selectedEdgeId
+    ? draft.edges.find(e => e.id === draft.selectedEdgeId) || null
+    : null;
+}
 
-    // Compute selected node
-    if (draft.selectedJobId) {
-      draft.selectedNode =
-        draft.jobs.find(j => j.id === draft.selectedJobId) || null;
-    } else if (draft.selectedTriggerId) {
-      draft.selectedNode =
-        draft.triggers.find(t => t.id === draft.selectedTriggerId) || null;
-    } else {
-      draft.selectedNode = null;
-    }
-
-    // Compute selected edge
-    draft.selectedEdge = draft.selectedEdgeId
-      ? draft.edges.find(e => e.id === draft.selectedEdgeId) || null
-      : null;
-  };
-
-  // Single Immer-managed state object (referentially stable)
-  let state: Workflow.State = produce(
+function produceInitialState() {
+  return produce(
     {
       // Initialize with empty data (Y.Doc will sync when connected)
       workflow: null,
@@ -169,6 +163,14 @@ export const createWorkflowStore = () => {
       updateDerivedState(draft);
     }
   );
+}
+
+export const createWorkflowStore = () => {
+  // Y.Doc will be connected externally via SessionProvider
+  let ydoc: Session.WorkflowDoc | null = null;
+  let observerCleanups: (() => void)[] = [];
+
+  let state = produceInitialState();
 
   const listeners = new Set<() => void>();
 
