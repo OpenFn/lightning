@@ -15,7 +15,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     conn = conn(:post, "/i/non_existent_trigger") |> WebhookAuth.call([])
 
     assert conn.status == 404
-    assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
+    assert Jason.decode!(conn.resp_body) == %{"error" => "webhook_not_found"}
   end
 
   test "assigns the trigger when no auth method is configured", %{
@@ -26,7 +26,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     expected_trigger =
       trigger
       |> unload_relation(:workflow)
-      |> Repo.preload([:workflow, :edges])
+      |> Repo.preload([:workflow, :edges, :webhook_auth_methods])
 
     assert conn.assigns[:trigger] == expected_trigger
   end
@@ -51,7 +51,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
       |> WebhookAuth.call([])
 
     assert conn.status == 404
-    assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
+    assert Jason.decode!(conn.resp_body) == %{"error" => "webhook_not_found"}
   end
 
   test "assigns the trigger for authenticated request with matching auth_method",
@@ -70,7 +70,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     expected_trigger =
       trigger
       |> unload_relation(:workflow)
-      |> Repo.preload([:workflow, :edges])
+      |> Repo.preload([:workflow, :edges, :webhook_auth_methods])
 
     assert conn.assigns[:trigger] == expected_trigger
   end

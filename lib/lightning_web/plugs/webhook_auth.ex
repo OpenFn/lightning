@@ -8,7 +8,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   alias Lightning.Config
   alias Lightning.Retry
   alias Lightning.Workflows
-  # alias Lightning.Workflows.WebhookAuthMethod
+  alias Lightning.Workflows.WebhookAuthMethod
 
   require Logger
 
@@ -29,7 +29,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
       1. Looks up the webhook trigger (with `workflow` and `edges`) and its
          `webhook_auth_methods`, wrapped in `Lightning.Retry.with_webhook_retry/2`
          so transient DB errors are retried.
-      2. If the trigger is missing → responds **404** `{"error":"Webhook not found"}`.
+      2. If the trigger is missing → responds **404** `{"error":"webhook_not_found"}`.
       3. If auth methods are configured:
          - If credentials match → assigns `:trigger` and continues.
          - If credentials are present but wrong → responds **404** (hide existence).
@@ -106,32 +106,30 @@ defmodule LightningWeb.Plugs.WebhookAuth do
     assign(conn, :trigger, trigger)
   end
 
-  defp check_auth(conn, _auth_methods, trigger) do
-    successful_response(conn, trigger)
+  defp check_auth(conn, auth_methods, trigger) do
+    cond do
+      valid_key?(conn, auth_methods) or valid_user?(conn, auth_methods) ->
+        successful_response(conn, trigger)
 
-    # cond do
-    #   valid_key?(conn, auth_methods) or valid_user?(conn, auth_methods) ->
-    #     successful_response(conn, trigger)
+      authenticated_request(conn) ->
+        not_found_response(conn)
 
-    #   authenticated_request(conn) ->
-    #     not_found_response(conn)
-
-    #   true ->
-    #     unauthorized_response(conn)
-    # end
+      true ->
+        unauthorized_response(conn)
+    end
   end
 
-  # defp authenticated_request(conn) do
-  #   conn |> get_req_header("x-api-key") != [] or
-  #     conn |> get_req_header("authorization") != []
-  # end
+  defp authenticated_request(conn) do
+    conn |> get_req_header("x-api-key") != [] or
+      conn |> get_req_header("authorization") != []
+  end
 
-  # defp unauthorized_response(conn) do
-  #   conn
-  #   |> put_status(:unauthorized)
-  #   |> json(%{"error" => "Unauthorized"})
-  #   |> halt()
-  # end
+  defp unauthorized_response(conn) do
+    conn
+    |> put_status(:unauthorized)
+    |> json(%{"error" => "Unauthorized"})
+    |> halt()
+  end
 
   defp not_found_response(conn) do
     conn
@@ -140,34 +138,34 @@ defmodule LightningWeb.Plugs.WebhookAuth do
     |> halt()
   end
 
-  # defp valid_key?(conn, methods) do
-  #   Enum.any?(methods, &key_matches?(conn, &1))
-  # end
+  defp valid_key?(conn, methods) do
+    Enum.any?(methods, &key_matches?(conn, &1))
+  end
 
-  # defp key_matches?(
-  #        conn,
-  #        %WebhookAuthMethod{auth_type: :api, api_key: key}
-  #      ) do
-  #   get_req_header(conn, "x-api-key")
-  #   |> Enum.any?(fn header_value ->
-  #     Plug.Crypto.secure_compare(header_value, key)
-  #   end)
-  # end
+  defp key_matches?(
+         conn,
+         %WebhookAuthMethod{auth_type: :api, api_key: key}
+       ) do
+    get_req_header(conn, "x-api-key")
+    |> Enum.any?(fn header_value ->
+      Plug.Crypto.secure_compare(header_value, key)
+    end)
+  end
 
-  # defp key_matches?(_, _), do: false
+  defp key_matches?(_, _), do: false
 
-  # defp valid_user?(conn, methods) do
-  #   Enum.any?(methods, &user_matches?(conn, &1))
-  # end
+  defp valid_user?(conn, methods) do
+    Enum.any?(methods, &user_matches?(conn, &1))
+  end
 
-  # defp user_matches?(conn, %WebhookAuthMethod{
-  #        auth_type: :basic,
-  #        username: username,
-  #        password: password
-  #      }) do
-  #   encoded = "Basic " <> Base.encode64("#{username}:#{password}")
-  #   conn |> get_req_header("authorization") |> Enum.member?(encoded)
-  # end
+  defp user_matches?(conn, %WebhookAuthMethod{
+         auth_type: :basic,
+         username: username,
+         password: password
+       }) do
+    encoded = "Basic " <> Base.encode64("#{username}:#{password}")
+    conn |> get_req_header("authorization") |> Enum.member?(encoded)
+  end
 
-  # defp user_matches?(_, _), do: false
+  defp user_matches?(_, _), do: false
 end

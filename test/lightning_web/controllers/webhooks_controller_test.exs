@@ -2,6 +2,7 @@ defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Extensions.MockRateLimiter
   alias Lightning.Extensions.StubRateLimiter
@@ -11,6 +12,14 @@ defmodule LightningWeb.WebhooksControllerTest do
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
+
+  setup :set_mox_from_context
+  setup :verify_on_exit!
+
+  setup do
+    Mox.stub(Lightning.MockConfig, :cors_origin, fn -> "*" end)
+    :ok
+  end
 
   describe "a POST request to '/i'" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
@@ -48,7 +57,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
     test "returns 404 when trigger does not exist", %{conn: conn} do
       conn = post(conn, "/i/bar")
-      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
+      assert json_response(conn, 404) == %{"error" => "webhook_not_found"}
     end
 
     test "returns 413 with a body exceeding the limit", %{conn: conn} do
@@ -110,7 +119,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       conn = get(conn, "/i/#{non_existent_trigger_id}")
 
-      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
+      assert json_response(conn, 404) == %{"error" => "webhook_not_found"}
     end
 
     test "returns 404 when trigger exists but is of type cron", %{conn: conn} do
@@ -124,7 +133,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       conn = get(conn, "/i/#{trigger_id}")
 
-      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
+      assert json_response(conn, 404) == %{"error" => "webhook_not_found"}
     end
 
     test "creates a pending workorder with a valid trigger", %{conn: conn} do
@@ -285,7 +294,7 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert json_response(conn, 503) == %{
                "error" => "service_unavailable",
                "message" =>
-                 "Unable to process request due to temporary database issues. Please try again later.",
+                 "Unable to process request due to temporary database issues. Please try again in 1s.",
                "retry_after" => 1
              }
 

@@ -76,7 +76,7 @@ defmodule LightningWeb.Endpoint do
 
   plug Sentry.PlugContext
 
-  # plug Plugs.WebhookAuth
+  plug Plugs.WebhookAuth
 
   plug Replug,
     plug: Plug.Parsers,
