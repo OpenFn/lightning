@@ -11,6 +11,78 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     {:ok, trigger: insert(:trigger), auth_method: insert(:webhook_auth_method)}
   end
 
+  test "OPTIONS preflight is a no-op" do
+    conn = conn(:options, "/i/whatever") |> WebhookAuth.call([])
+    refute conn.halted
+    assert conn.status == nil
+    assert conn.assigns[:trigger] == nil
+  end
+
+  test "non-/i path passes through unchanged" do
+    conn = conn(:post, "/api/things") |> WebhookAuth.call([])
+    refute conn.halted
+    assert conn.status == nil
+    assert conn.assigns[:trigger] == nil
+  end
+
+  test "responds 404 for wrong x-api-key on protected trigger", %{
+    trigger: trigger
+  } do
+    api_method = insert(:webhook_auth_method, auth_type: :api, api_key: "secret")
+    associate_auth_method(trigger, api_method)
+
+    conn =
+      conn(:post, "/i/#{trigger.id}")
+      |> put_req_header("x-api-key", "nope")
+      |> WebhookAuth.call([])
+
+    assert conn.halted
+    assert conn.status == 404
+    assert Jason.decode!(conn.resp_body) == %{"error" => "webhook_not_found"}
+  end
+
+  test "assigns trigger for matching x-api-key", %{trigger: trigger} do
+    api_method = insert(:webhook_auth_method, auth_type: :api, api_key: "secret")
+    associate_auth_method(trigger, api_method)
+
+    conn =
+      conn(:post, "/i/#{trigger.id}")
+      |> put_req_header("x-api-key", "secret")
+      |> WebhookAuth.call([])
+
+    expected_trigger =
+      trigger
+      |> unload_relation(:workflow)
+      |> Repo.preload([:workflow, :edges, :webhook_auth_methods])
+
+    refute conn.halted
+    assert conn.assigns[:trigger] == expected_trigger
+  end
+
+  test "returns 503 with Retry-After when DB lookup errors are exhausted" do
+    Mimic.copy(Lightning.Retry)
+
+    Mimic.expect(Lightning.Retry, :with_webhook_retry, fn _fun, _opts ->
+      {:error, %DBConnection.ConnectionError{message: "db down"}}
+    end)
+
+    Mox.stub(Lightning.MockConfig, :webhook_retry, fn
+      :timeout_ms -> 1_000
+      _ -> nil
+    end)
+
+    conn = conn(:post, "/i/anything") |> WebhookAuth.call([])
+
+    assert conn.halted
+    assert conn.status == 503
+    assert get_resp_header(conn, "retry-after") == ["1"]
+
+    body = Jason.decode!(conn.resp_body)
+    assert body["error"] == "service_unavailable"
+    assert body["retry_after"] == 1
+    assert String.contains?(body["message"], "retry in 1s")
+  end
+
   test "responds with 404 when trigger doesn't exist", _context do
     conn = conn(:post, "/i/non_existent_trigger") |> WebhookAuth.call([])
 
