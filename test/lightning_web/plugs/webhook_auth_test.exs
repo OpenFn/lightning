@@ -7,6 +7,8 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
   alias LightningWeb.Plugs.WebhookAuth
   alias Lightning.Repo
 
+  @moduletag capture_log: true
+
   setup do
     {:ok, trigger: insert(:trigger), auth_method: insert(:webhook_auth_method)}
   end

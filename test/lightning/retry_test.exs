@@ -4,8 +4,127 @@ defmodule Lightning.RetryTest do
 
   alias Lightning.Retry
 
+  @moduletag capture_log: true
+
   setup :set_mox_from_context
   setup :verify_on_exit!
+
+  describe "retriable_error?/1" do
+    test "returns true for {:error, %DBConnection.ConnectionError{}}" do
+      assert Retry.retriable_error?({:error, %DBConnection.ConnectionError{}})
+    end
+
+    test "returns false for non-DB errors" do
+      refute Retry.retriable_error?({:error, :nope})
+      refute Retry.retriable_error?(:anything)
+    end
+  end
+
+  describe "with_retry/2 timeout branch" do
+    test "hits :timeout when timeout_ms is 0" do
+      attempts = :counters.new(1, [])
+
+      result =
+        Retry.with_retry(
+          fn ->
+            :counters.add(attempts, 1, 1)
+            {:error, %DBConnection.ConnectionError{message: "slow"}}
+          end,
+          timeout_ms: 0,
+          max_attempts: 5,
+          initial_delay_ms: 0,
+          jitter: false
+        )
+
+      assert {:error, %DBConnection.ConnectionError{}} = result
+      assert :counters.get(attempts, 1) == 1
+    end
+  end
+
+  describe "with_retry/2 rescue path" do
+    test "wraps raised DBConnection.ConnectionError into {:error, e}" do
+      attempts = :counters.new(1, [])
+
+      result =
+        Retry.with_retry(
+          fn ->
+            :counters.add(attempts, 1, 1)
+            raise DBConnection.ConnectionError, message: "boom"
+          end,
+          max_attempts: 1,
+          initial_delay_ms: 0,
+          jitter: false
+        )
+
+      assert {:error, %DBConnection.ConnectionError{}} = result
+      assert :counters.get(attempts, 1) == 1
+    end
+  end
+
+  describe "with_retry/2 jitter path" do
+    test "executes jittered delay when jitter: true and base_delay > 0" do
+      attempts = :counters.new(1, [])
+
+      result =
+        Retry.with_retry(
+          fn ->
+            :counters.add(attempts, 1, 1)
+            {:error, %DBConnection.ConnectionError{message: "flaky"}}
+          end,
+          max_attempts: 2,
+          initial_delay_ms: 8,
+          jitter: true,
+          timeout_ms: 1_000
+        )
+
+      assert {:error, %DBConnection.ConnectionError{}} = result
+      assert :counters.get(attempts, 1) == 2
+    end
+  end
+
+  describe "with_retry/2 option coercions and clamps" do
+    test "string options are coerced (to_int/to_float) and respected" do
+      attempts = :counters.new(1, [])
+
+      result =
+        Retry.with_retry(
+          fn ->
+            :counters.add(attempts, 1, 1)
+            {:error, %DBConnection.ConnectionError{message: "nope"}}
+          end,
+          max_attempts: "2",
+          initial_delay_ms: "0",
+          max_delay_ms: "0",
+          backoff_factor: "1.5",
+          timeout_ms: "50",
+          jitter: false
+        )
+
+      assert {:error, %DBConnection.ConnectionError{}} = result
+      assert :counters.get(attempts, 1) == 2
+    end
+
+    test "invalid numeric options are clamped to safe mins" do
+      attempts = :counters.new(1, [])
+
+      result =
+        Retry.with_retry(
+          fn ->
+            :counters.add(attempts, 1, 1)
+            {:error, %DBConnection.ConnectionError{message: "still no"}}
+          end,
+          max_attempts: 0,
+          initial_delay_ms: -10,
+          max_delay_ms: -5,
+          backoff_factor: 0.0,
+          timeout_ms: -1,
+          jitter: false
+        )
+
+      assert {:error, %DBConnection.ConnectionError{}} = result
+      assert :counters.get(attempts, 1) == 1
+    end
+  end
 
   describe "with_retry/2" do
     test "returns success immediately when function succeeds" do
