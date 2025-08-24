@@ -59,9 +59,6 @@ defmodule LightningWeb.Plugs.WebhookAuth do
           context: %{op: :webhook_auth_lookup, webhook: webhook}
         )
         |> case do
-          {:ok, {nil, _methods}} ->
-            not_found_response(conn)
-
           {:ok, {trigger, methods}} ->
             validate_auth(trigger, methods, conn)
 
