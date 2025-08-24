@@ -62,6 +62,7 @@ defmodule LightningWeb.WebhooksController do
             without_run: without_run?
           )
         end,
+        retry_on: &Retry.retriable_error?/1,
         context: %{trigger_id: trigger.id, workflow_id: trigger.workflow.id}
       )
       |> case do
@@ -72,9 +73,12 @@ defmodule LightningWeb.WebhooksController do
           retry_after =
             Config.webhook_retry(:timeout_ms)
             |> div(1000)
+            |> max(1)
 
           Logger.error(
-            "webhook create_workorder exhausted retries trigger_id=#{trigger.id} workflow_id=#{trigger.workflow.id} error=#{Exception.message(error)}"
+            "webhook create_workorder exhausted retries " <>
+              "trigger_id=#{trigger.id} workflow_id=#{trigger.workflow.id} " <>
+              "project_id=#{project_id} error=#{Exception.message(error)}"
           )
 
           conn
@@ -83,7 +87,7 @@ defmodule LightningWeb.WebhooksController do
           |> json(%{
             error: :service_unavailable,
             message:
-              "Unable to process request due to temporary database issues. Please try again later.",
+              "Unable to process request due to temporary database issues. Please try again in #{retry_after}s.",
             retry_after: retry_after
           })
 

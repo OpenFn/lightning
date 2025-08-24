@@ -67,6 +67,10 @@ defmodule Lightning.Retry do
     result
   end
 
+  @spec retriable_error?(term()) :: boolean()
+  def retriable_error?({:error, %DBConnection.ConnectionError{}}), do: true
+  def retriable_error?(_), do: false
+
   defp do_retry(fun, attempt, delay, deadline, config) do
     call(fun) |> handle_result(fun, attempt, delay, deadline, config)
   end
@@ -154,7 +158,13 @@ defmodule Lightning.Retry do
   defp call(fun) do
     fun.()
   rescue
-    e -> {:error, e}
+    e in DBConnection.ConnectionError ->
+      # retryable; becomes tuple
+      {:error, e}
+
+    e ->
+      # NOT retryable; preserve original behavior
+      reraise e, __STACKTRACE__
   end
 
   defp build_config(opts) do
@@ -163,7 +173,10 @@ defmodule Lightning.Retry do
     %{
       max_attempts: merged[:max_attempts] |> to_int() |> max(1),
       initial_delay_ms: merged[:initial_delay_ms] |> to_int() |> max(0),
-      max_delay_ms: merged[:max_delay_ms] |> to_int(),
+      max_delay_ms:
+        merged[:max_delay_ms]
+        |> to_int()
+        |> max(merged[:initial_delay_ms] |> to_int()),
       backoff_factor: merged[:backoff_factor] |> to_float() |> max(1.0),
       timeout_ms: merged[:timeout_ms] |> to_int() |> max(0),
       retry_on: merged[:retry_on] || (&default_retry_check/1),

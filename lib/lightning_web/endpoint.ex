@@ -70,17 +70,17 @@ defmodule LightningWeb.Endpoint do
 
   LightningWeb.Utils.add_dynamic_plugs(@pre_parsers_plugs)
 
-  plug Replug,
-    plug: Plug.Parsers,
-    opts: {LightningWeb.PlugConfigs, :plug_parsers}
+  plug CORSPlug, origin: &Lightning.Config.cors_origin/0
 
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
-  plug CORSPlug, origin: &Lightning.Config.cors_origin/0
-
-  plug Plugs.WebhookAuth
-
   plug Sentry.PlugContext
+
+  # plug Plugs.WebhookAuth
+
+  plug Replug,
+    plug: Plug.Parsers,
+    opts: {LightningWeb.PlugConfigs, :plug_parsers}
 
   plug Plug.MethodOverride
   plug Plug.Head
