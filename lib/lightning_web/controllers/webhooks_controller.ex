@@ -41,7 +41,7 @@ defmodule LightningWeb.WebhooksController do
   @spec create(Plug.Conn.t(), map) :: Plug.Conn.t()
   def create(conn, _params) do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
-           trigger <- conn.assigns.trigger,
+           trigger <- conn.assigns[:trigger],
          {:ok, without_run?} <- check_skip_run_creation(project_id),
          :ok <-
            RateLimiter.limit_request(

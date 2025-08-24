@@ -337,4 +337,62 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert json_response(conn, 200) == %{"work_order_id" => work_order_id}
     end
   end
+
+  describe "create/2 controller error branches (422 + nil fallback)" do
+    setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
+
+    test "returns 422 invalid_request with details when WorkOrders.create_for returns a changeset error",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      bad_changeset =
+        %Lightning.WorkOrder{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.add_error(:dataclip, "is invalid")
+
+      Mimic.copy(Lightning.WorkOrders)
+
+      Mimic.expect(Lightning.WorkOrders, :create_for, fn _trigger, _opts ->
+        {:error, bad_changeset}
+      end)
+
+      conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"error" => "invalid_request", "details" => details} =
+               json_response(conn, 422)
+
+      assert Map.has_key?(details, "dataclip")
+    end
+
+    test "returns 422 with atom reason when WorkOrders.create_for returns {:error, reason}",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      Mimic.copy(Lightning.WorkOrders)
+
+      Mimic.expect(Lightning.WorkOrders, :create_for, fn _trigger, _opts ->
+        {:error, :bad_payload}
+      end)
+
+      conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert json_response(conn, 422) == %{"error" => "bad_payload"}
+    end
+
+    test "returns 404 when controller receives nil trigger assign (fallback path)" do
+      # Call the controller action directly to bypass WebhookAuth plug,
+      # so we actually execute the `nil -> 404` branch in the controller.
+      conn = Phoenix.ConnTest.build_conn(:post, "/i/nonexistent")
+      conn = LightningWeb.WebhooksController.create(conn, %{})
+
+      assert conn.status == 404
+      assert Jason.decode!(conn.resp_body) == %{"error" => "webhook_not_found"}
+    end
+  end
 end
