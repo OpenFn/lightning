@@ -81,7 +81,7 @@ Ensure you set the following URLs:
 - **Setup URL for Post installation:** `<app_url_here>/setup_vcs` (Check the box
   for **Redirect on update**)
 
-These envrionment variables will need to be set in order to configure the github
+These environment variables will need to be set in order to configure the github
 app:
 
 | **Variable**               | **Description**                                                                                                           |
@@ -257,7 +257,7 @@ by `KAFKA_NUMBER_OF_MESSAGES_PER_SECOND`). The default value is 1.
 
 #### Deduplication
 
-Each Kafka trigger maintains record of the topic, parition and offset for each
+Each Kafka trigger maintains record of the topic, partition and offset for each
 message received. This to protect against the ingestion of duplicate messages
 from the cluster. These records are periodically cleaned out. The duration for
 which they are retained is controlled by
@@ -285,7 +285,7 @@ consider this when disabling a Kafka trigger for an extended period.
 #### Failure notifications
 
 Under certain failure conditions, a Kafka trigger will send an email to certain
-user that are associated with a project. After each email an embargo is applied
+users that are associated with a project. After each email an embargo is applied
 to ensure that Lightning does not flood the recipients with email. The length of
 the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
 variable.
@@ -293,14 +293,14 @@ variable.
 #### Persisting Failed Messages
 
 **PLEASE NOTE: If alternate file storage is not enabled, messages that fail to
-be persisted will not be retained by Lightning ans this can result in data loss,
+be persisted will not be retained by Lightning and this can result in data loss,
 if the Kafka cluster can not make these messages available again.**
 
 If a Kafka message fails to be persisted as a WorkOrder, Run and Dataclip, the
 option exists to write the failed message to a location on the local file
 system. If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`,
 then the `KAFKA_ALTERNATE_STORAGE_PATH` ENV variable must be set to the path
-that exists and is writable by Lightning. The location shoudl also be suitably
+that exists and is writable by Lightning. The location should also be suitably
 protected to prevent data exposure as Lightning **will not encrypt** the message
 contents when writing it.
 
@@ -363,3 +363,31 @@ Once the client has been created set the following environment variables:
 | -------------------------- | --------------------------------------------------------------------- |
 | `SALESFORCE_CLIENT_ID`     | Which is `Consumer Key` from the "Manage Consumer Details" screen.    |
 | `SALESFORCE_CLIENT_SECRET` | Which is `Consumer Secret` from the "Manage Consumer Details" screen. |
+
+### Webhook Retry Configuration
+
+Lightning automatically retries webhook processing on **transient database
+connection errors** using exponential backoff. This helps prevent data loss
+during brief database outages.
+
+The following environment variables control webhook retry behavior:
+
+| **Variable**                     | **Description**                                                                                  | **Default** |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ | ----------: |
+| `WEBHOOK_RETRY_MAX_ATTEMPTS`     | Maximum number of attempts (the first attempt runs immediately; backoffs occur between retries). |         `5` |
+| `WEBHOOK_RETRY_INITIAL_DELAY_MS` | Initial backoff delay in milliseconds.                                                           |       `100` |
+| `WEBHOOK_RETRY_MAX_DELAY_MS`     | Maximum backoff delay in milliseconds.                                                           |     `10000` |
+| `WEBHOOK_RETRY_BACKOFF_FACTOR`   | Multiplier for exponential backoff (each delay × this factor, up to the max delay).              |         `2` |
+| `WEBHOOK_RETRY_TIMEOUT_MS`       | Total time budget for all attempts (including sleeps) in milliseconds.                           |     `60000` |
+| `WEBHOOK_RETRY_JITTER`           | Whether to add \~0–25% randomization to each delay to avoid thundering herd (`true`/`false`).    |      `true` |
+
+**How backoff works (defaults, jitter off):** attempt 1 runs immediately; on
+failure we sleep and retry up to `WEBHOOK_RETRY_MAX_ATTEMPTS - 1` times with
+exponential delays starting at `WEBHOOK_RETRY_INITIAL_DELAY_MS` and multiplying
+by `WEBHOOK_RETRY_BACKOFF_FACTOR`, capped by `WEBHOOK_RETRY_MAX_DELAY_MS`.
+Example sequence: `100ms → 200ms → 400ms → 800ms` (four sleeps for five total
+attempts), stopping sooner if `WEBHOOK_RETRY_TIMEOUT_MS` elapses.
+
+**Server timeout alignment:** Set your Phoenix `IDLE_TIMEOUT` to be **at least**
+`WEBHOOK_RETRY_TIMEOUT_MS + 15000` (in milliseconds) so long retries finish
+before the connection is closed.
