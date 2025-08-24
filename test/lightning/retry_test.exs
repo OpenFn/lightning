@@ -9,6 +9,81 @@ defmodule Lightning.RetryTest do
   setup :set_mox_from_context
   setup :verify_on_exit!
 
+  describe "with_retry/2 non-retryable raises" do
+    test "bubbles non-DB exceptions (reraise path)" do
+      assert_raise RuntimeError, "boom", fn ->
+        Retry.with_retry(fn -> raise "boom" end,
+          initial_delay_ms: 0,
+          jitter: false
+        )
+      end
+    end
+  end
+
+  describe "option parsing fallbacks (:error branches)" do
+    test "string parse failures fall back to safe defaults" do
+      attempts = :counters.new(1, [])
+
+      result =
+        Retry.with_retry(
+          fn ->
+            :counters.add(attempts, 1, 1)
+            {:error, %DBConnection.ConnectionError{message: "x"}}
+          end,
+          max_attempts: "not-a-number",
+          initial_delay_ms: "nope",
+          max_delay_ms: "nah",
+          backoff_factor: "??",
+          timeout_ms: "zzz",
+          jitter: true
+        )
+
+      assert {:error, %DBConnection.ConnectionError{}} = result
+      assert :counters.get(attempts, 1) == 1
+    end
+
+    test "non-numeric atoms hit generic to_int/to_float fallbacks" do
+      attempts = :counters.new(1, [])
+
+      result =
+        Retry.with_retry(
+          fn ->
+            :counters.add(attempts, 1, 1)
+            {:error, %DBConnection.ConnectionError{message: "y"}}
+          end,
+          max_attempts: :foo,
+          backoff_factor: :bar,
+          timeout_ms: :baz,
+          initial_delay_ms: :qux,
+          jitter: false
+        )
+
+      assert {:error, %DBConnection.ConnectionError{}} = result
+      assert :counters.get(attempts, 1) == 1
+    end
+  end
+
+  describe "calculate_next_delay/2 with jitter but zero base delay" do
+    test "falls back to base delay when base_delay == 0" do
+      attempts = :counters.new(1, [])
+
+      result =
+        Retry.with_retry(
+          fn ->
+            :counters.add(attempts, 1, 1)
+            {:error, %DBConnection.ConnectionError{message: "z"}}
+          end,
+          max_attempts: 2,
+          initial_delay_ms: 0,
+          jitter: true,
+          timeout_ms: 50
+        )
+
+      assert {:error, %DBConnection.ConnectionError{}} = result
+      assert :counters.get(attempts, 1) == 2
+    end
+  end
+
   describe "retriable_error?/1" do
     test "returns true for {:error, %DBConnection.ConnectionError{}}" do
       assert Retry.retriable_error?({:error, %DBConnection.ConnectionError{}})
