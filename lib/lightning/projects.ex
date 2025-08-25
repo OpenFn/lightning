@@ -32,6 +32,7 @@ defmodule Lightning.Projects do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkOrder
 
   require Logger
@@ -1214,4 +1215,89 @@ defmodule Lightning.Projects do
 
     query |> Repo.all()
   end
+
+  # List all sandboxes under a parent
+  @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
+  def list_sandboxes(parent_id) when is_binary(parent_id) do
+    from(p in Project, where: p.parent_id == ^parent_id, order_by: p.name)
+    |> Repo.all()
+  end
+
+  # Convenience to create a sandbox from a parent. Emails default off.
+  @spec create_sandbox(Project.t(), map(), boolean()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def create_sandbox(%Project{id: parent_id}, attrs, schedule_email? \\ false) do
+    attrs |> Map.put(:parent_id, parent_id) |> create_project(schedule_email?)
+  end
+
+  # Read-only "workspace" view: parent + all its direct sandboxes.
+  # (If you later allow nested sandboxes arbitrarily deep, switch to a recursive CTE.)
+  @spec get_workspace_projects(Project.t()) :: [Project.t()]
+  def get_workspace_projects(%Project{id: parent_id} = parent) do
+    ([parent] ++ list_sandboxes(parent_id))
+    |> Enum.uniq_by(& &1.id)
+  end
+
+  @doc "Compute a 12-hex project head from latest per-workflow hashes (deterministic)."
+  def compute_project_head_hash(project_id) do
+    pairs =
+      from(v in WorkflowVersion,
+        join: w in assoc(v, :workflow),
+        where: w.project_id == ^project_id,
+        distinct: [v.workflow_id],
+        order_by: [asc: v.workflow_id, desc: v.inserted_at, desc: v.id],
+        select: {v.workflow_id, v.hash}
+      )
+      |> Repo.all()
+      |> Enum.map(fn {wid, h} -> [to_string(wid), h] end)
+
+    data = Jason.encode!(pairs)
+
+    :crypto.hash(:sha256, data)
+    |> Base.encode16(case: :lower)
+    |> binary_part(0, 12)
+  end
+
+  @doc """
+  Append a new project head hash (12-hex) to project.version_history, append-only.
+  Returns {:ok, project} or {:error, :bad_hash}.
+  """
+  @spec append_project_head(Project.t(), String.t()) ::
+          {:ok, Project.t()} | {:error, :bad_hash}
+  def append_project_head(%Project{} = project, hash) do
+    if String.match?(hash, ~r/^[a-f0-9]{12}$/) do
+      {:ok, append_project_head!(project, hash)}
+    else
+      {:error, :bad_hash}
+    end
+  end
+
+  @doc false
+  @spec append_project_head!(Project.t(), String.t()) :: Project.t()
+  def append_project_head!(%Project{id: id}, hash) when is_binary(hash) do
+    unless String.match?(hash, ~r/^[a-f0-9]{12}$/),
+      do: raise(ArgumentError, "head_hash must be 12 hex chars")
+
+    {:ok, proj} =
+      Repo.transaction(fn ->
+        proj =
+          from(p in Project, where: p.id == ^id, lock: "FOR UPDATE")
+          |> Repo.one!()
+
+        new_hist = append_if_missing(proj.version_history || [], hash)
+
+        if new_hist == (proj.version_history || []) do
+          proj
+        else
+          proj
+          |> Ecto.Changeset.change(version_history: new_hist)
+          |> Repo.update!()
+        end
+      end)
+
+    proj
+  end
+
+  defp append_if_missing(list, h),
+    do: if(Enum.member?(list, h), do: list, else: list ++ [h])
 end
