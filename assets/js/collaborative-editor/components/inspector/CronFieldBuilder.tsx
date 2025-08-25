@@ -43,4 +43,4 @@ export function CronFieldBuilder({
       </div>
     </div>
   );
-};
+}
