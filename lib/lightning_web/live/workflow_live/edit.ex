@@ -2262,7 +2262,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(follow_run: run)}
   end
 
-  def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
+  def handle_info(%{event: "presence_diff", payload: diff}, socket) do
+    IO.inspect(diff, label: "presence_diff")
+
     summary =
       socket.assigns.workflow
       |> Presence.list_presences_for()
@@ -2833,6 +2835,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket.assigns.workflow,
         self()
       )
+
+      Presence.list_presences_for(socket.assigns.workflow)
+      |> IO.inspect(label: "Presence list")
     end
 
     socket

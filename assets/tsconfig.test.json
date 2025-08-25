@@ -1,9 +1,10 @@
 {
-  "extends": "@tsconfig/node-lts/tsconfig.json",
+  "extends": ["@tsconfig/node-lts/tsconfig.json", "./tsconfig.base.json"],
   "ts-node": {
     "transpileOnly": true,
     "files": true,
-    "esm": true
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
   },
   "compilerOptions": {
     "composite": true,
@@ -13,6 +14,12 @@
     "jsx": "react-jsx"
   },
   "files": [],
-  "include": ["*.d.ts", "test/**/*"],
-  "exclude": ["node_modules/**"]
+  "include": ["*.d.ts", "test/**/*", "js/**/*"],
+  "exclude": ["node_modules/**"],
+  "tsimp": {
+    "compilerOptions": {
+      "skipLibCheck": true,
+      "strict": false
+    }
+  }
 }
