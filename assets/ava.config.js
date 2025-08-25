@@ -5,7 +5,10 @@ export default {
     js: true,
     ts: 'module',
   },
-  nodeArguments: ['--loader=ts-node/esm', '--no-warnings'],
+  nodeOptions: ['--loader=ts-node/esm', '--no-warnings'],
   filterNodeArgumentsForWorkerThreads: argument => !processOnly.has(argument),
   files: ['test/**/*.test.ts'],
+  environmentVariables: {
+    TS_NODE_PROJECT: 'tsconfig.test.json'
+  }
 };
