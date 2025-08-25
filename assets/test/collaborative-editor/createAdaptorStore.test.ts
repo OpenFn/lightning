@@ -179,19 +179,43 @@ test("setAdaptors updates adaptors list and metadata", t => {
 // CHANNEL INTEGRATION TESTS
 // =============================================================================
 
-test("handleAdaptorsReceived processes valid data correctly", t => {
+test("requestAdaptors processes valid data correctly via channel", async t => {
   const store = createAdaptorStore();
+  const mockChannel = createMockPhoenixChannel();
+  const mockProvider = createMockPhoenixChannelProvider(mockChannel);
   let _notificationCount = 0;
 
   store.subscribe(() => {
     _notificationCount++;
   });
 
-  // Set loading state first
-  store.setLoading(true);
+  // Set up the channel with successful response containing mockAdaptorsList
+  mockChannel.push = (event: string, _payload: unknown) => {
+    const mockPush = {
+      receive: (status: string, callback: (response?: unknown) => void) => {
+        if (event === "request_adaptors" && status === "ok") {
+          setTimeout(() => {
+            callback({ adaptors: mockAdaptorsList });
+          }, 0);
+        } else if (status === "error") {
+          setTimeout(() => {
+            callback({ reason: "Error" });
+          }, 0);
+        } else if (status === "timeout") {
+          setTimeout(() => {
+            callback();
+          }, 0);
+        }
+        return mockPush;
+      },
+    };
 
-  // Process valid adaptors data
-  store._internal.handleAdaptorsReceived(mockAdaptorsList);
+    return mockPush;
+  };
+
+  // Connect channel and request adaptors
+  store._connectChannel(mockProvider);
+  await store.requestAdaptors();
 
   const state = store.getSnapshot();
 
@@ -234,14 +258,39 @@ test("handleAdaptorsReceived processes valid data correctly", t => {
   });
 });
 
-test("handleAdaptorsReceived handles invalid data gracefully", t => {
+test("requestAdaptors handles invalid data gracefully via channel", async t => {
   const store = createAdaptorStore();
+  const mockChannel = createMockPhoenixChannel();
+  const mockProvider = createMockPhoenixChannelProvider(mockChannel);
 
-  // Set loading state first
-  store.setLoading(true);
+  // Set up the channel with response containing invalid data
+  mockChannel.push = (event: string, _payload: unknown) => {
+    const mockPush = {
+      receive: (status: string, callback: (response?: unknown) => void) => {
+        if (event === "request_adaptors" && status === "ok") {
+          setTimeout(() => {
+            // Return invalid adaptors data (missing required name field)
+            callback({ adaptors: [invalidAdaptorData.missingName] });
+          }, 0);
+        } else if (status === "error") {
+          setTimeout(() => {
+            callback({ reason: "Error" });
+          }, 0);
+        } else if (status === "timeout") {
+          setTimeout(() => {
+            callback();
+          }, 0);
+        }
+        return mockPush;
+      },
+    };
 
-  // Process invalid data (pass array with invalid adaptor object)
-  store._internal.handleAdaptorsReceived([invalidAdaptorData.missingName]);
+    return mockPush;
+  };
+
+  // Connect channel and request adaptors
+  store._connectChannel(mockProvider);
+  await store.requestAdaptors();
 
   const state = store.getSnapshot();
   t.deepEqual(
@@ -256,15 +305,50 @@ test("handleAdaptorsReceived handles invalid data gracefully", t => {
   );
 });
 
-test("handleAdaptorsUpdated delegates to handleAdaptorsReceived", t => {
+test("channel adaptors_updated events are processed correctly", async t => {
   const store = createAdaptorStore();
+  const mockChannel = createMockPhoenixChannel();
+  const mockProvider = createMockPhoenixChannelProvider(mockChannel);
 
-  store.setLoading(true);
-  store._internal.handleAdaptorsUpdated(mockAdaptorsList);
+  // Set up the initial channel response for request_adaptors
+  mockChannel.push = (event: string, _payload: unknown) => {
+    const mockPush = {
+      receive: (status: string, callback: (response?: unknown) => void) => {
+        if (event === "request_adaptors" && status === "ok") {
+          setTimeout(() => {
+            callback({ adaptors: [] }); // Start with empty adaptors
+          }, 0);
+        } else if (status === "error") {
+          setTimeout(() => {
+            callback({ reason: "Error" });
+          }, 0);
+        } else if (status === "timeout") {
+          setTimeout(() => {
+            callback();
+          }, 0);
+        }
+        return mockPush;
+      },
+    };
+
+    return mockPush;
+  };
+
+  // Connect to channel
+  const cleanup = store._connectChannel(mockProvider);
+  await waitForAsync(10);
+
+  // Simulate adaptors_updated event from server
+  const mockChannelWithTest = mockChannel as typeof mockChannel & {
+    _test: { emit: (event: string, message: unknown) => void };
+  };
+  mockChannelWithTest._test.emit("adaptors_updated", mockAdaptorsList);
+
+  await waitForAsync(10);
 
   const state = store.getSnapshot();
 
-  // Should be sorted same as handleAdaptorsReceived
+  // Should be sorted same as requestAdaptors
   const expectedSortedAdaptors = [...mockAdaptorsList]
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(adaptor => ({
@@ -279,6 +363,9 @@ test("handleAdaptorsUpdated delegates to handleAdaptorsReceived", t => {
     expectedSortedAdaptors,
     "Should process update same as received"
   );
+
+  // Cleanup
+  cleanup();
 });
 
 test("connectChannel sets up event listeners and requests adaptors", async t => {
@@ -311,7 +398,7 @@ test("connectChannel sets up event listeners and requests adaptors", async t => 
   };
 
   // Connect to channel
-  const cleanup = store._internal.connectChannel(mockProvider);
+  const cleanup = store._connectChannel(mockProvider);
 
   // Wait for async operations
   await waitForAsync(50);
@@ -386,7 +473,7 @@ test("requestAdaptors handles successful response", async t => {
   };
 
   // Connect channel
-  store._internal.connectChannel(mockProvider);
+  store._connectChannel(mockProvider);
 
   // Request adaptors
   await store.requestAdaptors();
@@ -434,7 +521,7 @@ test("requestAdaptors handles error response", async t => {
   };
 
   // Connect channel
-  store._internal.connectChannel(mockProvider);
+  store._connectChannel(mockProvider);
 
   // Request adaptors (should fail)
   await store.requestAdaptors();
@@ -536,8 +623,10 @@ test("handles multiple subscribers correctly", t => {
   unsubscribe3();
 });
 
-test("handles complex adaptor data transformations", t => {
+test("handles complex adaptor data transformations via channel", async t => {
   const store = createAdaptorStore();
+  const mockChannel = createMockPhoenixChannel();
+  const mockProvider = createMockPhoenixChannelProvider(mockChannel);
 
   // Create adaptors with unsorted versions
   const unsortedAdaptors = [
@@ -559,7 +648,33 @@ test("handles complex adaptor data transformations", t => {
     }),
   ];
 
-  store._internal.handleAdaptorsReceived(unsortedAdaptors);
+  // Set up the channel with unsorted adaptors data
+  mockChannel.push = (event: string, _payload: unknown) => {
+    const mockPush = {
+      receive: (status: string, callback: (response?: unknown) => void) => {
+        if (event === "request_adaptors" && status === "ok") {
+          setTimeout(() => {
+            callback({ adaptors: unsortedAdaptors });
+          }, 0);
+        } else if (status === "error") {
+          setTimeout(() => {
+            callback({ reason: "Error" });
+          }, 0);
+        } else if (status === "timeout") {
+          setTimeout(() => {
+            callback();
+          }, 0);
+        }
+        return mockPush;
+      },
+    };
+
+    return mockPush;
+  };
+
+  // Connect channel and request adaptors
+  store._connectChannel(mockProvider);
+  await store.requestAdaptors();
 
   const state = store.getSnapshot();
 
@@ -583,7 +698,7 @@ test("handles null and undefined channel provider gracefully", async t => {
 
   // Test with null provider - this should handle the null case gracefully
   try {
-    store._internal.connectChannel(null);
+    store._connectChannel(null);
     t.fail("Should have thrown error for null provider");
   } catch (error) {
     t.true(error instanceof TypeError);
@@ -592,7 +707,7 @@ test("handles null and undefined channel provider gracefully", async t => {
 
   // Test with undefined provider
   try {
-    store._internal.connectChannel(undefined);
+    store._connectChannel(undefined);
     t.fail("Should have thrown error for undefined provider");
   } catch (error) {
     t.true(error instanceof TypeError);

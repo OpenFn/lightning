@@ -1,7 +1,10 @@
 /* Minimal types for Phoenix JS client sourced from deps. */
 
-declare module 'phoenix' {
-  export class Channel {}
+declare module "phoenix" {
+  // export class Channel {
+  //   on(event: string, callback: (data: unknown) => void): number;
+  //   off(event: string, callback: (data: unknown) => void): void;
+  // }
   export class Presence {}
 
   export class Socket {
@@ -14,5 +17,3 @@ declare module 'phoenix' {
     onClose(callback: (event?: unknown) => void): number;
   }
 }
-
-
