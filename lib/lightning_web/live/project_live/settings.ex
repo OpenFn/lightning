@@ -8,8 +8,6 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   alias Lightning.Collections
   alias Lightning.Credentials
-  alias Lightning.Credentials.Credential
-  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.ProjectLimiter
@@ -35,11 +33,6 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
 
     project_user = Projects.get_project_user(project, current_user)
-
-    oauth_clients = OauthClients.list_clients(project)
-
-    keychain_credentials =
-      Credentials.list_keychain_credentials_for_project(project)
 
     auth_methods = WebhookAuthMethods.list_for_project(project)
     project_files = Projects.list_project_files(project)
@@ -131,8 +124,6 @@ defmodule LightningWeb.ProjectLive.Settings do
        collections: collections,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
-       keychain_credentials: keychain_credentials,
-       oauth_clients: oauth_clients,
        project_changeset: Projects.change_project(socket.assigns.project),
        project_files: project_files,
        project_repo_connection: repo_connection,
@@ -363,44 +354,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       digest ->
         Projects.update_project_user(project_user, %{digest: digest})
         |> dispatch_flash(socket)
-    end
-  end
-
-  def handle_event(
-        "delete_oauth_client",
-        %{"oauth_client_id" => oauth_client_id},
-        %{assigns: assigns} = socket
-      ) do
-    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
-
-    {:noreply,
-     socket
-     |> put_flash(:info, "Oauth client deleted")
-     |> assign(
-       :oauth_clients,
-       OauthClients.list_clients(assigns.project)
-     )}
-  end
-
-  def handle_event(
-        "delete_credential",
-        %{"credential_id" => credential_id},
-        %{assigns: assigns} = socket
-      ) do
-    credential = Credentials.get_credential!(credential_id)
-
-    case Credentials.schedule_credential_deletion(credential) do
-      {:ok, %Credential{}} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Credential deleted")
-         |> assign(
-           :credentials,
-           Lightning.Credentials.list_credentials(assigns.project)
-         )}
-
-      {:error, %Ecto.Changeset{} = _changeset} ->
-        {:noreply, socket}
     end
   end
 
