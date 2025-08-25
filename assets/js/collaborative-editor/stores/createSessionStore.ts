@@ -161,7 +161,6 @@ export const createSessionStore = () => {
       notify();
     };
 
-    // @ts-expect-error - EventMap is not typed correctly in the library
     provider.on("status", statusHandler);
     provider.on("sync", syncHandler);
 
