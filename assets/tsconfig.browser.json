@@ -4,6 +4,7 @@
     "./tsconfig.base.json"
   ],
   "compilerOptions": {
+    "baseUrl": ".",
     "composite": true,
     "target": "es2020",
     "module": "esnext",
@@ -22,13 +23,11 @@
       "phoenix": [
         "../deps/phoenix/assets/js/phoenix"
       ],
-      "phoenix/*": [
-        "../deps/phoenix/assets/js/phoenix/*"
-      ],
-      "phoenix_live_view": [
-        "../deps/phoenix_live_view/assets/js/types"
+      "phoenix_live_view/constants": [
+        "../deps/phoenix_live_view/assets/js/types/constants.d.ts"
       ],
       "phoenix_live_view/*": [
+        "../deps/phoenix_live_view/assets/js/types/index.d.ts",
         "../deps/phoenix_live_view/assets/js/phoenix_live_view/*"
       ],
       "morphdom": [
