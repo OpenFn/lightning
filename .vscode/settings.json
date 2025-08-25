@@ -24,5 +24,11 @@
   },
   "emmet.includeLanguages": {
     "phoenix-heex": "html"
-  }
+  },
+  "json.schemas": [
+    {
+      "fileMatch": ["*tsconfig*.json"],
+      "url": "http://json.schemastore.org/tsconfig"
+    }
+  ]
 }

@@ -197,9 +197,8 @@ export const createAdaptorStore = (): AdaptorStore => {
   /**
    * Connect to Phoenix channel provider for real-time updates
    */
-  const connectChannel = (provider: unknown) => {
-    const typedProvider = provider as PhoenixChannelProvider;
-    channelProvider = typedProvider;
+  const connectChannel = (provider: PhoenixChannelProvider) => {
+    channelProvider = provider;
 
     const adaptorsListHandler = (message: unknown) => {
       console.debug("AdaptorStore: Received adaptors_list message", message);
@@ -212,16 +211,16 @@ export const createAdaptorStore = (): AdaptorStore => {
     };
 
     // Set up channel listeners
-    if (typedProvider.channel) {
-      typedProvider.channel.on("adaptors_updated", adaptorsUpdatedHandler);
+    if (provider.channel) {
+      provider.channel.on("adaptors_updated", adaptorsUpdatedHandler);
     }
 
     void requestAdaptors();
 
     return () => {
-      if (typedProvider.channel) {
-        typedProvider.channel.off("adaptors_list", adaptorsListHandler);
-        typedProvider.channel.off("adaptors_updated", adaptorsUpdatedHandler);
+      if (provider.channel) {
+        provider.channel.off("adaptors_list", adaptorsListHandler);
+        provider.channel.off("adaptors_updated", adaptorsUpdatedHandler);
       }
       channelProvider = null;
     };

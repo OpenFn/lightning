@@ -5,10 +5,11 @@ export default {
     js: true,
     ts: "module",
   },
-  nodeArguments: ["--loader=ts-node/esm", "--no-warnings"],
+  nodeArguments: ["--import=tsimp", "--no-warnings"],
   filterNodeArgumentsForWorkerThreads: argument => !processOnly.has(argument),
   files: ["test/**/*.test.ts"],
   environmentVariables: {
     TS_NODE_PROJECT: "tsconfig.test.json",
+    TSIMP_DIAG: "ignore",
   },
 };

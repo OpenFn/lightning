@@ -1,5 +1,5 @@
 {
-  "extends": "@tsconfig/node-lts/tsconfig.json",
+  "extends": ["@tsconfig/node-lts/tsconfig.json", "./tsconfig.base.json"],
   "ts-node": {
     "transpileOnly": true,
     "files": true,
@@ -15,5 +15,11 @@
   },
   "files": [],
   "include": ["*.d.ts", "test/**/*", "js/**/*"],
-  "exclude": ["node_modules/**"]
+  "exclude": ["node_modules/**"],
+  "tsimp": {
+    "compilerOptions": {
+      "skipLibCheck": true,
+      "strict": false
+    }
+  }
 }

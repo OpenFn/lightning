@@ -258,7 +258,6 @@ export const SessionProvider = ({
         () => {
           console.log("socket disconnected");
           setTimeout(() => {
-            // @ts-expect-error - socket.connect is not typed correctly
             socket.connect();
             console.log("socket connected");
           }, timeout);

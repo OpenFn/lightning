@@ -1,49 +1,19 @@
 {
-  "extends": [
-    "@tsconfig/strictest/tsconfig.json",
-    "./tsconfig.base.json"
-  ],
+  "extends": ["@tsconfig/strictest/tsconfig.json", "./tsconfig.base.json"],
   "compilerOptions": {
-    "baseUrl": ".",
     "composite": true,
     "target": "es2020",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "lib": [
-      "es2020",
-      "dom",
-      "dom.iterable"
-    ],
-    "jsx": "react-jsx",
-    "rootDir": "../",
-    "paths": {
-      "#/*": [
-        "./js/*"
-      ],
-      "phoenix": [
-        "../deps/phoenix/assets/js/phoenix"
-      ],
-      "phoenix_live_view/constants": [
-        "../deps/phoenix_live_view/assets/js/types/constants.d.ts"
-      ],
-      "phoenix_live_view/*": [
-        "../deps/phoenix_live_view/assets/js/types/index.d.ts",
-        "../deps/phoenix_live_view/assets/js/phoenix_live_view/*"
-      ],
-      "morphdom": [
-        "./node_modules/morphdom"
-      ]
-    }
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "jsx": "react-jsx"
   },
   "include": [
     "js/**/*",
     "vendor/**/*",
     "*.d.ts",
-    "../deps/phoenix/assets/js/phoenix/**/*",
-    "../deps/phoenix_live_view/assets/js/types/**/*",
-    "../deps/phoenix_live_view/assets/js/phoenix_live_view/**/*"
+    "../deps/phoenix_live_view/**/*",
+    "../deps/phoenix/**/*"
   ],
-  "exclude": [
-    "node_modules/**",
-  ]
+  "exclude": ["node_modules/**"]
 }
