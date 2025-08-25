@@ -7,5 +7,5 @@ export default {
   },
   nodeArguments: ['--loader=ts-node/esm', '--no-warnings'],
   filterNodeArgumentsForWorkerThreads: argument => !processOnly.has(argument),
-  files: ['test/**/*test.ts'],
+  files: ['test/**/*.test.ts'],
 };
