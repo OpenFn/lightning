@@ -108,12 +108,12 @@
 import { produce } from "immer";
 import * as Y from "yjs";
 
+import { channelRequest } from "../hooks/useChannel";
 import { JobSchema } from "../types/job";
 import type { Session } from "../types/session";
 import type { Workflow } from "../types/workflow";
 
 import { createWithSelector } from "./common";
-import { channelRequest } from "../hooks/useChannel";
 
 const JobShape = JobSchema.shape;
 // Helper to update derived state (defined first to avoid hoisting issues)
