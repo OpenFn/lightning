@@ -14,9 +14,9 @@ interface CollaborativeWorkflowDiagramProps {
   inspectorId?: string;
 }
 
-export function CollaborativeWorkflowDiagram({ 
-  className = "h-full w-full", 
-  inspectorId 
+export function CollaborativeWorkflowDiagram({
+  className = "h-full w-full",
+  inspectorId,
 }: CollaborativeWorkflowDiagramProps) {
   const workflow = useWorkflowState(state => state.workflow);
   const { currentNode, selectNode } = useNodeSelection();
@@ -45,4 +45,4 @@ export function CollaborativeWorkflowDiagram({
       </ReactFlowProvider>
     </div>
   );
-};
+}
