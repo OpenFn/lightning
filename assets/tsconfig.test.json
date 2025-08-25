@@ -3,7 +3,8 @@
   "ts-node": {
     "transpileOnly": true,
     "files": true,
-    "esm": true
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
   },
   "compilerOptions": {
     "composite": true,
@@ -13,6 +14,6 @@
     "jsx": "react-jsx"
   },
   "files": [],
-  "include": ["*.d.ts", "test/**/*"],
+  "include": ["*.d.ts", "test/**/*", "js/**/*"],
   "exclude": ["node_modules/**"]
 }
