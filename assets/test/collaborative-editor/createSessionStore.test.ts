@@ -10,68 +10,126 @@
  */
 
 import test from "ava";
+import * as sinon from "sinon";
+
 import { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as awarenessProtocol from "y-protocols/awareness";
 import { Doc as YDoc } from "yjs";
 
 import { createSessionStore } from "../../js/collaborative-editor/stores/createSessionStore";
 
-import {
-  createMockPhoenixChannel,
-  MockPhoenixChannel,
-} from "./mocks/phoenixChannel";
+import { createMockPhoenixChannel } from "./mocks/phoenixChannel";
 import { createMockSocket } from "./mocks/phoenixSocket";
 
-// Mock PhoenixChannelProvider - must match real interface
-const createMockPhoenixChannelProvider = (): {
-  channel: MockPhoenixChannel;
-  synced: boolean;
-  shouldConnect: boolean;
-  on: (event: string, handler: (message: unknown) => void) => void;
-  off: (event: string, handler: (message: unknown) => void) => void;
-} & Partial<PhoenixChannelProvider> => {
-  const eventHandlers = new Map<string, Set<(message: unknown) => void>>();
+// Test helper interface for triggering mock events
+interface MockProviderTestHelpers {
+  triggerStatus: (status: string) => void;
+  triggerSync: (synced: boolean) => void;
+  triggerSynced: (synced: boolean) => void;
+  getEventHandlers: () => Map<string, Set<(...args: unknown[]) => unknown>>;
+}
 
-  return {
-    channel: createMockPhoenixChannel(),
-    synced: false,
-    shouldConnect: true,
+// Factory for creating properly mocked PhoenixChannelProvider instances
+const createMockPhoenixChannelProvider = (
+  doc?: YDoc,
+  awareness?: awarenessProtocol.Awareness
+): PhoenixChannelProvider & { _test: MockProviderTestHelpers } => {
+  const eventHandlers = new Map<string, Set<(...args: unknown[]) => unknown>>();
 
-    on(event: string, handler: (message: unknown) => void) {
+  // Create a stub that extends the real class but doesn't connect
+  const stub = sinon.createStubInstance(PhoenixChannelProvider);
+
+  // Mock basic properties
+  stub.synced = false;
+  stub.shouldConnect = true;
+  stub.doc = doc || new YDoc();
+  stub.awareness = awareness || new awarenessProtocol.Awareness(stub.doc);
+  stub.channel = createMockPhoenixChannel() as any;
+  stub.serverUrl = "ws://localhost:4000/socket";
+  stub.roomname = "test:room";
+  stub.bcChannel = "test-bc-channel";
+  stub.bcconnected = false;
+  stub.disableBc = false;
+  stub.wsUnsuccessfulReconnects = 0;
+  stub.wsLastMessageReceived = 0;
+
+  // Mock event system
+  stub.on.callsFake(
+    (event: string, handler: (...args: unknown[]) => unknown) => {
       if (!eventHandlers.has(event)) {
         eventHandlers.set(event, new Set());
       }
       eventHandlers.get(event)?.add(handler);
-    },
+      return handler as any;
+    }
+  );
 
-    off(event: string, handler: (message: unknown) => void) {
+  stub.off.callsFake(
+    (event: string, handler: (...args: unknown[]) => unknown) => {
       const handlers = eventHandlers.get(event);
       if (handlers) {
         handlers.delete(handler);
       }
+    }
+  );
+
+  stub.emit.callsFake((event: string, args: unknown[]) => {
+    const handlers = eventHandlers.get(event);
+    if (handlers) {
+      handlers.forEach(handler => handler(...args));
+    }
+  });
+
+  // Mock lifecycle methods
+  stub.destroy.callsFake(() => {
+    eventHandlers.clear();
+  });
+
+  stub.connect.callsFake(() => {
+    stub.shouldConnect = true;
+  });
+
+  stub.disconnect.callsFake(() => {
+    stub.shouldConnect = false;
+  });
+
+  stub.connectBc.callsFake(() => {
+    stub.bcconnected = true;
+  });
+
+  stub.disconnectBc.callsFake(() => {
+    stub.bcconnected = false;
+  });
+
+  // Add test helpers for triggering events
+  (stub as any)._test = {
+    triggerStatus: (status: string) => {
+      const handlers = eventHandlers.get("status");
+      if (handlers) {
+        handlers.forEach(handler => handler([{ status }]));
+      }
     },
 
-    destroy() {
-      eventHandlers.clear();
+    triggerSync: (synced: boolean) => {
+      stub.synced = synced;
+      const handlers = eventHandlers.get("sync");
+      if (handlers) {
+        handlers.forEach(handler => handler(synced));
+      }
     },
 
-    // Test helper to trigger events
-    _test: {
-      triggerStatus: (status: string) => {
-        const handlers = eventHandlers.get("status");
-        if (handlers) {
-          handlers.forEach(handler => handler([{ status }]));
-        }
-      },
-
-      triggerSync: (synced: boolean) => {
-        const handlers = eventHandlers.get("sync");
-        if (handlers) {
-          handlers.forEach(handler => handler(synced));
-        }
-      },
+    triggerSynced: (synced: boolean) => {
+      stub.synced = synced;
+      const handlers = eventHandlers.get("synced");
+      if (handlers) {
+        handlers.forEach(handler => handler([synced]));
+      }
     },
+
+    getEventHandlers: () => eventHandlers,
   };
+
+  return stub as any;
 };
 
 // =============================================================================
@@ -678,16 +736,8 @@ test("destroySession performs complete cleanup", t => {
   const awareness = new awarenessProtocol.Awareness(ydoc);
   store.setAwareness(awareness);
 
-  // Mock provider to track cleanup with proper interface
-  const cleanup = { providerDestroyed: false };
-  const mockProvider = {
-    destroy: () => {
-      cleanup.providerDestroyed = true;
-    },
-    synced: true,
-    on: () => {},
-    off: () => {},
-  } as any;
+  // Create mock provider using the factory
+  const mockProvider = createMockPhoenixChannelProvider(ydoc, awareness);
 
   // Set up provider via connectProvider to avoid constructor issues
   store.connectProvider(mockProvider);
@@ -749,7 +799,10 @@ test("destroySession performs complete cleanup", t => {
   // Verify destruction was called
   t.true(ydocDestroyed, "YDoc destroy should have been called");
   t.true(awarenessDestroyed, "Awareness destroy should have been called");
-  t.true(cleanup.providerDestroyed, "Provider destroy should have been called");
+  t.true(
+    (mockProvider.destroy as sinon.SinonStub).calledOnce,
+    "Provider destroy should have been called"
+  );
 });
 
 test("destroySession is safe when called on empty state", t => {
@@ -804,21 +857,9 @@ test("destroySession handles partial state cleanup", t => {
 test("destroySession cleans up event handlers", t => {
   const store = createSessionStore();
 
-  // Use a proper mutable object for tracking
-  const cleanup = { handlersRemoved: false, providerDestroyed: false };
-  const mockProvider = {
-    destroy: () => {
-      cleanup.providerDestroyed = true;
-    },
-    synced: true,
-    on: () => {},
-    off: () => {
-      cleanup.handlersRemoved = true;
-    },
-  } as any;
-
   // Set up state and connect provider (which sets up handlers)
   const ydoc = store.initializeYDoc();
+  const mockProvider = createMockPhoenixChannelProvider(ydoc);
   store.connectProvider(mockProvider);
 
   // Verify initial state
@@ -828,8 +869,14 @@ test("destroySession cleans up event handlers", t => {
   store.destroySession();
 
   // Verify handler cleanup and provider destruction
-  t.true(cleanup.handlersRemoved, "Event handlers should be cleaned up");
-  t.true(cleanup.providerDestroyed, "Provider should be destroyed");
+  t.true(
+    (mockProvider.off as sinon.SinonStub).called,
+    "Event handlers should be cleaned up"
+  );
+  t.true(
+    (mockProvider.destroy as sinon.SinonStub).calledOnce,
+    "Provider should be destroyed"
+  );
 });
 
 test("disconnectProvider maintains existing comprehensive cleanup", t => {
@@ -838,18 +885,8 @@ test("disconnectProvider maintains existing comprehensive cleanup", t => {
   const awareness = new awarenessProtocol.Awareness(ydoc);
   store.setAwareness(awareness);
 
-  // Mock provider to track cleanup with proper mutable tracking
-  const cleanup = { handlersRemoved: false, providerDestroyed: false };
-  const mockProvider = {
-    destroy: () => {
-      cleanup.providerDestroyed = true;
-    },
-    synced: true,
-    on: () => {},
-    off: () => {
-      cleanup.handlersRemoved = true;
-    },
-  } as any;
+  // Create mock provider using the factory
+  const mockProvider = createMockPhoenixChannelProvider(ydoc, awareness);
 
   store.connectProvider(mockProvider);
 
@@ -892,8 +929,14 @@ test("disconnectProvider maintains existing comprehensive cleanup", t => {
   // Verify all destruction was called
   t.true(ydocDestroyed, "YDoc destroy should have been called");
   t.true(awarenessDestroyed, "Awareness destroy should have been called");
-  t.true(cleanup.providerDestroyed, "Provider destroy should have been called");
-  t.true(cleanup.handlersRemoved, "Event handlers should be cleaned up");
+  t.true(
+    (mockProvider.destroy as sinon.SinonStub).calledOnce,
+    "Provider destroy should have been called"
+  );
+  t.true(
+    (mockProvider.off as sinon.SinonStub).called,
+    "Event handlers should be cleaned up"
+  );
 });
 
 // =============================================================================
@@ -917,13 +960,8 @@ test("settled state is included in state reset operations", t => {
   const awareness = new awarenessProtocol.Awareness(ydoc);
   store.setAwareness(awareness);
 
-  // Mock provider
-  const mockProvider = {
-    destroy: () => {},
-    synced: true,
-    on: () => {},
-    off: () => {},
-  } as any;
+  // Create mock provider using the factory
+  const mockProvider = createMockPhoenixChannelProvider(ydoc, awareness);
 
   store.connectProvider(mockProvider);
 
@@ -955,23 +993,8 @@ test("settled state tracks document settling process", t => {
   const store = createSessionStore();
   const ydoc = store.initializeYDoc();
 
-  // Create mock provider that can trigger sync and update events
-  let syncHandler: ((synced: boolean) => void) | null = null;
-  let statusHandler: ((events: Array<{ status: string }>) => void) | null =
-    null;
-
-  const mockProvider = {
-    destroy: () => {},
-    synced: false,
-    on: (event: string, handler: Function) => {
-      if (event === "sync") {
-        syncHandler = handler as (synced: boolean) => void;
-      } else if (event === "status") {
-        statusHandler = handler as (events: Array<{ status: string }>) => void;
-      }
-    },
-    off: () => {},
-  };
+  // Create mock provider using the factory
+  const mockProvider = createMockPhoenixChannelProvider(ydoc);
 
   // Connect provider - this should start settling when connected
   store.connectProvider(mockProvider);
@@ -980,18 +1003,14 @@ test("settled state tracks document settling process", t => {
   t.is(store.settled, false, "settled should be false initially");
 
   // Simulate connection (this should trigger settling)
-  if (statusHandler) {
-    statusHandler([{ status: "connected" }]);
+  mockProvider._test.triggerStatus("connected");
 
-    // Settled should still be false until both sync and update events occur
-    t.is(
-      store.settled,
-      false,
-      "settled should be false until sync and update complete"
-    );
-
-    // This test validates the structure is in place for settling
-  }
+  // Settled should still be false until both sync and update events occur
+  t.is(
+    store.settled,
+    false,
+    "settled should be false until sync and update complete"
+  );
 
   t.pass("settling process integration test completed");
 });
@@ -1000,47 +1019,30 @@ test("settling is reset on reconnection", t => {
   const store = createSessionStore();
   const ydoc = store.initializeYDoc();
 
-  let statusHandler: ((events: Array<{ status: string }>) => void) | null =
-    null;
-
-  const mockProvider = {
-    destroy: () => {},
-    synced: false,
-    on: (event: string, handler: Function) => {
-      if (event === "status") {
-        statusHandler = handler as (events: Array<{ status: string }>) => void;
-      }
-    },
-    off: () => {},
-  };
+  // Create mock provider using the factory
+  const mockProvider = createMockPhoenixChannelProvider(ydoc);
 
   store.connectProvider(mockProvider);
 
   // Simulate initial connection
-  if (statusHandler) {
-    statusHandler([{ status: "connected" }]);
-    t.is(
-      store.settled,
-      false,
-      "settled should be false after initial connection"
-    );
+  mockProvider._test.triggerStatus("connected");
+  t.is(
+    store.settled,
+    false,
+    "settled should be false after initial connection"
+  );
 
-    // Simulate disconnection
-    statusHandler([{ status: "disconnected" }]);
-    t.is(
-      store.settled,
-      false,
-      "settled should remain false after disconnection"
-    );
+  // Simulate disconnection
+  mockProvider._test.triggerStatus("disconnected");
+  t.is(store.settled, false, "settled should remain false after disconnection");
 
-    // Simulate reconnection (this should restart settling)
-    statusHandler([{ status: "connected" }]);
-    t.is(
-      store.settled,
-      false,
-      "settled should be false after reconnection, ready to settle again"
-    );
-  }
+  // Simulate reconnection (this should restart settling)
+  mockProvider._test.triggerStatus("connected");
+  t.is(
+    store.settled,
+    false,
+    "settled should be false after reconnection, ready to settle again"
+  );
 
   t.pass("reconnection settling reset test completed");
 });
