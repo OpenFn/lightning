@@ -5,7 +5,9 @@
  * across different test files for consistent testing of channel-dependent features.
  */
 
-export interface MockPhoenixChannel {
+import { type Channel } from "phoenix";
+
+export interface MockPhoenixChannel extends Channel {
   on: (event: string, handler: (message: unknown) => void) => void;
   off: (event: string, handler: (message: unknown) => void) => void;
   push: (event: string, payload: unknown, timeout?: number) => MockPush;
@@ -14,6 +16,9 @@ export interface MockPhoenixChannel {
   onClose: (callback: () => void) => void;
   onError: (callback: (error: unknown) => void) => void;
   state: "closed" | "errored" | "joined" | "joining" | "leaving";
+  topic: string;
+  joinPush: MockPush;
+  socket: unknown;
 }
 
 export interface MockPush {
@@ -27,14 +32,32 @@ export interface MockPhoenixChannelProvider {
 /**
  * Creates a mock Phoenix channel for testing
  */
-export function createMockPhoenixChannel(): MockPhoenixChannel {
+export function createMockPhoenixChannel(
+  topic: string = "test:channel"
+): MockPhoenixChannel {
   const eventHandlers = new Map<string, Set<(message: unknown) => void>>();
   let channelState: MockPhoenixChannel["state"] = "closed";
   const closeCallbacks: (() => void)[] = [];
   const errorCallbacks: ((error: unknown) => void)[] = [];
 
+  const createMockPush = (): MockPush => ({
+    receive(status: string, callback: (response?: unknown) => void) {
+      setTimeout(() => {
+        if (status === "ok") {
+          callback({ status: "ok" });
+        } else if (status === "error") {
+          callback({ error: "Mock error" });
+        }
+      }, 0);
+      return this;
+    },
+  });
+
   const mockChannel: MockPhoenixChannel = {
     state: channelState,
+    topic,
+    socket: null,
+    joinPush: createMockPush(),
 
     on(event: string, handler: (message: unknown) => void) {
       if (!eventHandlers.has(event)) {
@@ -50,58 +73,28 @@ export function createMockPhoenixChannel(): MockPhoenixChannel {
       }
     },
 
-    push(event: string, _payload: unknown, _timeout?: number): MockPush {
-      const mockPush: MockPush = {
-        receive(status: string, callback: (response?: unknown) => void) {
-          // Simulate async response
-          setTimeout(() => {
-            if (status === "ok") {
-              // Simulate successful response based on event type
-              if (event === "request_adaptors") {
-                callback({ adaptors: [] });
-              } else {
-                callback({ status: "ok" });
-              }
-            } else if (status === "error") {
-              callback({ error: "Mock error" });
-            }
-          }, 0);
-          return mockPush;
-        },
-      };
-      return mockPush;
+    push(_event: string, _payload: unknown, _timeout?: number): MockPush {
+      return createMockPush();
     },
 
     join(_timeout?: number): MockPush {
       channelState = "joining";
-      const mockPush: MockPush = {
-        receive(status: string, callback: (response?: unknown) => void) {
-          setTimeout(() => {
-            if (status === "ok") {
-              channelState = "joined";
-              callback({ status: "joined" });
-            }
-          }, 0);
-          return mockPush;
-        },
-      };
-      return mockPush;
+      const joinPush = createMockPush();
+      setTimeout(() => {
+        channelState = "joined";
+        mockChannel.state = channelState;
+      }, 0);
+      return joinPush;
     },
 
     leave(_timeout?: number): MockPush {
       channelState = "leaving";
-      const mockPush: MockPush = {
-        receive(status: string, callback: (response?: unknown) => void) {
-          setTimeout(() => {
-            if (status === "ok") {
-              channelState = "closed";
-              callback({ status: "left" });
-            }
-          }, 0);
-          return mockPush;
-        },
-      };
-      return mockPush;
+      const leavePush = createMockPush();
+      setTimeout(() => {
+        channelState = "closed";
+        mockChannel.state = channelState;
+      }, 0);
+      return leavePush;
     },
 
     onClose(callback: () => void) {
