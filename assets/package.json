@@ -4,7 +4,7 @@
   "main": "js/app.js",
   "scripts": {
     "start": "node dev-server.js",
-    "test": "NODE_OPTIONS=\"--loader=ts-node/esm --no-warnings\" TS_NODE_PROJECT=tsconfig.test.json ava --",
+    "test": "NODE_OPTIONS=\"--loader=ts-node/esm --no-warnings\" TS_NODE_PROJECT=tsconfig.test.json ava",
     "test-report": "NODE_OPTIONS=\"--loader=ts-node/esm --no-warnings\" TS_NODE_PROJECT=tsconfig.test.json ava --tap | tap-xunit > ../test/reports/ava.xml",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
