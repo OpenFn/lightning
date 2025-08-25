@@ -260,7 +260,6 @@ export const createCredentialStore = (): CredentialStore => {
       console.error("CredentialStore: Credential request failed", error);
       setError("Failed to request credentials");
     }
-
   };
 
   // =============================================================================
@@ -280,7 +279,7 @@ export const createCredentialStore = (): CredentialStore => {
     clearError,
 
     // Internal methods (not part of public CredentialStore interface)
-    _connectChannel
+    _connectChannel,
   };
 };
 
