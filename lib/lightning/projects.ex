@@ -1216,29 +1216,81 @@ defmodule Lightning.Projects do
     query |> Repo.all()
   end
 
-  # List all sandboxes under a parent
+  @doc """
+  Returns the *direct* sandboxes (children) of a parent project, ordered by `name` (ASC).
+
+  This is a flat view: only rows where `parent.id == child.parent_id` are returned.
+  If we later support arbitrarily deep nesting, switch this to a recursive CTE.
+  """
   @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
   def list_sandboxes(parent_id) when is_binary(parent_id) do
     from(p in Project, where: p.parent_id == ^parent_id, order_by: p.name)
     |> Repo.all()
   end
 
-  # Convenience to create a sandbox from a parent. Emails default off.
+  @doc """
+  Creates a sandbox under the given `parent` by delegating to `create_project/2`.
+
+  This is a convenience wrapper that sets `:parent_id` and preserves the
+  existing behavior around collaborator emails (off by default unless `schedule_email?` is `true`).
+
+  ## Notes
+
+  * Child names are scoped-unique by `(parent_id, name)`. Root names may repeat,
+    but two siblings cannot share a name (enforced by the `projects_unique_child_name` index).
+  * This function does **not** clone workflows, credentials, or dataclips. It only creates
+    a new project row with `parent_id` set. See sandbox provisioning flow for full cloning.
+
+  ## Returns
+
+  * `{:ok, %Project{}}` on success
+  * `{:error, %Ecto.Changeset{}}` on validation/unique errors
+  """
   @spec create_sandbox(Project.t(), map(), boolean()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
   def create_sandbox(%Project{id: parent_id}, attrs, schedule_email? \\ false) do
     attrs |> Map.put(:parent_id, parent_id) |> create_project(schedule_email?)
   end
 
-  # Read-only "workspace" view: parent + all its direct sandboxes.
-  # (If you later allow nested sandboxes arbitrarily deep, switch to a recursive CTE.)
+  @doc """
+  Returns a read-only “workspace” view for a parent project: the parent itself
+  plus all of its direct sandboxes (unique set, no preloads).
+
+  Use this for nav/filters where showing the parent alongside its sandboxes is needed.
+
+  ## Notes
+
+  * Order is not guaranteed. Sort the resulting list if a specific order is needed.
+  * Not recursive. If we later model deeper hierarchies, use a recursive CTE.
+  """
   @spec get_workspace_projects(Project.t()) :: [Project.t()]
   def get_workspace_projects(%Project{id: parent_id} = parent) do
     ([parent] ++ list_sandboxes(parent_id))
     |> Enum.uniq_by(& &1.id)
   end
 
-  @doc "Compute a 12-hex project head from latest per-workflow hashes (deterministic)."
+  @doc """
+  Computes a deterministic 12-hex “project head” hash from the *latest* version
+  hash per workflow.
+
+  The algorithm:
+  1. For each workflow in the project, select the most recent row in `workflow_versions`
+     by `(inserted_at DESC, id DESC)`.
+  2. Build pairs `[[workflow_id_as_string, hash], ...]`.
+  3. JSON-encode the pairs and take `sha256` of the bytes.
+  4. Return the first 12 lowercase hex chars.
+
+  ## Guarantees
+
+  * **Deterministic** for a given set of latest heads.
+  * If a project has no workflow versions, returns the digest of `[]`, i.e. a stable
+    12-hex string representing “empty”.
+
+  ## Use cases
+
+  * Change detection across environments.
+  * Cache keys and optimistic comparisons (e.g. “is this workspace up-to-date?”).
+  """
   def compute_project_head_hash(project_id) do
     pairs =
       from(v in WorkflowVersion,
@@ -1259,8 +1311,19 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Append a new project head hash (12-hex) to project.version_history, append-only.
-  Returns {:ok, project} or {:error, :bad_hash}.
+  Appends a new 12-hex head hash to `project.version_history` (append-only).
+
+  This is a lenient wrapper that validates the format and returns tagged tuples.
+  For atomic locking and errors by exception, use `append_project_head!/2`.
+
+  ## Validation
+
+  * `hash` must match `~r/^[a-f0-9]{12}$/`.
+  * No duplicates: if the hash already exists in the array, this is a no-op.
+
+  ## Concurrency
+
+  The underlying `!/2` variant locks the row (`FOR UPDATE`) to avoid lost updates.
   """
   @spec append_project_head(Project.t(), String.t()) ::
           {:ok, Project.t()} | {:error, :bad_hash}
@@ -1272,7 +1335,22 @@ defmodule Lightning.Projects do
     end
   end
 
-  @doc false
+  @doc """
+  Like `append_project_head/2`, but raises on invalid input and performs the
+  append within a transaction that locks the project row.
+
+  ## Behavior
+
+  * Raises `ArgumentError` if `hash` is not 12 lowercase hex.
+  * Uses `SELECT … FOR UPDATE` to read the current array, appends if missing,
+    and writes back in the same transaction.
+  * Idempotent: if the hash is already present, returns the unchanged project.
+
+  ## Why lock?
+
+  Without a lock, concurrent appends could interleave and drop writes. Locking
+  is cheap here and guarantees append-only semantics.
+  """
   @spec append_project_head!(Project.t(), String.t()) :: Project.t()
   def append_project_head!(%Project{id: id}, hash) when is_binary(hash) do
     unless String.match?(hash, ~r/^[a-f0-9]{12}$/),

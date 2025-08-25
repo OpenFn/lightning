@@ -1,5 +1,16 @@
 defmodule Lightning.Workflows.WorkflowVersion do
-  @moduledoc "Provenance rows for workflow versions (hash + source + inserted_at)."
+  @moduledoc """
+  Immutable provenance rows for workflow heads.
+
+  - One row per head: `hash` (12-char lowercase hex), `source` ("app" | "cli"),
+    `workflow_id`, `inserted_at` (UTC μs).
+  - Append-only: `updated_at` disabled; rows are never mutated.
+  - Uniqueness: `(workflow_id, hash)` unique; same hash may exist across workflows.
+  - Validation mirrors DB checks: hash format, allowed sources, valid `workflow_id`.
+  - Deterministic ordering via `:utc_datetime_usec` timestamps.
+  - Use `Lightning.WorkflowVersions` to record/query and keep
+    `workflows.version_history` in sync.
+  """
   use Lightning.Schema
   import Ecto.Changeset
   alias Lightning.Workflows.Workflow
