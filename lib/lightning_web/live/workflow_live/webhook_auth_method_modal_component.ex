@@ -149,6 +149,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       <.modal
         id={"#{@id}_modal"}
         show={true}
+        on_close={@on_close}
         width={if(@action in [:new, :view], do: "min-w-1/3 max-w-xl", else: "")}
       >
         <.auth_methods_index :if={@action == :index} {assigns} />

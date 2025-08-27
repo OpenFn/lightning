@@ -158,7 +158,7 @@ defmodule LightningWeb.Components.Modal do
     )
     |> JS.hide(
       to: "##{id}-container",
-      time: 200,
+      time: 50,
       transition:
         {"transition-all transform ease-in duration-200",
          "opacity-100 translate-y-0 sm:scale-100",
