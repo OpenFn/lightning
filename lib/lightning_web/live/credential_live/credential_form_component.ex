@@ -193,7 +193,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
-          <.modal_title action={@action} />
+          <%= if @action in [:edit] do %>
+            Edit a credential
+          <% else %>
+            Add a credential
+          <% end %>
         </:title>
         <div class="container mx-auto">
           <.form
@@ -257,7 +261,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
-          <.modal_title action={@action} />
+          <%= if @action in [:edit] do %>
+            Edit a credential
+          <% else %>
+            Add a credential
+          <% end %>
         </:title>
         <LightningWeb.Components.Oauth.missing_client_warning :if={
           !@selected_oauth_client
@@ -291,7 +299,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
-          <.modal_title action={@action} />
+          <%= if @action in [:edit] do %>
+            Edit a credential
+          <% else %>
+            Add a credential
+          <% end %>
         </:title>
         <.form
           :let={f}
@@ -437,16 +449,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   defp get_api_version(%{body: %{"apiVersion" => api_version}}), do: api_version
 
   defp get_api_version(_), do: nil
-
-  defp modal_title(assigns) do
-    ~H"""
-    <%= if @action in [:edit] do %>
-      Edit a credential
-    <% else %>
-      Add a credential
-    <% end %>
-    """
-  end
 
   # NOTE: this function is sometimes called from inside a Task and therefore
   # requires a `pid`

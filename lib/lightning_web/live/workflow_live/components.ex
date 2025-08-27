@@ -414,7 +414,12 @@ defmodule LightningWeb.WorkflowLive.Components do
                         else: ""
                       )
                     ]}
-                    phx-click={show_modal("webhooks_auth_method_modal")}
+                    phx-click={
+                      @can_write_webhook_auth_method &&
+                        JS.push("show_modal",
+                          value: %{target: "webhook_auth_method"}
+                        )
+                    }
                   >
                     Add authentication
                     <%= if @action == :new do %>
@@ -439,12 +444,18 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <div>
                   <.link
                     href="#"
+                    id="manageAuthenticationLink"
                     class={[
                       "text-primary-700 underline hover:text-primary-800",
                       (!@can_write_webhook_auth_method or @disabled) &&
                         "text-gray-500 cursor-not-allowed"
                     ]}
-                    phx-click={show_modal("webhooks_auth_method_modal")}
+                    phx-click={
+                      @can_write_webhook_auth_method &&
+                        JS.push("show_modal",
+                          value: %{target: "webhook_auth_method"}
+                        )
+                    }
                   >
                     Manage authentication
                   </.link>
@@ -761,6 +772,67 @@ defmodule LightningWeb.WorkflowLive.Components do
         </:body>
       </.table>
     <% end %>
+    """
+  end
+
+  attr :id, :any, required: true
+  attr :on_close, JS, required: true
+
+  attr :webhook_auth_method, Lightning.Workflows.WebhookAuthMethod,
+    required: true
+
+  def linked_triggers_for_webhook_auth_method_modal(assigns) do
+    assigns =
+      assign(assigns,
+        webhook_auth_method:
+          Lightning.Repo.preload(assigns.webhook_auth_method,
+            triggers: [:workflow]
+          )
+      )
+
+    ~H"""
+    <.modal id={@id} show={true} on_close={@on_close}>
+      <:title>
+        <div class="flex justify-between">
+          <span>Associated Workflow Triggers</span>
+          <button
+            phx-click={@on_close}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <div class="space-y-4">
+        <p class="mb-4">
+          You have {length(@webhook_auth_method.triggers)}
+          <span class="font-semibold">Workflows</span>
+          associated with the "<span class="font-semibold">My Auth</span>" authentication method:
+        </p>
+        <ul class="list-disc pl-5 mb-4">
+          <li :for={trigger <- @webhook_auth_method.triggers} class="mb-2">
+            <.link
+              navigate={
+                ~p"/projects/#{@webhook_auth_method.project_id}/w/#{trigger.workflow.id}?s=#{trigger.id}"
+              }
+              class="link flex-1 rounded-md"
+              role="button"
+              target="_blank"
+            >
+              {trigger.workflow.name}
+            </.link>
+          </li>
+        </ul>
+      </div>
+      <:footer>
+        <.button type="button" phx-click={@on_close} theme="primary">
+          Close
+        </.button>
+      </:footer>
+    </.modal>
     """
   end
 

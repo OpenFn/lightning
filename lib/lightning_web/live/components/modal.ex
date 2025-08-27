@@ -75,17 +75,12 @@ defmodule LightningWeb.Components.Modal do
               ]}
             >
               <header :if={@title != []} class="pl-[24px] pr-[24px]">
-                <h1
-                  id={"#{@id}-title"}
-                  class="text-lg font-semibold leading-5 text-zinc-800"
-                >
+                <.modal_title id={"#{@id}-title"}>
                   {render_slot(@title)}
-                </h1>
-                <%= for subtitle <- @subtitle do %>
-                  <p class="mt-2 text-sm leading-4.5 text-zinc-600">
-                    {render_slot(subtitle)}
-                  </p>
-                <% end %>
+                  <:subtitle>
+                    {render_slot(@subtitle)}
+                  </:subtitle>
+                </.modal_title>
               </header>
               <div :if={@title != []} class="flex-grow bg-gray-100 h-0.5 my-[16px]">
               </div>
@@ -102,6 +97,23 @@ defmodule LightningWeb.Components.Modal do
         </div>
       </div>
     </div>
+    """
+  end
+
+  attr :rest, :global
+  slot :subtitle
+  slot :inner_block, required: true
+
+  def modal_title(assigns) do
+    ~H"""
+    <h1 class="text-lg font-semibold leading-5 text-zinc-800" {@rest}>
+      {render_slot(@inner_block)}
+    </h1>
+    <%= for subtitle <- @subtitle do %>
+      <p class="mt-2 text-sm leading-4.5 text-zinc-600">
+        {render_slot(subtitle)}
+      </p>
+    <% end %>
     """
   end
 

@@ -908,14 +908,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.live_component
             :if={
               @live_action == :edit && @can_write_webhook_auth_method &&
-                @selected_trigger && @snapshot_version_tag == "latest"
+                @selected_trigger && @snapshot_version_tag == "latest" &&
+                @active_modal == :webhook_auth_method
             }
             module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
-            id="webhooks_auth_method_modal"
-            action={:new}
+            id="manage_webhook_auth_methods"
+            action={:index}
             trigger={@selected_trigger}
             project={@project}
             current_user={@current_user}
+            on_close={JS.push("close_active_modal")}
+            on_save={
+              fn trigger_or_auth_method ->
+                send(self(), {:webhook_auth_method_updated, trigger_or_auth_method})
+              end
+            }
             return_to={
               Helpers.build_url(assigns, [Helpers.param("s", @selected_trigger.id)])
             }
@@ -1414,6 +1421,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        show_canvas_placeholder: assigns.live_action == :new,
        show_workflow_ai_chat: false,
        show_job_credential_modal: false,
+       active_modal: nil,
+       active_modal_assigns: nil,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        publish_template: false,
@@ -1437,7 +1446,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply,
-     apply_action(socket, socket.assigns.live_action, params)
+     socket
+     |> assign(
+       active_modal: nil,
+       active_modal_assigns: nil
+     )
+     |> apply_action(socket.assigns.live_action, params)
      |> track_user_presence()
      |> apply_query_params(params)
      |> prepare_workflow_template()
@@ -2185,6 +2199,31 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, assign(socket, selected_template: nil)}
   end
 
+  def handle_event("close_active_modal", _params, socket) do
+    socket
+    |> assign(active_modal: nil, active_modal_assigns: nil)
+    |> noreply()
+  end
+
+  def handle_event(
+        "show_modal",
+        %{"target" => "webhook_auth_method"},
+        socket
+      ) do
+    if socket.assigns.can_write_webhook_auth_method do
+      socket
+      |> assign(
+        active_modal: :webhook_auth_method,
+        active_modal_assigns: %{}
+      )
+      |> noreply()
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action")
+      |> noreply()
+    end
+  end
+
   def handle_event(_unhandled_event, _params, socket) do
     # TODO: add a warning and/or log for unhandled events
     {:noreply, socket}
@@ -2222,6 +2261,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       {:noreply, socket}
     end
+  end
+
+  def handle_info(
+        {:webhook_auth_method_updated, _trigger_or_auth_method},
+        socket
+      ) do
+    %{workflow: current_workflow, snapshot: snapshot} = socket.assigns
+
+    updated_workflow = get_workflow_by_id(current_workflow.id)
+
+    socket
+    |> assign_workflow(updated_workflow, snapshot)
+    |> apply_mode_and_selection()
+    |> noreply()
   end
 
   def handle_info({:form_changed, %{"workflow" => params}}, socket) do

@@ -304,22 +304,61 @@
           permissions_message="webhook auth methods."
           can_perform_action={@can_write_webhook_auth_method}
           action_button_text="New auth method"
-          action_button_click={show_modal("new_auth_method_modal")}
+          action_button_click={
+            JS.push("show_modal", value: %{target: "new_webhook_auth_method"})
+          }
           action_button_disabled={!@can_write_webhook_auth_method}
           action_button_id="add_new_auth_method"
         />
-        <.live_component
-          :if={@can_write_webhook_auth_method}
-          module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
-          id="new_auth_method_modal"
-          action={:new}
-          project={@project}
-          current_user={@current_user}
-          webhook_auth_method={
-            %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
+        <.modal
+          :if={
+            @active_modal in [
+              :new_webhook_auth_method,
+              :edit_webhook_auth_method
+            ]
           }
+          id="webhook_auth_method_modal"
+          width="min-w-1/3 max-w-xl"
+          on_close={JS.push("close_active_modal")}
+          show={true}
+        >
+          <.live_component
+            :if={@active_modal == :new_webhook_auth_method}
+            module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+            id="new_auth_method"
+            action={:new}
+            current_user={@current_user}
+            webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+            trigger={nil}
+            on_close={JS.push("close_active_modal")}
+            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
+          />
+          <.live_component
+            :if={@active_modal == :edit_webhook_auth_method}
+            module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+            id={"edit_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
+            action={:edit}
+            current_user={@current_user}
+            webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+            trigger={nil}
+            on_close={JS.push("close_active_modal")}
+            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
+          />
+        </.modal>
+        <.live_component
+          :if={@active_modal == :delete_webhook_auth_method}
+          module={LightningWeb.WorkflowLive.WebhookAuthMethodDeleteModal}
+          id={"delete_auth_method_#{@active_modal_assigns.webhook_auth_method.id}"}
+          current_user={@current_user}
+          webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+          on_close={JS.push("close_active_modal")}
           return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-          trigger={nil}
+        />
+        <LightningWeb.WorkflowLive.Components.linked_triggers_for_webhook_auth_method_modal
+          :if={@active_modal == :linked_triggers_for_webhook_auth_method}
+          id={"linked_triggers_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
+          webhook_auth_method={@active_modal_assigns.webhook_auth_method}
+          on_close={JS.push("close_active_modal")}
         />
         <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
           auth_methods={@webhook_auth_methods}
@@ -333,7 +372,11 @@
               message="No auth methods found."
               button_text="Create a new auth method"
               button_id="open-create-auth-method-modal"
-              button_click={show_modal("new_auth_method_modal")}
+              button_click={
+                JS.push("show_modal",
+                  value: %{target: "new_webhook_auth_method"}
+                )
+              }
               button_disabled={!@can_write_webhook_auth_method}
             />
           </:empty_state>
@@ -345,7 +388,12 @@
                 href="#"
                 class="text-indigo-600 hover:text-indigo-900"
                 phx-click={
-                  show_modal("display_linked_triggers_#{auth_method.id}_modal")
+                  JS.push("show_modal",
+                    value: %{
+                      target: "linked_triggers_for_webhook_auth_method",
+                      id: auth_method.id
+                    }
+                  )
                 }
               >
                 {Enum.count(auth_method.triggers)}
@@ -356,23 +404,6 @@
               >
                 No associated triggers...
               </span>
-
-              <div class="text-left">
-                <.live_component
-                  module={
-                    LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
-                  }
-                  id={"display_linked_triggers_#{auth_method.id}_modal"}
-                  action={:display_triggers}
-                  project={auth_method.project}
-                  webhook_auth_method={auth_method}
-                  current_user={@current_user}
-                  return_to={
-                    ~p"/projects/#{@project.id}/settings#webhook_security"
-                  }
-                  trigger={nil}
-                />
-              </div>
             </span>
           </:linked_triggers>
           <:action :let={auth_method}>
@@ -381,26 +412,17 @@
                 id={"edit_auth_method_link_#{auth_method.id}"}
                 href="#"
                 class="table-action"
-                phx-click={show_modal("edit_auth_#{auth_method.id}_modal")}
+                phx-click={
+                  JS.push("show_modal",
+                    value: %{
+                      target: "edit_webhook_auth_method",
+                      id: auth_method.id
+                    }
+                  )
+                }
               >
                 View
               </a>
-              <div class="text-left">
-                <.live_component
-                  module={
-                    LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
-                  }
-                  id={"edit_auth_#{auth_method.id}_modal"}
-                  action={:edit}
-                  project={@project}
-                  current_user={@current_user}
-                  webhook_auth_method={auth_method}
-                  return_to={
-                    ~p"/projects/#{@project.id}/settings#webhook_security"
-                  }
-                  trigger={nil}
-                />
-              </div>
             <% else %>
               <a
                 id={"edit_auth_method_link_#{auth_method.id}"}
@@ -417,31 +439,22 @@
                 id={"delete_auth_method_link_#{auth_method.id}"}
                 href="#"
                 class="table-action"
-                phx-click={show_modal("delete_auth_#{auth_method.id}_modal")}
+                phx-click={
+                  JS.push("show_modal",
+                    value: %{
+                      target: "delete_webhook_auth_method",
+                      id: auth_method.id
+                    }
+                  )
+                }
               >
                 Delete
               </a>
-              <div class="text-left">
-                <.live_component
-                  module={
-                    LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
-                  }
-                  id={"delete_auth_#{auth_method.id}_modal"}
-                  action={:delete}
-                  project={@project}
-                  webhook_auth_method={auth_method}
-                  current_user={@current_user}
-                  return_to={
-                    ~p"/projects/#{@project.id}/settings#webhook_security"
-                  }
-                  trigger={nil}
-                />
-              </div>
             <% else %>
               <a
                 id={"delete_auth_method_link_#{auth_method.id}"}
                 href="#"
-                class="ml-1 cursor-not-allowed text-indigo-300"
+                class="table-action cursor-not-allowed"
               >
                 Delete
               </a>
