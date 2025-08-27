@@ -134,6 +134,11 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info(
         {:DOWN, _ref, :process, _pid, _reason},
         socket
