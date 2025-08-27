@@ -9,7 +9,6 @@ import { Header } from "./components/Header";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { StoreProvider } from "./contexts/StoreProvider";
-import { WorkflowStoreProvider } from "./contexts/WorkflowStoreProvider";
 
 export interface CollaborativeEditorDataProps {
   "data-workflow-id": string;
@@ -71,13 +70,11 @@ export const CollaborativeEditor: WithActionProps<
           userName={userName}
         >
           <StoreProvider>
-            <WorkflowStoreProvider>
-              <Header>{breadcrumbElements}</Header>
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <WorkflowEditor />
-                <CollaborationWidget />
-              </div>
-            </WorkflowStoreProvider>
+            <Header>{breadcrumbElements}</Header>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <WorkflowEditor />
+              <CollaborationWidget />
+            </div>
           </StoreProvider>
         </SessionProvider>
       </SocketProvider>

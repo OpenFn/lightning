@@ -102,7 +102,7 @@
  * - The store is designed for use with `useSyncExternalStore` hook
  *
  * @see ../hooks/Workflow.ts for React hook implementations
- * @see ../contexts/WorkflowStoreProvider.tsx for provider setup
+ * @see ../contexts/StoreProvider.tsx for provider setup
  */
 
 import { produce } from "immer";
