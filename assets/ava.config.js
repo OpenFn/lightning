@@ -9,6 +9,7 @@ export default {
     TS_NODE_PROJECT: "tsconfig.test.json",
     TSIMP_DIAG: "ignore",
   },
+  require: ['./test/_setup.ts'],
   watchMode: {
     ignoreChanges: [".tsimp/**/*"],
   },
