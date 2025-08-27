@@ -2316,16 +2316,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
-    summary =
-      socket.assigns.workflow
-      |> Presence.list_presences_for()
-      |> Presence.build_presences_summary(socket.assigns)
-
-    {:noreply,
-     socket
-     |> assign(summary)
-     |> maybe_switch_workflow_version()
-     |> maybe_disable_canvas()}
+    {:noreply, update_presence_summary(socket)}
   end
 
   @impl true
@@ -2886,9 +2877,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket.assigns.workflow,
         self()
       )
-    end
 
-    socket
+      update_presence_summary(socket)
+    else
+      socket
+    end
   end
 
   defp initial_presence_summary(current_user) do
@@ -2903,6 +2896,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user_presence: init_user_presence,
       has_presence_edit_priority: true
     }
+  end
+
+  defp update_presence_summary(socket) do
+    summary =
+      socket.assigns.workflow
+      |> Presence.list_presences_for()
+      |> Presence.build_presences_summary(socket.assigns)
+
+    assign(socket, summary)
+    |> maybe_switch_workflow_version()
+    |> maybe_disable_canvas()
   end
 
   defp view_only_users(project) do
