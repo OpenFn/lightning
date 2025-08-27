@@ -535,17 +535,6 @@
                 Remove Collaborator
               </.button>
             </div>
-            <.confirm_user_removal_modal
-              :if={
-                user_removable?(
-                  project_user,
-                  @current_user,
-                  @can_remove_project_user
-                )
-              }
-              id={"remove_#{project_user.id}_modal"}
-              project_user={project_user}
-            />
           </:actions>
           <:empty_state>
             <.empty_state
@@ -558,6 +547,19 @@
             />
           </:empty_state>
         </LightningWeb.Components.DataTables.collaborators_table>
+        <%= for project_user <- @project_users do %>
+          <.confirm_user_removal_modal
+            :if={
+              user_removable?(
+                project_user,
+                @current_user,
+                @can_remove_project_user
+              )
+            }
+            id={"remove_#{project_user.id}_modal"}
+            project_user={project_user}
+          />
+        <% end %>
       </:panel>
       <:panel hash="security" class="space-y-4">
         <.section_header
