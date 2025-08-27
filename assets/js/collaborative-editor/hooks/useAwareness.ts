@@ -33,17 +33,30 @@
  * ```
  */
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useContext } from "react";
 
-import { useSession } from "../contexts/SessionProvider";
+import { StoreContext } from "../contexts/StoreProvider";
+import type { AwarenessStoreInstance } from "../stores/createAwarenessStore";
 import type { AwarenessUser, LocalUserData } from "../types/awareness";
+
+/**
+ * Main hook for accessing the AwarenessStore instance
+ * Handles context access and error handling once
+ */
+const useAwarenessStore = (): AwarenessStoreInstance => {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error("useAwarenessStore must be used within a StoreProvider");
+  }
+  return context.awarenessStore;
+};
 
 /**
  * Hook to get all connected users (including local user)
  * Returns referentially stable array that only changes when users actually change
  */
 export const useAwarenessUsers = (): AwarenessUser[] => {
-  const { awarenessStore } = useSession();
+  const awarenessStore = useAwarenessStore();
 
   const selectUsers = awarenessStore.withSelector(state => state.users);
 
@@ -55,7 +68,7 @@ export const useAwarenessUsers = (): AwarenessUser[] => {
  * Useful for cursor rendering where you don't want to show your own cursor
  */
 export const useRemoteUsers = (): AwarenessUser[] => {
-  const { awarenessStore } = useSession();
+  const awarenessStore = useAwarenessStore();
 
   const selectRemoteUsers = awarenessStore.withSelector(state => {
     if (!state.localUser) return state.users;
@@ -70,7 +83,7 @@ export const useRemoteUsers = (): AwarenessUser[] => {
  * Returns null if user is not initialized
  */
 export const useLocalUser = (): LocalUserData | null => {
-  const { awarenessStore } = useSession();
+  const awarenessStore = useAwarenessStore();
 
   const selectLocalUser = awarenessStore.withSelector(state => state.localUser);
 
@@ -84,7 +97,7 @@ export const useAwarenessConnectionState = (): {
   isInitialized: boolean;
   isConnected: boolean;
 } => {
-  const { awarenessStore } = useSession();
+  const awarenessStore = useAwarenessStore();
 
   const selectConnectionState = awarenessStore.withSelector(state => ({
     isInitialized: state.isInitialized,
@@ -98,7 +111,7 @@ export const useAwarenessConnectionState = (): {
  * Hook to get a specific user by ID
  */
 export const useUserById = (userId: string | null): AwarenessUser | null => {
-  const { awarenessStore } = useSession();
+  const awarenessStore = useAwarenessStore();
 
   const selectUser = awarenessStore.withSelector(state => {
     if (!userId) return null;
@@ -113,7 +126,7 @@ export const useUserById = (userId: string | null): AwarenessUser | null => {
  * Returns a Map for efficient lookups by clientId
  */
 export const useUserCursors = (): Map<number, AwarenessUser> => {
-  const { awarenessStore } = useSession();
+  const awarenessStore = useAwarenessStore();
 
   const selectCursors = awarenessStore.withSelector(state => {
     const cursorsMap = new Map<number, AwarenessUser>();
@@ -135,7 +148,7 @@ export const useUserCursors = (): Map<number, AwarenessUser> => {
  * This is referentially stable - only changes when awareness is initialized/destroyed
  */
 export const useRawAwareness = () => {
-  const { awarenessStore } = useSession();
+  const awarenessStore = useAwarenessStore();
 
   const selectRawAwareness = awarenessStore.withSelector(
     state => state.rawAwareness
@@ -149,11 +162,29 @@ export const useRawAwareness = () => {
  * Useful for conditional rendering of awareness-dependent components
  */
 export const useAwarenessReady = (): boolean => {
-  const { awarenessStore } = useSession();
+  const awarenessStore = useAwarenessStore();
 
   const selectReady = awarenessStore.withSelector(
     state => state.isInitialized && state.rawAwareness !== null
   );
 
   return useSyncExternalStore(awarenessStore.subscribe, selectReady);
+};
+
+/**
+ * Hook to get awareness command functions
+ * Returns stable function references that don't change across renders
+ * Use this for actions like updating cursor position, user data, etc.
+ */
+export const useAwarenessCommands = () => {
+  const awarenessStore = useAwarenessStore();
+
+  // These are already stable function references from the store
+  return {
+    updateLocalUserData: awarenessStore.updateLocalUserData,
+    updateLocalCursor: awarenessStore.updateLocalCursor,
+    updateLocalSelection: awarenessStore.updateLocalSelection,
+    updateLastSeen: awarenessStore.updateLastSeen,
+    setConnected: awarenessStore.setConnected,
+  };
 };

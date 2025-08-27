@@ -1,0 +1,114 @@
+/**
+ * # StoreProvider
+ *
+ * Manages store instances (adaptorStore, credentialStore, awarenessStore) and handles
+ * their lifecycle based on session state. This component separates store management
+ * from session management, providing proper separation of concerns.
+ *
+ * ## Key Responsibilities:
+ * - Creates and manages store instances
+ * - Initializes awareness when both awareness instance and userData are available
+ * - Connects/disconnects stores based on session state
+ * - Provides store instances via StoreContext
+ *
+ * ## Architecture:
+ * ```
+ * SessionProvider (session state)
+ *   ↓ useSession
+ * StoreProvider (store management)
+ *   ↓ useStores
+ * Components (consume stores)
+ * ```
+ */
+
+import type React from "react";
+import { createContext, useEffect, useState } from "react";
+
+import { useSession } from "../hooks/useSession";
+import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
+import { createAdaptorStore } from "../stores/createAdaptorStore";
+import {
+  type AwarenessStoreInstance,
+  createAwarenessStore,
+} from "../stores/createAwarenessStore";
+import {
+  type CredentialStoreInstance,
+  createCredentialStore,
+} from "../stores/createCredentialStore";
+
+export interface StoreContextValue {
+  adaptorStore: AdaptorStoreInstance;
+  credentialStore: CredentialStoreInstance;
+  awarenessStore: AwarenessStoreInstance;
+}
+
+export const StoreContext = createContext<StoreContextValue | null>(null);
+
+interface StoreProviderProps {
+  children: React.ReactNode;
+}
+
+export const StoreProvider = ({ children }: StoreProviderProps) => {
+  const session = useSession();
+
+  // Create store instances once and reuse them
+  const [stores] = useState(() => ({
+    adaptorStore: createAdaptorStore(),
+    credentialStore: createCredentialStore(),
+    awarenessStore: createAwarenessStore(),
+  }));
+
+  // Initialize awareness when both awareness instance and userData are available
+  useEffect(() => {
+    if (
+      session.awareness &&
+      session.userData &&
+      !stores.awarenessStore.isAwarenessReady()
+    ) {
+      console.debug("StoreProvider: Initializing awareness", {
+        userData: session.userData,
+      });
+
+      // AwarenessStore is the ONLY place that sets awareness local state
+      stores.awarenessStore.initializeAwareness(
+        session.awareness,
+        session.userData
+      );
+
+      // Set up last seen timer
+      const cleanupTimer = stores.awarenessStore._internal.setupLastSeenTimer();
+
+      return cleanupTimer;
+    }
+    return undefined;
+  }, [session.awareness, session.userData, stores]);
+
+  // Connect stores when provider is ready
+  useEffect(() => {
+    if (session.provider && session.isConnected) {
+      console.debug("StoreProvider: Connecting stores to channel");
+
+      const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
+      const cleanup2 = stores.credentialStore._connectChannel(session.provider);
+
+      return () => {
+        console.debug("StoreProvider: Disconnecting stores from channel");
+        cleanup1();
+        cleanup2();
+      };
+    }
+    return undefined;
+  }, [session.provider, session.isConnected, stores]);
+
+  // Clean up awareness when session is destroyed
+  useEffect(() => {
+    return () => {
+      console.debug("StoreProvider: Cleaning up awareness on unmount");
+      stores.awarenessStore.destroyAwareness();
+    };
+  }, [stores.awarenessStore]);
+
+  return (
+    <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
+  );
+};
