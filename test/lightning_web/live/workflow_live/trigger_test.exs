@@ -105,7 +105,10 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      assert view |> element("#addAuthenticationLink") |> render_click() =~
+      assert has_element?(view, "#addAuthenticationLink.cursor-not-allowed")
+
+      # forcing the event results in an error
+      assert render_click(view, "show_modal", %{target: "webhook_auth_method"}) =~
                "You are not authorized to perform this action"
 
       refute has_element?(view, "##{modal_id}")
@@ -187,7 +190,10 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      assert view |> element("#addAuthenticationLink") |> render_click() =~
+      assert has_element?(view, "#addAuthenticationLink.cursor-not-allowed")
+
+      # forcing the event results in an error
+      assert render_click(view, "show_modal", %{target: "webhook_auth_method"}) =~
                "You are not authorized to perform this action"
 
       refute has_element?(view, "##{modal_id}")
@@ -318,7 +324,10 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      assert view |> element("#manageAuthenticationLink") |> render_click() =~
+      assert has_element?(view, "#manageAuthenticationLink.cursor-not-allowed")
+
+      # forcing the event results in an error
+      assert render_click(view, "show_modal", %{target: "webhook_auth_method"}) =~
                "You are not authorized to perform this action"
 
       refute has_element?(view, "#manage_webhook_auth_methods")
