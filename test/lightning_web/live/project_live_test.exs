@@ -1900,6 +1900,42 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "all project users can see the workflows linked to auth methods" do
+      project = insert(:project)
+      workflow = insert(:simple_workflow, project: project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          triggers: workflow.triggers
+        )
+
+      for conn <-
+            build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
+        {:ok, view, html} =
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+        modal_id = "#linked_triggers_for_#{auth_method.id}_modal"
+
+        assert html =~ auth_method.name
+
+        assert has_element?(
+                 view,
+                 "#display_linked_triggers_link_#{auth_method.id}"
+               )
+
+        refute has_element?(view, modal_id)
+
+        view
+        |> element("#display_linked_triggers_link_#{auth_method.id}")
+        |> render_click()
+
+        assert has_element?(view, modal_id)
+
+        assert view |> element(modal_id) |> render() =~ workflow.name
+      end
+    end
+
     test "owners/admins can add a new project webhook auth method, editors/viewers can't" do
       project = insert(:project)
 
@@ -2337,6 +2373,12 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render_click()
 
         assert has_element?(view, "##{modal_id}")
+
+        assert view
+               |> form("##{modal_id} form",
+                 delete_confirmation: %{confirmation: "diel"}
+               )
+               |> render_change() =~ "Please type DELETE to confirm"
 
         view
         |> form("##{modal_id} form",

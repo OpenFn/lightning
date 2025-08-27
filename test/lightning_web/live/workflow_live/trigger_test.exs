@@ -292,6 +292,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         |> render_click()
 
       assert html =~ "Webhook Authentication Method"
+      refute html =~ "Create a new webhook auth method"
 
       refute has_element?(view, "##{modal_id} form button[type='submit']")
 
@@ -300,6 +301,13 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
                "##{modal_id} form button[type='button']",
                "Back"
              )
+
+      html =
+        view
+        |> element("##{modal_id} form button[type='button']", "Back")
+        |> render_click()
+
+      assert html =~ "Create a new webhook auth method"
     end
   end
 

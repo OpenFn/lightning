@@ -144,10 +144,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodDeleteModal do
       [:confirmation]
     )
     |> Ecto.Changeset.validate_required([:confirmation],
-      message: "Please type 'DELETE' to confirm"
+      message: "Please type DELETE to confirm"
     )
     |> Ecto.Changeset.validate_inclusion(:confirmation, ["DELETE"],
-      message: "Please type 'DELETE' to confirm"
+      message: "Please type DELETE to confirm"
     )
   end
 end

@@ -818,7 +818,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               navigate={
                 ~p"/projects/#{@webhook_auth_method.project_id}/w/#{trigger.workflow.id}?s=#{trigger.id}"
               }
-              class="link flex-1 rounded-md"
+              class="link"
               role="button"
               target="_blank"
             >
