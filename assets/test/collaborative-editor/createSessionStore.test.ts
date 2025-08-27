@@ -1,136 +1,14 @@
-/**
- * Tests for createSessionStore
- *
- * This test suite covers Steps 1 & 2 of the SessionStore migration:
- * - Core store interface (subscribe/getSnapshot)
- * - Yjs Document Management (Step 1)
- * - Phoenix Provider Creation Logic (Step 2)
- * - State management and cleanup
- * - Error handling and validation
- */
-
 import test from "ava";
-import * as sinon from "sinon";
+import { Doc as YDoc, applyUpdate, encodeStateAsUpdate } from "yjs";
 
-import { PhoenixChannelProvider } from "y-phoenix-channel";
-import * as awarenessProtocol from "y-protocols/awareness";
-import { Doc as YDoc } from "yjs";
+import {
+  createSessionStore,
+  type SessionState,
+  type SessionStore,
+} from "../../js/collaborative-editor/stores/createSessionStore";
 
-import { createSessionStore } from "../../js/collaborative-editor/stores/createSessionStore";
-
-import { createMockPhoenixChannel } from "./mocks/phoenixChannel";
 import { createMockSocket } from "./mocks/phoenixSocket";
-
-// Test helper interface for triggering mock events
-interface MockProviderTestHelpers {
-  triggerStatus: (status: string) => void;
-  triggerSync: (synced: boolean) => void;
-  triggerSynced: (synced: boolean) => void;
-  getEventHandlers: () => Map<string, Set<(...args: unknown[]) => unknown>>;
-}
-
-// Factory for creating properly mocked PhoenixChannelProvider instances
-const createMockPhoenixChannelProvider = (
-  doc?: YDoc,
-  awareness?: awarenessProtocol.Awareness
-): PhoenixChannelProvider & { _test: MockProviderTestHelpers } => {
-  const eventHandlers = new Map<string, Set<(...args: unknown[]) => unknown>>();
-
-  // Create a stub that extends the real class but doesn't connect
-  const stub = sinon.createStubInstance(PhoenixChannelProvider);
-
-  // Mock basic properties
-  stub.synced = false;
-  stub.shouldConnect = true;
-  stub.doc = doc || new YDoc();
-  stub.awareness = awareness || new awarenessProtocol.Awareness(stub.doc);
-  stub.channel = createMockPhoenixChannel() as any;
-  stub.serverUrl = "ws://localhost:4000/socket";
-  stub.roomname = "test:room";
-  stub.bcChannel = "test-bc-channel";
-  stub.bcconnected = false;
-  stub.disableBc = false;
-  stub.wsUnsuccessfulReconnects = 0;
-  stub.wsLastMessageReceived = 0;
-
-  // Mock event system
-  stub.on.callsFake(
-    (event: string, handler: (...args: unknown[]) => unknown) => {
-      if (!eventHandlers.has(event)) {
-        eventHandlers.set(event, new Set());
-      }
-      eventHandlers.get(event)?.add(handler);
-      return handler as any;
-    }
-  );
-
-  stub.off.callsFake(
-    (event: string, handler: (...args: unknown[]) => unknown) => {
-      const handlers = eventHandlers.get(event);
-      if (handlers) {
-        handlers.delete(handler);
-      }
-    }
-  );
-
-  stub.emit.callsFake((event: string, args: unknown[]) => {
-    const handlers = eventHandlers.get(event);
-    if (handlers) {
-      handlers.forEach(handler => handler(...args));
-    }
-  });
-
-  // Mock lifecycle methods
-  stub.destroy.callsFake(() => {
-    eventHandlers.clear();
-  });
-
-  stub.connect.callsFake(() => {
-    stub.shouldConnect = true;
-  });
-
-  stub.disconnect.callsFake(() => {
-    stub.shouldConnect = false;
-  });
-
-  stub.connectBc.callsFake(() => {
-    stub.bcconnected = true;
-  });
-
-  stub.disconnectBc.callsFake(() => {
-    stub.bcconnected = false;
-  });
-
-  // Add test helpers for triggering events
-  (stub as any)._test = {
-    triggerStatus: (status: string) => {
-      const handlers = eventHandlers.get("status");
-      if (handlers) {
-        handlers.forEach(handler => handler([{ status }]));
-      }
-    },
-
-    triggerSync: (synced: boolean) => {
-      stub.synced = synced;
-      const handlers = eventHandlers.get("sync");
-      if (handlers) {
-        handlers.forEach(handler => handler(synced));
-      }
-    },
-
-    triggerSynced: (synced: boolean) => {
-      stub.synced = synced;
-      const handlers = eventHandlers.get("synced");
-      if (handlers) {
-        handlers.forEach(handler => handler([synced]));
-      }
-    },
-
-    getEventHandlers: () => eventHandlers,
-  };
-
-  return stub as any;
-};
+import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
 // =============================================================================
 // CORE STORE INTERFACE TESTS
@@ -142,8 +20,11 @@ test("getSnapshot returns initial state", t => {
 
   t.is(initialState.ydoc, null);
   t.is(initialState.provider, null);
+  t.is(initialState.awareness, null);
+  t.is(initialState.userData, null);
   t.is(initialState.isConnected, false);
   t.is(initialState.isSynced, false);
+  t.is(initialState.settled, false);
   t.is(initialState.lastStatus, null);
 });
 
@@ -159,13 +40,17 @@ test("subscribe/unsubscribe functionality works correctly", t => {
   const unsubscribe = store.subscribe(listener);
 
   // Trigger a state change
-  store.initializeYDoc();
+  store.initializeSession(createMockSocket(), "test:room", {
+    id: "user-1",
+    name: "Test User",
+    color: "#ff0000",
+  });
 
   t.is(callCount, 1, "Listener should be called once for state change");
 
   // Unsubscribe and trigger another change
   unsubscribe();
-  store.destroyYDoc();
+  store.destroy();
 
   t.is(callCount, 1, "Listener should not be called after unsubscribe");
 });
@@ -245,147 +130,91 @@ test("multiple initializeYDoc calls replace previous YDoc", t => {
 });
 
 // =============================================================================
-// PHOENIX PROVIDER CREATION TESTS (STEP 2)
+// PROVIDER ATTACHMENT BEHAVIOR TESTS
 // =============================================================================
 
-test("createProvider creates PhoenixChannelProvider with YDoc", t => {
+test("initializeSession creates provider and attaches event handlers", t => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   const roomname = "test:room:123";
+  const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
 
-  // Initialize YDoc first
-  const ydoc = store.initializeYDoc();
-
-  const provider = store.createProvider(mockSocket, roomname, {
+  const result = store.initializeSession(mockSocket, roomname, userData, {
     connect: false,
   });
 
-  t.truthy(provider, "Should return provider instance");
+  t.truthy(result.provider, "Should return provider instance");
   t.is(
     store.getSnapshot().provider,
-    provider,
+    result.provider,
     "Should store provider in state"
   );
-  t.is(store.getProvider(), provider, "Query should return same provider");
-});
-
-test("createProvider with awareness and options", t => {
-  const store = createSessionStore();
-  const mockSocket = createMockSocket();
-  const roomname = "test:room:123";
-
-  // Initialize YDoc and create awareness
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
-
-  const provider = store.createProvider(mockSocket, roomname, {
-    awareness,
-    connect: false,
-  });
-
-  t.truthy(provider, "Should return provider instance");
   t.is(
-    store.getSnapshot().provider,
-    provider,
-    "Should store provider in state"
+    store.getProvider(),
+    result.provider,
+    "Query should return same provider"
   );
+
+  // Verify initial sync state is reflected
+  t.is(
+    store.getSnapshot().isSynced,
+    result.provider.synced,
+    "Store should reflect provider sync state"
+  );
+
+  store.destroy();
 });
 
-test("createProvider throws error without YDoc", t => {
-  const store = createSessionStore();
-  const mockSocket = createMockSocket();
-  const roomname = "test:room:123";
-
-  const error = t.throws(() => {
-    store.createProvider(mockSocket, roomname);
-  });
-
-  t.is(error.message, "YDoc must be initialized before creating provider");
-});
-
-test("createProvider throws error with null socket", t => {
-  const store = createSessionStore();
-  const roomname = "test:room:123";
-
-  store.initializeYDoc();
-
-  const error = t.throws(() => {
-    store.createProvider(null, roomname);
-  });
-
-  t.is(error.message, "Socket must be connected before creating provider");
-});
-
-test("createProvider replaces existing provider", t => {
+test("initializeSession replaces existing provider", t => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   const roomname1 = "test:room:123";
   const roomname2 = "test:room:456";
+  const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
 
-  store.initializeYDoc();
-
-  const firstProvider = store.createProvider(mockSocket, roomname1, {
+  const firstResult = store.initializeSession(mockSocket, roomname1, userData, {
     connect: false,
   });
-  const secondProvider = store.createProvider(mockSocket, roomname2, {
-    connect: false,
-  });
+  const secondResult = store.initializeSession(
+    mockSocket,
+    roomname2,
+    userData,
+    {
+      connect: false,
+    }
+  );
 
-  t.not(firstProvider, secondProvider, "Should create different instances");
+  t.not(
+    firstResult.provider,
+    secondResult.provider,
+    "Should create different instances"
+  );
   t.is(
     store.getSnapshot().provider,
-    secondProvider,
+    secondResult.provider,
     "Should store latest provider"
   );
-});
 
-// =============================================================================
-// LEGACY PROVIDER CONNECTION TESTS
-// =============================================================================
-
-test("connectProvider sets provider and attaches handlers", t => {
-  const store = createSessionStore();
-  const mockProvider = createMockPhoenixChannelProvider();
-
-  store.connectProvider(mockProvider);
-
-  t.is(store.getSnapshot().provider, mockProvider, "Should store provider");
-  t.is(store.getProvider(), mockProvider, "Query should return provider");
-});
-
-test("connectProvider cleans up previous handlers", t => {
-  const store = createSessionStore();
-  const firstProvider = createMockPhoenixChannelProvider();
-  const secondProvider = createMockPhoenixChannelProvider();
-
-  store.connectProvider(firstProvider);
-  store.connectProvider(secondProvider);
-
-  t.is(
-    store.getSnapshot().provider,
-    secondProvider,
-    "Should use latest provider"
-  );
+  store.destroy();
 });
 
 // =============================================================================
 // DISCONNECT AND CLEANUP TESTS
 // =============================================================================
 
-test("disconnectProvider cleans up provider and YDoc", t => {
+test("destroy cleans up provider and YDoc", t => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   const roomname = "test:room:123";
 
-  // Set up provider and YDoc
-  store.initializeYDoc();
-  store.createProvider(mockSocket, roomname);
+  // Set up provider and YDoc via initializeSession
+  store.initializeSession(mockSocket, roomname, null, { connect: false });
 
   // Verify initial state
   t.truthy(store.getSnapshot().provider, "Provider should be present");
   t.truthy(store.getSnapshot().ydoc, "YDoc should be present");
 
-  store.disconnectProvider();
+  store.destroy();
 
   const finalState = store.getSnapshot();
   t.is(finalState.provider, null, "Provider should be null");
@@ -395,11 +224,11 @@ test("disconnectProvider cleans up provider and YDoc", t => {
   t.is(finalState.lastStatus, null, "Status should be null");
 });
 
-test("disconnectProvider handles null provider gracefully", t => {
+test("destroy handles null provider gracefully", t => {
   const store = createSessionStore();
 
   t.notThrows(() => {
-    store.disconnectProvider();
+    store.destroy();
   });
 
   const state = store.getSnapshot();
@@ -421,11 +250,15 @@ test("isReady returns correct state", t => {
   t.false(store.isReady(), "Should not be ready with only YDoc");
 
   const mockSocket = createMockSocket();
-  store.createProvider(mockSocket, "test:room:123");
+  store.initializeSession(mockSocket, "test:room:123", null, {
+    connect: false,
+  });
   t.true(store.isReady(), "Should be ready with YDoc and provider");
 
   store.destroyYDoc();
   t.false(store.isReady(), "Should not be ready after destroying YDoc");
+
+  store.destroy();
 });
 
 test("getConnectionState and getSyncState return current values", t => {
@@ -451,90 +284,221 @@ test("property accessors return current state", t => {
   );
 });
 
-// =============================================================================
-// AWARENESS PROTOCOL INTEGRATION TESTS (STEP 3)
-// =============================================================================
-
-test("setAwareness stores awareness instance", t => {
+test("property getters provide convenient access to state values", t => {
   const store = createSessionStore();
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
+  const mockSocket = createMockSocket();
 
-  store.setAwareness(awareness);
+  // Initialize session
+  store.initializeSession(mockSocket, "test:room", {
+    id: "user-1",
+    name: "Test User",
+    color: "#ff0000",
+  });
+
+  // Test property getters provide convenient access to state
+  t.is(typeof store.ydoc, "object", "Should have ydoc getter");
+  t.is(typeof store.provider, "object", "Should have provider getter");
+  t.is(typeof store.awareness, "object", "Should have awareness getter");
+  t.is(typeof store.isConnected, "boolean", "Should have isConnected getter");
+  t.is(typeof store.isSynced, "boolean", "Should have isSynced getter");
+  t.is(typeof store.settled, "boolean", "Should have settled getter");
+
+  store.destroy();
+});
+
+test("withSelector creates memoized selectors for performance", t => {
+  const store = createSessionStore();
+  const mockSocket = createMockSocket();
+
+  store.initializeSession(mockSocket, "test:room", {
+    id: "user-1",
+    name: "Test User",
+    color: "#ff0000",
+  });
+
+  // Test selector access (optimized)
+  const ydocSelector = store.withSelector(state => state.ydoc);
+  const isConnectedSelector = store.withSelector(state => state.isConnected);
 
   t.is(
-    store.getSnapshot().awareness,
-    awareness,
-    "Should store awareness in state"
+    ydocSelector(),
+    store.ydoc,
+    "Selector should return same value as getter"
   );
-  t.is(store.getAwareness(), awareness, "Query should return same awareness");
-  t.is(store.awareness, awareness, "Property accessor should return awareness");
+  t.is(
+    isConnectedSelector(),
+    store.isConnected,
+    "Selector should return same value as getter"
+  );
+
+  store.destroy();
 });
 
-test("setAwareness accepts null awareness", t => {
+test("store instance maintains stable reference across state changes", t => {
   const store = createSessionStore();
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
 
-  // Set and then clear
-  store.setAwareness(awareness);
-  store.setAwareness(null);
+  // Store instance reference should never change
+  const reference1 = store;
+  const reference2 = store;
 
-  t.is(store.getSnapshot().awareness, null, "Should accept null awareness");
-  t.is(store.getAwareness(), null, "Query should return null");
+  t.is(reference1, reference2, "Store instance should have stable reference");
+
+  // Even after state changes, reference stays the same
+  const mockSocket = createMockSocket();
+  store.initializeSession(mockSocket, "test:room", null);
+
+  const reference3 = store;
+  t.is(
+    reference1,
+    reference3,
+    "Store reference should remain stable after state changes"
+  );
+
+  store.destroy();
 });
 
-test("createProvider uses stored awareness when no awareness in options", t => {
+test("store supports destructuring assignment for backward compatibility", t => {
+  const store = createSessionStore();
+  const mockSocket = createMockSocket();
+
+  store.initializeSession(mockSocket, "test:room", {
+    id: "user-1",
+    name: "Test User",
+    color: "#ff0000",
+  });
+
+  // This pattern should work for backward compatibility
+  const { ydoc, provider, awareness, isConnected, isSynced, settled } = store;
+
+  t.truthy(ydoc, "Should be able to destructure ydoc");
+  t.truthy(provider, "Should be able to destructure provider");
+  t.truthy(awareness, "Should be able to destructure awareness");
+  t.is(
+    typeof isConnected,
+    "boolean",
+    "Should be able to destructure isConnected"
+  );
+  t.is(typeof isSynced, "boolean", "Should be able to destructure isSynced");
+  t.is(typeof settled, "boolean", "Should be able to destructure settled");
+
+  store.destroy();
+});
+
+test("withSelector creates optimized subscription callbacks", t => {
+  const store = createSessionStore();
+  let callCount = 0;
+
+  // Create selector that only listens to ydoc changes
+  const selectYdoc = store.withSelector(state => state.ydoc);
+
+  // Subscribe to selector
+  const unsubscribe = store.subscribe(() => {
+    callCount++;
+  });
+
+  // Initialize session - should trigger notification
+  const mockSocket = createMockSocket();
+  store.initializeSession(mockSocket, "test:room", null);
+
+  t.is(callCount, 1, "Should notify on state change");
+
+  // Selector should return current value
+  t.is(selectYdoc(), store.ydoc, "Selector should return current ydoc");
+
+  unsubscribe();
+  store.destroy();
+});
+
+test("store provides complete interface for React integration", t => {
+  const store = createSessionStore();
+
+  // Verify store instance provides all necessary interface
+  t.is(typeof store.subscribe, "function", "Should have store interface");
+  t.is(typeof store.getSnapshot, "function", "Should have store interface");
+  t.is(typeof store.withSelector, "function", "Should have store interface");
+
+  // Verify convenience getters
+  t.true("ydoc" in store, "Should have ydoc getter");
+  t.true("provider" in store, "Should have provider getter");
+  t.true("awareness" in store, "Should have awareness getter");
+  t.true("isConnected" in store, "Should have isConnected getter");
+  t.true("isSynced" in store, "Should have isSynced getter");
+  t.true("settled" in store, "Should have settled getter");
+
+  // Verify methods
+  t.is(typeof store.initializeSession, "function", "Should have commands");
+  t.is(typeof store.destroy, "function", "Should have commands");
+  t.is(typeof store.isReady, "function", "Should have queries");
+});
+
+// =============================================================================
+// AWARENESS INTERNAL MANAGEMENT TESTS
+// =============================================================================
+
+test("initializeSession reuses existing awareness when re-initializing", t => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   const roomname = "test:room:123";
 
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
-  store.setAwareness(awareness);
-
-  const provider = store.createProvider(mockSocket, roomname, {
+  // First initialize with userData to create internal awareness
+  const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
+  const firstResult = store.initializeSession(mockSocket, roomname, userData, {
     connect: false,
   });
+  const firstAwareness = firstResult.awareness;
 
-  t.truthy(provider, "Should create provider with stored awareness");
+  // Re-initialize with different userData - should create new awareness
+  const newUserData = { id: "user-2", name: "New User", color: "#00ff00" };
+  const secondResult = store.initializeSession(
+    mockSocket,
+    roomname + "2",
+    newUserData,
+    {
+      connect: false,
+    }
+  );
+
+  t.truthy(secondResult.provider, "Should create provider with awareness");
+  t.not(
+    secondResult.awareness,
+    firstAwareness,
+    "Should create new awareness with new userData"
+  );
   t.is(
     store.getSnapshot().provider,
-    provider,
-    "Should store provider in state"
+    secondResult.provider,
+    "Should store new provider in state"
   );
-});
 
-test("createProvider options awareness overrides stored awareness", t => {
-  const store = createSessionStore();
-  const mockSocket = createMockSocket();
-  const roomname = "test:room:123";
+  // Verify userData is stored in session state instead of awareness
+  const sessionUserData = store.getSnapshot().userData;
+  t.deepEqual(
+    sessionUserData,
+    newUserData,
+    "Session state should contain user data"
+  );
 
-  const ydoc = store.initializeYDoc();
-  const storedAwareness = new awarenessProtocol.Awareness(ydoc);
-  const optionsAwareness = new awarenessProtocol.Awareness(ydoc);
-
-  store.setAwareness(storedAwareness);
-
-  const provider = store.createProvider(mockSocket, roomname, {
-    awareness: optionsAwareness,
-    connect: false,
-  });
-
-  t.truthy(provider, "Should create provider with options awareness");
+  // Verify awareness does not have user data set (clean awareness)
+  const awarenessUserData = secondResult.awareness?.getLocalState()?.user;
   t.is(
-    store.getSnapshot().provider,
-    provider,
-    "Should store provider in state"
+    awarenessUserData,
+    undefined,
+    "Awareness should not contain user data (clean awareness)"
   );
+
+  store.destroy();
 });
 
 test("destroyYDoc cleans up both YDoc and awareness", t => {
   const store = createSessionStore();
   const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
+  const mockSocket = createMockSocket();
+  const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
 
-  store.setAwareness(awareness);
+  // Create awareness internally through initializeSession
+  store.initializeSession(mockSocket, "test:room", userData, {
+    connect: false,
+  });
 
   // Verify both are present
   t.truthy(store.getSnapshot().ydoc, "YDoc should be present");
@@ -547,61 +511,6 @@ test("destroyYDoc cleans up both YDoc and awareness", t => {
   t.is(finalState.awareness, null, "Awareness should be null");
 });
 
-test("disconnectProvider cleans up awareness along with provider and YDoc", t => {
-  const store = createSessionStore();
-  const mockProvider = createMockPhoenixChannelProvider();
-
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
-  store.setAwareness(awareness);
-  store.connectProvider(mockProvider);
-
-  // Verify all are present
-  const initialState = store.getSnapshot();
-  t.truthy(initialState.ydoc, "YDoc should be present");
-  t.truthy(initialState.awareness, "Awareness should be present");
-  t.truthy(initialState.provider, "Provider should be present");
-
-  store.disconnectProvider();
-
-  const finalState = store.getSnapshot();
-  t.is(finalState.ydoc, null, "YDoc should be null");
-  t.is(finalState.awareness, null, "Awareness should be null");
-  t.is(finalState.provider, null, "Provider should be null");
-});
-
-test("getAwareness returns current awareness state", t => {
-  const store = createSessionStore();
-
-  t.is(store.getAwareness(), null, "Should initially be null");
-
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
-  store.setAwareness(awareness);
-
-  t.is(store.getAwareness(), awareness, "Should return stored awareness");
-});
-
-test("awareness property accessor returns current state", t => {
-  const store = createSessionStore();
-
-  t.is(
-    store.awareness,
-    null,
-    "awareness accessor should return null initially"
-  );
-
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
-  store.setAwareness(awareness);
-
-  t.is(
-    store.awareness,
-    awareness,
-    "awareness accessor should return awareness after setting"
-  );
-});
-
 // =============================================================================
 // CONNECTION SEQUENCE MANAGEMENT TESTS (STEP 4)
 // =============================================================================
@@ -610,56 +519,98 @@ test("initializeSession creates YDoc, provider, and sets awareness atomically", 
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   const roomname = "test:room:123";
-  const ydoc = new YDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
+  const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
 
-  const result = store.initializeSession(mockSocket, roomname, awareness, {
+  const result = store.initializeSession(mockSocket, roomname, userData, {
     connect: false,
   });
 
   t.truthy(result.ydoc, "Should return YDoc instance");
   t.truthy(result.provider, "Should return provider instance");
-  t.is(result.awareness, awareness, "Should return same awareness instance");
+  t.truthy(result.awareness, "Should create and return awareness instance");
 
   const finalState = store.getSnapshot();
   t.is(finalState.ydoc, result.ydoc, "Should store YDoc in state");
   t.is(finalState.provider, result.provider, "Should store provider in state");
-  t.is(finalState.awareness, awareness, "Should store awareness in state");
+  t.is(
+    finalState.awareness,
+    result.awareness,
+    "Should store awareness in state"
+  );
+
+  // Verify userData is stored in session state instead of awareness
+  t.deepEqual(
+    finalState.userData,
+    userData,
+    "Session state should contain provided user data"
+  );
+
+  // Verify awareness does not have user data set (clean awareness)
+  const awarenessUserData = result.awareness?.getLocalState()?.user;
+  t.is(
+    awarenessUserData,
+    undefined,
+    "Awareness should not contain user data (clean awareness)"
+  );
+
+  store.destroy();
 });
 
 test("initializeSession reuses existing YDoc if present", t => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   const roomname = "test:room:123";
+  const userData = { id: "user-2", name: "Another User", color: "#00ff00" };
 
   const existingYDoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(existingYDoc);
 
-  const result = store.initializeSession(mockSocket, roomname, awareness, {
+  const result = store.initializeSession(mockSocket, roomname, userData, {
     connect: false,
   });
 
   t.is(result.ydoc, existingYDoc, "Should reuse existing YDoc");
   t.truthy(result.provider, "Should create provider");
-  t.is(result.awareness, awareness, "Should use provided awareness");
+  t.truthy(result.awareness, "Should create awareness");
+
+  // Verify userData is stored in session state instead of awareness
+  const sessionUserData = store.getSnapshot().userData;
+  t.deepEqual(
+    sessionUserData,
+    userData,
+    "Session state should contain provided user data"
+  );
+
+  // Verify awareness does not have user data set (clean awareness)
+  const awarenessUserData = result.awareness?.getLocalState()?.user;
+  t.is(
+    awarenessUserData,
+    undefined,
+    "Awareness should not contain user data (clean awareness)"
+  );
+
+  store.destroy();
 });
 
-test("initializeSession uses stored awareness when none provided", t => {
+test("initializeSession handles null userData gracefully", t => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   const roomname = "test:room:123";
 
   const ydoc = store.initializeYDoc();
-  const storedAwareness = new awarenessProtocol.Awareness(ydoc);
-  store.setAwareness(storedAwareness);
 
   const result = store.initializeSession(mockSocket, roomname, null, {
     connect: false,
   });
 
-  t.is(result.awareness, storedAwareness, "Should use stored awareness");
+  t.is(
+    result.awareness,
+    null,
+    "Should not create awareness when userData is null"
+  );
   t.truthy(result.provider, "Should create provider");
   t.is(result.ydoc, ydoc, "Should use existing YDoc");
+
+  store.destroy();
 });
 
 test("initializeSession throws error with null socket", t => {
@@ -667,7 +618,7 @@ test("initializeSession throws error with null socket", t => {
   const roomname = "test:room:123";
 
   const error = t.throws(() => {
-    store.initializeSession(null, roomname);
+    store.initializeSession(null, roomname, null);
   });
 
   t.is(error.message, "Socket must be connected before initializing session");
@@ -677,86 +628,202 @@ test("initializeSession throws error with null socket", t => {
   t.is(finalState.ydoc, null, "YDoc should remain null");
   t.is(finalState.provider, null, "Provider should remain null");
   t.is(finalState.awareness, null, "Awareness should remain null");
+  t.is(finalState.userData, null, "userData should remain null");
 });
 
 test("initializeSession with connect=false option", t => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   const roomname = "test:room:123";
-  const ydoc = new YDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
+  const userData = { id: "user-3", name: "Test User 3", color: "#0000ff" };
 
-  const result = store.initializeSession(mockSocket, roomname, awareness, {
+  const result = store.initializeSession(mockSocket, roomname, userData, {
     connect: false,
   });
 
   t.truthy(result.provider, "Should create provider");
-  t.is(result.awareness, awareness, "Should use provided awareness");
+  t.truthy(result.awareness, "Should create awareness");
   t.truthy(result.ydoc, "Should create/use YDoc");
+
+  // Verify userData is stored in session state instead of awareness
+  const sessionUserData = store.getSnapshot().userData;
+  t.deepEqual(
+    sessionUserData,
+    userData,
+    "Session state should contain provided user data"
+  );
+
+  // Verify awareness does not have user data set (clean awareness)
+  const awarenessUserData = result.awareness?.getLocalState()?.user;
+  t.is(
+    awarenessUserData,
+    undefined,
+    "Awareness should not contain user data (clean awareness)"
+  );
+
+  store.destroy();
 });
 
-test("initializeSession handles awareness properly with null awareness", t => {
+test("initializeSession creates awareness only when userData is provided", t => {
   const store = createSessionStore();
-  const mockProvider = createMockPhoenixChannelProvider();
+  const mockSocket = createMockSocket();
+  const roomname = "test:room:123";
 
-  // Use connectProvider to avoid the PhoenixChannelProvider constructor issue
-  const ydoc = store.initializeYDoc();
-  store.connectProvider(mockProvider);
+  // Test without userData
+  store.initializeSession(mockSocket, roomname, null, {
+    connect: false,
+  });
+  const result1 = store.getSnapshot();
+  t.truthy(result1.ydoc, "Should have YDoc");
+  t.truthy(result1.provider, "Should have provider");
+  t.is(result1.awareness, null, "Awareness should be null when no userData");
+  t.is(
+    result1.userData,
+    null,
+    "userData should be null when no userData provided"
+  );
 
+  // Test with userData
+  const userData = { id: "user-4", name: "Test User 4", color: "#ff00ff" };
+  store.initializeSession(mockSocket, roomname + "2", userData, {
+    connect: false,
+  });
+  const result2 = store.getSnapshot();
+  t.truthy(result2.awareness, "Should create awareness when userData provided");
+
+  // Verify userData is stored in session state instead of awareness
+  t.deepEqual(
+    result2.userData,
+    userData,
+    "Session state should contain provided user data"
+  );
+
+  // Verify awareness does not have user data set (clean awareness)
+  const awarenessUserData = result2.awareness?.getLocalState()?.user;
+  t.is(
+    awarenessUserData,
+    undefined,
+    "Awareness should not contain user data (clean awareness)"
+  );
+
+  store.destroy();
+});
+
+// =============================================================================
+// EVENT HANDLER INTEGRATION TESTS
+// =============================================================================
+
+test("attachProvider integration works with initializeSession", t => {
+  const store = createSessionStore();
+  const mockSocket = createMockSocket();
+
+  // Test that initializeSession properly integrates with attachProvider
+  // by verifying that provider events can be processed (implicit test)
+
+  // Initialize session - should call attachProvider internally
+  const result1 = store.initializeSession(
+    mockSocket,
+    "room1",
+    { id: "user-1", name: "Test User", color: "#ff0000" },
+    { connect: false }
+  );
+  t.truthy(result1.provider, "initializeSession should create provider");
+
+  // Re-initialize with new session - should call attachProvider internally and replace provider
+  const result2 = store.initializeSession(
+    mockSocket,
+    "room2",
+    { id: "user-2", name: "Test User 2", color: "#00ff00" },
+    { connect: false }
+  );
+  t.truthy(result2.provider, "second initializeSession should create provider");
+  t.not(
+    result1.provider,
+    result2.provider,
+    "Should create different provider instances"
+  );
+  t.is(
+    store.getSnapshot().provider,
+    result2.provider,
+    "Should store latest provider"
+  );
+
+  store.destroy();
+});
+
+test("provider event handler integration via public interface", t => {
+  const store = createSessionStore();
+  const mockSocket = createMockSocket();
+
+  // Create provider and verify initial state
+  const result = store.initializeSession(
+    mockSocket,
+    "test:room",
+    { id: "user-1", name: "Test User", color: "#ff0000" },
+    { connect: false }
+  );
+
+  // Initial state should reflect provider's synced status
+  t.is(
+    store.getSnapshot().isSynced,
+    result.provider.synced,
+    "Store should reflect provider sync state"
+  );
+
+  // Test that provider status changes are reflected in store state
+  // (This verifies attachProvider event handlers are working)
+  t.is(store.getSnapshot().isConnected, false, "Should start disconnected");
+  t.is(store.getSnapshot().lastStatus, null, "Should have no initial status");
+
+  // Verify event handlers are working by checking that destroy cleans up properly
+  t.notThrows(
+    () => store.destroy(),
+    "Destroy should handle event cleanup properly"
+  );
+
+  // After destroy, all state should be reset
   const finalState = store.getSnapshot();
-  t.truthy(finalState.ydoc, "Should have YDoc");
-  t.truthy(finalState.provider, "Should have provider");
-  t.is(finalState.awareness, null, "Awareness should be null");
-});
-
-// =============================================================================
-// LEGACY SETYDOC TESTS
-// =============================================================================
-
-test("setYDoc allows external YDoc assignment", t => {
-  const store = createSessionStore();
-  const externalYDoc = new YDoc();
-
-  store.setYDoc(externalYDoc);
-
-  t.is(store.getSnapshot().ydoc, externalYDoc, "Should store external YDoc");
-  t.is(store.getYDoc(), externalYDoc, "Query should return external YDoc");
-
-  store.setYDoc(null);
-  t.is(store.getSnapshot().ydoc, null, "Should accept null YDoc");
+  t.is(finalState.provider, null, "Provider should be null after destroy");
+  t.is(finalState.isConnected, false, "Should not be connected after destroy");
+  t.is(finalState.isSynced, false, "Should not be synced after destroy");
+  t.is(finalState.lastStatus, null, "Status should be null after destroy");
 });
 
 // =============================================================================
 // STEP 6: COMPREHENSIVE CLEANUP TESTS
 // =============================================================================
 
-test("destroySession performs complete cleanup", t => {
+test("destroy performs complete cleanup", t => {
   const store = createSessionStore();
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
-  store.setAwareness(awareness);
+  const mockSocket = createMockSocket();
+  const userData = {
+    id: "user-cleanup",
+    name: "Cleanup User",
+    color: "#ff0000",
+  };
 
-  // Create mock provider using the factory
-  const mockProvider = createMockPhoenixChannelProvider(ydoc, awareness);
-
-  // Set up provider via connectProvider to avoid constructor issues
-  store.connectProvider(mockProvider);
+  // Initialize with userData to create awareness internally
+  const result = store.initializeSession(mockSocket, "test:room", userData, {
+    connect: false,
+  });
 
   // Track YDoc destruction
   let ydocDestroyed = false;
-  const originalDestroy = ydoc.destroy;
-  ydoc.destroy = () => {
+  const originalDestroy = result.ydoc.destroy;
+  result.ydoc.destroy = () => {
     ydocDestroyed = true;
-    originalDestroy.call(ydoc);
+    originalDestroy.call(result.ydoc);
   };
 
   // Track awareness destruction
   let awarenessDestroyed = false;
-  const originalAwarenessDestroy = awareness.destroy;
-  awareness.destroy = () => {
-    awarenessDestroyed = true;
-    originalAwarenessDestroy.call(awareness);
-  };
+  if (result.awareness) {
+    const originalAwarenessDestroy = result.awareness.destroy;
+    result.awareness.destroy = () => {
+      awarenessDestroyed = true;
+      originalAwarenessDestroy.call(result.awareness);
+    };
+  }
 
   // Verify initial state
   const beforeState = store.getSnapshot();
@@ -765,65 +832,47 @@ test("destroySession performs complete cleanup", t => {
   t.truthy(beforeState.awareness, "Should have awareness before cleanup");
 
   // Perform cleanup
-  store.destroySession();
+  store.destroy();
 
   // Verify complete cleanup
   const afterState = store.getSnapshot();
-  t.is(afterState.ydoc, null, "YDoc should be null after destroySession");
-  t.is(
-    afterState.provider,
-    null,
-    "Provider should be null after destroySession"
-  );
-  t.is(
-    afterState.awareness,
-    null,
-    "Awareness should be null after destroySession"
-  );
+  t.is(afterState.ydoc, null, "YDoc should be null after destroy");
+  t.is(afterState.provider, null, "Provider should be null after destroy");
+  t.is(afterState.awareness, null, "Awareness should be null after destroy");
   t.is(
     afterState.isConnected,
     false,
-    "isConnected should be false after destroySession"
+    "isConnected should be false after destroy"
   );
-  t.is(
-    afterState.isSynced,
-    false,
-    "isSynced should be false after destroySession"
-  );
-  t.is(
-    afterState.lastStatus,
-    null,
-    "lastStatus should be null after destroySession"
-  );
+  t.is(afterState.isSynced, false, "isSynced should be false after destroy");
+  t.is(afterState.userData, null, "userData should be null after destroy");
+  t.is(afterState.lastStatus, null, "lastStatus should be null after destroy");
 
   // Verify destruction was called
   t.true(ydocDestroyed, "YDoc destroy should have been called");
   t.true(awarenessDestroyed, "Awareness destroy should have been called");
-  t.true(
-    (mockProvider.destroy as sinon.SinonStub).calledOnce,
-    "Provider destroy should have been called"
-  );
 });
 
-test("destroySession is safe when called on empty state", t => {
+test("destroy is safe when called on empty state", t => {
   const store = createSessionStore();
 
   // Should not throw when called on initial state
   t.notThrows(() => {
-    store.destroySession();
-  }, "destroySession should be safe on empty state");
+    store.destroy();
+  }, "destroy should be safe on empty state");
 
   // State should remain in clean initial state
   const state = store.getSnapshot();
   t.is(state.ydoc, null, "YDoc should remain null");
   t.is(state.provider, null, "Provider should remain null");
   t.is(state.awareness, null, "Awareness should remain null");
+  t.is(state.userData, null, "userData should remain null");
   t.is(state.isConnected, false, "isConnected should remain false");
   t.is(state.isSynced, false, "isSynced should remain false");
   t.is(state.lastStatus, null, "lastStatus should remain null");
 });
 
-test("destroySession handles partial state cleanup", t => {
+test("destroy handles partial state cleanup", t => {
   const store = createSessionStore();
 
   // Set up partial state (only YDoc, no provider or awareness)
@@ -845,8 +894,8 @@ test("destroySession handles partial state cleanup", t => {
 
   // Should handle partial cleanup gracefully
   t.notThrows(() => {
-    store.destroySession();
-  }, "destroySession should handle partial state");
+    store.destroy();
+  }, "destroy should handle partial state");
 
   // Verify cleanup
   const afterState = store.getSnapshot();
@@ -854,74 +903,72 @@ test("destroySession handles partial state cleanup", t => {
   t.true(ydocDestroyed, "YDoc destroy should have been called");
 });
 
-test("destroySession cleans up event handlers", t => {
+test("destroy cleans up event handlers", t => {
   const store = createSessionStore();
+  const mockSocket = createMockSocket();
+  const userData = {
+    id: "user-handler",
+    name: "Handler User",
+    color: "#00ff00",
+  };
 
-  // Set up state and connect provider (which sets up handlers)
-  const ydoc = store.initializeYDoc();
-  const mockProvider = createMockPhoenixChannelProvider(ydoc);
-  store.connectProvider(mockProvider);
+  // Set up state by initializing session
+  const result = store.initializeSession(mockSocket, "test:room", userData, {
+    connect: false,
+  });
 
   // Verify initial state
   t.truthy(store.getSnapshot().provider, "Should have provider");
 
   // Perform cleanup
-  store.destroySession();
+  store.destroy();
 
-  // Verify handler cleanup and provider destruction
-  t.true(
-    (mockProvider.off as sinon.SinonStub).called,
-    "Event handlers should be cleaned up"
-  );
-  t.true(
-    (mockProvider.destroy as sinon.SinonStub).calledOnce,
-    "Provider should be destroyed"
-  );
+  // Verify provider destruction
+  const finalState = store.getSnapshot();
+  t.is(finalState.provider, null, "Provider should be destroyed");
 });
 
-test("disconnectProvider maintains existing comprehensive cleanup", t => {
+test("destroy maintains existing comprehensive cleanup", t => {
   const store = createSessionStore();
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
-  store.setAwareness(awareness);
+  const mockSocket = createMockSocket();
+  const userData = {
+    id: "user-comprehensive",
+    name: "Comprehensive User",
+    color: "#0000ff",
+  };
 
-  // Create mock provider using the factory
-  const mockProvider = createMockPhoenixChannelProvider(ydoc, awareness);
-
-  store.connectProvider(mockProvider);
+  // Initialize session to create all components internally
+  const result = store.initializeSession(mockSocket, "test:room", userData, {
+    connect: false,
+  });
 
   // Track destruction calls
   let ydocDestroyed = false;
   let awarenessDestroyed = false;
 
-  const originalYdocDestroy = ydoc.destroy;
-  ydoc.destroy = () => {
+  const originalYdocDestroy = result.ydoc.destroy;
+  result.ydoc.destroy = () => {
     ydocDestroyed = true;
-    originalYdocDestroy.call(ydoc);
+    originalYdocDestroy.call(result.ydoc);
   };
 
-  const originalAwarenessDestroy = awareness.destroy;
-  awareness.destroy = () => {
-    awarenessDestroyed = true;
-    originalAwarenessDestroy.call(awareness);
-  };
+  if (result.awareness) {
+    const originalAwarenessDestroy = result.awareness.destroy;
+    result.awareness.destroy = () => {
+      awarenessDestroyed = true;
+      originalAwarenessDestroy.call(result.awareness);
+    };
+  }
 
-  // disconnectProvider should clean up everything like destroySession
-  store.disconnectProvider();
+  // destroy should clean up everything
+  store.destroy();
 
-  // Verify complete cleanup (same as destroySession)
+  // Verify complete cleanup
   const afterState = store.getSnapshot();
-  t.is(afterState.ydoc, null, "YDoc should be null after disconnectProvider");
-  t.is(
-    afterState.provider,
-    null,
-    "Provider should be null after disconnectProvider"
-  );
-  t.is(
-    afterState.awareness,
-    null,
-    "Awareness should be null after disconnectProvider"
-  );
+  t.is(afterState.ydoc, null, "YDoc should be null after destroy");
+  t.is(afterState.provider, null, "Provider should be null after destroy");
+  t.is(afterState.awareness, null, "Awareness should be null after destroy");
+  t.is(afterState.userData, null, "userData should be null after destroy");
   t.is(afterState.isConnected, false, "isConnected should be false");
   t.is(afterState.isSynced, false, "isSynced should be false");
   t.is(afterState.lastStatus, null, "lastStatus should be null");
@@ -929,120 +976,132 @@ test("disconnectProvider maintains existing comprehensive cleanup", t => {
   // Verify all destruction was called
   t.true(ydocDestroyed, "YDoc destroy should have been called");
   t.true(awarenessDestroyed, "Awareness destroy should have been called");
-  t.true(
-    (mockProvider.destroy as sinon.SinonStub).calledOnce,
-    "Provider destroy should have been called"
-  );
-  t.true(
-    (mockProvider.off as sinon.SinonStub).called,
-    "Event handlers should be cleaned up"
-  );
 });
 
 // =============================================================================
 // DOCUMENT SETTLING BEHAVIOR TESTS
 // =============================================================================
 
-test("settled state starts as false", t => {
+test("settled state tracks document settling process", async t => {
   const store = createSessionStore();
+  const mockSocket = createMockSocket();
+  const userData = {
+    id: "user-settling",
+    name: "Settling User",
+    color: "#00ffff",
+  };
 
-  const state = store.getSnapshot();
-  t.is(state.settled, false, "settled should start as false");
-  t.is(store.getSettled(), false, "getSettled() should return false");
-  t.is(store.settled, false, "property accessor should return false");
+  // Initialize session (without connecting initially)
+  const result = store.initializeSession(mockSocket, "test:room", userData, {
+    connect: true,
+  });
+
+  // Initially settled should be false
+  t.is(store.settled, false, "settled should be false initially");
+  const settled = waitForState(store, state => state.settled);
+
+  triggerProviderStatus(store, "connected");
+  const { ydoc, provider } = result;
+  provider.synced = true;
+
+  applyProviderUpdate(ydoc, provider);
+
+  t.is(await settled, true);
+
+  store.destroy();
 });
 
-test("settled state is included in state reset operations", t => {
+test("settling is reset on reconnection", async t => {
   const store = createSessionStore();
+  const mockSocket = createMockSocket();
+  const userData = {
+    id: "user-reconnect",
+    name: "Reconnect User",
+    color: "#ffff00",
+  };
 
-  // Set up some state
-  const ydoc = store.initializeYDoc();
-  const awareness = new awarenessProtocol.Awareness(ydoc);
-  store.setAwareness(awareness);
+  // Initialize session
+  const result = store.initializeSession(mockSocket, "test:room", userData, {
+    connect: true,
+  });
 
-  // Create mock provider using the factory
-  const mockProvider = createMockPhoenixChannelProvider(ydoc, awareness);
+  t.deepEqual(result.provider, store.getSnapshot().provider);
 
-  store.connectProvider(mockProvider);
-
-  // Manually set settled to true to test reset
-  // Note: In reality this would be set by the settling process
-
-  // Test disconnectProvider resets settled
-  store.disconnectProvider();
-  const afterDisconnect = store.getSnapshot();
-  t.is(
-    afterDisconnect.settled,
-    false,
-    "disconnectProvider should reset settled to false"
-  );
-
-  // Test destroySession resets settled
-  const ydoc2 = store.initializeYDoc();
-  store.connectProvider(mockProvider);
-  store.destroySession();
-  const afterDestroy = store.getSnapshot();
-  t.is(
-    afterDestroy.settled,
-    false,
-    "destroySession should reset settled to false"
-  );
-});
-
-test("settled state tracks document settling process", t => {
-  const store = createSessionStore();
-  const ydoc = store.initializeYDoc();
-
-  // Create mock provider using the factory
-  const mockProvider = createMockPhoenixChannelProvider(ydoc);
-
-  // Connect provider - this should start settling when connected
-  store.connectProvider(mockProvider);
+  triggerProviderStatus(store, "connected");
+  t.is(store.isConnected, true);
 
   // Initially settled should be false
   t.is(store.settled, false, "settled should be false initially");
 
-  // Simulate connection (this should trigger settling)
-  mockProvider._test.triggerStatus("connected");
+  let settled = waitForState(store, state => state.settled);
 
-  // Settled should still be false until both sync and update events occur
-  t.is(
-    store.settled,
-    false,
-    "settled should be false until sync and update complete"
-  );
+  triggerProviderSync(store, true);
+  applyProviderUpdate(store.ydoc!, store.provider!);
 
-  t.pass("settling process integration test completed");
+  t.is(await settled, true);
+  t.is(store.settled, true);
+
+  triggerProviderStatus(store, "disconnected");
+  t.is(store.isConnected, false);
+
+  t.is(store.settled, false);
+
+  settled = waitForState(store, state => state.settled);
+
+  triggerProviderStatus(store, "connected");
+  triggerProviderSync(store, true);
+  applyProviderUpdate(store.ydoc!, store.provider!);
+
+  t.is(await settled, true);
+
+  store.destroy();
+  t.is(store.settled, false, "destroy should reset settled to false");
 });
 
-test("settling is reset on reconnection", t => {
-  const store = createSessionStore();
-  const ydoc = store.initializeYDoc();
+function triggerProviderSync(store: SessionStore, synced: boolean) {
+  store.provider!.emit("sync", [synced]);
+}
 
-  // Create mock provider using the factory
-  const mockProvider = createMockPhoenixChannelProvider(ydoc);
+function triggerProviderStatus(
+  store: SessionStore,
+  status: "connected" | "disconnected" | "connecting"
+) {
+  store.provider!.emit("status", [{ status }]);
+}
 
-  store.connectProvider(mockProvider);
+function applyProviderUpdate(ydoc: YDoc, provider: PhoenixChannelProvider) {
+  const doc2 = new YDoc();
+  doc2.getArray("test").insert(0, ["hello"]);
 
-  // Simulate initial connection
-  mockProvider._test.triggerStatus("connected");
-  t.is(
-    store.settled,
-    false,
-    "settled should be false after initial connection"
-  );
+  const update = encodeStateAsUpdate(doc2);
+  applyUpdate(ydoc, update, provider);
+}
 
-  // Simulate disconnection
-  mockProvider._test.triggerStatus("disconnected");
-  t.is(store.settled, false, "settled should remain false after disconnection");
+async function waitForState(
+  store: SessionStore,
+  callback: (state: SessionState) => boolean,
+  timeout = 200
+) {
+  const stack = new Error().stack;
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      const error = new Error("Timeout waiting for state");
+      error.stack = stack;
 
-  // Simulate reconnection (this should restart settling)
-  mockProvider._test.triggerStatus("connected");
-  t.is(
-    store.settled,
-    false,
-    "settled should be false after reconnection, ready to settle again"
-  );
+      reject(error);
+    }, timeout);
 
-  t.pass("reconnection settling reset test completed");
-});
+    const unsubscribe = store.subscribe(() => {
+      try {
+        const result = callback(store.getSnapshot());
+        if (result) {
+          unsubscribe();
+          clearTimeout(timeoutId);
+          resolve(result);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}

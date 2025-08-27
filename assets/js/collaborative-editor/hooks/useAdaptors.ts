@@ -2,66 +2,67 @@
  * React hooks for adaptor management
  *
  * Provides convenient hooks for components to access adaptor functionality
- * from the SessionProvider context using the useSyncExternalStore pattern.
+ * from the StoreProvider context using the useSyncExternalStore pattern.
  */
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useSyncExternalStore, useContext } from "react";
 
-import { useSession } from "../contexts/SessionProvider";
-import type { Adaptor, AdaptorState } from "../types/adaptor";
+import { StoreContext } from "../contexts/StoreProvider";
+import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
+import type { Adaptor } from "../types/adaptor";
 
-function defaultSelector(state: AdaptorState): Adaptor[] {
-  return state.adaptors;
-}
+/**
+ * Main hook for accessing the AdaptorStore instance
+ * Handles context access and error handling once
+ */
+const useAdaptorStore = (): AdaptorStoreInstance => {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error("useAdaptorStore must be used within a StoreProvider");
+  }
+  return context.adaptorStore;
+};
 
-export function useAdaptors(): Adaptor[];
-export function useAdaptors<T>(
-  selector: (state: AdaptorState) => T,
-  deps?: React.DependencyList
-): T;
+/**
+ * Hook to get all adaptors
+ * Returns referentially stable array that only changes when adaptors actually change
+ */
+export const useAdaptors = (): Adaptor[] => {
+  const adaptorStore = useAdaptorStore();
 
-export function useAdaptors<T = Adaptor[]>(
-  selector: (state: AdaptorState) => T = defaultSelector as (
-    state: AdaptorState
-  ) => T,
-  deps: React.DependencyList = []
-): T {
-  const { adaptorStore } = useSession();
+  const selectAdaptors = adaptorStore.withSelector(state => state.adaptors);
 
-  const getSnapshot = useMemo(() => {
-    return adaptorStore.withSelector(selector);
-  }, [adaptorStore, selector, ...deps]);
-
-  return useSyncExternalStore(adaptorStore.subscribe, getSnapshot);
-}
+  return useSyncExternalStore(adaptorStore.subscribe, selectAdaptors);
+};
 /**
  * Hook to get loading state
  */
 export const useAdaptorsLoading = (): boolean => {
-  const { adaptorStore } = useSession();
+  const adaptorStore = useAdaptorStore();
 
-  const selector = adaptorStore.withSelector(state => state.isLoading);
+  const selectLoading = adaptorStore.withSelector(state => state.isLoading);
 
-  return useSyncExternalStore(adaptorStore.subscribe, selector, selector);
+  return useSyncExternalStore(adaptorStore.subscribe, selectLoading);
 };
 
 /**
  * Hook to get error state
  */
 export const useAdaptorsError = (): string | null => {
-  const { adaptorStore } = useSession();
+  const adaptorStore = useAdaptorStore();
 
-  const selector = adaptorStore.withSelector(state => state.error);
+  const selectError = adaptorStore.withSelector(state => state.error);
 
-  return useSyncExternalStore(adaptorStore.subscribe, selector, selector);
+  return useSyncExternalStore(adaptorStore.subscribe, selectError);
 };
 
 /**
  * Hook to get adaptor commands for triggering actions
  */
 export const useAdaptorCommands = () => {
-  const { adaptorStore } = useSession();
+  const adaptorStore = useAdaptorStore();
 
+  // These are already stable function references from the store
   return {
     requestAdaptors: adaptorStore.requestAdaptors,
     setAdaptors: adaptorStore.setAdaptors,
@@ -74,11 +75,11 @@ export const useAdaptorCommands = () => {
  * Memoized for performance
  */
 export const useAdaptor = (name: string): Adaptor | null => {
-  const { adaptorStore } = useSession();
+  const adaptorStore = useAdaptorStore();
 
-  const selector = adaptorStore.withSelector(
+  const selectAdaptor = adaptorStore.withSelector(
     state => state.adaptors.find(adaptor => adaptor.name === name) || null
   );
 
-  return useSyncExternalStore(adaptorStore.subscribe, selector, selector);
+  return useSyncExternalStore(adaptorStore.subscribe, selectAdaptor);
 };

@@ -8,6 +8,7 @@ import { CollaborationWidget } from "./components/CollaborationWidget";
 import { Header } from "./components/Header";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
+import { StoreProvider } from "./contexts/StoreProvider";
 import { WorkflowStoreProvider } from "./contexts/WorkflowStoreProvider";
 
 export interface CollaborativeEditorDataProps {
@@ -69,13 +70,15 @@ export const CollaborativeEditor: WithActionProps<
           userId={userId}
           userName={userName}
         >
-          <WorkflowStoreProvider>
-            <Header>{breadcrumbElements}</Header>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <WorkflowEditor />
-              <CollaborationWidget />
-            </div>
-          </WorkflowStoreProvider>
+          <StoreProvider>
+            <WorkflowStoreProvider>
+              <Header>{breadcrumbElements}</Header>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <WorkflowEditor />
+                <CollaborationWidget />
+              </div>
+            </WorkflowStoreProvider>
+          </StoreProvider>
         </SessionProvider>
       </SocketProvider>
     </div>
