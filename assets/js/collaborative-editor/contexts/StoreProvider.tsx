@@ -35,11 +35,17 @@ import {
   type CredentialStoreInstance,
   createCredentialStore,
 } from "../stores/createCredentialStore";
+import {
+  createWorkflowStore,
+  type WorkflowStoreInstance,
+} from "../stores/createWorkflowStore";
+import type { Session } from "../types/session";
 
 export interface StoreContextValue {
   adaptorStore: AdaptorStoreInstance;
   credentialStore: CredentialStoreInstance;
   awarenessStore: AwarenessStoreInstance;
+  workflowStore: WorkflowStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -56,6 +62,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     adaptorStore: createAdaptorStore(),
     credentialStore: createCredentialStore(),
     awarenessStore: createAwarenessStore(),
+    workflowStore: createWorkflowStore(),
   }));
 
   // Initialize awareness when both awareness instance and userData are available
@@ -99,6 +106,21 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     }
     return undefined;
   }, [session.provider, session.isConnected, stores]);
+
+  // Connect/disconnect workflowStore Y.Doc when session changes
+  useEffect(() => {
+    if (session.ydoc) {
+      console.debug("StoreProvider: Connecting workflowStore to Y.Doc");
+      stores.workflowStore.connectYDoc(session.ydoc as Session.WorkflowDoc);
+      return () => {
+        console.debug("StoreProvider: Disconnecting workflowStore from Y.Doc");
+        stores.workflowStore.disconnectYDoc();
+      };
+    } else {
+      stores.workflowStore.disconnectYDoc();
+      return undefined;
+    }
+  }, [session.ydoc, stores.workflowStore]);
 
   // Clean up awareness when session is destroyed
   useEffect(() => {
