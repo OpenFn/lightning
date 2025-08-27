@@ -24,6 +24,8 @@
 import type React from "react";
 import { createContext, useEffect, useState } from "react";
 
+import logger from "#/utils/logger";
+
 import { useSession } from "../hooks/useSession";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
 import { createAdaptorStore } from "../stores/createAdaptorStore";
@@ -83,6 +85,8 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       );
 
       // Set up last seen timer
+      // TODO: the awarenessStore should be responsible for this
+      // TODO: also the destroyAwareness call should be in this effect.
       const cleanupTimer = stores.awarenessStore._internal.setupLastSeenTimer();
 
       return cleanupTimer;
@@ -93,7 +97,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Connect stores when provider is ready
   useEffect(() => {
     if (session.provider && session.isConnected) {
-      console.debug("StoreProvider: Connecting stores to channel");
+      logger.label("StoreProvider").debug("Connecting stores to channel");
 
       const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
       const cleanup2 = stores.credentialStore._connectChannel(session.provider);
@@ -109,18 +113,28 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
 
   // Connect/disconnect workflowStore Y.Doc when session changes
   useEffect(() => {
-    if (session.ydoc) {
-      console.debug("StoreProvider: Connecting workflowStore to Y.Doc");
-      stores.workflowStore.connectYDoc(session.ydoc as Session.WorkflowDoc);
+    if (session.ydoc && session.provider && session.isConnected) {
+      logger.label("StoreProvider").debug("Connecting workflowStore");
+      stores.workflowStore.connect(
+        session.ydoc as Session.WorkflowDoc,
+        session.provider
+      );
+
       return () => {
-        console.debug("StoreProvider: Disconnecting workflowStore from Y.Doc");
-        stores.workflowStore.disconnectYDoc();
+        logger
+          .label("StoreProvider")
+          .debug("Disconnecting workflowStore from Y.Doc");
+        stores.workflowStore.disconnect();
       };
     } else {
-      stores.workflowStore.disconnectYDoc();
       return undefined;
     }
-  }, [session.ydoc, stores.workflowStore]);
+  }, [
+    session.ydoc,
+    session.provider,
+    stores.workflowStore,
+    session.isConnected,
+  ]);
 
   // Clean up awareness when session is destroyed
   useEffect(() => {

@@ -6,8 +6,8 @@
 import type React from "react";
 import { createContext, useEffect, useState } from "react";
 import { PhoenixChannelProvider } from "y-phoenix-channel";
-import * as awarenessProtocol from "y-protocols/awareness";
-import { Doc as YDoc } from "yjs";
+
+import logger from "#/utils/logger";
 
 import { useSocket } from "../../react/contexts/SocketProvider";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
@@ -24,7 +24,10 @@ import {
   createSessionStore,
   type SessionStoreInstance,
 } from "../stores/createSessionStore";
-import type { LocalUserData } from "../types/awareness";
+
+function debug(...args: Parameters<typeof logger.debug>) {
+  logger.label("SessionProvider").debug(...args);
+}
 
 export const SessionContext = createContext<SessionStoreInstance | null>(null);
 
@@ -111,12 +114,7 @@ export const SessionProvider = ({
     // Listen directly to channel for 'joined' state detection
     const cleanupJoinListener = setupJoinListener(provider, isConnected => {
       // Request adaptors when channel is successfully joined
-      if (isConnected) {
-        console.debug("Channel joined, requesting adaptors and credentials");
-
-        cleanupAdaptorChannel = adaptorStore._connectChannel(provider);
-        cleanupCredentialChannel = credentialStore._connectChannel(provider);
-      }
+      debug("joinListener", { isConnected });
     });
 
     // Set up automatic last seen updates via awareness store

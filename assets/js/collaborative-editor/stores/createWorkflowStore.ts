@@ -106,7 +106,10 @@
  */
 
 import { produce } from "immer";
+import type { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as Y from "yjs";
+
+import logger from "#/utils/logger";
 
 import { channelRequest } from "../hooks/useChannel";
 import { JobSchema } from "../types/job";
@@ -114,6 +117,14 @@ import type { Session } from "../types/session";
 import type { Workflow } from "../types/workflow";
 
 import { createWithSelector } from "./common";
+
+function debug(...args: Parameters<typeof logger.debug>) {
+  logger.label("WorkflowStore").debug(...args);
+}
+
+function info(...args: Parameters<typeof logger.info>) {
+  logger.label("WorkflowStore").info(...args);
+}
 
 const JobShape = JobSchema.shape;
 // Helper to update derived state (defined first to avoid hoisting issues)
@@ -170,12 +181,20 @@ export const createWorkflowStore = () => {
   // Y.Doc will be connected externally via SessionProvider
   let ydoc: Session.WorkflowDoc | null = null;
   let observerCleanups: (() => void)[] = [];
+  let provider: PhoenixChannelProvider | null = null;
 
   let state = produceInitialState();
 
   const listeners = new Set<() => void>();
 
   const notify = () => {
+    debug("notify", {
+      workflow: state.workflow,
+      jobs: state.jobs.length,
+      triggers: state.triggers.length,
+      edges: state.edges.length,
+      positions: Object.keys(state.positions).length,
+    });
     listeners.forEach(listener => {
       listener();
     });
@@ -186,6 +205,19 @@ export const createWorkflowStore = () => {
     return () => listeners.delete(listener);
   };
 
+  let lastState: Workflow.State = state;
+  const updateState = (updater: (draft: Workflow.State) => void) => {
+    const nextState = produce(state, draft => {
+      updater(draft);
+      updateDerivedState(draft);
+    });
+    if (nextState !== lastState) {
+      lastState = nextState;
+      state = nextState;
+      notify();
+    }
+  };
+
   // Returns the current Immer state (referentially stable)
   const getSnapshot = (): Workflow.State => state;
 
@@ -193,11 +225,12 @@ export const createWorkflowStore = () => {
   const withSelector = createWithSelector(getSnapshot);
 
   // Connect Y.Doc and set up observers
-  const connectYDoc = (doc: Session.WorkflowDoc) => {
+  const connect = (d: Session.WorkflowDoc, p: PhoenixChannelProvider) => {
     // Clean up previous connection
-    disconnectYDoc();
+    disconnect();
 
-    ydoc = doc;
+    provider = p;
+    ydoc = d;
 
     // Get Y.js maps and arrays
     const workflowMap = ydoc.getMap("workflow");
@@ -208,50 +241,40 @@ export const createWorkflowStore = () => {
 
     // Set up observers
     const workflowObserver = () => {
-      state = produce(state, draft => {
+      updateState(draft => {
         draft.workflow = workflowMap.toJSON() as Session.Workflow;
-        updateDerivedState(draft);
       });
-      notify();
     };
 
     const jobsObserver = () => {
-      state = produce(state, draft => {
+      updateState(draft => {
         const yjsJobs = jobsArray.toArray() as Y.Map<unknown>[];
         draft.jobs = yjsJobs.map(yjsJob => yjsJob.toJSON() as Workflow.Job);
-        updateDerivedState(draft);
       });
-      notify();
     };
 
     const triggersObserver = () => {
-      state = produce(state, draft => {
+      updateState(draft => {
         const yjsTriggers = triggersArray.toArray() as Y.Map<unknown>[];
         draft.triggers = yjsTriggers.map(
           yjsTrigger => yjsTrigger.toJSON() as Workflow.Trigger
         );
-        updateDerivedState(draft);
       });
-      notify();
     };
 
     const edgesObserver = () => {
-      state = produce(state, draft => {
+      updateState(draft => {
         const yjsEdges = edgesArray.toArray() as Y.Map<unknown>[];
         draft.edges = yjsEdges.map(
           yjsEdge => yjsEdge.toJSON() as Workflow.Edge
         );
-        updateDerivedState(draft);
       });
-      notify();
     };
 
     const positionsObserver = () => {
-      state = produce(state, draft => {
+      updateState(draft => {
         draft.positions = positionsMap.toJSON() as Workflow.Positions;
-        updateDerivedState(draft);
       });
-      notify();
     };
 
     // Attach observers with deep observation for nested changes
@@ -262,6 +285,7 @@ export const createWorkflowStore = () => {
     positionsMap.observeDeep(positionsObserver);
 
     // Store cleanup functions
+    debug("Attaching observers");
     observerCleanups = [
       () => workflowMap.unobserveDeep(workflowObserver),
       () => jobsArray.unobserveDeep(jobsObserver),
@@ -273,7 +297,6 @@ export const createWorkflowStore = () => {
     state = produce(state, draft => {
       updateDerivedState(draft);
     });
-    notify();
 
     // Initial sync from Y.Doc to state
     workflowObserver();
@@ -284,18 +307,17 @@ export const createWorkflowStore = () => {
   };
 
   // Disconnect Y.Doc and clean up observers
-  const disconnectYDoc = () => {
+  const disconnect = () => {
+    debug("Cleaning up observers", observerCleanups.length);
     observerCleanups.forEach(cleanup => {
       cleanup();
     });
     observerCleanups = [];
     ydoc = null;
+    provider = null;
 
     // Update collaboration status
-    state = produce(state, draft => {
-      updateDerivedState(draft);
-    });
-    notify();
+    updateState(_draft => {});
   };
 
   // =============================================================================
@@ -459,47 +481,39 @@ export const createWorkflowStore = () => {
   // These methods directly update Immer state without Y.Doc involvement
 
   const selectJob = (id: string | null) => {
-    state = produce(state, draft => {
+    updateState(draft => {
       draft.selectedJobId = id;
       draft.selectedTriggerId = null;
       draft.selectedEdgeId = null;
-      updateDerivedState(draft);
     });
-    notify();
   };
 
   const selectTrigger = (id: string | null) => {
-    state = produce(state, draft => {
+    updateState(draft => {
       draft.selectedTriggerId = id;
       draft.selectedJobId = null;
       draft.selectedEdgeId = null;
-      updateDerivedState(draft);
     });
-    notify();
   };
 
   const selectEdge = (id: string | null) => {
-    state = produce(state, draft => {
+    updateState(draft => {
       draft.selectedEdgeId = id;
       draft.selectedJobId = null;
       draft.selectedTriggerId = null;
-      updateDerivedState(draft);
     });
-    notify();
   };
 
   const clearSelection = () => {
-    state = produce(state, draft => {
+    updateState(draft => {
       draft.selectedJobId = null;
       draft.selectedTriggerId = null;
       draft.selectedEdgeId = null;
-      updateDerivedState(draft);
     });
-    notify();
   };
 
   const saveWorkflow = async () => {
-    if (!ydoc) return;
+    if (!ydoc || !provider) return;
 
     const workflow = ydoc.getMap("workflow").toJSON();
 
@@ -516,14 +530,15 @@ export const createWorkflowStore = () => {
       positions,
     };
 
-    // send to the server
+    debug("Saving workflow", payload);
+
     const response = await channelRequest<{ workflow: unknown }>(
-      ydoc.provider.channel,
+      provider.channel,
       "save_workflow",
       payload
     );
 
-    console.log("Saving workflow", payload);
+    debug("Saved workflow", response);
   };
 
   // =============================================================================
@@ -537,13 +552,11 @@ export const createWorkflowStore = () => {
     removeJob(id);
 
     // Immediately clear selection if this job was selected
-    state = produce(state, draft => {
+    updateState(draft => {
       if (draft.selectedJobId === id) {
         draft.selectedJobId = null;
-        updateDerivedState(draft);
       }
     });
-    notify();
 
     // Note: Y.Doc observer will also fire and update the jobs array
   };
@@ -555,8 +568,8 @@ export const createWorkflowStore = () => {
     withSelector,
 
     // Y.Doc connection management
-    connectYDoc,
-    disconnectYDoc,
+    connect,
+    disconnect,
     get isConnected() {
       return ydoc !== null;
     },
