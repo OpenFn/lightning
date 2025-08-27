@@ -2,7 +2,7 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import { useSession } from "../contexts/SessionProvider";
+import { useSession } from "../hooks/useSession";
 import { useCurrentJob, useNodeSelection } from "../hooks/useWorkflow";
 
 import { CollaborativeMonaco } from "./CollaborativeMonaco";

@@ -4,12 +4,13 @@
  */
 
 import { useSocket } from "../../react/contexts/SocketProvider";
-import { useSession } from "../contexts/SessionProvider";
 import { useAwarenessUsers } from "../hooks/useAwareness";
+import { useSession } from "../hooks/useSession";
 
 export function CollaborationWidget() {
   const { isConnected: socketConnected, connectionError } = useSocket();
   const { isConnected: yjsConnected, isSynced } = useSession();
+
   const users = useAwarenessUsers();
 
   const getStatusColor = () => {

@@ -30,13 +30,31 @@
  */
 
 import type React from "react";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 
 import { useURLState } from "#/react/lib/use-url-state";
 
-import { useWorkflowStoreContext } from "../contexts/WorkflowStoreProvider";
+import { WorkflowStoreContext } from "../contexts/WorkflowStoreProvider";
 import type { WorkflowStoreInstance } from "../stores/createWorkflowStore";
 import type { Workflow } from "../types/workflow";
+
+/**
+ * Hook to access the WorkflowStore context.
+ *
+ * This is primarily for internal use by hooks in the Workflow.ts module.
+ * Most components should use the specialized hooks instead.
+ *
+ * @internal Use hooks from ../hooks/Workflow.ts instead
+ */
+export const useWorkflowStoreContext = () => {
+  const store = useContext(WorkflowStoreContext);
+  if (!store) {
+    throw new Error(
+      "useWorkflowStore must be used within WorkflowStoreProvider"
+    );
+  }
+  return store;
+};
 
 /**
  * Core selector hook that eliminates boilerplate and provides optimal performance.

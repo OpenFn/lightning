@@ -45,35 +45,18 @@
  */
 
 import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 
+import { useSession } from "../hooks/useSession";
 import {
   createWorkflowStore,
   type WorkflowStoreInstance,
 } from "../stores/createWorkflowStore";
 import type { Session } from "../types/session";
 
-import { useSession } from "./SessionProvider";
-
-const WorkflowStoreContext = createContext<WorkflowStoreInstance | null>(null);
-
-/**
- * Hook to access the WorkflowStore context.
- *
- * This is primarily for internal use by hooks in the Workflow.ts module.
- * Most components should use the specialized hooks instead.
- *
- * @internal Use hooks from ../hooks/Workflow.ts instead
- */
-export const useWorkflowStoreContext = () => {
-  const store = useContext(WorkflowStoreContext);
-  if (!store) {
-    throw new Error(
-      "useWorkflowStore must be used within WorkflowStoreProvider"
-    );
-  }
-  return store;
-};
+export const WorkflowStoreContext = createContext<WorkflowStoreInstance | null>(
+  null
+);
 
 interface WorkflowStoreProviderProps {
   children: React.ReactNode;

@@ -1,71 +1,66 @@
 /**
- * React hooks for adaptor management
+ * React hooks for credential management
  *
- * Provides convenient hooks for components to access adaptor functionality
- * from the SessionProvider context using the useSyncExternalStore pattern.
+ * Provides convenient hooks for components to access credential functionality
+ * from the StoreProvider context using the useSyncExternalStore pattern.
  */
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useSyncExternalStore, useContext } from "react";
 
-import { useSession } from "../contexts/SessionProvider";
+import { StoreContext } from "../contexts/StoreProvider";
+import type { CredentialStoreInstance } from "../stores/createCredentialStore";
 import type { CredentialState } from "../types/credential";
+
+/**
+ * Main hook for accessing the CredentialStore instance
+ * Handles context access and error handling once
+ */
+const useCredentialStore = (): CredentialStoreInstance => {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error("useCredentialStore must be used within a StoreProvider");
+  }
+  return context.credentialStore;
+};
 
 type ProjectAndKeychainCredentials = Pick<
   CredentialState,
   "projectCredentials" | "keychainCredentials"
 >;
 
-function defaultSelector(
-  state: CredentialState
-): ProjectAndKeychainCredentials {
-  return {
+/**
+ * Hook to get project and keychain credentials
+ * Returns referentially stable object that only changes when credentials actually change
+ */
+export const useCredentials = (): ProjectAndKeychainCredentials => {
+  const credentialStore = useCredentialStore();
+
+  const selectCredentials = credentialStore.withSelector(state => ({
     projectCredentials: state.projectCredentials,
     keychainCredentials: state.keychainCredentials,
-  };
-}
+  }));
 
-export function useCredentials(): ProjectAndKeychainCredentials;
-export function useCredentials<T>(
-  selector: (state: CredentialState) => T,
-  deps?: React.DependencyList
-): T;
-
-export function useCredentials<T = ProjectAndKeychainCredentials>(
-  selector: (state: CredentialState) => T = defaultSelector as (
-    state: CredentialState
-  ) => T,
-  deps: React.DependencyList = []
-): T {
-  const { credentialStore } = useSession();
-
-  const getSnapshot = useMemo(() => {
-    return credentialStore.withSelector(selector);
-  }, [credentialStore, selector, ...deps]);
-
-  return useSyncExternalStore(credentialStore.subscribe, getSnapshot);
-}
+  return useSyncExternalStore(credentialStore.subscribe, selectCredentials);
+};
 
 /**
  * Hook to get error state
  */
 export const useCredentialsError = (): string | null => {
-  const { credentialStore } = useSession();
+  const credentialStore = useCredentialStore();
 
-  const selector = credentialStore.withSelector(state => state.error);
+  const selectError = credentialStore.withSelector(state => state.error);
 
-  return useSyncExternalStore(
-    credentialStore.subscribe,
-    selector,
-    selector // SSR snapshot
-  );
+  return useSyncExternalStore(credentialStore.subscribe, selectError);
 };
 
 /**
  * Hook to get adaptor commands for triggering actions
  */
 export const useCredentialsCommands = () => {
-  const { credentialStore } = useSession();
+  const credentialStore = useCredentialStore();
 
+  // These are already stable function references from the store
   return {
     requestCredentials: credentialStore.requestCredentials,
     clearError: credentialStore.clearError,
