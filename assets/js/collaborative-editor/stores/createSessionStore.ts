@@ -13,9 +13,15 @@ import type * as awarenessProtocol from "y-protocols/awareness";
 import { Awareness } from "y-protocols/awareness";
 import { Doc as YDoc } from "yjs";
 
+import logger from "#/utils/logger";
+
 import type { LocalUserData } from "../types/awareness";
 
 import { createWithSelector, type WithSelector } from "./common";
+
+function debug(...args: Parameters<typeof logger.debug>) {
+  logger.label("SessionStore").debug(...args);
+}
 
 export interface SessionState {
   ydoc: YDoc | null;
@@ -343,6 +349,7 @@ function createSettlingSubscription(
       .then(() => {
         if (!currentController?.signal.aborted) {
           updateState(draft => {
+            debug("Settled");
             draft.settled = true;
           });
         }

@@ -57,6 +57,8 @@
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
+import logger from "#/utils/logger";
+
 import { channelRequest } from "../hooks/useChannel";
 import {
   type CredentialState,
@@ -65,6 +67,14 @@ import {
 } from "../types/credential";
 
 import { createWithSelector } from "./common";
+
+function debug(...args: Parameters<typeof logger.debug>) {
+  logger.label("CredentialStore").debug(...args);
+}
+
+function info(...args: Parameters<typeof logger.info>) {
+  logger.label("CredentialStore").info(...args);
+}
 
 /**
  * Creates an credential store instance with useSyncExternalStore + Immer pattern
@@ -246,7 +256,7 @@ export const createCredentialStore = (): CredentialStore => {
     clearError();
 
     try {
-      console.log("CredentialStore: Requesting credentials");
+      debug("Requesting credentials");
       const response = await channelRequest<{ credentials: unknown }>(
         _channelProvider.channel,
         "request_credentials",
