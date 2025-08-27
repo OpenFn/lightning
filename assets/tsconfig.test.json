@@ -1,11 +1,5 @@
 {
   "extends": ["@tsconfig/node-lts/tsconfig.json", "./tsconfig.base.json"],
-  "ts-node": {
-    "transpileOnly": true,
-    "files": true,
-    "esm": true,
-    "experimentalSpecifierResolution": "node"
-  },
   "compilerOptions": {
     "composite": true,
     "module": "esnext",
