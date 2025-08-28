@@ -1,0 +1,27 @@
+#! /usr/bin/env bash
+
+set -e
+
+# Get the directory of this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT/assets"
+
+npm run lint -- \
+  --concurrency 4 \
+  --fix js/collaborative-editor \
+  --exit-on-fatal-error || {
+  exit_code=$?
+  [ $exit_code -le 1 ] || exit $exit_code
+}
+
+npm exec prettier -- \
+  --config "$PROJECT_ROOT"/.prettierrc \
+  --ignore-path "$PROJECT_ROOT"/.prettierignore \
+  --write \
+  js/collaborative-editor test | grep -v "unchanged"
+
+cd "$PROJECT_ROOT"
+
+mix format
