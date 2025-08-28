@@ -147,21 +147,14 @@ defmodule LightningWeb.Plugs.WebhookAuth do
          username: expected_user,
          password: expected_pass
        }) do
-    secure_eq = fn a, b ->
-      Plug.Crypto.secure_compare(
-        :crypto.hash(:sha256, a),
-        :crypto.hash(:sha256, b)
-      )
-    end
-
     get_req_header(conn, "authorization")
     |> Enum.find_value(false, fn auth ->
       with [scheme, b64] <- String.split(auth, " ", parts: 2),
            true <- String.downcase(scheme) == "basic",
            {:ok, decoded} <- Base.decode64(b64),
            [user, pass] <- String.split(decoded, ":", parts: 2),
-           true <- secure_eq.(user, expected_user),
-           true <- secure_eq.(pass, expected_pass) do
+           true <- Plug.Crypto.secure_compare(user, expected_user),
+           true <- Plug.Crypto.secure_compare(pass, expected_pass) do
         true
       else
         _ -> false
