@@ -4,6 +4,8 @@ import { MonacoBinding } from "y-monaco";
 import type { Awareness } from "y-protocols/awareness";
 import type * as Y from "yjs";
 
+import _logger from "#/utils/logger";
+
 import { type Monaco, MonacoEditor, setTheme } from "../../monaco";
 
 import { Cursors } from "./Cursors";
@@ -16,6 +18,8 @@ interface CollaborativeMonacoProps {
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
 }
+
+const logger = _logger.ns("CollaborativeMonaco").seal();
 
 export function CollaborativeMonaco({
   ytext,
@@ -31,7 +35,7 @@ export function CollaborativeMonaco({
 
   const handleOnMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
-      console.log(
+      logger.log(
         "🚀 Monaco editor mounted, ytext available:",
         !!ytext,
         "awareness available:",
@@ -49,7 +53,7 @@ export function CollaborativeMonaco({
 
       // Create initial binding if ytext and awareness are available
       if (ytext && awareness) {
-        console.log("🔄 Creating initial Monaco binding on mount");
+        logger.log("🔄 Creating initial Monaco binding on mount");
         const binding = new MonacoBinding(
           ytext,
           editor.getModel()!,
@@ -57,7 +61,7 @@ export function CollaborativeMonaco({
           awareness
         );
         bindingRef.current = binding;
-        console.log("✅ Initial Monaco binding created successfully");
+        logger.log("✅ Initial Monaco binding created successfully");
       }
     },
     [adaptor, ytext, awareness]
@@ -65,7 +69,7 @@ export function CollaborativeMonaco({
 
   // Effect to handle Y.Text binding changes after mount
   useEffect(() => {
-    console.log(
+    logger.log(
       "🔄 Monaco binding effect running - editor ready:",
       !!editorRef.current,
       "ytext:",
@@ -77,7 +81,7 @@ export function CollaborativeMonaco({
     );
 
     if (!editorRef.current || !ytext || !awareness) {
-      console.log("❌ Monaco binding effect - missing requirements");
+      logger.log("❌ Monaco binding effect - missing requirements");
       // If editor is ready but ytext is not, clear any existing binding
       if (bindingRef.current && !ytext) {
         bindingRef.current.destroy();
@@ -86,7 +90,7 @@ export function CollaborativeMonaco({
       return;
     }
 
-    console.log(
+    logger.log(
       "🔄 Creating Monaco binding for Y.Text in effect:",
       ytext,
       ytext.toString()
@@ -94,7 +98,7 @@ export function CollaborativeMonaco({
 
     // Destroy existing binding if it exists (for job switching)
     if (bindingRef.current) {
-      console.log("🗑️ Destroying existing Monaco binding for job switch");
+      logger.log("🗑️ Destroying existing Monaco binding for job switch");
       bindingRef.current.destroy();
       bindingRef.current = undefined;
     }
@@ -108,11 +112,11 @@ export function CollaborativeMonaco({
     );
     bindingRef.current = binding;
 
-    console.log("✅ Monaco binding created successfully in effect");
+    logger.log("✅ Monaco binding created successfully in effect");
 
     // Clean up binding when ytext or awareness changes
     return () => {
-      console.log("🧹 Cleaning up Monaco binding from effect");
+      logger.log("🧹 Cleaning up Monaco binding from effect");
       if (bindingRef.current) {
         bindingRef.current.destroy();
         bindingRef.current = undefined;

@@ -13,15 +13,13 @@ import type * as awarenessProtocol from "y-protocols/awareness";
 import { Awareness } from "y-protocols/awareness";
 import { Doc as YDoc } from "yjs";
 
-import logger from "#/utils/logger";
+import _logger from "#/utils/logger";
 
 import type { LocalUserData } from "../types/awareness";
 
 import { createWithSelector, type WithSelector } from "./common";
 
-function debug(...args: Parameters<typeof logger.debug>) {
-  logger.label("SessionStore").debug(...args);
-}
+const logger = _logger.ns("SessionStore").seal();
 
 export interface SessionState {
   ydoc: YDoc | null;
@@ -169,7 +167,7 @@ export const createSessionStore = (): SessionStore => {
       connect: options.connect ?? true,
     });
 
-    // Step 4: Update state atomically
+    // Step 4: Update state
     updateState(draft => {
       draft.ydoc = ydoc;
       draft.awareness = awarenessToUse;
@@ -201,6 +199,7 @@ export const createSessionStore = (): SessionStore => {
    * - Resets all state to null
    */
   const destroy = () => {
+    logger.debug("Destroying session");
     // Clean up all event handlers first
     cleanupProviderHandlers?.();
     cleanupProviderHandlers = null;
@@ -349,7 +348,7 @@ function createSettlingSubscription(
       .then(() => {
         if (!currentController?.signal.aborted) {
           updateState(draft => {
-            debug("Settled");
+            logger.debug("Settled");
             draft.settled = true;
           });
         }

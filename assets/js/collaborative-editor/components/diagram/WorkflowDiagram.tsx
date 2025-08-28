@@ -17,6 +17,7 @@ import {
   useWorkflowState,
   usePositions,
 } from "#/collaborative-editor/hooks/useWorkflow";
+import _logger from "#/utils/logger";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
 import edgeTypes from "#/workflow-diagram/edges";
@@ -84,6 +85,8 @@ const useTippyForControls = (isManualLayout: boolean) => {
     };
   }, [isManualLayout]); // Only run once on mount
 };
+
+const logger = _logger.ns("WorkflowDiagram").seal();
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const flow = useReactFlow();
@@ -199,7 +202,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   useEffect(() => {
     const { positions, lastSelection } = chartCache.current;
     // create model from workflow and also apply selection styling to the model.
-    console.log("calling fromWorkflow");
+    logger.log("calling fromWorkflow");
 
     const newModel = updateSelectionStyles(
       fromWorkflow(
@@ -337,7 +340,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           padding: FIT_PADDING,
         })
         .catch(error => {
-          console.error("Failed to fit bounds:", error);
+          logger.error("Failed to fit bounds:", error);
         });
     }
   }, [props.forceFit, flow, model.nodes]);

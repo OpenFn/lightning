@@ -70,6 +70,8 @@
 import { produce } from "immer";
 import type { Awareness } from "y-protocols/awareness";
 
+import _logger from "#/utils/logger";
+
 import type {
   AwarenessState,
   AwarenessStore,
@@ -78,6 +80,8 @@ import type {
 } from "../types/awareness";
 
 import { createWithSelector } from "./common";
+
+const logger = _logger.ns("AwarenessStore").seal();
 
 /**
  * Creates an awareness store instance with useSyncExternalStore + Immer pattern
@@ -148,11 +152,7 @@ export const createAwarenessStore = (): AwarenessStore => {
           };
           users.push(user);
         } catch (error) {
-          console.warn(
-            "AwarenessStore: Invalid user data for client",
-            clientId,
-            error
-          );
+          logger.warn("Invalid user data for client", clientId, error);
         }
       }
     });
@@ -168,9 +168,7 @@ export const createAwarenessStore = (): AwarenessStore => {
    */
   const handleAwarenessChange = () => {
     if (!awarenessInstance) {
-      console.warn(
-        "AwarenessStore: handleAwarenessChange called without awareness instance"
-      );
+      logger.warn("handleAwarenessChange called without awareness instance");
       return;
     }
 
@@ -194,7 +192,7 @@ export const createAwarenessStore = (): AwarenessStore => {
     awareness: Awareness,
     userData: LocalUserData
   ) => {
-    console.debug("AwarenessStore: Initializing awareness", { userData });
+    logger.debug("Initializing awareness", { userData });
 
     awarenessInstance = awareness;
 
@@ -223,7 +221,7 @@ export const createAwarenessStore = (): AwarenessStore => {
    * Clean up awareness instance
    */
   const destroyAwareness = () => {
-    console.debug("AwarenessStore: Destroying awareness");
+    logger.debug("Destroying awareness");
 
     if (awarenessInstance) {
       awarenessInstance.off("change", handleAwarenessChange);
@@ -251,9 +249,7 @@ export const createAwarenessStore = (): AwarenessStore => {
    */
   const updateLocalUserData = (userData: Partial<LocalUserData>) => {
     if (!awarenessInstance || !state.localUser) {
-      console.warn(
-        "AwarenessStore: Cannot update user data - awareness not initialized"
-      );
+      logger.warn("Cannot update user data - awareness not initialized");
       return;
     }
 
@@ -276,9 +272,7 @@ export const createAwarenessStore = (): AwarenessStore => {
    */
   const updateLocalCursor = (cursor: { x: number; y: number } | null) => {
     if (!awarenessInstance) {
-      console.warn(
-        "AwarenessStore: Cannot update cursor - awareness not initialized"
-      );
+      logger.warn("Cannot update cursor - awareness not initialized");
       return;
     }
 
@@ -310,9 +304,7 @@ export const createAwarenessStore = (): AwarenessStore => {
     selection: AwarenessUser["selection"] | null
   ) => {
     if (!awarenessInstance) {
-      console.warn(
-        "AwarenessStore: Cannot update selection - awareness not initialized"
-      );
+      logger.warn("Cannot update selection - awareness not initialized");
       return;
     }
 

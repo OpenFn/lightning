@@ -57,7 +57,7 @@
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
-import logger from "#/utils/logger";
+import _logger from "#/utils/logger";
 
 import { channelRequest } from "../hooks/useChannel";
 import {
@@ -68,13 +68,7 @@ import {
 
 import { createWithSelector } from "./common";
 
-function debug(...args: Parameters<typeof logger.debug>) {
-  logger.label("CredentialStore").debug(...args);
-}
-
-function info(...args: Parameters<typeof logger.info>) {
-  logger.label("CredentialStore").info(...args);
-}
+const logger = _logger.ns("CredentialStore").seal();
 
 /**
  * Creates an credential store instance with useSyncExternalStore + Immer pattern
@@ -146,7 +140,7 @@ export const createCredentialStore = (): CredentialStore => {
       notify();
     } else {
       const errorMessage = `Invalid credentials data: ${result.error.message}`;
-      console.error("CredentialStore: Failed to parse credentials data", {
+      logger.error("Failed to parse credentials data", {
         error: result.error,
         rawData,
       });
@@ -208,18 +202,12 @@ export const createCredentialStore = (): CredentialStore => {
 
     // Listen for credential-related channel messages
     const credentialsListHandler = (message: unknown) => {
-      console.debug(
-        "CredentialStore: Received credentials_list message",
-        message
-      );
+      logger.debug("Received credentials_list message", message);
       handleCredentialsReceived(message);
     };
 
     const credentialsUpdatedHandler = (message: unknown) => {
-      console.debug(
-        "CredentialStore: Received credentials_updated message",
-        message
-      );
+      logger.debug("Received credentials_updated message", message);
       handleCredentialsUpdated(message);
     };
 
@@ -245,9 +233,7 @@ export const createCredentialStore = (): CredentialStore => {
    */
   const requestCredentials = async (): Promise<void> => {
     if (!_channelProvider?.channel) {
-      console.warn(
-        "CredentialStore: Cannot request credentials - no channel connected"
-      );
+      logger.warn("Cannot request credentials - no channel connected");
       setError("No connection available");
       return;
     }
@@ -256,7 +242,7 @@ export const createCredentialStore = (): CredentialStore => {
     clearError();
 
     try {
-      debug("Requesting credentials");
+      logger.debug("Requesting credentials");
       const response = await channelRequest<{ credentials: unknown }>(
         _channelProvider.channel,
         "request_credentials",
@@ -267,7 +253,7 @@ export const createCredentialStore = (): CredentialStore => {
         handleCredentialsReceived(response.credentials);
       }
     } catch (error) {
-      console.error("CredentialStore: Credential request failed", error);
+      logger.error("Credential request failed", error);
       setError("Failed to request credentials");
     }
   };
