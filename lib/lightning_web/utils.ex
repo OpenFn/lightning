@@ -84,4 +84,8 @@ defmodule LightningWeb.Utils do
       end
     end
   end
+
+  def noreply(socket), do: {:noreply, socket}
+  def reply(socket), do: {:reply, socket}
+  def ok(socket), do: {:ok, socket}
 end

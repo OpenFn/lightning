@@ -74,6 +74,7 @@ defmodule LightningWeb do
       use Phoenix.LiveView, @opts
       import LightningWeb.Components.NewInputs
       import LightningWeb.Components.Table
+      import LightningWeb.Utils, only: [ok: 1, noreply: 1, reply: 1]
 
       unquote(html_helpers())
       on_mount Sentry.LiveViewHook
@@ -85,6 +86,7 @@ defmodule LightningWeb do
       use Phoenix.LiveComponent
       import LightningWeb.Components.NewInputs
       import LightningWeb.Components.Table
+      import LightningWeb.Utils, only: [ok: 1, noreply: 1, reply: 1]
 
       unquote(html_helpers())
     end
@@ -138,6 +140,7 @@ defmodule LightningWeb do
       alias LightningWeb.Components.Menu
       alias LightningWeb.DynamicComponent
       alias LightningWeb.Router.Helpers, as: Routes
+      alias Phoenix.LiveView.JS
 
       import LightningWeb.Components.Pills
       import LightningWeb.Components.Loaders

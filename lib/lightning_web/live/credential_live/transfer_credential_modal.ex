@@ -120,10 +120,18 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
         width="xl:min-w-1/3 min-w-1/2 w-[300px]"
       >
         <:title>
-          <.modal_title {assigns} />
+          <%= if @revoke_transfer do %>
+            Revoke Credential Transfer
+          <% else %>
+            Transfer Credential Ownership
+          <% end %>
         </:title>
         <div class="text-sm leading-4.5 text-zinc-600 mb-4">
-          <.modal_subtitle {assigns} />
+          <%= if @revoke_transfer do %>
+            A transfer of this credential is pending. Click the revoke button to cancel it.
+          <% else %>
+            Enter the email address of the new owner. Note: The user must be a member of all projects where this credential is used.
+          <% end %>
         </div>
         <.modal_content {assigns} />
       </Components.Credentials.credential_modal>
@@ -227,26 +235,6 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       id={"#{@modal_id}-cancel-button"}
       modal_id={@modal_id}
     />
-    """
-  end
-
-  defp modal_title(assigns) do
-    ~H"""
-    <%= if @revoke_transfer do %>
-      Revoke Credential Transfer
-    <% else %>
-      Transfer Credential Ownership
-    <% end %>
-    """
-  end
-
-  defp modal_subtitle(assigns) do
-    ~H"""
-    <%= if @revoke_transfer do %>
-      A transfer of this credential is pending. Click the revoke button to cancel it.
-    <% else %>
-      Enter the email address of the new owner. Note: The user must be a member of all projects where this credential is used.
-    <% end %>
     """
   end
 end

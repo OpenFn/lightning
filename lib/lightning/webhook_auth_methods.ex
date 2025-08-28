@@ -616,9 +616,11 @@ defmodule Lightning.WebhookAuthMethods do
       ```
 
   """
-  @spec find_by_id!(binary()) :: WebhookAuthMethod.t() | no_return()
-  def find_by_id!(id) do
-    Repo.get_by!(WebhookAuthMethod, id: id)
+  @spec find_by_id!(binary(), opts :: Keyword.t()) ::
+          WebhookAuthMethod.t() | no_return()
+  def find_by_id!(id, opts \\ []) do
+    preloads = opts |> Keyword.get(:include, [])
+    Repo.get_by!(WebhookAuthMethod, id: id) |> Repo.preload(preloads)
   end
 
   @doc """
@@ -712,7 +714,7 @@ defmodule Lightning.WebhookAuthMethods do
   end
 
   @doc """
-  Creates a changeset for a `WebhookAuthMethod` struct, which can include special handling based on the authentication type.
+  Builds `WebhookAuthMethod` struct, which can include special handling based on the authentication type.
 
   This function prepares a changeset for the creation or update of a `WebhookAuthMethod`. If the `auth_type` is `:api`, it generates a new API key and includes it in the returned structure.
 
@@ -727,22 +729,22 @@ defmodule Lightning.WebhookAuthMethods do
 
   ## Examples
 
-    - Creating a changeset for an API type auth method:
+    - Building for an API type auth method:
 
       ```elixir
-      iex> Lightning.Workflows.create_changeset(%WebhookAuthMethod{auth_type: :api}, %{})
+      iex> Lightning.WebhookAuthMethods.build(%WebhookAuthMethod{}, %{auth_type: "api"})
       %WebhookAuthMethod{api_key: some_new_api_key}
       ```
 
-    - Creating a changeset for a non-API type auth method:
+    - Building for a non-API type auth method:
 
       ```elixir
-      iex> Lightning.Workflows.create_changeset(%WebhookAuthMethod{auth_type: :other}, %{})
+      iex> Lightning.WebhookAuthMethods.build(%WebhookAuthMethod{auth_type: :other}, %{})
       %WebhookAuthMethod{}
       ```
   """
-  @spec create_changeset(WebhookAuthMethod.t(), map()) :: WebhookAuthMethod.t()
-  def create_changeset(%WebhookAuthMethod{} = webhook_auth_method, params) do
+  @spec build(WebhookAuthMethod.t(), map()) :: WebhookAuthMethod.t()
+  def build(%WebhookAuthMethod{} = webhook_auth_method, params) do
     auth_method =
       webhook_auth_method
       |> WebhookAuthMethod.changeset(params)
