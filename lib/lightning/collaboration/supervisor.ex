@@ -12,7 +12,7 @@ defmodule Lightning.Collaboration.Supervisor do
   end
 
   @impl true
-  def init(_init_arg) do
+  def init(_opts) do
     children = [
       # Start :pg first
       %{
@@ -36,6 +36,17 @@ defmodule Lightning.Collaboration.Supervisor do
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  def start_shared_doc(doc_name) do
+    start_child(
+      {Yex.Sync.SharedDoc,
+       [
+         doc_name: doc_name,
+         auto_exit: true,
+         persistence: Lightning.Collaboration.Persistence
+       ]}
+    )
   end
 
   def start_child(child_spec) do

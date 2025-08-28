@@ -15,7 +15,9 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def bind(_state, doc_name, doc) do
-    Logger.info("Loading persisted state. document=#{doc_name}")
+    Logger.info(
+      "Loading persisted state. pid=#{inspect(self())} document=#{doc_name}"
+    )
 
     case load_document_state(doc_name) do
       {:ok, binary_state} ->
@@ -70,6 +72,7 @@ defmodule Lightning.Collaboration.Persistence do
     case Yex.encode_state_as_update(doc) do
       {:ok, update} ->
         save_document_state(doc_name, update)
+
         Logger.info("Successfully saved final state. document=#{doc_name}")
 
       {:error, reason} ->

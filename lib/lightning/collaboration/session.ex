@@ -26,7 +26,9 @@ defmodule Lightning.Collaboration.Session do
   def init(opts) do
     workflow_id = Keyword.fetch!(opts, :workflow_id)
     user = Keyword.fetch!(opts, :user)
-    parent_pid = Keyword.fetch!(opts, :parent_pid)
+
+    parent_pid =
+      Keyword.get(opts, :parent_pid, Process.info(self(), :parent) |> elem(1))
 
     Logger.info("Starting session for workflow #{workflow_id}")
 
@@ -39,64 +41,18 @@ defmodule Lightning.Collaboration.Session do
       workflow_id: workflow_id
     }
 
-    {:ok, state, {:continue, :start_shared_doc}}
-  end
+    case setup_shared_doc(workflow_id, user) do
+      {:ok, shared_doc_pid} ->
+        {:ok, %{state | shared_doc_pid: shared_doc_pid}}
 
-  @impl true
-  def handle_continue(
-        :start_shared_doc,
-        %{workflow_id: workflow_id, user: user} = state
-      ) do
-    case lookup_shared_doc(workflow_id) do
-      nil ->
-        Logger.info("No existing SharedDoc found for workflow #{workflow_id}")
-
-        child_spec =
-          {SharedDoc,
-           [
-             doc_name: "workflow:#{workflow_id}",
-             auto_exit: true
-           ]}
-
-        case Collaboration.Supervisor.start_child(child_spec) do
-          {:ok, pid} ->
-            :pg.join(@pg_scope, workflow_id, pid)
-            initialize_workflow_document(pid, workflow_id)
-            join_shared_doc(pid, user, workflow_id)
-            {:noreply, %{state | shared_doc_pid: pid}}
-
-          {:error, {:already_started, pid}} ->
-            {:noreply, %{state | shared_doc_pid: pid}}
-
-          error ->
-            Logger.error(
-              "Failed to start SharedDoc for workflow #{workflow_id}: #{inspect(error)}"
-            )
-
-            {:stop, {:shutdown, :shared_doc_start_failed}, state}
-        end
-
-      shared_doc_pid ->
-        Logger.info("Existing SharedDoc found for workflow #{workflow_id}")
-        join_shared_doc(shared_doc_pid, user, workflow_id)
-        {:noreply, %{state | shared_doc_pid: shared_doc_pid}}
+      {:error, :shared_doc_start_failed} ->
+        {:stop, {:error, "Failed to setup SharedDoc"}}
     end
   end
 
-  # TODO: we need to have a strategy for handling the shared doc process crashing.
-  # What should we do? We can't have all the sessions try and create a new one all at once.
-  # and we want the front end to be able to still work, but show there is a problem?
-  # @impl true
-  # def handle_info(
-  #       {:DOWN, _ref, :process, _pid, _reason},
-  #       socket
-  #     ) do
-  #   {:stop, {:error, "remote process crash"}, socket}
-  # end
-
   @impl true
   def terminate(reason, _state) do
-    Logger.debug("Session terminating: #{inspect({reason})}")
+    Logger.warning("going down: #{inspect({reason})}")
     :ok
   end
 
@@ -144,6 +100,18 @@ defmodule Lightning.Collaboration.Session do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end
+  end
+
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [opts]},
+      type: :worker
+    }
+  end
+
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts)
   end
 
   # ----------------------------------------------------------------------------
@@ -216,6 +184,17 @@ defmodule Lightning.Collaboration.Session do
     {:noreply, state}
   end
 
+  # TODO: we need to have a strategy for handling the shared doc process crashing.
+  # What should we do? We can't have all the sessions try and create a new one all at once.
+  # and we want the front end to be able to still work, but show there is a problem?
+  # @impl true
+  # def handle_info(
+  #       {:DOWN, _ref, :process, _pid, _reason},
+  #       state
+  #     ) do
+  #   {:stop, {:error, "remote process crash"}, state}
+  # end
+
   @impl true
   def handle_info(any, state) do
     Logger.debug("Session received unknown message: #{inspect(any)}")
@@ -223,6 +202,37 @@ defmodule Lightning.Collaboration.Session do
   end
 
   # ----------------------------------------------------------------------------
+
+  @doc false
+  defp setup_shared_doc(workflow_id, user) do
+    case lookup_shared_doc(workflow_id) do
+      nil ->
+        Logger.info("No existing SharedDoc found for workflow #{workflow_id}")
+
+        case Collaboration.Supervisor.start_shared_doc("workflow:#{workflow_id}") do
+          {:ok, pid} ->
+            :pg.join(@pg_scope, workflow_id, pid)
+            initialize_workflow_document(pid, workflow_id)
+            join_shared_doc(pid, user, workflow_id)
+            {:ok, pid}
+
+          {:error, {:already_started, pid}} ->
+            {:ok, pid}
+
+          error ->
+            Logger.error(
+              "Failed to start SharedDoc for workflow #{workflow_id}: #{inspect(error)}"
+            )
+
+            {:error, :shared_doc_start_failed}
+        end
+
+      shared_doc_pid ->
+        Logger.info("Existing SharedDoc found for workflow #{workflow_id}")
+        join_shared_doc(shared_doc_pid, user, workflow_id)
+        {:ok, shared_doc_pid}
+    end
+  end
 
   defp join_shared_doc(shared_doc_pid, user, workflow_id) do
     SharedDoc.observe(shared_doc_pid)
@@ -259,6 +269,8 @@ defmodule Lightning.Collaboration.Session do
           edges_array = Yex.Doc.get_array(doc, "edges")
           triggers_array = Yex.Doc.get_array(doc, "triggers")
           positions = Yex.Doc.get_map(doc, "positions")
+
+          IO.inspect(length(workflow.jobs || []), label: "jobs")
 
           Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
             # Set workflow properties
