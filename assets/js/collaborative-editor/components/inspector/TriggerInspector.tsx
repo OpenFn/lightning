@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 
 import { TriggerSchema } from "#/collaborative-editor/types/trigger";
+import _logger from "#/utils/logger";
 
 import { useWorkflowActions } from "../../hooks/useWorkflow";
 import type { Workflow } from "../../types/workflow";
@@ -12,6 +13,8 @@ import { CronFieldBuilder } from "./CronFieldBuilder";
 interface TriggerInspectorProps {
   trigger: Workflow.Trigger;
 }
+
+const logger = _logger.ns("TriggerInspector").seal();
 
 export function TriggerInspector({ trigger }: TriggerInspectorProps) {
   const { updateTrigger } = useWorkflowActions();
@@ -191,7 +194,7 @@ export function TriggerInspector({ trigger }: TriggerInspectorProps) {
                         listeners={{ onChangeDebounceMs: 2000 }}
                       >
                         {cronField => {
-                          console.log(cronField.state);
+                          logger.log("Cron field state:", cronField.state);
                           return (
                             <div>
                               <label

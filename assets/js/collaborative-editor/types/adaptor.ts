@@ -5,6 +5,7 @@
  * and provides runtime validation with Zod schemas.
  */
 
+import type { PhoenixChannelProvider } from "y-phoenix-channel";
 import { z } from "zod";
 
 // =============================================================================
@@ -116,7 +117,7 @@ export interface AdaptorQueries {
  * Internal methods interface (not part of public API)
  */
 export interface AdaptorInternals {
-  _connectChannel: (provider: unknown) => () => void;
+  _connectChannel: (provider: PhoenixChannelProvider) => () => void;
 }
 
 /**

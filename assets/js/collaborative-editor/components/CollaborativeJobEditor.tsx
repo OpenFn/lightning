@@ -9,6 +9,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { useCallback, useMemo, useState } from "react";
 
+import _logger from "#/utils/logger";
+
 import Docs from "../../adaptor-docs/Docs";
 import { Tabs } from "../../components/Tabs";
 import Metadata from "../../metadata-explorer/Explorer";
@@ -42,6 +44,8 @@ const persistSettings = () =>
 
 const iconStyle = "inline cursor-pointer h-5 w-5 ml-1 hover:text-primary-600";
 
+const logger = _logger.ns("CollaborativeJobEditor").seal();
+
 type CollaborativeJobEditorProps = {
   jobId: string;
   adaptor: string;
@@ -59,7 +63,7 @@ export function CollaborativeJobEditor({
 }: CollaborativeJobEditorProps) {
   const awareness = useRawAwareness();
   const awarenessReady = useAwarenessReady();
-  console.log("awarenessReady", awarenessReady);
+  logger.log("awarenessReady", awarenessReady);
 
   const [vertical, setVertical] = useState(
     () => settings[SettingsKeys.ORIENTATION] === "v"

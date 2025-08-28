@@ -106,10 +106,11 @@
  */
 
 import { produce } from "immer";
+import type { Channel } from "phoenix";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as Y from "yjs";
 
-import logger from "#/utils/logger";
+import _logger from "#/utils/logger";
 
 import { channelRequest } from "../hooks/useChannel";
 import { JobSchema } from "../types/job";
@@ -118,13 +119,7 @@ import type { Workflow } from "../types/workflow";
 
 import { createWithSelector } from "./common";
 
-function debug(...args: Parameters<typeof logger.debug>) {
-  logger.label("WorkflowStore").debug(...args);
-}
-
-function info(...args: Parameters<typeof logger.info>) {
-  logger.label("WorkflowStore").info(...args);
-}
+const logger = _logger.ns("WorkflowStore").seal();
 
 const JobShape = JobSchema.shape;
 // Helper to update derived state (defined first to avoid hoisting issues)
@@ -181,14 +176,14 @@ export const createWorkflowStore = () => {
   // Y.Doc will be connected externally via SessionProvider
   let ydoc: Session.WorkflowDoc | null = null;
   let observerCleanups: (() => void)[] = [];
-  let provider: PhoenixChannelProvider | null = null;
+  let provider: (PhoenixChannelProvider & { channel: Channel }) | null = null;
 
   let state = produceInitialState();
 
   const listeners = new Set<() => void>();
 
   const notify = () => {
-    debug("notify", {
+    logger.debug("notify", {
       workflow: state.workflow,
       jobs: state.jobs.length,
       triggers: state.triggers.length,
@@ -228,8 +223,11 @@ export const createWorkflowStore = () => {
   const connect = (d: Session.WorkflowDoc, p: PhoenixChannelProvider) => {
     // Clean up previous connection
     disconnect();
+    if (p.channel === undefined) {
+      throw new Error("Provider must have a channel");
+    }
 
-    provider = p;
+    provider = p as PhoenixChannelProvider & { channel: Channel };
     ydoc = d;
 
     // Get Y.js maps and arrays
@@ -246,7 +244,17 @@ export const createWorkflowStore = () => {
       });
     };
 
-    const jobsObserver = () => {
+    const jobsObserver = (
+      jobs?: Y.YArrayEvent<Y.Map<unknown>>[],
+      transaction?: Y.Transaction
+    ) => {
+      if (jobs && transaction) {
+        logger.debug("jobsObserver", {
+          jobs,
+          transaction,
+          sameOrigin: transaction.origin === provider,
+        });
+      }
       updateState(draft => {
         const yjsJobs = jobsArray.toArray() as Y.Map<unknown>[];
         draft.jobs = yjsJobs.map(yjsJob => yjsJob.toJSON() as Workflow.Job);
@@ -285,7 +293,7 @@ export const createWorkflowStore = () => {
     positionsMap.observeDeep(positionsObserver);
 
     // Store cleanup functions
-    debug("Attaching observers");
+    logger.debug("Attaching observers");
     observerCleanups = [
       () => workflowMap.unobserveDeep(workflowObserver),
       () => jobsArray.unobserveDeep(jobsObserver),
@@ -308,7 +316,7 @@ export const createWorkflowStore = () => {
 
   // Disconnect Y.Doc and clean up observers
   const disconnect = () => {
-    debug("Cleaning up observers", observerCleanups.length);
+    logger.debug("Cleaning up observers", observerCleanups.length);
     observerCleanups.forEach(cleanup => {
       cleanup();
     });
@@ -326,6 +334,10 @@ export const createWorkflowStore = () => {
   // These methods update Y.Doc, which triggers observers that update Immer state
 
   const updateJob = (id: string, updates: Partial<Session.Job>) => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
     // TODO: parse through zod to throw out extra fields
     // if (!ydoc) {
     //   // Fallback to direct state update if Y.Doc not connected
@@ -346,21 +358,19 @@ export const createWorkflowStore = () => {
 
     if (jobIndex >= 0) {
       const yjsJob = jobs[jobIndex];
-      if (yjsJob) {
-        ydoc.transact(() => {
-          Object.entries(updates)
-            .filter(([key]) => key in JobShape)
-            .forEach(([key, value]) => {
-              if (key === "body" && typeof value === "string") {
-                const ytext = yjsJob.get("body") as Y.Text;
-                ytext.delete(0, ytext.length);
-                ytext.insert(0, value);
-              } else {
-                yjsJob.set(key, value);
-              }
-            });
-        });
-      }
+      ydoc.transact(() => {
+        Object.entries(updates)
+          .filter(([key]) => key in JobShape)
+          .forEach(([key, value]) => {
+            if (key === "body" && typeof value === "string") {
+              const ytext = yjsJob.get("body") as Y.Text;
+              ytext.delete(0, ytext.length);
+              ytext.insert(0, value);
+            } else {
+              yjsJob.set(key, value);
+            }
+          });
+      });
     }
 
     // Observer handles the rest: Y.Doc → immer → notify
@@ -415,13 +425,11 @@ export const createWorkflowStore = () => {
 
     if (triggerIndex >= 0) {
       const yjsTrigger = triggers[triggerIndex];
-      if (yjsTrigger) {
-        ydoc.transact(() => {
-          Object.entries(updates).forEach(([key, value]) => {
-            yjsTrigger.set(key, value);
-          });
+      ydoc.transact(() => {
+        Object.entries(updates).forEach(([key, value]) => {
+          yjsTrigger.set(key, value);
         });
-      }
+      });
     }
   };
 
@@ -530,15 +538,20 @@ export const createWorkflowStore = () => {
       positions,
     };
 
-    debug("Saving workflow", payload);
+    logger.debug("Saving workflow", payload);
 
-    const response = await channelRequest<{ workflow: unknown }>(
-      provider.channel,
-      "save_workflow",
-      payload
-    );
+    try {
+      const response = await channelRequest<{ workflow: unknown }>(
+        provider.channel,
+        "save_workflow",
+        payload
+      );
 
-    debug("Saved workflow", response);
+      logger.debug("Saved workflow", response);
+    } catch (error) {
+      logger.error("Failed to save workflow", error);
+      throw error;
+    }
   };
 
   // =============================================================================

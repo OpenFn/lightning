@@ -1,7 +1,11 @@
 import { isValidCron } from "cron-validator";
 import { z } from "zod";
 
+import _logger from "#/utils/logger";
+
 import { uuidSchema } from "./common";
+
+const logger = _logger.ns("TriggerTypes").seal();
 
 // Base trigger fields common to all trigger types
 const baseTriggerSchema = z.object({
@@ -24,7 +28,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
     .min(1, "Cron expression is required")
     .refine(
       expr => {
-        console.log("validating cron expression", expr);
+        logger.log("validating cron expression", expr);
         // Use cron-validator for professional validation
         return isValidCron(expr, {
           seconds: false, // Standard 5-field format without seconds

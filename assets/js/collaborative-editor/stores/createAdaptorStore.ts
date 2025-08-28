@@ -57,6 +57,8 @@
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
+import _logger from "#/utils/logger";
+
 import { channelRequest } from "../hooks/useChannel";
 import {
   type Adaptor,
@@ -66,6 +68,8 @@ import {
 } from "../types/adaptor";
 
 import { createWithSelector } from "./common";
+
+const logger = _logger.ns("AdaptorStore").seal();
 
 /**
  * Creates an adaptor store instance with useSyncExternalStore + Immer pattern
@@ -132,7 +136,7 @@ export const createAdaptorStore = (): AdaptorStore => {
       notify();
     } else {
       const errorMessage = `Invalid adaptors data: ${result.error.message}`;
-      console.error("AdaptorStore: Failed to parse adaptors data", {
+      logger.error("Failed to parse adaptors data", {
         error: result.error,
         rawData,
       });
@@ -201,12 +205,12 @@ export const createAdaptorStore = (): AdaptorStore => {
     channelProvider = provider;
 
     const adaptorsListHandler = (message: unknown) => {
-      console.debug("AdaptorStore: Received adaptors_list message", message);
+      logger.debug("Received adaptors_list message", message);
       handleAdaptorsReceived(message);
     };
 
     const adaptorsUpdatedHandler = (message: unknown) => {
-      console.debug("AdaptorStore: Received adaptors_updated message", message);
+      logger.debug("Received adaptors_updated message", message);
       handleAdaptorsUpdated(message);
     };
 
@@ -231,9 +235,7 @@ export const createAdaptorStore = (): AdaptorStore => {
    */
   const requestAdaptors = async (): Promise<void> => {
     if (!channelProvider?.channel) {
-      console.warn(
-        "AdaptorStore: Cannot request adaptors - no channel connected"
-      );
+      logger.warn("Cannot request adaptors - no channel connected");
       setError("No connection available");
       return;
     }
@@ -252,7 +254,7 @@ export const createAdaptorStore = (): AdaptorStore => {
         handleAdaptorsReceived(response.adaptors);
       }
     } catch (error) {
-      console.error("AdaptorStore: Adaptor request failed", error);
+      logger.error("Adaptor request failed", error);
       setError(
         `Failed to request adaptors: ${error instanceof Error ? error.message : "Unknown error"}`
       );

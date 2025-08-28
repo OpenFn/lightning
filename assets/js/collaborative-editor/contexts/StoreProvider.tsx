@@ -24,7 +24,7 @@
 import type React from "react";
 import { createContext, useEffect, useState } from "react";
 
-import logger from "#/utils/logger";
+import _logger from "#/utils/logger";
 
 import { useSession } from "../hooks/useSession";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
@@ -56,6 +56,8 @@ interface StoreProviderProps {
   children: React.ReactNode;
 }
 
+const logger = _logger.ns("StoreProvider").seal();
+
 export const StoreProvider = ({ children }: StoreProviderProps) => {
   const session = useSession();
 
@@ -74,7 +76,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       session.userData &&
       !stores.awarenessStore.isAwarenessReady()
     ) {
-      console.debug("StoreProvider: Initializing awareness", {
+      logger.debug("Initializing awareness", {
         userData: session.userData,
       });
 
@@ -97,13 +99,13 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Connect stores when provider is ready
   useEffect(() => {
     if (session.provider && session.isConnected) {
-      logger.label("StoreProvider").debug("Connecting stores to channel");
+      logger.debug("Connecting stores to channel");
 
       const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
       const cleanup2 = stores.credentialStore._connectChannel(session.provider);
 
       return () => {
-        console.debug("StoreProvider: Disconnecting stores from channel");
+        logger.debug("Disconnecting stores from channel");
         cleanup1();
         cleanup2();
       };
@@ -114,16 +116,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Connect/disconnect workflowStore Y.Doc when session changes
   useEffect(() => {
     if (session.ydoc && session.provider && session.isConnected) {
-      logger.label("StoreProvider").debug("Connecting workflowStore");
+      logger.debug("Connecting workflowStore");
       stores.workflowStore.connect(
         session.ydoc as Session.WorkflowDoc,
         session.provider
       );
 
       return () => {
-        logger
-          .label("StoreProvider")
-          .debug("Disconnecting workflowStore from Y.Doc");
+        logger.debug("Disconnecting workflowStore from Y.Doc");
         stores.workflowStore.disconnect();
       };
     } else {
@@ -139,7 +139,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Clean up awareness when session is destroyed
   useEffect(() => {
     return () => {
-      console.debug("StoreProvider: Cleaning up awareness on unmount");
+      logger.debug("Cleaning up awareness on unmount");
       stores.awarenessStore.destroyAwareness();
     };
   }, [stores.awarenessStore]);

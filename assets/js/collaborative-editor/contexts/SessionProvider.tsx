@@ -7,7 +7,7 @@ import type React from "react";
 import { createContext, useEffect, useState } from "react";
 import { PhoenixChannelProvider } from "y-phoenix-channel";
 
-import logger from "#/utils/logger";
+import _logger from "#/utils/logger";
 
 import { useSocket } from "../../react/contexts/SocketProvider";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
@@ -25,9 +25,7 @@ import {
   type SessionStoreInstance,
 } from "../stores/createSessionStore";
 
-function debug(...args: Parameters<typeof logger.debug>) {
-  logger.label("SessionProvider").debug(...args);
-}
+const logger = _logger.ns("SessionProvider").seal();
 
 export const SessionContext = createContext<SessionStoreInstance | null>(null);
 
@@ -64,7 +62,7 @@ export const SessionProvider = ({
   useEffect(() => {
     if (!isConnected || !socket) return;
 
-    console.log("🚀 Initializing Session with PhoenixChannelProvider");
+    logger.log("Initializing Session with PhoenixChannelProvider");
 
     // Set up user data for awareness
     const userData = {
@@ -75,7 +73,7 @@ export const SessionProvider = ({
 
     // Create the Yjs channel provider
     const roomname = `workflow:collaborate:${workflowId}`;
-    console.log("🔗 Creating PhoenixChannelProvider with:", {
+    logger.log("Creating PhoenixChannelProvider with:", {
       roomname,
       socketConnected: socket.isConnected(),
     });
@@ -97,10 +95,10 @@ export const SessionProvider = ({
     window.triggerSessionReconnect = (timeout = 1000) => {
       socket.disconnect(
         () => {
-          console.log("socket disconnected");
+          logger.log("socket disconnected");
           setTimeout(() => {
             socket.connect();
-            console.log("socket connected");
+            logger.log("socket connected");
           }, timeout);
         },
         undefined,
@@ -114,7 +112,7 @@ export const SessionProvider = ({
     // Listen directly to channel for 'joined' state detection
     const cleanupJoinListener = setupJoinListener(provider, isConnected => {
       // Request adaptors when channel is successfully joined
-      debug("joinListener", { isConnected });
+      logger.debug("joinListener", { isConnected });
     });
 
     // Set up automatic last seen updates via awareness store
@@ -122,7 +120,7 @@ export const SessionProvider = ({
 
     // Cleanup function
     return () => {
-      console.debug("PhoenixChannelProvider: cleaning up");
+      logger.debug("PhoenixChannelProvider: cleaning up");
 
       cleanupJoinListener();
       cleanupLastSeenTimer();
