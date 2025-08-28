@@ -55,10 +55,23 @@ defmodule Lightning.Retry do
     start_time = monotonic_ms()
     deadline = start_time + config.timeout_ms
 
-    result = do_retry(fun, 1, config.initial_delay_ms, deadline, config)
+    :telemetry.execute(
+      [:lightning, :retry, :start],
+      %{attempt: 1},
+      config.context
+    )
+
+    {result, final_attempt} =
+      do_retry(fun, 1, config.initial_delay_ms, deadline, config)
 
     duration = monotonic_ms() - start_time
-    status = if match?({:ok, _}, result), do: "success", else: "failure"
+    status = if match?({:ok, _}, result), do: :success, else: :failure
+
+    :telemetry.execute(
+      [:lightning, :retry, :stop],
+      %{attempts: final_attempt, duration_ms: duration},
+      Map.put(config.context, :result, status)
+    )
 
     Logger.debug(
       "retry finished: result=#{status} duration_ms=#{duration} ctx=#{inspect(config.context)}"
@@ -72,27 +85,39 @@ defmodule Lightning.Retry do
   def retriable_error?(_), do: false
 
   defp do_retry(fun, attempt, delay, deadline, config) do
-    call(fun) |> handle_result(fun, attempt, delay, deadline, config)
+    case call(fun) |> handle_result(attempt, delay, deadline, config) do
+      {:continue, next_attempt, next_delay, sleep_ms} ->
+        if sleep_ms > 0, do: Process.sleep(sleep_ms)
+        do_retry(fun, next_attempt, next_delay, deadline, config)
+
+      {:done, result, final_attempt} ->
+        {result, final_attempt}
+    end
   end
 
   defp handle_result(
          {:ok, _} = success,
-         _fun,
          attempt,
          _delay,
          _deadline,
          config
        ) do
     if attempt > 1 do
+      :telemetry.execute(
+        [:lightning, :retry, :succeeded],
+        %{attempts: attempt},
+        config.context
+      )
+
       Logger.info(
         "retry succeeded after #{attempt} attempts ctx=#{inspect(config.context)}"
       )
     end
 
-    success
+    {:done, success, attempt}
   end
 
-  defp handle_result({:error, _} = error, fun, attempt, delay, deadline, config) do
+  defp handle_result({:error, _} = error, attempt, delay, deadline, config) do
     remaining_time = deadline - monotonic_ms()
 
     case classify(error, attempt, delay, remaining_time, config) do
@@ -101,29 +126,46 @@ defmodule Lightning.Retry do
           "retry not retryable attempt=#{attempt} error=#{short_error(error)} ctx=#{inspect(config.context)}"
         )
 
-        error
+        {:done, error, attempt}
 
       :exhausted ->
+        :telemetry.execute(
+          [:lightning, :retry, :exhausted],
+          %{attempts: attempt},
+          config.context
+        )
+
         Logger.warning(
           "retry exhausted attempts=#{attempt} error=#{short_error(error)} ctx=#{inspect(config.context)}"
         )
 
-        error
+        {:done, error, attempt}
 
       :timeout ->
+        :telemetry.execute(
+          [:lightning, :retry, :timeout],
+          %{attempts: attempt},
+          config.context
+        )
+
         Logger.warning(
           "retry timeout attempts=#{attempt} ctx=#{inspect(config.context)}"
         )
 
-        error
+        {:done, error, attempt}
 
       {:retry, sleep_ms, next_delay} ->
+        :telemetry.execute(
+          [:lightning, :retry, :attempt],
+          %{attempt: attempt, sleep_ms: sleep_ms, next_delay_ms: next_delay},
+          config.context
+        )
+
         Logger.debug(
           "retry sleeping attempt=#{attempt} delay_ms=#{sleep_ms} ctx=#{inspect(config.context)}"
         )
 
-        if sleep_ms > 0, do: Process.sleep(sleep_ms)
-        do_retry(fun, attempt + 1, next_delay, deadline, config)
+        {:continue, attempt + 1, next_delay, sleep_ms}
     end
   end
 

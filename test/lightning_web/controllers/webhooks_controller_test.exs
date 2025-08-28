@@ -59,7 +59,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
     test "returns 404 when trigger does not exist", %{conn: conn} do
       conn = post(conn, "/i/bar")
-      assert json_response(conn, 404) == %{"error" => "webhook_not_found"}
+      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
     end
 
     test "returns 413 with a body exceeding the limit", %{conn: conn} do
@@ -121,7 +121,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       conn = get(conn, "/i/#{non_existent_trigger_id}")
 
-      assert json_response(conn, 404) == %{"error" => "webhook_not_found"}
+      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
     end
 
     test "returns 404 when trigger exists but is of type cron", %{conn: conn} do
@@ -135,7 +135,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       conn = get(conn, "/i/#{trigger_id}")
 
-      assert json_response(conn, 404) == %{"error" => "webhook_not_found"}
+      assert json_response(conn, 404) == %{"error" => "Webhook not found"}
     end
 
     test "creates a pending workorder with a valid trigger", %{conn: conn} do
@@ -394,7 +394,7 @@ defmodule LightningWeb.WebhooksControllerTest do
       conn = LightningWeb.WebhooksController.create(conn, %{})
 
       assert conn.status == 404
-      assert Jason.decode!(conn.resp_body) == %{"error" => "webhook_not_found"}
+      assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
     end
   end
 end

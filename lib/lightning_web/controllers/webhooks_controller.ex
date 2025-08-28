@@ -1,7 +1,6 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.Config
   alias Lightning.Extensions.RateLimiting
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
@@ -70,26 +69,19 @@ defmodule LightningWeb.WebhooksController do
           json(conn, %{work_order_id: work_order.id})
 
         {:error, %DBConnection.ConnectionError{} = error} ->
-          retry_after =
-            Config.webhook_retry(:timeout_ms)
-            |> div(1000)
-            |> max(1)
-
-          Logger.error(
-            "webhook create_workorder exhausted retries " <>
-              "trigger_id=#{trigger.id} workflow_id=#{trigger.workflow.id} " <>
-              "project_id=#{project_id} error=#{Exception.message(error)}"
-          )
-
-          conn
-          |> put_resp_header("retry-after", Integer.to_string(retry_after))
-          |> put_status(:service_unavailable)
-          |> json(%{
-            error: :service_unavailable,
+          LightningWeb.Utils.respond_service_unavailable(
+            conn,
+            error,
+            %{
+              op: :create_workorder,
+              trigger_id: trigger.id,
+              workflow_id: trigger.workflow.id,
+              project_id: project_id
+            },
             message:
-              "Unable to process request due to temporary database issues. Please try again in #{retry_after}s.",
-            retry_after: retry_after
-          })
+              "Unable to process request due to temporary database issues. Please try again in %{s}s.",
+            halt?: false
+          )
 
         {:error, %Ecto.Changeset{} = changeset} ->
           errors = Ecto.Changeset.traverse_errors(changeset, fn {m, _} -> m end)
@@ -117,7 +109,7 @@ defmodule LightningWeb.WebhooksController do
       nil ->
         conn
         |> put_status(:not_found)
-        |> json(%{error: :webhook_not_found})
+        |> json(%{"error" => "Webhook not found"})
 
       _disabled ->
         put_status(conn, :forbidden)

@@ -5,7 +5,6 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   """
   use LightningWeb, :controller
 
-  alias Lightning.Config
   alias Lightning.Retry
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
@@ -53,36 +52,24 @@ defmodule LightningWeb.Plugs.WebhookAuth do
               )
 
             methods = (trigger && trigger.webhook_auth_methods) || []
-            {:ok, {trigger, methods}}
+
+            {:ok, validate_auth(trigger, methods, conn)}
           end,
           retry_on: &Retry.retriable_error?/1,
           context: %{op: :webhook_auth_lookup, webhook: webhook}
         )
         |> case do
-          {:ok, {trigger, methods}} ->
-            validate_auth(trigger, methods, conn)
+          {:ok, %Plug.Conn{} = conn} ->
+            conn
 
           {:error, %DBConnection.ConnectionError{} = error} ->
-            retry_after =
-              Config.webhook_retry(:timeout_ms)
-              |> div(1000)
-              |> max(1)
-
-            Logger.error(
-              "webhook auth lookup exhausted retries webhook=#{webhook} " <>
-                "error=#{Exception.message(error)}"
-            )
-
-            conn
-            |> put_resp_header("retry-after", Integer.to_string(retry_after))
-            |> put_status(:service_unavailable)
-            |> json(%{
-              error: :service_unavailable,
+            LightningWeb.Utils.respond_service_unavailable(
+              conn,
+              error,
+              %{op: :webhook_auth_lookup, webhook: webhook},
               message:
-                "Temporary database issue during webhook lookup. Please retry in #{retry_after}s.",
-              retry_after: retry_after
-            })
-            |> halt()
+                "Temporary database issue during webhook lookup. Please retry in %{s}s."
+            )
         end
 
       _ ->
@@ -131,7 +118,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   defp not_found_response(conn) do
     conn
     |> put_status(:not_found)
-    |> json(%{error: :webhook_not_found})
+    |> json(%{"error" => "Webhook not found"})
     |> halt()
   end
 

@@ -40,7 +40,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
 
     assert conn.halted
     assert conn.status == 404
-    assert Jason.decode!(conn.resp_body) == %{"error" => "webhook_not_found"}
+    assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
   end
 
   test "assigns trigger for matching x-api-key", %{trigger: trigger} do
@@ -89,7 +89,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     conn = conn(:post, "/i/non_existent_trigger") |> WebhookAuth.call([])
 
     assert conn.status == 404
-    assert Jason.decode!(conn.resp_body) == %{"error" => "webhook_not_found"}
+    assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
   end
 
   test "assigns the trigger when no auth method is configured", %{
@@ -125,7 +125,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
       |> WebhookAuth.call([])
 
     assert conn.status == 404
-    assert Jason.decode!(conn.resp_body) == %{"error" => "webhook_not_found"}
+    assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
   end
 
   test "assigns the trigger for authenticated request with matching auth_method",
