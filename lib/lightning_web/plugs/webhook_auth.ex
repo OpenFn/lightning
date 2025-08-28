@@ -144,11 +144,29 @@ defmodule LightningWeb.Plugs.WebhookAuth do
 
   defp user_matches?(conn, %WebhookAuthMethod{
          auth_type: :basic,
-         username: username,
-         password: password
+         username: expected_user,
+         password: expected_pass
        }) do
-    encoded = "Basic " <> Base.encode64("#{username}:#{password}")
-    conn |> get_req_header("authorization") |> Enum.member?(encoded)
+    secure_eq = fn a, b ->
+      Plug.Crypto.secure_compare(
+        :crypto.hash(:sha256, a),
+        :crypto.hash(:sha256, b)
+      )
+    end
+
+    get_req_header(conn, "authorization")
+    |> Enum.find_value(false, fn auth ->
+      with [scheme, b64] <- String.split(auth, " ", parts: 2),
+           true <- String.downcase(scheme) == "basic",
+           {:ok, decoded} <- Base.decode64(b64),
+           [user, pass] <- String.split(decoded, ":", parts: 2),
+           true <- secure_eq.(user, expected_user),
+           true <- secure_eq.(pass, expected_pass) do
+        true
+      else
+        _ -> false
+      end
+    end)
   end
 
   defp user_matches?(_, _), do: false
