@@ -2,6 +2,11 @@ defmodule Lightning.SessionTest do
   # Tests must be async: false because we put a SharedDoc in a dynamic supervisor
   # that isn't owned by the test process. So we need our Ecto sandbox to be
   # in shared mode.
+
+  # We assume that the WorkflowCollaboration supervisor is up
+  # that starts :pg with the :workflow_collaboration scope
+  # and a dynamic supervisor called Lightning.WorkflowCollaboration
+
   use Lightning.DataCase, async: false
 
   import Eventually
@@ -10,64 +15,55 @@ defmodule Lightning.SessionTest do
   alias Lightning.Collaboration.Session
   alias Lightning.Workflows.Workflow
 
-  # we assume that the WorkflowCollaboration supervisor is up
-  # that starts :pg with the :workflow_collaboration scope
-  # and a dynamic supervisor called Lightning.WorkflowCollaboration
-
   setup do
     user = insert(:user)
     {:ok, user: user}
+  end
+
+  defp start_session(opts) do
+    {:ok, client} =
+      Session.start(opts) |> Session.ready?()
+
+    client
   end
 
   describe "start/1" do
     test "when an existing SharedDoc doesn't exist", %{user: user} do
       workflow_id = Ecto.UUID.generate()
 
-      {:ok, pid} = Session.start(user, workflow_id) |> Session.ready?()
+      {:ok, pid} =
+        Session.start(
+          user: user,
+          workflow_id: workflow_id
+        )
 
       state = :sys.get_state(pid)
       assert state.workflow_id == workflow_id
       assert is_pid(state.shared_doc_pid)
+
+      Session.stop(pid)
+
+      refute_eventually(Process.alive?(state.shared_doc_pid))
     end
 
-    test "when an existing SharedDoc does exist", %{user: user} do
-      workflow_id = Ecto.UUID.generate()
-
-      {:ok, pid1} = Session.start(user, workflow_id) |> Session.ready?()
-
-      state1 = :sys.get_state(pid1)
-
-      {:ok, pid2} = Session.start(user, workflow_id) |> Session.ready?()
-
-      state2 = :sys.get_state(pid2)
-
-      # Both should reference the same SharedDoc
-      assert state1.shared_doc_pid == state2.shared_doc_pid
-    end
-  end
-
-  describe "joining" do
-    test "an existing session", %{user: user} do
+    test "and joining an existing session", %{user: user1} do
       user2 = insert(:user)
       workflow = insert(:simple_workflow)
 
-      client_1 =
-        Task.async(fn ->
-          {:ok, pid} = Session.start(user, workflow.id) |> Session.ready?()
+      [parent1, parent2] = build_parents(2)
 
-          pid
-        end)
+      [client_1, client_2] =
+        for {parent, user} <- [{parent1, user1}, {parent2, user2}] do
+          {:ok, client} =
+            Session.start(
+              user: user,
+              workflow_id: workflow.id,
+              parent_pid: parent
+            )
+            |> Session.ready?()
 
-      client_1 = Task.await(client_1)
-
-      client_2 =
-        Task.async(fn ->
-          {:ok, pid} = Session.start(user2, workflow.id) |> Session.ready?()
-
-          pid
-        end)
-
-      client_2 = Task.await(client_2)
+          client
+        end
 
       # Check that both users are seen as online
       assert_eventually(
@@ -78,20 +74,37 @@ defmodule Lightning.SessionTest do
         ) == 2
       )
 
-      GenServer.stop(client_2)
-      Process.alive?(client_2)
+      shared_doc_pids =
+        [client_1, client_2]
+        |> MapSet.new(fn client ->
+          %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(client)
+          shared_doc_pid
+        end)
 
-      GenServer.stop(client_1)
-      Process.alive?(client_1)
+      assert MapSet.size(shared_doc_pids) == 1,
+             "Expected exactly one shared doc pid, got #{inspect(shared_doc_pids)}"
 
-      # TODO: I've enabled auto_exit: true, so this should be 0.
+      # Check there is only one SharedDoc process for this workflow
+      assert_eventually(
+        length(:pg.get_members(:workflow_collaboration, workflow.id)) == 1
+      )
+
+      Process.exit(parent2, :normal)
+      # Check that the session exits when the parent exits
+      refute_eventually(Process.alive?(client_2))
+
+      Process.exit(parent1, :normal)
+      refute_eventually(Process.alive?(client_1))
+
+      shared_doc_pid = shared_doc_pids |> MapSet.to_list() |> List.first()
+      refute_eventually(Process.alive?(shared_doc_pid))
+
+      # TODO: I've enabled auto_exit: true, so this will be 0.
       # But we might want to control the cleanup ourselves, in which case
-      # this will be > 0.
+      # this will be > 0 until we stop the SharedDoc ourselves.
       assert_eventually(
         length(:pg.get_members(:workflow_collaboration, workflow.id)) == 0
       )
-
-      # IO.inspect({session_one, session_two})
     end
   end
 
@@ -103,7 +116,7 @@ defmodule Lightning.SessionTest do
         |> insert()
 
       # Start a session - this should initialize the SharedDoc with workflow data
-      {:ok, session_pid} = Session.start(user, workflow.id) |> Session.ready?()
+      session_pid = start_session(user: user, workflow_id: workflow.id)
 
       # Send a message to allow :handle_continue to finish
       shared_doc = Session.get_doc(session_pid)
@@ -181,6 +194,10 @@ defmodule Lightning.SessionTest do
                  "Trigger #{key} mismatch: expected #{expected_value |> inspect}, got #{doc_value |> inspect}"
         end)
       end
+
+      shared_doc_pid = :sys.get_state(session_pid).shared_doc_pid
+      Session.stop(session_pid)
+      refute_eventually(Process.alive?(shared_doc_pid))
     end
 
     test "existing SharedDoc is not reinitialized", %{user: user} do
@@ -189,7 +206,7 @@ defmodule Lightning.SessionTest do
       insert(:job, workflow: workflow, name: "Original Job", body: "original")
 
       # Start first session
-      {:ok, session1_pid} = Session.start(user, workflow.id) |> Session.ready?()
+      session1_pid = start_session(user: user, workflow_id: workflow.id)
 
       shared_doc_1 = Session.get_doc(session1_pid)
 
@@ -199,7 +216,7 @@ defmodule Lightning.SessionTest do
       end)
 
       # Start second session - should connect to existing SharedDoc
-      {:ok, session2_pid} = Session.start(user, workflow.id) |> Session.ready?()
+      session2_pid = start_session(user: user, workflow_id: workflow.id)
       shared_doc_2 = Session.get_doc(session2_pid)
 
       assert shared_doc_1 == shared_doc_2
@@ -207,6 +224,13 @@ defmodule Lightning.SessionTest do
       # The modified name should still be there (not reinitialized)
       workflow_map = Yex.Doc.get_map(shared_doc_2, "workflow")
       assert Yex.Map.fetch!(workflow_map, "name") == "Modified Name"
+
+      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session1_pid)
+
+      Session.stop(session1_pid)
+      Session.stop(session2_pid)
+
+      refute_eventually(Process.alive?(shared_doc_pid))
     end
 
     test "client can sync workflow data from SharedDoc", %{user: user} do
@@ -221,10 +245,9 @@ defmodule Lightning.SessionTest do
         )
 
       # Start session to initialize SharedDoc
-      {:ok, session_pid} = Session.start(user, workflow.id) |> Session.ready?()
+      session_pid = start_session(user: user, workflow_id: workflow.id)
 
-      state = :sys.get_state(session_pid)
-      shared_doc_pid = state.shared_doc_pid
+      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
 
       # Simulate a client connecting and syncing
       Task.async(fn ->
@@ -252,6 +275,9 @@ defmodule Lightning.SessionTest do
         assert List.first(jobs_data)["body"] == job.body
       end)
       |> Task.await()
+
+      Session.stop(session_pid)
+      refute_eventually(Process.alive?(shared_doc_pid))
     end
   end
 
@@ -290,18 +316,53 @@ defmodule Lightning.SessionTest do
   end
 
   describe "teardown" do
-    test "when a session is stopped", %{user: user} do
+    test "when a session is stopped", %{user: user1} do
       workflow_id = Ecto.UUID.generate()
+      user2 = insert(:user)
+      user3 = insert(:user)
 
-      {:ok, pid} = Session.start(user, workflow_id) |> Session.ready?()
-      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(pid)
+      [{client1, parent1}, {client2, parent2}, {client3, _parent3}] =
+        Enum.map([user1, user2, user3], fn user ->
+          parent = build_parent()
 
-      Session.stop(pid)
+          {:ok, client} =
+            Session.start(
+              user: user,
+              workflow_id: workflow_id,
+              parent_pid: parent
+            )
+            |> Session.ready?()
 
-      # SharedDoc should still be alive if we want to control cleanup
+          {client, parent}
+        end)
 
+      shared_doc_pids =
+        [client1, client2, client3]
+        |> MapSet.new(fn client ->
+          %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(client)
+          shared_doc_pid
+        end)
+
+      assert MapSet.size(shared_doc_pids) == 1,
+             "Expected exactly one shared doc pid, got #{inspect(shared_doc_pids)}"
+
+      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(client3)
+
+      # Calls Session.terminate
+      Session.stop(client3)
+      refute_eventually(Process.alive?(client3))
+      assert Process.alive?(shared_doc_pid)
+
+      Process.exit(parent2, :normal)
+      refute_eventually(Process.alive?(client2))
+      assert Process.alive?(shared_doc_pid)
+
+      Process.exit(parent1, :normal)
+      refute_eventually(Process.alive?(client1))
       refute_eventually(Process.alive?(shared_doc_pid))
 
+      # If we disable auto_exit, so we can control cleanup ourselves,
+      # we can check that the SharedDoc is no longer being observed like this
       # assert_eventually(
       #   :sys.get_state(shared_doc_pid)
       #   |> Map.get(:assigns)
@@ -342,5 +403,22 @@ defmodule Lightning.SessionTest do
     |> Enum.find(fn item ->
       Yex.Map.fetch!(item, "id") == id
     end)
+  end
+
+  defp build_parent() do
+    spawn_link(fn ->
+      Process.flag(:trap_exit, true)
+
+      receive do
+        {:EXIT, _pid, :normal} ->
+          :ok
+      end
+    end)
+  end
+
+  defp build_parents(count) do
+    for _ <- 1..count do
+      build_parent()
+    end
   end
 end
