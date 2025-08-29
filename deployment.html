@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-3646D5E0.js"></script>
+    <script defer src="dist/sidebar_items-42B0648B.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -111,7 +111,7 @@ as run_results via the websocket connection from a worker.</li></ul><h3 id="gith
 repository permissions are needed for the GitHub app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>Ensure you set the following URLs:</p><ul><li><strong>Homepage URL:</strong> <code class="inline">&lt;app_url_here&gt;</code></li><li><strong>Callback URL for authorizing users:</strong> <code class="inline">&lt;app_url_here&gt;/oauth/github/callback</code>
 (Do NOT check the two checkboxes in this section requesting Device Flow and
 OAuth.)</li><li><strong>Setup URL for Post installation:</strong> <code class="inline">&lt;app_url_here&gt;/setup_vcs</code> (Check the box
-for <strong>Redirect on update</strong>)</li></ul><p>These envrionment variables will need to be set in order to configure the github
+for <strong>Redirect on update</strong>)</li></ul><p>These environment variables will need to be set in order to configure the github
 app:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;"><strong>Description</strong></th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_ID</code></td><td style="text-align: left;">the github app ID.</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_NAME</code></td><td style="text-align: left;">the github app name. This is the name used in the public link. It is the downcased name with spaces replaced with hyphens</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_ID</code></td><td style="text-align: left;">the github app Client ID</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_SECRET</code></td><td style="text-align: left;">the github app Client Secret</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_CERT</code></td><td style="text-align: left;">the github app private key (Base 64 encoded)</td></tr></tbody></table><p>You can access these from your github app settings menu. Also needed for the
 configuration is:</p><ul><li><code class="inline">REPO_CONNECTION_SIGNING_SECRET</code> - secret used to sign access tokens. This
 access token is used to authenticate requests made from the github actions.
@@ -138,7 +138,7 @@ message every 10 seconds). The default value is 1.</p><p>Processing concurrency 
 <code class="inline">KAFKA_NUMBER_OF_PROCESSORS</code> environment variable. Modifying this, modifies the
 number of processors that are downstream of the Kafka consumer, so an increase
 in this value should increase throughput (when factoring in the rate limit set
-by <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code>). The default value is 1.</p><h4>Deduplication</h4><p>Each Kafka trigger maintains record of the topic, parition and offset for each
+by <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code>). The default value is 1.</p><h4>Deduplication</h4><p>Each Kafka trigger maintains record of the topic, partition and offset for each
 message received. This to protect against the ingestion of duplicate messages
 from the cluster. These records are periodically cleaned out. The duration for
 which they are retained is controlled by
@@ -152,16 +152,16 @@ will result in the consumer group reverting to what has been configured as the
 duplication of messages or even data loss.</p><p>It is recommended that you check the value of the <code class="inline">offsets.retention.minutes</code>
 for the Kafka cluster to determine what the cluster's retention period is, and
 consider this when disabling a Kafka trigger for an extended period.</p><h4>Failure notifications</h4><p>Under certain failure conditions, a Kafka trigger will send an email to certain
-user that are associated with a project. After each email an embargo is applied
+users that are associated with a project. After each email an embargo is applied
 to ensure that Lightning does not flood the recipients with email. The length of
 the embargo is controlled by the <code class="inline">KAFKA_NOTIFICATION_EMBARGO_SECONDS</code> ENV
 variable.</p><h4>Persisting Failed Messages</h4><p><strong>PLEASE NOTE: If alternate file storage is not enabled, messages that fail to
-be persisted will not be retained by Lightning ans this can result in data loss,
+be persisted will not be retained by Lightning and this can result in data loss,
 if the Kafka cluster can not make these messages available again.</strong></p><p>If a Kafka message fails to be persisted as a WorkOrder, Run and Dataclip, the
 option exists to write the failed message to a location on the local file
 system. If this option is enabled by setting <code class="inline">KAFKA_ALTERNATE_STORAGE_ENABLED</code>,
 then the <code class="inline">KAFKA_ALTERNATE_STORAGE_PATH</code> ENV variable must be set to the path
-that exists and is writable by Lightning. The location shoudl also be suitably
+that exists and is writable by Lightning. The location should also be suitably
 protected to prevent data exposure as Lightning <strong>will not encrypt</strong> the message
 contents when writing it.</p><p>If the option is enabled and a message fails to be persisted, Lightning will
 create a subdirectory named with the id if the affected trigger's workflow in
@@ -171,9 +171,9 @@ headers and data as received by the Kafka pipeline and write this to a file
 within the subdirectory. The file will be named based on the pattern
 <code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers be
 disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="0821815069-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="0821815069-2">(</span><span class="p" data-group-id="0821815069-2">)</span><span class="w">
-</span><span class="p" data-group-id="0821815069-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
+run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="0454801204-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="0454801204-2">(</span><span class="p" data-group-id="0454801204-2">)</span><span class="w">
+</span><span class="p" data-group-id="0454801204-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
@@ -183,7 +183,16 @@ application' type.</p><p>Set the callback url to: <code class="inline">https://&
 Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Once the client has been created, get/download the OAuth client JSON and set the
 following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GOOGLE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">client_id</code> from the client details.</td></tr><tr><td style="text-align: left;"><code class="inline">GOOGLE_CLIENT_SECRET</code></td><td style="text-align: left;"><code class="inline">client_secret</code> from the client details.</td></tr></tbody></table><h3 id="salesforce-oauth2" class="section-heading"><a href="#salesforce-oauth2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Salesforce Oauth2</span></h3><p>Using your Salesforce developer account, create a new Oauth 2.0 connected
 application.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
-Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Grant permissions as desired.</p><p>Once the client has been created set the following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Key</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_SECRET</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Secret</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr></tbody></table>
+Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Grant permissions as desired.</p><p>Once the client has been created set the following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Key</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_SECRET</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Secret</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr></tbody></table><h3 id="webhook-retry-configuration" class="section-heading"><a href="#webhook-retry-configuration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Webhook Retry Configuration</span></h3><p>Lightning automatically retries webhook processing on <strong>transient database
+connection errors</strong> using exponential backoff. This helps prevent data loss
+during brief database outages.</p><p>The following environment variables control webhook retry behavior:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;"><strong>Description</strong></th><th style="text-align: right;"><strong>Default</strong></th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">WEBHOOK_RETRY_MAX_ATTEMPTS</code></td><td style="text-align: left;">Maximum number of attempts (the first attempt runs immediately; backoffs occur between retries).</td><td style="text-align: right;"><code class="inline">5</code></td></tr><tr><td style="text-align: left;"><code class="inline">WEBHOOK_RETRY_INITIAL_DELAY_MS</code></td><td style="text-align: left;">Initial backoff delay in milliseconds.</td><td style="text-align: right;"><code class="inline">100</code></td></tr><tr><td style="text-align: left;"><code class="inline">WEBHOOK_RETRY_MAX_DELAY_MS</code></td><td style="text-align: left;">Maximum backoff delay in milliseconds.</td><td style="text-align: right;"><code class="inline">10000</code></td></tr><tr><td style="text-align: left;"><code class="inline">WEBHOOK_RETRY_BACKOFF_FACTOR</code></td><td style="text-align: left;">Multiplier for exponential backoff (each delay × this factor, up to the max delay).</td><td style="text-align: right;"><code class="inline">2</code></td></tr><tr><td style="text-align: left;"><code class="inline">WEBHOOK_RETRY_TIMEOUT_MS</code></td><td style="text-align: left;">Total time budget for all attempts (including sleeps) in milliseconds.</td><td style="text-align: right;"><code class="inline">60000</code></td></tr><tr><td style="text-align: left;"><code class="inline">WEBHOOK_RETRY_JITTER</code></td><td style="text-align: left;">Whether to add \~0–25% randomization to each delay to avoid thundering herd (<code class="inline">true</code>/<code class="inline">false</code>).</td><td style="text-align: right;"><code class="inline">true</code></td></tr></tbody></table><p><strong>How backoff works (defaults, jitter off):</strong> attempt 1 runs immediately; on
+failure we sleep and retry up to <code class="inline">WEBHOOK_RETRY_MAX_ATTEMPTS - 1</code> times with
+exponential delays starting at <code class="inline">WEBHOOK_RETRY_INITIAL_DELAY_MS</code> and multiplying
+by <code class="inline">WEBHOOK_RETRY_BACKOFF_FACTOR</code>, capped by <code class="inline">WEBHOOK_RETRY_MAX_DELAY_MS</code>.
+Example sequence: <code class="inline">100ms → 200ms → 400ms → 800ms</code> (four sleeps for five total
+attempts), stopping sooner if <code class="inline">WEBHOOK_RETRY_TIMEOUT_MS</code> elapses.</p><p><strong>Server timeout alignment:</strong> Set your Phoenix <code class="inline">IDLE_TIMEOUT</code> to be <strong>at least</strong>
+<code class="inline">WEBHOOK_RETRY_TIMEOUT_MS + 15000</code> (in milliseconds) so long retries finish
+before the connection is closed.</p>
 
 </div>
 

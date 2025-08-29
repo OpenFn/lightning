@@ -126,6 +126,7 @@ Lightning.PromEx.html
 Lightning.PromExTestPlugin.html
 Lightning.Release.html
 Lightning.Repo.html
+Lightning.Retry.html
 Lightning.Run.html
 Lightning.RunStep.html
 Lightning.Runs.Handlers.CompleteRun.html
@@ -388,8 +389,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-80681CB5.js
-dist/sidebar_items-3646D5E0.js
+dist/search_data-12C164DF.js
+dist/sidebar_items-42B0648B.js
 index.html
 provisioning.html
 readme.html

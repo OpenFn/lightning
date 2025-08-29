@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-3646D5E0.js"></script>
+    <script defer src="dist/sidebar_items-42B0648B.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -117,8 +117,7 @@ It verifies the presence of correct API keys or Basic Authentication credentials
 
       </div>
 
-        <div class="summary-synopsis"><p>Handles the incoming HTTP request and performs authentication and authorization checks
-based on paths starting with <code class="inline">/i/</code>.</p></div>
+        <div class="summary-synopsis"><p>Handles webhook auth for <code class="inline">/i/:webhook</code> requests.</p></div>
 
     </div>
 
@@ -155,7 +154,7 @@ based on paths starting with <code class="inline">/i/</code>.</p></div>
       <h1 class="signature" translate="no">call(conn, action)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/webhook_auth.ex#L57" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/webhook_auth.ex#L42" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -164,21 +163,19 @@ based on paths starting with <code class="inline">/i/</code>.</p></div>
 
   <section class="docstring">
 
-<p>Handles the incoming HTTP request and performs authentication and authorization checks
-based on paths starting with <code class="inline">/i/</code>.</p><h2 id="call/2-details" class="section-heading"><a href="#call/2-details" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Details</span></h2><p>This function is the entry point for the <code class="inline">WebhookAuth</code> plug. It first checks if
-the request path starts with <code class="inline">/i/</code> to determine whether the request should be processed
-by this plug.</p><p>If the path matches, it then extracts the <code class="inline">webhook</code> part from the request path and
-runs to fetch the corresponding <code class="inline">trigger</code> using the <code class="inline">fetch_trigger</code> function.</p><p>If a valid <code class="inline">trigger</code> is found, the function proceeds to validate the authentication
-of the request using the <code class="inline">validate_auth</code> function.</p><p>In case the <code class="inline">trigger</code> is not found, or the path does not start with <code class="inline">/i/</code>, the function
-returns a 404 Not Found response with a JSON error message indicating that the webhook
-is not found.</p><h2 id="call/2-parameters" class="section-heading"><a href="#call/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">conn</code>: The connection struct representing the incoming HTTP request.</li><li><code class="inline">_opts</code>: A set of options, not used in this function but is a mandatory parameter as per
- Plug specification.</li></ul><h2 id="call/2-returns" class="section-heading"><a href="#call/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>A connection struct representing the outgoing response, which can be a successful
-response, an unauthorized response, or a not found response, based on the evaluation
-of the above-mentioned conditions.</li></ul><h2 id="call/2-examples" class="section-heading"><a href="#call/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>Assuming a request with the path <code class="inline">/i/some_webhook</code>:</p><h3 id="call/2-webhook-found-and-authenticated" class="section-heading"><a href="#call/2-webhook-found-and-authenticated" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Webhook Found and Authenticated</span></h3><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="9615047315-1">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9615047315-2">[</span><span class="p" data-group-id="9615047315-2">]</span><span class="p" data-group-id="9615047315-1">)</span><span class="w">
-</span><span class="p" data-group-id="9615047315-3">%</span><span class="nc" data-group-id="9615047315-3">Plug.Conn</span><span class="p" data-group-id="9615047315-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9615047315-3">}</span><span class="w">
+      <div class="specs">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="9615047315-4">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9615047315-5">[</span><span class="p" data-group-id="9615047315-5">]</span><span class="p" data-group-id="9615047315-4">)</span><span class="w">
-</span><span class="p" data-group-id="9615047315-6">%</span><span class="nc" data-group-id="9615047315-6">Plug.Conn</span><span class="p" data-group-id="9615047315-6">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9615047315-6">}</span></code></pre>
+          <pre translate="no"><span class="attribute">@spec</span> call(<a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>()</pre>
+
+      </div>
+
+<p>Handles webhook auth for <code class="inline">/i/:webhook</code> requests.</p><ul><li><p><strong>CORS preflight:</strong> If the request method is <code class="inline">OPTIONS</code>, this plug is a no-op
+and returns the connection unchanged so upstream CORS handling can respond.
+This avoids doing DB lookups or emitting 401/404 on preflight requests.</p></li><li><p><strong>Auth flow:</strong> For non-<code class="inline">OPTIONS</code> requests whose path matches <code class="inline">/i/:webhook</code>,
+this plug:</p><ol><li>Looks up the webhook trigger (with <code class="inline">workflow</code> and <code class="inline">edges</code>) and its
+<code class="inline">webhook_auth_methods</code>, wrapped in <a href="Lightning.Retry.html#with_webhook_retry/2"><code class="inline">Lightning.Retry.with_webhook_retry/2</code></a>
+so transient DB errors are retried.</li><li>If the trigger is missing → responds <strong>404</strong> <code class="inline">{&quot;error&quot;:&quot;webhook_not_found&quot;}</code>.</li><li>If auth methods are configured:<ul><li>If credentials match → assigns <code class="inline">:trigger</code> and continues.</li><li>If credentials are present but wrong → responds <strong>404</strong> (hide existence).</li><li>If credentials are missing → responds <strong>401</strong>.</li></ul></li><li>If retries exhaust due to DB issues → responds <strong>503</strong> with <code class="inline">Retry-After</code>
+based on <code class="inline">WEBHOOK_RETRY_TIMEOUT_MS</code>.</li></ol></li></ul><p>Returns the (possibly halted) connection.</p>
   </section>
 </section>
 <section class="detail" id="init/1">
@@ -191,7 +188,7 @@ of the above-mentioned conditions.</li></ul><h2 id="call/2-examples" class="sect
       <h1 class="signature" translate="no">init(opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/webhook_auth.ex#L15" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/webhook_auth.ex#L17" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
