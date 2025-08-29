@@ -130,6 +130,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def env do
+      Application.get_env(:lightning, :env)
+    end
+
+    @impl true
     def email_sender_name do
       Application.get_env(:lightning, :emails, [])
       |> Keyword.get(:sender_name)
@@ -404,6 +409,7 @@ defmodule Lightning.Config do
   @callback cors_origin() :: list()
   @callback default_max_run_duration() :: integer()
   @callback email_sender_name() :: String.t()
+  @callback env() :: :dev | :test | :prod
   @callback get_extension_mod(key :: atom()) :: any()
   @callback google(key :: atom()) :: any()
   @callback grace_period() :: integer()
@@ -469,6 +475,15 @@ defmodule Lightning.Config do
   """
   def apollo(key \\ nil) do
     impl().apollo(key)
+  end
+
+  @doc """
+  Returns the environment.
+
+  Either :dev, :test, or :prod.
+  """
+  def env do
+    impl().env()
   end
 
   @doc """

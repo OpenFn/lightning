@@ -686,6 +686,12 @@ defmodule Lightning.Config.Bootstrap do
           "lightning-cluster"
         )
 
+    # ==============================================================================
+
+    setup_storage()
+
+    config :lightning, :env, config_env()
+
     # Commenting this out because the React modules aren't being used in prod
     # Utils.get_env([:esbuild, :default, :args]) returns nil in prod
     # We should have uncomment it when we have a proper fix

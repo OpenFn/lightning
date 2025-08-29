@@ -206,10 +206,12 @@ defmodule Lightning.Application do
   defp put_usage_tracking_cron_opts(cron_opts) do
     usage_tracking_opts = Lightning.Config.usage_tracking()
 
-    if usage_tracking_opts[:enabled] do
-      print_tracking_thanks_message()
-    else
-      print_tracking_opt_out_message()
+    if Lightning.Config.env() !== :test do
+      if usage_tracking_opts[:enabled] do
+        print_tracking_thanks_message()
+      else
+        print_tracking_opt_out_message()
+      end
     end
 
     Keyword.merge(
