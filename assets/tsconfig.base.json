@@ -5,6 +5,19 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "noEmit": true
+    "noEmit": true,
+    "rootDir": "../",
+    "paths": {
+      "#/*": ["./js/*"],
+      "phoenix": ["../deps/phoenix"],
+      "phoenix_live_view": [
+        "../deps/phoenix_live_view/assets/js/types/index.d.ts",
+        "../deps/phoenix_live_view"
+      ],
+      "phoenix_live_view/*": [
+        "../deps/phoenix_live_view/assets/js/phoenix_live_view/*"
+      ],
+      "morphdom": ["./node_modules/morphdom"]
+    }
   }
 }

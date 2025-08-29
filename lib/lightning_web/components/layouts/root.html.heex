@@ -16,6 +16,9 @@
     <.live_title suffix=" · OpenFn Lightning">
       {assigns[:page_title] || "Lightning"}
     </.live_title>
+    <script>
+      window.userToken = "<%= assigns[:user_token] %>";
+    </script>
     <link
       phx-track-static
       rel="stylesheet"

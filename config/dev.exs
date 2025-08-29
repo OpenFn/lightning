@@ -130,3 +130,5 @@ config :phoenix, :plug_init_mode, :runtime
 config :lightning, :is_resettable_demo, true
 
 config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 30_000
+
+config :lightning, Lightning.WorkflowCollaboration, cleanup_delay_ms: 5_000
