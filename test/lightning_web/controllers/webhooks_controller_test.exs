@@ -2,6 +2,7 @@ defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Extensions.MockRateLimiter
   alias Lightning.Extensions.StubRateLimiter
@@ -11,6 +12,16 @@ defmodule LightningWeb.WebhooksControllerTest do
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
+
+  @moduletag capture_log: true
+
+  setup :set_mox_from_context
+  setup :verify_on_exit!
+
+  setup do
+    Mox.stub(Lightning.MockConfig, :cors_origin, fn -> "*" end)
+    :ok
+  end
 
   describe "a POST request to '/i'" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
@@ -41,7 +52,8 @@ defmodule LightningWeb.WebhooksControllerTest do
       conn = post(conn, "/i/#{trigger.id}")
 
       assert json_response(conn, 402) == %{
-               "error" => "Runs limit exceeded"
+               "error" => "runs_hard_limit",
+               "message" => "Runs limit exceeded"
              }
     end
 
@@ -87,7 +99,8 @@ defmodule LightningWeb.WebhooksControllerTest do
       conn = post(conn, "/i/#{trigger.id}")
 
       assert json_response(conn, 429) == %{
-               "error" => "Too many runs in the last minute"
+               "error" => "too_many_requests",
+               "message" => "Too many runs in the last minute"
              }
     end
 
@@ -240,6 +253,148 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert response_message =~
                "Unable to process request, trigger is disabled."
+    end
+  end
+
+  describe "webhook DB retry behaviour" do
+    setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
+
+    setup %{conn: conn} do
+      Mimic.copy(Lightning.WorkOrders)
+
+      Mox.stub(Lightning.MockConfig, :webhook_retry, fn ->
+        [
+          max_attempts: 1,
+          initial_delay_ms: 0,
+          max_delay_ms: 0,
+          timeout_ms: 1_000,
+          jitter: false
+        ]
+      end)
+
+      Mox.stub(Lightning.MockConfig, :webhook_retry, fn
+        :timeout_ms -> 1_000
+        _ -> nil
+      end)
+
+      {:ok, %{conn: conn}}
+    end
+
+    test "returns 503 with Retry-After when DB connection errors are exhausted",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      Mimic.expect(Lightning.WorkOrders, :create_for, fn _trigger, _opts ->
+        {:error, %DBConnection.ConnectionError{message: "db down"}}
+      end)
+
+      conn = post(conn, "/i/#{trigger.id}")
+
+      assert json_response(conn, 503) == %{
+               "error" => "service_unavailable",
+               "message" =>
+                 "Unable to process request due to temporary database issues. Please try again in 1s.",
+               "retry_after" => 1
+             }
+
+      assert get_resp_header(conn, "retry-after") == ["1"]
+    end
+
+    test "retries once on DB error then succeeds", %{conn: conn} do
+      Mox.stub(Lightning.MockConfig, :webhook_retry, fn ->
+        [
+          max_attempts: 2,
+          initial_delay_ms: 0,
+          max_delay_ms: 0,
+          timeout_ms: 5_000,
+          jitter: false
+        ]
+      end)
+
+      Mox.stub(Lightning.MockConfig, :webhook_retry, fn
+        :timeout_ms -> 5_000
+        _ -> nil
+      end)
+
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      work_order_id = Ecto.UUID.generate()
+
+      Mimic.expect(Lightning.WorkOrders, :create_for, fn _t, _o ->
+        {:error, %DBConnection.ConnectionError{message: "flaky"}}
+      end)
+
+      Mimic.expect(Lightning.WorkOrders, :create_for, fn _t, _o ->
+        {:ok, %{id: work_order_id}}
+      end)
+
+      conn = post(conn, "/i/#{trigger.id}")
+
+      assert json_response(conn, 200) == %{"work_order_id" => work_order_id}
+    end
+  end
+
+  describe "create/2 controller error branches (422 + nil fallback)" do
+    setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
+
+    test "returns 422 invalid_request with details when WorkOrders.create_for returns a changeset error",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      bad_changeset =
+        %Lightning.WorkOrder{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.add_error(:dataclip, "is invalid")
+
+      Mimic.copy(Lightning.WorkOrders)
+
+      Mimic.expect(Lightning.WorkOrders, :create_for, fn _trigger, _opts ->
+        {:error, bad_changeset}
+      end)
+
+      conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"error" => "invalid_request", "details" => details} =
+               json_response(conn, 422)
+
+      assert Map.has_key?(details, "dataclip")
+    end
+
+    test "returns 422 with atom reason when WorkOrders.create_for returns {:error, reason}",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      Mimic.copy(Lightning.WorkOrders)
+
+      Mimic.expect(Lightning.WorkOrders, :create_for, fn _trigger, _opts ->
+        {:error, :bad_payload}
+      end)
+
+      conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert json_response(conn, 422) == %{"error" => "bad_payload"}
+    end
+
+    test "returns 404 when controller receives nil trigger assign (fallback path)" do
+      # Call the controller action directly to bypass WebhookAuth plug,
+      # so we actually execute the `nil -> 404` branch in the controller.
+      conn = Phoenix.ConnTest.build_conn(:post, "/i/nonexistent")
+      conn = LightningWeb.WebhooksController.create(conn, %{})
+
+      assert conn.status == 404
+      assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
     end
   end
 end
