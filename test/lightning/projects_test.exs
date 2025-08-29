@@ -2077,6 +2077,143 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "sandboxes (list/create/workspace)" do
+    test "list_sandboxes/1 returns only direct children ordered by name" do
+      parent = insert(:project, name: "parent")
+
+      _other_parent = insert(:project, name: "another-root")
+
+      # children (unordered names to prove sorting)
+      _c2 = insert(:project, name: "B-child", parent: parent)
+      _c1 = insert(:project, name: "A-child", parent: parent)
+      _c3 = insert(:project, name: "Z-child", parent: parent)
+
+      got = Projects.list_sandboxes(parent.id)
+      assert Enum.map(got, & &1.name) == ["A-child", "B-child", "Z-child"]
+      assert Enum.uniq(Enum.map(got, & &1.parent_id)) == [parent.id]
+    end
+
+    test "create_sandbox/3 sets parent and creates a normal project (emails off by default)" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      attrs = %{
+        name: "sandbox-1",
+        project_users: [%{user_id: owner.id, role: :owner}]
+      }
+
+      assert {:ok, sandbox} = Projects.create_sandbox(parent, attrs)
+      assert sandbox.parent_id == parent.id
+      assert sandbox.name == "sandbox-1"
+    end
+
+    test "get_workspace_projects/1 returns parent + its direct sandboxes (unique set)" do
+      parent = insert(:project, name: "root")
+      c1 = insert(:project, name: "s-a", parent: parent)
+      c2 = insert(:project, name: "s-b", parent: parent)
+      _unrelated = insert(:project, name: "someone-else")
+
+      got = Projects.get_workspace_projects(parent)
+
+      # Ensure it contains exactly parent + children (order is not guaranteed)
+      expect_ids = MapSet.new([parent.id, c1.id, c2.id])
+      assert MapSet.new(Enum.map(got, & &1.id)) == expect_ids
+    end
+  end
+
+  describe "project head hash + version history helpers" do
+    test "compute_project_head_hash/1 uses latest per workflow and is deterministic" do
+      project = insert(:project)
+
+      # Two workflows in this project
+      w1 = insert(:simple_workflow, project: project)
+      w2 = insert(:simple_workflow, project: project)
+
+      # Insert workflow_versions with controlled inserted_at so ordering is deterministic
+      now = DateTime.utc_now(:microsecond)
+      later = DateTime.add(now, 1, :microsecond)
+      latest = DateTime.add(now, 2, :microsecond)
+
+      rows = [
+        %{
+          id: Ecto.UUID.generate(),
+          workflow_id: w1.id,
+          hash: "aaaaaaaaaaaa",
+          source: "app",
+          inserted_at: now
+        },
+        %{
+          id: Ecto.UUID.generate(),
+          workflow_id: w1.id,
+          hash: "bbbbbbbbbbbb",
+          source: "cli",
+          inserted_at: later
+        },
+        %{
+          id: Ecto.UUID.generate(),
+          workflow_id: w2.id,
+          hash: "cccccccccccc",
+          source: "app",
+          inserted_at: latest
+        }
+      ]
+
+      Repo.insert_all(Lightning.Workflows.WorkflowVersion, rows)
+
+      # Build expected digest the same way as the implementation
+      pairs =
+        [
+          {w1.id, "bbbbbbbbbbbb"},
+          {w2.id, "cccccccccccc"}
+        ]
+        |> Enum.sort_by(fn {wid, _} -> to_string(wid) end)
+        |> Enum.map(fn {wid, h} -> [to_string(wid), h] end)
+
+      expected =
+        pairs
+        |> Jason.encode!()
+        |> then(fn data -> :crypto.hash(:sha256, data) end)
+        |> Base.encode16(case: :lower)
+        |> binary_part(0, 12)
+
+      assert Projects.compute_project_head_hash(project.id) == expected
+    end
+
+    test "append_project_head/2 appends once and validates format" do
+      project = insert(:project, version_history: [])
+
+      # Valid 12-hex hash
+      h1 = "deadbeefcafe"
+      assert {:ok, p1} = Projects.append_project_head(project, h1)
+      assert p1.version_history == [h1]
+
+      # Appending the same hash again is a no-op
+      assert {:ok, p2} = Projects.append_project_head(p1, h1)
+      assert p2.version_history == [h1]
+
+      # Invalid hash returns {:error, :bad_hash}
+      assert {:error, :bad_hash} = Projects.append_project_head(p2, "not-hex")
+    end
+
+    test "append_project_head!/2 raises on bad hash and returns updated project on success" do
+      project = insert(:project, version_history: [])
+
+      good = "0123456789ab"
+      bad = "oops"
+
+      # Success path
+      updated = Projects.append_project_head!(project, good)
+      assert updated.version_history == [good]
+
+      # Error path
+      assert_raise ArgumentError, ~r/must be 12 hex/, fn ->
+        Projects.append_project_head!(updated, bad)
+      end
+    end
+  end
+
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =

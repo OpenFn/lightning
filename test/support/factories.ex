@@ -766,4 +766,63 @@ defmodule Lightning.Factories do
   def with_snapshot(workflow) do
     workflow |> tap(&Lightning.Workflows.Snapshot.create/1)
   end
+
+  defp hex12(n) do
+    n
+    |> Integer.to_string(16)
+    |> String.downcase()
+    |> String.pad_leading(12, "0")
+  end
+
+  def workflow_version_factory do
+    %Lightning.Workflows.WorkflowVersion{
+      workflow: build(:workflow),
+      hash: sequence(:wv_hash, &hex12(&1)),
+      source: "app"
+    }
+  end
+
+  def with_version(%Lightning.Workflows.Workflow{} = workflow, attrs \\ %{}) do
+    unless workflow.__meta__.state == :loaded do
+      raise "with_version/2 expects an INSERTED workflow"
+    end
+
+    defaults = %{
+      workflow: workflow,
+      hash: sequence(:wv_hash, &hex12(&1)),
+      source: "app"
+    }
+
+    insert(:workflow_version, Map.merge(defaults, attrs))
+    workflow
+  end
+
+  def with_versions(
+        %Lightning.Workflows.Workflow{} = workflow,
+        n,
+        source \\ "app"
+      ) do
+    Enum.each(1..n, fn _ ->
+      insert(:workflow_version,
+        workflow: workflow,
+        hash: sequence(:wv_hash, &hex12(&1)),
+        source: source
+      )
+    end)
+
+    workflow
+  end
+
+  def sandbox_factory do
+    parent = build(:project)
+
+    %Lightning.Projects.Project{
+      name: sequence(:project_name, &"project-#{&1}"),
+      parent: parent
+    }
+  end
+
+  def sandbox_for(parent, attrs \\ %{}) do
+    build(:project, Map.merge(%{parent: parent}, attrs))
+  end
 end
