@@ -350,6 +350,48 @@ defmodule Lightning.Config do
     def sentry do
       Application.get_env(:lightning, :sentry, Sentry)
     end
+
+    @impl true
+    def webhook_retry do
+      default_webhook_retry()
+      |> Keyword.merge(Application.get_env(:lightning, :webhook_retry, []))
+      |> normalize_retry()
+    end
+
+    @impl true
+    def webhook_retry(key) when is_atom(key) do
+      webhook_retry() |> Keyword.fetch!(key)
+    end
+
+    defp default_webhook_retry do
+      [
+        max_attempts: 5,
+        initial_delay_ms: 100,
+        max_delay_ms: 10_000,
+        backoff_factor: 2.0,
+        timeout_ms: 60_000,
+        jitter: true
+      ]
+    end
+
+    defp normalize_retry(opts) do
+      max_attempts = max(1, Keyword.get(opts, :max_attempts, 5))
+      initial_ms = max(0, Keyword.get(opts, :initial_delay_ms, 100))
+      max_delay_ms = max(initial_ms, Keyword.get(opts, :max_delay_ms, 10_000))
+      timeout_ms = max(0, Keyword.get(opts, :timeout_ms, 60_000))
+      backoff_factor = max(1.0, 1.0 * Keyword.get(opts, :backoff_factor, 2.0))
+
+      jitter = !!Keyword.get(opts, :jitter, true)
+
+      [
+        max_attempts: max_attempts,
+        initial_delay_ms: initial_ms,
+        max_delay_ms: max_delay_ms,
+        timeout_ms: timeout_ms,
+        backoff_factor: backoff_factor,
+        jitter: jitter
+      ]
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -406,6 +448,8 @@ defmodule Lightning.Config do
   @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
   @callback sentry() :: module()
+  @callback webhook_retry() :: Keyword.t()
+  @callback webhook_retry(key :: atom()) :: any()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -642,6 +686,14 @@ defmodule Lightning.Config do
 
   def sentry do
     impl().sentry()
+  end
+
+  def webhook_retry do
+    impl().webhook_retry()
+  end
+
+  def webhook_retry(key) when is_atom(key) do
+    impl().webhook_retry(key)
   end
 
   defp impl do

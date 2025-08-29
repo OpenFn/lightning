@@ -57,9 +57,14 @@ defmodule Lightning.WorkOrders do
   alias Lightning.WorkOrders.Query
   alias Lightning.WorkOrders.RetryManyWorkOrdersJob
 
+  @type dataclip_input ::
+          Dataclip.t()
+          | Ecto.Changeset.t(Dataclip.t())
+          | map()
+
   @type work_order_option ::
           {:workflow, Workflow.t()}
-          | {:dataclip, Dataclip.t()}
+          | {:dataclip, dataclip_input()}
           | {:created_by, User.t()}
           | {:project_id, Ecto.UUID.t()}
           | {:without_run, boolean()}
