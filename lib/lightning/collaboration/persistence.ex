@@ -67,7 +67,9 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def unbind(%{doc_name: doc_name}, _doc_name, doc) do
-    Logger.info("Saving final state. document=#{doc_name}")
+    Logger.info(
+      "Saving final state. pid=#{inspect(self())} document=#{doc_name}"
+    )
 
     case Yex.encode_state_as_update(doc) do
       {:ok, update} ->
