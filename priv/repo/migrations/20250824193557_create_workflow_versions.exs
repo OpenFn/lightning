@@ -19,17 +19,5 @@ defmodule Lightning.Repo.Migrations.CreateWorkflowVersions do
     create index(:workflow_versions, [:workflow_id, :inserted_at, :id],
              name: :workflow_versions_latest_per_wf
            )
-
-    create constraint(
-             :workflow_versions,
-             :hash_is_12_hex,
-             check: "hash ~ '^[a-f0-9]{12}$'"
-           )
-
-    create constraint(
-             :workflow_versions,
-             :source_is_known,
-             check: "source IN ('app','cli')"
-           )
   end
 end

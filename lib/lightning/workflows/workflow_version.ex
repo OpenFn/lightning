@@ -41,13 +41,5 @@ defmodule Lightning.Workflows.WorkflowVersion do
       name: :workflow_versions_workflow_id_hash_index,
       message: "has already been taken"
     )
-    |> check_constraint(:hash,
-      name: :hash_is_12_hex,
-      message: "must be 12 lowercase hex chars"
-    )
-    |> check_constraint(:source,
-      name: :source_is_known,
-      message: "must be 'app' or 'cli'"
-    )
   end
 end

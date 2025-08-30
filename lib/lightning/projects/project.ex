@@ -112,8 +112,13 @@ defmodule Lightning.Projects.Project do
       else: cs
   end
 
-  def sandbox?(%__MODULE__{parent_id: nil}), do: false
-  def sandbox?(_), do: true
+  @doc """
+  Returns `true` if the project is a sandbox (i.e. `parent_id` is a UUID),
+  `false` otherwise.
+  """
+  @spec sandbox?(t()) :: boolean()
+  def sandbox?(%__MODULE__{parent_id: pid}) when is_binary(pid), do: true
+  def sandbox?(_), do: false
 
   defp validate_dataclip_retention_period(changeset) do
     history_retention_period = get_field(changeset, :history_retention_period)
