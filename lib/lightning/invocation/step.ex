@@ -34,6 +34,17 @@ defmodule Lightning.Invocation.Step do
           exit_reason: String.t() | nil,
           job: Job.t() | Ecto.Association.NotLoaded.t() | nil
         }
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :exit_reason,
+             :error_type,
+             :finished_at,
+             :started_at,
+             :job_id,
+             :input_dataclip_id,
+             :output_dataclip_id
+           ]}
 
   schema "steps" do
     field :exit_reason, :string
