@@ -24,4 +24,4 @@ npm exec prettier -- \
 
 cd "$PROJECT_ROOT"
 
-mix format
+mix format && echo "✓ Elixir code formatted successfully"
