@@ -85,9 +85,7 @@ defmodule Lightning.Collaboration.Session do
   end
 
   @impl true
-  def terminate(reason, %{shared_doc_pid: shared_doc_pid} = state) do
-    Logger.warning("going down: #{inspect(reason)}")
-
+  def terminate(_reason, %{shared_doc_pid: shared_doc_pid} = state) do
     if state.parent_ref do
       Process.demonitor(state.parent_ref)
     end
@@ -220,6 +218,8 @@ defmodule Lightning.Collaboration.Session do
     {:reply, :ok, state}
   end
 
+  # Comes from the parent process, we forward it on to the SharedDoc.
+  # The SharedDoc will send a message back via the :yjs message.
   @impl true
   def handle_call(
         {:send_yjs_message, chunk},
@@ -241,8 +241,19 @@ defmodule Lightning.Collaboration.Session do
     {:reply, :ok, state}
   end
 
+  # Comes from the SharedDoc, for changes coming from the SharedDoc
+  # and we forward it on to the parent process.
   @impl true
-  def handle_info({:yjs, reply, _shared_doc_pid}, state) do
+  def handle_info({:yjs, reply, shared_doc_pid}, state) do
+    Logger.debug(
+      {:yjs, reply, shared_doc_pid}
+      |> inspect(
+        label: "Session :yjs",
+        pretty: true,
+        syntax_colors: IO.ANSI.syntax_colors()
+      )
+    )
+
     Map.get(state, :parent_pid) |> send({:yjs, reply})
     {:noreply, state}
   end
@@ -255,12 +266,8 @@ defmodule Lightning.Collaboration.Session do
         {:DOWN, ref, :process, _pid, _reason},
         %{parent_ref: parent_ref, shared_doc_pid: shared_doc_pid} = state
       ) do
-    Logger.warning("DOWN: #{inspect(ref)}")
-
     if ref == parent_ref do
       Process.demonitor(parent_ref)
-
-      Logger.warning("Parent process going down, stopping session")
 
       if shared_doc_pid && Process.alive?(shared_doc_pid) do
         SharedDoc.unobserve(shared_doc_pid)
@@ -286,11 +293,11 @@ defmodule Lightning.Collaboration.Session do
       nil ->
         Logger.info("No existing SharedDoc found for workflow #{workflow_id}")
 
-        case Collaboration.Supervisor.start_shared_doc("workflow:#{workflow_id}") do
+        case start_shared_doc(workflow_id) do
           {:ok, pid} ->
             :pg.join(@pg_scope, workflow_id, pid)
 
-            initialize_workflow_document(pid, workflow_id)
+            # initialize_workflow_document(pid, workflow_id)
             join_shared_doc(pid, user, workflow_id)
 
             {:ok, pid}
@@ -326,8 +333,19 @@ defmodule Lightning.Collaboration.Session do
     )
   end
 
-  # Private function to initialize SharedDoc with workflow data
-  defp initialize_workflow_document(shared_doc_pid, workflow_id) do
+  defp start_shared_doc(workflow_id) do
+    Collaboration.Supervisor.start_child(
+      {Yex.Sync.SharedDoc,
+       [
+         doc_name: "workflow:#{workflow_id}",
+         auto_exit: true,
+         persistence:
+           {Lightning.Collaboration.Persistence, workflow_id: workflow_id}
+       ]}
+    )
+  end
+
+  def initialize_workflow_document(doc, workflow_id) do
     Logger.debug("Initializing SharedDoc with workflow data for #{workflow_id}")
 
     # Fetch workflow from database
@@ -339,75 +357,75 @@ defmodule Lightning.Collaboration.Session do
           "Workflow #{workflow_id} not found, initializing empty document"
         )
 
-        :ok
+        doc
 
       workflow ->
         # Initialize the document with workflow data
-        SharedDoc.update_doc(shared_doc_pid, fn doc ->
-          workflow_map = Yex.Doc.get_map(doc, "workflow")
-          jobs_array = Yex.Doc.get_array(doc, "jobs")
-          edges_array = Yex.Doc.get_array(doc, "edges")
-          triggers_array = Yex.Doc.get_array(doc, "triggers")
-          positions = Yex.Doc.get_map(doc, "positions")
+        workflow_map = Yex.Doc.get_map(doc, "workflow")
+        jobs_array = Yex.Doc.get_array(doc, "jobs")
+        edges_array = Yex.Doc.get_array(doc, "edges")
+        triggers_array = Yex.Doc.get_array(doc, "triggers")
+        positions = Yex.Doc.get_map(doc, "positions")
 
-          Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
-            # Set workflow properties
-            Yex.Map.set(workflow_map, "id", workflow.id)
-            Yex.Map.set(workflow_map, "name", workflow.name || "")
+        Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
+          # Set workflow properties
+          Yex.Map.set(workflow_map, "id", workflow.id)
+          Yex.Map.set(workflow_map, "name", workflow.name || "")
 
-            Enum.each(workflow.jobs || [], fn job ->
-              job_map =
-                Yex.MapPrelim.from(%{
-                  "id" => job.id,
-                  "name" => job.name || "",
-                  "body" => Yex.TextPrelim.from(job.body || ""),
-                  "adaptor" => job.adaptor,
-                  "project_credential_id" => job.project_credential_id,
-                  "keychain_credential_id" => job.keychain_credential_id
-                })
+          Enum.each(workflow.jobs || [], fn job ->
+            job_map =
+              Yex.MapPrelim.from(%{
+                "id" => job.id,
+                "name" => job.name || "",
+                "body" => Yex.TextPrelim.from(job.body || ""),
+                "adaptor" => job.adaptor,
+                "project_credential_id" => job.project_credential_id,
+                "keychain_credential_id" => job.keychain_credential_id
+              })
 
-              Yex.Array.push(jobs_array, job_map)
-            end)
-
-            Enum.each(workflow.edges || [], fn edge ->
-              edge_map =
-                Yex.MapPrelim.from(%{
-                  "condition_expression" => edge.condition_expression,
-                  "condition_label" => edge.condition_label,
-                  "condition_type" => edge.condition_type |> to_string(),
-                  "enabled" => edge.enabled,
-                  # "errors" => edge.errors,
-                  "id" => edge.id,
-                  "source_job_id" => edge.source_job_id,
-                  "source_trigger_id" => edge.source_trigger_id,
-                  "target_job_id" => edge.target_job_id
-                })
-
-              Yex.Array.push(edges_array, edge_map)
-            end)
-
-            Enum.each(workflow.triggers || [], fn trigger ->
-              trigger_map =
-                Yex.MapPrelim.from(%{
-                  "cron_expression" => trigger.cron_expression,
-                  "enabled" => trigger.enabled,
-                  "has_auth_method" => trigger.has_auth_method,
-                  "id" => trigger.id,
-                  "type" => trigger.type |> to_string()
-                })
-
-              Yex.Array.push(triggers_array, trigger_map)
-            end)
-
-            Enum.each(workflow.positions || [], fn {id, position} ->
-              Yex.Map.set(positions, id, position)
-            end)
-
-            Logger.debug(
-              "Initialized workflow document with #{length(workflow.jobs || [])} jobs and their Y.Text bodies"
-            )
+            Yex.Array.push(jobs_array, job_map)
           end)
+
+          Enum.each(workflow.edges || [], fn edge ->
+            edge_map =
+              Yex.MapPrelim.from(%{
+                "condition_expression" => edge.condition_expression,
+                "condition_label" => edge.condition_label,
+                "condition_type" => edge.condition_type |> to_string(),
+                "enabled" => edge.enabled,
+                # "errors" => edge.errors,
+                "id" => edge.id,
+                "source_job_id" => edge.source_job_id,
+                "source_trigger_id" => edge.source_trigger_id,
+                "target_job_id" => edge.target_job_id
+              })
+
+            Yex.Array.push(edges_array, edge_map)
+          end)
+
+          Enum.each(workflow.triggers || [], fn trigger ->
+            trigger_map =
+              Yex.MapPrelim.from(%{
+                "cron_expression" => trigger.cron_expression,
+                "enabled" => trigger.enabled,
+                "has_auth_method" => trigger.has_auth_method,
+                "id" => trigger.id,
+                "type" => trigger.type |> to_string()
+              })
+
+            Yex.Array.push(triggers_array, trigger_map)
+          end)
+
+          Enum.each(workflow.positions || [], fn {id, position} ->
+            Yex.Map.set(positions, id, position)
+          end)
+
+          Logger.debug(
+            "Initialized workflow document with #{length(workflow.jobs || [])} jobs and their Y.Text bodies"
+          )
         end)
+
+        doc
     end
   end
 end

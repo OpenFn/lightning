@@ -14,7 +14,6 @@ defmodule Lightning.Collaboration.DocumentState do
     field :state_data, :binary
     # For efficient updates in the future
     field :state_vector, :binary
-    field :user_count, :integer, default: 0
 
     timestamps(type: :utc_datetime)
   end
@@ -24,8 +23,7 @@ defmodule Lightning.Collaboration.DocumentState do
     |> cast(attrs, [
       :document_name,
       :state_data,
-      :state_vector,
-      :user_count
+      :state_vector
     ])
     |> validate_required([:document_name, :state_data])
     |> unique_constraint(:document_name)
