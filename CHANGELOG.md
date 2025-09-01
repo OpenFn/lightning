@@ -19,6 +19,8 @@ and this project adheres to
 
 - Retry webhook events on transient database connection errors
   [#3097](https://github.com/OpenFn/lightning/issues/3097)
+- Allow users to retry followed runs from the job panel
+  [#3502](https://github.com/OpenFn/lightning/issues/3502)
 
 ### Changed
 
