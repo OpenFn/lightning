@@ -22,12 +22,12 @@ defmodule Lightning.WorkflowVersions do
   alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Repo
+  alias Lightning.Validators.Hex
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
 
   @type hash :: String.t()
 
-  @hash_regex ~r/^[a-f0-9]{12}$/
   @sources ~w(app cli)
 
   @doc """
@@ -62,7 +62,7 @@ defmodule Lightning.WorkflowVersions do
           {:ok, Workflow.t()} | {:error, term()}
   def record_version(%Workflow{id: id}, hash, source \\ "app")
       when is_binary(hash) and is_binary(source) do
-    with true <- Regex.match?(@hash_regex, hash),
+    with true <- Hex.valid?(hash),
          true <- source in @sources do
       Multi.new()
       |> Multi.insert(
@@ -146,7 +146,7 @@ defmodule Lightning.WorkflowVersions do
   end
 
   defp valid_input?(hashes, source) do
-    Enum.all?(hashes, &Regex.match?(@hash_regex, &1)) and source in @sources
+    Enum.all?(hashes, &Hex.valid?/1) and source in @sources
   end
 
   defp do_record_versions(id, hashes, source) do

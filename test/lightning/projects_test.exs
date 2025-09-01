@@ -2208,9 +2208,72 @@ defmodule Lightning.ProjectsTest do
       assert updated.version_history == [good]
 
       # Error path
-      assert_raise ArgumentError, ~r/must be 12 hex/, fn ->
-        Projects.append_project_head!(updated, bad)
-      end
+      assert_raise ArgumentError,
+                   "head_hash must be 12 lowercase hex chars",
+                   fn ->
+                     Projects.append_project_head!(updated, bad)
+                   end
+    end
+
+    test "rejects uppercase even if otherwise valid" do
+      p = insert(:project)
+
+      assert {:error, :bad_hash} =
+               Projects.append_project_head(p, "ABCDEF123456")
+    end
+
+    test "concurrent appends of the same hash result in a single entry" do
+      p = insert(:project)
+
+      fun = fn -> Projects.append_project_head!(p, "abcdef123456") end
+      tasks = for _ <- 1..10, do: Task.async(fun)
+      _ = Enum.map(tasks, &Task.await/1)
+
+      p = Repo.get!(Lightning.Projects.Project, p.id)
+      assert p.version_history == ["abcdef123456"]
+    end
+
+    test "concurrent appends of different hashes keep both (order unspecified)" do
+      p = insert(:project)
+
+      t1 = Task.async(fn -> Projects.append_project_head!(p, "aaaaaaaaaaaa") end)
+      t2 = Task.async(fn -> Projects.append_project_head!(p, "bbbbbbbbbbbb") end)
+      _ = Task.await(t1)
+      _ = Task.await(t2)
+
+      p = Repo.get!(Lightning.Projects.Project, p.id)
+
+      assert Enum.sort(p.version_history) ==
+               Enum.sort(["aaaaaaaaaaaa", "bbbbbbbbbbbb"])
+    end
+
+    test "version_history attrs are ignored by changeset (append-only via context)" do
+      {:ok, p} =
+        %Project{}
+        |> Project.changeset(%{name: "p", version_history: ["abcdef123456"]})
+        |> Repo.insert()
+
+      assert p.version_history == []
+
+      {:ok, p2} =
+        p
+        |> Project.changeset(%{version_history: ["bbbbbbbbbbbb"]})
+        |> Repo.update()
+
+      assert p2.version_history == []
+    end
+
+    test "compute_project_head_hash/1 returns stable digest for projects with no workflow versions" do
+      p = insert(:project)
+
+      expected =
+        []
+        |> Jason.encode!()
+        |> then(&:crypto.hash(:sha256, &1))
+        |> Base.encode16(case: :lower)
+        |> binary_part(0, 12)
+
+      assert Projects.compute_project_head_hash(p.id) == expected
     end
   end
 

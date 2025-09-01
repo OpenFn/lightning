@@ -1,0 +1,126 @@
+defmodule Lightning.Validators.Hex do
+  @moduledoc """
+  Flexible validator for **hex strings** with configurable length.
+
+  By default it expects **12 lowercase** hex characters (`0-9`, `a-f`), which
+  matches our common “head hash” format. You can change both the **length**
+  (fixed integer or inclusive range) and the **letter case** via options.
+
+  ## Length
+
+  Pass either:
+  * a positive integer (exact length), or
+  * an inclusive `Range` (min..max length).
+
+  ## Case handling
+
+  Use the `:case` option:
+  * `:lower` (default) – allow only `a-f`
+  * `:upper` – allow only `A-F`
+  * `:any`   – allow `a-f` or `A-F`
+
+  ## Examples
+
+      iex> Lightning.Validators.Hex.valid?("deadbeefcafe")
+      true
+
+      iex> Lightning.Validators.Hex.valid?("DEADBEEFCAFE")
+      false
+
+      iex> Lightning.Validators.Hex.valid?("DEADBEEFCAFE", 12, case: :upper)
+      true
+
+      iex> Lightning.Validators.Hex.valid?("a1", 1..2)
+      true
+
+      iex> Lightning.Validators.Hex.valid?("xyz", 3)
+      false
+
+  ## Notes
+
+  * Returns `false` for non-binary inputs.
+  * Does **not** normalize (e.g., no automatic downcasing). If you need
+    normalization, do it at the call site before validating.
+  """
+
+  @default_len 12
+
+  @typedoc "Length can be a positive integer (exact) or an inclusive range."
+  @type length_spec :: pos_integer() | Range.t()
+
+  @typedoc "Case handling for hex letters."
+  @type case_opt :: :lower | :upper | :any
+
+  @doc """
+  Returns `true` if `s` is hex of the requested length and case.
+
+  ### Arguments
+    * `s` – the value to check (must be a binary to pass)
+    * `len_or_range` – exact length (integer) or length range (defaults to `#{@default_len}`)
+    * `opts` – options (currently supports `:case` as `:lower` | `:upper` | `:any`, default `:lower`)
+
+  ### Examples
+
+      iex> Lightning.Validators.Hex.valid?("abc123ff", 8)
+      true
+
+      iex> Lightning.Validators.Hex.valid?("ABC123FF", 8)
+      false
+
+      iex> Lightning.Validators.Hex.valid?("ABC123FF", 8, case: :any)
+      true
+  """
+  @spec valid?(term, length_spec, keyword) :: boolean
+  def valid?(s, len_or_range \\ @default_len, opts \\ [])
+
+  def valid?(s, len_or_range, opts) when is_binary(s),
+    do: len_or_range |> build_regex(opts) |> Regex.match?(s)
+
+  def valid?(_, _len_or_range, _opts), do: false
+
+  @doc """
+  Returns a compiled **Regex** for hex strings.
+
+  Defaults to **12 lowercase** hex. You can override the length and case.
+
+  ## Examples
+
+      iex> Lightning.Validators.Hex.format()
+      ~r/^[0-9a-f]{12}$/
+
+      iex> Lightning.Validators.Hex.format(8)
+      ~r/^[0-9a-f]{8}$/
+
+      iex> Lightning.Validators.Hex.format(8..64, case: :any)
+      ~r/^[0-9A-Fa-f]{8,64}$/
+  """
+  @spec format(length_spec, keyword) :: Regex.t()
+  def format(len_or_range \\ @default_len, opts \\ []),
+    do: build_regex(len_or_range, opts)
+
+  @doc false
+  @spec build_regex(length_spec, keyword) :: Regex.t()
+  defp build_regex(len_or_range, opts) do
+    cls = hex_class(Keyword.get(opts, :case, :lower))
+    q = quantifier(len_or_range)
+    Regex.compile!("^#{cls}#{q}$")
+  end
+
+  @doc false
+  defp hex_class(:lower), do: "[0-9a-f]"
+  defp hex_class(:upper), do: "[0-9A-F]"
+  defp hex_class(:any), do: "[0-9A-Fa-f]"
+  defp hex_class(_), do: "[0-9a-f]"
+
+  @doc false
+  defp quantifier(len) when is_integer(len) and len > 0,
+    do: "{#{len}}"
+
+  defp quantifier(%Range{first: min, last: max} = r)
+       when is_integer(min) and is_integer(max) and min > 0 and max >= min and
+              r.step in [1, nil],
+       do: "{#{min},#{max}}"
+
+  defp quantifier(other),
+    do: raise(ArgumentError, "invalid length_spec: #{inspect(other)}")
+end

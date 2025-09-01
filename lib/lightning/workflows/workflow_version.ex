@@ -13,10 +13,11 @@ defmodule Lightning.Workflows.WorkflowVersion do
   """
   use Lightning.Schema
   import Ecto.Changeset
+
+  alias Lightning.Validators.Hex
   alias Lightning.Workflows.Workflow
 
   @sources ~w(app cli)
-  @hash_regex ~r/^[a-f0-9]{12}$/
 
   schema "workflow_versions" do
     field :hash, :string
@@ -34,7 +35,7 @@ defmodule Lightning.Workflows.WorkflowVersion do
     version
     |> cast(attrs, [:hash, :source, :workflow_id])
     |> validate_required([:hash, :source, :workflow_id])
-    |> validate_format(:hash, @hash_regex)
+    |> validate_format(:hash, Hex.format())
     |> validate_inclusion(:source, @sources)
     |> foreign_key_constraint(:workflow_id)
     |> unique_constraint(:hash,

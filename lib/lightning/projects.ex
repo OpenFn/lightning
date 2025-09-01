@@ -28,6 +28,7 @@ defmodule Lightning.Projects do
   alias Lightning.RunStep
   alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
+  alias Lightning.Validators.Hex
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
@@ -1313,12 +1314,13 @@ defmodule Lightning.Projects do
   @doc """
   Appends a new 12-hex head hash to `project.version_history` (append-only).
 
-  This is a lenient wrapper that validates the format and returns tagged tuples.
+  This is a lenient wrapper that validates using
+  `Lightning.Validators.Hex.valid?(hash)` and returns tagged tuples.
   For atomic locking and errors by exception, use `append_project_head!/2`.
 
   ## Validation
 
-  * `hash` must match `~r/^[a-f0-9]{12}$/`.
+  * `hash` must be **12 lowercase hex characters** (`0-9`, `a-f`).
   * No duplicates: if the hash already exists in the array, this is a no-op.
 
   ## Concurrency
@@ -1327,8 +1329,8 @@ defmodule Lightning.Projects do
   """
   @spec append_project_head(Project.t(), String.t()) ::
           {:ok, Project.t()} | {:error, :bad_hash}
-  def append_project_head(%Project{} = project, hash) do
-    if String.match?(hash, ~r/^[a-f0-9]{12}$/) do
+  def append_project_head(%Project{} = project, hash) when is_binary(hash) do
+    if Hex.valid?(hash) do
       {:ok, append_project_head!(project, hash)}
     else
       {:error, :bad_hash}
@@ -1341,20 +1343,15 @@ defmodule Lightning.Projects do
 
   ## Behavior
 
-  * Raises `ArgumentError` if `hash` is not 12 lowercase hex.
+  * Raises `ArgumentError` if `hash` is not **12 lowercase hex**.
   * Uses `SELECT … FOR UPDATE` to read the current array, appends if missing,
     and writes back in the same transaction.
   * Idempotent: if the hash is already present, returns the unchanged project.
-
-  ## Why lock?
-
-  Without a lock, concurrent appends could interleave and drop writes. Locking
-  is cheap here and guarantees append-only semantics.
   """
   @spec append_project_head!(Project.t(), String.t()) :: Project.t()
   def append_project_head!(%Project{id: id}, hash) when is_binary(hash) do
-    unless String.match?(hash, ~r/^[a-f0-9]{12}$/),
-      do: raise(ArgumentError, "head_hash must be 12 hex chars")
+    unless Hex.valid?(hash),
+      do: raise(ArgumentError, "head_hash must be 12 lowercase hex chars")
 
     {:ok, proj} =
       Repo.transaction(fn ->
