@@ -89,6 +89,12 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("yjs_sync", {:binary, chunk}, socket) do
+    Logger.debug("""
+    WorkflowChannel: handle_in, yjs_sync
+      from=#{inspect(self())}
+      chunk=#{inspect(Utils.decipher_message(chunk))}
+    """)
+
     Session.start_sync(socket.assigns.session_pid, chunk)
     {:noreply, socket}
   end

@@ -9,28 +9,37 @@ defmodule Lightning.Collaboration.Persistence do
   @behaviour Yex.Sync.SharedDoc.PersistenceBehaviour
 
   alias Lightning.Collaboration.DocumentState
+  alias Lightning.Collaboration.Session
   alias Lightning.Repo
 
   require Logger
 
   @impl true
-  def bind(_state, doc_name, doc) do
-    Logger.info(
-      "Loading persisted state. pid=#{inspect(self())} document=#{doc_name}"
+  def bind(state, doc_name, doc) do
+    if !(workflow_id = Keyword.get(state, :workflow_id)) do
+      raise KeyError, """
+      workflow_id is required in state: #{inspect(state)}
+
+      Ensure you are starting the SharedDoc with the correct persistence opts.
+      """
+    end
+
+    Logger.debug(
+      "Looking for persisted DocumentState. pid=#{inspect(self())} document=#{doc_name}"
     )
 
     case load_document_state(doc_name) do
       {:ok, binary_state} ->
         case Yex.apply_update(doc, binary_state) do
           :ok ->
-            Logger.info(
+            Logger.debug(
               "Successfully loaded persisted state. document=#{doc_name}"
             )
 
             :ok
 
           {:error, reason} ->
-            Logger.warning(
+            Logger.error(
               "Failed to apply persisted state. document=#{doc_name} reason=#{inspect(reason)}"
             )
 
@@ -41,6 +50,8 @@ defmodule Lightning.Collaboration.Persistence do
         Logger.info(
           "No persisted state found, starting fresh. document=#{doc_name}"
         )
+
+        Session.initialize_workflow_document(doc, workflow_id)
 
         :ok
     end

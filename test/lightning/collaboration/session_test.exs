@@ -281,6 +281,68 @@ defmodule Lightning.SessionTest do
     end
   end
 
+  describe "reconnecting" do
+    # This test recreates the issue we were having in the front end.
+    # If the Workflow process/channel crashes, the frontend doc is still around
+    # and when the frontend reconnects, it still has an active Doc.
+    # So we need to make sure that when the Session process gets started again,
+    # it doesn't create a new Doc from scratch, but rather loads the existing Doc
+    # from persistence.
+
+    test "frontend doc is still around", %{user: user} do
+      workflow = insert(:simple_workflow)
+
+      parent_pid = build_parent()
+
+      session_pid =
+        start_session(
+          user: user,
+          workflow_id: workflow.id,
+          parent_pid: parent_pid
+        )
+
+      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
+
+      {:ok, client_pid} =
+        GenServer.start(__MODULE__.TestClient, shared_doc_pid: shared_doc_pid)
+
+      # Ensure handle_continue has finished
+      :sys.get_state(client_pid)
+
+      assert get_jobs(shared_doc_pid) |> length() == 1
+
+      # Simulate a client disconnecting
+      Process.exit(session_pid, :kill)
+      refute_eventually(Process.alive?(session_pid))
+
+      # TODO: we shouldn't need to unobserve explicitly here, if the Session
+      # doesn't get to handle the DOWN message, then the SharedDoc will be left
+      # running.
+      GenServer.call(client_pid, :unobserve)
+      refute_eventually(Process.alive?(shared_doc_pid))
+
+      # Starting a new session
+      session_pid =
+        start_session(
+          user: user,
+          workflow_id: workflow.id,
+          parent_pid: parent_pid
+        )
+
+      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
+
+      GenServer.call(client_pid, {:observe, shared_doc_pid})
+
+      jobs = GenServer.call(client_pid, :get_jobs)
+      assert length(jobs) == 1
+
+      Session.stop(session_pid)
+      GenServer.stop(client_pid)
+      refute_eventually(Process.alive?(session_pid))
+      refute_eventually(Process.alive?(shared_doc_pid))
+    end
+  end
+
   defp initiate_sync(shared_doc, client_doc) do
     {:ok, step1} = Yex.Sync.get_sync_step1(client_doc)
     local_message = Yex.Sync.message_encode!({:sync, step1})
@@ -410,7 +472,15 @@ defmodule Lightning.SessionTest do
       Process.flag(:trap_exit, true)
 
       receive do
-        {:EXIT, _pid, :normal} ->
+        {:EXIT, _pid, reason} ->
+          IO.inspect(reason, label: "parent exit")
+          :ok
+
+        any ->
+          IO.inspect(any,
+            label: "WARNING: parent received unknown message: exiting"
+          )
+
           :ok
       end
     end)
@@ -419,6 +489,106 @@ defmodule Lightning.SessionTest do
   defp build_parents(count) do
     for _ <- 1..count do
       build_parent()
+    end
+  end
+
+  def get_jobs(shared_doc_pid) do
+    Yex.Sync.SharedDoc.get_doc(shared_doc_pid)
+    |> Yex.Doc.get_array("jobs")
+    |> Yex.Array.to_list()
+  end
+
+  defmodule TestClient do
+    use GenServer
+    alias Lightning.Collaboration.Utils
+
+    def init(opts) do
+      shared_doc_pid = opts[:shared_doc_pid]
+      client_doc = Yex.Doc.new()
+
+      {:ok, %{client_doc: client_doc, shared_doc_pid: shared_doc_pid},
+       {:continue, :sync}}
+    end
+
+    def handle_continue(:sync, state) do
+      # Observe the SharedDoc to receive sync messages
+      observe(state.shared_doc_pid)
+      start_sync(state.shared_doc_pid, state.client_doc)
+
+      {:noreply, state}
+    end
+
+    defp observe(shared_doc_pid) do
+      Yex.Sync.SharedDoc.observe(shared_doc_pid)
+    end
+
+    defp start_sync(shared_doc_pid, client_doc) do
+      {:ok, step1} = Yex.Sync.get_sync_step1(client_doc)
+      local_message = Yex.Sync.message_encode!({:sync, step1})
+      Yex.Sync.SharedDoc.start_sync(shared_doc_pid, local_message)
+    end
+
+    def handle_call(:unobserve, _from, state) do
+      Yex.Sync.SharedDoc.unobserve(state.shared_doc_pid)
+      {:reply, :ok, state}
+    end
+
+    def handle_call({:observe, shared_doc_pid}, _from, state) do
+      observe(shared_doc_pid)
+      start_sync(shared_doc_pid, state.client_doc)
+      {:reply, :ok, %{state | shared_doc_pid: shared_doc_pid}}
+    end
+
+    def handle_call(:get_doc, _from, state) do
+      {:reply, state.client_doc, state}
+    end
+
+    def handle_call(:get_jobs, _from, state) do
+      {:reply, Lightning.SessionTest.get_jobs(state.shared_doc_pid), state}
+    end
+
+    def handle_info({:yjs, msg, proc}, state) do
+      # proc is usually the SharedDoc process.
+
+      case Yex.Sync.message_decode(msg) do
+        {:ok, {:sync, sync_message}} ->
+          case Yex.Sync.read_sync_message(
+                 sync_message,
+                 state.client_doc,
+                 state.shared_doc_pid
+               ) do
+            :ok ->
+              IO.inspect(msg |> Utils.decipher_message(),
+                label: "handle_info :yjs :ok"
+              )
+
+              {:noreply, state}
+
+            {:ok, reply} ->
+              IO.inspect(msg |> Utils.decipher_message(),
+                label: "handle_info :yjs :reply"
+              )
+
+              Yex.Sync.SharedDoc.send_yjs_message(
+                proc,
+                Yex.Sync.message_encode!({:sync, reply})
+              )
+
+              {:noreply, state}
+          end
+
+        _ ->
+          IO.inspect(msg |> Utils.decipher_message(),
+            label: "handle_info :yjs"
+          )
+
+          {:noreply, state}
+      end
+    end
+
+    def terminate(_reason, state) do
+      Yex.Sync.SharedDoc.unobserve(state.shared_doc_pid)
+      :ok
     end
   end
 end
