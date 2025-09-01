@@ -27,7 +27,7 @@ defmodule Lightning.Validators.Hex do
       iex> Lightning.Validators.Hex.valid?("DEADBEEFCAFE")
       false
 
-      iex> Lightning.Validators.Hex.valid?("DEADBEEFCAFE", 12, case: :upper)
+      iex> Lightning.Validators.Hex.valid?("DEADBEEFCAFE", case: :upper)
       true
 
       iex> Lightning.Validators.Hex.valid?("a1", 1..2)
@@ -36,11 +36,19 @@ defmodule Lightning.Validators.Hex do
       iex> Lightning.Validators.Hex.valid?("xyz", 3)
       false
 
-  ## Notes
+      iex> Lightning.Validators.Hex.format()
+      ~r/^[0-9a-f]{12}$/
 
-  * Returns `false` for non-binary inputs.
-  * Does **not** normalize (e.g., no automatic downcasing). If you need
-    normalization, do it at the call site before validating.
+      iex> Lightning.Validators.Hex.format(8)
+      ~r/^[0-9a-f]{8}$/
+
+      iex> Lightning.Validators.Hex.format(8..64, case: :any)
+      ~r/^[0-9A-Fa-f]{8,64}$/
+
+  ## Ecto usage
+
+      changeset
+      |> Ecto.Changeset.validate_format(:hash, Lightning.Validators.Hex.format())
   """
 
   @default_len 12
@@ -54,24 +62,25 @@ defmodule Lightning.Validators.Hex do
   @doc """
   Returns `true` if `s` is hex of the requested length and case.
 
-  ### Arguments
-    * `s` – the value to check (must be a binary to pass)
-    * `len_or_range` – exact length (integer) or length range (defaults to `#{@default_len}`)
-    * `opts` – options (currently supports `:case` as `:lower` | `:upper` | `:any`, default `:lower`)
+  Accepts convenience forms:
 
-  ### Examples
-
-      iex> Lightning.Validators.Hex.valid?("abc123ff", 8)
-      true
-
-      iex> Lightning.Validators.Hex.valid?("ABC123FF", 8)
-      false
-
-      iex> Lightning.Validators.Hex.valid?("ABC123FF", 8, case: :any)
-      true
+  * `valid?(s)` — uses default length (#{@default_len}) and `case: :lower`
+  * `valid?(s, len_or_range)` — custom length, lowercase only
+  * `valid?(s, case: :upper | :any)` — default length with custom case
+  * `valid?(s, len_or_range, opts)` — full control
   """
+  @spec valid?(term) :: boolean
+  @spec valid?(term, length_spec) :: boolean
+  @spec valid?(term, keyword) :: boolean
   @spec valid?(term, length_spec, keyword) :: boolean
-  def valid?(s, len_or_range \\ @default_len, opts \\ [])
+  def valid?(s), do: valid?(s, @default_len, [])
+
+  def valid?(s, opts) when is_list(opts),
+    do: valid?(s, @default_len, opts)
+
+  def valid?(s, len_or_range)
+      when is_integer(len_or_range) or is_struct(len_or_range, Range),
+      do: valid?(s, len_or_range, [])
 
   def valid?(s, len_or_range, opts) when is_binary(s),
     do: len_or_range |> build_regex(opts) |> Regex.match?(s)
@@ -81,21 +90,27 @@ defmodule Lightning.Validators.Hex do
   @doc """
   Returns a compiled **Regex** for hex strings.
 
-  Defaults to **12 lowercase** hex. You can override the length and case.
+  Accepts convenience forms:
 
-  ## Examples
-
-      iex> Lightning.Validators.Hex.format()
-      ~r/^[0-9a-f]{12}$/
-
-      iex> Lightning.Validators.Hex.format(8)
-      ~r/^[0-9a-f]{8}$/
-
-      iex> Lightning.Validators.Hex.format(8..64, case: :any)
-      ~r/^[0-9A-Fa-f]{8,64}$/
+  * `format()` — default length (#{@default_len}), lowercase
+  * `format(len_or_range)` — custom length, lowercase
+  * `format(case: :upper | :any)` — default length with custom case
+  * `format(len_or_range, opts)` — full control
   """
+  @spec format() :: Regex.t()
+  @spec format(length_spec) :: Regex.t()
+  @spec format(keyword) :: Regex.t()
   @spec format(length_spec, keyword) :: Regex.t()
-  def format(len_or_range \\ @default_len, opts \\ []),
+  def format(), do: build_regex(@default_len, [])
+
+  def format(opts) when is_list(opts),
+    do: build_regex(@default_len, opts)
+
+  def format(len_or_range)
+      when is_integer(len_or_range) or is_struct(len_or_range, Range),
+      do: build_regex(len_or_range, [])
+
+  def format(len_or_range, opts),
     do: build_regex(len_or_range, opts)
 
   @doc false
@@ -113,8 +128,7 @@ defmodule Lightning.Validators.Hex do
   defp hex_class(_), do: "[0-9a-f]"
 
   @doc false
-  defp quantifier(len) when is_integer(len) and len > 0,
-    do: "{#{len}}"
+  defp quantifier(len) when is_integer(len) and len > 0, do: "{#{len}}"
 
   defp quantifier(%Range{first: min, last: max} = r)
        when is_integer(min) and is_integer(max) and min > 0 and max >= min and
