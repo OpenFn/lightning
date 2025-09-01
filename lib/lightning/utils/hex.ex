@@ -101,7 +101,7 @@ defmodule Lightning.Validators.Hex do
   @spec format(length_spec) :: Regex.t()
   @spec format(keyword) :: Regex.t()
   @spec format(length_spec, keyword) :: Regex.t()
-  def format(), do: build_regex(@default_len, [])
+  def format, do: build_regex(@default_len, [])
 
   def format(opts) when is_list(opts),
     do: build_regex(@default_len, opts)
