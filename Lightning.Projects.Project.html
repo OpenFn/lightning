@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
 
-    <script defer src="dist/sidebar_items-EEDC4219.js"></script>
+    <script defer src="dist/sidebar_items-BFD682FA.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-DPJLHKSM.js"></script>
 
@@ -161,6 +161,17 @@ projects name to confirm.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#sandbox?/1" data-no-tooltip="" translate="no">sandbox?(arg1)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns <code class="inline">true</code> if the project is a sandbox (i.e. <code class="inline">parent_id</code> is a UUID),
+<code class="inline">false</code> otherwise.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#validate/1" data-no-tooltip="" translate="no">validate(changeset)</a>
 
       </div>
@@ -233,25 +244,31 @@ projects name to confirm.</p></div>
   __meta__: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
   allow_support_access: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   collections: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  color: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   concurrency: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   credentials: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   dataclip_retention_period: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   description: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  env: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   history_retention_period: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   jobs: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   name: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   oauth_clients: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  parent: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  parent_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_credentials: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_oauth_clients: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_users:
     [<a href="Lightning.Projects.ProjectUser.html#t:t/0">Lightning.Projects.ProjectUser.t</a>()] | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   requires_mfa: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   retention_policy: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  sandboxes: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   scheduled_deletion: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   users: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  version_history: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   workflows: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
 
@@ -282,7 +299,7 @@ projects name to confirm.</p></div>
       <h1 class="signature" translate="no">data_retention_options()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L52" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L62" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -310,7 +327,7 @@ projects name to confirm.</p></div>
       <h1 class="signature" translate="no">deletion_changeset(project, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L121" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L162" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -333,7 +350,7 @@ projects name to confirm.</p>
       <h1 class="signature" translate="no">project_with_users_changeset(project, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L127" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L168" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -343,6 +360,35 @@ projects name to confirm.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="sandbox?/1">
+
+  <div class="detail-header">
+    <a href="#sandbox?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">sandbox?(arg1)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L123" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> sandbox?(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Returns <code class="inline">true</code> if the project is a sandbox (i.e. <code class="inline">parent_id</code> is a UUID),
+<code class="inline">false</code> otherwise.</p>
   </section>
 </section>
 <section class="detail" id="validate/1">
@@ -355,7 +401,7 @@ projects name to confirm.</p>
       <h1 class="signature" translate="no">validate(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L88" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

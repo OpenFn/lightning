@@ -185,6 +185,7 @@ Lightning.UsageTracking.WorkflowMetricsQuery.html
 Lightning.UsageTracking.WorkflowMetricsService.html
 Lightning.UsageTracking.html
 Lightning.Utils.Crypto.html
+Lightning.Validators.Hex.html
 Lightning.Validators.html
 Lightning.Vault.html
 Lightning.VersionControl.Audit.html
@@ -206,6 +207,7 @@ Lightning.Workers.RunToken.html
 Lightning.Workers.WorkerToken.html
 Lightning.Workers.html
 Lightning.WorkflowTemplates.html
+Lightning.WorkflowVersions.html
 Lightning.Workflows.Audit.html
 Lightning.Workflows.Edge.html
 Lightning.Workflows.Job.html
@@ -225,6 +227,7 @@ Lightning.Workflows.WebhookAuthMethod.html
 Lightning.Workflows.WebhookAuthMethodAudit.html
 Lightning.Workflows.Workflow.html
 Lightning.Workflows.WorkflowTemplate.html
+Lightning.Workflows.WorkflowVersion.html
 Lightning.Workflows.html
 Lightning.html
 LightningWeb.API.Helpers.html
@@ -389,8 +392,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-EBE61036.js
-dist/sidebar_items-EEDC4219.js
+dist/search_data-37C57C2F.js
+dist/sidebar_items-BFD682FA.js
 index.html
 provisioning.html
 readme.html

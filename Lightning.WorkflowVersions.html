@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="project" content="Lightning v2.14.3">
+
+
+    <title>Lightning.WorkflowVersions — Lightning v2.14.3</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
+
+    <script defer src="dist/sidebar_items-BFD682FA.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.14.3
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.WorkflowVersions</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.14.3)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Provenance + comparison helpers for workflow heads.</p><ul><li>Persists append-only rows in <code class="inline">workflow_versions</code> and maintains a materialized
+<code class="inline">workflows.version_history</code> array (12-char lowercase hex).</li><li><a href="#record_version/3"><code class="inline">record_version/3</code></a> and <a href="#record_versions/3"><code class="inline">record_versions/3</code></a> are <strong>idempotent</strong> (<code class="inline">ON CONFLICT DO NOTHING</code>)
+and <strong>concurrency-safe</strong> (row lock, append without dupes).</li><li><a href="#history_for/1"><code class="inline">history_for/1</code></a> and <a href="#latest_hash/1"><code class="inline">latest_hash/1</code></a> read the array first; when empty they fall back
+to the table with deterministic ordering by <code class="inline">(inserted_at, id)</code>.</li><li><a href="#reconcile_history!/1"><code class="inline">reconcile_history!/1</code></a> rebuilds the array from provenance rows.</li><li><a href="#classify/2"><code class="inline">classify/2</code></a> and <a href="#classify_with_delta/2"><code class="inline">classify_with_delta/2</code></a> compare two histories (same/ahead/diverged).</li></ul><p>Validation &amp; invariants:</p><ul><li><code class="inline">hash</code> must match <code class="inline">^[a-f0-9]{12}$</code>; <code class="inline">source</code> must be <code class="inline">&quot;app&quot;</code> or <code class="inline">&quot;cli&quot;</code>;
+<code class="inline">(workflow_id, hash)</code> is unique.</li></ul><p>Designed for fast diffs and consistent “latest head” lookups.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:hash/0" data-no-tooltip="" translate="no">hash()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#classify/2" data-no-tooltip="" translate="no">classify(left, right)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Compares two histories and returns only the relation (no counts).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#classify_with_delta/2" data-no-tooltip="" translate="no">classify_with_delta(left, right)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Compares two histories and returns the relation <strong>with a delta</strong>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#history_for/1" data-no-tooltip="" translate="no">history_for(workflow)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the <strong>ordered</strong> history of heads for a workflow.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#latest_hash/1" data-no-tooltip="" translate="no">latest_hash(wf)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the <strong>latest</strong> head for a workflow (or <code class="inline">nil</code> if none).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#reconcile_history!/1" data-no-tooltip="" translate="no">reconcile_history!(wf)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Rebuilds and <strong>persists</strong> <code class="inline">workflow.version_history</code> from provenance rows.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#record_version/3" data-no-tooltip="" translate="no">record_version(workflow, hash, source \\ &quot;app&quot;)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Records a <strong>single</strong> workflow head <code class="inline">hash</code> with provenance and keeps
+<code class="inline">workflows.version_history</code> in sync.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#record_versions/3" data-no-tooltip="" translate="no">record_versions(workflow, hashes, source \\ &quot;app&quot;)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Bulk record <strong>many</strong> heads at once and append them to <code class="inline">version_history</code>
+<strong>in order</strong>, skipping duplicates both in the input and in the database.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:hash/0">
+
+  <div class="detail-header">
+    <a href="#t:hash/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">hash()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> hash() :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="classify/2">
+
+  <div class="detail-header">
+    <a href="#classify/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">classify(left, right)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L335" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> classify([<a href="#t:hash/0">hash</a>()], [<a href="#t:hash/0">hash</a>()]) ::
+  :same | {:ahead, :left} | {:ahead, :right} | :diverged</pre>
+
+      </div>
+
+<p>Compares two histories and returns only the relation (no counts).</p><p>Wrapper around <a href="#classify_with_delta/2"><code class="inline">classify_with_delta/2</code></a>.</p><h2 id="classify/2-examples" class="section-heading"><a href="#classify/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="8169017589-1">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b)</span><span class="p" data-group-id="8169017589-1">)</span><span class="w">
+</span><span class="ss">:same</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="8169017589-2">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b c)</span><span class="p" data-group-id="8169017589-2">)</span><span class="w">
+</span><span class="p" data-group-id="8169017589-3">{</span><span class="ss">:ahead</span><span class="p">,</span><span class="w"> </span><span class="ss">:right</span><span class="p" data-group-id="8169017589-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="8169017589-4">(</span><span class="sx">~w(a x)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a y)</span><span class="p" data-group-id="8169017589-4">)</span><span class="w">
+</span><span class="ss">:diverged</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="classify_with_delta/2">
+
+  <div class="detail-header">
+    <a href="#classify_with_delta/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">classify_with_delta(left, right)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L306" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> classify_with_delta([<a href="#t:hash/0">hash</a>()], [<a href="#t:hash/0">hash</a>()]) ::
+  {:same, 0}
+  | {:ahead, :left, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}
+  | {:ahead, :right, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}
+  | {:diverged, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}</pre>
+
+      </div>
+
+<p>Compares two histories and returns the relation <strong>with a delta</strong>.</p><p>Possible results:</p><ul><li><code class="inline">{:same, 0}</code> — sequences are identical</li><li><code class="inline">{:ahead, :right, n}</code> — <code class="inline">right</code> strictly extends <code class="inline">left</code> by <code class="inline">n</code> items</li><li><code class="inline">{:ahead, :left, n}</code> — <code class="inline">left</code>  strictly extends <code class="inline">right</code> by <code class="inline">n</code> items</li><li><code class="inline">{:diverged, k}</code> — sequences share a common prefix of length <code class="inline">k</code>, then diverge</li></ul><h2 id="classify_with_delta/2-examples" class="section-heading"><a href="#classify_with_delta/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify_with_delta</span><span class="p" data-group-id="4695068466-1">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b c d)</span><span class="p" data-group-id="4695068466-1">)</span><span class="w">
+</span><span class="p" data-group-id="4695068466-2">{</span><span class="ss">:ahead</span><span class="p">,</span><span class="w"> </span><span class="ss">:right</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="4695068466-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify_with_delta</span><span class="p" data-group-id="4695068466-3">(</span><span class="sx">~w(a b x)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b y)</span><span class="p" data-group-id="4695068466-3">)</span><span class="w">
+</span><span class="p" data-group-id="4695068466-4">{</span><span class="ss">:diverged</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="4695068466-4">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="history_for/1">
+
+  <div class="detail-header">
+    <a href="#history_for/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">history_for(workflow)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L216" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the <strong>ordered</strong> history of heads for a workflow.</p><p>If <code class="inline">workflow.version_history</code> is present and non-empty, that array is returned.
+Otherwise, the function falls back to <code class="inline">workflow_versions</code> ordered by
+<code class="inline">inserted_at ASC, id ASC</code> to provide deterministic ordering for equal timestamps.</p><h2 id="history_for/1-examples" class="section-heading"><a href="#history_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">history_for</span><span class="p" data-group-id="5016049711-1">(</span><span class="p" data-group-id="5016049711-2">%</span><span class="nc" data-group-id="5016049711-2">Workflow</span><span class="p" data-group-id="5016049711-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5016049711-3">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="5016049711-3">]</span><span class="p" data-group-id="5016049711-2">}</span><span class="p" data-group-id="5016049711-1">)</span><span class="w">
+</span><span class="p" data-group-id="5016049711-4">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="5016049711-4">]</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">history_for</span><span class="p" data-group-id="5016049711-5">(</span><span class="n">wf</span><span class="p" data-group-id="5016049711-5">)</span><span class="w"> </span><span class="c1"># when array is empty/nil</span><span class="w">
+</span><span class="p" data-group-id="5016049711-6">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;c&quot;</span><span class="p" data-group-id="5016049711-6">]</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="latest_hash/1">
+
+  <div class="detail-header">
+    <a href="#latest_hash/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">latest_hash(wf)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L245" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> latest_hash(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()) :: <a href="#t:hash/0">hash</a>() | nil</pre>
+
+      </div>
+
+<p>Returns the <strong>latest</strong> head for a workflow (or <code class="inline">nil</code> if none).</p><p>Uses <code class="inline">workflow.version_history</code> when populated (taking the last element).
+If empty/nil, reads from <code class="inline">workflow_versions</code> with
+<code class="inline">ORDER BY inserted_at DESC, id DESC LIMIT 1</code> for deterministic results.</p><h2 id="latest_hash/1-examples" class="section-heading"><a href="#latest_hash/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">latest_hash</span><span class="p" data-group-id="8183922304-1">(</span><span class="p" data-group-id="8183922304-2">%</span><span class="nc" data-group-id="8183922304-2">Workflow</span><span class="p" data-group-id="8183922304-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8183922304-3">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="8183922304-3">]</span><span class="p" data-group-id="8183922304-2">}</span><span class="p" data-group-id="8183922304-1">)</span><span class="w">
+</span><span class="s">&quot;b&quot;</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">latest_hash</span><span class="p" data-group-id="8183922304-4">(</span><span class="n">wf_without_versions</span><span class="p" data-group-id="8183922304-4">)</span><span class="w">
+</span><span class="no">nil</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="reconcile_history!/1">
+
+  <div class="detail-header">
+    <a href="#reconcile_history!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reconcile_history!(wf)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L276" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> reconcile_history!(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()) ::
+  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()</pre>
+
+      </div>
+
+<p>Rebuilds and <strong>persists</strong> <code class="inline">workflow.version_history</code> from provenance rows.</p><p>This is useful for maintenance/migrations when the array drifts from the
+<code class="inline">workflow_versions</code> table. Ordering is <code class="inline">inserted_at ASC, id ASC</code>.</p><h2 id="reconcile_history!/1-returns" class="section-heading"><a href="#reconcile_history!/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">%Workflow{}</code> — updated workflow with a rebuilt <code class="inline">version_history</code></li></ul><h2 id="reconcile_history!/1-examples" class="section-heading"><a href="#reconcile_history!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">wf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">reconcile_history!</span><span class="p" data-group-id="7070834419-1">(</span><span class="n">wf</span><span class="p" data-group-id="7070834419-1">)</span><span class="w">
+</span><span class="p" data-group-id="7070834419-2">%</span><span class="nc" data-group-id="7070834419-2">Workflow</span><span class="p" data-group-id="7070834419-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7070834419-3">[</span><span class="n">...</span><span class="p" data-group-id="7070834419-3">]</span><span class="p" data-group-id="7070834419-2">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="record_version/3">
+
+    <span id="record_version/2"></span>
+
+  <div class="detail-header">
+    <a href="#record_version/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">record_version(workflow, hash, source \\ &quot;app&quot;)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L63" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> record_version(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), <a href="#t:hash/0">hash</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Records a <strong>single</strong> workflow head <code class="inline">hash</code> with provenance and keeps
+<code class="inline">workflows.version_history</code> in sync.</p><p>This operation is <strong>idempotent</strong> and <strong>concurrency-safe</strong>:
+it inserts into <code class="inline">workflow_versions</code> with <code class="inline">ON CONFLICT DO NOTHING</code>, then
+locks the workflow row (<code class="inline">FOR UPDATE</code>) and appends <code class="inline">hash</code> to the array only
+if it is not already present.</p><h2 id="record_version/3-parameters" class="section-heading"><a href="#record_version/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> — the workflow owning the history</li><li><code class="inline">hash</code> — 12-char lowercase hex (e.g., <code class="inline">&quot;deadbeefcafe&quot;</code>)</li><li><code class="inline">source</code> — <code class="inline">&quot;app&quot;</code> or <code class="inline">&quot;cli&quot;</code> (defaults to <code class="inline">&quot;app&quot;</code>)</li></ul><h2 id="record_version/3-returns" class="section-heading"><a href="#record_version/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, %Workflow{}}</code> — workflow (possibly unchanged) with an updated
+<code class="inline">version_history</code> if a new <code class="inline">hash</code> was appended</li><li><code class="inline">{:error, :invalid_input}</code> — when <code class="inline">hash</code>/<code class="inline">source</code> are invalid</li><li><code class="inline">{:error, reason}</code> — database error</li></ul><h2 id="record_version/3-examples" class="section-heading"><a href="#record_version/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_version</span><span class="p" data-group-id="1893136816-1">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;deadbeefcafe&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="p" data-group-id="1893136816-1">)</span><span class="w">
+</span><span class="p" data-group-id="1893136816-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1893136816-3">%</span><span class="nc" data-group-id="1893136816-3">Workflow</span><span class="p" data-group-id="1893136816-3">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1893136816-4">[</span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;deadbeefcafe&quot;</span><span class="p" data-group-id="1893136816-4">]</span><span class="p" data-group-id="1893136816-3">}</span><span class="p" data-group-id="1893136816-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_version</span><span class="p" data-group-id="1893136816-5">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;NOT_HEX&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="p" data-group-id="1893136816-5">)</span><span class="w">
+</span><span class="p" data-group-id="1893136816-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:invalid_input</span><span class="p" data-group-id="1893136816-6">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="record_versions/3">
+
+    <span id="record_versions/2"></span>
+
+  <div class="detail-header">
+    <a href="#record_versions/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">record_versions(workflow, hashes, source \\ &quot;app&quot;)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L139" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> record_versions(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), [<a href="#t:hash/0">hash</a>()], <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Bulk record <strong>many</strong> heads at once and append them to <code class="inline">version_history</code>
+<strong>in order</strong>, skipping duplicates both in the input and in the database.</p><p>Internally this:</p><ul><li>de-dups the input list (preserving first appearance order),</li><li><code class="inline">INSERT ... ON CONFLICT DO NOTHING</code> into <code class="inline">workflow_versions</code>, and</li><li>locks the workflow row and appends only missing hashes.</li></ul><p>The operation is <strong>idempotent</strong> and safe to call concurrently.</p><h2 id="record_versions/3-parameters" class="section-heading"><a href="#record_versions/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> — the workflow owning the history</li><li><code class="inline">hashes</code> — list of 12-char lowercase hex strings</li><li><code class="inline">source</code> — <code class="inline">&quot;app&quot;</code> or <code class="inline">&quot;cli&quot;</code> (defaults to <code class="inline">&quot;app&quot;</code>)</li></ul><h2 id="record_versions/3-returns" class="section-heading"><a href="#record_versions/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, %Workflow{}, inserted_count}</code> — number of <strong>new</strong> provenance rows
+actually written (0 if everything already existed)</li><li><code class="inline">{:error, :invalid_input}</code> — when any hash or the source is invalid</li><li><code class="inline">{:error, reason}</code> — database error</li></ul><h2 id="record_versions/3-notes" class="section-heading"><a href="#record_versions/3-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Notes</span></h2><ul><li>Passing <code class="inline">[]</code> is allowed and returns <code class="inline">{:ok, workflow, 0}</code>.</li><li>Ordering of <code class="inline">version_history</code> matches the <strong>input order</strong> for newly appended hashes.</li></ul><h2 id="record_versions/3-examples" class="section-heading"><a href="#record_versions/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_versions</span><span class="p" data-group-id="5926736092-1">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a1a1a1a1a1a1 b2b2b2b2b2b2)</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;cli&quot;</span><span class="p" data-group-id="5926736092-1">)</span><span class="w">
+</span><span class="p" data-group-id="5926736092-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5926736092-3">%</span><span class="nc" data-group-id="5926736092-3">Workflow</span><span class="p" data-group-id="5926736092-3">{</span><span class="p" data-group-id="5926736092-3">}</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="5926736092-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_versions</span><span class="p" data-group-id="5926736092-4">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5926736092-5">[</span><span class="s">&quot;bad&quot;</span><span class="p" data-group-id="5926736092-5">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="p" data-group-id="5926736092-4">)</span><span class="w">
+</span><span class="p" data-group-id="5926736092-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:invalid_input</span><span class="p" data-group-id="5926736092-6">}</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>
