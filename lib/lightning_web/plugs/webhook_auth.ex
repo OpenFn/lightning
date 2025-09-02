@@ -5,9 +5,11 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   """
   use LightningWeb, :controller
 
-  alias Lightning.WebhookAuthMethods
+  alias Lightning.Retry
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
+
+  require Logger
 
   @doc """
   Initializes the options.
@@ -15,66 +17,72 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   def init(opts), do: opts
 
   @doc """
-  Handles the incoming HTTP request and performs authentication and authorization checks
-  based on paths starting with `/i/`.
+  Handles webhook auth for `/i/:webhook` requests.
 
-  ## Details
-  This function is the entry point for the `WebhookAuth` plug. It first checks if
-  the request path starts with `/i/` to determine whether the request should be processed
-  by this plug.
+  - **CORS preflight:** If the request method is `OPTIONS`, this plug is a no-op
+    and returns the connection unchanged so upstream CORS handling can respond.
+    This avoids doing DB lookups or emitting 401/404 on preflight requests.
 
-  If the path matches, it then extracts the `webhook` part from the request path and
-  runs to fetch the corresponding `trigger` using the `fetch_trigger` function.
+  - **Auth flow:** For non-`OPTIONS` requests whose path matches `/i/:webhook`,
+    this plug:
+      1. Looks up the webhook trigger (with `workflow` and `edges`) and its
+         `webhook_auth_methods`, wrapped in `Lightning.Retry.with_webhook_retry/2`
+         so transient DB errors are retried.
+      2. If the trigger is missing → responds **404** `{"error":"webhook_not_found"}`.
+      3. If auth methods are configured:
+         - If credentials match → assigns `:trigger` and continues.
+         - If credentials are present but wrong → responds **404** (hide existence).
+         - If credentials are missing → responds **401**.
+      4. If retries exhaust due to DB issues → responds **503** with `Retry-After`
+         based on `WEBHOOK_RETRY_TIMEOUT_MS`.
 
-  If a valid `trigger` is found, the function proceeds to validate the authentication
-  of the request using the `validate_auth` function.
-
-  In case the `trigger` is not found, or the path does not start with `/i/`, the function
-  returns a 404 Not Found response with a JSON error message indicating that the webhook
-  is not found.
-
-  ## Parameters
-  - `conn`: The connection struct representing the incoming HTTP request.
-  - `_opts`: A set of options, not used in this function but is a mandatory parameter as per
-     Plug specification.
-
-  ## Returns
-  - A connection struct representing the outgoing response, which can be a successful
-    response, an unauthorized response, or a not found response, based on the evaluation
-    of the above-mentioned conditions.
-
-  ## Examples
-  Assuming a request with the path `/i/some_webhook`:
-
-  ### Webhook Found and Authenticated
-
-      iex> LightningWeb.Plugs.WebhookAuth.call(conn, [])
-      %Plug.Conn{status: 200, ...}
-
-      iex> LightningWeb.Plugs.WebhookAuth.call(conn, [])
-      %Plug.Conn{status: 404, ...}
+  Returns the (possibly halted) connection.
   """
+  @spec call(Plug.Conn.t(), any) :: Plug.Conn.t()
+  def call(%Plug.Conn{method: "OPTIONS"} = conn, _opts), do: conn
+
   def call(conn, _opts) do
     case conn.path_info do
-      ["i" | [webhook | _additional_path]] ->
-        trigger =
-          Workflows.get_webhook_trigger(webhook,
-            include: [:workflow, :edges]
-          )
+      ["i" | [webhook | _rest]] ->
+        Retry.with_webhook_retry(
+          fn ->
+            trigger =
+              Workflows.get_webhook_trigger(webhook,
+                include: [:workflow, :edges, :webhook_auth_methods]
+              )
 
-        validate_auth(trigger, conn)
+            methods = (trigger && trigger.webhook_auth_methods) || []
+
+            {:ok, validate_auth(trigger, methods, conn)}
+          end,
+          retry_on: &Retry.retriable_error?/1,
+          context: %{op: :webhook_auth_lookup, webhook: webhook}
+        )
+        |> case do
+          {:ok, %Plug.Conn{} = conn} ->
+            conn
+
+          {:error, %DBConnection.ConnectionError{} = error} ->
+            LightningWeb.Utils.respond_service_unavailable(
+              conn,
+              error,
+              %{op: :webhook_auth_lookup, webhook: webhook},
+              message:
+                "Temporary database issue during webhook lookup. Please retry in %{s}s."
+            )
+        end
 
       _ ->
         conn
     end
   end
 
-  defp validate_auth(nil, conn), do: not_found_response(conn)
+  defp validate_auth(nil, _methods, conn), do: not_found_response(conn)
 
-  defp validate_auth(trigger, conn) do
-    case WebhookAuthMethods.list_for_trigger(trigger) do
+  defp validate_auth(trigger, methods, conn) do
+    case methods do
       [] -> successful_response(conn, trigger)
-      methods -> check_auth(conn, methods, trigger)
+      _ -> check_auth(conn, methods, trigger)
     end
   end
 
@@ -136,11 +144,22 @@ defmodule LightningWeb.Plugs.WebhookAuth do
 
   defp user_matches?(conn, %WebhookAuthMethod{
          auth_type: :basic,
-         username: username,
-         password: password
+         username: expected_user,
+         password: expected_pass
        }) do
-    encoded = "Basic " <> Base.encode64("#{username}:#{password}")
-    conn |> get_req_header("authorization") |> Enum.member?(encoded)
+    get_req_header(conn, "authorization")
+    |> Enum.find_value(false, fn auth ->
+      with [scheme, b64] <- String.split(auth, " ", parts: 2),
+           true <- String.downcase(scheme) == "basic",
+           {:ok, decoded} <- Base.decode64(b64),
+           [user, pass] <- String.split(decoded, ":", parts: 2),
+           true <- Plug.Crypto.secure_compare(user, expected_user),
+           true <- Plug.Crypto.secure_compare(pass, expected_pass) do
+        true
+      else
+        _ -> false
+      end
+    end)
   end
 
   defp user_matches?(_, _), do: false
