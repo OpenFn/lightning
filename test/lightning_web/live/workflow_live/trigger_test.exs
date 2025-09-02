@@ -39,7 +39,6 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         )
 
       assert view |> element("a#addAuthenticationLink") |> has_element?()
-      assert view |> element("#webhooks_auth_method_modal") |> has_element?()
     end
 
     for conn <- build_project_user_conns(project, [:editor, :viewer]) do
@@ -53,8 +52,6 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       assert view
              |> element("a#addAuthenticationLink.cursor-not-allowed")
              |> has_element?()
-
-      refute view |> element("#webhooks_auth_method_modal") |> has_element?()
     end
   end
 
@@ -98,7 +95,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
          workflow: workflow,
          trigger: trigger
        } do
-    modal_id = "webhooks_auth_method_modal"
+    modal_id = "manage_webhook_auth_methods_modal"
 
     for conn <- build_project_user_conns(project, [:editor, :viewer]) do
       {:ok, view, _html} =
@@ -108,7 +105,13 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      refute view |> element("##{modal_id}") |> has_element?()
+      assert has_element?(view, "#addAuthenticationLink.cursor-not-allowed")
+
+      # forcing the event results in an error
+      assert render_click(view, "show_modal", %{target: "webhook_auth_method"}) =~
+               "You are not authorized to perform this action"
+
+      refute has_element?(view, "##{modal_id}")
     end
 
     for conn <- build_project_user_conns(project, [:owner, :admin]) do
@@ -119,11 +122,14 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      assert view |> element("##{modal_id}") |> has_element?()
+      html = view |> element("#addAuthenticationLink") |> render_click()
+      refute html =~ "You are not authorized to perform this action"
+      # modal is present
+      assert has_element?(view, "##{modal_id}")
 
       html =
         view
-        |> form("#choose_auth_type_form_#{modal_id}",
+        |> form("##{modal_id} form",
           webhook_auth_method: %{auth_type: "basic"}
         )
         |> render_submit()
@@ -135,7 +141,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       refute render(view) =~ auth_method_name
 
       view
-      |> form("#form_#{modal_id}_new_webhook_auth_method",
+      |> form("##{modal_id} form",
         webhook_auth_method: %{
           name: auth_method_name,
           username: "testusername",
@@ -144,21 +150,17 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       )
       |> render_submit()
 
-      flash =
-        assert_redirect(
-          view,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-        )
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+      )
 
-      assert flash["info"] == "Webhook auth method created successfully"
+      # modal is removed
+      refute has_element?(view, "##{modal_id}")
 
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
-          on_error: :raise
-        )
+      html = render(view)
 
+      assert html =~ "Webhook auth method created successfully"
       assert html =~ auth_method_name
 
       assert %Postgrex.Result{num_rows: 1} =
@@ -178,7 +180,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
          workflow: workflow,
          trigger: trigger
        } do
-    modal_id = "webhooks_auth_method_modal"
+    modal_id = "manage_webhook_auth_methods_modal"
 
     for conn <- build_project_user_conns(project, [:editor, :viewer]) do
       {:ok, view, _html} =
@@ -188,7 +190,13 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      refute view |> element("##{modal_id}") |> has_element?()
+      assert has_element?(view, "#addAuthenticationLink.cursor-not-allowed")
+
+      # forcing the event results in an error
+      assert render_click(view, "show_modal", %{target: "webhook_auth_method"}) =~
+               "You are not authorized to perform this action"
+
+      refute has_element?(view, "##{modal_id}")
     end
 
     for conn <- build_project_user_conns(project, [:owner, :admin]) do
@@ -199,11 +207,14 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      assert view |> element("##{modal_id}") |> has_element?()
+      html = view |> element("#addAuthenticationLink") |> render_click()
+      refute html =~ "You are not authorized to perform this action"
+      # modal is present
+      assert has_element?(view, "##{modal_id}")
 
       html =
         view
-        |> form("#choose_auth_type_form_#{modal_id}",
+        |> form("##{modal_id} form",
           webhook_auth_method: %{auth_type: "api"}
         )
         |> render_submit()
@@ -217,28 +228,24 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       refute render(view) =~ auth_method_name
 
       assert view
-             |> form("#form_#{modal_id}_new_webhook_auth_method",
+             |> form("##{modal_id} form",
                webhook_auth_method: %{
                  name: auth_method_name
                }
              )
              |> render_submit()
 
-      flash =
-        assert_redirect(
-          view,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-        )
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+      )
 
-      assert flash["info"] == "Webhook auth method created successfully"
+      # modal is removed
+      refute has_element?(view, "##{modal_id}")
 
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
-          on_error: :raise
-        )
+      html = render(view)
 
+      assert html =~ "Webhook auth method created successfully"
       assert html =~ auth_method_name
 
       assert %Postgrex.Result{num_rows: 1} =
@@ -252,7 +259,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     end
   end
 
-  test "admin can successfully update an authentication method, editor cant", %{
+  test "users cannot update auth methods via the trigger form", %{
     project: project,
     workflow: workflow,
     trigger: trigger
@@ -264,18 +271,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         triggers: [trigger]
       )
 
-    modal_id = "webhooks_auth_method_modal"
-
-    for conn <- build_project_user_conns(project, [:editor, :viewer]) do
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
-          on_error: :raise
-        )
-
-      refute view |> element("##{modal_id}") |> has_element?()
-    end
+    modal_id = "manage_webhook_auth_methods_modal"
 
     for conn <- build_project_user_conns(project, [:owner, :admin]) do
       {:ok, view, _html} =
@@ -285,46 +281,33 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      assert view |> element("##{modal_id}") |> has_element?()
+      view |> element("#manageAuthenticationLink") |> render_click()
+
+      # modal is present
+      assert has_element?(view, "##{modal_id}")
 
       html =
         view
-        |> element("#edit_auth_method_link_#{auth_method.id}")
+        |> element("#view_auth_method_link_#{auth_method.id}")
         |> render_click()
 
       assert html =~ "Webhook Authentication Method"
+      refute html =~ "Create a new webhook auth method"
 
-      new_auth_method_name = Name.generate()
+      refute has_element?(view, "##{modal_id} form button[type='submit']")
 
-      assert view
-             |> form("#form_#{modal_id}_#{auth_method.id}")
-             |> render_submit(%{
-               webhook_auth_method: %{
-                 name: new_auth_method_name,
-                 username: "newusername",
-                 password: "newpassword123"
-               }
-             })
+      assert has_element?(
+               view,
+               "##{modal_id} form button[type='button']",
+               "Back"
+             )
 
-      flash =
-        assert_redirect(
-          view,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-        )
+      html =
+        view
+        |> element("##{modal_id} form button[type='button']", "Back")
+        |> render_click()
 
-      assert flash["info"] == "Webhook auth method updated successfully"
-
-      updated_auth_method = Repo.get(WebhookAuthMethod, auth_method.id)
-
-      refute updated_auth_method.name == auth_method.name
-      assert updated_auth_method.name == new_auth_method_name
-
-      # only auth method name is updated
-      refute auth_method.username == "username"
-      assert auth_method.username == updated_auth_method.username
-
-      refute auth_method.password == "newpassword123"
-      assert auth_method.password == updated_auth_method.password
+      assert html =~ "Create a new webhook auth method"
     end
   end
 
@@ -349,18 +332,30 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
           on_error: :raise
         )
 
-      refute view |> element("#webhooks_auth_method_modal") |> has_element?()
+      assert has_element?(view, "#manageAuthenticationLink.cursor-not-allowed")
+
+      # forcing the event results in an error
+      assert render_click(view, "show_modal", %{target: "webhook_auth_method"}) =~
+               "You are not authorized to perform this action"
+
+      refute has_element?(view, "#manage_webhook_auth_methods")
     end
 
     for conn <- build_project_user_conns(project, [:owner, :admin]) do
-      {:ok, view, _html} =
+      {:ok, view, html} =
         live(
           conn,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
-      assert view |> element("#webhooks_auth_method_modal") |> has_element?()
+      # they can see it listed
+      assert html =~ auth_method.name
+
+      html = view |> element("#manageAuthenticationLink") |> render_click()
+      refute html =~ "You are not authorized to perform this action"
+      # modal is present
+      assert has_element?(view, "#manage_webhook_auth_methods")
 
       view
       |> element("#select_#{auth_method.id}")
@@ -368,13 +363,19 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
       view |> element("#update_trigger_auth_methods_button") |> render_click()
 
-      flash =
-        assert_redirect(
-          view,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
-        )
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+      )
 
-      assert flash["info"] == "Trigger webhook auth methods updated successfully"
+      html = render(view)
+
+      assert html =~ "Trigger webhook auth methods updated successfully"
+      # it is no longer listed
+      refute html =~ auth_method.name
+
+      # modal is closed
+      refute has_element?(view, "#manage_webhook_auth_methods")
 
       updated_trigger =
         Repo.preload(trigger, [:webhook_auth_methods], force: true)
@@ -382,12 +383,12 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       assert updated_trigger.webhook_auth_methods == []
 
       # Then we add it back for the next test role! ============================
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
-          on_error: :raise
-        )
+      refute has_element?(view, "#manageAuthenticationLink")
+      assert has_element?(view, "#addAuthenticationLink")
+      view |> element("#addAuthenticationLink") |> render_click()
+
+      # modal is present
+      assert has_element?(view, "#manage_webhook_auth_methods")
 
       view
       |> element("#select_#{auth_method.id}")

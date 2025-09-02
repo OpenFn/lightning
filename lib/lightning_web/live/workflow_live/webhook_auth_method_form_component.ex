@@ -7,35 +7,31 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   alias Lightning.Projects.Project
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
-  alias Phoenix.LiveView.JS
 
   @impl true
   def update(
-        %{webhook_auth_method: webhook_auth_method, current_user: _user} =
+        %{
+          webhook_auth_method: webhook_auth_method,
+          current_user: _user,
+          on_close: _on_close,
+          return_to: _return_to
+        } =
           assigns,
         socket
       ) do
     {:ok,
      socket
      |> assign(:changeset, WebhookAuthMethod.changeset(webhook_auth_method, %{}))
-     |> assign(:delete_confirmation_changeset, delete_confirmation_changeset())
+     |> assign(
+       :project_webhook_auth_methods,
+       WebhookAuthMethods.list_for_project(%Project{
+         id: webhook_auth_method.project_id
+       })
+     )
      |> assign(assigns)
      |> assign(sudo_mode?: false)
-     |> assign(show_2fa_options: false)}
-  end
-
-  def delete_confirmation_changeset(params \\ %{}) do
-    {%{confirmation: ""}, %{confirmation: :string}}
-    |> Ecto.Changeset.cast(
-      params,
-      [:confirmation]
-    )
-    |> Ecto.Changeset.validate_required([:confirmation],
-      message: "Please type 'DELETE' to confirm"
-    )
-    |> Ecto.Changeset.validate_inclusion(:confirmation, ["DELETE"],
-      message: "Please type 'DELETE' to confirm"
-    )
+     |> assign(show_2fa_options: false)
+     |> assign_new(:on_save, fn -> nil end)}
   end
 
   @impl true
@@ -60,15 +56,33 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   end
 
   def handle_event(
-        "validate_deletion",
-        %{"delete_confirmation_changeset" => delete_confirmation_changeset},
+        "validate_auth_type",
+        %{"webhook_auth_method" => params},
         socket
       ) do
     changeset =
-      delete_confirmation_changeset(delete_confirmation_changeset)
+      socket.assigns.webhook_auth_method
+      |> WebhookAuthMethod.changeset(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, socket |> assign(:delete_confirmation_changeset, changeset)}
+    {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+  def handle_event(
+        "choose_auth_type",
+        %{"webhook_auth_method" => params},
+        socket
+      ) do
+    auth_method =
+      WebhookAuthMethods.build(
+        socket.assigns.webhook_auth_method,
+        params
+      )
+
+    changeset = WebhookAuthMethod.changeset(auth_method, %{})
+
+    {:noreply,
+     assign(socket, webhook_auth_method: auth_method, changeset: changeset)}
   end
 
   def handle_event(
@@ -87,53 +101,17 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       )
 
     changeset =
-      WebhookAuthMethods.list_for_project(%Project{
-        id: socket.assigns.webhook_auth_method.project_id
-      })
-      |> Enum.any?(fn wam -> wam.name == params["name"] end)
-      |> if do
-        Ecto.Changeset.add_error(
-          changeset,
-          :name,
-          "must be unique within the project"
-        )
-      else
-        changeset
-      end
+      changeset
+      |> Ecto.Changeset.validate_change(:name, fn :name, name ->
+        if name in socket.assigns.project_webhook_auth_methods do
+          [name: "must be unique within the project"]
+        else
+          []
+        end
+      end)
       |> Map.put(:action, :validate)
 
     {:noreply, socket |> assign(changeset: changeset)}
-  end
-
-  def handle_event(
-        "perform_deletion",
-        %{"delete_confirmation_changeset" => delete_confirmation_changeset},
-        socket
-      ) do
-    changeset =
-      delete_confirmation_changeset(delete_confirmation_changeset)
-      |> Map.put(:action, :validate)
-
-    if changeset.valid? do
-      case WebhookAuthMethods.schedule_for_deletion(
-             socket.assigns.webhook_auth_method,
-             actor: socket.assigns.current_user
-           ) do
-        {:ok, _} ->
-          {:noreply,
-           socket
-           |> put_flash(
-             :info,
-             "Your Webhook Authentication method has been deleted."
-           )
-           |> push_navigate(to: socket.assigns.return_to)}
-
-        {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply, assign(socket, :changeset, changeset)}
-      end
-    else
-      {:noreply, socket |> assign(:delete_confirmation_changeset, changeset)}
-    end
   end
 
   defp slugify_username(%{"username" => username} = params),
@@ -150,11 +128,15 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
            params,
            actor: socket.assigns.current_user
          ) do
-      {:ok, _webhook_auth_method} ->
+      {:ok, webhook_auth_method} ->
+        if socket.assigns.on_save do
+          socket.assigns.on_save.(webhook_auth_method)
+        end
+
         {:noreply,
          socket
          |> put_flash(:info, "Webhook auth method updated successfully")
-         |> push_navigate(to: socket.assigns.return_to)}
+         |> push_patch(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -171,11 +153,15 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     case WebhookAuthMethods.create_auth_method(assigns.trigger, enriched_params,
            actor: assigns.current_user
          ) do
-      {:ok, _auth_method} ->
+      {:ok, auth_method} ->
+        if socket.assigns.on_save do
+          socket.assigns.on_save.(auth_method)
+        end
+
         {:noreply,
          socket
          |> put_flash(:info, "Webhook auth method created successfully")
-         |> push_navigate(to: socket.assigns.return_to)}
+         |> push_patch(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
@@ -188,11 +174,15 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     case WebhookAuthMethods.create_auth_method(enriched_params,
            actor: assigns.current_user
          ) do
-      {:ok, _webhook_auth_method} ->
+      {:ok, webhook_auth_method} ->
+        if socket.assigns.on_save do
+          socket.assigns.on_save.(webhook_auth_method)
+        end
+
         {:noreply,
          socket
          |> put_flash(:info, "Webhook auth method created successfully")
-         |> push_navigate(to: socket.assigns.return_to)}
+         |> push_patch(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -213,70 +203,51 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   end
 
   @impl true
-  def render(%{action: :delete} = assigns) do
-    ~H"""
-    <div>
-      <.form
-        :let={f}
-        id={"delete_auth_method_#{@id}"}
-        for={@delete_confirmation_changeset}
-        as={:delete_confirmation_changeset}
-        phx-change="validate_deletion"
-        phx-submit="perform_deletion"
-        phx-target={@myself}
-      >
-        <div class="space-y-4 ml-[24px] mr-[24px]">
-          <%= if @webhook_auth_method.triggers |> Enum.count() == 0 do %>
-            <p>You are about to delete the webhook auth method
-              "<span class="font-bold"><%= @webhook_auth_method.name %></span>"
-              which is used by no workflows.</p>
-          <% else %>
-            <p>
-              You are about to delete the webhook auth method
-              "<span class="font-bold"><%= @webhook_auth_method.name %></span>"
-              which is used by <span class="mb-2 text-purple-600 underline cursor-pointer"><%= @webhook_auth_method.triggers |> Enum.count() %> workflow triggers</span>.
-            </p>
-            <p>
-              Deleting this webhook will remove it from any associated triggers and cannot be undone.
-            </p>
-          <% end %>
-
-          <.label for={:confirmation}>
-            Type in 'DELETE' to confirm the deletion
-          </.label>
-          <.input type="text" field={f[:confirmation]} />
-        </div>
-        <.modal_footer class="mx-6 mt-6">
-          <div class="sm:flex sm:flex-row-reverse gap-3">
-            <.button
-              type="submit"
-              phx-disable-with="Deleting..."
-              theme="danger"
-              disabled={!@delete_confirmation_changeset.valid?}
-            >
-              Delete authentication method
-            </.button>
-            <.button
-              type="button"
-              phx-click={JS.navigate(@return_to)}
-              theme="secondary"
-            >
-              Cancel
-            </.button>
-          </div>
-        </.modal_footer>
-      </.form>
-    </div>
-    """
-  end
+  slot :subtitle
+  slot :action_buttons
 
   def render(assigns) do
     ~H"""
-    <div id={"write_webhook_auth_method_#{@id}"}>
-      <%= if @action == :edit and @show_2fa_options do %>
+    <div id={@id}>
+      <.modal_title>
+        <div class="flex justify-between">
+          <span>
+            <%= if @action == :new do %>
+              <%= case @webhook_auth_method.auth_type do %>
+                <% nil -> %>
+                  Add an authentication method
+                <% :basic -> %>
+                  Create a "basic auth" method
+                <% :api -> %>
+                  Create an "API token" method
+              <% end %>
+            <% else %>
+              Webhook Authentication Method
+            <% end %>
+          </span>
+          <button
+            phx-click={@on_close}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+        <:subtitle>
+          {render_slot(@subtitle)}
+        </:subtitle>
+      </.modal_title>
+      <div class="my-[16px]"></div>
+      <%= if @action in [:edit, :view] and @show_2fa_options do %>
         <.authenticate_user_form {assigns} />
       <% else %>
-        <.webhook_auth_method_form {assigns} />
+        <.webhook_auth_method_form :if={@webhook_auth_method.auth_type} {assigns} />
+        <.choose_auth_type_form
+          :if={is_nil(@webhook_auth_method.auth_type)}
+          {assigns}
+        />
       <% end %>
     </div>
     """
@@ -294,8 +265,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       class="mt-2"
       id="reauthentication-form"
     >
-      <div class="space-y-4 ml-[24px] mr-[24px]">
-        <p class="font-normal text-sm whitespace-normal">
+      <div class="space-y-4">
+        <p class="text-sm">
           You're required to reauthenticate yourself before viewing the webhook
           <%= if @webhook_auth_method.auth_type == :basic do %>
             Password
@@ -320,20 +291,91 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         </div>
         <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
       </div>
-      <.modal_footer class="mx-6 mt-6">
-        <div class="sm:flex sm:flex-row-reverse gap-3">
-          <.button type="submit" theme="primary">
-            Done
-          </.button>
-          <.button
-            type="button"
-            phx-click="toggle-2fa"
-            phx-target={@myself}
-            theme="secondary"
+      <.modal_footer class="sm:flex sm:flex-row-reverse gap-3">
+        <.button type="submit" theme="primary">
+          Done
+        </.button>
+        <.button
+          type="button"
+          phx-click="toggle-2fa"
+          phx-target={@myself}
+          theme="secondary"
+        >
+          Back
+        </.button>
+      </.modal_footer>
+    </.form>
+    """
+  end
+
+  defp choose_auth_type_form(assigns) do
+    ~H"""
+    <.form
+      :let={f}
+      for={@changeset}
+      phx-change="validate_auth_type"
+      phx-submit="choose_auth_type"
+      phx-target={@myself}
+    >
+      <div class="space-y-4">
+        <label class="relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-xs">
+          <.input
+            type="radio"
+            id={f[:auth_type].id <> "_basic"}
+            field={f[:auth_type]}
+            class="sr-only"
+            value={:basic}
+          />
+          <span class="flex items-center gap-x-2.5">
+            <.icon name="hero-globe-alt" class="h-10 w-10" />
+            Basic HTTP Authentication (username & password)
+          </span>
+          <span
+            class={[
+              "pointer-events-none absolute -inset-px rounded-lg",
+              if(f[:auth_type].value == :basic,
+                do: "outline outline-indigo-600 outline-2 outline-offset-2",
+                else: "border-transparent"
+              )
+            ]}
+            aria-hidden="true"
           >
-            Cancel
-          </.button>
-        </div>
+          </span>
+        </label>
+
+        <label class="relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-xs focus:outline-none">
+          <.input
+            type="radio"
+            id={f[:auth_type].id <> "_api"}
+            field={f[:auth_type]}
+            class="sr-only"
+            value={:api}
+          />
+          <span class="flex items-center gap-2">
+            <.icon name="hero-code-bracket-square" class="h-10 w-10" />
+            API Key Authentication (‘x-api-key’ header)
+          </span>
+          <span
+            class={[
+              "pointer-events-none absolute -inset-px rounded-lg",
+              if(f[:auth_type].value == :api,
+                do: "outline outline-indigo-600 outline-2 outline-offset-2",
+                else: "border-transparent"
+              )
+            ]}
+            aria-hidden="true"
+          >
+          </span>
+        </label>
+      </div>
+      <.modal_footer>
+        <.button
+          theme="primary"
+          type="submit"
+          disabled={f[:auth_type].value != :api and f[:auth_type].value != :basic}
+        >
+          Next
+        </.button>
       </.modal_footer>
     </.form>
     """
@@ -343,65 +385,44 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     ~H"""
     <.form
       :let={f}
-      id={"form_#{@id}"}
       for={@changeset}
       phx-submit="save"
       phx-change="validate"
       phx-target={@myself}
     >
-      <div class="ml-[24px] mr-[24px]">
-        <.basic_auth_type_form_fields
-          :if={@webhook_auth_method.auth_type == :basic}
-          form={f}
-          {assigns}
-        />
+      <.basic_auth_type_form_fields
+        :if={@webhook_auth_method.auth_type == :basic}
+        form={f}
+        {assigns}
+      />
 
-        <.api_auth_type_form_fields
-          :if={@webhook_auth_method.auth_type == :api}
-          form={f}
-          {assigns}
-        />
-      </div>
-      <.modal_footer class="mx-6 mt-6">
-        <div class="sm:flex sm:flex-row-reverse gap-3">
-          <.button type="submit" disabled={!@changeset.valid?} theme="primary">
+      <.api_auth_type_form_fields
+        :if={@webhook_auth_method.auth_type == :api}
+        form={f}
+        {assigns}
+      />
+      <.modal_footer>
+        <%= if @action_buttons != [] do %>
+          {render_slot(@action_buttons)}
+        <% else %>
+          <.button
+            type="submit"
+            disabled={!@changeset.valid? or @action == :view}
+            theme="primary"
+          >
             <%= if @action == :new do %>
               Create auth method
             <% else %>
               Save changes
             <% end %>
           </.button>
-          <.cancel_button return_to={@return_to} />
-        </div>
+          <.button type="button" phx-click={@on_close} theme="secondary">
+            Cancel
+          </.button>
+        <% end %>
       </.modal_footer>
     </.form>
     """
-  end
-
-  defp cancel_button(assigns) do
-    view = assigns.return_to |> String.split("/") |> List.last()
-
-    if view == "settings#webhook_security" do
-      ~H"""
-      <.button type="button" phx-click={JS.navigate(@return_to)} theme="secondary">
-        Cancel
-      </.button>
-      """
-    else
-      ~H"""
-      <.button
-        type="button"
-        phx-click={
-          JS.hide(to: "#webhooks_auth_method_modal")
-          |> JS.push("close_webhook_modal")
-        }
-        phx-target="#webhooks_auth_method_modal-container"
-        theme="secondary"
-      >
-        Cancel
-      </.button>
-      """
-    end
   end
 
   attr :form, Phoenix.HTML.Form, required: true
@@ -409,7 +430,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   defp basic_auth_type_form_fields(assigns) do
     ~H"""
     <.label for={:name}>Auth method name</.label>
-    <.input type="text" field={@form[:name]} required="true" />
+    <.input
+      type="text"
+      field={@form[:name]}
+      required="true"
+      disabled={@action == :view}
+    />
 
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-1"></div>
@@ -420,14 +446,14 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       type="text"
       field={@form[:username]}
       required="true"
-      disabled={@action == :edit}
+      disabled={@action in [:edit, :view]}
     />
 
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-1"></div>
     </div>
 
-    <%= if @action == :edit do %>
+    <%= if @action in [:edit, :view] do %>
       <div class="mb-3">
         <label class="block text-sm font-semibold leading-6 text-slate-800">
           Password
@@ -454,7 +480,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   defp api_auth_type_form_fields(assigns) do
     ~H"""
     <.label for={:name}>Auth method name</.label>
-    <.input type="text" field={@form[:name]} required="true" />
+    <.input
+      type="text"
+      field={@form[:name]}
+      required="true"
+      disabled={@action == :view}
+    />
 
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-1"></div>
@@ -501,10 +532,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           <% end %>
         </button>
       </div>
-      <div class="h-6"></div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-1"></div>
-      </div>
     </div>
     """
   end
@@ -549,10 +576,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
             Show
           <% end %>
         </button>
-      </div>
-      <div class="h-6"></div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-1"></div>
       </div>
     </div>
     """

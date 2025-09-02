@@ -87,6 +87,10 @@ defmodule LightningWeb.Utils do
     end
   end
 
+  def noreply(socket), do: {:noreply, socket}
+  def reply(socket), do: {:reply, socket}
+  def ok(socket), do: {:ok, socket}
+
   @doc """
   Standard **503 Service Unavailable** response for transient DB outages
   during webhook handling.

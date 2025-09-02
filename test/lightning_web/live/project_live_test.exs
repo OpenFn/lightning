@@ -1820,6 +1820,71 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
+    test "MFA not limited: no banner, button is enabled, and MFA can be toggled",
+         %{conn: conn} do
+      project = insert(:project)
+
+      project_user =
+        insert(:project_user, role: :admin, project: project, user: build(:user))
+
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->
+        :ok
+      end)
+
+      conn = log_in_user(conn, project_user.user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/settings#security")
+
+      refute has_element?(view, "#toggle-mfa-switch[disabled]")
+
+      assert view
+             |> element("#toggle-mfa-switch")
+             |> render_click() =~ "Project MFA requirement updated successfully"
+    end
+
+    test "MFA limited: banner displayed, button is disabled, and MFA cannot be toggled",
+         %{conn: conn} do
+      project = insert(:project)
+
+      project_user =
+        insert(:project_user, role: :admin, project: project, user: build(:user))
+
+      banner_message = "MFA Feature is disabled"
+
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{type: type},
+                                                                    _ ->
+        component = %Lightning.Extensions.Message{
+          attrs: %{text: banner_message},
+          function: fn assigns ->
+            ~H"""
+            {@text}
+            """
+          end
+        }
+
+        case type do
+          :require_mfa ->
+            {:error, :disabled, component}
+
+          _ ->
+            :ok
+        end
+      end)
+
+      conn = log_in_user(conn, project_user.user)
+      {:ok, view, html} = live(conn, ~p"/projects/#{project}/settings#security")
+
+      assert html =~ banner_message
+      assert has_element?(view, "#toggle-mfa-switch[disabled]")
+
+      assert view |> render_click("toggle-mfa", %{}) =~
+               "You are not authorized to perform this action"
+    end
+  end
+
+  describe "webhook-security" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
     test "all project users can see the project webhook auth methods" do
       project = insert(:project)
       auth_methods = insert_list(4, :webhook_auth_method, project: project)
@@ -1835,11 +1900,49 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "all project users can see the workflows linked to auth methods" do
+      project = insert(:project)
+      workflow = insert(:simple_workflow, project: project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          triggers: workflow.triggers
+        )
+
+      for conn <-
+            build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
+        {:ok, view, html} =
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+        modal_id = "#linked_triggers_for_#{auth_method.id}_modal"
+
+        assert html =~ auth_method.name
+
+        assert has_element?(
+                 view,
+                 "#display_linked_triggers_link_#{auth_method.id}"
+               )
+
+        refute has_element?(view, modal_id)
+
+        view
+        |> element("#display_linked_triggers_link_#{auth_method.id}")
+        |> render_click()
+
+        assert has_element?(view, modal_id)
+
+        assert view |> element(modal_id) |> render() =~ workflow.name
+      end
+    end
+
     test "owners/admins can add a new project webhook auth method, editors/viewers can't" do
       project = insert(:project)
 
       settings_path =
         ~p"/projects/#{project}/settings"
+
+      modal_id = "webhook_auth_method_modal"
 
       for conn <- build_project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
@@ -1855,26 +1958,33 @@ defmodule LightningWeb.ProjectLiveTest do
                |> element("button#add_new_auth_method:disabled")
                |> has_element?()
 
-        modal_id = "new_auth_method_modal"
+        # modal doesn't exist
+        refute view |> element("##{modal_id}") |> has_element?()
 
+        # open modal
+        html = view |> element("button#add_new_auth_method") |> render_click()
         assert view |> element("##{modal_id}") |> has_element?()
 
+        assert html =~ "Basic HTTP Authentication"
+        assert html =~ "API Key Authentication"
+
         view
-        |> form("#choose_auth_type_form_#{modal_id}",
+        |> form("##{modal_id} form",
           webhook_auth_method: %{auth_type: "basic"}
         )
         |> render_submit() =~ "Create credential"
 
-        refute view
-               |> element("form#choose_auth_type_form_#{modal_id}")
-               |> has_element?()
+        # choose form is nolonger shown
+        html = render(view)
+        refute html =~ "Basic HTTP Authentication"
+        refute html =~ "API Key Authentication"
 
         credential_name = Name.generate()
 
-        refute render(view) =~ credential_name
+        refute html =~ credential_name
 
         view
-        |> form("#form_#{modal_id}_new_webhook_auth_method",
+        |> form("##{modal_id} form",
           webhook_auth_method: %{
             name: credential_name,
             username: "testusername",
@@ -1883,21 +1993,14 @@ defmodule LightningWeb.ProjectLiveTest do
         )
         |> render_submit()
 
-        flash =
-          assert_redirect(
-            view,
-            settings_path <> "#webhook_security"
-          )
+        assert_patched(view, settings_path)
 
-        assert flash["info"] == "Webhook auth method created successfully"
+        # modal doesn't exist
+        refute view |> element("##{modal_id}") |> has_element?()
 
-        {:ok, _view, html} =
-          live(
-            conn,
-            settings_path,
-            on_error: :raise
-          )
+        html = render(view)
 
+        assert html =~ "Webhook auth method created successfully"
         assert html =~ credential_name
       end
 
@@ -1913,8 +2016,13 @@ defmodule LightningWeb.ProjectLiveTest do
                |> element("button#add_new_auth_method:disabled")
                |> has_element?()
 
-        modal_id = "new_auth_method_modal"
+        # forcing the event results in error
+        assert render_click(view, "show_modal", %{
+                 target: "new_webhook_auth_method"
+               }) =~
+                 "You are not authorized to perform this action"
 
+        # modal doesn't exist
         refute view |> element("##{modal_id}") |> has_element?()
       end
     end
@@ -1940,7 +2048,14 @@ defmodule LightningWeb.ProjectLiveTest do
              |> element("button#add_new_auth_method:disabled")
              |> has_element?()
 
-      refute view |> element("#new_auth_method_modal") |> has_element?()
+      # forcing the event results in error
+      assert render_click(view, "show_modal", %{
+               target: "new_webhook_auth_method"
+             }) =~
+               "You are not authorized to perform this action"
+
+      # modal doesn't exist
+      refute view |> element("#webhook_auth_method_modal") |> has_element?()
     end
 
     test "owners/admins can add edit a project webhook auth method, editors/viewers can't" do
@@ -1952,8 +2067,9 @@ defmodule LightningWeb.ProjectLiveTest do
           auth_type: :basic
         )
 
-      settings_path =
-        ~p"/projects/#{project}/settings"
+      settings_path = ~p"/projects/#{project}/settings"
+
+      modal_id = "webhook_auth_method_modal"
 
       for conn <- build_project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
@@ -1963,12 +2079,18 @@ defmodule LightningWeb.ProjectLiveTest do
             on_error: :raise
           )
 
+        # modal doesn't exist
+        refute view |> element("##{modal_id}") |> has_element?()
+
         assert view
                |> element("a#edit_auth_method_link_#{auth_method.id}")
                |> has_element?()
 
-        modal_id = "edit_auth_#{auth_method.id}_modal"
+        view
+        |> element("a#edit_auth_method_link_#{auth_method.id}")
+        |> render_click()
 
+        # modal exists
         assert view |> element("##{modal_id}") |> has_element?()
 
         credential_name = Name.generate()
@@ -1976,25 +2098,18 @@ defmodule LightningWeb.ProjectLiveTest do
         refute render(view) =~ credential_name
 
         view
-        |> form("#form_#{modal_id}_#{auth_method.id}",
+        |> form("##{modal_id} form",
           webhook_auth_method: %{name: credential_name}
         )
         |> render_submit()
 
-        flash =
-          assert_redirect(
-            view,
-            settings_path <> "#webhook_security"
-          )
+        assert_patched(view, settings_path)
 
-        assert flash["info"] == "Webhook auth method updated successfully"
+        # modal doesn't exist
+        refute view |> element("##{modal_id}") |> has_element?()
 
-        {:ok, _view, html} =
-          live(
-            conn,
-            settings_path
-          )
-
+        html = render(view)
+        assert html =~ "Webhook auth method updated successfully"
         assert html =~ credential_name
       end
 
@@ -2012,8 +2127,14 @@ defmodule LightningWeb.ProjectLiveTest do
                )
                |> has_element?()
 
-        modal_id = "edit_auth_#{auth_method.id}_modal"
+        # forcing the event results in error
+        assert render_click(view, "show_modal", %{
+                 target: "edit_webhook_auth_method",
+                 id: auth_method.id
+               }) =~
+                 "You are not authorized to perform this action"
 
+        # modal doesn't exist
         refute view |> element("##{modal_id}") |> has_element?()
       end
     end
@@ -2047,9 +2168,15 @@ defmodule LightningWeb.ProjectLiveTest do
              )
              |> has_element?()
 
-      refute view
-             |> element("#edit_auth_#{auth_method.id}_modal")
-             |> has_element?()
+      # forcing the event results in error
+      assert render_click(view, "show_modal", %{
+               target: "edit_webhook_auth_method",
+               id: auth_method.id
+             }) =~
+               "You are not authorized to perform this action"
+
+      # modal doesn't exist
+      refute view |> element("#webhook_auth_method_modal") |> has_element?()
     end
 
     test "password is required before displaying the API KEY of a project webhook auth method",
@@ -2077,15 +2204,15 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
-      assert view
-             |> element("a#edit_auth_method_link_#{auth_method.id}")
-             |> has_element?()
+      view
+      |> element("a#edit_auth_method_link_#{auth_method.id}")
+      |> render_click()
 
-      modal_id = "edit_auth_#{auth_method.id}_modal"
+      modal_id = "webhook_auth_method_modal"
 
       assert view |> element("##{modal_id}") |> has_element?()
 
-      form_id = "form_#{modal_id}_#{auth_method.id}"
+      form_id = "webhook_auth_method"
 
       assert view |> has_element?("##{form_id}_api_key_action_button", "Show")
       refute view |> has_element?("##{form_id}_api_key_action_button", "Copy")
@@ -2154,19 +2281,19 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project}/settings"
         )
 
-      assert view
-             |> element("a#edit_auth_method_link_#{auth_method.id}")
-             |> has_element?()
+      view
+      |> element("a#edit_auth_method_link_#{auth_method.id}")
+      |> render_click()
 
-      modal_id = "edit_auth_#{auth_method.id}_modal"
+      modal_id = "webhook_auth_method_modal"
 
       assert view |> element("##{modal_id}") |> has_element?()
 
       # this is to check that the root tag for the live component is mantained
-      root_div = "write_webhook_auth_method_#{modal_id}_#{auth_method.id}"
+      root_div = "edit_auth_method_#{auth_method.id}"
       assert has_element?(view, "##{root_div}")
 
-      form_id = "form_#{modal_id}_#{auth_method.id}"
+      form_id = "webhook_auth_method"
 
       assert view |> has_element?("##{form_id}_password_action_button", "Show")
       refute view |> has_element?("##{form_id}_password_action_button", "Copy")
@@ -2210,156 +2337,101 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(view) =~ auth_method.password
     end
 
-    test "MFA not limited: no banner, button is enabled, and MFA can be toggled",
+    test "owners and admins can delete a project webhook auth method",
          %{conn: conn} do
       project = insert(:project)
 
-      project_user =
-        insert(:project_user, role: :admin, project: project, user: build(:user))
+      for role <- [:owner, :admin] do
+        auth_method =
+          insert(:webhook_auth_method,
+            project: project,
+            auth_type: :basic
+          )
 
-      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->
-        :ok
-      end)
+        project_user =
+          insert(:project_user,
+            role: role,
+            project: project,
+            user: build(:user)
+          )
 
-      conn = log_in_user(conn, project_user.user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/settings#security")
+        settings_path =
+          ~p"/projects/#{project}/settings"
 
-      refute has_element?(view, "#toggle-mfa-switch[disabled]")
+        conn = log_in_user(conn, project_user.user)
 
-      assert view
-             |> element("#toggle-mfa-switch")
-             |> render_click() =~ "Project MFA requirement updated successfully"
-    end
+        {:ok, view, html} = live(conn, settings_path)
 
-    test "MFA limited: banner displayed, button is disabled, and MFA cannot be toggled",
-         %{conn: conn} do
-      project = insert(:project)
+        assert html =~ auth_method.name
 
-      project_user =
-        insert(:project_user, role: :admin, project: project, user: build(:user))
+        modal_id = "delete_auth_method_#{auth_method.id}_modal"
 
-      banner_message = "MFA Feature is disabled"
+        refute has_element?(view, "##{modal_id}")
 
-      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{type: type},
-                                                                    _ ->
-        component = %Lightning.Extensions.Message{
-          attrs: %{text: banner_message},
-          function: fn assigns ->
-            ~H"""
-            {@text}
-            """
-          end
-        }
+        view
+        |> element("a#delete_auth_method_link_#{auth_method.id}")
+        |> render_click()
 
-        case type do
-          :require_mfa ->
-            {:error, :disabled, component}
+        assert has_element?(view, "##{modal_id}")
 
-          _ ->
-            :ok
-        end
-      end)
+        assert view
+               |> form("##{modal_id} form",
+                 delete_confirmation: %{confirmation: "diel"}
+               )
+               |> render_change() =~ "Please type DELETE to confirm"
 
-      conn = log_in_user(conn, project_user.user)
-      {:ok, view, html} = live(conn, ~p"/projects/#{project}/settings#security")
-
-      assert html =~ banner_message
-      assert has_element?(view, "#toggle-mfa-switch[disabled]")
-
-      assert view |> render_click("toggle-mfa", %{}) =~
-               "You are not authorized to perform this action"
-    end
-  end
-
-  test "owners and admins can delete a project webhook auth method",
-       %{conn: conn} do
-    project = insert(:project)
-
-    for role <- [:owner, :admin] do
-      auth_method =
-        insert(:webhook_auth_method,
-          project: project,
-          auth_type: :basic
+        view
+        |> form("##{modal_id} form",
+          delete_confirmation: %{confirmation: "DELETE"}
         )
+        |> render_submit()
 
-      project_user =
-        insert(:project_user,
-          role: role,
-          project: project,
-          user: build(:user)
-        )
+        assert_patched(view, settings_path)
 
-      settings_path =
-        ~p"/projects/#{project}/settings"
+        html = render(view)
 
-      conn = log_in_user(conn, project_user.user)
+        assert html =~ "Your Webhook Authentication method has been deleted."
+        refute html =~ auth_method.name
+      end
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          settings_path
-        )
+      for role <- [:editor, :viewer] do
+        auth_method =
+          insert(:webhook_auth_method,
+            project: project,
+            auth_type: :basic
+          )
 
-      assert view
-             |> element("a#delete_auth_method_link_#{auth_method.id}")
-             |> has_element?()
+        project_user =
+          insert(:project_user,
+            role: role,
+            project: project,
+            user: build(:user)
+          )
 
-      modal_id = "delete_auth_#{auth_method.id}_modal"
+        settings_path =
+          ~p"/projects/#{project}/settings"
 
-      assert view
-             |> element("#delete_auth_method_#{modal_id}_#{auth_method.id}")
-             |> has_element?()
+        conn = log_in_user(conn, project_user.user)
 
-      view
-      |> form("#delete_auth_method_#{modal_id}_#{auth_method.id}",
-        delete_confirmation_changeset: %{confirmation: "DELETE"}
-      )
-      |> render_submit()
+        {:ok, view, _html} = live(conn, settings_path)
 
-      flash =
-        assert_redirect(
-          view,
-          settings_path <> "#webhook_security"
-        )
+        modal_id = "delete_auth_method_#{auth_method.id}_modal"
 
-      assert flash["info"] ==
-               "Your Webhook Authentication method has been deleted."
-    end
+        assert view
+               |> has_element?(
+                 "a#delete_auth_method_link_#{auth_method.id}.cursor-not-allowed"
+               )
 
-    for role <- [:editor, :viewer] do
-      auth_method =
-        insert(:webhook_auth_method,
-          project: project,
-          auth_type: :basic
-        )
+        # forcing the event results in error
+        assert render_click(view, "show_modal", %{
+                 target: "delete_webhook_auth_method",
+                 id: auth_method.id
+               }) =~
+                 "You are not authorized to perform this action"
 
-      project_user =
-        insert(:project_user,
-          role: role,
-          project: project,
-          user: build(:user)
-        )
-
-      settings_path =
-        ~p"/projects/#{project}/settings"
-
-      conn = log_in_user(conn, project_user.user)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          settings_path
-        )
-
-      assert view
-             |> has_element?(
-               "a#delete_auth_method_link_#{auth_method.id}.cursor-not-allowed"
-             )
-
-      modal_id = "delete_auth_#{auth_method.id}_modal"
-
-      refute view
-             |> has_element?("#delete_auth_method_#{modal_id}_#{auth_method.id}")
+        # modal doesn't exist
+        refute view |> element("##{modal_id}") |> has_element?()
+      end
     end
   end
 
