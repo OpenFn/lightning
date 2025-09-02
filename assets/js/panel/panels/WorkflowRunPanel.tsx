@@ -103,12 +103,12 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = props => {
   }, [pushEvent, manualContent, job_id]);
 
   const shouldShowRetry = React.useMemo(() => {
-    if (!currentRunStep || !currentDataclip || !runId) return false;
+    if (is_edge || !currentRunStep || !currentDataclip || !runId) return false;
     return (
       currentDataclip.wiped_at === null &&
       currentRunStep.input_dataclip_id === currentDataclip.id
     );
-  }, [currentRunStep, runId, currentDataclip]);
+  }, [currentRunStep, runId, currentDataclip, is_edge]);
 
   return (
     <>
