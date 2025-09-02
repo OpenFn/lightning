@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Added DB support for sandboxes and workflow version provenance.
+  [#3422](https://github.com/OpenFn/lightning/issues/3422)
 - Retry webhook events on transient database connection errors
   [#3097](https://github.com/OpenFn/lightning/issues/3097)
 
