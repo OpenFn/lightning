@@ -1376,6 +1376,42 @@ defmodule Lightning.Projects do
   defp append_if_missing(list, h),
     do: if(Enum.member?(list, h), do: list, else: list ++ [h])
 
+  @doc """
+  Provisions a **sandbox (child) project** under the given `parent`.
+
+  This is a thin wrapper around `Lightning.Projects.Sandboxes.provision/3`.
+
+  ## Authorization
+  The `actor` must be an `:owner` or `:admin` **of the parent project**.
+  Returns `{:error, :unauthorized}` otherwise.
+
+  ## Attributes (`attrs`)
+    * `:name` (required) — Sandbox name (must be unique per `parent_id`).
+    * `:color` — Optional hex color (string) for the project.
+    * `:env` — Optional environment slug to set on the project.
+    * `:collaborators` — Optional list of `%{user_id: Ecto.UUID.t(), role: atom()}`.
+      The `actor` is always added as `:owner`; extra `:owner` entries are ignored.
+    * `:dataclip_ids` — Optional list of named dataclip IDs to copy
+      (eligible types: `:global | :saved_input | :http_request`).
+
+  ## Behavior
+    * Clones a subset of project settings from the parent.
+    * **References** existing credentials via `project_credentials` (no credential duplication).
+    * Clones the workflow DAG (jobs, triggers, edges), **disables triggers** in the clone,
+      **remaps node positions**, and copies the latest workflow head/version per workflow.
+    * Does **not** copy runs/history.
+
+  ## Examples
+
+      iex> provision_sandbox(parent, actor, %{name: "SB-1", color: "#aabbcc"})
+      {:ok, %Lightning.Projects.Project{}}
+
+      iex> provision_sandbox(parent, viewer, %{name: "SB-1"})
+      {:error, :unauthorized}
+
+  """
+  @spec provision_sandbox(Project.t(), User.t(), map()) ::
+          {:ok, Project.t()} | {:error, term()}
   def provision_sandbox(%Project{} = parent, %User{} = actor, attrs) do
     Lightning.Projects.Sandboxes.provision(parent, actor, attrs)
   end
