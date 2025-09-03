@@ -192,6 +192,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             setCurrentRunDataclip(typedResponse.dataclip);
             // Auto-select the current run's dataclip when viewing a specific run
             selectDataclipForManualRun(typedResponse.dataclip);
+          } else {
+            setCurrentRunDataclip(null);
+            selectDataclipForManualRun(null);
           }
         }
       );
