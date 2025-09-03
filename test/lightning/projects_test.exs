@@ -2277,6 +2277,63 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "provision_sandbox/3 (wrapper)" do
+    test "delegates to Sandboxes.provision/3 and returns {:ok, sandbox} on success" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user_id: owner.id, role: :owner}]
+        )
+
+      {:ok, sandbox} =
+        Projects.provision_sandbox(parent, owner, %{
+          name: "sb-1",
+          color: "#123456",
+          env: "staging"
+        })
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert sandbox.parent_id == parent.id
+      assert sandbox.name == "sb-1"
+      assert sandbox.color == "#123456"
+      assert sandbox.env == "staging"
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == owner.id && &1.role == :owner)
+             )
+    end
+
+    test "returns {:error, :unauthorized} for non-admin/editor actor" do
+      actor = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user_id: actor.id, role: :editor}]
+        )
+
+      assert {:error, :unauthorized} =
+               Projects.provision_sandbox(parent, actor, %{name: "sb-nope"})
+    end
+
+    test "bubbles up changeset errors from sandbox provisioning" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user_id: owner.id, role: :owner}]
+        )
+
+      assert {:error, :rollback} =
+               Projects.provision_sandbox(parent, owner, %{name: ""})
+    end
+  end
+
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =
