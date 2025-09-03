@@ -1375,4 +1375,8 @@ defmodule Lightning.Projects do
 
   defp append_if_missing(list, h),
     do: if(Enum.member?(list, h), do: list, else: list ++ [h])
+
+  def provision_sandbox(%Project{} = parent, %User{} = actor, attrs) do
+    Lightning.Projects.Sandboxes.provision(parent, actor, attrs)
+  end
 end
