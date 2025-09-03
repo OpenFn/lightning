@@ -60,7 +60,6 @@ export const WorkflowEditor: WithActionProps<{
       } else {
         console.debug('Selecting', id);
 
-        nextUrl.searchParams.delete('m');
         nextUrl.searchParams.set('s', id);
       }
     }
