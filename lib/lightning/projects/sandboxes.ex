@@ -149,12 +149,7 @@ defmodule Lightning.Projects.Sandboxes do
           copy_latest_heads!(wf_map)
 
           head = Lightning.Projects.compute_project_head_hash(sandbox.id)
-
-          sandbox =
-            case Lightning.Projects.append_project_head(sandbox, head) do
-              {:ok, proj} -> proj
-              {:error, :bad_hash} -> sandbox
-            end
+          sandbox = Lightning.Projects.append_project_head!(sandbox, head)
 
           maybe_clone_named_dataclips!(
             parent.id,
