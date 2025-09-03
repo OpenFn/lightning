@@ -30,6 +30,8 @@ and this project adheres to
   [#1588](https://github.com/OpenFn/lightning/issues/1588)
 
 ### Fixed
+- Current run dataclip stuck when switching nodes
+  [#3560](https://github.com/OpenFn/lightning/pull/3560)
 
 ## [v2.14.3] - 2025-08-29
 
