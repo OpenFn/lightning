@@ -1648,15 +1648,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event(
-        "get-run-input-dataclip",
+        "get-run-step-and-input-dataclip",
         %{"run_id" => run_id, "job_id" => job_id},
         socket
       ) do
-    Invocation.get_first_dataclip_for_run_and_job(run_id, job_id)
-    |> case do
-      nil -> {:reply, %{dataclip: nil}, socket}
-      dataclip -> {:reply, %{dataclip: dataclip}, socket}
-    end
+    dataclip = Invocation.get_first_dataclip_for_run_and_job(run_id, job_id)
+    run_step = Invocation.get_first_step_for_run_and_job(run_id, job_id)
+
+    {:reply, %{dataclip: dataclip, run_step: run_step}, socket}
   end
 
   def handle_event(
@@ -2051,10 +2050,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   # order, just like clicking "rerun from here" on the history page.
   def handle_event(
         "rerun",
-        %{"run_id" => run_id, "step_id" => step_id},
+        %{"run_id" => run_id, "step_id" => step_id} = params,
         socket
       ) do
-    case rerun(socket, run_id, step_id) do
+    case rerun(socket, run_id, step_id, params["via"]) do
       {:ok, socket} ->
         {:noreply, socket}
 
@@ -2378,11 +2377,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp format_step(step) do
     %{
+      id: step.id,
       job_id: step.job_id,
       error_type: step.error_type,
       exit_reason: step.exit_reason,
       started_at: step.started_at,
-      finished_at: step.finished_at
+      finished_at: step.finished_at,
+      input_dataclip_id: step.input_dataclip_id
     }
   end
 
@@ -2967,16 +2968,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         selectable_dataclips =
           Invocation.list_dataclips_for_job(%Job{id: job.id})
 
-        step =
-          assigns[:follow_run] &&
-            Invocation.get_first_step_for_run_and_job(
-              assigns[:follow_run].id,
-              job.id
-            )
-
         socket
         |> assign_manual_run_form(changeset)
-        |> assign(step: step)
         |> assign_dataclips(selectable_dataclips, dataclip)
 
       _ ->
@@ -3465,7 +3458,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp rerun(socket, run_id, step_id) do
+  defp rerun(socket, run_id, step_id, via) do
     %{
       can_run_workflow: can_run_workflow?,
       current_user: current_user,
@@ -3492,15 +3485,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
          {:ok, workflow} <- save_or_get_workflow,
          {:ok, run} <-
            WorkOrders.retry(run_id, step_id, created_by: current_user) do
-      Runs.subscribe(run)
+      if via == "job_panel" do
+        {:ok, push_navigate(socket, to: ~p"/projects/#{project_id}/runs/#{run}")}
+      else
+        Runs.subscribe(run)
 
-      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+        snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
 
-      {:ok,
-       socket
-       |> assign_workflow(workflow, snapshot)
-       |> follow_run(run)
-       |> push_event("push-hash", %{"hash" => "log"})}
+        {:ok,
+         socket
+         |> assign_workflow(workflow, snapshot)
+         |> follow_run(run)
+         |> push_event("push-hash", %{"hash" => "log"})}
+      end
     end
   end
 

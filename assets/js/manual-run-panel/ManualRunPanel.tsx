@@ -8,6 +8,7 @@ import React from 'react';
 import constructQuery from '../utils/constructQuery';
 import { Tabs } from '../components/Tabs';
 import { type Dataclip, FilterTypes, SeletableOptions } from './types';
+import type { RunStep } from '../workflow-store/store';
 import CustomView from './views/CustomView';
 import EmptyView from './views/EmptyView';
 import ExistingView from './views/ExistingView';
@@ -18,6 +19,8 @@ import useQuery from '../hooks/useQuery';
 interface ManualRunPanelProps {
   job_id: string;
   fixedHeight: boolean;
+  onRunStepChange?: (runStep: RunStep | null) => void;
+  onDataclipChange?: (dataclip: Dataclip | null) => void;
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
@@ -44,6 +47,8 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     job_id,
     navigate,
     fixedHeight = false,
+    onRunStepChange,
+    onDataclipChange,
   } = props;
 
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
@@ -109,10 +114,17 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         setSelectedOption(SeletableOptions.EXISTING);
         pushManualChange(SeletableOptions.EXISTING);
       }
+      onDataclipChange?.(dataclip);
       setSelectedDataclip(dataclip);
       setNameError(''); // Clear any existing error when switching dataclips
     },
-    [pushEvent, setSelectedOption, pushManualChange, setSelectedDataclip]
+    [
+      pushEvent,
+      setSelectedOption,
+      pushManualChange,
+      setSelectedDataclip,
+      onDataclipChange,
+    ]
   );
 
   React.useEffect(() => {
@@ -184,10 +196,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   React.useEffect(() => {
     if (runId && job_id) {
       pushEventTo(
-        'get-run-input-dataclip',
+        'get-run-step-and-input-dataclip',
         { run_id: runId, job_id: job_id },
         (response: unknown) => {
-          const typedResponse = response as { dataclip: Dataclip | null };
+          const typedResponse = response as {
+            dataclip: Dataclip | null;
+            run_step: RunStep | null;
+          };
           if (typedResponse.dataclip) {
             setCurrentRunDataclip(typedResponse.dataclip);
             // Auto-select the current run's dataclip when viewing a specific run
@@ -196,12 +211,14 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             setCurrentRunDataclip(null);
             selectDataclipForManualRun(null);
           }
+          onRunStepChange?.(typedResponse.run_step);
         }
       );
     } else {
       setCurrentRunDataclip(null);
+      onRunStepChange?.(null);
     }
-  }, [runId, job_id, pushEventTo, selectDataclipForManualRun]);
+  }, [runId, job_id, pushEventTo, selectDataclipForManualRun, onRunStepChange]);
 
   React.useEffect(() => {
     pushEventTo(
