@@ -622,7 +622,7 @@ export const Tooltip = {
     }
   },
   destroyed() {
-    if (this._tippyInstance) this._tippyInstance.unmount();
+    if (this._tippyInstance) this._tippyInstance.destroy();
   },
 } as PhoenixHook<
   { _tippyInstance: TippyInstance | null; _originalContent: string },
