@@ -6,6 +6,7 @@ defmodule Lightning.Projects.SandboxesTest do
   alias Lightning.Repo
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.Sandboxes
@@ -197,6 +198,47 @@ defmodule Lightning.Projects.SandboxesTest do
       assert {:ok, %Project{}} =
                Sandboxes.provision(parent, actor, %{name: "sb-ok"})
     end
+  end
+
+  defp attach_keychain!(
+         %Project{} = project,
+         %User{} = creator,
+         default_cred,
+         attrs \\ %{}
+       ) do
+    insert(
+      :keychain_credential,
+      Map.merge(
+        %{
+          project: project,
+          created_by: creator,
+          default_credential: default_cred,
+          name: "kc-main",
+          path: "$.org_id"
+        },
+        attrs
+      )
+    )
+  end
+
+  defp rewire_job_to_keychain!(%Job{} = job, %KeychainCredential{} = kc) do
+    job
+    |> Ecto.Changeset.change(%{
+      project_credential_id: nil,
+      keychain_credential_id: kc.id
+    })
+    |> Repo.update!()
+  end
+
+  defp find_sandbox_job!(%Project{} = sandbox, wf_name, job_name) do
+    from(j in Job,
+      join: w in assoc(j, :workflow),
+      where:
+        w.project_id == ^sandbox.id and w.name == ^wf_name and
+          j.name == ^job_name,
+      select: j
+    )
+    |> Repo.one!()
   end
 
   describe "provisioning end-to-end" do
@@ -392,6 +434,101 @@ defmodule Lightning.Projects.SandboxesTest do
 
         assert cnt >= 1
       end
+    end
+  end
+
+  describe "keychains" do
+    test "clones only used keychains and rewires jobs to cloned keychains" do
+      # Parent with credential + keychain used by one job
+      %{
+        actor: actor,
+        parent: parent,
+        pc: pc,
+        flows: %{w1: w1},
+        nodes: %{j1: j1, j2: j2}
+      } = build_parent_fixture!(:owner)
+
+      # Create a keychain in the parent that points to the same default credential
+      kc = attach_keychain!(parent, actor, pc.credential)
+
+      # Rewire j2 in parent to use the keychain (and drop project_credential)
+      rewire_job_to_keychain!(Repo.preload(j2, [:workflow]), kc)
+
+      # Provision sandbox
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-kc"})
+
+      # The sandbox should contain exactly one keychain (the used one)
+      s_kcs =
+        from(k in KeychainCredential, where: k.project_id == ^sandbox.id)
+        |> Repo.all()
+
+      assert length(s_kcs) == 1
+      s_kc = hd(s_kcs)
+      assert s_kc.name == kc.name
+      assert s_kc.path == kc.path
+      assert s_kc.default_credential_id == kc.default_credential_id
+      assert s_kc.created_by_id == actor.id
+
+      # j2 should be rewired to the sandbox keychain (no project_credential)
+      s_j2 =
+        find_sandbox_job!(sandbox, w1.name, j2.name)
+        |> Repo.preload(:project_credential)
+
+      assert s_j2.keychain_credential_id == s_kc.id
+      assert is_nil(s_j2.project_credential_id)
+
+      # j1 should still use a project_credential (no keychain)
+      s_j1 =
+        find_sandbox_job!(sandbox, w1.name, j1.name)
+        |> Repo.preload(:project_credential)
+
+      assert is_nil(s_j1.keychain_credential_id)
+      assert not is_nil(s_j1.project_credential_id)
+
+      # Ensure we didn't duplicate underlying credentials: child project_credentials
+      # should reference the same credential_ids as parent
+      parent_cred_ids =
+        from(pc in ProjectCredential,
+          where: pc.project_id == ^parent.id,
+          select: pc.credential_id
+        )
+        |> Repo.all()
+        |> MapSet.new()
+
+      sandbox_cred_ids =
+        from(pc in ProjectCredential,
+          where: pc.project_id == ^sandbox.id,
+          select: pc.credential_id
+        )
+        |> Repo.all()
+        |> MapSet.new()
+
+      assert sandbox_cred_ids == parent_cred_ids
+    end
+
+    test "does not clone unused keychains" do
+      %{
+        actor: actor,
+        parent: parent,
+        pc: pc
+      } = build_parent_fixture!(:admin)
+
+      # Parent keychain exists but is not referenced by any job
+      _unused =
+        attach_keychain!(parent, actor, pc.credential, %{name: "kc-unused"})
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-kc-unused"})
+
+      # No keychains should be present in sandbox because none were used by jobs
+      cnt =
+        from(k in KeychainCredential,
+          where: k.project_id == ^sandbox.id,
+          select: count(k.id)
+        )
+        |> Repo.one()
+
+      assert cnt == 0
     end
   end
 end

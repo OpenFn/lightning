@@ -10,7 +10,9 @@ defmodule Lightning.Projects.Sandboxes do
     * **remaps positions** (node coordinates) to the new node IDs,
     * copies the **latest** `WorkflowVersion` per workflow to seed version history,
     * can optionally **copy a subset of named dataclips**,
-    * and assigns the **creator as :owner** (additional collaborators optional).
+    * **clones Keychain credentials (metadata only) actually used by parent jobs** and
+      rewires sandbox jobs to those cloned keychains, and
+    * assigns the **creator as :owner** (additional collaborators optional).
 
   ### Authorization
 
@@ -25,6 +27,10 @@ defmodule Lightning.Projects.Sandboxes do
     “exactly one owner” validation.
   * Credentials are **not duplicated**; we create `project_credentials` rows
     that reference the parent’s existing `credentials`.
+  * **Keychain credentials are cloned as metadata (name/path/default_credential)** into
+    the sandbox project and **no secrets are duplicated**. Because we copy
+    `project_credentials` first, the keychain’s `default_credential_id` remains valid
+    in the sandbox and passes validation.
   * Trigger rows are cloned but always persisted with `enabled: false`.
   * Positions are remapped by translating old node IDs to new ones; if no valid
     positions remain, we store `nil` (UI → auto-layout).
@@ -35,6 +41,7 @@ defmodule Lightning.Projects.Sandboxes do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
@@ -99,6 +106,9 @@ defmodule Lightning.Projects.Sandboxes do
       `dataclip_retention_period`.
     * Credentials: `project_credentials` rows pointing at the **same**
       underlying credentials (no new `credentials`).
+    * **Keychain credentials (metadata)**: only the keychains actually used by
+      parent jobs are cloned into the sandbox (`name`, `path`, `default_credential_id`);
+      sandbox jobs are rewired to those cloned keychains.
     * DAG: workflows, jobs, triggers (disabled), edges, webhook auth methods.
     * Positions: remapped from parent node IDs to child node IDs; `nil` when
       nothing remaps (UI → auto-layout).
@@ -150,9 +160,10 @@ defmodule Lightning.Projects.Sandboxes do
         |> create_sandbox!()
 
       cred_map = copy_credentials!(parent, sandbox)
+      kc_map = clone_keychains!(parent, sandbox, actor)
 
       wf_map = create_workflows!(parent, sandbox)
-      job_map = clone_jobs!(parent, wf_map, cred_map)
+      job_map = clone_jobs!(parent, wf_map, cred_map, kc_map)
       trg_map = clone_triggers!(parent, wf_map)
       clone_edges!(parent, wf_map, job_map, trg_map)
       remap_positions!(parent, wf_map, job_map, trg_map)
@@ -177,7 +188,8 @@ defmodule Lightning.Projects.Sandboxes do
   defp preload_parent(parent) do
     Repo.preload(parent,
       workflows: [
-        jobs: [:project_credential],
+        # ← include keychain
+        jobs: [:project_credential, :keychain_credential],
         triggers: [:webhook_auth_methods],
         edges: []
       ],
@@ -226,6 +238,53 @@ defmodule Lightning.Projects.Sandboxes do
     Map.new(returning, &{&1.credential_id, &1.id})
   end
 
+  # Clone only the keychain credentials that parent jobs actually use.
+  # Returns a map of old_keychain_id => new_keychain_id in the sandbox.
+  defp clone_keychains!(parent, sandbox, actor) do
+    parent
+    |> collect_used_keychains()
+    |> Enum.reduce(%{}, fn kc, acc ->
+      %KeychainCredential{id: new_id} =
+        insert_or_get_keychain!(kc, sandbox, actor)
+
+      Map.put(acc, kc.id, new_id)
+    end)
+  end
+
+  defp collect_used_keychains(parent) do
+    parent.workflows
+    |> Enum.flat_map(& &1.jobs)
+    |> Enum.map(& &1.keychain_credential)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq_by(& &1.id)
+  end
+
+  defp insert_or_get_keychain!(%KeychainCredential{} = kc, sandbox, actor) do
+    params = %{
+      name: kc.name,
+      path: kc.path,
+      default_credential_id: kc.default_credential_id
+    }
+
+    %KeychainCredential{}
+    |> KeychainCredential.changeset(params)
+    # IMPORTANT: put associations (not in cast) so changeset validations can verify project
+    |> Ecto.Changeset.put_assoc(:project, sandbox)
+    |> Ecto.Changeset.put_assoc(:created_by, actor)
+    |> Repo.insert()
+    |> case do
+      {:ok, new_kc} ->
+        new_kc
+
+      {:error, %Ecto.Changeset{errors: [name: {"has already been taken", _}]}} ->
+        # If a keychain with the same name already exists in the sandbox, reuse it.
+        Repo.get_by!(KeychainCredential, project_id: sandbox.id, name: kc.name)
+
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+    end
+  end
+
   defp create_workflows!(parent, sandbox) do
     Enum.reduce(parent.workflows, %{}, fn w, acc ->
       {:ok, new_w} =
@@ -243,19 +302,32 @@ defmodule Lightning.Projects.Sandboxes do
     end)
   end
 
-  defp clone_jobs!(parent, wf_map, cred_map) do
+  # Respects keychain rewiring: if a job used a keychain in the parent,
+  # we set keychain_credential_id and keep project_credential_id nil;
+  # otherwise we map the static project_credential as before.
+  defp clone_jobs!(parent, wf_map, cred_map, kc_map) do
     parent.workflows
     |> Enum.flat_map(fn w ->
       new_wf_id = Map.fetch!(wf_map, w.id)
 
       Enum.map(w.jobs, fn j ->
-        child_pc_id =
-          case j.project_credential do
-            %ProjectCredential{credential_id: cred_id} ->
-              Map.get(cred_map, cred_id)
+        child_kc_id =
+          case j.keychain_credential do
+            %KeychainCredential{id: old_id} -> Map.get(kc_map, old_id)
+            _ -> nil
+          end
 
-            _ ->
-              nil
+        child_pc_id =
+          if child_kc_id do
+            nil
+          else
+            case j.project_credential do
+              %ProjectCredential{credential_id: cred_id} ->
+                Map.get(cred_map, cred_id)
+
+              _ ->
+                nil
+            end
           end
 
         {:ok, new_job} =
@@ -267,7 +339,7 @@ defmodule Lightning.Projects.Sandboxes do
             adaptor: j.adaptor,
             workflow_id: new_wf_id,
             project_credential_id: child_pc_id,
-            keychain_credential_id: nil
+            keychain_credential_id: child_kc_id
           })
           |> Repo.insert()
 
