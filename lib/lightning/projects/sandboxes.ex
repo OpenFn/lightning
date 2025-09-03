@@ -307,46 +307,24 @@ defmodule Lightning.Projects.Sandboxes do
   # otherwise we map the static project_credential as before.
   defp clone_jobs!(parent, wf_map, cred_map, kc_map) do
     parent.workflows
-    |> Enum.flat_map(fn w ->
-      new_wf_id = Map.fetch!(wf_map, w.id)
-
-      Enum.map(w.jobs, fn j ->
-        child_kc_id =
-          case j.keychain_credential do
-            %KeychainCredential{id: old_id} -> Map.get(kc_map, old_id)
-            _ -> nil
-          end
-
-        child_pc_id =
-          if child_kc_id do
-            nil
-          else
-            case j.project_credential do
-              %ProjectCredential{credential_id: cred_id} ->
-                Map.get(cred_map, cred_id)
-
-              _ ->
-                nil
-            end
-          end
-
-        {:ok, new_job} =
-          %Job{}
-          |> Job.changeset(%{
-            id: Ecto.UUID.generate(),
-            name: j.name,
-            body: j.body,
-            adaptor: j.adaptor,
-            workflow_id: new_wf_id,
-            project_credential_id: child_pc_id,
-            keychain_credential_id: child_kc_id
-          })
-          |> Repo.insert()
-
-        {j.id, new_job.id}
-      end)
-    end)
+    |> Enum.flat_map(&clone_jobs_for_workflow(&1, wf_map, cred_map, kc_map))
     |> Map.new()
+  end
+
+  defp clone_jobs_for_workflow(w, wf_map, cred_map, kc_map) do
+    new_wf_id = Map.fetch!(wf_map, w.id)
+
+    Enum.map(w.jobs, fn j ->
+      child_kc_id = child_keychain_id(j, kc_map)
+      child_pc_id = project_credential_id_for_clone(j, child_kc_id, cred_map)
+
+      new_job =
+        j
+        |> build_job_attrs(new_wf_id, child_pc_id, child_kc_id)
+        |> insert_job!()
+
+      {j.id, new_job.id}
+    end)
   end
 
   defp clone_triggers!(parent, wf_map) do
@@ -407,6 +385,42 @@ defmodule Lightning.Projects.Sandboxes do
       end)
     end)
   end
+
+  defp child_keychain_id(
+         %{keychain_credential: %KeychainCredential{id: old_id}},
+         kc_map
+       ),
+       do: Map.get(kc_map, old_id)
+
+  defp child_keychain_id(_job, _kc_map), do: nil
+
+  defp project_credential_id_for_clone(_job, child_kc_id, _cred_map)
+       when not is_nil(child_kc_id),
+       do: nil
+
+  defp project_credential_id_for_clone(
+         %{project_credential: %ProjectCredential{credential_id: cred_id}},
+         nil,
+         cred_map
+       ),
+       do: Map.get(cred_map, cred_id)
+
+  defp project_credential_id_for_clone(_job, _child_kc_id, _cred_map), do: nil
+
+  defp build_job_attrs(j, new_wf_id, child_pc_id, child_kc_id) do
+    %{
+      id: Ecto.UUID.generate(),
+      name: j.name,
+      body: j.body,
+      adaptor: j.adaptor,
+      workflow_id: new_wf_id,
+      project_credential_id: child_pc_id,
+      keychain_credential_id: child_kc_id
+    }
+  end
+
+  defp insert_job!(attrs),
+    do: %Job{} |> Job.changeset(attrs) |> Repo.insert!()
 
   defp remap_positions!(parent, wf_map, job_map, trg_map) do
     Enum.each(parent.workflows, fn w ->
