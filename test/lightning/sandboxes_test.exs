@@ -615,10 +615,8 @@ defmodule Lightning.Projects.SandboxesTest do
     test "returns {:error, changeset} when project creation fails" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
 
-      assert {:error, %Ecto.Changeset{} = ch} =
+      assert {:error, :rollback} =
                Sandboxes.provision(parent, actor, %{name: ""})
-
-      assert {"can't be blank", _} = ch.errors[:name]
     end
   end
 

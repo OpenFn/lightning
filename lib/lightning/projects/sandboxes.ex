@@ -12,7 +12,8 @@ defmodule Lightning.Projects.Sandboxes do
     * can optionally **copy a subset of named dataclips**,
     * **clones Keychain credentials (metadata only) actually used by parent jobs** and
       rewires sandbox jobs to those cloned keychains, and
-    * assigns the **creator as :owner** (additional collaborators optional).
+    * assigns the **creator as :owner**; any **non-owner collaborators** provided are
+      included **at creation time** (duplicate/owner entries are filtered).
 
   ### Authorization
 
@@ -22,13 +23,12 @@ defmodule Lightning.Projects.Sandboxes do
   ### Invariants & side effects
 
   * The sandbox is created in a single DB **transaction**.
-  * The creator is added as the **only owner** at creation time; additional
-    collaborators are added **after** creation to preserve the project’s
-    “exactly one owner” validation.
+  * The creator is added as the owner and any **non-owner collaborators** from
+    `:collaborators` are also added at creation time (we ensure exactly one owner).
   * Credentials are **not duplicated**; we create `project_credentials` rows
     that reference the parent’s existing `credentials`.
   * **Keychain credentials are cloned as metadata (name/path/default_credential)** into
-    the sandbox project and **no secrets are duplicated**. Because we copy
+    the sandbox project; **no secrets are duplicated**. Because we copy
     `project_credentials` first, the keychain’s `default_credential_id` remains valid
     in the sandbox and passes validation.
   * Trigger rows are cloned but always persisted with `enabled: false`.
@@ -58,8 +58,8 @@ defmodule Lightning.Projects.Sandboxes do
   * `:color` (optional) – UI color string (e.g. `"#336699"`)
   * `:env` (optional) – environment slug for the project (e.g. `"staging"`)
   * `:collaborators` (optional) – list of `%{user_id: Ecto.UUID.t(), role: atom()}`
-    to add in addition to the creator (owner). Any `:owner` entries are ignored;
-    only one owner is allowed (the creator).
+    to add in addition to the creator (owner). Any `:owner` entries are ignored
+    and duplicates by `user_id` are removed.
   * `:dataclip_ids` (optional) – list of dataclip IDs to copy **if** they are:
       * named (`name` not `nil`) **and**
       * of type in `[:global, :saved_input, :http_request]`.
@@ -97,7 +97,7 @@ defmodule Lightning.Projects.Sandboxes do
 
     * `{:ok, %Lightning.Projects.Project{}}` on success
     * `{:error, :unauthorized}` if `actor` lacks permission on `parent`
-    * `{:error, term()}` for validation/DB errors (e.g. name format/uniqueness)
+    * `{:error, Ecto.Changeset.t() | term()}` for validation/DB errors
 
   ## What gets cloned
 
@@ -113,32 +113,10 @@ defmodule Lightning.Projects.Sandboxes do
     * Positions: remapped from parent node IDs to child node IDs; `nil` when
       nothing remaps (UI → auto-layout).
     * Version heads: latest `WorkflowVersion` per workflow (`hash`, `source`).
-
-  ## Examples
-
-      # Minimal: creator becomes owner
-      {:ok, sandbox} =
-        Lightning.Projects.Sandboxes.provision(parent, actor, %{
-          name: "Sandbox – June load test"
-        })
-
-      # With collaborators, env, color, and a few named dataclips
-      {:ok, sandbox} =
-        Lightning.Projects.Sandboxes.provision(parent, actor, %{
-          name: "SB – staging QA",
-          color: "#336699",
-          env: "staging",
-          collaborators: [%{user_id: editor.id, role: :editor}],
-          dataclip_ids: [clip1_id, clip2_id]
-        })
-
-      # Unauthorized
-      {:error, :unauthorized} =
-        Lightning.Projects.Sandboxes.provision(parent, viewer_user, %{name: "Nope"})
-
   """
   @spec provision(Project.t(), User.t(), provision_attrs) ::
-          {:ok, Project.t()} | {:error, term()}
+          {:ok, Project.t()}
+          | {:error, :unauthorized | Ecto.Changeset.t() | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
     case Lightning.Projects.get_project_user_role(actor, parent) do
       role when role in [:owner, :admin] -> do_provision(parent, actor, attrs)
@@ -158,7 +136,7 @@ defmodule Lightning.Projects.Sandboxes do
       base_attrs =
         build_base_attrs(parent, actor, name, color, env, collaborators)
 
-      case create_sandbox(base_attrs) do
+      case create_sandbox(parent, base_attrs) do
         {:ok, sandbox} ->
           cred_map = copy_credentials!(parent, sandbox)
           kc_map = clone_keychains!(parent, sandbox, actor)
@@ -170,6 +148,14 @@ defmodule Lightning.Projects.Sandboxes do
           remap_positions!(parent, wf_map, job_map, trg_map)
           copy_latest_heads!(wf_map)
 
+          head = Lightning.Projects.compute_project_head_hash(sandbox.id)
+
+          sandbox =
+            case Lightning.Projects.append_project_head(sandbox, head) do
+              {:ok, proj} -> proj
+              {:error, :bad_hash} -> sandbox
+            end
+
           maybe_clone_named_dataclips!(
             parent.id,
             sandbox.id,
@@ -179,20 +165,18 @@ defmodule Lightning.Projects.Sandboxes do
           sandbox
 
         {:error, changeset} ->
-          Repo.rollback({:invalid_project, changeset})
+          {:error, changeset}
       end
     end)
     |> case do
       {:ok, project} -> {:ok, project}
-      {:error, {:invalid_project, changeset}} -> {:error, changeset}
-      {:error, reason} -> {:error, reason}
+      {:error, changeset} -> {:error, changeset}
     end
   end
 
   defp preload_parent(parent) do
     Repo.preload(parent,
       workflows: [
-        # ← include keychain
         jobs: [:project_credential, :keychain_credential],
         triggers: [:webhook_auth_methods],
         edges: []
@@ -208,6 +192,7 @@ defmodule Lightning.Projects.Sandboxes do
       collaborators
       |> List.wrap()
       |> Enum.reject(&(&1.user_id == actor.id or &1.role == :owner))
+      |> Enum.uniq_by(& &1.user_id)
 
     parent
     |> Map.take(@clone_fields)
@@ -215,13 +200,12 @@ defmodule Lightning.Projects.Sandboxes do
       name: name,
       color: color,
       env: env,
-      parent_id: parent.id,
       project_users: [owner_user | extras]
     })
   end
 
-  defp create_sandbox(attrs) do
-    Lightning.Projects.create_project(attrs, false)
+  defp create_sandbox(parent, attrs) do
+    Lightning.Projects.create_sandbox(parent, attrs, false)
   end
 
   defp copy_credentials!(parent, sandbox) do
@@ -267,30 +251,19 @@ defmodule Lightning.Projects.Sandboxes do
     |> Enum.uniq_by(& &1.id)
   end
 
+  # Prefer deterministic upsert: check for existing (unique by project_id+name),
+  # otherwise insert a fresh keychain tied to the sandbox + actor.
   defp insert_or_get_keychain!(%KeychainCredential{} = kc, sandbox, actor) do
-    params = %{
-      name: kc.name,
-      path: kc.path,
-      default_credential_id: kc.default_credential_id
-    }
-
-    %KeychainCredential{}
-    |> KeychainCredential.changeset(params)
-    # IMPORTANT: put associations (not in cast) so changeset validations can verify project
-    |> Ecto.Changeset.put_assoc(:project, sandbox)
-    |> Ecto.Changeset.put_assoc(:created_by, actor)
-    |> Repo.insert()
-    |> case do
-      {:ok, new_kc} ->
-        new_kc
-
-      {:error, %Ecto.Changeset{errors: [name: {"has already been taken", _}]}} ->
-        # If a keychain with the same name already exists in the sandbox, reuse it.
-        Repo.get_by!(KeychainCredential, project_id: sandbox.id, name: kc.name)
-
-      {:error, changeset} ->
-        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
-    end
+    Repo.get_by(KeychainCredential, project_id: sandbox.id, name: kc.name) ||
+      %KeychainCredential{}
+      |> KeychainCredential.changeset(%{
+        name: kc.name,
+        path: kc.path,
+        default_credential_id: kc.default_credential_id
+      })
+      |> Ecto.Changeset.put_assoc(:project, sandbox)
+      |> Ecto.Changeset.put_assoc(:created_by, actor)
+      |> Repo.insert!()
   end
 
   defp create_workflows!(parent, sandbox) do
