@@ -2,8 +2,10 @@ defmodule Lightning.Collaboration.DocumentState do
   @moduledoc """
   Schema for persisting Y.js collaborative document states.
 
-  Stores the binary-encoded CRDT state for workflow documents
-  to enable persistence across server restarts.
+  Supports multiple record types for batched persistence:
+  - "update": Individual or batched updates
+  - "checkpoint": Full document state snapshot
+  - "state_vector": Current state vector for efficient syncing
   """
 
   use Ecto.Schema
@@ -12,10 +14,10 @@ defmodule Lightning.Collaboration.DocumentState do
   schema "collaboration_document_states" do
     field :document_name, :string
     field :state_data, :binary
-    # For efficient updates in the future
     field :state_vector, :binary
+    field :version, Ecto.Enum, values: [:update, :checkpoint, :state_vector]
 
-    timestamps(type: :utc_datetime)
+    timestamps(type: :utc_datetime_usec)
   end
 
   def changeset(document_state, attrs) do
@@ -23,9 +25,9 @@ defmodule Lightning.Collaboration.DocumentState do
     |> cast(attrs, [
       :document_name,
       :state_data,
-      :state_vector
+      :state_vector,
+      :version
     ])
-    |> validate_required([:document_name, :state_data])
-    |> unique_constraint(:document_name)
+    |> validate_required([:document_name, :state_data, :version])
   end
 end

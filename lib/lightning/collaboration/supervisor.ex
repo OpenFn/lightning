@@ -2,8 +2,11 @@ defmodule Lightning.Collaboration.Supervisor do
   @moduledoc """
   Supervisor for workflow collaboration infrastructure.
 
-  Manages the :pg process group and a dynamic supervisor for
-  workflow collaboration processes.
+  Manages the collaboration Registry, :pg process group, and a dynamic
+  supervisor for workflow collaboration processes.
+
+  The Registry must be started first to ensure processes can register
+  themselves during startup.
   """
   use Supervisor
 
@@ -14,7 +17,9 @@ defmodule Lightning.Collaboration.Supervisor do
   @impl true
   def init(_opts) do
     children = [
-      # Start :pg first
+      # Start Registry first - processes depend on it for registration
+      Lightning.Collaboration.Registry,
+      # Start :pg for cluster-wide SharedDoc coordination
       %{
         id: :workflow_collaboration_pg,
         start: {:pg, :start_link, [:workflow_collaboration]},
@@ -42,7 +47,7 @@ defmodule Lightning.Collaboration.Supervisor do
     DynamicSupervisor.start_child(__MODULE__.DocSupervisor, child_spec)
   end
 
-  def stop_child(pid) when is_pid(pid) do
+  def terminate_child(pid) when is_pid(pid) do
     DynamicSupervisor.terminate_child(__MODULE__.DocSupervisor, pid)
   end
 end

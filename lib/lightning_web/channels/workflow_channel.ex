@@ -7,6 +7,7 @@ defmodule LightningWeb.WorkflowChannel do
   """
   use LightningWeb, :channel
 
+  alias Lightning.Collaborate
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
   alias Lightning.Credentials.KeychainCredential
@@ -36,7 +37,7 @@ defmodule LightningWeb.WorkflowChannel do
                  ) do
               :ok ->
                 {:ok, session_pid} =
-                  Session.start(user: user, workflow_id: workflow_id)
+                  Collaborate.start(user: user, workflow_id: workflow_id)
 
                 {:ok,
                  assign(socket,

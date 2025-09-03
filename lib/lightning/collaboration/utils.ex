@@ -59,6 +59,10 @@ defmodule Lightning.Collaboration.Utils do
       {:ok, {:awareness, binary}} ->
         {:awareness, safe_binary_to_string(binary)}
 
+      # For some reason the :custom message can't be found in the typespecs
+      {:ok, other} ->
+        {:unknown, other}
+
       {:error, reason} ->
         {:error, reason}
     end

@@ -44,4 +44,58 @@ defmodule Lightning.TestUtils do
       end)
     end
   end
+
+  @doc """
+  Inspect a process and its links.
+
+  - `depth` - The depth of the process to inspect.
+  """
+  @spec inspect_process(pid(), depth :: integer()) :: map()
+  def inspect_process(pid, depth \\ 0) do
+    build_process_info(pid, depth, true)
+    |> IO.inspect(syntax_colors: IO.ANSI.syntax_colors(), pretty: true)
+  end
+
+  defp build_process_info(pid, depth, is_root) do
+    info = Process.info(pid)
+
+    process_module =
+      case Process.info(pid, :dictionary) do
+        {:dictionary, dict} ->
+          dict[:"$initial_call"] || dict[:"$ancestors"]
+
+        _ ->
+          case Process.info(pid, :initial_call) do
+            {:initial_call, {mod, _fun, _arity}} -> mod
+            _ -> :unknown
+          end
+      end
+
+    links =
+      info[:links]
+      |> List.wrap()
+      |> Enum.map(fn link ->
+        if depth > 0 do
+          %{link => build_process_info(link, depth - 1, false)}
+        else
+          link
+        end
+      end)
+
+    %{
+      name: info[:registered_name],
+      module: process_module,
+      alive?: Process.alive?(pid),
+      monitors: length(info[:monitors] || []),
+      monitored_by: length(info[:monitored_by] || []),
+      links: links
+    }
+    |> then(fn map ->
+      if is_root do
+        Map.put(map, :self, self()) |> Map.put(:pid, pid)
+      else
+        map
+      end
+    end)
+  end
 end

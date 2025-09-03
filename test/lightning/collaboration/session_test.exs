@@ -1,66 +1,56 @@
 defmodule Lightning.SessionTest do
-  # Tests must be async: false because we put a SharedDoc in a dynamic supervisor
-  # that isn't owned by the test process. So we need our Ecto sandbox to be
-  # in shared mode.
-
   # We assume that the WorkflowCollaboration supervisor is up
   # that starts :pg with the :workflow_collaboration scope
   # and a dynamic supervisor called Lightning.WorkflowCollaboration
 
+  # Tests must be async: false, some of the processes we start are either
+  # not owned by the test process, or themselves start processes.
   use Lightning.DataCase, async: false
 
   import Eventually
   import Lightning.Factories
 
+  alias Lightning.Collaboration.DocumentState
+  alias Lightning.Collaboration.DocumentSupervisor
+  # alias Lightning.Collaboration.PersistenceWriter
+  alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.Session
+  alias Lightning.Collaboration.TestClient
   alias Lightning.Workflows.Workflow
+
+  use Lightning.Utils.Logger, color: [:blue_background]
 
   setup do
     user = insert(:user)
     {:ok, user: user}
   end
 
-  defp start_session(opts) do
-    {:ok, client} =
-      Session.start(opts) |> Session.ready?()
-
-    client
-  end
-
   describe "start/1" do
-    test "when an existing SharedDoc doesn't exist", %{user: user} do
+    test "start_link/1 returns an error when the SharedDoc doesn't exist", %{
+      user: user
+    } do
       workflow_id = Ecto.UUID.generate()
 
-      {:ok, pid} =
-        Session.start(
-          user: user,
-          workflow_id: workflow_id
-        )
-
-      state = :sys.get_state(pid)
-      assert state.workflow_id == workflow_id
-      assert is_pid(state.shared_doc_pid)
-
-      Session.stop(pid)
-
-      refute_eventually(Process.alive?(state.shared_doc_pid))
+      assert {:error, {{:error, :shared_doc_not_found}, _}} =
+               start_supervised({Session, user: user, workflow_id: workflow_id})
     end
 
-    test "and joining an existing session", %{user: user1} do
+    test "start/1 can join an existing shared doc", %{user: user1} do
       user2 = insert(:user)
       workflow = insert(:simple_workflow)
+
+      Lightning.Collaborate.start_document(workflow.id)
 
       [parent1, parent2] = build_parents(2)
 
       [client_1, client_2] =
         for {parent, user} <- [{parent1, user1}, {parent2, user2}] do
           {:ok, client} =
-            Session.start(
+            Session.start_link(
               user: user,
               workflow_id: workflow.id,
               parent_pid: parent
             )
-            |> Session.ready?()
 
           client
         end
@@ -81,6 +71,23 @@ defmodule Lightning.SessionTest do
           shared_doc_pid
         end)
 
+      shared_doc_pid =
+        Registry.get_group("workflow:#{workflow.id}")
+        |> Map.get(:shared_doc)
+
+      observer_processes =
+        shared_doc_pid
+        |> :sys.get_state()
+        |> then(fn state ->
+          state.assigns.observer_process
+        end)
+        |> MapSet.new(fn {pid, _ref} -> pid end)
+
+      assert [client_1, client_2]
+             |> MapSet.new()
+             |> MapSet.equal?(observer_processes),
+             "SharedDoc should have both clients as observers"
+
       assert MapSet.size(shared_doc_pids) == 1,
              "Expected exactly one shared doc pid, got #{inspect(shared_doc_pids)}"
 
@@ -96,10 +103,9 @@ defmodule Lightning.SessionTest do
       Process.exit(parent1, :normal)
       refute_eventually(Process.alive?(client_1))
 
-      shared_doc_pid = shared_doc_pids |> MapSet.to_list() |> List.first()
       refute_eventually(Process.alive?(shared_doc_pid))
 
-      # TODO: I've enabled auto_exit: true, so this will be 0.
+      # NOTE: We've enabled auto_exit: true, so this will be 0.
       # But we might want to control the cleanup ourselves, in which case
       # this will be > 0 until we stop the SharedDoc ourselves.
       assert_eventually(
@@ -115,8 +121,11 @@ defmodule Lightning.SessionTest do
         build(:complex_workflow, name: "Test Workflow")
         |> insert()
 
+      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+
       # Start a session - this should initialize the SharedDoc with workflow data
-      session_pid = start_session(user: user, workflow_id: workflow.id)
+      session_pid =
+        start_supervised!({Session, user: user, workflow_id: workflow.id})
 
       # Send a message to allow :handle_continue to finish
       shared_doc = Session.get_doc(session_pid)
@@ -194,10 +203,6 @@ defmodule Lightning.SessionTest do
                  "Trigger #{key} mismatch: expected #{expected_value |> inspect}, got #{doc_value |> inspect}"
         end)
       end
-
-      shared_doc_pid = :sys.get_state(session_pid).shared_doc_pid
-      Session.stop(session_pid)
-      refute_eventually(Process.alive?(shared_doc_pid))
     end
 
     test "existing SharedDoc is not reinitialized", %{user: user} do
@@ -205,19 +210,24 @@ defmodule Lightning.SessionTest do
 
       insert(:job, workflow: workflow, name: "Original Job", body: "original")
 
+      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+
       # Start first session
-      session1_pid = start_session(user: user, workflow_id: workflow.id)
+      session_1 =
+        start_supervised!({Session, workflow_id: workflow.id, user: user})
 
-      shared_doc_1 = Session.get_doc(session1_pid)
+      shared_doc_1 = Session.get_doc(session_1)
 
-      Session.update_doc(session1_pid, fn doc ->
+      Session.update_doc(session_1, fn doc ->
         workflow_map = Yex.Doc.get_map(doc, "workflow")
         Yex.Map.set(workflow_map, "name", "Modified Name")
       end)
 
       # Start second session - should connect to existing SharedDoc
-      session2_pid = start_session(user: user, workflow_id: workflow.id)
-      shared_doc_2 = Session.get_doc(session2_pid)
+      session_2 =
+        start_supervised!({Session, workflow_id: workflow.id, user: user})
+
+      shared_doc_2 = Session.get_doc(session_2)
 
       assert shared_doc_1 == shared_doc_2
 
@@ -225,10 +235,11 @@ defmodule Lightning.SessionTest do
       workflow_map = Yex.Doc.get_map(shared_doc_2, "workflow")
       assert Yex.Map.fetch!(workflow_map, "name") == "Modified Name"
 
-      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session1_pid)
+      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_1)
 
-      Session.stop(session1_pid)
-      Session.stop(session2_pid)
+      # TODO: probably not needed anymore since we're using start_supervised!
+      Session.stop(session_1)
+      Session.stop(session_2)
 
       refute_eventually(Process.alive?(shared_doc_pid))
     end
@@ -244,8 +255,11 @@ defmodule Lightning.SessionTest do
           body: "console.log('sync')"
         )
 
+      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+
       # Start session to initialize SharedDoc
-      session_pid = start_session(user: user, workflow_id: workflow.id)
+      session_pid =
+        start_supervised!({Session, user: user, workflow_id: workflow.id})
 
       %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
 
@@ -281,6 +295,119 @@ defmodule Lightning.SessionTest do
     end
   end
 
+  describe "persistence" do
+    # @tag :pick
+    test "saves document state to the database", %{user: user} do
+      workflow = insert(:simple_workflow)
+
+      _document_supervisor =
+        start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+
+      session_pid =
+        start_supervised!({Session, user: user, workflow_id: workflow.id})
+
+      # This is an existing workflow, so when the session starts, it should
+      # both initialize the workflow document and save the initial state
+      # to the database.
+
+      workflow_id = workflow.id
+      document_name = "workflow:#{workflow_id}"
+
+      expected_workflow = %{
+        "id" => workflow_id,
+        "name" => workflow.name
+      }
+
+      assert Session.get_doc(session_pid)
+             |> Yex.Doc.get_map("workflow")
+             |> Yex.Map.to_json() == expected_workflow
+
+      # The Session is now up to date.
+
+      # Lets find the PersistenceWriter and check it's state
+
+      persistence_writer = get_persistence_writer(document_name)
+
+      # There should be 1 pending update
+      assert get_pending_updates(document_name) |> length() == 1
+
+      assert get_document_state(document_name) |> length() == 0,
+             "Nothing is expected in the database yet"
+
+      # Now lets add a job
+      add_job(session_pid)
+      assert get_pending_updates(document_name) |> length() == 2
+
+      # And another
+      job = string_params_for(:job)
+      add_job(session_pid, job)
+      assert get_pending_updates(document_name) |> length() == 3
+
+      # And force saving the updates (this normally happens on a timer)
+      send(persistence_writer, :force_save)
+
+      assert_eventually(get_pending_updates(document_name) |> length() == 0)
+
+      # And remove a job
+      remove_job(session_pid, job)
+      assert get_pending_updates(document_name) |> length() == 1
+
+      send(persistence_writer, :force_save)
+
+      assert_eventually(get_pending_updates(document_name) |> length() == 0)
+
+      # And check that the document state is in the database
+      assert get_document_state(document_name) |> length() == 2
+
+      # :ok = GenServer.stop(document_supervisor)
+
+      info(
+        inspect(
+          Registry.get_group(document_name)
+          |> Map.merge(%{session_pid: session_pid, self: self()}),
+          pretty: true,
+          syntax_colors: IO.ANSI.syntax_colors()
+        )
+      )
+
+      # TODO: Recover from state without a checkpoint
+      # TODO: Recover from state with a checkpoint
+    end
+
+    defp get_persistence_writer(document_name) do
+      Registry.get_group(document_name)
+      |> Map.get(:persistence_writer)
+    end
+
+    defp get_pending_updates(document_name) do
+      persistence_writer = get_persistence_writer(document_name)
+      :sys.get_state(persistence_writer).pending_updates
+    end
+
+    defp add_job(session_pid, job \\ nil) do
+      job = job || string_params_for(:job)
+
+      Session.update_doc(session_pid, fn doc ->
+        Yex.Doc.get_array(doc, "jobs")
+        |> Yex.Array.push(Yex.MapPrelim.from(job))
+      end)
+    end
+
+    defp remove_job(session_pid, job) when is_map(job) do
+      Session.update_doc(session_pid, fn doc ->
+        jobs = Yex.Doc.get_array(doc, "jobs")
+
+        index = jobs |> Enum.find_index(fn j -> j["id"] == job["id"] end)
+
+        if index do
+          Yex.Array.delete(jobs, index)
+        else
+          raise "Job #{job["id"]} not found in document"
+        end
+      end)
+    end
+  end
+
   describe "reconnecting" do
     # This test recreates the issue we were having in the front end.
     # If the Workflow process/channel crashes, the frontend doc is still around
@@ -289,57 +416,70 @@ defmodule Lightning.SessionTest do
     # it doesn't create a new Doc from scratch, but rather loads the existing Doc
     # from persistence.
 
-    test "frontend doc is still around", %{user: user} do
+    @tag :pick
+    test "client doc is still around", %{user: user} do
       workflow = insert(:simple_workflow)
 
-      parent_pid = build_parent()
+      document_supervisor =
+        start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+
+      %{shared_doc: shared_doc, persistence_writer: persistence_writer} =
+        Registry.get_group("workflow:#{workflow.id}")
 
       session_pid =
-        start_session(
-          user: user,
-          workflow_id: workflow.id,
-          parent_pid: parent_pid
-        )
-
-      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
+        start_supervised!({Session, user: user, workflow_id: workflow.id})
 
       {:ok, client_pid} =
-        GenServer.start(__MODULE__.TestClient, shared_doc_pid: shared_doc_pid)
+        GenServer.start(TestClient, shared_doc_pid: shared_doc)
 
       # Ensure handle_continue has finished
       :sys.get_state(client_pid)
 
-      assert get_jobs(shared_doc_pid) |> length() == 1
+      assert get_jobs(shared_doc) |> length() == 1
+
+      # Client adds a job
+      TestClient.add_job(client_pid, string_params_for(:job))
+
+      # SharedDoc should have the job
+      assert_eventually(get_jobs(shared_doc) |> length() == 2)
 
       # Simulate a client disconnecting
       Process.exit(session_pid, :kill)
       refute_eventually(Process.alive?(session_pid))
 
-      # TODO: we shouldn't need to unobserve explicitly here, if the Session
-      # doesn't get to handle the DOWN message, then the SharedDoc will be left
-      # running.
+      # We call unobserve here to allow the SharedDoc to autoexit,
+      # the client has it's own YDoc and we want to apply updates without
+      # the SharedDoc being around.
       GenServer.call(client_pid, :unobserve)
-      refute_eventually(Process.alive?(shared_doc_pid))
+      refute_eventually(Process.alive?(shared_doc))
+      refute_eventually(Process.alive?(persistence_writer))
+      refute_eventually(Process.alive?(document_supervisor))
+
+      assert Process.alive?(client_pid), "Client should still be alive"
+
+      assert get_document_state("workflow:#{workflow.id}"),
+             "DocumentState should be saved in the database"
+
+      # Client adds another job, while the SharedDoc is not around
+      TestClient.add_job(client_pid, string_params_for(:job))
+
+      # Starting a new document supervisor, like when the frontend reconnects
+      # At this point, client is still running, and the SharedDoc should
+      # pick up the existing document from the database.
+      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
 
       # Starting a new session
-      session_pid =
-        start_session(
-          user: user,
-          workflow_id: workflow.id,
-          parent_pid: parent_pid
-        )
+      _session_pid =
+        start_supervised!({Session, user: user, workflow_id: workflow.id})
 
-      %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
+      shared_doc_pid = Registry.get_group("workflow:#{workflow.id}").shared_doc
 
       GenServer.call(client_pid, {:observe, shared_doc_pid})
 
       jobs = GenServer.call(client_pid, :get_jobs)
-      assert length(jobs) == 1
+      assert length(jobs) == 2
 
-      Session.stop(session_pid)
-      GenServer.stop(client_pid)
-      refute_eventually(Process.alive?(session_pid))
-      refute_eventually(Process.alive?(shared_doc_pid))
+      assert get_jobs(shared_doc_pid) |> length() == 2
     end
   end
 
@@ -383,17 +523,16 @@ defmodule Lightning.SessionTest do
       user2 = insert(:user)
       user3 = insert(:user)
 
+      start_supervised!({DocumentSupervisor, workflow_id: workflow_id})
+
       [{client1, parent1}, {client2, parent2}, {client3, _parent3}] =
         Enum.map([user1, user2, user3], fn user ->
           parent = build_parent()
 
-          {:ok, client} =
-            Session.start(
-              user: user,
-              workflow_id: workflow_id,
-              parent_pid: parent
+          client =
+            start_supervised!(
+              {Session, user: user, workflow_id: workflow_id, parent_pid: parent}
             )
-            |> Session.ready?()
 
           {client, parent}
         end)
@@ -472,14 +611,11 @@ defmodule Lightning.SessionTest do
       Process.flag(:trap_exit, true)
 
       receive do
-        {:EXIT, _pid, reason} ->
-          IO.inspect(reason, label: "parent exit")
+        {:EXIT, _pid, _reason} ->
           :ok
 
         any ->
-          IO.inspect(any,
-            label: "WARNING: parent received unknown message: exiting"
-          )
+          warning("WARNING: parent received unknown message: #{inspect(any)}")
 
           :ok
       end
@@ -498,97 +634,7 @@ defmodule Lightning.SessionTest do
     |> Yex.Array.to_list()
   end
 
-  defmodule TestClient do
-    use GenServer
-    alias Lightning.Collaboration.Utils
-
-    def init(opts) do
-      shared_doc_pid = opts[:shared_doc_pid]
-      client_doc = Yex.Doc.new()
-
-      {:ok, %{client_doc: client_doc, shared_doc_pid: shared_doc_pid},
-       {:continue, :sync}}
-    end
-
-    def handle_continue(:sync, state) do
-      # Observe the SharedDoc to receive sync messages
-      observe(state.shared_doc_pid)
-      start_sync(state.shared_doc_pid, state.client_doc)
-
-      {:noreply, state}
-    end
-
-    defp observe(shared_doc_pid) do
-      Yex.Sync.SharedDoc.observe(shared_doc_pid)
-    end
-
-    defp start_sync(shared_doc_pid, client_doc) do
-      {:ok, step1} = Yex.Sync.get_sync_step1(client_doc)
-      local_message = Yex.Sync.message_encode!({:sync, step1})
-      Yex.Sync.SharedDoc.start_sync(shared_doc_pid, local_message)
-    end
-
-    def handle_call(:unobserve, _from, state) do
-      Yex.Sync.SharedDoc.unobserve(state.shared_doc_pid)
-      {:reply, :ok, state}
-    end
-
-    def handle_call({:observe, shared_doc_pid}, _from, state) do
-      observe(shared_doc_pid)
-      start_sync(shared_doc_pid, state.client_doc)
-      {:reply, :ok, %{state | shared_doc_pid: shared_doc_pid}}
-    end
-
-    def handle_call(:get_doc, _from, state) do
-      {:reply, state.client_doc, state}
-    end
-
-    def handle_call(:get_jobs, _from, state) do
-      {:reply, Lightning.SessionTest.get_jobs(state.shared_doc_pid), state}
-    end
-
-    def handle_info({:yjs, msg, proc}, state) do
-      # proc is usually the SharedDoc process.
-
-      case Yex.Sync.message_decode(msg) do
-        {:ok, {:sync, sync_message}} ->
-          case Yex.Sync.read_sync_message(
-                 sync_message,
-                 state.client_doc,
-                 state.shared_doc_pid
-               ) do
-            :ok ->
-              IO.inspect(msg |> Utils.decipher_message(),
-                label: "handle_info :yjs :ok"
-              )
-
-              {:noreply, state}
-
-            {:ok, reply} ->
-              IO.inspect(msg |> Utils.decipher_message(),
-                label: "handle_info :yjs :reply"
-              )
-
-              Yex.Sync.SharedDoc.send_yjs_message(
-                proc,
-                Yex.Sync.message_encode!({:sync, reply})
-              )
-
-              {:noreply, state}
-          end
-
-        _ ->
-          IO.inspect(msg |> Utils.decipher_message(),
-            label: "handle_info :yjs"
-          )
-
-          {:noreply, state}
-      end
-    end
-
-    def terminate(_reason, state) do
-      Yex.Sync.SharedDoc.unobserve(state.shared_doc_pid)
-      :ok
-    end
+  defp get_document_state(document_name) do
+    DocumentState |> Repo.all(document_name: document_name)
   end
 end
