@@ -530,5 +530,227 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert cnt == 0
     end
+
+    test "clones keychain credentials and rewires jobs to the cloned keychain" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      kc =
+        insert(:keychain_credential,
+          project: parent,
+          created_by: actor,
+          name: "kc-1",
+          path: "$.user_id"
+        )
+
+      w = insert(:workflow, project: parent, name: "KC Flow")
+      _t = insert(:trigger, workflow: w, enabled: true)
+
+      _j =
+        insert(:job,
+          workflow: w,
+          name: "UsesKC",
+          keychain_credential: kc,
+          project_credential: nil
+        )
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-kc"})
+
+      # child keychain exists in sandbox
+      kc_child =
+        from(k in Lightning.Credentials.KeychainCredential,
+          where: k.project_id == ^sandbox.id and k.name == "kc-1"
+        )
+        |> Repo.one!()
+
+      # cloned job points to child keychain, not to project_credential
+      sj =
+        from(j in Job,
+          join: w in assoc(j, :workflow),
+          where: w.project_id == ^sandbox.id and j.name == "UsesKC",
+          select: %{
+            kc_id: j.keychain_credential_id,
+            pc_id: j.project_credential_id
+          }
+        )
+        |> Repo.one!()
+
+      assert sj.kc_id == kc_child.id
+      assert is_nil(sj.pc_id)
+    end
+
+    test "raises when cloning an invalid keychain (invalid JSONPath etc.)" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      # invalid path (doesn't start with '$')
+      _kc_bad =
+        insert(:keychain_credential,
+          project: parent,
+          created_by: actor,
+          name: "kc-bad",
+          path: "user.id"
+        )
+
+      w = insert(:workflow, project: parent, name: "Bad KC Flow")
+      _t = insert(:trigger, workflow: w, enabled: true)
+
+      _j =
+        insert(:job,
+          workflow: w,
+          name: "UsesBadKC",
+          keychain_credential:
+            Repo.get_by!(Lightning.Credentials.KeychainCredential,
+              project_id: parent.id,
+              name: "kc-bad"
+            ),
+          project_credential: nil
+        )
+
+      assert_raise Ecto.InvalidChangesetError, fn ->
+        Sandboxes.provision(parent, actor, %{name: "sb-kc-bad"})
+      end
+    end
+  end
+
+  describe "errors" do
+    test "returns {:error, changeset} when project creation fails" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      assert {:error, %Ecto.Changeset{} = ch} =
+               Sandboxes.provision(parent, actor, %{name: ""})
+
+      assert {"can't be blank", _} = ch.errors[:name]
+    end
+  end
+
+  describe "collaborators" do
+    test "adds non-owner collaborators" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+      other = insert(:user)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{
+          name: "sb-with-collab",
+          collaborators: [
+            # should be added
+            %{user_id: other.id, role: :editor},
+            # ignored (creator is the only owner)
+            %{user_id: actor.id, role: :owner}
+          ]
+        })
+
+      # <-- reload association
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == other.id and &1.role == :editor)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+  end
+
+  describe "dataclips guards" do
+    test "does nothing when dataclip_ids key is omitted (nil branch)" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-no-clips"})
+
+      assert Repo.aggregate(
+               from(d in Dataclip, where: d.project_id == ^sandbox.id),
+               :count,
+               :id
+             ) == 0
+    end
+
+    test "does nothing when dataclip_ids is [] (empty branch)" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{
+          name: "sb-empty-clips",
+          dataclip_ids: []
+        })
+
+      assert Repo.aggregate(
+               from(d in Dataclip, where: d.project_id == ^sandbox.id),
+               :count,
+               :id
+             ) == 0
+    end
+  end
+
+  describe "positions remapping" do
+    test "drops positions whose node ids are not in the cloned graph" do
+      %{actor: actor, parent: parent, flows: %{w1: w1}} =
+        build_parent_fixture!(:owner)
+
+      # add an extra bogus position
+      bogus_id = Ecto.UUID.generate()
+
+      Repo.update!(
+        Ecto.Changeset.change(w1,
+          positions: Map.put(w1.positions || %{}, bogus_id, %{x: 999, y: 999})
+        )
+      )
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-pos-drop"})
+
+      [sw1] =
+        Repo.all(
+          from w in Workflow,
+            where: w.project_id == ^sandbox.id and w.name == "Alpha"
+        )
+
+      # no parent ids should appear in the child positions, and bogus was dropped
+      refute Map.has_key?(sw1.positions || %{}, bogus_id)
+    end
+
+    test "returns nil when no positions remap (all keys unknown)" do
+      %{actor: actor} = ctx = build_parent_fixture!(:owner)
+      parent = ctx.parent
+
+      # Make a brand new workflow with positions only for unknown ids
+      w3 = insert(:workflow, project: parent, name: "Gamma")
+      only_bogus = %{Ecto.UUID.generate() => %{x: 1, y: 2}}
+      Repo.update!(Ecto.Changeset.change(w3, positions: only_bogus))
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-pos-nil"})
+
+      sw3 = Repo.get_by!(Workflow, project_id: sandbox.id, name: "Gamma")
+      assert is_nil(sw3.positions)
+    end
+  end
+
+  describe "jobs without credentials" do
+    test "clones a job with no project_credential and no keychain (both nil)" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      w = insert(:workflow, project: parent, name: "Bare")
+      _t = insert(:trigger, workflow: w, enabled: true)
+
+      j0 =
+        insert(:job,
+          workflow: w,
+          name: "NoCreds",
+          project_credential: nil,
+          keychain_credential: nil
+        )
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-nocreds"})
+
+      sj =
+        from(j in Job,
+          join: w in assoc(j, :workflow),
+          where: w.project_id == ^sandbox.id and j.name == ^j0.name,
+          select: %{
+            pc_id: j.project_credential_id,
+            kc_id: j.keychain_credential_id
+          }
+        )
+        |> Repo.one!()
+
+      assert is_nil(sj.pc_id)
+      assert is_nil(sj.kc_id)
+    end
   end
 end

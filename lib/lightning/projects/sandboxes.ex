@@ -150,37 +150,41 @@ defmodule Lightning.Projects.Sandboxes do
     name = Map.fetch!(attrs, :name)
     color = Map.get(attrs, :color)
     env = Map.get(attrs, :env)
+    collaborators = Map.get(attrs, :collaborators, [])
 
     Repo.transaction(fn ->
       parent = preload_parent(parent)
 
-      sandbox =
-        parent
-        |> build_base_attrs(actor, name, color, env)
-        |> create_sandbox!()
+      base_attrs =
+        build_base_attrs(parent, actor, name, color, env, collaborators)
 
-      cred_map = copy_credentials!(parent, sandbox)
-      kc_map = clone_keychains!(parent, sandbox, actor)
+      case create_sandbox(base_attrs) do
+        {:ok, sandbox} ->
+          cred_map = copy_credentials!(parent, sandbox)
+          kc_map = clone_keychains!(parent, sandbox, actor)
+          wf_map = create_workflows!(parent, sandbox)
+          job_map = clone_jobs!(parent, wf_map, cred_map, kc_map)
+          trg_map = clone_triggers!(parent, wf_map)
 
-      wf_map = create_workflows!(parent, sandbox)
-      job_map = clone_jobs!(parent, wf_map, cred_map, kc_map)
-      trg_map = clone_triggers!(parent, wf_map)
-      clone_edges!(parent, wf_map, job_map, trg_map)
-      remap_positions!(parent, wf_map, job_map, trg_map)
-      copy_latest_heads!(wf_map)
+          clone_edges!(parent, wf_map, job_map, trg_map)
+          remap_positions!(parent, wf_map, job_map, trg_map)
+          copy_latest_heads!(wf_map)
 
-      add_collaborators!(sandbox, actor, Map.get(attrs, :collaborators, []))
+          maybe_clone_named_dataclips!(
+            parent.id,
+            sandbox.id,
+            Map.get(attrs, :dataclip_ids)
+          )
 
-      maybe_clone_named_dataclips!(
-        parent.id,
-        sandbox.id,
-        Map.get(attrs, :dataclip_ids)
-      )
+          sandbox
 
-      sandbox
+        {:error, changeset} ->
+          Repo.rollback({:invalid_project, changeset})
+      end
     end)
     |> case do
       {:ok, project} -> {:ok, project}
+      {:error, {:invalid_project, changeset}} -> {:error, changeset}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -197,8 +201,13 @@ defmodule Lightning.Projects.Sandboxes do
     )
   end
 
-  defp build_base_attrs(parent, actor, name, color, env) do
+  defp build_base_attrs(parent, actor, name, color, env, collaborators) do
     owner_user = %{user_id: actor.id, role: :owner}
+
+    extras =
+      collaborators
+      |> List.wrap()
+      |> Enum.reject(&(&1.user_id == actor.id or &1.role == :owner))
 
     parent
     |> Map.take(@clone_fields)
@@ -207,13 +216,12 @@ defmodule Lightning.Projects.Sandboxes do
       color: color,
       env: env,
       parent_id: parent.id,
-      project_users: [owner_user]
+      project_users: [owner_user | extras]
     })
   end
 
-  defp create_sandbox!(attrs) do
-    {:ok, sandbox} = Lightning.Projects.create_project(attrs, false)
-    sandbox
+  defp create_sandbox(attrs) do
+    Lightning.Projects.create_project(attrs, false)
   end
 
   defp copy_credentials!(parent, sandbox) do
@@ -460,19 +468,6 @@ defmodule Lightning.Projects.Sandboxes do
         source: s
       })
     end)
-  end
-
-  defp add_collaborators!(sandbox, actor, collaborators) do
-    extras =
-      Enum.reject(collaborators, fn c ->
-        c.user_id == actor.id or c.role == :owner
-      end)
-
-    if extras != [] do
-      {:ok, _} = Lightning.Projects.add_project_users(sandbox, extras, false)
-    end
-
-    :ok
   end
 
   defp maybe_clone_named_dataclips!(_parent_id, _sandbox_id, nil), do: :ok
