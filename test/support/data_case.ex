@@ -26,6 +26,7 @@ defmodule Lightning.DataCase do
 
       import Lightning.Factories
       import Lightning.ModelHelpers
+      import Lightning.TestUtils
 
       import Lightning.DataCase
 

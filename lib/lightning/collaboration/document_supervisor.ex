@@ -1,0 +1,121 @@
+defmodule Lightning.Collaboration.DocumentSupervisor do
+  use GenServer
+  use Lightning.Utils.Logger, color: [:green_background, :yellow]
+
+  import Lightning.Collaboration.Registry, only: [via: 1]
+
+  alias Lightning.Collaboration.Persistence
+  alias Lightning.Collaboration.PersistenceWriter
+
+  @pg_scope :workflow_collaboration
+
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts)
+  end
+
+  @impl true
+  def init(opts) do
+    workflow_id = Keyword.fetch!(opts, :workflow_id)
+    document_name = "workflow:#{opts[:workflow_id]}"
+
+    {:ok, persistence_writer_pid} =
+      PersistenceWriter.start_link(
+        document_name: document_name,
+        workflow_id: workflow_id,
+        name: via({:persistence_writer, document_name})
+      )
+
+    persistence_writer_ref = Process.monitor(persistence_writer_pid)
+
+    {:ok, shared_doc_pid} =
+      Yex.Sync.SharedDoc.start_link(
+        [
+          doc_name: document_name,
+          auto_exit: true,
+          persistence:
+            {Persistence,
+             %{
+               workflow_id: workflow_id,
+               persistence_writer: persistence_writer_pid
+             }}
+        ],
+        name: via({:shared_doc, document_name})
+      )
+
+    :ok = register_shared_doc_with_pg(workflow_id, shared_doc_pid)
+
+    shared_doc_ref = Process.monitor(shared_doc_pid)
+
+    {:ok,
+     %{
+       workflow_id: workflow_id,
+       persistence_writer_pid: persistence_writer_pid,
+       persistence_writer_ref: persistence_writer_ref,
+       shared_doc_pid: shared_doc_pid,
+       shared_doc_ref: shared_doc_ref
+     }}
+  end
+
+  def child_spec(opts) do
+    {id, opts} =
+      opts
+      |> Keyword.put_new_lazy(:id, fn -> Ecto.UUID.generate() end)
+      |> Keyword.pop!(:id)
+
+    %{
+      id: id,
+      start: {__MODULE__, :start_link, [opts]},
+      type: :worker,
+      # Only restart if the DocumentSupervisor crashes.
+      restart: :transient,
+      shutdown: 5000
+    }
+  end
+
+  @impl true
+  def terminate(_reason, state) do
+    # Specifically stop the SharedDoc first, which sends a flush_and_stop
+    # message to the PersistenceWriter. So we usually don't need to stop the
+    # PersistenceWriter if the SharedDoc is exiting normally, but just in case
+    # we check if it's still alive before stopping it.
+
+    if state.shared_doc_ref,
+      do: Process.demonitor(state.shared_doc_ref, [:flush])
+
+    if state.shared_doc_pid && Process.alive?(state.shared_doc_pid) do
+      GenServer.stop(state.shared_doc_pid, :normal, 5000)
+    end
+
+    info("Stopping PersistenceWriter")
+
+    if state.persistence_writer_ref,
+      do: Process.demonitor(state.persistence_writer_ref, [:flush])
+
+    if state.persistence_writer_pid &&
+         Process.alive?(state.persistence_writer_pid) do
+      GenServer.stop(state.persistence_writer_pid, :normal, 5000)
+    end
+
+    :ok
+  end
+
+  @impl true
+  def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
+    key =
+      [:persistence_writer_ref, :shared_doc_ref]
+      |> Enum.find(fn key -> ref == state[key] end)
+
+    info("DOWN: #{inspect(key)} reason: #{inspect(reason)}")
+
+    Process.demonitor(ref, [:flush])
+
+    # We're not going to stop the children here, we handle that in terminate.
+
+    {:stop, :normal, state |> Map.put(key, nil)}
+  end
+
+  # Supervisor.start_link(children, strategy: :one_for_all)
+  defp register_shared_doc_with_pg(workflow_id, shared_doc_pid) do
+    :pg.join(@pg_scope, workflow_id, shared_doc_pid)
+  end
+end

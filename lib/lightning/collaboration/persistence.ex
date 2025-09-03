@@ -8,15 +8,18 @@ defmodule Lightning.Collaboration.Persistence do
 
   @behaviour Yex.Sync.SharedDoc.PersistenceBehaviour
 
+  use Lightning.Utils.Logger, color: [:blue_background]
+
   alias Lightning.Collaboration.DocumentState
+  alias Lightning.Collaboration.PersistenceWriter
   alias Lightning.Collaboration.Session
   alias Lightning.Repo
 
-  require Logger
-
   @impl true
   def bind(state, doc_name, doc) do
-    if !(workflow_id = Keyword.get(state, :workflow_id)) do
+    workflow_id = Map.get(state, :workflow_id)
+
+    if !workflow_id do
       raise KeyError, """
       workflow_id is required in state: #{inspect(state)}
 
@@ -24,32 +27,23 @@ defmodule Lightning.Collaboration.Persistence do
       """
     end
 
-    Logger.debug(
-      "Looking for persisted DocumentState. pid=#{inspect(self())} document=#{doc_name}"
-    )
-
-    case load_document_state(doc_name) do
-      {:ok, binary_state} ->
-        case Yex.apply_update(doc, binary_state) do
-          :ok ->
-            Logger.debug(
-              "Successfully loaded persisted state. document=#{doc_name}"
-            )
-
-            :ok
-
-          {:error, reason} ->
-            Logger.error(
-              "Failed to apply persisted state. document=#{doc_name} reason=#{inspect(reason)}"
-            )
-
-            :ok
+    case load_document_records(doc_name) do
+      {:ok, checkpoint, updates} ->
+        # Apply checkpoint first if exists
+        if checkpoint do
+          info("Applying checkpoint to document. document=#{doc_name}")
+          Yex.apply_update(doc, checkpoint.state_data)
         end
 
+        # Then apply updates in chronological order
+        Enum.each(updates, fn update ->
+          Yex.apply_update(doc, update.state_data)
+        end)
+
+        info("Loaded #{length(updates)} updates. document=#{doc_name}")
+
       {:error, :not_found} ->
-        Logger.info(
-          "No persisted state found, starting fresh. document=#{doc_name}"
-        )
+        info("No persisted state found, starting fresh. document=#{doc_name}")
 
         Session.initialize_workflow_document(doc, workflow_id)
 
@@ -57,83 +51,102 @@ defmodule Lightning.Collaboration.Persistence do
     end
 
     # Return state for tracking
-    %{doc_name: doc_name, last_save: DateTime.utc_now()}
+    state |> Map.put(:last_save, DateTime.utc_now(:microsecond))
   end
 
   @impl true
   def update_v1(state, update, doc_name, _doc) do
-    Logger.debug(
-      "Received update, state persistence scheduled. document=#{doc_name}"
-    )
+    # Send to PersistenceWriter via state
+    case PersistenceWriter.add_update(doc_name, update) do
+      :ok ->
+        state
 
-    # TODO For now, we'll persist every update immediately
-    # In production, you might want to batch updates or use async persistence
-    Task.start(fn ->
-      save_update(doc_name, update)
-    end)
-
-    # Update last save time in state
-    %{state | last_save: DateTime.utc_now()}
+      {:error, reason} ->
+        error("Failed to add update to PersistenceWriter: #{inspect(reason)}")
+        state
+    end
   end
 
   @impl true
-  def unbind(%{doc_name: doc_name}, _doc_name, doc) do
-    Logger.info(
-      "Saving final state. pid=#{inspect(self())} document=#{doc_name}"
-    )
+  def unbind(state, doc_name, _doc) do
+    info("SharedDoc shutting down, flushing persistence. document=#{doc_name}")
 
-    case Yex.encode_state_as_update(doc) do
-      {:ok, update} ->
-        save_document_state(doc_name, update)
-
-        Logger.info("Successfully saved final state. document=#{doc_name}")
-
-      {:error, reason} ->
-        Logger.error(
-          "Failed to encode final state. document=#{doc_name} reason=#{inspect(reason)}"
-        )
+    if writer = state[:persistence_writer] do
+      # Synchronously flush and stop the writer
+      try do
+        GenServer.call(writer, :flush_and_stop, 10_000)
+      catch
+        :exit, _ ->
+          error(
+            "PersistenceWriter unavailable during unbind. document=#{doc_name}"
+          )
+      end
     end
 
     :ok
   end
 
   # Private functions
+  defp load_document_records(doc_name) do
+    import Ecto.Query
 
-  defp load_document_state(doc_name) do
-    case Repo.get_by(DocumentState, document_name: doc_name) do
-      nil ->
-        {:error, :not_found}
+    # Get latest checkpoint
+    checkpoint =
+      Repo.one(
+        from d in DocumentState,
+          where: d.document_name == ^doc_name and d.version == :checkpoint,
+          order_by: [desc: d.inserted_at],
+          limit: 1
+      )
 
-      %DocumentState{state_data: state_data} ->
-        {:ok, state_data}
+    checkpoint_time =
+      if checkpoint, do: checkpoint.inserted_at, else: ~U[1970-01-01 00:00:00Z]
+
+    # Get updates after checkpoint
+    updates =
+      Repo.all(
+        from d in DocumentState,
+          where:
+            d.document_name == ^doc_name and
+              d.version == :update and
+              d.inserted_at > ^checkpoint_time,
+          order_by: [asc: d.inserted_at]
+      )
+
+    if checkpoint || length(updates) > 0 do
+      {:ok, checkpoint, updates}
+    else
+      {:error, :not_found}
     end
   end
 
-  defp save_document_state(doc_name, binary_state) do
-    attrs = %{
-      document_name: doc_name,
-      state_data: binary_state,
-      updated_at: DateTime.utc_now()
-    }
+  # defp load_document_state(doc_name) do
+  #   case Repo.get_by(DocumentState, document_name: doc_name) do
+  #     nil ->
+  #       {:error, :not_found}
 
-    case Repo.get_by(DocumentState, document_name: doc_name) do
-      nil ->
-        %DocumentState{}
-        |> DocumentState.changeset(attrs)
-        |> Repo.insert()
+  #     %DocumentState{state_data: state_data} ->
+  #       {:ok, state_data}
+  #   end
+  # end
 
-      existing ->
-        existing
-        |> DocumentState.changeset(attrs)
-        |> Repo.update()
-    end
-  end
+  # defp save_document_state(doc_name, binary_state) do
+  #   attrs = %{
+  #     document_name: doc_name,
+  #     state_data: binary_state,
+  #     updated_at: DateTime.utc_now()
+  #   }
 
-  defp save_update(doc_name, update) do
-    # For immediate persistence, we could store individual updates
-    # For now, let's just log them and rely on the final unbind save
-    Logger.debug(
-      "Received update. document=#{doc_name} size_bytes=#{byte_size(update)}"
-    )
-  end
+  #   case Repo.get_by(DocumentState, document_name: doc_name) do
+  #     nil ->
+  #       %DocumentState{}
+  #       |> DocumentState.changeset(attrs)
+  #       |> Repo.insert!()
+
+  #     existing ->
+  #       existing
+  #       |> DocumentState.changeset(attrs)
+  #       |> Repo.update!()
+  #   end
+  # end
 end
