@@ -30,14 +30,19 @@ defmodule Lightning.Collaborate do
     {:ok, _session_pid} =
       SessionSupervisor.start_child({
         Session,
-        [workflow_id: workflow_id, user: user, parent_pid: parent_pid]
+        workflow_id: workflow_id,
+        user: user,
+        parent_pid: parent_pid,
+        name: Registry.via({:session, "workflow:#{workflow_id}"})
       })
   end
 
   def start_document(workflow_id) do
     {:ok, doc_supervisor_pid} =
       SessionSupervisor.start_child(
-        {DocumentSupervisor, workflow_id: workflow_id}
+        {DocumentSupervisor,
+         workflow_id: workflow_id,
+         name: Registry.via({:doc_supervisor, "workflow:#{workflow_id}"})}
       )
 
     {:ok, doc_supervisor_pid}
