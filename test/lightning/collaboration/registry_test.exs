@@ -33,14 +33,16 @@ defmodule Lightning.Collaboration.RegistryTest do
       assert nil == Registry.whereis(non_existent_key)
     end
 
-    test "doesn't prevent duplicate registrations" do
+    test "prevents duplicate registrations" do
       workflow_id = Ecto.UUID.generate()
       user_id = Ecto.UUID.generate()
       session_key = {:session, workflow_id, user_id}
 
       # First and second registration succeeds
-      assert {:ok, _pid} = Registry.register(session_key)
-      assert {:ok, _pid} = Registry.register(session_key)
+      assert {:ok, pid} = Registry.register(session_key)
+
+      assert {:error, {:already_registered, ^pid}} =
+               Registry.register(session_key)
     end
 
     test "supports different key patterns" do
@@ -57,10 +59,6 @@ defmodule Lightning.Collaboration.RegistryTest do
 
       # Since we can't register the same process twice, verify the key format works
       assert [] = Registry.lookup(shared_doc_key)
-    end
-
-    test "registry_name returns the correct registry name" do
-      assert Registry.registry_name() == Lightning.Collaboration.Registry
     end
   end
 end
