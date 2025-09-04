@@ -50,6 +50,11 @@ defmodule Lightning.Config.Bootstrap do
       """
     end
 
+    if config_env() == :dev do
+      enabled = env!("LIVE_DEBUGGER", &Utils.ensure_boolean/1, true)
+      config :live_debugger, :disabled?, not enabled
+    end
+
     # Load storage and webhook retry config early so endpoint can respect it.
     setup_storage()
     setup_webhook_retry()
@@ -421,6 +426,10 @@ defmodule Lightning.Config.Bootstrap do
     host = env!("URL_HOST", :string, "example.com")
     port = env!("PORT", :integer, 4000)
     url_port = env!("URL_PORT", :integer, 443)
+
+    config :lightning, LightningWeb.Endpoint,
+      url: [port: port],
+      http: [port: port]
 
     config :lightning,
       cors_origin:
