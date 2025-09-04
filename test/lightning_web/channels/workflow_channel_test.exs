@@ -1,14 +1,13 @@
 defmodule LightningWeb.WorkflowChannelTest do
   use LightningWeb.ChannelCase
 
-  import Lightning.AccountsFixtures
-  import Lightning.ProjectsFixtures
-  import Lightning.WorkflowsFixtures
+  import Lightning.CollaborationHelpers
+  import Lightning.Factories
 
   setup do
-    user = user_fixture()
-    project = project_fixture(project_users: [%{user_id: user.id, role: :owner}])
-    workflow = workflow_fixture(project_id: project.id)
+    user = insert(:user)
+    project = insert(:project, project_users: [%{user: user, role: :owner}])
+    workflow = insert(:workflow, project: project)
 
     {:ok, _, socket} =
       LightningWeb.UserSocket
@@ -18,47 +17,29 @@ defmodule LightningWeb.WorkflowChannelTest do
         "workflow:collaborate:#{workflow.id}"
       )
 
+    on_exit(fn ->
+      ensure_doc_supervisor_stopped(socket.assigns.workflow.id)
+    end)
+
     %{socket: socket, user: user, project: project, workflow: workflow}
   end
 
-  describe "async handlers" do
-    test "request_adaptors returns adaptors asynchronously", %{socket: socket} do
-      ref = push(socket, "request_adaptors", %{})
-
-      # Should not get an immediate reply
-      refute_reply ref, :ok, _, 100
-
-      # Should get an async push with adaptors
-      assert_push "adaptors_response", {:ok, %{adaptors: adaptors}}
-      assert is_list(adaptors)
-    end
-
-    test "request_credentials returns credentials asynchronously", %{
-      socket: socket
-    } do
-      ref = push(socket, "request_credentials", %{})
-
-      # Should not get an immediate reply
-      refute_reply ref, :ok, _, 100
-
-      # Should get an async push with credentials
-      assert_push "credentials_response", {:ok, %{credentials: credentials}}
-      assert Map.has_key?(credentials, :project_credentials)
-      assert Map.has_key?(credentials, :keychain_credentials)
-      assert is_list(credentials.project_credentials)
-      assert is_list(credentials.keychain_credentials)
-    end
-
+  describe "getting credentials and adaptors" do
     test "multiple concurrent requests are handled independently", %{
       socket: socket
     } do
       # Send both requests
-      push(socket, "request_adaptors", %{})
-      push(socket, "request_credentials", %{})
+      ref_adaptors = push(socket, "request_adaptors", %{})
+      ref_credentials = push(socket, "request_credentials", %{})
 
       # Should get both responses (order may vary)
-      assert_push "adaptors_response", {:ok, %{adaptors: _}}
-      assert_push "credentials_response", {:ok, %{credentials: _}}
+      assert_reply ref_adaptors, :ok, %{adaptors: _}
+      assert_reply ref_credentials, :ok, %{credentials: credentials}
+
+      assert Map.has_key?(credentials, :project_credentials)
+      assert Map.has_key?(credentials, :keychain_credentials)
+      assert is_list(credentials.project_credentials)
+      assert is_list(credentials.keychain_credentials)
     end
 
     test "error handling works correctly for async responses", %{socket: socket} do
@@ -66,11 +47,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Note: This would require test mocking setup in a real implementation
       # For now, we'll just verify that the error response format is handled
 
-      # Send the request  
-      push(socket, "request_adaptors", %{})
+      # Send the request
+      ref = push(socket, "request_adaptors", %{})
 
       # Should get a successful response (since we can't easily mock the failure)
-      assert_push "adaptors_response", {:ok, %{adaptors: adaptors}}
+      assert_reply ref, :ok, %{adaptors: adaptors}
       assert is_list(adaptors)
     end
   end

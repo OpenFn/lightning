@@ -42,6 +42,24 @@ defmodule Lightning.Collaboration.Session do
 
   # ----------------------------------------------------------------------------
 
+  def child_spec(opts) do
+    {opts, args} =
+      Keyword.put_new_lazy(opts, :session_id, fn -> Ecto.UUID.generate() end)
+      |> Keyword.split_with(fn {k, _v} -> k in [:session_id, :name] end)
+
+    {session_id, opts} = Keyword.pop!(opts, :session_id)
+
+    %{
+      id: {:session, session_id},
+      start: {__MODULE__, :start_link, [args, opts]},
+      restart: :temporary
+    }
+  end
+
+  def start_link(args, opt \\ []) do
+    GenServer.start_link(__MODULE__, args, opt)
+  end
+
   @impl true
   def init(opts) do
     opts = Keyword.put_new_lazy(opts, :parent_pid, fn -> self() end)
@@ -85,20 +103,6 @@ defmodule Lightning.Collaboration.Session do
     end
   end
 
-  # @impl true
-  # def handle_continue(
-  #       :session_ready,
-  #       %{workflow_id: workflow_id, user: user} = state
-  #     ) do
-  #   case setup_shared_doc(workflow_id, user) do
-  #     {:ok, shared_doc_pid} ->
-  #       {:noreply, %{state | shared_doc_pid: shared_doc_pid}}
-
-  #     {:error, :shared_doc_start_failed} ->
-  #       {:stop, {:error, "Failed to setup SharedDoc"}, state}
-  #   end
-  # end
-
   @impl true
   def terminate(_reason, %{shared_doc_pid: shared_doc_pid} = state) do
     if state.parent_ref do
@@ -117,6 +121,8 @@ defmodule Lightning.Collaboration.Session do
 
     :ok
   end
+
+  # ----------------------------------------------------------------------------
 
   @doc """
   Check if the session is ready.
@@ -145,6 +151,7 @@ defmodule Lightning.Collaboration.Session do
   """
   @spec ready?({:ok, pid()} | pid()) ::
           {:ok, pid()} | {:error, :not_ready} | boolean()
+  @deprecated "Not required anymore, the process can be assumed to be ready"
   def ready?({:ok, session_pid}) do
     if GenServer.call(session_pid, :ready?) do
       {:ok, session_pid}
@@ -162,22 +169,6 @@ defmodule Lightning.Collaboration.Session do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end
-  end
-
-  def child_spec(opts) do
-    {opts, args} =
-      Keyword.put_new_lazy(opts, :session_id, fn -> Ecto.UUID.generate() end)
-      |> Keyword.split_with(fn {k, _v} -> k in [:name] end)
-
-    %{
-      id: {:session, args[:session_id]},
-      start: {__MODULE__, :start_link, [args, opts]},
-      restart: :temporary
-    }
-  end
-
-  def start_link(args, opt \\ []) do
-    GenServer.start_link(__MODULE__, args, opt)
   end
 
   # ----------------------------------------------------------------------------
