@@ -8,7 +8,9 @@ defmodule Lightning.Collaborate do
 
   @pg_scope :workflow_collaboration
 
+  @spec start(opts :: Keyword.t()) :: GenServer.on_start()
   def start(opts) do
+    session_id = Ecto.UUID.generate()
     parent_pid = Keyword.get(opts, :parent_pid, self())
 
     user = Keyword.fetch!(opts, :user)
@@ -24,17 +26,20 @@ defmodule Lightning.Collaborate do
         shared_doc_pid
     end
 
-    # We don't register the session in the Registry as it may be started
-    # more than once for the same workflow and user.
-    # Think different clients or browser tabs.
-    {:ok, _session_pid} =
-      SessionSupervisor.start_child({
-        Session,
-        workflow_id: workflow_id,
-        user: user,
-        parent_pid: parent_pid,
-        name: Registry.via({:session, "workflow:#{workflow_id}"})
-      })
+    # IDEA: Maybe we should link the parent process to the session?
+    # Using Process.link/1?
+    # Because we should be able to do something if the session crashes,
+    # because the WorkflowChannel is expecting it's pid to be alive.
+    SessionSupervisor.start_child({
+      Session,
+      workflow_id: workflow_id,
+      user: user,
+      parent_pid: parent_pid,
+      name:
+        Registry.via(
+          {:session, "workflow:#{workflow_id}:#{session_id}", user.id}
+        )
+    })
   end
 
   def start_document(workflow_id) do

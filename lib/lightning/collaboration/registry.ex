@@ -37,15 +37,13 @@ defmodule Lightning.Collaboration.Registry do
       ]}
   """
 
-  @registry_name __MODULE__
-
   @doc """
   Child specification for starting the Registry.
   """
   def child_spec(_opts) do
     %{
-      id: @registry_name,
-      start: {Registry, :start_link, [[keys: :unique, name: @registry_name]]},
+      id: __MODULE__,
+      start: {Registry, :start_link, [[keys: :unique, name: __MODULE__]]},
       type: :supervisor
     }
   end
@@ -69,14 +67,14 @@ defmodule Lightning.Collaboration.Registry do
   """
   @spec register(term()) :: {:ok, pid()} | {:error, {:already_registered, pid()}}
   def register(key) do
-    case Registry.register(@registry_name, key, nil) do
+    case Registry.register(__MODULE__, key, nil) do
       {:ok, _pid} -> {:ok, self()}
       {:error, reason} -> {:error, reason}
     end
   end
 
   def via(key) do
-    {:via, Registry, {@registry_name, key}}
+    {:via, Registry, {__MODULE__, key}}
   end
 
   @doc """
@@ -96,7 +94,7 @@ defmodule Lightning.Collaboration.Registry do
   """
   @spec lookup(term()) :: [{pid(), term()}]
   def lookup(key) do
-    Registry.lookup(@registry_name, key)
+    Registry.lookup(__MODULE__, key)
   end
 
   @doc """
@@ -125,28 +123,43 @@ defmodule Lightning.Collaboration.Registry do
   def count(key \\ nil)
 
   def count(nil) do
-    Registry.count(@registry_name)
+    Registry.count(__MODULE__)
   end
 
   def count(key) do
     select(key) |> length()
   end
 
+  @doc """
+  Select processes registered with the given key (prefix).
+
+  The key pattern expected is:
+  - `{:type, key}`
+  - `{:type, key, any()}`.
+
+  We do a select with any key that _starts with_ the given key.
+  """
+  @spec select(binary()) :: [{term(), pid()}]
   def select(key) when is_binary(key) do
-    Registry.select(@registry_name, [
-      {{{:"$1", key}, :"$2", :_}, [], [[:"$1", :"$2"]]}
+    # We have two select specs, for keys with and without values.
+    Registry.select(__MODULE__, [
+      {{{:"$1", :"$2"}, :"$3", :"$4"},
+       [{:==, {:binary_part, :"$2", 0, byte_size(key)}, key}], [[:"$1", :"$3"]]},
+      {{{:"$1", :"$2", :"$5"}, :"$3", :"$4"},
+       [{:==, {:binary_part, :"$2", 0, byte_size(key)}, key}], [[:"$1", :"$3"]]}
     ])
   end
 
   def get_group(key) do
-    select(key) |> Map.new(fn [type, pid] -> {type, pid} end)
+    select(key)
+    |> Enum.reduce(%{}, fn [type, pid], acc ->
+      case type do
+        :session ->
+          Map.update(acc, :sessions, [pid], fn existing -> existing ++ [pid] end)
+
+        _ ->
+          Map.put(acc, type, pid)
+      end
+    end)
   end
-
-  @doc """
-  Get the registry name.
-
-  This is useful when processes need to register using via tuples.
-  """
-  @spec registry_name() :: atom()
-  def registry_name, do: @registry_name
 end

@@ -6,12 +6,24 @@ defmodule Lightning.CollaborateTest do
 
   import Lightning.Factories
   import Eventually
+  import Lightning.CollaborationHelpers
+
+  setup do
+    user = insert(:user)
+    workflow = insert(:workflow)
+
+    on_exit(fn ->
+      ensure_doc_supervisor_stopped(workflow.id)
+    end)
+
+    {:ok, user: user, workflow: workflow}
+  end
 
   describe "start/1" do
-    test "starting a new collaboration with no existing SharedDoc" do
-      user = insert(:user)
-      workflow = insert(:workflow)
-
+    test "starting a new collaboration with no existing SharedDoc", %{
+      user: user,
+      workflow: workflow
+    } do
       assert {:ok, session_pid} =
                Collaborate.start(user: user, workflow_id: workflow.id)
 
@@ -30,10 +42,10 @@ defmodule Lightning.CollaborateTest do
       refute_eventually(Process.alive?(shared_doc_pid))
     end
 
-    test "starting a new collaboration with an existing SharedDoc" do
-      user = insert(:user)
-      workflow = insert(:workflow)
-
+    test "starting a new collaboration with an existing SharedDoc", %{
+      user: user,
+      workflow: workflow
+    } do
       assert {:ok, session_1} =
                Collaborate.start(user: user, workflow_id: workflow.id)
 
@@ -42,8 +54,18 @@ defmodule Lightning.CollaborateTest do
 
       refute session_1 == session_2, "Same user and workflow get new sessions"
 
-      assert Registry.count("workflow:#{workflow.id}") == 2,
-             "should have 2 processes for the workflow"
+      process_group = Registry.get_group("workflow:#{workflow.id}")
+
+      for {key, _} <- process_group do
+        assert key in [
+                 :doc_supervisor,
+                 :persistence_writer,
+                 :shared_doc,
+                 :sessions
+               ]
+      end
+
+      assert Registry.count("workflow:#{workflow.id}") == 5
 
       assert %{
                persistence_writer: persistence_writer_pid,
