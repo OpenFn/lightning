@@ -165,12 +165,13 @@ defmodule Lightning.Collaboration.Session do
   end
 
   def child_spec(opts) do
-    opts =
+    {opts, args} =
       Keyword.put_new_lazy(opts, :session_id, fn -> Ecto.UUID.generate() end)
+      |> Keyword.split_with(fn {k, _v} -> k in [:name] end)
 
     %{
-      id: {:session, opts[:session_id]},
-      start: {__MODULE__, :start_link, [opts]},
+      id: {:session, args[:session_id]},
+      start: {__MODULE__, :start_link, [args, opts]},
       restart: :temporary
     }
   end

@@ -9,8 +9,8 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
 
   @pg_scope :workflow_collaboration
 
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts)
+  def start_link(args, opts \\ []) do
+    GenServer.start_link(__MODULE__, args, opts)
   end
 
   @impl true
@@ -62,9 +62,11 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       |> Keyword.put_new_lazy(:id, fn -> Ecto.UUID.generate() end)
       |> Keyword.pop!(:id)
 
+    {opts, args} = Keyword.split_with(opts, fn {k, _v} -> k in [:name] end)
+
     %{
       id: id,
-      start: {__MODULE__, :start_link, [opts]},
+      start: {__MODULE__, :start_link, [args, opts]},
       type: :worker,
       # Only restart if the DocumentSupervisor crashes.
       restart: :transient,
