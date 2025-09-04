@@ -119,34 +119,4 @@ defmodule Lightning.Collaboration.Persistence do
       {:error, :not_found}
     end
   end
-
-  # defp load_document_state(doc_name) do
-  #   case Repo.get_by(DocumentState, document_name: doc_name) do
-  #     nil ->
-  #       {:error, :not_found}
-
-  #     %DocumentState{state_data: state_data} ->
-  #       {:ok, state_data}
-  #   end
-  # end
-
-  # defp save_document_state(doc_name, binary_state) do
-  #   attrs = %{
-  #     document_name: doc_name,
-  #     state_data: binary_state,
-  #     updated_at: DateTime.utc_now()
-  #   }
-
-  #   case Repo.get_by(DocumentState, document_name: doc_name) do
-  #     nil ->
-  #       %DocumentState{}
-  #       |> DocumentState.changeset(attrs)
-  #       |> Repo.insert!()
-
-  #     existing ->
-  #       existing
-  #       |> DocumentState.changeset(attrs)
-  #       |> Repo.update!()
-  #   end
-  # end
 end

@@ -79,13 +79,17 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     # Specifically stop the SharedDoc first, which sends a flush_and_stop
     # message to the PersistenceWriter. So we usually don't need to stop the
     # PersistenceWriter if the SharedDoc is exiting normally, but just in case
-    # we check if it's still alive before stopping it.
+    # we try to stop it gracefully.
 
     if state.shared_doc_ref,
       do: Process.demonitor(state.shared_doc_ref, [:flush])
 
-    if state.shared_doc_pid && Process.alive?(state.shared_doc_pid) do
-      GenServer.stop(state.shared_doc_pid, :normal, 5000)
+    if state.shared_doc_pid do
+      try do
+        GenServer.stop(state.shared_doc_pid, :normal, 5000)
+      catch
+        :exit, {:noproc, _} -> :ok
+      end
     end
 
     info("Stopping PersistenceWriter")
@@ -93,9 +97,12 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     if state.persistence_writer_ref,
       do: Process.demonitor(state.persistence_writer_ref, [:flush])
 
-    if state.persistence_writer_pid &&
-         Process.alive?(state.persistence_writer_pid) do
-      GenServer.stop(state.persistence_writer_pid, :normal, 5000)
+    if state.persistence_writer_pid do
+      try do
+        GenServer.stop(state.persistence_writer_pid, :normal, 5000)
+      catch
+        :exit, {:noproc, _} -> :ok
+      end
     end
 
     :ok
