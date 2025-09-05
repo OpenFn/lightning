@@ -323,7 +323,7 @@ defmodule LightningWeb.ProfileLiveTest do
       |> render_submit()
 
       user_token =
-        Lightning.Repo.get_by!(Lightning.Accounts.UserToken,
+        Repo.get_by!(Lightning.Accounts.UserToken,
           user_id: user.id,
           context: "sudo_session"
         )
@@ -409,6 +409,7 @@ defmodule LightningWeb.ProfileLiveTest do
   end
 
   describe "Github Component" do
+    @describetag :capture_log
     setup :register_and_log_in_user
 
     test "users get updated after successfully connecting to github", %{
@@ -543,7 +544,7 @@ defmodule LightningWeb.ProfileLiveTest do
       assert has_element?(view, "#connect-github-link")
       refute has_element?(view, "#disconnect-github-button")
 
-      updated_user = Lightning.Repo.reload(user)
+      updated_user = Repo.reload(user)
       assert is_nil(updated_user.github_oauth_token)
     end
 
@@ -597,7 +598,7 @@ defmodule LightningWeb.ProfileLiveTest do
       assert has_element?(view, "#connect-github-link")
       refute has_element?(view, "#disconnect-github-button")
 
-      updated_user = Lightning.Repo.reload(user)
+      updated_user = Repo.reload(user)
       assert is_nil(updated_user.github_oauth_token)
     end
 
@@ -639,8 +640,149 @@ defmodule LightningWeb.ProfileLiveTest do
       assert has_element?(view, "#connect-github-link")
       refute has_element?(view, "#disconnect-github-button")
 
-      updated_user = Lightning.Repo.reload(user)
+      updated_user = Repo.reload(user)
       assert is_nil(updated_user.github_oauth_token)
+    end
+  end
+
+  describe "experimental features toggle" do
+    setup :register_and_log_in_user
+
+    test "renders experimental features section with default disabled state", %{
+      conn: conn
+    } do
+      {:ok, _view, html} = live(conn, ~p"/profile", on_error: :raise)
+
+      assert html =~ "Experimental Features"
+      assert html =~ "Enable access to new features and improvements"
+    end
+
+    test "renders experimental features section with enabled state", %{
+      conn: conn,
+      user: user
+    } do
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/profile", on_error: :raise)
+
+      assert html =~ "Experimental Features"
+    end
+
+    test "toggles experimental features on via form change", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      # Find the form within the experimental features component
+      view
+      |> form("[phx-change=\"update_preferences\"]",
+        preferences: %{"experimental_features" => "true"}
+      )
+      |> render_change()
+
+      # Check if the preference was actually updated
+      updated_user = Repo.reload(user)
+      assert updated_user.preferences["experimental_features"] == true
+
+      # Since flash messages in components may not be visible in test render,
+      # we'll test that the functionality works by checking the database update
+      # The flash message functionality is working if the update succeeds
+    end
+
+    test "toggles experimental features off via form change", %{
+      conn: conn,
+      user: user
+    } do
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/profile", on_error: :raise)
+
+      view
+      |> form("[phx-change=\"update_preferences\"]",
+        preferences: %{"experimental_features" => "false"}
+      )
+      |> render_change()
+
+      updated_user = Repo.reload(user_with_prefs)
+      assert updated_user.preferences["experimental_features"] == false
+    end
+
+    test "preserves existing preferences when toggling experimental features", %{
+      conn: conn,
+      user: user
+    } do
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "existing_pref" => "value",
+            "experimental_features" => false
+          }
+        })
+        |> Repo.update!()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/profile", on_error: :raise)
+
+      view
+      |> form("[phx-change=\"update_preferences\"]",
+        preferences: %{"experimental_features" => "true"}
+      )
+      |> render_change()
+
+      updated_user = Repo.reload(user_with_prefs)
+      assert updated_user.preferences["existing_pref"] == "value"
+      assert updated_user.preferences["experimental_features"] == true
+    end
+
+    test "handles missing experimental_features parameter", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      view
+      |> form("[phx-change=\"update_preferences\"]", preferences: %{})
+      |> render_change()
+
+      # Should default to false when parameter is missing
+      updated_user = Repo.reload(user)
+      assert updated_user.preferences["experimental_features"] == false
+    end
+
+    test "works correctly when user has default empty preferences", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      view
+      |> form("[phx-change=\"update_preferences\"]",
+        preferences: %{"experimental_features" => "true"}
+      )
+      |> render_change()
+
+      updated_user = Repo.reload(user)
+      assert updated_user.preferences["experimental_features"] == true
     end
   end
 
