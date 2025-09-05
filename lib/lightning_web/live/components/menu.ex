@@ -15,6 +15,14 @@ defmodule LightningWeb.Components.Menu do
     </.menu_item>
 
     <.menu_item
+      to={~p"/projects/#{@project_id}/sandboxes"}
+      active={@active_menu_item == :sandboxes}
+    >
+      <Icon.sandboxes class="h-5 w-5 inline-block mr-2 align-middle" />
+      <span class="inline-block align-middle">Sandboxes</span>
+    </.menu_item>
+
+    <.menu_item
       to={~p"/projects/#{@project_id}/history"}
       active={@active_menu_item == :runs}
     >

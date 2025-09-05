@@ -3,7 +3,7 @@
     <nav
       class={"basis-48 #{@side_menu_theme}"}
       id="side-menu"
-      style="width: 192px"
+      style={"width: 192px;" <> if(assigns[:side_menu_style], do: " " <> @side_menu_style, else: "")}
     >
       <div class="flex flex-col h-full">
         <div class="app-logo-container w-full h-20 flex items-center justify-center">

@@ -424,6 +424,11 @@ defmodule LightningWeb.Components.NewInputs do
     doc:
       "indicates if the tag input operates independently of a form's validation flow"
 
+  attr :shape, :string, default: "rounded", values: ~w(square rounded circle)
+  attr :wrapper_class, :string, default: ""
+  attr :swatch_class, :string, default: ""
+  attr :swatch_style, :any, default: nil
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -468,7 +473,7 @@ defmodule LightningWeb.Components.NewInputs do
             class={[
               "block w-full rounded-lg border border-secondary-300 bg-white",
               "sm:text-sm shadow-xs",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200/50",
               "disabled:cursor-not-allowed",
               @button_placement == "right" && "rounded-r-none",
               @button_placement == "left" && "rounded-l-none",
@@ -481,7 +486,7 @@ defmodule LightningWeb.Components.NewInputs do
             {Phoenix.HTML.Form.options_for_select(@options, @value)}
           </select>
         </div>
-        <div class="relative ronded-l-none">
+        <div class="relative rounded-l-none">
           {render_slot(@inner_block)}
         </div>
       </div>
@@ -527,7 +532,7 @@ defmodule LightningWeb.Components.NewInputs do
             class={[
               "grid grid-cols-1 w-full rounded-lg bg-white border border-secondary-300",
               "sm:text-sm",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200/50",
               "py-2 pr-2 pl-3 text-left",
               "disabled:cursor-not-allowed",
               @button_placement == "right" && "rounded-r-none",
@@ -549,7 +554,7 @@ defmodule LightningWeb.Components.NewInputs do
           </button>
           <ul
             id={@id}
-            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-hidden sm:text-sm hidden"
+            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm hidden"
             tabindex="-1"
             role="listbox"
             phx-click-away={JS.hide()}
@@ -662,6 +667,7 @@ defmodule LightningWeb.Components.NewInputs do
           data-reveal-id={@reveal_id}
           value={Form.normalize_value(@type, @value)}
           lv-keep-type
+          placeholder={@placeholder}
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
@@ -961,6 +967,62 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
+  def input(%{type: "color"} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:value, fn -> assigns[:value] || "#79B2D6" end)
+      |> then(fn a ->
+        assign(a, :value, LightningWeb.Utils.normalize_hex(a.value))
+      end)
+      |> assign_new(:disabled, fn ->
+        get_in(assigns, [:rest, :disabled]) || false
+      end)
+
+    ~H"""
+    <div phx-feedback-for={@name} class={@wrapper_class}>
+      <.label :if={@label} for={@id} class="mb-2 block">
+        {@label}
+        <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+      </.label>
+
+      <label
+        for={"#{@id}-native"}
+        class={[
+          "inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white shadow-xs",
+          "px-2 py-2 cursor-pointer select-none",
+          @disabled && "cursor-not-allowed opacity-50",
+          @class
+        ]}
+        id={"#{@id}-pretty"}
+        phx-hook="ColorPicker"
+        data-input-id={"##{@id}-native"}
+      >
+        <span
+          data-swatch
+          class={[
+            "h-5 w-5 border border-slate-300",
+            color_shape_classes(@shape),
+            @swatch_class
+          ]}
+          style={["background-color: #{@value};", @swatch_style]}
+        />
+        <span data-readout class="font-mono text-sm text-slate-700">
+          {String.upcase(@value)}
+        </span>
+      </label>
+
+      <input
+        type="color"
+        id={"#{@id}-native"}
+        name={@name}
+        value={@value}
+        class="sr-only"
+        {@rest}
+      />
+    </div>
+    """
+  end
+
   # All other inputs text, datetime-local, url etc. are handled here...
   def input(assigns) do
     ~H"""
@@ -982,6 +1044,7 @@ defmodule LightningWeb.Components.NewInputs do
           id={@id}
           class={@class}
           value={Form.normalize_value(@type, @value)}
+          placeholder={@placeholder}
           {@rest}
         />
       </div>
@@ -1228,4 +1291,8 @@ defmodule LightningWeb.Components.NewInputs do
     </p>
     """
   end
+
+  defp color_shape_classes("square"), do: "rounded-none"
+  defp color_shape_classes("rounded"), do: "rounded-md"
+  defp color_shape_classes("circle"), do: "rounded-full"
 end

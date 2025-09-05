@@ -54,6 +54,81 @@ export {
 
 export { ReactComponent, HeexReactComponent } from '#/react/hooks';
 
+export const ColorPicker = {
+  mounted() {
+    this._prevNative = null;
+    this._onInput = (e: Event) =>
+      this.sync((e.target as HTMLInputElement).value);
+
+    this.resolveNodes();
+    this.bindIfNeeded();
+    this.syncFromNative();
+  },
+
+  updated() {
+    const prev = this.native;
+    this.resolveNodes();
+
+    // If the native input node was replaced by LV diff, re-bind
+    if (this.native !== this._prevNative) {
+      this.unbind(prev);
+      this.bindIfNeeded();
+    }
+
+    this.syncFromNative();
+  },
+
+  destroyed() {
+    this.unbind(this.native);
+  },
+
+  resolveNodes() {
+    const selector = this.el.dataset.inputId; // e.g. "#confirm-color-native"
+    if (!selector) {
+      this.native = null;
+    } else {
+      this.native = document.querySelector<HTMLInputElement>(selector);
+    }
+    this.swatch  = this.el.querySelector<HTMLElement>("[data-swatch]");
+    this.readout = this.el.querySelector<HTMLElement>("[data-readout]");
+  },
+
+  bindIfNeeded() {
+    if (this.native && this._prevNative !== this.native) {
+      this.native.addEventListener("input", this._onInput);
+      this.native.addEventListener("change", this._onInput);
+      this._prevNative = this.native;
+    }
+  },
+
+  unbind(node?: HTMLInputElement | null) {
+    const el = node ?? this._prevNative;
+    if (el) {
+      el.removeEventListener("input", this._onInput);
+      el.removeEventListener("change", this._onInput);
+    }
+    this._prevNative = null;
+  },
+
+  syncFromNative() {
+    if (this.native) this.sync(this.native.value);
+  },
+
+  sync(val?: string) {
+    if (!val) return;
+    const hex = (val.startsWith("#") ? val : `#${val}`).toUpperCase();
+
+    if (this.swatch)  this.swatch.style.backgroundColor = hex;
+    if (this.readout) this.readout.textContent = hex;
+  }
+} as PhoenixHook<{
+  native: HTMLInputElement | null;
+  swatch: HTMLElement | null;
+  readout: HTMLElement | null;
+  _onInput: (e: Event) => void;
+  _prevNative: HTMLInputElement | null;
+}>;
+
 export const TabIndent = {
   mounted() {
     this.el.addEventListener('keydown', e => {

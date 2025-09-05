@@ -14,6 +14,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
+  alias LightningWeb.Live.Helpers.ProjectTheme
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -57,9 +58,12 @@ defmodule LightningWeb.Hooks do
       can_access_project ->
         sandboxes = Lightning.Projects.list_sandboxes(root.id)
 
+        style = ProjectTheme.inline_style_for(project)
+
         {:cont,
          socket
          |> assign(:side_menu_theme, "primary-theme")
+         |> assign(:side_menu_style, style)
          |> assign_new(:project_user, fn -> project_user end)
          |> assign_new(:project, fn -> root end)
          |> assign_new(:projects, fn -> projects end)
