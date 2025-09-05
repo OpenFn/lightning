@@ -424,7 +424,14 @@ defmodule Lightning.Config.Bootstrap do
       queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
     host = env!("URL_HOST", :string, "example.com")
-    port = env!("PORT", :integer, 4000)
+
+    port =
+      env!(
+        "PORT",
+        :integer,
+        Utils.get_env([:lightning, LightningWeb.Endpoint, :http, :port])
+      )
+
     url_port = env!("URL_PORT", :integer, 443)
 
     config :lightning, LightningWeb.Endpoint,
