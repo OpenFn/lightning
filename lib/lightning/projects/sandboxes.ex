@@ -475,4 +475,53 @@ defmodule Lightning.Projects.Sandboxes do
       m -> m
     end
   end
+
+  @doc """
+  Updates a sandbox (child project) under `parent` on behalf of `actor`.
+
+  Authorization: `actor` must be `:owner` or `:admin` on the **parent** project.
+  The `sandbox` must belong to the given `parent`.
+
+  Only basic project attributes are expected (`:name`, `:color`, `:env`).
+  """
+  @spec update(Project.t(), User.t(), Project.t() | Ecto.UUID.t(), map()) ::
+          {:ok, Project.t()}
+          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+  def update(%Project{} = parent, %User{} = actor, %Project{} = sandbox, attrs)
+      when is_map(attrs) do
+    with true <- sandbox.parent_id == parent.id || {:error, :not_found},
+         role when role in [:owner, :admin] <-
+           Lightning.Projects.get_project_user_role(actor, parent) ||
+             {:error, :unauthorized} do
+      attrs = Map.take(attrs, [:name, :color, :env])
+      Lightning.Projects.update_project(sandbox, attrs, actor)
+    end
+  end
+
+  def update(%Project{} = parent, %User{} = actor, sandbox_id, attrs)
+      when is_binary(sandbox_id) and is_map(attrs) do
+    case Lightning.Projects.get_project(sandbox_id) do
+      %Project{} = sb -> update(parent, actor, sb, attrs)
+      nil -> {:error, :not_found}
+    end
+  end
+
+  @spec delete(Project.t(), User.t(), Project.t() | Ecto.UUID.t()) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  def delete(%Project{} = parent, %User{} = actor, %Project{} = sandbox) do
+    with true <- sandbox.parent_id == parent.id || {:error, :not_found},
+         role when role in [:owner, :admin] <-
+           Lightning.Projects.get_project_user_role(actor, parent) ||
+             {:error, :unauthorized} do
+      Lightning.Projects.delete_project(sandbox)
+    end
+  end
+
+  def delete(%Project{} = parent, %User{} = actor, sandbox_id)
+      when is_binary(sandbox_id) do
+    case Lightning.Projects.get_project(sandbox_id) do
+      %Project{} = sb -> delete(parent, actor, sb)
+      nil -> {:error, :not_found}
+    end
+  end
 end

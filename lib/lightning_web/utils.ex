@@ -165,4 +165,37 @@ defmodule LightningWeb.Utils do
 
     if halt?, do: Plug.Conn.halt(conn), else: conn
   end
+
+  @doc """
+  Normalizes a color string to a `#RRGGBB` uppercase hex.
+
+  Accepts:
+    * `#RGB`, `RGB`
+    * `#RRGGBB`, `RRGGBB`
+    * Any other value -> fallback #79B2D6
+  """
+  @spec normalize_hex(nil | binary() | any()) :: binary()
+  def normalize_hex(nil), do: "#79B2D6"
+
+  def normalize_hex(val) when is_binary(val) do
+    val
+    |> String.trim()
+    |> String.trim_leading("#")
+    |> String.upcase()
+    |> case do
+      <<r::binary-size(1), g::binary-size(1), b::binary-size(1)>> ->
+        "##{r <> r}#{g <> g}#{b <> b}"
+
+      <<r::binary-size(2), g::binary-size(2), b::binary-size(2), _rest::binary>> ->
+        "##{r}#{g}#{b}"
+
+      <<r::binary-size(2), g::binary-size(2), b::binary-size(2)>> ->
+        "##{r}#{g}#{b}"
+
+      _ ->
+        "#79B2D6"
+    end
+  end
+
+  def normalize_hex(_), do: "#79B2D6"
 end
