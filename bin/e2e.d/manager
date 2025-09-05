@@ -1,0 +1,266 @@
+#! /usr/bin/env bash
+set -e
+
+# Configuration (overridable via environment variables)
+export MIX_ENV=${MIX_ENV:-dev}
+export PORT=${PORT:-4003}
+export LOG_LEVEL=${LOG_LEVEL:-info}
+export RTM=${RTM:-false}
+export DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@localhost/lightning_test_e2e}
+export LIVE_DEBUGGER=${LIVE_DEBUGGER:-false}
+SNAPSHOT_FILE="${SNAPSHOT_FILE:-/tmp/demo_data_snapshot.sql}"
+
+# Helper functions
+run_in_project_root() {
+  local command="$1"
+  if [[ -n "${PROJECT_ROOT}" && -d "${PROJECT_ROOT}" ]]; then
+    bash -c "cd '${PROJECT_ROOT}' && exec ${command}"
+  else
+    bash -c "exec ${command}"
+  fi
+}
+
+show_help() {
+  local script_name="bin/e2e"
+  cat <<EOF
+Usage: $script_name [COMMAND] [OPTIONS]
+
+E2E test environment management for Lightning
+
+Commands:
+  server          Start the e2e test server
+  reset           Fast reset using snapshot (truncate + restore)
+  reset --full    Full database reset with confirmation
+  reset --quiet   Fast reset with minimal output
+  setup           Initialize or refresh database and create snapshot
+  describe        Output current database state as JSON
+  help            Show this help message (default)
+
+Getting Started:
+  For first-time setup, run 'setup' to initialize your database with demo data
+  and create an initial snapshot. This gives you a clean baseline for testing.
+
+  During development, use 'reset' between test runs for instant database restore.
+  This is perfect for iterative testing where you need consistent starting data.
+
+  When you need to pick up schema changes or fresh migrations, use 'reset --full'
+  to rebuild everything from scratch. This is slower but ensures you have the
+  latest database structure.
+
+  To start the test server on port 4003, run 'server'. This runs independently 
+  from your main development server on port 4000.
+
+CI Environments:
+
+  When using 'reset --full', to override the confirmation prompt, prepend
+  'yes |' to your command.
+
+Environment Variables:
+  All settings can be overridden via environment variables:
+  DATABASE_URL, PORT, LOG_LEVEL, MIX_ENV, SNAPSHOT_FILE
+EOF
+}
+
+confirm_destructive_operation() {
+  local operation="$1"
+  echo "WARNING: This will perform a destructive operation: $operation"
+  echo "This will drop and recreate the entire database."
+  echo "Database URL: $DATABASE_URL"
+  echo ""
+  read -p "Are you sure you want to continue? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Operation cancelled."
+    exit 1
+  fi
+}
+
+db_exists() {
+  local db_name="lightning_test_e2e"
+  psql -h localhost -U postgres -lqt | cut -d \| -f 1 | grep -qw "$db_name"
+}
+
+seed_demo_data() {
+  echo "Seeding demo data..."
+  run_in_project_root 'mix run --no-start -e "
+Lightning.Setup.ensure_minimum_setup()
+Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
+  Lightning.SetupUtils.setup_demo(create_super: true)
+end)
+"'
+}
+
+create_snapshot() {
+  source "$(dirname "$0")/create_snapshot.sh"
+  create_snapshot "${DATABASE_URL}"
+  echo "Use '$0 reset' for fast restore."
+}
+
+truncate_data() {
+  echo "Truncating all database data..."
+  psql "${DATABASE_URL}" -f "$(dirname "$0")/truncate_all_data.sql"
+}
+
+restore_snapshot() {
+  if [ -f "$SNAPSHOT_FILE" ]; then
+    echo "Restoring from snapshot: $SNAPSHOT_FILE"
+    psql "${DATABASE_URL}" -f "$SNAPSHOT_FILE"
+    echo "Snapshot restore complete!"
+  else
+    echo "Error: Snapshot file not found: $SNAPSHOT_FILE"
+    echo "Run 'setup' first to create a snapshot"
+    exit 1
+  fi
+}
+
+# Command functions
+cmd_server() {
+  local pid_file="/tmp/lightning_e2e_server"
+  
+  # Check if server is already running
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid=$(cat "$pid_file" 2>/dev/null)
+    if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" 2>/dev/null; then
+      echo "E2E server is already running (PID: $existing_pid) on port $PORT"
+      echo "Use 'kill $existing_pid' to stop it, or check http://localhost:$PORT"
+      exit 0
+    else
+      echo "Cleaning up stale PID file..."
+      rm -f "$pid_file"
+    fi
+  fi
+  
+  # Set up PID file cleanup on exit
+  cleanup_pid_file() {
+    echo "Shutting down server..."
+    rm -f "$pid_file"
+  }
+  trap cleanup_pid_file SIGINT SIGTERM EXIT
+  
+  echo "Starting Phoenix server on port $PORT..."
+  
+  # Change to project root if needed and start server
+  if [[ -n "${PROJECT_ROOT}" && -d "${PROJECT_ROOT}" ]]; then
+    cd "${PROJECT_ROOT}"
+  fi
+  
+  # Start server and write PID after it starts
+  mix phx.server &
+  local server_pid=$!
+  
+  # Write PID to file
+  echo "$server_pid" > "$pid_file"
+  echo "Server PID $server_pid written to $pid_file"
+  
+  # Wait for the server process
+  wait $server_pid
+}
+
+cmd_reset() {
+  local full_reset=false
+  local quiet=false
+
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --full)
+      full_reset=true
+      shift
+      ;;
+    --quiet)
+      quiet=true
+      shift
+      ;;
+    *)
+      echo "Unknown flag: $1"
+      echo "Use 'help' for usage information"
+      exit 1
+      ;;
+    esac
+  done
+
+  if [ "$full_reset" = true ]; then
+    # Check if running in non-interactive mode (e.g., with yes |)
+    if [ -t 0 ]; then
+      confirm_destructive_operation "full database reset (drop/create/migrate)"
+    fi
+
+    if [ "$quiet" = true ]; then
+      echo "Performing full database reset..." >&2
+      run_in_project_root "mix ecto.reset" >/dev/null 2>&1
+      seed_demo_data >/dev/null 2>&1
+      create_snapshot >/dev/null 2>&1
+    else
+      echo "Performing full database reset (drop/create/migrate)..."
+      run_in_project_root "mix ecto.reset"
+      seed_demo_data
+      create_snapshot
+    fi
+  else
+    # Fast reset using snapshot - check snapshot exists first
+    if [ ! -f "$SNAPSHOT_FILE" ]; then
+      echo "Error: Snapshot file not found at: $SNAPSHOT_FILE"
+      echo "Cannot perform fast reset without a snapshot."
+      echo "Run 'bin/e2e setup' to create the snapshot, or use 'reset --full' for a complete rebuild."
+      exit 1
+    fi
+    
+    if [ "$quiet" = true ]; then
+      truncate_data >/dev/null 2>&1
+      restore_snapshot >/dev/null 2>&1
+    else
+      echo "Truncating data and restoring from snapshot..."
+      truncate_data
+      restore_snapshot
+    fi
+  fi
+}
+
+cmd_setup() {
+  echo "Setting up e2e database..."
+
+  if db_exists; then
+    echo "Database exists, truncating data..."
+    truncate_data
+  else
+    echo "Database doesn't exist, creating and migrating..."
+    run_in_project_root "mix ecto.create"
+    run_in_project_root "mix ecto.migrate"
+  fi
+
+  seed_demo_data
+  create_snapshot
+  echo "Setup complete!"
+}
+
+cmd_describe() {
+  source "$(dirname "$0")/describe_data.sh"
+  describe_test_data "${DATABASE_URL}"
+}
+
+# Parse command
+COMMAND="${1:-help}"
+shift || true
+
+case "$COMMAND" in
+server)
+  cmd_server "$@"
+  ;;
+reset)
+  cmd_reset "$@"
+  ;;
+setup)
+  cmd_setup "$@"
+  ;;
+describe)
+  cmd_describe "$@"
+  ;;
+help | --help | -h)
+  show_help
+  ;;
+*)
+  echo "Unknown command: $COMMAND"
+  echo "Use 'help' for usage information"
+  exit 1
+  ;;
+esac
