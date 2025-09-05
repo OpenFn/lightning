@@ -1,9 +1,27 @@
 defmodule Lightning.Collaboration.Session do
+  @moduledoc """
+  Manages individual user sessions for collaborative workflow editing.
+
+  A Session acts as a bridge between a parent process (typically a Phoenix 
+  channel) and a SharedDoc process that manages the Y.js CRDT document. Each 
+  user editing a workflow has their own Session process that handles:
+
+  * User presence tracking via `Lightning.Workflows.Presence`
+  * Bi-directional Y.js message routing between parent and SharedDoc
+  * Connection management to existing SharedDoc processes via Registry lookup
+  * Workflow document initialization with database data when needed
+  * Cleanup when the parent process disconnects
+
+  Sessions are temporary processes that monitor their parent and terminate 
+  when the parent disconnects, ensuring proper cleanup of presence tracking
+  and SharedDoc observers.
+  """
   use GenServer, restart: :temporary
   use Lightning.Utils.Logger, color: [:cyan_background]
 
   alias Lightning.Accounts.User
   alias Lightning.Collaboration.Registry
+  alias Lightning.Workflows.Presence
   alias Yex.Sync.SharedDoc
 
   defstruct [:parent_pid, :parent_ref, :shared_doc_pid, :user, :workflow_id]
@@ -93,7 +111,7 @@ defmodule Lightning.Collaboration.Session do
 
         # We track the user presence here so the the original WorkflowLive.Edit
         # can be stopped from editing the workflow when someone else is editing it.
-        Lightning.Workflows.Presence.track_user_presence(
+        Presence.track_user_presence(
           user,
           workflow_id,
           self()
@@ -113,7 +131,7 @@ defmodule Lightning.Collaboration.Session do
       SharedDoc.unobserve(shared_doc_pid)
     end
 
-    Lightning.Workflows.Presence.untrack_user_presence(
+    Presence.untrack_user_presence(
       state.user,
       state.workflow_id,
       self()
@@ -261,76 +279,88 @@ defmodule Lightning.Collaboration.Session do
          ) do
       nil ->
         warning("Workflow #{workflow_id} not found, initializing empty document")
-
         doc
 
       workflow ->
-        # Initialize the document with workflow data
-        workflow_map = Yex.Doc.get_map(doc, "workflow")
-        jobs_array = Yex.Doc.get_array(doc, "jobs")
-        edges_array = Yex.Doc.get_array(doc, "edges")
-        triggers_array = Yex.Doc.get_array(doc, "triggers")
-        positions = Yex.Doc.get_map(doc, "positions")
-
-        Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
-          # Set workflow properties
-          Yex.Map.set(workflow_map, "id", workflow.id)
-          Yex.Map.set(workflow_map, "name", workflow.name || "")
-
-          Enum.each(workflow.jobs || [], fn job ->
-            job_map =
-              Yex.MapPrelim.from(%{
-                "id" => job.id,
-                "name" => job.name || "",
-                "body" => Yex.TextPrelim.from(job.body || ""),
-                "adaptor" => job.adaptor,
-                "project_credential_id" => job.project_credential_id,
-                "keychain_credential_id" => job.keychain_credential_id
-              })
-
-            Yex.Array.push(jobs_array, job_map)
-          end)
-
-          Enum.each(workflow.edges || [], fn edge ->
-            edge_map =
-              Yex.MapPrelim.from(%{
-                "condition_expression" => edge.condition_expression,
-                "condition_label" => edge.condition_label,
-                "condition_type" => edge.condition_type |> to_string(),
-                "enabled" => edge.enabled,
-                # "errors" => edge.errors,
-                "id" => edge.id,
-                "source_job_id" => edge.source_job_id,
-                "source_trigger_id" => edge.source_trigger_id,
-                "target_job_id" => edge.target_job_id
-              })
-
-            Yex.Array.push(edges_array, edge_map)
-          end)
-
-          Enum.each(workflow.triggers || [], fn trigger ->
-            trigger_map =
-              Yex.MapPrelim.from(%{
-                "cron_expression" => trigger.cron_expression,
-                "enabled" => trigger.enabled,
-                "has_auth_method" => trigger.has_auth_method,
-                "id" => trigger.id,
-                "type" => trigger.type |> to_string()
-              })
-
-            Yex.Array.push(triggers_array, trigger_map)
-          end)
-
-          Enum.each(workflow.positions || [], fn {id, position} ->
-            Yex.Map.set(positions, id, position)
-          end)
-
-          debug(
-            "Initialized workflow document with #{length(workflow.jobs || [])} jobs and their Y.Text bodies"
-          )
-        end)
-
-        doc
+        initialize_workflow_data(doc, workflow)
     end
+  end
+
+  defp initialize_workflow_data(doc, workflow) do
+    # Get Yex objects BEFORE transaction to avoid hanging the VM
+    workflow_map = Yex.Doc.get_map(doc, "workflow")
+    jobs_array = Yex.Doc.get_array(doc, "jobs")
+    edges_array = Yex.Doc.get_array(doc, "edges")
+    triggers_array = Yex.Doc.get_array(doc, "triggers")
+    positions = Yex.Doc.get_map(doc, "positions")
+
+    Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
+      # Set workflow properties
+      Yex.Map.set(workflow_map, "id", workflow.id)
+      Yex.Map.set(workflow_map, "name", workflow.name || "")
+
+      initialize_jobs(jobs_array, workflow.jobs)
+      initialize_edges(edges_array, workflow.edges)
+      initialize_triggers(triggers_array, workflow.triggers)
+      initialize_positions(positions, workflow.positions)
+    end)
+
+    doc
+  end
+
+  defp initialize_jobs(jobs_array, jobs) do
+    Enum.each(jobs || [], fn job ->
+      job_map =
+        Yex.MapPrelim.from(%{
+          "id" => job.id,
+          "name" => job.name || "",
+          "body" => Yex.TextPrelim.from(job.body || ""),
+          "adaptor" => job.adaptor,
+          "project_credential_id" => job.project_credential_id,
+          "keychain_credential_id" => job.keychain_credential_id
+        })
+
+      Yex.Array.push(jobs_array, job_map)
+    end)
+  end
+
+  defp initialize_edges(edges_array, edges) do
+    Enum.each(edges || [], fn edge ->
+      edge_map =
+        Yex.MapPrelim.from(%{
+          "condition_expression" => edge.condition_expression,
+          "condition_label" => edge.condition_label,
+          "condition_type" => edge.condition_type |> to_string(),
+          "enabled" => edge.enabled,
+          # "errors" => edge.errors,
+          "id" => edge.id,
+          "source_job_id" => edge.source_job_id,
+          "source_trigger_id" => edge.source_trigger_id,
+          "target_job_id" => edge.target_job_id
+        })
+
+      Yex.Array.push(edges_array, edge_map)
+    end)
+  end
+
+  defp initialize_triggers(triggers_array, triggers) do
+    Enum.each(triggers || [], fn trigger ->
+      trigger_map =
+        Yex.MapPrelim.from(%{
+          "cron_expression" => trigger.cron_expression,
+          "enabled" => trigger.enabled,
+          "has_auth_method" => trigger.has_auth_method,
+          "id" => trigger.id,
+          "type" => trigger.type |> to_string()
+        })
+
+      Yex.Array.push(triggers_array, trigger_map)
+    end)
+  end
+
+  defp initialize_positions(positions, workflow_positions) do
+    Enum.each(workflow_positions || [], fn {id, position} ->
+      Yex.Map.set(positions, id, position)
+    end)
   end
 end
