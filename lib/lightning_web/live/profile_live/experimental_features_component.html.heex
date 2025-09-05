@@ -1,0 +1,24 @@
+<div class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
+  <div class="px-4 py-6 sm:p-8">
+    <div class="flex items-center justify-between">
+      <span class="flex flex-grow flex-col">
+        <span class="text-xl font-medium leading-6 text-gray-900">
+          Experimental Features
+        </span>
+        <span class="text-sm text-gray-500">
+          Enable access to new features and improvements before they're generally available
+        </span>
+      </span>
+      <.form
+        :let={f}
+        for={@changeset}
+        as={:preferences}
+        phx-change="update_preferences"
+        phx-target={@myself}
+        class="ml-5"
+      >
+        <.input type="toggle" field={f[:experimental_features]} label="" />
+      </.form>
+    </div>
+  </div>
+</div>

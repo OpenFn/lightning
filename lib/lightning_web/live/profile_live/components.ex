@@ -71,6 +71,11 @@ defmodule LightningWeb.ProfileLive.Components do
         id={"#{@current_user.id}_github_section"}
         user={@current_user}
       />
+      <.live_component
+        module={LightningWeb.ProfileLive.ExperimentalFeaturesComponent}
+        id="experimental-features"
+        user={@current_user}
+      />
       <.delete_user_card url={@delete_user_url} />
     </div>
     """

@@ -80,3 +80,8 @@ priv/openfn
 
 worktrees
 .docker-cache
+
+assets/playwright-report
+assets/test-results
+.tsbuildinfo
+.tsimp
