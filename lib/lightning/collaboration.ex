@@ -1,4 +1,19 @@
 defmodule Lightning.Collaborate do
+  @moduledoc """
+  Public API for starting collaborative workflow editing sessions.
+
+  This module serves as the main entry point for collaborative editing,
+  coordinating the creation and management of document and session processes
+  for workflow collaboration. It manages the lifecycle of SharedDoc processes
+  and ensures proper process discovery through :pg process groups and the
+  collaboration Registry.
+
+  Key responsibilities:
+  - Starting collaborative editing sessions for users and workflows
+  - Coordinating DocumentSupervisor creation when needed
+  - Managing SharedDoc discovery via :pg process groups
+  - Delegating process lookup operations to the Registry
+  """
   alias Lightning.Collaboration.DocumentSupervisor
   alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.Session

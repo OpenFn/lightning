@@ -1,4 +1,17 @@
 defmodule Lightning.Collaboration.DocumentSupervisor do
+  @moduledoc """
+  Manages the lifecycle of collaborative workflow document processes.
+
+  This GenServer coordinates a SharedDoc and PersistenceWriter for each 
+  collaborative workflow document. It starts both processes with proper 
+  dependencies, registers the SharedDoc with the `:pg` process group for 
+  cluster-wide coordination, and handles graceful shutdown by ensuring 
+  the SharedDoc flushes data to the PersistenceWriter before termination.
+
+  Uses a transient restart strategy, only restarting if the supervisor 
+  itself crashes, not when child processes exit normally. Monitors both 
+  child processes and stops itself if either child crashes.
+  """
   use GenServer
   use Lightning.Utils.Logger, color: [:green_background, :yellow]
 

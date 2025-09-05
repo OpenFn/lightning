@@ -1530,7 +1530,6 @@ defmodule LightningWeb.RunChannelTest do
     %{socket: socket}
   end
 
-
   defp set_google_credential(_context) do
     expires_at =
       DateTime.utc_now()
