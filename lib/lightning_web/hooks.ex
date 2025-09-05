@@ -14,6 +14,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
+  alias LightningWeb.Live.Helpers.ProjectTheme
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -52,12 +53,15 @@ defmodule LightningWeb.Hooks do
         {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
+        style = ProjectTheme.inline_style_for(project)
+
         {:cont,
          socket
          |> assign(:side_menu_theme, "primary-theme")
          |> assign_new(:project_user, fn -> project_user end)
          |> assign_new(:project, fn -> project end)
-         |> assign_new(:projects, fn -> projects end)}
+         |> assign_new(:projects, fn -> projects end)
+         |> assign(:side_menu_style, style)}
 
       true ->
         {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
