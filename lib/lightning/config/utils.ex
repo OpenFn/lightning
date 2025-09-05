@@ -24,6 +24,7 @@ defmodule Lightning.Config.Utils do
 
   # Handle list of keys
   defp get_nested(value, [], _default), do: value
+
   defp get_nested(value, [head | tail], default) do
     case get_value(value, head) do
       nil -> default
