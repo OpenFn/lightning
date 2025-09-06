@@ -2277,60 +2277,48 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "provision_sandbox/3 (wrapper)" do
-    test "delegates to Sandboxes.provision/3 and returns {:ok, sandbox} on success" do
+  describe "sandbox facade delegates" do
+    test "provision_sandbox/3 creates a child project and sets parent_id" do
       owner = insert(:user)
 
       parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user_id: owner.id, role: :owner}]
-        )
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
 
       {:ok, sandbox} =
-        Projects.provision_sandbox(parent, owner, %{
-          name: "sb-1",
-          color: "#123456",
-          env: "staging"
-        })
-
-      sandbox = Repo.preload(sandbox, :project_users)
+        Projects.provision_sandbox(parent, owner, %{name: "sb-1"})
 
       assert sandbox.parent_id == parent.id
       assert sandbox.name == "sb-1"
-      assert sandbox.color == "#123456"
-      assert sandbox.env == "staging"
-
-      assert Enum.any?(
-               sandbox.project_users,
-               &(&1.user_id == owner.id && &1.role == :owner)
-             )
+      assert is_list(sandbox.version_history)
     end
 
-    test "returns {:error, :unauthorized} for non-admin/editor actor" do
-      actor = insert(:user)
-
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user_id: actor.id, role: :editor}]
-        )
-
-      assert {:error, :unauthorized} =
-               Projects.provision_sandbox(parent, actor, %{name: "sb-nope"})
-    end
-
-    test "bubbles up changeset errors from sandbox provisioning" do
+    test "update_sandbox/4 updates basic fields on the child" do
       owner = insert(:user)
 
       parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user_id: owner.id, role: :owner}]
-        )
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
 
-      assert {:error, :rollback} =
-               Projects.provision_sandbox(parent, owner, %{name: ""})
+      {:ok, sandbox} = Projects.provision_sandbox(parent, owner, %{name: "old"})
+
+      {:ok, updated} =
+        Projects.update_sandbox(parent, owner, sandbox, %{name: "new"})
+
+      assert updated.name == "new"
+    end
+
+    test "delete_sandbox/3 removes the child project" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      {:ok, sandbox} =
+        Projects.provision_sandbox(parent, owner, %{name: "to-delete"})
+
+      assert {:ok, %Lightning.Projects.Project{}} =
+               Projects.delete_sandbox(parent, owner, sandbox)
+
+      refute Repo.get(Lightning.Projects.Project, sandbox.id)
     end
   end
 

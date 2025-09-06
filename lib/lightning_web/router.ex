@@ -194,6 +194,10 @@ defmodule LightningWeb.Router do
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Edit, :new
         live "/w/:id", WorkflowLive.Edit, :edit
+
+        live "/sandboxes", SandboxLive.Index, :index
+        live "/sandboxes/new", SandboxLive.Index, :new
+        live "/sandboxes/:id/edit", SandboxLive.Index, :edit
       end
 
       live "/credentials", CredentialLive.Index, :index

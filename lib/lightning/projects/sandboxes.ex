@@ -45,6 +45,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
+  alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -147,6 +148,8 @@ defmodule Lightning.Projects.Sandboxes do
           clone_edges!(parent, wf_map, job_map, trg_map)
           remap_positions!(parent, wf_map, job_map, trg_map)
           copy_latest_heads!(wf_map)
+
+          ensure_initial_snapshots!(Map.values(wf_map))
 
           head = Lightning.Projects.compute_project_head_hash(sandbox.id)
           sandbox = Lightning.Projects.append_project_head!(sandbox, head)
@@ -473,6 +476,73 @@ defmodule Lightning.Projects.Sandboxes do
     |> case do
       m when map_size(m) == 0 -> nil
       m -> m
+    end
+  end
+
+  defp ensure_initial_snapshots!(new_workflow_ids) do
+    Enum.each(new_workflow_ids, fn id ->
+      Lightning.Workflows.Workflow
+      |> Lightning.Repo.get!(id)
+      |> Workflows.maybe_create_latest_snapshot()
+    end)
+  end
+
+  @doc """
+  Updates a sandbox (child project) under `parent` on behalf of `actor`.
+
+  Authorization: `actor` must be `:owner` or `:admin` on the **parent** project.
+  The `sandbox` must belong to the given `parent`.
+
+  Only basic project attributes are expected (`:name`, `:color`, `:env`).
+  """
+  @spec update(Project.t(), User.t(), Project.t() | Ecto.UUID.t(), map()) ::
+          {:ok, Project.t()}
+          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+  def update(%Project{} = parent, %User{} = actor, %Project{} = sandbox, attrs)
+      when is_map(attrs) do
+    with true <- sandbox.parent_id == parent.id || {:error, :not_found},
+         role when role in [:owner, :admin] <-
+           Lightning.Projects.get_project_user_role(actor, parent) do
+      attrs = Map.take(attrs, [:name, :color, :env])
+      Lightning.Projects.update_project(sandbox, attrs, actor)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :unauthorized}
+    end
+  end
+
+  def update(%Project{} = parent, %User{} = actor, sandbox_id, attrs)
+      when is_binary(sandbox_id) and is_map(attrs) do
+    case Lightning.Projects.get_project(sandbox_id) do
+      %Project{} = sb -> update(parent, actor, sb, attrs)
+      nil -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Deletes a sandbox (child project) under `parent` on behalf of `actor`.
+
+  Authorization: `actor` must be `:owner` or `:admin` on the **parent** project.
+  The `sandbox` must belong to the given `parent`.
+  """
+  @spec delete(Project.t(), User.t(), Project.t() | Ecto.UUID.t()) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  def delete(%Project{} = parent, %User{} = actor, %Project{} = sandbox) do
+    with true <- sandbox.parent_id == parent.id || {:error, :not_found},
+         role when role in [:owner, :admin] <-
+           Lightning.Projects.get_project_user_role(actor, parent) do
+      Lightning.Projects.delete_project(sandbox)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :unauthorized}
+    end
+  end
+
+  def delete(%Project{} = parent, %User{} = actor, sandbox_id)
+      when is_binary(sandbox_id) do
+    case Lightning.Projects.get_project(sandbox_id) do
+      %Project{} = sb -> delete(parent, actor, sb)
+      nil -> {:error, :not_found}
     end
   end
 end
