@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Sandbox Basic CRUD UI
+  [#3412](https://github.com/OpenFn/lightning/issues/3412)
+  [#3431](https://github.com/OpenFn/lightning/issues/3431)
 - API for provisioning Sandboxes
   [#3430](https://github.com/OpenFn/lightning/issues/3430)
 - Added DB support for sandboxes and workflow version provenance.
