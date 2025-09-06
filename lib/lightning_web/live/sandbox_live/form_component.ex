@@ -3,6 +3,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
   alias Ecto.Changeset
   alias Lightning.Helpers
+  alias Lightning.Projects
   alias Lightning.Projects.Project
 
   @type mode :: :new | :edit
@@ -95,11 +96,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     result =
       case mode do
         :new ->
-          Lightning.Projects.Sandboxes.provision(parent, actor, attrs)
+          Projects.provision_sandbox(parent, actor, attrs)
 
         :edit ->
-          sb = socket.assigns.sandbox
-          Lightning.Projects.Sandboxes.update(parent, actor, sb, attrs)
+          Projects.update_sandbox(parent, actor, socket.assigns.sandbox, attrs)
       end
 
     case result do

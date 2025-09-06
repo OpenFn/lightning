@@ -2277,6 +2277,51 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "sandbox facade delegates" do
+    test "provision_sandbox/3 creates a child project and sets parent_id" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      {:ok, sandbox} =
+        Projects.provision_sandbox(parent, owner, %{name: "sb-1"})
+
+      assert sandbox.parent_id == parent.id
+      assert sandbox.name == "sb-1"
+      assert is_list(sandbox.version_history)
+    end
+
+    test "update_sandbox/4 updates basic fields on the child" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      {:ok, sandbox} = Projects.provision_sandbox(parent, owner, %{name: "old"})
+
+      {:ok, updated} =
+        Projects.update_sandbox(parent, owner, sandbox, %{name: "new"})
+
+      assert updated.name == "new"
+    end
+
+    test "delete_sandbox/3 removes the child project" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      {:ok, sandbox} =
+        Projects.provision_sandbox(parent, owner, %{name: "to-delete"})
+
+      assert {:ok, %Lightning.Projects.Project{}} =
+               Projects.delete_sandbox(parent, owner, sandbox)
+
+      refute Repo.get(Lightning.Projects.Project, sandbox.id)
+    end
+  end
+
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =
