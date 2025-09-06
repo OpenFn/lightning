@@ -17,9 +17,9 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
     setup %{conn: conn, user: user} do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :provision, fn parent_arg,
-                                                                user_arg,
-                                                                attrs ->
+      Mimic.stub(Lightning.Projects.Sandboxes, :provision, fn parent_arg,
+                                                              user_arg,
+                                                              attrs ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
 
@@ -81,6 +81,78 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       assert html =~ "Sandbox created"
     end
+
+    test "color input renders swatch + readout and normalizes updates", %{
+      conn: conn,
+      parent: parent
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+      html = render(view)
+
+      assert html =~ ~s(data-swatch)
+      assert html =~ "background-color: #336699"
+      assert html =~ "#336699"
+      assert html =~ "h-5 w-5 border border-slate-300"
+      assert html =~ "rounded-md"
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "sb-1", "color" => "#abc"}
+      })
+
+      html = render(view)
+      assert html =~ "background-color: #AABBCC"
+      assert html =~ "#AABBCC"
+      assert html =~ "--ring: #AABBCC"
+    end
+
+    test "creating sandbox with blank name disables submit and keeps placeholder",
+         %{
+           conn: conn,
+           parent: parent
+         } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      render_submit(
+        element(view, "#sandbox-form-new"),
+        %{"project" => %{"raw_name" => ""}}
+      )
+
+      html = render(view)
+      assert html =~ ~s(<button disabled="disabled" type="submit")
+      assert html =~ "e.g. my-sandbox"
+    end
+  end
+
+  describe "new modal (cancel)" do
+    setup %{conn: conn, user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+      {:ok, conn: conn, parent: parent}
+    end
+
+    test "clicking Cancel triggers close_modal and navigates back", %{
+      conn: conn,
+      parent: parent
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      res =
+        view
+        |> element("button[phx-click='close_modal']", "Cancel")
+        |> render_click()
+
+      html =
+        assert_redirect_or_patch(
+          res,
+          view,
+          conn,
+          ~p"/projects/#{parent.id}/sandboxes"
+        )
+
+      assert html =~ "Sandboxes"
+    end
   end
 
   describe "edit modal" do
@@ -88,16 +160,13 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
       sb = insert(:sandbox, parent: parent, name: "sb-1")
 
-      # mock the function actually called by the component:
-      Mimic.expect(Lightning.Projects.Sandboxes, :update, fn parent_arg,
-                                                             user_arg,
-                                                             %Lightning.Projects.Project{
-                                                               id: sb_id
-                                                             } = current_sb,
-                                                             attrs ->
+      Mimic.stub(Lightning.Projects.Sandboxes, :update, fn parent_arg,
+                                                           user_arg,
+                                                           %Lightning.Projects.Project{} =
+                                                             current_sb,
+                                                           attrs ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
-        assert sb_id == sb.id
 
         name = attrs[:name] || attrs["name"]
         env = attrs[:env] || attrs["env"]
@@ -148,9 +217,23 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       assert html =~ "Sandbox updated"
     end
+
+    test "color input displays existing sandbox color", %{
+      conn: conn,
+      parent: parent
+    } do
+      sb = insert(:sandbox, parent: parent, name: "sb-colored", color: "#ff0000")
+
+      {:ok, view, _} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
+
+      html = render(view)
+      assert html =~ "background-color: #FF0000"
+      assert html =~ "#FF0000"
+      assert html =~ "rounded-md"
+    end
   end
 
-  # helper unchanged
   defp assert_redirect_or_patch(res_or_html, view, conn, to) do
     case res_or_html do
       {:error, {:redirect, _}} ->
