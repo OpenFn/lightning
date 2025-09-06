@@ -10,8 +10,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
   use Mimic
 
   setup_all do
+    Mimic.copy(Lightning.Projects)
     Mimic.copy(Lightning.Projects.Sandboxes)
 
+    Mimic.stub_with(Lightning.Projects, Lightning.Projects)
     Mimic.stub_with(Lightning.Projects.Sandboxes, Lightning.Projects.Sandboxes)
     :ok
   end
