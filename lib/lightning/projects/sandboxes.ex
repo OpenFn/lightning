@@ -45,6 +45,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
+  alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -147,6 +148,8 @@ defmodule Lightning.Projects.Sandboxes do
           clone_edges!(parent, wf_map, job_map, trg_map)
           remap_positions!(parent, wf_map, job_map, trg_map)
           copy_latest_heads!(wf_map)
+
+          ensure_initial_snapshots!(Map.values(wf_map))
 
           head = Lightning.Projects.compute_project_head_hash(sandbox.id)
           sandbox = Lightning.Projects.append_project_head!(sandbox, head)
@@ -474,6 +477,14 @@ defmodule Lightning.Projects.Sandboxes do
       m when map_size(m) == 0 -> nil
       m -> m
     end
+  end
+
+  defp ensure_initial_snapshots!(new_workflow_ids) do
+    Enum.each(new_workflow_ids, fn id ->
+      Lightning.Workflows.Workflow
+      |> Lightning.Repo.get!(id)
+      |> Workflows.maybe_create_latest_snapshot()
+    end)
   end
 
   @doc """
