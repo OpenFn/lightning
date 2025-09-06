@@ -97,6 +97,27 @@ defmodule LightningWeb.ProjectThemeTest do
       decls = css |> String.trim() |> String.split(~r/;\s*/, trim: true)
       assert length(decls) == 11
     end
+
+    test "covers red-sector hue paths (max==r and h<60)" do
+      s = build(:project, parent_id: Ecto.UUID.generate(), color: "#ff0000")
+      css = ProjectTheme.inline_primary_scale(s)
+      decls = css |> String.trim() |> String.split(~r/;\s*/, trim: true)
+      assert length(decls) == 11
+    end
+
+    test "covers green-sector hue path (max==g)" do
+      s = build(:project, parent_id: Ecto.UUID.generate(), color: "#00ff00")
+      css = ProjectTheme.inline_primary_scale(s)
+      decls = css |> String.trim() |> String.split(~r/;\s*/, trim: true)
+      assert length(decls) == 11
+    end
+
+    test "covers magenta-sector hue path (h≥300, true branch in hsl_to_rgb)" do
+      s = build(:project, parent_id: Ecto.UUID.generate(), color: "#ff00ff")
+      css = ProjectTheme.inline_primary_scale(s)
+      decls = css |> String.trim() |> String.split(~r/;\s*/, trim: true)
+      assert length(decls) == 11
+    end
   end
 
   describe "inline_sidebar_vars/0" do
