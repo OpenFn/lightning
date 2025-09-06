@@ -502,10 +502,12 @@ defmodule Lightning.Projects.Sandboxes do
       when is_map(attrs) do
     with true <- sandbox.parent_id == parent.id || {:error, :not_found},
          role when role in [:owner, :admin] <-
-           Lightning.Projects.get_project_user_role(actor, parent) ||
-             {:error, :unauthorized} do
+           Lightning.Projects.get_project_user_role(actor, parent) do
       attrs = Map.take(attrs, [:name, :color, :env])
       Lightning.Projects.update_project(sandbox, attrs, actor)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :unauthorized}
     end
   end
 
@@ -517,14 +519,22 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
+  @doc """
+  Deletes a sandbox (child project) under `parent` on behalf of `actor`.
+
+  Authorization: `actor` must be `:owner` or `:admin` on the **parent** project.
+  The `sandbox` must belong to the given `parent`.
+  """
   @spec delete(Project.t(), User.t(), Project.t() | Ecto.UUID.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def delete(%Project{} = parent, %User{} = actor, %Project{} = sandbox) do
     with true <- sandbox.parent_id == parent.id || {:error, :not_found},
          role when role in [:owner, :admin] <-
-           Lightning.Projects.get_project_user_role(actor, parent) ||
-             {:error, :unauthorized} do
+           Lightning.Projects.get_project_user_role(actor, parent) do
       Lightning.Projects.delete_project(sandbox)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :unauthorized}
     end
   end
 
