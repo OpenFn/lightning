@@ -232,7 +232,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute has_element?(view, "#confirm-delete-sandbox")
     end
 
-    test "confirm-delete-validate with no params is a no-op (second clause)", %{
+    test "confirm-delete-validate with empty params keeps modal open", %{
       conn: conn,
       parent: parent,
       sb1: sb1
@@ -250,7 +250,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert has_element?(view, "#confirm-delete-sandbox")
     end
 
-    test "confirm-delete with no params is a no-op (second clause)", %{
+    test "confirm-delete with empty params keeps modal open", %{
       conn: conn,
       parent: parent,
       sb1: sb1
@@ -294,6 +294,46 @@ defmodule LightningWeb.SandboxLive.IndexTest do
                ~s/#confirm-delete-sandbox button[type="submit"]:not([disabled])/
              )
              |> has_element?()
+    end
+
+    test "confirm-delete-validate ignores event when no sandbox selected" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          confirm_delete_sandbox: nil,
+          confirm_cs: :sentinel,
+          confirm_delete_input: ""
+        }
+      }
+
+      {:noreply, sock2} =
+        LightningWeb.SandboxLive.Index.handle_event(
+          "confirm-delete-validate",
+          %{"confirm" => %{}},
+          socket
+        )
+
+      assert sock2.assigns.confirm_cs == :sentinel
+      assert sock2.assigns.confirm_delete_input == ""
+    end
+
+    test "confirm-delete ignores event when no sandbox selected" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          project: %Lightning.Projects.Project{id: Ecto.UUID.generate()},
+          current_user: %Lightning.Accounts.User{id: Ecto.UUID.generate()},
+          confirm_delete_sandbox: nil,
+          confirm_cs: :sentinel
+        }
+      }
+
+      {:noreply, sock2} =
+        LightningWeb.SandboxLive.Index.handle_event(
+          "confirm-delete",
+          %{"confirm" => %{}},
+          socket
+        )
+
+      assert sock2.assigns == socket.assigns
     end
   end
 end
