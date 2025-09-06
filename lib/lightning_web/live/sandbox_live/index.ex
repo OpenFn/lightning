@@ -102,7 +102,7 @@ defmodule LightningWeb.SandboxLive.Index do
       cs = confirm_changeset(sb, confirm)
 
       if cs.valid? do
-        case Lightning.Projects.Sandboxes.delete(parent, current, sb) do
+        case Lightning.Projects.delete_sandbox(parent, current, sb) do
           {:ok, _proj} ->
             {:noreply,
              socket
