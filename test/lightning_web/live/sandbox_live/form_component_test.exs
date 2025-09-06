@@ -17,9 +17,9 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
     setup %{conn: conn, user: user} do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
 
-      Mimic.expect(Lightning.Projects, :provision_sandbox, fn parent_arg,
-                                                              user_arg,
-                                                              attrs ->
+      Mimic.expect(Lightning.Projects.Sandboxes, :provision, fn parent_arg,
+                                                                user_arg,
+                                                                attrs ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
 
@@ -56,7 +56,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
     test "creating sandbox succeeds", %{conn: conn, parent: parent} do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
 
-      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
       |> element("#sandbox-form-new")
