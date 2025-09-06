@@ -23,6 +23,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
@@ -1399,4 +1400,32 @@ defmodule Lightning.Projects do
 
   defp append_if_missing(list, h),
     do: if(Enum.member?(list, h), do: list, else: list ++ [h])
+
+  @doc """
+  Provision a sandbox under `parent` on behalf of `actor`.
+  See `Lightning.Projects.Sandboxes.provision/3` for details.
+  """
+  @spec provision_sandbox(Project.t(), User.t(), Sandboxes.provision_attrs()) ::
+          {:ok, Project.t()} | {:error, term()}
+  defdelegate provision_sandbox(parent, actor, attrs),
+    to: Sandboxes,
+    as: :provision
+
+  @doc """
+  Update a sandbox (child of `parent`) as `actor`.
+  Accepts only basic fields like :name, :color, :env.
+  """
+  @spec update_sandbox(Project.t(), User.t(), Project.t() | Ecto.UUID.t(), map()) ::
+          {:ok, Project.t()}
+          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+  defdelegate update_sandbox(parent, actor, sandbox, attrs),
+    to: Sandboxes,
+    as: :update
+
+  @doc """
+  Delete a sandbox (child of `parent`) as `actor`.
+  """
+  @spec delete_sandbox(Project.t(), User.t(), Project.t() | Ecto.UUID.t()) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  defdelegate delete_sandbox(parent, actor, sandbox), to: Sandboxes, as: :delete
 end
