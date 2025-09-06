@@ -1,82 +1,102 @@
 defmodule LightningWeb.Live.Helpers.ProjectTheme do
   @moduledoc """
-  Produces inline CSS variable styles for the left side menu, derived from a project's color.
-  Used to tint the menu when the loaded project is a sandbox.
+  Runtime theme utilities. Builds a full primary scale (50..950) from a base hex
+  and returns inline CSS variable overrides for Tailwind v4's `--color-primary-*`.
   """
 
   alias Lightning.Projects.Project
+  @stops [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
 
-  @default nil
-
-  @spec inline_style_for(Project.t() | nil) :: String.t() | nil
-  def inline_style_for(%Project{} = project) do
+  @doc """
+  If the project is a sandbox with a color, returns a string of CSS custom
+  properties that override the full `--color-primary-*` scale.
+  Returns `nil` for non-sandboxes or missing color.
+  """
+  @spec inline_primary_scale(Project.t() | nil) :: String.t() | nil
+  def inline_primary_scale(%Project{} = p) do
     cond do
-      not Project.sandbox?(project) ->
-        @default
+      not Project.sandbox?(p) ->
+        nil
 
-      is_nil(project.color) ->
-        @default
+      is_nil(p.color) or String.trim(to_string(p.color)) == "" ->
+        nil
 
       true ->
-        hex = normalize_hex(project.color)
+        hex = normalize_hex(p.color)
+        scale = build_scale(hex)
 
-        bg = hex
-        bg_light = lighten(hex, 0.12)
-        bg_dark = darken(hex, 0.14)
-        text = text_contrast(hex)
-        text_lg = mix(text, "#ffffff", 0.35)
-        text_lgr = mix(text, "#ffffff", 0.55)
-        ring = "var(--color-gray-300)"
-        ring_f = bg_light
-
-        """
-        --primary-bg: #{bg};
-        --primary-text: #{text};
-        --primary-bg-lighter: #{bg_light};
-        --primary-bg-dark: #{bg_dark};
-        --primary-text-light: #{text_lg};
-        --primary-text-lighter: #{text_lgr};
-        --primary-ring: #{ring};
-        --primary-ring-focus: #{ring_f};
-        """
-        |> String.trim()
+        @stops
+        |> Enum.map_join(" ", fn stop ->
+          "--color-primary-#{stop}: #{Map.fetch!(scale, stop)};"
+        end)
     end
   end
 
-  def inline_style_for(_), do: @default
+  def inline_primary_scale(_), do: nil
 
-  defp normalize_hex(nil), do: "#6b7280"
-  defp normalize_hex("#" <> _ = hex) when byte_size(hex) in [4, 7, 9], do: hex
-  defp normalize_hex(hex), do: "#" <> hex
+  @doc """
+  Returns the sidebar variables that your CSS reads (`--primary-*`), pointing at the
+  primary scale. Safe to append anywhere you put `inline_primary_scale/1`.
+  """
+  @spec inline_sidebar_vars() :: String.t()
+  def inline_sidebar_vars do
+    """
+    --primary-bg: var(--color-primary-800);
+    --primary-text: white;
+    --primary-bg-lighter: var(--color-primary-600);
+    --primary-bg-dark: var(--color-primary-900);
+    --primary-text-light: var(--color-primary-300);
+    --primary-text-lighter: var(--color-primary-200);
+    --primary-ring: var(--color-gray-300);
+    --primary-ring-focus: var(--color-primary-600);
+    """
+    |> String.replace("\n", " ")
+  end
 
-  defp lighten(hex, pct), do: adjust(hex, pct)
-  defp darken(hex, pct), do: adjust(hex, -pct)
+  # ---- existing helpers (unchanged below) ----
+  defp build_scale(hex) do
+    {h, s, _l} = to_hsl(hex)
 
-  defp adjust(hex, pct) do
-    {r, g, b} = hex_to_rgb(hex)
-
-    {r2, g2, b2} = {
-      clamp(r + (255 - r) * pct),
-      clamp(g + (255 - g) * pct),
-      clamp(b + (255 - b) * pct)
+    targets = %{
+      50 => 0.98,
+      100 => 0.95,
+      200 => 0.90,
+      300 => 0.82,
+      400 => 0.70,
+      500 => 0.60,
+      600 => 0.50,
+      700 => 0.42,
+      800 => 0.35,
+      900 => 0.28,
+      950 => 0.20
     }
 
-    rgb_to_hex({r2, g2, b2})
+    Enum.reduce(targets, %{}, fn {stop, lt}, acc ->
+      s_adj =
+        cond do
+          lt >= 0.9 -> s * 0.75
+          lt >= 0.7 -> s * 0.9
+          lt >= 0.5 -> s
+          true -> min(1.0, s * 1.05)
+        end
+
+      Map.put(acc, stop, from_hsl(h, s_adj, lt))
+    end)
   end
 
-  defp text_contrast(hex) do
+  defp normalize_hex("#" <> _ = hex), do: hex
+  defp normalize_hex(hex), do: "#" <> hex
+
+  # hex/hsl/rgb helpers (same as you already had) ...
+  defp to_hsl(hex) do
     {r, g, b} = hex_to_rgb(hex)
-    yiq = (r * 299 + g * 587 + b * 114) / 1000
-    if yiq >= 150, do: "#111827", else: "#ffffff"
+    {h, s, l} = rgb_to_hsl(r / 255, g / 255, b / 255)
+    {h, s, l}
   end
 
-  defp mix(hex_a, hex_b, pct) do
-    {r1, g1, b1} = hex_to_rgb(hex_a)
-    {r2, g2, b2} = hex_to_rgb(hex_b)
-    r = clamp(r1 + pct * (r2 - r1))
-    g = clamp(g1 + pct * (g2 - g1))
-    b = clamp(b1 + pct * (b2 - b1))
-    rgb_to_hex({r, g, b})
+  defp from_hsl(h, s, l) do
+    {r, g, b} = hsl_to_rgb(h, s, l)
+    rgb_to_hex({round(r * 255), round(g * 255), round(b * 255)})
   end
 
   defp hex_to_rgb("#" <> hex) do
@@ -99,26 +119,63 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
          String.to_integer(b, 16)}
 
       _ ->
-        {107, 114, 128}
+        {99, 102, 241}
     end
   end
 
-  defp rgb_to_hex({r, g, b}) do
-    "#" <>
-      for(
-        c <- [r, g, b],
-        into: "",
-        do: c |> round() |> Integer.to_string(16) |> String.pad_leading(2, "0")
-      )
+  defp rgb_to_hex({r, g, b}),
+    do:
+      "#" <>
+        for(
+          c <- [r, g, b],
+          into: "",
+          do: Integer.to_string(c, 16) |> String.pad_leading(2, "0")
+        )
+
+  defp dup(<<x>>), do: String.to_integer(<<x, x>>, 16)
+
+  defp rgb_to_hsl(r, g, b) do
+    max = max(r, max(g, b))
+    min = min(r, min(g, b))
+    l = (max + min) / 2
+    d = max - min
+
+    {h, s} =
+      if d == 0 do
+        {0.0, 0.0}
+      else
+        s = d / (1 - abs(2 * l - 1))
+
+        h =
+          cond do
+            max == r -> 60 * remf((g - b) / d, 6.0)
+            max == g -> 60 * ((b - r) / d + 2)
+            true -> 60 * ((r - g) / d + 4)
+          end
+
+        {h, s}
+      end
+
+    {remf(h, 360.0), s, l}
   end
 
-  defp dup(<<x>>) do
-    v = String.to_integer(<<x, x>>, 16)
-    v
+  defp hsl_to_rgb(h, s, l) do
+    c = (1 - abs(2 * l - 1)) * s
+    x = c * (1 - abs(remf(h / 60, 2.0) - 1))
+    m = l - c / 2
+
+    {r1, g1, b1} =
+      cond do
+        h < 60 -> {c, x, 0}
+        h < 120 -> {x, c, 0}
+        h < 180 -> {0, c, x}
+        h < 240 -> {0, x, c}
+        h < 300 -> {x, 0, c}
+        true -> {c, 0, x}
+      end
+
+    {r1 + m, g1 + m, b1 + m}
   end
 
-  defp clamp(v) when is_float(v), do: clamp(round(v))
-  defp clamp(v) when v < 0, do: 0
-  defp clamp(v) when v > 255, do: 255
-  defp clamp(v), do: v
+  defp remf(a, b), do: a - b * Float.floor(a / b)
 end
