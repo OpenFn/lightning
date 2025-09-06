@@ -53,7 +53,12 @@ defmodule LightningWeb.Hooks do
         {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
-        style = ProjectTheme.inline_style_for(project)
+        scale = ProjectTheme.inline_primary_scale(project)
+
+        theme_style =
+          [scale, ProjectTheme.inline_sidebar_vars()]
+          |> Enum.reject(&is_nil/1)
+          |> Enum.join(" ")
 
         {:cont,
          socket
@@ -61,7 +66,7 @@ defmodule LightningWeb.Hooks do
          |> assign_new(:project_user, fn -> project_user end)
          |> assign_new(:project, fn -> project end)
          |> assign_new(:projects, fn -> projects end)
-         |> assign(:side_menu_style, style)}
+         |> assign(:theme_style, theme_style)}
 
       true ->
         {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
@@ -69,7 +74,7 @@ defmodule LightningWeb.Hooks do
   end
 
   def on_mount(:project_scope, _, _session, socket) do
-    {:cont, socket}
+    {:cont, assign_new(socket, :theme_style, fn -> nil end)}
   end
 
   def on_mount(:assign_projects, _, _session, socket) do
