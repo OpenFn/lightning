@@ -75,35 +75,31 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   @impl true
-  def handle_event("confirm-delete-validate", %{"confirm" => params}, socket) do
+  def handle_event("confirm-delete-validate", params, socket) do
     sb = socket.assigns.confirm_delete_sandbox
-
-    cs =
-      if sb do
-        confirm_changeset(sb, params)
-      else
-        socket.assigns.confirm_cs
-      end
-
-    {:noreply,
-     socket
-     |> assign(:confirm_cs, cs)
-     |> assign(:confirm_delete_input, String.trim(params["name"] || ""))}
-  end
-
-  def handle_event("confirm-delete-validate", _params, socket),
-    do: {:noreply, socket}
-
-  @impl true
-  def handle_event("confirm-delete", %{"confirm" => params}, socket) do
-    parent = socket.assigns.project
-    current = socket.assigns.current_user
-    sb = socket.assigns.confirm_delete_sandbox
+    confirm = params["confirm"] || %{}
 
     if is_nil(sb) do
       {:noreply, socket}
     else
-      cs = confirm_changeset(sb, params)
+      cs = confirm_changeset(sb, confirm)
+      name = String.trim(confirm["name"] || "")
+
+      {:noreply, assign(socket, confirm_cs: cs, confirm_delete_input: name)}
+    end
+  end
+
+  @impl true
+  def handle_event("confirm-delete", params, socket) do
+    parent = socket.assigns.project
+    current = socket.assigns.current_user
+    sb = socket.assigns.confirm_delete_sandbox
+    confirm = params["confirm"] || %{}
+
+    if is_nil(sb) do
+      {:noreply, socket}
+    else
+      cs = confirm_changeset(sb, confirm)
 
       if cs.valid? do
         case Lightning.Projects.Sandboxes.delete(parent, current, sb) do
@@ -137,10 +133,7 @@ defmodule LightningWeb.SandboxLive.Index do
           {:error, reason} ->
             {:noreply,
              socket
-             |> put_flash(
-               :error,
-               "Failed to delete sandbox: #{inspect(reason)}"
-             )
+             |> put_flash(:error, "Failed to delete sandbox: #{inspect(reason)}")
              |> assign(:confirm_delete_open?, false)}
         end
       else
@@ -148,9 +141,6 @@ defmodule LightningWeb.SandboxLive.Index do
       end
     end
   end
-
-  def handle_event("confirm-delete", _params, socket),
-    do: {:noreply, socket}
 
   @impl true
   def handle_event("close-delete-modal", _params, socket) do
