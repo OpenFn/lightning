@@ -1399,12 +1399,4 @@ defmodule Lightning.Projects do
 
   defp append_if_missing(list, h),
     do: if(Enum.member?(list, h), do: list, else: list ++ [h])
-
-  defdelegate provision_sandbox(parent, actor, attrs),
-    to: Lightning.Projects.Sandboxes,
-    as: :provision
-
-  defdelegate update_sandbox(parent, actor, sandbox, attrs),
-    to: Lightning.Projects.Sandboxes,
-    as: :update
 end
