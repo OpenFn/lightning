@@ -3137,12 +3137,39 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     project_concurrency = workflow.project.concurrency || 0
 
+    socket =
+      socket
+      |> assign(
+        workflow: workflow,
+        max_concurrency: max(0, project_concurrency - alloted_concurrency)
+      )
+      |> apply_params(socket.assigns.workflow_params, :workflow)
+
+    snapshot =
+      Snapshot.get_current_for(workflow) ||
+        case Workflows.maybe_create_latest_snapshot(workflow) do
+          {:ok, snap} -> snap
+          _ -> nil
+        end
+
+    case snapshot do
+      %Snapshot{} = snap -> assign_workflow(socket, workflow, snap)
+      nil -> assign_workflow_without_snapshot(socket, workflow)
+    end
+  end
+
+  defp assign_workflow(socket, workflow, nil) do
     socket
+    |> assign(workflow: workflow)
+    |> assign(snapshot: nil)
+    |> assign(snapshot_version_tag: "latest")
     |> assign(
-      workflow: workflow,
-      max_concurrency: max(0, project_concurrency - alloted_concurrency)
+      show_workflow_ai_chat:
+        Map.get(socket.assigns, :show_workflow_ai_chat, false)
     )
-    |> apply_params(socket.assigns.workflow_params, :workflow)
+    |> assign_changeset(Ecto.Changeset.change(workflow))
+    |> maybe_disable_canvas()
+    |> generate_workflow_code()
   end
 
   defp assign_workflow(socket, workflow, snapshot) do
@@ -3166,6 +3193,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(snapshot_version_tag: version)
     |> assign(show_workflow_ai_chat: show_workflow_ai_chat)
     |> assign_changeset(changeset)
+    |> maybe_disable_canvas()
+    |> generate_workflow_code()
+  end
+
+  defp assign_workflow_without_snapshot(socket, workflow) do
+    socket
+    |> assign(snapshot: nil)
+    |> assign(snapshot_version_tag: "latest")
+    |> assign_changeset(Ecto.Changeset.change(workflow))
     |> maybe_disable_canvas()
     |> generate_workflow_code()
   end
