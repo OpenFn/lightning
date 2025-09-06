@@ -218,5 +218,82 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "Failed to delete sandbox: "
     end
+
+    test "open-delete-modal with unknown id shows flash", %{
+      conn: conn,
+      parent: parent
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      bad_id = Ecto.UUID.generate()
+      html = render_click(view, "open-delete-modal", %{"id" => bad_id})
+
+      assert html =~ "Sandbox not found"
+      refute has_element?(view, "#confirm-delete-sandbox")
+    end
+
+    test "confirm-delete-validate with no params is a no-op (second clause)", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      assert has_element?(view, "#confirm-delete-sandbox")
+
+      _html_before = render(view)
+
+      _html_after =
+        view |> element("#confirm-delete-sandbox form") |> render_change(%{})
+
+      assert has_element?(view, "#confirm-delete-sandbox")
+    end
+
+    test "confirm-delete with no params is a no-op (second clause)", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      assert has_element?(view, "#confirm-delete-sandbox")
+
+      _html =
+        view |> element("#confirm-delete-sandbox form") |> render_submit(%{})
+
+      assert has_element?(view, "#confirm-delete-sandbox")
+    end
+
+    test "close-delete-modal resets assigns", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      assert has_element?(view, "#confirm-delete-sandbox")
+
+      view
+      |> element("#confirm-delete-sandbox [aria-label='Close']")
+      |> render_click()
+
+      refute has_element?(view, "#confirm-delete-sandbox")
+
+      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      assert has_element?(view, "#confirm-delete-sandbox")
+
+      view
+      |> form("#confirm-delete-sandbox form", confirm: %{"name" => "nope"})
+      |> render_change()
+
+      refute view
+             |> element(
+               ~s/#confirm-delete-sandbox button[type="submit"]:not([disabled])/
+             )
+             |> has_element?()
+    end
   end
 end
