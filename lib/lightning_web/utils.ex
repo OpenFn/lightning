@@ -183,14 +183,17 @@ defmodule LightningWeb.Utils do
     |> String.trim_leading("#")
     |> String.upcase()
     |> case do
-      <<r::binary-size(1), g::binary-size(1), b::binary-size(1)>> ->
-        "##{r <> r}#{g <> g}#{b <> b}"
+      <<r::binary-size(1), g::binary-size(1), b::binary-size(1)>> = s ->
+        if valid_hex?(s), do: "##{r <> r}#{g <> g}#{b <> b}", else: "#79B2D6"
 
-      <<r::binary-size(2), g::binary-size(2), b::binary-size(2), _rest::binary>> ->
-        "##{r}#{g}#{b}"
+      <<r::binary-size(2), g::binary-size(2), b::binary-size(2), _rest::binary>> =
+          s ->
+        if valid_hex?(String.slice(s, 0, 6)),
+          do: "##{r}#{g}#{b}",
+          else: "#79B2D6"
 
-      <<r::binary-size(2), g::binary-size(2), b::binary-size(2)>> ->
-        "##{r}#{g}#{b}"
+      <<r::binary-size(2), g::binary-size(2), b::binary-size(2)>> = s ->
+        if valid_hex?(s), do: "##{r}#{g}#{b}", else: "#79B2D6"
 
       _ ->
         "#79B2D6"
@@ -198,4 +201,6 @@ defmodule LightningWeb.Utils do
   end
 
   def normalize_hex(_), do: "#79B2D6"
+
+  defp valid_hex?(str), do: String.match?(str, ~r/^[0-9A-F]+$/)
 end
