@@ -53,7 +53,6 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
     |> String.replace("\n", " ")
   end
 
-  # ---- existing helpers (unchanged below) ----
   defp build_scale(hex) do
     {h, s, _l} = to_hsl(hex)
 
@@ -87,7 +86,6 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
   defp normalize_hex("#" <> _ = hex), do: hex
   defp normalize_hex(hex), do: "#" <> hex
 
-  # hex/hsl/rgb helpers (same as you already had) ...
   defp to_hsl(hex) do
     {r, g, b} = hex_to_rgb(hex)
     {h, s, l} = rgb_to_hsl(r / 255, g / 255, b / 255)
