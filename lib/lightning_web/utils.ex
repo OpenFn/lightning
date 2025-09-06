@@ -166,8 +166,10 @@ defmodule LightningWeb.Utils do
     if halt?, do: Plug.Conn.halt(conn), else: conn
   end
 
+  @fallback "#79B2D6"
+
   @doc """
-  Normalizes a color string to a `#RRGGBB` uppercase hex.
+  Normalizes a color string to `#RRGGBB` uppercase hex.
 
   Accepts:
     * `#RGB`, `RGB`
@@ -175,7 +177,7 @@ defmodule LightningWeb.Utils do
     * Any other value -> fallback #79B2D6
   """
   @spec normalize_hex(nil | binary() | any()) :: binary()
-  def normalize_hex(nil), do: "#79B2D6"
+  def normalize_hex(nil), do: @fallback
 
   def normalize_hex(val) when is_binary(val) do
     val
@@ -184,23 +186,22 @@ defmodule LightningWeb.Utils do
     |> String.upcase()
     |> case do
       <<r::binary-size(1), g::binary-size(1), b::binary-size(1)>> = s ->
-        if valid_hex?(s), do: "##{r <> r}#{g <> g}#{b <> b}", else: "#79B2D6"
-
-      <<r::binary-size(2), g::binary-size(2), b::binary-size(2), _rest::binary>> =
-          s ->
-        if valid_hex?(String.slice(s, 0, 6)),
-          do: "##{r}#{g}#{b}",
-          else: "#79B2D6"
+        if valid_hex?(s), do: "##{r <> r}#{g <> g}#{b <> b}", else: @fallback
 
       <<r::binary-size(2), g::binary-size(2), b::binary-size(2)>> = s ->
-        if valid_hex?(s), do: "##{r}#{g}#{b}", else: "#79B2D6"
+        if valid_hex?(s), do: "##{r}#{g}#{b}", else: @fallback
+
+      <<r::binary-size(2), g::binary-size(2), b::binary-size(2), rest::binary>> =
+          s
+      when byte_size(rest) > 0 ->
+        if valid_hex?(binary_part(s, 0, 6)), do: "##{r}#{g}#{b}", else: @fallback
 
       _ ->
-        "#79B2D6"
+        @fallback
     end
   end
 
-  def normalize_hex(_), do: "#79B2D6"
+  def normalize_hex(_), do: @fallback
 
   defp valid_hex?(str), do: String.match?(str, ~r/^[0-9A-F]+$/)
 end
