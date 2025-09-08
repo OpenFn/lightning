@@ -37,7 +37,7 @@ defmodule LightningWeb.Components.Icon do
 
   def sandboxes(assigns), do: Heroicons.squares_plus(assigns)
 
-  def git_branch(assigns) do
+  def branches(assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -47,11 +47,11 @@ defmodule LightningWeb.Components.Icon do
       class={@class}
       aria-hidden="true"
     >
-      <!-- simple branch shape -->
       <circle cx="6" cy="6" r="2.25" />
-      <circle cx="18" cy="8" r="2.25" />
+      <circle cx="18" cy="6" r="2.25" />
       <circle cx="18" cy="18" r="2.25" />
-      <path d="M8.5 6v8a3.5 3.5 0 0 0 3.5 3.5h4" />
+      <path d="M6 8v10a4 4 0 0 0 4 4h8" />
+      <path d="M8 6h8" />
     </svg>
     """
   end

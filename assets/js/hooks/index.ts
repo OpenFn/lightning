@@ -69,7 +69,6 @@ export const ColorPicker = {
     const prev = this.native;
     this.resolveNodes();
 
-    // If the native input node was replaced by LV diff, re-bind
     if (this.native !== this._prevNative) {
       this.unbind(prev);
       this.bindIfNeeded();
@@ -83,7 +82,7 @@ export const ColorPicker = {
   },
 
   resolveNodes() {
-    const selector = this.el.dataset.inputId; // e.g. "#confirm-color-native"
+    const selector = this.el.dataset.inputId;
     if (!selector) {
       this.native = null;
     } else {
