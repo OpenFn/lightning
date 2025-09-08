@@ -63,10 +63,10 @@ defmodule LightningWeb.Hooks do
         {:cont,
          socket
          |> assign(:side_menu_theme, "primary-theme")
+         |> assign(:theme_style, theme_style)
          |> assign_new(:project_user, fn -> project_user end)
          |> assign_new(:project, fn -> project end)
-         |> assign_new(:projects, fn -> projects end)
-         |> assign(:theme_style, theme_style)}
+         |> assign_new(:projects, fn -> projects end)}
 
       true ->
         {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
