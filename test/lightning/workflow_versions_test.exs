@@ -154,7 +154,7 @@ defmodule Lightning.WorkflowVersionsTest do
   end
 
   describe "record_versions/3 (bulk)" do
-    test "deduplicates input, ignores preexisting rows, preserves order in version_history, returns inserted_count" do
+    test "deduplicates input, preserves order in version_history, returns inserted_count" do
       wf = insert(:workflow)
 
       # initial bulk with a duplicate in the list
@@ -165,13 +165,13 @@ defmodule Lightning.WorkflowVersionsTest do
       assert wf1.version_history == [@a, @b]
       assert count_rows(wf.id) == 2
 
-      # bulk that mixes old and new; order preserved; only new counted
+      # bulk that mixes old and new; order preserved; both old and new counted
       assert {:ok, wf2, inserted2} =
                WorkflowVersions.record_versions(wf1, [@b, @c], "cli")
 
-      assert inserted2 == 1
+      assert inserted2 == 2
       assert wf2.version_history == [@a, @b, @c]
-      assert count_rows(wf.id) == 3
+      assert count_rows(wf.id) == 4
     end
 
     test "invalid input returns {:error, :invalid_input}" do

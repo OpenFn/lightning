@@ -47,7 +47,6 @@ defmodule Lightning.WorkflowVersions do
   ## Returns
     * `{:ok, %Workflow{}}` — workflow (possibly unchanged) with an updated
       `version_history` if a new `hash` was appended
-    * `{:error, :invalid_input}` — when `hash`/`source` are invalid
     * `{:error, reason}` — database error
 
   ## Examples
@@ -60,13 +59,13 @@ defmodule Lightning.WorkflowVersions do
   """
   @spec record_version(Workflow.t(), hash, String.t()) ::
           {:ok, Workflow.t()} | {:error, term()}
-  def record_version(%Workflow{} = workflow, hash, source \\ "app")
+  def record_version(%Workflow{id: id}, hash, source \\ "app")
       when is_binary(hash) and is_binary(source) do
     with true <- Hex.valid?(hash),
          true <- source in @sources do
       Multi.new()
       |> Multi.run(:latest_version, fn _repo, _changes ->
-        {:ok, latest_version(workflow)}
+        {:ok, latest_version(id)}
       end)
       |> Multi.run(:is_duplicate, fn _repo, %{latest_version: latest_version} ->
         {:ok, is_map(latest_version) && latest_version.hash == hash}
@@ -80,64 +79,31 @@ defmodule Lightning.WorkflowVersions do
              latest_version.source == source}
         end
       )
-      |> Multi.run(
-        :new_version,
-        fn repo, %{is_duplicate: is_duplicate} ->
-          if is_duplicate do
-            {:ok, nil}
-          else
-            %WorkflowVersion{}
-            |> WorkflowVersion.changeset(%{
-              workflow_id: workflow.id,
-              hash: hash,
-              source: source
-            })
-            |> repo.insert()
-          end
-        end
+      |> maybe_insert_new_version(
+        WorkflowVersion.changeset(%WorkflowVersion{}, %{
+          workflow_id: id,
+          hash: hash,
+          source: source
+        })
       )
-      |> Multi.run(
-        :delete_latest,
-        fn repo,
-           %{should_squash: should_squash, latest_version: latest_version} ->
-          if should_squash do
-            repo.delete(latest_version)
-          else
-            {:ok, nil}
-          end
-        end
-      )
+      |> maybe_delete_current_latest()
       |> Multi.run(
         :append_history,
         fn repo, %{new_version: new_version, delete_latest: deleted_version} ->
           wf =
-            from(w in Workflow, where: w.id == ^workflow.id, lock: "FOR UPDATE")
+            from(w in Workflow, where: w.id == ^id, lock: "FOR UPDATE")
             |> repo.one!()
 
           new_hist =
-            (wf.version_history || [])
-            |> then(fn history ->
-              if deleted_version do
-                Enum.reject(history, fn hash -> hash == deleted_version.hash end)
-              else
-                history
-              end
-            end)
-            |> then(fn history ->
-              if new_version do
-                append_if_missing(history, hash)
-              else
-                history
-              end
-            end)
+            build_version_history(
+              wf.version_history || [],
+              new_version,
+              deleted_version
+            )
 
-          if new_hist == (wf.version_history || []) do
-            {:ok, wf}
-          else
-            wf
-            |> Changeset.change(version_history: new_hist)
-            |> repo.update()
-          end
+          wf
+          |> Changeset.change(version_history: new_hist)
+          |> repo.update()
         end
       )
       |> Repo.transaction()
@@ -147,6 +113,51 @@ defmodule Lightning.WorkflowVersions do
       end
     else
       false -> {:error, :invalid_input}
+    end
+  end
+
+  defp maybe_insert_new_version(multi, changeset) do
+    Multi.run(
+      multi,
+      :new_version,
+      fn repo, %{is_duplicate: is_duplicate} ->
+        if is_duplicate do
+          {:ok, nil}
+        else
+          repo.insert(changeset)
+        end
+      end
+    )
+  end
+
+  defp maybe_delete_current_latest(multi) do
+    Multi.run(
+      multi,
+      :delete_latest,
+      fn repo, %{should_squash: should_squash, latest_version: latest_version} ->
+        if should_squash do
+          repo.delete(latest_version)
+        else
+          {:ok, nil}
+        end
+      end
+    )
+  end
+
+  defp build_version_history(current_history, new_version, deleted_version) do
+    if new_version do
+      new_hist =
+        if deleted_version do
+          Enum.reject(current_history, fn hash ->
+            hash == deleted_version.hash
+          end)
+        else
+          current_history
+        end
+
+      append_if_missing(new_hist, new_version.hash)
+    else
+      current_history
     end
   end
 
@@ -204,13 +215,7 @@ defmodule Lightning.WorkflowVersions do
     rows = build_rows(id, hashes, source, now)
 
     Multi.new()
-    |> Multi.insert_all(
-      :rows,
-      WorkflowVersion,
-      rows,
-      on_conflict: :nothing,
-      conflict_target: [:workflow_id, :hash]
-    )
+    |> Multi.insert_all(:rows, WorkflowVersion, rows)
     |> Multi.run(:append_history, fn repo, _ ->
       append_history(repo, id, hashes)
     end)
@@ -308,9 +313,9 @@ defmodule Lightning.WorkflowVersions do
     end
   end
 
-  defp latest_version(workflow) do
+  defp latest_version(workflow_id) do
     from(v in WorkflowVersion,
-      where: v.workflow_id == ^workflow.id,
+      where: v.workflow_id == ^workflow_id,
       order_by: [desc: v.inserted_at, desc: v.id],
       limit: 1
     )
