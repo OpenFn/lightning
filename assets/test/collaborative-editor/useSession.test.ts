@@ -5,8 +5,6 @@
  * Tests React integration compatibility and selector-based optimization.
  */
 
-import test from "ava";
-
 import { createSessionStore } from "../../js/collaborative-editor/stores/createSessionStore";
 import { createMockSocket } from "./mocks/phoenixSocket";
 
@@ -33,21 +31,19 @@ function testUseSession(selector) {
 // HOOK CONTEXT VALIDATION TESTS
 // =============================================================================
 
-test("useSession throws error when used outside SessionProvider", t => {
+test("useSession throws error when used outside SessionProvider", () => {
   mockContextValue = null;
 
-  const error = t.throws(() => {
+  expect(() => {
     testUseSession();
-  });
-
-  t.is(error.message, "useSession must be used within a SessionProvider");
+  }).toThrow("useSession must be used within a SessionProvider");
 });
 
 // =============================================================================
 // REACT INTEGRATION COMPATIBILITY TESTS
 // =============================================================================
 
-test("useSession supports component destructuring patterns", t => {
+test("useSession supports component destructuring patterns", () => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   mockContextValue = store;
@@ -64,13 +60,13 @@ test("useSession supports component destructuring patterns", t => {
   // Simulate ConnectionStatus component pattern
   const { isConnected: yjsConnected, isSynced } = sessionStore;
 
-  t.is(typeof yjsConnected, "boolean", "Should support renaming destructure");
-  t.is(typeof isSynced, "boolean", "Should support property destructure");
+  expect(typeof yjsConnected).toBe("boolean"); // "Should support renaming destructure"
+  expect(typeof isSynced).toBe("boolean"); // "Should support property destructure"
 
   store.destroy();
 });
 
-test("useSession supports direct property access patterns", t => {
+test("useSession supports direct property access patterns", () => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   mockContextValue = store;
@@ -89,8 +85,8 @@ test("useSession supports direct property access patterns", t => {
   const ydoc = sessionStore.ydoc;
   const isReady = sessionStore.isReady();
 
-  t.truthy(ydoc, "Should support direct property access");
-  t.is(typeof isReady, "boolean", "Should support method calls");
+  expect(ydoc).toBeTruthy(); // "Should support direct property access"
+  expect(typeof isReady).toBe("boolean"); // "Should support method calls"
 
   store.destroy();
 });
@@ -99,7 +95,7 @@ test("useSession supports direct property access patterns", t => {
 // SELECTOR-BASED OPTIMIZATION TESTS
 // =============================================================================
 
-test("useSession with selector only re-renders on selected state changes", t => {
+test("useSession with selector only re-renders on selected state changes", () => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   mockContextValue = store;
@@ -119,29 +115,21 @@ test("useSession with selector only re-renders on selected state changes", t => 
   // Use hook with selector
   const selectedYdoc = testUseSession(ydocSelector);
 
-  t.is(ydocSelectorCallCount, 1, "Selector should be called once initially");
-  t.is(selectedYdoc, store.ydoc, "Should return selected value");
+  expect(ydocSelectorCallCount).toBe(1); // "Selector should be called once initially"
+  expect(selectedYdoc).toBe(store.ydoc); // "Should return selected value"
 
   // Test that selector is memoized
   const memoizedSelector = store.withSelector(ydocSelector);
   const firstCall = memoizedSelector();
   const secondCall = memoizedSelector();
 
-  t.is(
-    ydocSelectorCallCount,
-    2,
-    "Selector should be called for withSelector setup"
-  );
-  t.is(
-    firstCall,
-    secondCall,
-    "Memoized selector should return consistent values"
-  );
+  expect(ydocSelectorCallCount).toBe(2); // Selector should be called for withSelector setup
+  expect(firstCall).toBe(secondCall); // Memoized selector should return consistent values
 
   store.destroy();
 });
 
-test("useSession without selector provides full state reactively", t => {
+test("useSession without selector provides full state reactively", () => {
   const store = createSessionStore();
   const mockSocket = createMockSocket();
   mockContextValue = store;
@@ -156,32 +144,16 @@ test("useSession without selector provides full state reactively", t => {
   const sessionState = testUseSession();
 
   // Should get full session state
-  t.truthy(sessionState.ydoc, "Should have ydoc from full state");
-  t.truthy(sessionState.provider, "Should have provider from full state");
-  t.truthy(sessionState.awareness, "Should have awareness from full state");
-  t.is(
-    typeof sessionState.isConnected,
-    "boolean",
-    "Should have isConnected from full state"
-  );
-  t.is(
-    typeof sessionState.isSynced,
-    "boolean",
-    "Should have isSynced from full state"
-  );
-  t.is(
-    typeof sessionState.settled,
-    "boolean",
-    "Should have settled from full state"
-  );
+  expect(sessionState.ydoc).toBeTruthy(); // "Should have ydoc from full state"
+  expect(sessionState.provider).toBeTruthy(); // "Should have provider from full state"
+  expect(sessionState.awareness).toBeTruthy(); // "Should have awareness from full state"
+  expect(typeof sessionState.isConnected).toBe("boolean"); // Should have isConnected from full state
+  expect(typeof sessionState.isSynced).toBe("boolean"); // Should have isSynced from full state
+  expect(typeof sessionState.settled).toBe("boolean"); // Should have settled from full state
 
   // Verify it matches store snapshot
   const storeSnapshot = store.getSnapshot();
-  t.deepEqual(
-    sessionState,
-    storeSnapshot,
-    "Should return full state matching store snapshot"
-  );
+  expect(sessionState).toEqual(storeSnapshot); // Should return full state matching store snapshot
 
   store.destroy();
 });

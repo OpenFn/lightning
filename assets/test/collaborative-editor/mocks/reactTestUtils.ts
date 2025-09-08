@@ -1,8 +1,8 @@
 /**
- * React testing utilities for Ava tests
+ * React testing utilities for Vitest tests
  *
  * Since this project doesn't use React Testing Library, we create minimal
- * utilities to test React hooks with Ava framework.
+ * utilities to test React hooks with Vitest framework.
  */
 
 import type { DependencyList } from "react";

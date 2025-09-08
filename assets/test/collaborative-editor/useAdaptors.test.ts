@@ -5,8 +5,6 @@
  * to adaptor functionality from React components using the SessionProvider context.
  */
 
-import test from "ava";
-
 import { createAdaptorStore } from "../../js/collaborative-editor/stores/createAdaptorStore";
 import type { AdaptorStoreInstance } from "../../js/collaborative-editor/stores/createAdaptorStore";
 import type {
@@ -24,7 +22,7 @@ import {
 // Note: setAdaptors doesn't sort, only handleAdaptorsReceived does
 // So when we use setAdaptors in tests, we get the original order
 
-// Since we can't easily test React hooks directly with Ava, we'll test the hook logic
+// Since we can't easily test React hooks directly with Vitest, we'll test the hook logic
 // by directly testing the store interactions and selector behavior
 
 interface TestContext {
@@ -32,13 +30,15 @@ interface TestContext {
   mockSession: ReturnType<typeof createMockSessionContext>;
 }
 
-test.beforeEach(t => {
+let testContext: TestContext;
+
+beforeEach(() => {
   // Create fresh store for each test
   const adaptorStore = createAdaptorStore();
   const mockSession = createMockSessionContext(adaptorStore);
   setMockSessionValue(mockSession);
 
-  t.context = {
+  testContext = {
     adaptorStore,
     mockSession,
   };
@@ -48,8 +48,8 @@ test.beforeEach(t => {
 // useAdaptors Hook Tests
 // =============================================================================
 
-test("useAdaptors: default selector returns all adaptors", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptors: default selector returns all adaptors", () => {
+  const { adaptorStore } = testContext;
 
   // Set up test data
   adaptorStore.setAdaptors(mockAdaptorsList);
@@ -60,11 +60,11 @@ test("useAdaptors: default selector returns all adaptors", t => {
 
   const result = selector();
 
-  t.deepEqual(result, mockAdaptorsList);
+  expect(result).toEqual(mockAdaptorsList);
 });
 
-test("useAdaptors: custom selector returns selected data", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptors: custom selector returns selected data", () => {
+  const { adaptorStore } = testContext;
 
   // Set up test data
   adaptorStore.setAdaptors(mockAdaptorsList);
@@ -77,14 +77,11 @@ test("useAdaptors: custom selector returns selected data", t => {
 
   const result = selector();
 
-  t.deepEqual(
-    result,
-    mockAdaptorsList.map(a => a.name)
-  );
+  expect(result).toEqual(mockAdaptorsList.map(a => a.name));
 });
 
-test("useAdaptors: selector with memoization", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptors: selector with memoization", () => {
+  const { adaptorStore } = testContext;
 
   // Set up test data
   adaptorStore.setAdaptors(mockAdaptorsList);
@@ -98,12 +95,12 @@ test("useAdaptors: selector with memoization", t => {
   const result2 = selector();
 
   // Results should be the same reference due to memoization
-  t.is(result1, result2);
-  t.deepEqual(result1, mockAdaptorsList);
+  expect(result1).toBe(result2);
+  expect(result1).toEqual(mockAdaptorsList);
 });
 
-test("useAdaptors: handles empty adaptors list", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptors: handles empty adaptors list", () => {
+  const { adaptorStore } = testContext;
 
   // Don't set any adaptors (should start empty)
   const selector = adaptorStore.withSelector(
@@ -112,11 +109,11 @@ test("useAdaptors: handles empty adaptors list", t => {
 
   const result = selector();
 
-  t.deepEqual(result, []);
+  expect(result).toEqual([]);
 });
 
-test("useAdaptors: complex selector with filtering", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptors: complex selector with filtering", () => {
+  const { adaptorStore } = testContext;
 
   // Set up test data
   adaptorStore.setAdaptors(mockAdaptorsList);
@@ -128,16 +125,16 @@ test("useAdaptors: complex selector with filtering", t => {
 
   const result = selector();
 
-  t.is(result.length, 3); // All mock adaptors have multiple versions
-  t.is(result[0]?.name, "@openfn/language-http");
+  expect(result.length).toBe(3); // All mock adaptors have multiple versions
+  expect(result[0]?.name).toBe("@openfn/language-http");
 });
 
 // =============================================================================
 // useAdaptorsLoading Hook Tests
 // =============================================================================
 
-test("useAdaptorsLoading: returns loading state", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptorsLoading: returns loading state", () => {
+  const { adaptorStore } = testContext;
 
   // Test initial loading state
   adaptorStore.setLoading(true);
@@ -147,11 +144,11 @@ test("useAdaptorsLoading: returns loading state", t => {
   );
   const result = selector();
 
-  t.is(result, true);
+  expect(result).toBe(true);
 });
 
-test("useAdaptorsLoading: updates when loading state changes", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptorsLoading: updates when loading state changes", () => {
+  const { adaptorStore } = testContext;
 
   // Create hook tester to test subscription behavior
   const hookTester = createHookTester(
@@ -174,16 +171,16 @@ test("useAdaptorsLoading: updates when loading state changes", t => {
   unsubscribe();
   hookTester.cleanup();
 
-  t.is(values[0], false); // Initial state
-  t.true(callCount >= 1);
+  expect(values[0]).toBe(false); // Initial state
+  expect(callCount >= 1).toBe(true);
 });
 
 // =============================================================================
 // useAdaptorsError Hook Tests
 // =============================================================================
 
-test("useAdaptorsError: returns error state", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptorsError: returns error state", () => {
+  const { adaptorStore } = testContext;
 
   const errorMessage = "Failed to load adaptors";
   adaptorStore.setError(errorMessage);
@@ -193,11 +190,11 @@ test("useAdaptorsError: returns error state", t => {
   );
   const result = selector();
 
-  t.is(result, errorMessage);
+  expect(result).toBe(errorMessage);
 });
 
-test("useAdaptorsError: returns null when no error", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptorsError: returns null when no error", () => {
+  const { adaptorStore } = testContext;
 
   adaptorStore.setError(null);
 
@@ -206,11 +203,11 @@ test("useAdaptorsError: returns null when no error", t => {
   );
   const result = selector();
 
-  t.is(result, null);
+  expect(result).toBe(null);
 });
 
-test("useAdaptorsError: updates when error state changes", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptorsError: updates when error state changes", () => {
+  const { adaptorStore } = testContext;
 
   const hookTester = createHookTester(
     adaptorStore.subscribe,
@@ -230,50 +227,50 @@ test("useAdaptorsError: updates when error state changes", t => {
   unsubscribe();
   hookTester.cleanup();
 
-  t.is(values[0], null); // Initial state
+  expect(values[0]).toBe(null); // Initial state
 });
 
 // =============================================================================
 // useAdaptorCommands Hook Tests
 // =============================================================================
 
-test("useAdaptorCommands: returns command functions", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptorCommands: returns command functions", () => {
+  const { adaptorStore } = testContext;
 
   // Test that commands are available (we can't easily test the full hook, but we can test the store provides them)
-  t.is(typeof adaptorStore.requestAdaptors, "function");
-  t.is(typeof adaptorStore.setAdaptors, "function");
-  t.is(typeof adaptorStore.clearError, "function");
+  expect(typeof adaptorStore.requestAdaptors).toBe("function");
+  expect(typeof adaptorStore.setAdaptors).toBe("function");
+  expect(typeof adaptorStore.clearError).toBe("function");
 });
 
-test("useAdaptorCommands: setAdaptors command works", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptorCommands: setAdaptors command works", () => {
+  const { adaptorStore } = testContext;
 
   // Test setAdaptors command
   adaptorStore.setAdaptors(mockAdaptorsList);
 
   const state = adaptorStore.getSnapshot();
-  t.deepEqual(state.adaptors, mockAdaptorsList);
+  expect(state.adaptors).toEqual(mockAdaptorsList);
 });
 
-test("useAdaptorCommands: clearError command works", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptorCommands: clearError command works", () => {
+  const { adaptorStore } = testContext;
 
   // Set an error first
   adaptorStore.setError("Test error");
-  t.is(adaptorStore.getSnapshot().error, "Test error");
+  expect(adaptorStore.getSnapshot().error).toBe("Test error");
 
   // Clear the error
   adaptorStore.clearError();
-  t.is(adaptorStore.getSnapshot().error, null);
+  expect(adaptorStore.getSnapshot().error).toBe(null);
 });
 
 // =============================================================================
 // useAdaptor Hook Tests (find specific adaptor by name)
 // =============================================================================
 
-test("useAdaptor: finds existing adaptor by name", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptor: finds existing adaptor by name", () => {
+  const { adaptorStore } = testContext;
 
   adaptorStore.setAdaptors(mockAdaptorsList);
 
@@ -286,13 +283,13 @@ test("useAdaptor: finds existing adaptor by name", t => {
 
   const result = selector();
 
-  t.not(result, null);
-  t.is(result?.name, adaptorName);
-  t.is(result?.latest, "2.1.0");
+  expect(result).not.toBe(null);
+  expect(result?.name).toBe(adaptorName);
+  expect(result?.latest).toBe("2.1.0");
 });
 
-test("useAdaptor: returns null for non-existent adaptor", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptor: returns null for non-existent adaptor", () => {
+  const { adaptorStore } = testContext;
 
   adaptorStore.setAdaptors(mockAdaptorsList);
 
@@ -305,11 +302,11 @@ test("useAdaptor: returns null for non-existent adaptor", t => {
 
   const result = selector();
 
-  t.is(result, null);
+  expect(result).toBe(null);
 });
 
-test("useAdaptor: updates when adaptors change", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("useAdaptor: updates when adaptors change", () => {
+  const { adaptorStore } = testContext;
 
   const targetAdaptor = "@openfn/language-http";
 
@@ -328,7 +325,7 @@ test("useAdaptor: updates when adaptors change", t => {
   });
 
   // Initially no adaptors
-  t.is(values[0], null);
+  expect(values[0]).toBe(null);
 
   // Add adaptors
   adaptorStore.setAdaptors(mockAdaptorsList);
@@ -341,8 +338,8 @@ test("useAdaptor: updates when adaptors change", t => {
 // Integration Tests
 // =============================================================================
 
-test("hooks integration: all hooks work together", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("hooks integration: all hooks work together", () => {
+  const { adaptorStore } = testContext;
 
   // Test initial state
   const initialAdaptors = adaptorStore.withSelector(
@@ -355,16 +352,15 @@ test("hooks integration: all hooks work together", t => {
     (state: AdaptorState) => state.error
   )();
 
-  t.deepEqual(initialAdaptors, []);
-  t.is(initialLoading, false);
-  t.is(initialError, null);
+  expect(initialAdaptors).toEqual([]);
+  expect(initialLoading).toBe(false);
+  expect(initialError).toBe(null);
 
   // Set loading state
   adaptorStore.setLoading(true);
-  t.is(
-    adaptorStore.withSelector((state: AdaptorState) => state.isLoading)(),
-    true
-  );
+  expect(
+    adaptorStore.withSelector((state: AdaptorState) => state.isLoading)()
+  ).toBe(true);
 
   // Add adaptors
   adaptorStore.setAdaptors(mockAdaptorsList);
@@ -381,14 +377,14 @@ test("hooks integration: all hooks work together", t => {
       state.adaptors.find(a => a.name === "@openfn/language-http") || null
   )();
 
-  t.deepEqual(finalAdaptors, mockAdaptorsList);
-  t.is(finalLoading, false);
-  t.not(specificAdaptor, null);
-  t.is(specificAdaptor?.name, "@openfn/language-http");
+  expect(finalAdaptors).toEqual(mockAdaptorsList);
+  expect(finalLoading).toBe(false);
+  expect(specificAdaptor).not.toBe(null);
+  expect(specificAdaptor?.name).toBe("@openfn/language-http");
 });
 
-test("hooks integration: error handling works across all hooks", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("hooks integration: error handling works across all hooks", () => {
+  const { adaptorStore } = testContext;
 
   const errorMessage = "Network error";
 
@@ -405,21 +401,23 @@ test("hooks integration: error handling works across all hooks", t => {
     (state: AdaptorState) => state.adaptors
   )();
 
-  t.is(error, errorMessage);
-  t.is(loading, false); // setError should clear loading
-  t.deepEqual(adaptors, []); // adaptors should still be empty
+  expect(error).toBe(errorMessage);
+  expect(loading).toBe(false); // setError should clear loading
+  expect(adaptors).toEqual([]); // adaptors should still be empty
 
   // Clear error
   adaptorStore.clearError();
-  t.is(adaptorStore.withSelector((state: AdaptorState) => state.error)(), null);
+  expect(
+    adaptorStore.withSelector((state: AdaptorState) => state.error)()
+  ).toBe(null);
 });
 
 // =============================================================================
 // Edge Cases
 // =============================================================================
 
-test("hooks: handle rapid state changes", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("hooks: handle rapid state changes", () => {
+  const { adaptorStore } = testContext;
 
   // Rapid state changes
   adaptorStore.setLoading(true);
@@ -433,14 +431,14 @@ test("hooks: handle rapid state changes", t => {
   // Final state should be consistent
   const finalState = adaptorStore.getSnapshot();
 
-  t.deepEqual(finalState.adaptors, mockAdaptorsList);
-  t.is(finalState.isLoading, false);
-  t.is(finalState.error, null);
-  t.is(typeof finalState.lastUpdated, "number");
+  expect(finalState.adaptors).toEqual(mockAdaptorsList);
+  expect(finalState.isLoading).toBe(false);
+  expect(finalState.error).toBe(null);
+  expect(typeof finalState.lastUpdated).toBe("number");
 });
 
-test("hooks: selector referential stability", t => {
-  const { adaptorStore } = t.context as TestContext;
+test("hooks: selector referential stability", () => {
+  const { adaptorStore } = testContext;
 
   const selector = adaptorStore.withSelector(
     (state: AdaptorState) => state.adaptors
@@ -449,10 +447,10 @@ test("hooks: selector referential stability", t => {
   // Same selector should return same reference when data hasn't changed
   const result1 = selector();
   const result2 = selector();
-  t.is(result1, result2);
+  expect(result1).toBe(result2);
 
   // After changing data, should return new reference
   adaptorStore.setAdaptors(mockAdaptorsList);
   const result3 = selector();
-  t.not(result1, result3);
+  expect(result1).not.toBe(result3);
 });

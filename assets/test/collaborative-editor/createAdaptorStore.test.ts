@@ -9,8 +9,6 @@
  * - Error handling and validation
  */
 
-import test from "ava";
-
 import { createAdaptorStore } from "../../js/collaborative-editor/stores/createAdaptorStore";
 
 import {
@@ -29,17 +27,17 @@ import {
 // CORE STORE INTERFACE TESTS
 // =============================================================================
 
-test("getSnapshot returns initial state", t => {
+test("getSnapshot returns initial state", () => {
   const store = createAdaptorStore();
   const initialState = store.getSnapshot();
 
-  t.deepEqual(initialState.adaptors, []);
-  t.is(initialState.isLoading, false);
-  t.is(initialState.error, null);
-  t.is(initialState.lastUpdated, null);
+  expect(initialState.adaptors).toEqual([]);
+  expect(initialState.isLoading).toBe(false);
+  expect(initialState.error).toBe(null);
+  expect(initialState.lastUpdated).toBe(null);
 });
 
-test("subscribe/unsubscribe functionality works correctly", t => {
+test("subscribe/unsubscribe functionality works correctly", () => {
   const store = createAdaptorStore();
   let callCount = 0;
 
@@ -53,21 +51,21 @@ test("subscribe/unsubscribe functionality works correctly", t => {
   // Trigger a state change
   store.setLoading(true);
 
-  t.is(callCount, 1, "Listener should be called once");
+  expect(callCount).toBe(1); // "Listener should be called once"
 
   // Trigger another state change
   store.setError("test error");
 
-  t.is(callCount, 2, "Listener should be called twice");
+  expect(callCount).toBe(2); // "Listener should be called twice"
 
   // Unsubscribe and trigger change
   unsubscribe();
   store.clearError();
 
-  t.is(callCount, 2, "Listener should not be called after unsubscribe");
+  expect(callCount).toBe(2); // "Listener should not be called after unsubscribe"
 });
 
-test("withSelector creates memoized selector with referential stability", t => {
+test("withSelector creates memoized selector with referential stability", () => {
   const store = createAdaptorStore();
 
   const selectAdaptors = store.withSelector(state => state.adaptors);
@@ -81,35 +79,23 @@ test("withSelector creates memoized selector with referential stability", t => {
   const adaptors2 = selectAdaptors();
   const loading2 = selectIsLoading();
 
-  t.is(
-    adaptors1,
-    adaptors2,
-    "Same selector calls should return identical reference"
-  );
-  t.is(
-    loading1,
-    loading2,
-    "Same selector calls should return identical reference"
-  );
+  expect(adaptors1).toBe(adaptors2); // Same selector calls should return identical reference
+  expect(loading1).toBe(loading2); // Same selector calls should return identical reference
 
   // Change unrelated state - adaptors selector should return same reference
   store.setLoading(true);
   const adaptors3 = selectAdaptors();
   const loading3 = selectIsLoading();
 
-  t.is(
-    adaptors1,
-    adaptors3,
-    "Unrelated state change should not affect memoized selector"
-  );
-  t.not(loading1, loading3, "Related state change should return new value");
+  expect(adaptors1).toBe(adaptors3); // Unrelated state change should not affect memoized selector
+  expect(loading1).not.toBe(loading3); // "Related state change should return new value"
 });
 
 // =============================================================================
 // STATE MANAGEMENT COMMANDS TESTS
 // =============================================================================
 
-test("setLoading updates loading state and notifies subscribers", t => {
+test("setLoading updates loading state and notifies subscribers", () => {
   const store = createAdaptorStore();
   let notificationCount = 0;
 
@@ -121,65 +107,62 @@ test("setLoading updates loading state and notifies subscribers", t => {
   store.setLoading(true);
 
   const state1 = store.getSnapshot();
-  t.is(state1.isLoading, true);
-  t.is(notificationCount, 1);
+  expect(state1.isLoading).toBe(true);
+  expect(notificationCount).toBe(1);
 
   // Set loading to false
   store.setLoading(false);
 
   const state2 = store.getSnapshot();
-  t.is(state2.isLoading, false);
-  t.is(notificationCount, 2);
+  expect(state2.isLoading).toBe(false);
+  expect(notificationCount).toBe(2);
 });
 
-test("setError updates error state and sets loading to false", t => {
+test("setError updates error state and sets loading to false", () => {
   const store = createAdaptorStore();
 
   // First set loading to true
   store.setLoading(true);
-  t.is(store.getSnapshot().isLoading, true);
+  expect(store.getSnapshot().isLoading).toBe(true);
 
   // Set error - should clear loading state
   const errorMessage = "Test error message";
   store.setError(errorMessage);
 
   const state = store.getSnapshot();
-  t.is(state.error, errorMessage);
-  t.is(state.isLoading, false, "Setting error should clear loading state");
+  expect(state.error).toBe(errorMessage);
+  expect(state.isLoading).toBe(false); // "Setting error should clear loading state"
 });
 
-test("clearError removes error state", t => {
+test("clearError removes error state", () => {
   const store = createAdaptorStore();
 
   // Set error first
   store.setError("Test error");
-  t.is(store.getSnapshot().error, "Test error");
+  expect(store.getSnapshot().error).toBe("Test error");
 
   // Clear error
   store.clearError();
-  t.is(store.getSnapshot().error, null);
+  expect(store.getSnapshot().error).toBe(null);
 });
 
-test("setAdaptors updates adaptors list and metadata", t => {
+test("setAdaptors updates adaptors list and metadata", () => {
   const store = createAdaptorStore();
   const timestamp = Date.now();
 
   store.setAdaptors(mockAdaptorsList);
 
   const state = store.getSnapshot();
-  t.deepEqual(state.adaptors, mockAdaptorsList);
-  t.is(state.error, null, "Setting adaptors should clear error");
-  t.true(
-    state.lastUpdated ? state.lastUpdated >= timestamp : false,
-    "Should update lastUpdated timestamp"
-  );
+  expect(state.adaptors).toEqual(mockAdaptorsList);
+  expect(state.error).toBe(null); // "Setting adaptors should clear error"
+  expect(state.lastUpdated ? state.lastUpdated >= timestamp : false).toBe(true); // Should update lastUpdated timestamp
 });
 
 // =============================================================================
 // CHANNEL INTEGRATION TESTS
 // =============================================================================
 
-test("requestAdaptors processes valid data correctly via channel", async t => {
+test("requestAdaptors processes valid data correctly via channel", async () => {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -229,36 +212,25 @@ test("requestAdaptors processes valid data correctly via channel", async t => {
       ),
     }));
 
-  t.deepEqual(state.adaptors, expectedSortedAdaptors);
-  t.is(state.isLoading, false, "Should clear loading state");
-  t.is(state.error, null, "Should clear error state");
-  t.true(
-    state.lastUpdated ? state.lastUpdated > 0 : false,
-    "Should set lastUpdated timestamp"
-  );
+  expect(state.adaptors).toEqual(expectedSortedAdaptors);
+  expect(state.isLoading).toBe(false); // "Should clear loading state"
+  expect(state.error).toBe(null); // "Should clear error state"
+  expect(state.lastUpdated ? state.lastUpdated > 0 : false).toBe(true); // "Should set lastUpdated timestamp"
 
   // Check that adaptors are sorted alphabetically
   const adaptorNames = state.adaptors.map(a => a.name);
   const sortedNames = [...adaptorNames].sort();
-  t.deepEqual(
-    adaptorNames,
-    sortedNames,
-    "Adaptors should be sorted alphabetically"
-  );
+  expect(adaptorNames).toEqual(sortedNames); // "Adaptors should be sorted alphabetically"
 
   // Check that versions are sorted (descending)
   state.adaptors.forEach(adaptor => {
     const versions = adaptor.versions.map(v => v.version);
     const sortedVersions = [...versions].sort((a, b) => b.localeCompare(a));
-    t.deepEqual(
-      versions,
-      sortedVersions,
-      `Versions for ${adaptor.name} should be sorted descending`
-    );
+    expect(versions).toEqual(sortedVersions); // `Versions for ${adaptor.name} should be sorted descending`
   });
 });
 
-test("requestAdaptors handles invalid data gracefully via channel", async t => {
+test("requestAdaptors handles invalid data gracefully via channel", async () => {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -293,19 +265,12 @@ test("requestAdaptors handles invalid data gracefully via channel", async t => {
   await store.requestAdaptors();
 
   const state = store.getSnapshot();
-  t.deepEqual(
-    state.adaptors,
-    [],
-    "Adaptors should remain empty on invalid data"
-  );
-  t.is(state.isLoading, false, "Should clear loading state even on error");
-  t.true(
-    state.error?.includes("Invalid adaptors data"),
-    "Should set descriptive error message"
-  );
+  expect(state.adaptors).toEqual([]); // "Adaptors should remain empty on invalid data"
+  expect(state.isLoading).toBe(false); // "Should clear loading state even on error"
+  expect(state.error?.includes("Invalid adaptors data")).toBe(true); // "Should set descriptive error message"
 });
 
-test("channel adaptors_updated events are processed correctly", async t => {
+test("channel adaptors_updated events are processed correctly", async () => {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -358,17 +323,13 @@ test("channel adaptors_updated events are processed correctly", async t => {
       ),
     }));
 
-  t.deepEqual(
-    state.adaptors,
-    expectedSortedAdaptors,
-    "Should process update same as received"
-  );
+  expect(state.adaptors).toEqual(expectedSortedAdaptors); // "Should process update same as received"
 
   // Cleanup
   cleanup();
 });
 
-test("connectChannel sets up event listeners and requests adaptors", async t => {
+test("connectChannel sets up event listeners and requests adaptors", async () => {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -414,7 +375,7 @@ test("connectChannel sets up event listeners and requests adaptors", async t => 
       ),
     }));
 
-  t.deepEqual(state.adaptors, expectedSortedAdaptors);
+  expect(state.adaptors).toEqual(expectedSortedAdaptors);
 
   // Test real-time updates
   const updatedAdaptors = [mockAdaptor];
@@ -436,14 +397,14 @@ test("connectChannel sets up event listeners and requests adaptors", async t => 
       ),
     }));
 
-  t.deepEqual(updatedState.adaptors, expectedUpdatedAdaptors);
+  expect(updatedState.adaptors).toEqual(expectedUpdatedAdaptors);
 
   // Cleanup
   cleanup();
-  t.pass("Channel cleanup completed without errors");
+  // "Channel cleanup completed without errors");
 });
 
-test("requestAdaptors handles successful response", async t => {
+test("requestAdaptors handles successful response", async () => {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -488,12 +449,12 @@ test("requestAdaptors handles successful response", async t => {
       ),
     }));
 
-  t.deepEqual(state.adaptors, expectedSortedAdaptors);
-  t.is(state.error, null);
-  t.is(state.isLoading, false);
+  expect(state.adaptors).toEqual(expectedSortedAdaptors);
+  expect(state.error).toBe(null);
+  expect(state.isLoading).toBe(false);
 });
 
-test("requestAdaptors handles error response", async t => {
+test("requestAdaptors handles error response", async () => {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -527,64 +488,66 @@ test("requestAdaptors handles error response", async t => {
   await store.requestAdaptors();
 
   const state = store.getSnapshot();
-  t.deepEqual(state.adaptors, []);
-  t.true(state.error?.includes("Failed to request adaptors") || false);
-  t.is(state.isLoading, false);
+  expect(state.adaptors).toEqual([]);
+  expect(state.error?.includes("Failed to request adaptors") || false).toBe(
+    true
+  );
+  expect(state.isLoading).toBe(false);
 });
 
-test("requestAdaptors handles no channel connection", async t => {
+test("requestAdaptors handles no channel connection", async () => {
   const store = createAdaptorStore();
 
   // Request adaptors without connecting channel
   await store.requestAdaptors();
 
   const state = store.getSnapshot();
-  t.true(state.error?.includes("No connection available") ?? false);
-  t.is(state.isLoading, false);
+  expect(state.error?.includes("No connection available") ?? false).toBe(true);
+  expect(state.isLoading).toBe(false);
 });
 
 // =============================================================================
 // QUERY HELPERS TESTS
 // =============================================================================
 
-test("findAdaptorByName returns correct adaptor", t => {
+test("findAdaptorByName returns correct adaptor", () => {
   const store = createAdaptorStore();
   store.setAdaptors(mockAdaptorsList);
 
   const foundAdaptor = store.findAdaptorByName("@openfn/language-http");
-  t.deepEqual(foundAdaptor, mockAdaptor);
+  expect(foundAdaptor).toEqual(mockAdaptor);
 
   const notFound = store.findAdaptorByName("@openfn/language-nonexistent");
-  t.is(notFound, null);
+  expect(notFound).toBe(null);
 });
 
-test("getLatestVersion returns correct version", t => {
+test("getLatestVersion returns correct version", () => {
   const store = createAdaptorStore();
   store.setAdaptors(mockAdaptorsList);
 
   const latestVersion = store.getLatestVersion("@openfn/language-http");
-  t.is(latestVersion, "2.1.0");
+  expect(latestVersion).toBe("2.1.0");
 
   const notFound = store.getLatestVersion("@openfn/language-nonexistent");
-  t.is(notFound, null);
+  expect(notFound).toBe(null);
 });
 
-test("getVersions returns correct versions array", t => {
+test("getVersions returns correct versions array", () => {
   const store = createAdaptorStore();
   store.setAdaptors(mockAdaptorsList);
 
   const versions = store.getVersions("@openfn/language-http");
-  t.deepEqual(versions, mockAdaptor.versions);
+  expect(versions).toEqual(mockAdaptor.versions);
 
   const notFound = store.getVersions("@openfn/language-nonexistent");
-  t.deepEqual(notFound, []);
+  expect(notFound).toEqual([]);
 });
 
 // =============================================================================
 // EDGE CASES AND ERROR HANDLING
 // =============================================================================
 
-test("handles multiple subscribers correctly", t => {
+test("handles multiple subscribers correctly", () => {
   const store = createAdaptorStore();
 
   let listener1Count = 0;
@@ -604,9 +567,9 @@ test("handles multiple subscribers correctly", t => {
   // Trigger change
   store.setLoading(true);
 
-  t.is(listener1Count, 1);
-  t.is(listener2Count, 1);
-  t.is(listener3Count, 1);
+  expect(listener1Count).toBe(1);
+  expect(listener2Count).toBe(1);
+  expect(listener3Count).toBe(1);
 
   // Unsubscribe middle listener
   unsubscribe2();
@@ -614,16 +577,16 @@ test("handles multiple subscribers correctly", t => {
   // Trigger another change
   store.setError("test");
 
-  t.is(listener1Count, 2);
-  t.is(listener2Count, 1, "Unsubscribed listener should not be called");
-  t.is(listener3Count, 2);
+  expect(listener1Count).toBe(2);
+  expect(listener2Count).toBe(1); // "Unsubscribed listener should not be called"
+  expect(listener3Count).toBe(2);
 
   // Cleanup
   unsubscribe1();
   unsubscribe3();
 });
 
-test("handles complex adaptor data transformations via channel", async t => {
+test("handles complex adaptor data transformations via channel", async () => {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -679,48 +642,52 @@ test("handles complex adaptor data transformations via channel", async t => {
   const state = store.getSnapshot();
 
   // Check alphabetical sorting of adaptors
-  t.is(state.adaptors[0].name, "a-first-adaptor");
-  t.is(state.adaptors[1].name, "z-last-adaptor");
+  expect(state.adaptors[0].name).toBe("a-first-adaptor");
+  expect(state.adaptors[1].name).toBe("z-last-adaptor");
 
   // Check version sorting (descending)
-  t.deepEqual(
-    state.adaptors[0].versions.map(v => v.version),
-    ["3.1.0", "3.0.0", "2.9.0"]
-  );
-  t.deepEqual(
-    state.adaptors[1].versions.map(v => v.version),
-    ["2.0.0", "1.5.0", "1.0.0"]
-  );
+  expect(state.adaptors[0].versions.map(v => v.version)).toEqual([
+    "3.1.0",
+    "3.0.0",
+    "2.9.0",
+  ]);
+  expect(state.adaptors[1].versions.map(v => v.version)).toEqual([
+    "2.0.0",
+    "1.5.0",
+    "1.0.0",
+  ]);
 });
 
-test("handles null and undefined channel provider gracefully", async t => {
+test("handles null and undefined channel provider gracefully", async () => {
   const store = createAdaptorStore();
 
   // Test with null provider - this should handle the null case gracefully
   try {
     store._connectChannel(null);
-    t.fail("Should have thrown error for null provider");
+    throw new Error("Should have thrown error for null provider");
   } catch (error) {
-    t.true(error instanceof TypeError);
-    t.true((error as Error).message.includes("Cannot read properties of null"));
+    expect(error instanceof TypeError).toBe(true);
+    expect(
+      (error as Error).message.includes("Cannot read properties of null")
+    ).toBe(true);
   }
 
   // Test with undefined provider
   try {
     store._connectChannel(undefined);
-    t.fail("Should have thrown error for undefined provider");
+    throw new Error("Should have thrown error for undefined provider");
   } catch (error) {
-    t.true(error instanceof TypeError);
+    expect(error instanceof TypeError).toBe(true);
   }
 
   // Test requestAdaptors without any channel connection
   await store.requestAdaptors();
 
   const state = store.getSnapshot();
-  t.true(state.error?.includes("No connection available") ?? false);
+  expect(state.error?.includes("No connection available") ?? false).toBe(true);
 });
 
-test("maintains state consistency during rapid updates", t => {
+test("maintains state consistency during rapid updates", () => {
   const store = createAdaptorStore();
   let notificationCount = 0;
 
@@ -738,12 +705,14 @@ test("maintains state consistency during rapid updates", t => {
   store.clearError();
 
   // Each operation should trigger exactly one notification
-  t.is(notificationCount, 7);
+  expect(notificationCount).toBe(7);
 
   // Final state should be consistent
   const finalState = store.getSnapshot();
-  t.deepEqual(finalState.adaptors, mockAdaptorsList);
-  t.is(finalState.isLoading, false);
-  t.is(finalState.error, null);
-  t.true(finalState.lastUpdated ? finalState.lastUpdated > 0 : false);
+  expect(finalState.adaptors).toEqual(mockAdaptorsList);
+  expect(finalState.isLoading).toBe(false);
+  expect(finalState.error).toBe(null);
+  expect(finalState.lastUpdated ? finalState.lastUpdated > 0 : false).toBe(
+    true
+  );
 });

@@ -5,16 +5,10 @@
     "target": "es2020",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "types": ["node"],
+    "lib": ["es2020"],
+    "types": ["node", "vitest/globals"],
     "jsx": "react-jsx"
   },
-  "files": [],
-  "include": ["*.d.ts", "test/**/*", "js/**/*", "playwright.config.ts"],
-  "exclude": ["node_modules/**"],
-  "tsimp": {
-    "compilerOptions": {
-      "skipLibCheck": true,
-      "strict": false
-    }
-  }
+  "include": ["*.d.ts", "test/**/*", "js/**/*", "vitest.config.ts"],
+  "exclude": ["node_modules/**"]
 }
