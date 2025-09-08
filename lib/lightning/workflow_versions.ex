@@ -465,19 +465,20 @@ defmodule Lightning.WorkflowVersions do
               t.id == edge.source_trigger_id
             end)
 
-          trigger.type
+          trigger && trigger.type
 
         edge.source_job_id ->
           job = Enum.find(workflow.jobs, fn j -> j.id == edge.source_job_id end)
-          job.name
+          job && job.name
 
         true ->
           nil
       end
 
     target_job = Enum.find(workflow.jobs, fn j -> j.id == edge.target_job_id end)
+    target_name = target_job && target_job.name
 
-    "#{source_name}-#{target_job.name}"
+    "#{source_name}-#{target_name}"
   end
 
   @doc """
