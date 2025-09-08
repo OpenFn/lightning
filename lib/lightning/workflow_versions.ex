@@ -60,36 +60,86 @@ defmodule Lightning.WorkflowVersions do
   """
   @spec record_version(Workflow.t(), hash, String.t()) ::
           {:ok, Workflow.t()} | {:error, term()}
-  def record_version(%Workflow{id: id}, hash, source \\ "app")
+  def record_version(%Workflow{} = workflow, hash, source \\ "app")
       when is_binary(hash) and is_binary(source) do
     with true <- Hex.valid?(hash),
          true <- source in @sources do
       Multi.new()
-      |> Multi.insert(
-        :row,
-        WorkflowVersion.changeset(%WorkflowVersion{}, %{
-          workflow_id: id,
-          hash: hash,
-          source: source
-        }),
-        on_conflict: :nothing,
-        conflict_target: [:workflow_id, :hash]
-      )
-      |> Multi.run(:append_history, fn repo, _ ->
-        wf =
-          from(w in Workflow, where: w.id == ^id, lock: "FOR UPDATE")
-          |> repo.one!()
-
-        new_hist = append_if_missing(wf.version_history || [], hash)
-
-        if new_hist == (wf.version_history || []) do
-          {:ok, wf}
-        else
-          wf
-          |> Changeset.change(version_history: new_hist)
-          |> repo.update()
-        end
+      |> Multi.run(:latest_version, fn _repo, _changes ->
+        {:ok, latest_version(workflow)}
       end)
+      |> Multi.run(:is_duplicate, fn _repo, %{latest_version: latest_version} ->
+        {:ok, is_map(latest_version) && latest_version.hash == hash}
+      end)
+      |> Multi.run(
+        :should_squash,
+        fn _repo,
+           %{is_duplicate: is_duplicate, latest_version: latest_version} ->
+          {:ok,
+           !is_duplicate && is_map(latest_version) &&
+             latest_version.source == source}
+        end
+      )
+      |> Multi.run(
+        :new_version,
+        fn repo, %{is_duplicate: is_duplicate} ->
+          if is_duplicate do
+            {:ok, nil}
+          else
+            %WorkflowVersion{}
+            |> WorkflowVersion.changeset(%{
+              workflow_id: workflow.id,
+              hash: hash,
+              source: source
+            })
+            |> repo.insert()
+          end
+        end
+      )
+      |> Multi.run(
+        :delete_latest,
+        fn repo,
+           %{should_squash: should_squash, latest_version: latest_version} ->
+          if should_squash do
+            repo.delete(latest_version)
+          else
+            {:ok, nil}
+          end
+        end
+      )
+      |> Multi.run(
+        :append_history,
+        fn repo, %{new_version: new_version, delete_latest: deleted_version} ->
+          wf =
+            from(w in Workflow, where: w.id == ^workflow.id, lock: "FOR UPDATE")
+            |> repo.one!()
+
+          new_hist =
+            (wf.version_history || [])
+            |> then(fn history ->
+              if deleted_version do
+                Enum.reject(history, fn hash -> hash == deleted_version.hash end)
+              else
+                history
+              end
+            end)
+            |> then(fn history ->
+              if new_version do
+                append_if_missing(history, hash)
+              else
+                history
+              end
+            end)
+
+          if new_hist == (wf.version_history || []) do
+            {:ok, wf}
+          else
+            wf
+            |> Changeset.change(version_history: new_hist)
+            |> repo.update()
+          end
+        end
+      )
       |> Repo.transaction()
       |> case do
         {:ok, %{append_history: updated}} -> {:ok, updated}
@@ -258,6 +308,15 @@ defmodule Lightning.WorkflowVersions do
     end
   end
 
+  defp latest_version(workflow) do
+    from(v in WorkflowVersion,
+      where: v.workflow_id == ^workflow.id,
+      order_by: [desc: v.inserted_at, desc: v.id],
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
   @doc """
   Rebuilds and **persists** `workflow.version_history` from provenance rows.
 
@@ -279,6 +338,141 @@ defmodule Lightning.WorkflowVersions do
     wf
     |> Changeset.change(version_history: arr)
     |> Repo.update!()
+  end
+
+  @doc """
+  Generates a deterministic hash for a workflow based on its structure.
+
+  Algorithm:
+  - Create a list
+  - Add the workflow name to the start of the list
+  - For each node (trigger, job and edge) in a consistent order
+    - Get a sorted list of keys
+    - Filter out ignored keys
+    - Add each key and value to the list
+  - Join the list into a string, no separator
+  - Hash the list with SHA 256
+  - Truncate the resulting string to 12 characters
+
+  ## Parameters
+    * `workflow` — the workflow struct to hash
+
+  ## Returns
+    * A 12-character lowercase hex string
+
+  ## Examples
+
+      iex> WorkflowVersions.generate_hash(workflow)
+      "a1b2c3d4e5f6"
+  """
+  @spec generate_hash(Workflow.t()) :: binary()
+  def generate_hash(%Workflow{} = workflow) do
+    workflow = Repo.preload(workflow, [:jobs, :edges, :triggers])
+
+    workflow_keys = [:name, :positions]
+    job_keys = [:name, :adaptor, :project_credential_id, :body]
+    trigger_keys = [:type, :cron_expression, :enabled]
+
+    edge_keys = [
+      :name,
+      :condition_type,
+      :condition_label,
+      :condition_expression,
+      :enabled
+    ]
+
+    workflow_hash_list =
+      workflow
+      |> Map.take(workflow_keys)
+      |> Enum.sort_by(fn {k, _v} -> k end)
+      |> Enum.flat_map(fn {k, v} ->
+        [to_string(k), serialize_value(v)]
+      end)
+
+    triggers_hash_list =
+      workflow.triggers
+      |> Enum.sort_by(& &1.type)
+      |> Enum.reduce([], fn trigger, acc ->
+        hash_list =
+          trigger
+          |> Map.take(trigger_keys)
+          |> Enum.sort_by(fn {k, _v} -> k end)
+          |> Enum.flat_map(fn {k, v} ->
+            [to_string(k), serialize_value(v)]
+          end)
+
+        acc ++ hash_list
+      end)
+
+    jobs_hash_list =
+      workflow.jobs
+      |> Enum.sort_by(& &1.name)
+      |> Enum.reduce([], fn job, acc ->
+        hash_list =
+          job
+          |> Map.take(job_keys)
+          |> Enum.sort_by(fn {k, _v} -> k end)
+          |> Enum.flat_map(fn {k, v} -> [to_string(k), serialize_value(v)] end)
+
+        acc ++ hash_list
+      end)
+
+    # (sort by generated name: source-target)
+    edges_hash_list =
+      workflow.edges
+      |> Enum.map(fn edge ->
+        edge
+        |> Map.take(edge_keys)
+        |> Map.put(:name, edge_name(edge, workflow))
+      end)
+      |> Enum.sort_by(& &1.name)
+      |> Enum.reduce([], fn edge, acc ->
+        hash_list =
+          edge
+          |> Enum.sort_by(fn {k, _v} -> k end)
+          |> Enum.flat_map(fn {k, v} -> [to_string(k), serialize_value(v)] end)
+
+        acc ++ hash_list
+      end)
+
+    joined_data =
+      Enum.join([
+        workflow_hash_list,
+        triggers_hash_list,
+        jobs_hash_list,
+        edges_hash_list
+      ])
+
+    :crypto.hash(:sha256, joined_data)
+    |> Base.encode16(case: :lower)
+    |> binary_part(0, 12)
+  end
+
+  defp serialize_value(val) when is_map(val), do: Jason.encode!(val)
+  defp serialize_value(val), do: to_string(val)
+
+  defp edge_name(edge, workflow) do
+    source_name =
+      cond do
+        edge.source_trigger_id ->
+          trigger =
+            Enum.find(workflow.triggers, fn t ->
+              t.id == edge.source_trigger_id
+            end)
+
+          trigger.type
+
+        edge.source_job_id ->
+          job = Enum.find(workflow.jobs, fn j -> j.id == edge.source_job_id end)
+          job.name
+
+        true ->
+          nil
+      end
+
+    target_job = Enum.find(workflow.jobs, fn j -> j.id == edge.target_job_id end)
+
+    "#{source_name}-#{target_job.name}"
   end
 
   @doc """

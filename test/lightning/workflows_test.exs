@@ -126,6 +126,29 @@ defmodule Lightning.WorkflowsTest do
              } = Repo.one(Audit)
     end
 
+    test "save_workflow/1 records a version" do
+      user = insert(:user)
+      project = insert(:project)
+
+      # Create a new workflow
+      valid_attrs = %{name: "versioned-workflow", project_id: project.id}
+      {:ok, workflow} = Workflows.save_workflow(valid_attrs, user)
+
+      # Reload to get updated version_history
+      workflow = Repo.reload!(workflow)
+
+      # Check that a version was recorded
+      assert length(workflow.version_history) == 1
+
+      # Verify the version exists in the database
+      version =
+        Lightning.Workflows.WorkflowVersion
+        |> Repo.get_by!(workflow_id: workflow.id)
+
+      assert version.hash == hd(workflow.version_history)
+      assert version.source == "app"
+    end
+
     test "save_workflow/1 audits when a trigger is enabled" do
       %{id: user_id} = user = insert(:user)
       workflow = create_workflow()

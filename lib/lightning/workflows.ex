@@ -19,6 +19,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkflowVersions
 
   defdelegate subscribe(project_id), to: Events
 
@@ -151,6 +152,10 @@ defmodule Lightning.Workflows do
       end
     end)
     |> maybe_audit_workflow_state_changes(changeset)
+    |> Multi.run(:workflow_version, fn _repo, %{workflow: workflow} ->
+      hash = WorkflowVersions.generate_hash(workflow)
+      WorkflowVersions.record_version(workflow, hash)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
