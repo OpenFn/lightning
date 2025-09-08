@@ -4643,6 +4643,232 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     |> Map.put(:request, nil)
   end
 
+  describe "collaborative editor toggle" do
+    setup :create_workflow
+
+    test "shows collaborative editor toggle when experimental features enabled",
+         %{
+           conn: conn,
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
+      # Enable experimental features for the user
+      user_with_experimental =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      {:ok, view, html} =
+        conn
+        |> log_in_user(user_with_experimental)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should show the beaker icon toggle
+      assert has_element?(
+               view,
+               "a[aria-label*='collaborative editor (experimental)']"
+             )
+
+      # Should have correct navigation link
+      assert has_element?(
+               view,
+               "a[href='/projects/#{project.id}/w/#{workflow.id}/collaborate']"
+             )
+
+      # Should have beaker icon
+      assert html =~ "hero-beaker"
+    end
+
+    test "hides collaborative editor toggle when experimental features disabled",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow
+         } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should not show the toggle
+      refute has_element?(
+               view,
+               "a[aria-label*='collaborative editor (experimental)']"
+             )
+    end
+
+    test "hides collaborative editor toggle on non-latest snapshots", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow,
+      snapshot: snapshot
+    } do
+      # Enable experimental features for the user
+      user_with_experimental =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      # Create a new snapshot to make the original non-latest
+      job_attrs =
+        workflow.jobs |> Enum.map(&%{id: &1.id, name: &1.name <> " updated"})
+
+      {:ok, _updated_workflow} =
+        Workflows.change_workflow(workflow, %{jobs: job_attrs})
+        |> Workflows.save_workflow(user)
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user_with_experimental)
+        |> live(
+          ~p"/projects/#{project.id}/w/#{workflow.id}?v=#{snapshot.lock_version}"
+        )
+
+      # Should not show the toggle for non-latest snapshots
+      refute has_element?(
+               view,
+               "a[aria-label*='collaborative editor (experimental)']"
+             )
+    end
+
+    test "shows collaborative editor toggle only on latest snapshots with experimental features",
+         %{
+           conn: conn,
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
+      # Enable experimental features
+      user_with_experimental =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user_with_experimental)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should show toggle on latest version
+      assert has_element?(
+               view,
+               "a[aria-label*='collaborative editor (experimental)']"
+             )
+    end
+
+    test "navigates to collaborative editor when toggle clicked", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # Enable experimental features
+      user_with_experimental =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user_with_experimental)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Click the collaborative editor toggle
+      view
+      |> element("a[aria-label*='collaborative editor (experimental)']")
+      |> render_click()
+
+      # Should navigate to collaborative editor route
+      assert_redirect(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+      )
+    end
+
+    test "toggle has correct styling and accessibility", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # Enable experimental features
+      user_with_experimental =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user_with_experimental)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      toggle_element =
+        view
+        |> element("a[aria-label*='collaborative editor (experimental)']")
+
+      toggle_html = render(toggle_element)
+
+      # Check styling classes
+      assert toggle_html =~ "text-primary-600"
+      assert toggle_html =~ "hover:text-primary-700"
+      assert toggle_html =~ "hover:bg-primary-50"
+      assert toggle_html =~ "transition-colors"
+
+      # Check accessibility
+      assert toggle_html =~ "aria-label"
+      assert toggle_html =~ "collaborative editor (experimental)"
+
+      # Check icon presence
+      assert toggle_html =~ "hero-beaker"
+    end
+
+    test "preserves existing experimental features preferences", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # Set up user with experimental features and other preferences
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "experimental_features" => true,
+            "existing_pref" => "value",
+            "another_setting" => false
+          }
+        })
+        |> Repo.update!()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should show toggle
+      assert has_element?(
+               view,
+               "a[aria-label*='collaborative editor (experimental)']"
+             )
+
+      # Verify all preferences are preserved
+      updated_user = Repo.reload(user_with_prefs)
+      assert updated_user.preferences["experimental_features"] == true
+      assert updated_user.preferences["existing_pref"] == "value"
+      assert updated_user.preferences["another_setting"] == false
+    end
+  end
+
   defp stub_apollo_unavailable(_context) do
     stub(Lightning.MockConfig, :apollo, fn key ->
       case key do

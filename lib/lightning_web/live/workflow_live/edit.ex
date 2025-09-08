@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import React
 
   alias Lightning.AiAssistant
+  alias Lightning.Accounts
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
@@ -106,6 +107,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
+              
+    <!-- Add collaborative editor toggle (beaker icon only) -->
+              <.link
+                :if={
+                  show_collaborative_editor_toggle?(
+                    @current_user,
+                    @snapshot_version_tag
+                  )
+                }
+                navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}/collaborate"}
+                class="inline-flex items-center justify-center w-6 h-6 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
+                phx-hook="Tooltip"
+                data-placement="bottom"
+                aria-label="Switch to collaborative editor (experimental)"
+              >
+                <.icon name="hero-beaker" class="h-4 w-4" />
+              </.link>
+
               <LightningWeb.WorkflowLive.Components.online_users
                 id="canvas-online-users"
                 presences={@presences}
@@ -3836,5 +3855,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       [base_class]
     end
+  end
+
+  defp show_collaborative_editor_toggle?(user, snapshot_version_tag) do
+    Accounts.experimental_features_enabled?(user) &&
+      snapshot_version_tag == "latest"
   end
 end

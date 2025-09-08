@@ -15,6 +15,8 @@ export interface CollaborativeEditorDataProps {
   "data-workflow-name": string;
   "data-user-id": string;
   "data-user-name": string;
+  "data-project-id"?: string;
+  "data-project-name"?: string;
 }
 
 export const CollaborativeEditor: WithActionProps<
@@ -70,7 +72,9 @@ export const CollaborativeEditor: WithActionProps<
           userName={userName}
         >
           <StoreProvider>
-            <Header>{breadcrumbElements}</Header>
+            <Header projectId={projectId} workflowId={workflowId}>
+              {breadcrumbElements}
+            </Header>
             <div className="flex-1 min-h-0 overflow-hidden">
               <WorkflowEditor />
               <CollaborationWidget />
