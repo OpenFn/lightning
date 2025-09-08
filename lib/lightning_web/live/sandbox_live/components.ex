@@ -176,7 +176,7 @@ defmodule LightningWeb.SandboxLive.Components do
             phx-hook="Tooltip"
             aria-label="Branch/Rewire is coming soon"
           >
-            <Icon.git_branch class="h-5 w-5 text-slate-300" />
+            <Icon.branches class="h-5 w-5 text-slate-300" />
           </button>
 
           <button
