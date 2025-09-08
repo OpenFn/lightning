@@ -345,4 +345,30 @@ defmodule Lightning.Runs do
     |> order_by([{^order, :timestamp}])
     |> Repo.stream()
   end
+
+  @doc """
+  Rolls back claimed runs to available state.
+
+  This is used when a worker socket disconnects after runs have been claimed
+  but before the worker receives the response. The runs are set back to :available
+  so they can be claimed by another worker.
+  """
+  @spec rollback_claimed_runs([Run.t()]) :: {:ok, non_neg_integer()}
+  def rollback_claimed_runs(runs) do
+    # Set the runs back to :available state so they can be claimed by another worker
+    run_ids = Enum.map(runs, & &1.id)
+
+    {count, _} =
+      from(r in Run, where: r.id in ^run_ids)
+      |> Repo.update_all(set: [state: :available, claimed_at: nil, worker_name: nil])
+
+    case count do
+      count when count > 0 ->
+        Logger.info("Successfully rolled back #{count} claimed runs to :available state")
+        {:ok, count}
+      0 ->
+        Logger.warning("No runs were rolled back - they may have already been processed")
+        {:ok, 0}
+    end
+  end
 end

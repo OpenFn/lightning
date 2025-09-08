@@ -37,20 +37,32 @@ defmodule LightningWeb.WorkerChannel do
       ) do
     case Runs.claim(demand, sanitise_worker_name(worker_name)) do
       {:ok, runs} ->
-        runs =
-          runs
-          |> Enum.map(fn run ->
-            opts = run_options(run)
+        # Check if the socket is still alive before replying
+        if Process.alive?(socket.transport_pid) do
+          runs =
+            runs
+            |> Enum.map(fn run ->
+              opts = run_options(run)
 
-            token = Workers.generate_run_token(run, opts)
+              token = Workers.generate_run_token(run, opts)
 
-            %{
-              "id" => run.id,
-              "token" => token
-            }
-          end)
+              %{
+                "id" => run.id,
+                "token" => token
+              }
+            end)
 
-        {:reply, {:ok, %{runs: runs}}, socket}
+          {:reply, {:ok, %{runs: runs}}, socket}
+        else
+          # Socket is no longer alive, roll back the transaction by setting runs back to :available
+          Logger.warning(
+            "Worker socket disconnected before claim reply, rolling back transaction for runs: #{Enum.map_join(runs, ", ", & &1.id)}"
+          )
+
+          Runs.rollback_claimed_runs(runs)
+
+          {:noreply, socket}
+        end
 
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.errors(changeset)}, socket}
@@ -107,4 +119,5 @@ defmodule LightningWeb.WorkerChannel do
     |> Runs.RunOptions.new()
     |> Ecto.Changeset.apply_changes()
   end
+
 end
