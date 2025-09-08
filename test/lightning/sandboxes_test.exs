@@ -417,23 +417,21 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "copies trigger webhook auth methods when present" do
-      if Code.ensure_loaded?(Lightning.Workflows.WebhookAuthMethod) do
-        %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 
-        {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-wam"})
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-wam"})
 
-        cnt =
-          from(t in Trigger,
-            join: w in assoc(t, :workflow),
-            where: w.project_id == ^sandbox.id,
-            join: j in "trigger_webhook_auth_methods",
-            on: j.trigger_id == t.id,
-            select: count(j.webhook_auth_method_id)
-          )
-          |> Repo.one()
+      cnt =
+        from(t in Trigger,
+          join: w in assoc(t, :workflow),
+          where: w.project_id == ^sandbox.id,
+          join: j in "trigger_webhook_auth_methods",
+          on: j.trigger_id == t.id,
+          select: count(j.webhook_auth_method_id)
+        )
+        |> Repo.one()
 
-        assert cnt >= 1
-      end
+      assert cnt >= 1
     end
   end
 
