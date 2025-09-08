@@ -13,14 +13,27 @@ npm run lint -- \
   --fix js/collaborative-editor \
   --exit-on-fatal-error || {
   exit_code=$?
-  [ $exit_code -le 1 ] || exit $exit_code
+  if [ $exit_code -le 1 ]; then
+    echo "Continuing with warnings/fixes"
+  else
+    echo "ESLint exited with code $exit_code"
+    echo "Skipping rest of the script due to ESLint error"
+    exit $exit_code
+  fi
 }
 
 npm exec prettier -- \
-  --config "$PROJECT_ROOT"/.prettierrc \
-  --ignore-path "$PROJECT_ROOT"/.prettierignore \
+  --config "$PROJECT_ROOT/.prettierrc" \
+  --ignore-path "$PROJECT_ROOT/.prettierignore" \
   --write \
-  js/collaborative-editor test | grep -v "unchanged"
+  js/collaborative-editor test | grep -v "unchanged" || {
+  exit_code=$?
+  if [ $exit_code -eq 1 ]; then
+    echo "✓ No changes needed for Prettier"
+  else
+    exit $exit_code
+  fi
+}
 
 cd "$PROJECT_ROOT"
 

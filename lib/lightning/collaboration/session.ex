@@ -2,8 +2,8 @@ defmodule Lightning.Collaboration.Session do
   @moduledoc """
   Manages individual user sessions for collaborative workflow editing.
 
-  A Session acts as a bridge between a parent process (typically a Phoenix 
-  channel) and a SharedDoc process that manages the Y.js CRDT document. Each 
+  A Session acts as a bridge between a parent process (typically a Phoenix
+  channel) and a SharedDoc process that manages the Y.js CRDT document. Each
   user editing a workflow has their own Session process that handles:
 
   * User presence tracking via `Lightning.Workflows.Presence`
@@ -12,17 +12,18 @@ defmodule Lightning.Collaboration.Session do
   * Workflow document initialization with database data when needed
   * Cleanup when the parent process disconnects
 
-  Sessions are temporary processes that monitor their parent and terminate 
+  Sessions are temporary processes that monitor their parent and terminate
   when the parent disconnects, ensuring proper cleanup of presence tracking
   and SharedDoc observers.
   """
   use GenServer, restart: :temporary
-  use Lightning.Utils.Logger, color: [:cyan_background]
 
   alias Lightning.Accounts.User
   alias Lightning.Collaboration.Registry
   alias Lightning.Workflows.Presence
   alias Yex.Sync.SharedDoc
+
+  require Logger
 
   defstruct [:parent_pid, :parent_ref, :shared_doc_pid, :user, :workflow_id]
 
@@ -85,11 +86,9 @@ defmodule Lightning.Collaboration.Session do
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
 
-    info("Starting session for workflow #{workflow_id}")
+    Logger.info("Starting session for workflow #{workflow_id}")
 
     parent_ref = Process.monitor(parent_pid)
-
-    info("Parent pid: #{inspect(parent_pid)}")
 
     # Just initialize the state, defer SharedDoc creation
     state = %__MODULE__{
@@ -107,7 +106,7 @@ defmodule Lightning.Collaboration.Session do
 
       shared_doc_pid ->
         SharedDoc.observe(shared_doc_pid)
-        info("Joined SharedDoc for workflow #{workflow_id}")
+        Logger.info("Joined SharedDoc for workflow #{workflow_id}")
 
         # We track the user presence here so the the original WorkflowLive.Edit
         # can be stopped from editing the workflow when someone else is editing it.
@@ -219,7 +218,7 @@ defmodule Lightning.Collaboration.Session do
         from,
         %{shared_doc_pid: shared_doc_pid} = state
       ) do
-    debug({:start_sync, from} |> inspect)
+    Logger.debug({:start_sync, from} |> inspect)
     SharedDoc.start_sync(shared_doc_pid, chunk)
     {:reply, :ok, state}
   end
@@ -228,7 +227,7 @@ defmodule Lightning.Collaboration.Session do
   # and we forward it on to the parent process.
   @impl true
   def handle_info({:yjs, reply, shared_doc_pid}, state) do
-    debug(
+    Logger.debug(
       {:yjs, reply, shared_doc_pid}
       |> inspect(
         label: "Session :yjs",
@@ -264,21 +263,26 @@ defmodule Lightning.Collaboration.Session do
 
   @impl true
   def handle_info(any, state) do
-    debug("Session received unknown message: #{inspect(any)}")
+    Logger.debug("Session received unknown message: #{inspect(any)}")
     {:noreply, state}
   end
 
   # ----------------------------------------------------------------------------
 
   def initialize_workflow_document(doc, workflow_id) do
-    debug("Initializing SharedDoc with workflow data for #{workflow_id}")
+    Logger.debug("Initializing SharedDoc with workflow data for #{workflow_id}")
 
     # Fetch workflow from database
     case Lightning.Workflows.get_workflow(workflow_id,
            include: [:jobs, :edges, :triggers]
          ) do
       nil ->
-        warning("Workflow #{workflow_id} not found, initializing empty document")
+        # TODO: this should be an error, but we need to handle it gracefully
+        # in the frontend.
+        Logger.warning(
+          "Workflow #{workflow_id} not found, initializing empty document"
+        )
+
         doc
 
       workflow ->

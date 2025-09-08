@@ -18,7 +18,7 @@ defmodule Lightning.SessionTest do
   alias Lightning.Collaboration.TestClient
   alias Lightning.Workflows.Workflow
 
-  use Lightning.Utils.Logger, color: [:blue_background]
+  require Logger
 
   setup do
     user = insert(:user)
@@ -237,7 +237,7 @@ defmodule Lightning.SessionTest do
 
       %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_1)
 
-      # TODO: probably not needed anymore since we're using start_supervised!
+      # # TODO: probably not needed anymore since we're using start_supervised!
       Session.stop(session_1)
       Session.stop(session_2)
 
@@ -358,17 +358,6 @@ defmodule Lightning.SessionTest do
 
       # And check that the document state is in the database
       assert get_document_state(document_name) |> length() == 2
-
-      # :ok = GenServer.stop(document_supervisor)
-
-      info(
-        inspect(
-          Registry.get_group(document_name)
-          |> Map.merge(%{session_pid: session_pid, self: self()}),
-          pretty: true,
-          syntax_colors: IO.ANSI.syntax_colors()
-        )
-      )
 
       # TODO: Recover from state without a checkpoint
       # TODO: Recover from state with a checkpoint
@@ -518,6 +507,7 @@ defmodule Lightning.SessionTest do
   end
 
   describe "teardown" do
+    @tag :capture_log
     test "when a session is stopped", %{user: user1} do
       workflow_id = Ecto.UUID.generate()
       user2 = insert(:user)
@@ -615,7 +605,9 @@ defmodule Lightning.SessionTest do
           :ok
 
         any ->
-          warning("WARNING: parent received unknown message: #{inspect(any)}")
+          Logger.warning(
+            "WARNING: parent received unknown message: #{inspect(any)}"
+          )
 
           :ok
       end

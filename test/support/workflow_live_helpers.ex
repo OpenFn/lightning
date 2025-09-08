@@ -548,7 +548,8 @@ defmodule Lightning.WorkflowLive.Helpers do
   # Element Helpers
 
   def editor_element(view) do
-    view |> element("[phx-hook=HeexReactComponent][data-react-name=WorkflowEditor]")
+    view
+    |> element("[phx-hook=HeexReactComponent][data-react-name=WorkflowEditor]")
   end
 
   def selected_adaptor_version_element(view, job) do

@@ -11,7 +11,7 @@ defmodule Lightning.Collaboration.TestClient do
 
   use GenServer
   alias Lightning.Collaboration.Utils
-  use Lightning.Utils.Logger, color: [:magenta_background]
+  require Logger
 
   def init(opts) do
     shared_doc_pid = opts[:shared_doc_pid]
@@ -62,7 +62,7 @@ defmodule Lightning.Collaboration.TestClient do
   end
 
   def handle_call({:add_job, job}, _from, state) do
-    info("Adding job to client doc")
+    Logger.debug("Adding job to client doc")
 
     # Convert the string-keyed map to a Yex.MapPrelim
     job_prelim = Yex.MapPrelim.from(job)
@@ -95,7 +95,7 @@ defmodule Lightning.Collaboration.TestClient do
       Yex.Sync.SharedDoc.send_yjs_message(shared_doc_pid, message)
     else
       message ->
-        info(":update_v1 " <> inspect(message))
+        Logger.debug(":update_v1 " <> inspect(message))
     end
 
     {:noreply, state}
@@ -110,7 +110,9 @@ defmodule Lightning.Collaboration.TestClient do
              state.client_doc,
              state.shared_doc_pid
            ) do
-      info("handle_info :yjs :reply: #{Utils.decipher_message(msg) |> inspect}")
+      Logger.debug(
+        "handle_info :yjs :reply: #{Utils.decipher_message(msg) |> inspect}"
+      )
 
       Yex.Sync.SharedDoc.send_yjs_message(
         from,
@@ -120,10 +122,12 @@ defmodule Lightning.Collaboration.TestClient do
       {:noreply, state}
     else
       {:error, message} ->
-        info(":yjs " <> inspect(message))
+        Logger.debug(":yjs " <> inspect(message))
 
       :ok ->
-        info("handle_info :yjs :ok: #{Utils.decipher_message(msg) |> inspect}")
+        Logger.debug(
+          "handle_info :yjs :ok: #{Utils.decipher_message(msg) |> inspect}"
+        )
     end
 
     {:noreply, state}

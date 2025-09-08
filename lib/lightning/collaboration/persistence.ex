@@ -8,12 +8,12 @@ defmodule Lightning.Collaboration.Persistence do
 
   @behaviour Yex.Sync.SharedDoc.PersistenceBehaviour
 
-  use Lightning.Utils.Logger, color: [:blue_background]
-
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.PersistenceWriter
   alias Lightning.Collaboration.Session
   alias Lightning.Repo
+
+  require Logger
 
   @impl true
   def bind(state, doc_name, doc) do
@@ -31,7 +31,7 @@ defmodule Lightning.Collaboration.Persistence do
       {:ok, checkpoint, updates} ->
         # Apply checkpoint first if exists
         if checkpoint do
-          info("Applying checkpoint to document. document=#{doc_name}")
+          Logger.info("Applying checkpoint to document. document=#{doc_name}")
           Yex.apply_update(doc, checkpoint.state_data)
         end
 
@@ -40,10 +40,12 @@ defmodule Lightning.Collaboration.Persistence do
           Yex.apply_update(doc, update.state_data)
         end)
 
-        info("Loaded #{length(updates)} updates. document=#{doc_name}")
+        Logger.debug("Loaded #{length(updates)} updates. document=#{doc_name}")
 
       {:error, :not_found} ->
-        info("No persisted state found, starting fresh. document=#{doc_name}")
+        Logger.info(
+          "No persisted state found, starting fresh. document=#{doc_name}"
+        )
 
         Session.initialize_workflow_document(doc, workflow_id)
 
@@ -62,14 +64,19 @@ defmodule Lightning.Collaboration.Persistence do
         state
 
       {:error, reason} ->
-        error("Failed to add update to PersistenceWriter: #{inspect(reason)}")
+        Logger.error(
+          "Failed to add update to PersistenceWriter: #{inspect(reason)}"
+        )
+
         state
     end
   end
 
   @impl true
   def unbind(state, doc_name, _doc) do
-    info("SharedDoc shutting down, flushing persistence. document=#{doc_name}")
+    Logger.debug(
+      "SharedDoc shutting down, flushing persistence. document=#{doc_name}"
+    )
 
     if writer = state[:persistence_writer] do
       # Synchronously flush and stop the writer
@@ -77,7 +84,7 @@ defmodule Lightning.Collaboration.Persistence do
         GenServer.call(writer, :flush_and_stop, 10_000)
       catch
         :exit, _ ->
-          error(
+          Logger.error(
             "PersistenceWriter unavailable during unbind. document=#{doc_name}"
           )
       end

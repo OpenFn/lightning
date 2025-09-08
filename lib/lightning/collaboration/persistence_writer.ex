@@ -15,13 +15,14 @@ defmodule Lightning.Collaboration.PersistenceWriter do
   """
 
   use GenServer
-  use Lightning.Utils.Logger, color: [:black_background, :yellow]
 
   import Ecto.Query
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.Registry
   alias Lightning.Repo
+
+  require Logger
 
   # Configuration constants
   # Save after 2s of inactivity
@@ -92,7 +93,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
   def init(opts) do
     document_name = Keyword.fetch!(opts, :document_name)
 
-    info("Starting PersistenceWriter for document: #{document_name}")
+    Logger.debug("Starting PersistenceWriter for document: #{document_name}")
 
     state = %__MODULE__{
       document_name: document_name,
@@ -107,7 +108,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @impl true
   def handle_cast({:add_update, update}, state) do
-    info("Adding update to batch for document: #{state.document_name}")
+    Logger.debug("Adding update to batch for document: #{state.document_name}")
 
     new_state = %{
       state
@@ -119,7 +120,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
     # Check if we should force save due to batch size
     if length(new_state.pending_updates) >= @max_batch_size do
-      info(
+      Logger.debug(
         "Batch size limit reached, forcing save for document: #{state.document_name}"
       )
 
@@ -148,7 +149,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @impl true
   def handle_call(:flush_and_stop, _from, state) do
-    info(
+    Logger.debug(
       "Flushing and stopping PersistenceWriter for document: #{state.document_name}"
     )
 
@@ -161,7 +162,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
         {:stop, :normal, :ok, state}
 
       {:error, reason} ->
-        error(
+        Logger.error(
           "Failed to flush updates for document #{state.document_name}: #{inspect(reason)}"
         )
 
@@ -171,7 +172,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @impl true
   def handle_info(:save_batch, state) do
-    debug("Saving batch for document: #{state.document_name}")
+    Logger.debug("Saving batch for document: #{state.document_name}")
 
     state = cancel_timers(state)
 
@@ -192,7 +193,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
         {:noreply, new_state}
 
       {:error, reason} ->
-        error(
+        Logger.error(
           "Failed to save batch for document #{state.document_name}: #{inspect(reason)}"
         )
 
@@ -204,18 +205,18 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @impl true
   def handle_info(:force_save, state) do
-    debug("Force saving batch for document: #{state.document_name}")
+    Logger.debug("Force saving batch for document: #{state.document_name}")
     send(self(), :save_batch)
     {:noreply, %{state | max_wait_timer: nil}}
   end
 
   @impl true
   def handle_info(:create_checkpoint, state) do
-    info("Creating checkpoint for document: #{state.document_name}")
+    Logger.info("Creating checkpoint for document: #{state.document_name}")
 
     case create_checkpoint(state.document_name) do
       {:ok, _} ->
-        info(
+        Logger.info(
           "Checkpoint created successfully for document: #{state.document_name}"
         )
 
@@ -237,7 +238,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @impl true
   def handle_info(:cleanup_old_updates, state) do
-    Logger.debug("Cleaning up old updates for document: #{state.document_name}")
+    Logger.info("Cleaning up old updates for document: #{state.document_name}")
 
     case cleanup_old_updates(state.document_name) do
       {:ok, deleted_count} ->
@@ -261,7 +262,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
-    debug(
+    Logger.debug(
       "SharedDoc process died for document #{state.document_name}: #{inspect(reason)}"
     )
 
@@ -270,10 +271,14 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
     case save_pending_updates(state) do
       {:ok, _} ->
-        debug("Successfully flushed updates before stopping PersistenceWriter")
+        Logger.debug(
+          "Successfully flushed updates before stopping PersistenceWriter"
+        )
 
       {:error, save_reason} ->
-        debug("Failed to flush updates before stopping: #{inspect(save_reason)}")
+        Logger.debug(
+          "Failed to flush updates before stopping: #{inspect(save_reason)}"
+        )
     end
 
     {:stop, :normal, %{}}
@@ -281,13 +286,13 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @impl true
   def handle_info(any, state) do
-    debug("PersistenceWriter received unknown message: #{inspect(any)}")
+    Logger.debug("PersistenceWriter received unknown message: #{inspect(any)}")
     {:noreply, state}
   end
 
   @impl true
   def terminate(reason, state) do
-    debug(
+    Logger.debug(
       "#{inspect(self())} terminating for document #{state.document_name}: #{inspect(reason)}"
     )
 
@@ -295,10 +300,10 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     if length(state.pending_updates) > 0 do
       case save_pending_updates(state) do
         {:ok, _} ->
-          debug("Successfully saved pending updates on termination")
+          Logger.debug("Successfully saved pending updates on termination")
 
         {:error, save_reason} ->
-          debug(
+          Logger.debug(
             "Failed to save pending updates on termination: #{inspect(save_reason)}"
           )
       end
@@ -324,7 +329,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
   defp save_pending_updates(%{pending_updates: []} = _state), do: {:ok, 0}
 
   defp save_pending_updates(state) do
-    debug(
+    Logger.debug(
       "Saving #{length(state.pending_updates)} pending updates for document: #{state.document_name}"
     )
 
@@ -346,7 +351,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     end
   rescue
     exception ->
-      error("Exception while saving updates: #{inspect(exception)}")
+      Logger.error("Exception while saving updates: #{inspect(exception)}")
       {:error, exception}
   end
 
@@ -366,7 +371,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     Yex.encode_state_as_update!(temp_doc)
   rescue
     exception ->
-      error("Failed to merge updates: #{inspect(exception)}")
+      Logger.error("Failed to merge updates: #{inspect(exception)}")
       # Fallback to the most recent update
       hd(updates)
   end
@@ -425,7 +430,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     end
   rescue
     exception ->
-      error("Exception while creating checkpoint: #{inspect(exception)}")
+      Logger.error("Exception while creating checkpoint: #{inspect(exception)}")
       {:error, exception}
   end
 
@@ -460,7 +465,9 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     end
   rescue
     exception ->
-      error("Exception while cleaning up old updates: #{inspect(exception)}")
+      Logger.error(
+        "Exception while cleaning up old updates: #{inspect(exception)}"
+      )
 
       {:error, exception}
   end

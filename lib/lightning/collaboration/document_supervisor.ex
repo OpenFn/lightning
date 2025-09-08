@@ -2,23 +2,24 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   @moduledoc """
   Manages the lifecycle of collaborative workflow document processes.
 
-  This GenServer coordinates a SharedDoc and PersistenceWriter for each 
-  collaborative workflow document. It starts both processes with proper 
-  dependencies, registers the SharedDoc with the `:pg` process group for 
-  cluster-wide coordination, and handles graceful shutdown by ensuring 
+  This GenServer coordinates a SharedDoc and PersistenceWriter for each
+  collaborative workflow document. It starts both processes with proper
+  dependencies, registers the SharedDoc with the `:pg` process group for
+  cluster-wide coordination, and handles graceful shutdown by ensuring
   the SharedDoc flushes data to the PersistenceWriter before termination.
 
-  Uses a transient restart strategy, only restarting if the supervisor 
-  itself crashes, not when child processes exit normally. Monitors both 
+  Uses a transient restart strategy, only restarting if the supervisor
+  itself crashes, not when child processes exit normally. Monitors both
   child processes and stops itself if either child crashes.
   """
   use GenServer
-  use Lightning.Utils.Logger, color: [:green_background, :yellow]
 
   import Lightning.Collaboration.Registry, only: [via: 1]
 
   alias Lightning.Collaboration.Persistence
   alias Lightning.Collaboration.PersistenceWriter
+
+  require Logger
 
   @pg_scope :workflow_collaboration
 
@@ -105,7 +106,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       end
     end
 
-    info("Stopping PersistenceWriter")
+    Logger.debug("Stopping PersistenceWriter")
 
     if state.persistence_writer_ref,
       do: Process.demonitor(state.persistence_writer_ref, [:flush])
@@ -127,7 +128,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       [:persistence_writer_ref, :shared_doc_ref]
       |> Enum.find(fn key -> ref == state[key] end)
 
-    info("DOWN: #{inspect(key)} reason: #{inspect(reason)}")
+    Logger.debug("DOWN: #{inspect(key)} reason: #{inspect(reason)}")
 
     Process.demonitor(ref, [:flush])
 

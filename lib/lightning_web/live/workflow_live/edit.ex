@@ -7,8 +7,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.WorkflowLive.Components
   import React
 
-  alias Lightning.AiAssistant
   alias Lightning.Accounts
+  alias Lightning.AiAssistant
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
