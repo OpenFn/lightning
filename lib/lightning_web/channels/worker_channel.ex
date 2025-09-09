@@ -51,7 +51,7 @@ defmodule LightningWeb.WorkerChannel do
             }
           end)
 
-        Process.sleep(10_000)
+        # Process.sleep(10_000)
 
         # Check if the socket is still alive AND the client is still waiting for a reply
         if Process.alive?(socket.transport_pid) and socket.assigns[:reply_ref] do
