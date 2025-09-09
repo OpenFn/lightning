@@ -360,14 +360,23 @@ defmodule Lightning.Runs do
 
     {count, _} =
       from(r in Run, where: r.id in ^run_ids)
-      |> Repo.update_all(set: [state: :available, claimed_at: nil, worker_name: nil])
+      |> Repo.update_all(
+        set: [state: :available, claimed_at: nil, worker_name: nil]
+      )
 
     case count do
       count when count > 0 ->
-        Logger.info("Successfully rolled back #{count} claimed runs to :available state")
+        Logger.info(
+          "Successfully rolled back #{count} claimed runs to :available state"
+        )
+
         {:ok, count}
+
       0 ->
-        Logger.warning("No runs were rolled back - they may have already been processed")
+        Logger.warning(
+          "No runs were rolled back - they may have already been processed"
+        )
+
         {:ok, 0}
     end
   end

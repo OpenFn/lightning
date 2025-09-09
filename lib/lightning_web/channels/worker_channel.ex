@@ -119,5 +119,4 @@ defmodule LightningWeb.WorkerChannel do
     |> Runs.RunOptions.new()
     |> Ecto.Changeset.apply_changes()
   end
-
 end
