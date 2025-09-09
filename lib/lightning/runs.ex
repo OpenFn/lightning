@@ -364,20 +364,7 @@ defmodule Lightning.Runs do
         set: [state: :available, claimed_at: nil, worker_name: nil]
       )
 
-    case count do
-      count when count > 0 ->
-        Logger.info(
-          "Successfully rolled back #{count} claimed runs to :available state"
-        )
-
-        {:ok, count}
-
-      0 ->
-        Logger.warning(
-          "No runs were rolled back - they may have already been processed"
-        )
-
-        {:ok, 0}
-    end
+    Logger.warn("Successfully rolled back #{count} claimed runs to :available state")
+    {:ok, count}
   end
 end
