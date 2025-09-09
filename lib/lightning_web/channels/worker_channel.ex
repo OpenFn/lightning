@@ -37,21 +37,24 @@ defmodule LightningWeb.WorkerChannel do
       ) do
     case Runs.claim(demand, sanitise_worker_name(worker_name)) do
       {:ok, runs} ->
-        # Check if the socket is still alive before replying
-        if Process.alive?(socket.transport_pid) do
-          runs =
-            runs
-            |> Enum.map(fn run ->
-              opts = run_options(run)
+        # Prepare the response data
+        runs =
+          runs
+          |> Enum.map(fn run ->
+            opts = run_options(run)
 
-              token = Workers.generate_run_token(run, opts)
+            token = Workers.generate_run_token(run, opts)
 
-              %{
-                "id" => run.id,
-                "token" => token
-              }
-            end)
+            %{
+              "id" => run.id,
+              "token" => token
+            }
+          end)
 
+        Process.sleep(10_000)
+
+        # Check if the socket is still alive AND the client is still waiting for a reply
+        if Process.alive?(socket.transport_pid) and socket.assigns[:reply_ref] do
           {:reply, {:ok, %{runs: runs}}, socket}
         else
           # Socket is no longer alive, roll back the transaction by setting runs back to :available
