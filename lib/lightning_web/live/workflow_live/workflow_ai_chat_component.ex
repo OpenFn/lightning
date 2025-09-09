@@ -132,7 +132,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
     <div
       id={@id}
       phx-hook="TemplateToWorkflow"
-      class="absolute inset-y-0 left-0 w-[30%] max-w-[30%] z-20 -translate-x-full z-50"
+      class="absolute inset-y-0 left-0 w-[30%] max-w-[30%] z-40 -translate-x-full"
       phx-mounted={slide_in()}
       phx-remove={slide_out()}
     >
