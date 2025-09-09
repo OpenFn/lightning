@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.14.4] - 2025-09-09
+
+### Fixed
+
+- Fix Workflow AI Assistant apearing above inspector panel
+  [#3567](https://github.com/OpenFn/lightning/issues/3567)
+
 ## [v2.14.3] - 2025-08-29
 
 ## [v2.14.3-pre1] - 2025-08-22
@@ -39,8 +46,8 @@ and this project adheres to
 - Add test gauge metric that can be used to set arbitrary values for the
   purposes of triggering behaviour in metric consumers.
   [3510](https://github.com/OpenFn/lightning/issues/3510)
-- Add test gauge metric that can be used to set arbitrary values for the purposes
-  of triggering behaviour in metric consumers.
+- Add test gauge metric that can be used to set arbitrary values for the
+  purposes of triggering behaviour in metric consumers.
   [#3510](https://github.com/OpenFn/lightning/issues/3510)
 - Possibly temporary plumbing to allow the use of libcluster_postgres as an
   additional mechanism for discovering Erlang nodes.
