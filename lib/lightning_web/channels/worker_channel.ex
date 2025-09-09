@@ -51,7 +51,8 @@ defmodule LightningWeb.WorkerChannel do
             }
           end)
 
-        # Check if the socket is still alive AND the client is still waiting for a reply
+        # Check if the socket is still alive
+        # TODO... AND the client is still waiting for a reply?
         if Process.alive?(socket.transport_pid) do
           {:reply, {:ok, %{runs: runs}}, socket}
         else

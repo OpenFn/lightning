@@ -61,12 +61,12 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def grace_period do
+    def grace_period_seconds do
       Application.get_env(:lightning, :run_grace_period_seconds)
     end
 
     @impl true
-    def default_max_run_duration do
+    def default_max_run_duration_seconds do
       Application.get_env(:lightning, :max_run_duration_seconds)
     end
 
@@ -397,11 +397,11 @@ defmodule Lightning.Config do
   @callback apollo(key :: atom() | nil) :: map()
   @callback check_flag?(atom()) :: boolean() | nil
   @callback cors_origin() :: list()
-  @callback default_max_run_duration() :: integer()
+  @callback default_max_run_duration_seconds() :: integer()
   @callback email_sender_name() :: String.t()
   @callback get_extension_mod(key :: atom()) :: any()
   @callback google(key :: atom()) :: any()
-  @callback grace_period() :: integer()
+  @callback grace_period_seconds() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_alternate_storage_enabled?() :: boolean()
   @callback kafka_alternate_storage_file_path() :: String.t()
@@ -493,15 +493,15 @@ defmodule Lightning.Config do
 
   The returned value is in seconds.
   """
-  def grace_period do
-    impl().grace_period()
+  def grace_period_seconds do
+    impl().grace_period_seconds()
   end
 
   @doc """
   Returns the default maximum run duration in seconds.
   """
-  def default_max_run_duration do
-    impl().default_max_run_duration()
+  def default_max_run_duration_seconds do
+    impl().default_max_run_duration_seconds()
   end
 
   def repo_connection_token_signer do

@@ -37,7 +37,7 @@ defmodule Lightning.Extensions.StubUsageLimiter do
 
   @impl true
   def get_run_options(_context),
-    do: [run_timeout_ms: Config.default_max_run_duration()]
+    do: [run_timeout_ms: Config.default_max_run_duration_seconds()]
 
   @impl true
   def get_data_retention_periods(_context) do

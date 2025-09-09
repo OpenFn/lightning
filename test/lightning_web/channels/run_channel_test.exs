@@ -26,7 +26,7 @@ defmodule LightningWeb.RunChannelTest do
       end
     )
 
-    Mox.stub(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
+    Mox.stub(Lightning.MockConfig, :default_max_run_duration_seconds, fn -> 1 end)
 
     :ok
   end

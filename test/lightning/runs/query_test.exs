@@ -19,10 +19,12 @@ defmodule Lightning.Runs.QueryTest do
 
       now = Lightning.current_time()
 
-      default_max_run_duration = Lightning.Config.default_max_run_duration()
-      grace_period = Lightning.Config.grace_period()
+      default_max_run_duration_seconds =
+        Lightning.Config.default_max_run_duration_seconds()
 
-      default_max = grace_period + default_max_run_duration
+      grace_period_seconds = Lightning.Config.grace_period_seconds()
+
+      default_max = grace_period_seconds + default_max_run_duration_seconds
 
       run_to_be_marked_lost =
         insert(:run,
@@ -102,10 +104,12 @@ defmodule Lightning.Runs.QueryTest do
 
       now = Lightning.current_time()
 
-      default_max_run_duration = Lightning.Config.default_max_run_duration()
-      grace_period = Lightning.Config.grace_period()
+      default_max_run_duration_seconds =
+        Lightning.Config.default_max_run_duration_seconds()
 
-      default_max = grace_period + default_max_run_duration
+      grace_period_seconds = Lightning.Config.grace_period_seconds()
+
+      default_max = grace_period_seconds + default_max_run_duration_seconds
 
       should_be_lost =
         insert(:run,
