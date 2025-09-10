@@ -31,35 +31,26 @@ defmodule LightningWeb.RunChannel do
            Runs.get_project_id_for_run(run) do
       Sentry.Context.set_extra_context(%{run_id: id})
 
-      # Check if another worker is already in this run channel
-      # This prevents multiple workers from joining the same run
-      case check_and_claim_run_channel(id, socket.assigns[:worker_id] || socket.id) do
-        :ok ->
-          # Notify the worker channel that this run channel has been joined
-          # Use PubSub for cross-node communication in clustered environments
-          case socket.assigns[:worker_id] do
-            nil ->
-              # No worker ID available, continue normally
-              :ok
+      # Notify the worker channel that this run channel has been joined
+      # Use PubSub for cross-node communication in clustered environments
+      case socket.assigns[:worker_id] do
+        nil ->
+          # No worker ID available, continue normally
+          :ok
 
-            worker_id ->
-              Lightning.broadcast("worker_channel:#{worker_id}", {:run_channel_joined, id, worker_id})
-          end
-
-          {:ok,
-           socket
-           |> assign(%{
-             claims: claims,
-             id: id,
-             run: run,
-             project_id: project_id,
-             scrubber: nil
-           })}
-
-        {:error, :already_claimed} ->
-          Logger.warning("Run channel #{id} already claimed by another worker")
-          {:error, %{reason: "already_claimed"}}
+        worker_id ->
+          Lightning.broadcast("worker_channel:#{worker_id}", {:run_channel_joined, id, worker_id})
       end
+
+      {:ok,
+       socket
+       |> assign(%{
+         claims: claims,
+         id: id,
+         run: run,
+         project_id: project_id,
+         scrubber: nil
+       })}
     else
       {:error, :not_found} ->
         {:error, %{reason: "not_found"}}
