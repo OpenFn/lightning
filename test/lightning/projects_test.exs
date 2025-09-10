@@ -2334,6 +2334,45 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "root_of/1" do
+    test "returns the same project when given a root" do
+      root = insert(:project, name: "root")
+      assert Projects.root_of(root).id == root.id
+    end
+
+    test "returns the top-most ancestor for a sandbox (one level)" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+
+      assert Projects.root_of(child).id == root.id
+    end
+
+    test "returns the top-most ancestor for deep nesting" do
+      root = insert(:project, name: "A")
+
+      last =
+        1..5
+        |> Enum.reduce(root, fn n, acc ->
+          insert(:project, name: "A-#{n}", parent: acc)
+        end)
+
+      assert Projects.root_of(last).id == root.id
+    end
+
+    test "works regardless of parent preload" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+
+      # Preloaded parent
+      preloaded = Repo.preload(child, :parent)
+      assert Projects.root_of(preloaded).id == root.id
+
+      # Not preloaded (fresh get)
+      fresh = Repo.get!(Project, child.id)
+      assert Projects.root_of(fresh).id == root.id
+    end
+  end
+
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =
