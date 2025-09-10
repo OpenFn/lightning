@@ -34,10 +34,17 @@ and this project adheres to
   [#1588](https://github.com/OpenFn/lightning/issues/1588)
 
 ### Fixed
-- Tooltip gets stuck when switching pages 
+- Tooltip gets stuck when switching pages
   [#3559](https://github.com/OpenFn/lightning/pull/3559)
 - Current run dataclip stuck when switching nodes
   [#3560](https://github.com/OpenFn/lightning/pull/3560)
+
+## [v2.14.4] - 2025-09-09
+
+### Fixed
+
+- Fix Workflow AI Assistant apearing above inspector panel
+  [#3567](https://github.com/OpenFn/lightning/issues/3567)
 
 ## [v2.14.3] - 2025-08-29
 
