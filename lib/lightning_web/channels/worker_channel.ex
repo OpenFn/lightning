@@ -77,22 +77,29 @@ defmodule LightningWeb.WorkerChannel do
 
         # Check if the socket is still alive
         if Process.alive?(socket.transport_pid) do
-          # Start a timeout to ensure the client joins the run channels
-          timeout_ms = run_channel_join_timeout_ms()
-
-          timeout_ref =
-            :timer.send_after(
-              timeout_ms,
-              self(),
-              {:claim_timeout, original_runs}
-            )
-
-          # Store the timeout reference and original runs in socket assigns
+          # Only start timeout if we actually have runs to track
           socket =
-            assign(socket,
-              claim_timeout_ref: timeout_ref,
-              pending_runs: original_runs
-            )
+            if Enum.count(original_runs) > 0 do
+              # Start a timeout to ensure the client joins the run channels
+              timeout_ms = run_channel_join_timeout_ms()
+
+              timeout_ref =
+                :timer.send_after(
+                  timeout_ms,
+                  self(),
+                  {:claim_timeout, original_runs}
+                )
+
+              # Store the timeout reference and original runs in socket assigns
+              assign(socket,
+                claim_timeout_ref: timeout_ref,
+                pending_runs: original_runs
+              )
+            else
+              socket
+            end
+
+          Logger.error("Sending #{Enum.count(response_runs)} runs back!")
 
           {:reply, {:ok, %{runs: response_runs}}, socket}
         else
