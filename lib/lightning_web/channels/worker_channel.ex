@@ -59,7 +59,10 @@ defmodule LightningWeb.WorkerChannel do
 
   @impl true
   def handle_info(:work_available, socket) do
-    push(socket, "work-available", %{})
+    if Application.get_env(:lightning, :broadcast_work_available) do
+      push(socket, "work-available", %{})
+    end
+
     {:noreply, socket}
   end
 
