@@ -11,6 +11,8 @@ defmodule LightningWeb.Utils do
   alias Phoenix.HTML.Form
   alias Plug.Conn.Query
 
+  require Logger
+
   def pluralize_with_s(n, string) when n <= 1, do: string
   def pluralize_with_s(_integer, string), do: "#{string}s"
 
@@ -83,5 +85,84 @@ defmodule LightningWeb.Utils do
         plug Replug, plug: plug, opts: opts
       end
     end
+  end
+
+  def noreply(socket), do: {:noreply, socket}
+  def reply(socket), do: {:reply, socket}
+  def ok(socket), do: {:ok, socket}
+
+  @doc """
+  Standard **503 Service Unavailable** response for transient DB outages
+  during webhook handling.
+
+  This function is typically called inside a `with_webhook_retry/2` error branch
+  when retries against the database have been exhausted.
+
+  ## Options
+
+    * `:message` — custom response message, may include `"%{s}"` placeholder
+      which will be replaced with the retry-after value.
+    * `:halt?` — whether to halt the connection after sending the response.
+      Defaults to `true`.
+  """
+  @spec respond_service_unavailable(
+          Plug.Conn.t(),
+          Exception.t(),
+          map(),
+          keyword()
+        ) ::
+          Plug.Conn.t()
+  def respond_service_unavailable(
+        conn,
+        %DBConnection.ConnectionError{} = error,
+        context,
+        opts \\ []
+      ) do
+    halt? = Keyword.get(opts, :halt?, true)
+
+    message =
+      Keyword.get(
+        opts,
+        :message,
+        "Temporary database issue. Please retry in %{s}s."
+      )
+
+    retry_after =
+      Lightning.Config.webhook_retry(:timeout_ms) |> div(1000) |> max(1)
+
+    :telemetry.execute(
+      [:lightning, :webhook, :db_unavailable],
+      %{count: 1},
+      Map.merge(context, %{retry_after: retry_after})
+    )
+
+    Lightning.Sentry.capture_exception(error,
+      extra: Map.merge(context, %{retry_after: retry_after}),
+      tags: %{type: "webhook", op: to_string(Map.get(context, :op, :unknown))},
+      fingerprint: [
+        "webhook-db-unavailable",
+        to_string(Map.get(context, :op, :unknown))
+      ]
+    )
+
+    Logger.error(
+      "webhook #{Map.get(context, :op, "op=unknown")} exhausted retries " <>
+        Enum.map_join(context, " ", fn {k, v} -> "#{k}=#{v}" end) <>
+        " error=#{Exception.message(error)}"
+    )
+
+    body = %{
+      error: :service_unavailable,
+      message: String.replace(message, "%{s}", Integer.to_string(retry_after)),
+      retry_after: retry_after
+    }
+
+    conn =
+      conn
+      |> Plug.Conn.put_resp_header("retry-after", Integer.to_string(retry_after))
+      |> Plug.Conn.put_status(:service_unavailable)
+      |> Phoenix.Controller.json(body)
+
+    if halt?, do: Plug.Conn.halt(conn), else: conn
   end
 end

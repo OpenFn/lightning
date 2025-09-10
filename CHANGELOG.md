@@ -17,9 +17,27 @@ and this project adheres to
 
 ### Added
 
+- API for provisioning Sandboxes
+  [#3430](https://github.com/OpenFn/lightning/issues/3430)
+- Added DB support for sandboxes and workflow version provenance.
+  [#3422](https://github.com/OpenFn/lightning/issues/3422)
+- Retry webhook events on transient database connection errors
+  [#3097](https://github.com/OpenFn/lightning/issues/3097)
+- Allow users to retry followed runs from the job panel
+  [#3502](https://github.com/OpenFn/lightning/issues/3502)
+
 ### Changed
 
+- Enable X-Content-Type-Options header for static pages.
+  [#3534](https://github.com/OpenFn/lightning/issues/3534)
+- Refactor webhook auth methods modals
+  [#1588](https://github.com/OpenFn/lightning/issues/1588)
+
 ### Fixed
+- Tooltip gets stuck when switching pages
+  [#3559](https://github.com/OpenFn/lightning/pull/3559)
+- Current run dataclip stuck when switching nodes
+  [#3560](https://github.com/OpenFn/lightning/pull/3560)
 
 ## [v2.14.4] - 2025-09-09
 

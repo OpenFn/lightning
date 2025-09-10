@@ -908,14 +908,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.live_component
             :if={
               @live_action == :edit && @can_write_webhook_auth_method &&
-                @selected_trigger && @snapshot_version_tag == "latest"
+                @selected_trigger && @snapshot_version_tag == "latest" &&
+                @active_modal == :webhook_auth_method
             }
             module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
-            id="webhooks_auth_method_modal"
-            action={:new}
+            id="manage_webhook_auth_methods"
+            action={:index}
             trigger={@selected_trigger}
             project={@project}
             current_user={@current_user}
+            on_close={JS.push("close_active_modal")}
+            on_save={
+              fn trigger_or_auth_method ->
+                send(self(), {:webhook_auth_method_updated, trigger_or_auth_method})
+              end
+            }
             return_to={
               Helpers.build_url(assigns, [Helpers.param("s", @selected_trigger.id)])
             }
@@ -1414,6 +1421,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        show_canvas_placeholder: assigns.live_action == :new,
        show_workflow_ai_chat: false,
        show_job_credential_modal: false,
+       active_modal: nil,
+       active_modal_assigns: nil,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        publish_template: false,
@@ -1437,7 +1446,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply,
-     apply_action(socket, socket.assigns.live_action, params)
+     socket
+     |> assign(
+       active_modal: nil,
+       active_modal_assigns: nil
+     )
+     |> apply_action(socket.assigns.live_action, params)
      |> track_user_presence()
      |> apply_query_params(params)
      |> prepare_workflow_template()
@@ -1634,15 +1648,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event(
-        "get-run-input-dataclip",
+        "get-run-step-and-input-dataclip",
         %{"run_id" => run_id, "job_id" => job_id},
         socket
       ) do
-    Invocation.get_first_dataclip_for_run_and_job(run_id, job_id)
-    |> case do
-      nil -> {:reply, %{dataclip: nil}, socket}
-      dataclip -> {:reply, %{dataclip: dataclip}, socket}
-    end
+    dataclip = Invocation.get_first_dataclip_for_run_and_job(run_id, job_id)
+    run_step = Invocation.get_first_step_for_run_and_job(run_id, job_id)
+
+    {:reply, %{dataclip: dataclip, run_step: run_step}, socket}
   end
 
   def handle_event(
@@ -2037,10 +2050,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   # order, just like clicking "rerun from here" on the history page.
   def handle_event(
         "rerun",
-        %{"run_id" => run_id, "step_id" => step_id},
+        %{"run_id" => run_id, "step_id" => step_id} = params,
         socket
       ) do
-    case rerun(socket, run_id, step_id) do
+    case rerun(socket, run_id, step_id, params["via"]) do
       {:ok, socket} ->
         {:noreply, socket}
 
@@ -2185,6 +2198,31 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, assign(socket, selected_template: nil)}
   end
 
+  def handle_event("close_active_modal", _params, socket) do
+    socket
+    |> assign(active_modal: nil, active_modal_assigns: nil)
+    |> noreply()
+  end
+
+  def handle_event(
+        "show_modal",
+        %{"target" => "webhook_auth_method"},
+        socket
+      ) do
+    if socket.assigns.can_write_webhook_auth_method do
+      socket
+      |> assign(
+        active_modal: :webhook_auth_method,
+        active_modal_assigns: %{}
+      )
+      |> noreply()
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action")
+      |> noreply()
+    end
+  end
+
   def handle_event(_unhandled_event, _params, socket) do
     # TODO: add a warning and/or log for unhandled events
     {:noreply, socket}
@@ -2222,6 +2260,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       {:noreply, socket}
     end
+  end
+
+  def handle_info(
+        {:webhook_auth_method_updated, _trigger_or_auth_method},
+        socket
+      ) do
+    %{workflow: current_workflow, snapshot: snapshot} = socket.assigns
+
+    updated_workflow = get_workflow_by_id(current_workflow.id)
+
+    socket
+    |> assign_workflow(updated_workflow, snapshot)
+    |> apply_mode_and_selection()
+    |> noreply()
   end
 
   def handle_info({:form_changed, %{"workflow" => params}}, socket) do
@@ -2263,16 +2315,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
-    summary =
-      socket.assigns.workflow
-      |> Presence.list_presences_for()
-      |> Presence.build_presences_summary(socket.assigns)
-
-    {:noreply,
-     socket
-     |> assign(summary)
-     |> maybe_switch_workflow_version()
-     |> maybe_disable_canvas()}
+    {:noreply, update_presence_summary(socket)}
   end
 
   @impl true
@@ -2334,11 +2377,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp format_step(step) do
     %{
+      id: step.id,
       job_id: step.job_id,
       error_type: step.error_type,
       exit_reason: step.exit_reason,
       started_at: step.started_at,
-      finished_at: step.finished_at
+      finished_at: step.finished_at,
+      input_dataclip_id: step.input_dataclip_id
     }
   end
 
@@ -2833,9 +2878,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket.assigns.workflow,
         self()
       )
-    end
 
-    socket
+      update_presence_summary(socket)
+    else
+      socket
+    end
   end
 
   defp initial_presence_summary(current_user) do
@@ -2850,6 +2897,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user_presence: init_user_presence,
       has_presence_edit_priority: true
     }
+  end
+
+  defp update_presence_summary(socket) do
+    summary =
+      socket.assigns.workflow
+      |> Presence.list_presences_for()
+      |> Presence.build_presences_summary(socket.assigns)
+
+    assign(socket, summary)
+    |> maybe_switch_workflow_version()
+    |> maybe_disable_canvas()
   end
 
   defp view_only_users(project) do
@@ -2910,16 +2968,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         selectable_dataclips =
           Invocation.list_dataclips_for_job(%Job{id: job.id})
 
-        step =
-          assigns[:follow_run] &&
-            Invocation.get_first_step_for_run_and_job(
-              assigns[:follow_run].id,
-              job.id
-            )
-
         socket
         |> assign_manual_run_form(changeset)
-        |> assign(step: step)
         |> assign_dataclips(selectable_dataclips, dataclip)
 
       _ ->
@@ -3408,7 +3458,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp rerun(socket, run_id, step_id) do
+  defp rerun(socket, run_id, step_id, via) do
     %{
       can_run_workflow: can_run_workflow?,
       current_user: current_user,
@@ -3435,15 +3485,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
          {:ok, workflow} <- save_or_get_workflow,
          {:ok, run} <-
            WorkOrders.retry(run_id, step_id, created_by: current_user) do
-      Runs.subscribe(run)
+      if via == "job_panel" do
+        {:ok, push_navigate(socket, to: ~p"/projects/#{project_id}/runs/#{run}")}
+      else
+        Runs.subscribe(run)
 
-      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+        snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
 
-      {:ok,
-       socket
-       |> assign_workflow(workflow, snapshot)
-       |> follow_run(run)
-       |> push_event("push-hash", %{"hash" => "log"})}
+        {:ok,
+         socket
+         |> assign_workflow(workflow, snapshot)
+         |> follow_run(run)
+         |> push_event("push-hash", %{"hash" => "log"})}
+      end
     end
   end
 

@@ -15,7 +15,7 @@ export const Panel: React.FC<PanelProps> = ({
   children,
   footer,
   onClose,
-  onBack
+  onBack,
 }) => {
   return (
     <div
@@ -25,9 +25,10 @@ export const Panel: React.FC<PanelProps> = ({
         <div className="flex px-4 py-5 sm:px-6 gap-2 items-center">
           <div className="flex-none flex items-center">
             <div
-              onClick={() => { onBack(); }}
+              onClick={() => {
+                onBack();
+              }}
               className="justify-center flex items-center hover:text-gray-500 cursor-pointer"
-              id="close-panel"
             >
               <span className="hero-arrow-left h-4 w-4 inline-block" />
             </div>
@@ -35,7 +36,9 @@ export const Panel: React.FC<PanelProps> = ({
           <div className="grow font-bold truncate">{heading}</div>
           <div className="flex-none flex items-center">
             <div
-              onClick={() => { onClose(); }}
+              onClick={() => {
+                onClose();
+              }}
               className="justify-center flex items-center hover:text-gray-500 cursor-pointer"
               id="close-panel"
             >
@@ -44,14 +47,14 @@ export const Panel: React.FC<PanelProps> = ({
           </div>
         </div>
         <div className="px-4 py-5 sm:p-6 grow flex flex-col overflow-visible h-130">
-          <div className="md:gap-4 grow flex flex-col overflow-visible">{children}</div>
+          <div className="md:gap-4 grow flex flex-col overflow-visible">
+            {children}
+          </div>
         </div>
         {footer && (
           <div className="p-3 z-50 bg-white rounded-lg">
             <div className="md:grid md:grid-cols-6 md:gap-4 @container">
-              <div className="col-span-6">
-                {footer}
-              </div>
+              <div className="col-span-6">{footer}</div>
             </div>
           </div>
         )}

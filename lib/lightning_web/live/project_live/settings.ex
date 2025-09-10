@@ -8,8 +8,6 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   alias Lightning.Collections
   alias Lightning.Credentials
-  alias Lightning.Credentials.Credential
-  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.ProjectLimiter
@@ -36,12 +34,6 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     project_user = Projects.get_project_user(project, current_user)
 
-    oauth_clients = OauthClients.list_clients(project)
-
-    keychain_credentials =
-      Credentials.list_keychain_credentials_for_project(project)
-
-    auth_methods = WebhookAuthMethods.list_for_project(project)
     project_files = Projects.list_project_files(project)
     collections = Collections.list_project_collections(project)
 
@@ -131,8 +123,6 @@ defmodule LightningWeb.ProjectLive.Settings do
        collections: collections,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
-       keychain_credentials: keychain_credentials,
-       oauth_clients: oauth_clients,
        project_changeset: Projects.change_project(socket.assigns.project),
        project_files: project_files,
        project_repo_connection: repo_connection,
@@ -142,7 +132,9 @@ defmodule LightningWeb.ProjectLive.Settings do
        selected_credential_type: nil,
        show_collaborators_modal: false,
        show_invite_collaborators_modal: false,
-       webhook_auth_methods: auth_methods
+       webhook_auth_methods: [],
+       active_modal: nil,
+       active_modal_assigns: nil
      )
      |> assign(permissions)}
   end
@@ -159,6 +151,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   defp apply_action(socket, :index, _params) do
     project_users = Projects.get_project_users!(socket.assigns.project.id)
+    auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
 
     concurrency_input_component =
       socket.router
@@ -173,9 +166,12 @@ defmodule LightningWeb.ProjectLive.Settings do
     |> assign(
       page_title: "Project settings",
       project_users: project_users,
+      webhook_auth_methods: auth_methods,
       concurrency_input_component: concurrency_input_component,
       show_collaborators_modal: false,
-      show_invite_collaborators_modal: false
+      show_invite_collaborators_modal: false,
+      active_modal: nil,
+      active_modal_assigns: nil
     )
   end
 
@@ -321,6 +317,82 @@ defmodule LightningWeb.ProjectLive.Settings do
      )}
   end
 
+  def handle_event("close_active_modal", _params, socket) do
+    socket
+    |> assign(active_modal: nil, active_modal_assigns: nil)
+    |> noreply()
+  end
+
+  def handle_event(
+        "show_modal",
+        %{"target" => "new_webhook_auth_method"},
+        socket
+      ) do
+    if socket.assigns.can_write_webhook_auth_method do
+      socket
+      |> assign(
+        active_modal: :new_webhook_auth_method,
+        active_modal_assigns: %{
+          webhook_auth_method: %Lightning.Workflows.WebhookAuthMethod{
+            project_id: socket.assigns.project.id
+          }
+        }
+      )
+      |> noreply()
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action")
+      |> noreply()
+    end
+  end
+
+  def handle_event(
+        "show_modal",
+        %{"target" => target_modal, "id" => auth_method_id},
+        socket
+      )
+      when target_modal in [
+             "edit_webhook_auth_method",
+             "delete_webhook_auth_method"
+           ] do
+    if socket.assigns.can_write_webhook_auth_method do
+      auth_method =
+        WebhookAuthMethods.find_by_id!(auth_method_id, include: [:triggers])
+
+      socket
+      |> assign(
+        active_modal: String.to_existing_atom(target_modal),
+        active_modal_assigns: %{webhook_auth_method: auth_method}
+      )
+      |> noreply()
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action")
+      |> noreply()
+    end
+  end
+
+  def handle_event(
+        "show_modal",
+        %{
+          "target" => "linked_triggers_for_webhook_auth_method",
+          "id" => auth_method_id
+        },
+        socket
+      ) do
+    auth_method =
+      WebhookAuthMethods.find_by_id!(auth_method_id,
+        include: [triggers: [:workflow]]
+      )
+
+    socket
+    |> assign(
+      active_modal: :linked_triggers_for_webhook_auth_method,
+      active_modal_assigns: %{webhook_auth_method: auth_method}
+    )
+    |> noreply()
+  end
+
   def handle_event(
         "set_failure_alert",
         %{
@@ -363,44 +435,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       digest ->
         Projects.update_project_user(project_user, %{digest: digest})
         |> dispatch_flash(socket)
-    end
-  end
-
-  def handle_event(
-        "delete_oauth_client",
-        %{"oauth_client_id" => oauth_client_id},
-        %{assigns: assigns} = socket
-      ) do
-    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
-
-    {:noreply,
-     socket
-     |> put_flash(:info, "Oauth client deleted")
-     |> assign(
-       :oauth_clients,
-       OauthClients.list_clients(assigns.project)
-     )}
-  end
-
-  def handle_event(
-        "delete_credential",
-        %{"credential_id" => credential_id},
-        %{assigns: assigns} = socket
-      ) do
-    credential = Credentials.get_credential!(credential_id)
-
-    case Credentials.schedule_credential_deletion(credential) do
-      {:ok, %Credential{}} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Credential deleted")
-         |> assign(
-           :credentials,
-           Lightning.Credentials.list_credentials(assigns.project)
-         )}
-
-      {:error, %Ecto.Changeset{} = _changeset} ->
-        {:noreply, socket}
     end
   end
 

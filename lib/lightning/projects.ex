@@ -28,10 +28,12 @@ defmodule Lightning.Projects do
   alias Lightning.RunStep
   alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
+  alias Lightning.Validators.Hex
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkOrder
 
   require Logger
@@ -1213,5 +1215,204 @@ defmodule Lightning.Projects do
             (pu.role in ^[:admin, :owner] or u.role == ^:superuser)
 
     query |> Repo.all()
+  end
+
+  @doc """
+  Returns the *direct* sandboxes (children) of a parent project, ordered by `name` (ASC).
+
+  This is a flat view: only rows where `parent.id == child.parent_id` are returned.
+  If we later support arbitrarily deep nesting, switch this to a recursive CTE.
+  """
+  @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
+  def list_sandboxes(parent_id) when is_binary(parent_id) do
+    from(p in Project, where: p.parent_id == ^parent_id, order_by: p.name)
+    |> Repo.all()
+  end
+
+  @doc """
+  Creates a sandbox under the given `parent` by delegating to `create_project/2`.
+
+  This is a convenience wrapper that sets `:parent_id` and preserves the
+  existing behavior around collaborator emails (off by default unless `schedule_email?` is `true`).
+
+  ## Notes
+
+  * Child names are scoped-unique by `(parent_id, name)`. Root names may repeat,
+    but two siblings cannot share a name (enforced by the `projects_unique_child_name` index).
+  * This function does **not** clone workflows, credentials, or dataclips. It only creates
+    a new project row with `parent_id` set. See sandbox provisioning flow for full cloning.
+
+  ## Returns
+
+  * `{:ok, %Project{}}` on success
+  * `{:error, %Ecto.Changeset{}}` on validation/unique errors
+  """
+  @spec create_sandbox(Project.t(), map(), boolean()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def create_sandbox(%Project{id: parent_id}, attrs, schedule_email? \\ false) do
+    attrs |> Map.put(:parent_id, parent_id) |> create_project(schedule_email?)
+  end
+
+  @doc """
+  Returns a read-only “workspace” view for a parent project: the parent itself
+  plus all of its direct sandboxes (unique set, no preloads).
+
+  Use this for nav/filters where showing the parent alongside its sandboxes is needed.
+
+  ## Notes
+
+  * Order is not guaranteed. Sort the resulting list if a specific order is needed.
+  * Not recursive. If we later model deeper hierarchies, use a recursive CTE.
+  """
+  @spec get_workspace_projects(Project.t()) :: [Project.t()]
+  def get_workspace_projects(%Project{id: parent_id} = parent) do
+    ([parent] ++ list_sandboxes(parent_id))
+    |> Enum.uniq_by(& &1.id)
+  end
+
+  @doc """
+  Computes a deterministic 12-hex “project head” hash from the *latest* version
+  hash per workflow.
+
+  The algorithm:
+  1. For each workflow in the project, select the most recent row in `workflow_versions`
+     by `(inserted_at DESC, id DESC)`.
+  2. Build pairs `[[workflow_id_as_string, hash], ...]`.
+  3. JSON-encode the pairs and take `sha256` of the bytes.
+  4. Return the first 12 lowercase hex chars.
+
+  ## Guarantees
+
+  * **Deterministic** for a given set of latest heads.
+  * If a project has no workflow versions, returns the digest of `[]`, i.e. a stable
+    12-hex string representing “empty”.
+
+  ## Use cases
+
+  * Change detection across environments.
+  * Cache keys and optimistic comparisons (e.g. “is this workspace up-to-date?”).
+  """
+  def compute_project_head_hash(project_id) do
+    pairs =
+      from(v in WorkflowVersion,
+        join: w in assoc(v, :workflow),
+        where: w.project_id == ^project_id,
+        distinct: [v.workflow_id],
+        order_by: [asc: v.workflow_id, desc: v.inserted_at, desc: v.id],
+        select: {v.workflow_id, v.hash}
+      )
+      |> Repo.all()
+      |> Enum.map(fn {wid, h} -> [to_string(wid), h] end)
+
+    data = Jason.encode!(pairs)
+
+    :crypto.hash(:sha256, data)
+    |> Base.encode16(case: :lower)
+    |> binary_part(0, 12)
+  end
+
+  @doc """
+  Appends a new 12-hex head hash to `project.version_history` (append-only).
+
+  This is a lenient wrapper that validates using
+  `Lightning.Validators.Hex.valid?(hash)` and returns tagged tuples.
+  For atomic locking and errors by exception, use `append_project_head!/2`.
+
+  ## Validation
+
+  * `hash` must be **12 lowercase hex characters** (`0-9`, `a-f`).
+  * No duplicates: if the hash already exists in the array, this is a no-op.
+
+  ## Concurrency
+
+  The underlying `!/2` variant locks the row (`FOR UPDATE`) to avoid lost updates.
+  """
+  @spec append_project_head(Project.t(), String.t()) ::
+          {:ok, Project.t()} | {:error, :bad_hash}
+  def append_project_head(%Project{} = project, hash) when is_binary(hash) do
+    if Hex.valid?(hash) do
+      {:ok, append_project_head!(project, hash)}
+    else
+      {:error, :bad_hash}
+    end
+  end
+
+  @doc """
+  Like `append_project_head/2`, but raises on invalid input and performs the
+  append within a transaction that locks the project row.
+
+  ## Behavior
+
+  * Raises `ArgumentError` if `hash` is not **12 lowercase hex**.
+  * Uses `SELECT … FOR UPDATE` to read the current array, appends if missing,
+    and writes back in the same transaction.
+  * Idempotent: if the hash is already present, returns the unchanged project.
+  """
+  @spec append_project_head!(Project.t(), String.t()) :: Project.t()
+  def append_project_head!(%Project{id: id}, hash) when is_binary(hash) do
+    unless Hex.valid?(hash),
+      do: raise(ArgumentError, "head_hash must be 12 lowercase hex chars")
+
+    {:ok, proj} =
+      Repo.transaction(fn ->
+        proj =
+          from(p in Project, where: p.id == ^id, lock: "FOR UPDATE")
+          |> Repo.one!()
+
+        new_hist = append_if_missing(proj.version_history || [], hash)
+
+        if new_hist == (proj.version_history || []) do
+          proj
+        else
+          proj
+          |> Ecto.Changeset.change(version_history: new_hist)
+          |> Repo.update!()
+        end
+      end)
+
+    proj
+  end
+
+  defp append_if_missing(list, h),
+    do: if(Enum.member?(list, h), do: list, else: list ++ [h])
+
+  @doc """
+  Provisions a **sandbox (child) project** under the given `parent`.
+
+  This is a thin wrapper around `Lightning.Projects.Sandboxes.provision/3`.
+
+  ## Authorization
+  The `actor` must be an `:owner` or `:admin` **of the parent project**.
+  Returns `{:error, :unauthorized}` otherwise.
+
+  ## Attributes (`attrs`)
+    * `:name` (required) — Sandbox name (must be unique per `parent_id`).
+    * `:color` — Optional hex color (string) for the project.
+    * `:env` — Optional environment slug to set on the project.
+    * `:collaborators` — Optional list of `%{user_id: Ecto.UUID.t(), role: atom()}`.
+      The `actor` is always added as `:owner`; extra `:owner` entries are ignored.
+    * `:dataclip_ids` — Optional list of named dataclip IDs to copy
+      (eligible types: `:global | :saved_input | :http_request`).
+
+  ## Behavior
+    * Clones a subset of project settings from the parent.
+    * **References** existing credentials via `project_credentials` (no credential duplication).
+    * Clones the workflow DAG (jobs, triggers, edges), **disables triggers** in the clone,
+      **remaps node positions**, and copies the latest workflow head/version per workflow.
+    * Does **not** copy runs/history.
+
+  ## Examples
+
+      iex> provision_sandbox(parent, actor, %{name: "SB-1", color: "#aabbcc"})
+      {:ok, %Lightning.Projects.Project{}}
+
+      iex> provision_sandbox(parent, viewer, %{name: "SB-1"})
+      {:error, :unauthorized}
+
+  """
+  @spec provision_sandbox(Project.t(), User.t(), map()) ::
+          {:ok, Project.t()} | {:error, term()}
+  def provision_sandbox(%Project{} = parent, %User{} = actor, attrs) do
+    Lightning.Projects.Sandboxes.provision(parent, actor, attrs)
   end
 end

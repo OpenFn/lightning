@@ -3565,7 +3565,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert_reply(view, %{dataclips: ^dataclips})
     end
 
-    test "gets run input dataclip",
+    test "gets run step and input dataclip",
          %{conn: conn, project: project} do
       %{jobs: [job | _rest]} =
         workflow = insert(:complex_workflow, project: project)
@@ -3609,12 +3609,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         })
         |> then(&%{&1 | body: nil})
 
-      render_hook(view, "get-run-input-dataclip", %{
+      expected_step_id = hd(run.steps).id
+
+      render_hook(view, "get-run-step-and-input-dataclip", %{
         "run_id" => run.id,
         "job_id" => job.id
       })
 
-      assert_reply(view, %{dataclip: ^expected_dataclip})
+      assert_reply(view, %{
+        dataclip: ^expected_dataclip,
+        run_step: %{id: ^expected_step_id}
+      })
     end
 
     test "returns nil when no dataclip found for run and job",
@@ -3647,12 +3652,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Intentionally not creating any step for this job to test the nil case
 
-      render_hook(view, "get-run-input-dataclip", %{
+      render_hook(view, "get-run-step-and-input-dataclip", %{
         "run_id" => run.id,
         "job_id" => job.id
       })
 
-      assert_reply(view, %{dataclip: nil})
+      assert_reply(view, %{dataclip: nil, run_step: nil})
     end
 
     test "creates run from start job", %{
@@ -3715,6 +3720,53 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert created_run =
                Lightning.Repo.get_by(Lightning.Run, starting_job_id: job_2.id)
+
+      assert_redirected(view, ~p"/projects/#{project}/runs/#{created_run}")
+    end
+
+    test "can rerun",
+         %{conn: conn, project: project, user: user} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      # Create a dataclip
+      dataclip =
+        insert(:dataclip,
+          body: %{"input-field" => "input-value"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+
+      work_order = insert(:workorder, workflow: workflow, dataclip: dataclip)
+
+      # Create run with step in one go using the factory pattern
+      run =
+        insert(:run,
+          workflow: workflow,
+          starting_job: job,
+          dataclip: dataclip,
+          work_order: work_order,
+          steps: [
+            build(:step, job: job, input_dataclip: dataclip)
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job.id, a: run.id, m: "workflow_input"]}",
+          on_error: :raise
+        )
+
+      render_hook(view, "rerun", %{
+        "run_id" => run.id,
+        "step_id" => hd(run.steps).id,
+        "via" => "job_panel"
+      })
+
+      created_run = Lightning.Repo.get_by(Lightning.Run, created_by_id: user.id)
 
       assert_redirected(view, ~p"/projects/#{project}/runs/#{created_run}")
     end
