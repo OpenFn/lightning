@@ -201,22 +201,38 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Gets a single project.
+  Fetches a project by id (root **or** sandbox) and preloads its direct `:parent`.
 
-  Raises `Ecto.NoResultsError` if the Project does not exist.
-
-  ## Examples
-
-      iex> get_project!(123)
-      %Project{}
-
-      iex> get_project!(456)
-      ** (Ecto.NoResultsError)
-
+  Raises `Ecto.NoResultsError` if no project with the given id exists.
   """
+  @spec get_project!(Ecto.UUID.t()) :: Project.t()
   def get_project!(id), do: Repo.get!(Project, id) |> Repo.preload(:parent)
 
-  def get_project(id), do: Repo.get(Project, id) |> Repo.preload(:parent)
+  @doc """
+  Fetches a project by id (root **or** sandbox) and preloads its direct `:parent`.
+
+  Returns `nil` if no project with the given id exists.
+  """
+  @spec get_project(Ecto.UUID.t()) :: Project.t() | nil
+  def get_project(id) do
+    case Repo.get(Project, id) do
+      nil -> nil
+      p -> Repo.preload(p, :parent)
+    end
+  end
+
+  @doc """
+  Returns the **root ancestor** of a project by walking up `parent_id` links.
+
+  Supports arbitrarily deep nesting. (Assumes the parent chain is well-formed.)
+  """
+  @spec root_of(Project.t()) :: Project.t()
+  def root_of(%Project{} = p) do
+    case p.parent_id do
+      nil -> p
+      pid -> root_of(Repo.get!(Project, pid))
+    end
+  end
 
   @doc """
   Should input or output dataclips be saved for runs in this project?
@@ -684,18 +700,13 @@ defmodule Lightning.Projects do
   """
   @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
   def get_projects_for_user(%User{support_user: true} = user) do
-    support_projects =
-      from(p in Project,
-        where:
-          p.allow_support_access and
-            is_nil(p.scheduled_deletion) and
-            is_nil(p.parent_id)
-      )
-
-    user_projects = projects_for_user_query(user)
-
-    support_projects
-    |> union(^user_projects)
+    from(p in Project,
+      where:
+        p.allow_support_access and
+          is_nil(p.scheduled_deletion) and
+          is_nil(p.parent_id)
+    )
+    |> union(^projects_for_user_query(user))
     |> Repo.all()
     |> Enum.uniq_by(& &1.id)
   end

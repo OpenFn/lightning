@@ -34,19 +34,18 @@ defmodule LightningWeb.Hooks do
     {:halt, redirect(socket, to: ~p"/users/log_in")}
   end
 
-  def on_mount(:project_scope, %{"project_id" => project_id}, _session, socket) do
-    %{current_user: current_user} = socket.assigns
-
+  def on_mount(
+        :project_scope,
+        %{"project_id" => project_id},
+        _session,
+        %{assigns: %{current_user: current_user}} = socket
+      ) do
     current = Lightning.Projects.get_project(project_id)
-
-    if is_nil(current),
-      do:
-        {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
-
-    root = current.parent || current
+    root = if current, do: Lightning.Projects.root_of(current)
     projects = Lightning.Projects.get_projects_for_user(current_user)
-    sandboxes = Lightning.Projects.list_sandboxes(root.id)
-    project_user = Lightning.Projects.get_project_user(root, current_user)
+
+    project_user =
+      root && Lightning.Projects.get_project_user(root, current_user)
 
     can_access_project =
       Permissions.can?(ProjectUsers, :access_project, current_user, root)
@@ -56,6 +55,8 @@ defmodule LightningWeb.Hooks do
         {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
+        sandboxes = Lightning.Projects.list_sandboxes(root.id)
+
         {:cont,
          socket
          |> assign(:side_menu_theme, "primary-theme")
