@@ -135,5 +135,80 @@ defmodule LightningWeb.WorkerChannelTest do
 
       assert %{worker_name: nil} = Repo.reload!(run)
     end
+
+    test "rolls back claimed runs when timeout is reached", %{socket: socket} do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      {:ok, %{runs: [%{id: run_id} = run]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      # Set a very short timeout for testing (100ms)
+      Application.put_env(:lightning, :run_channel_join_timeout_seconds, 0.1)
+
+      ref =
+        push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
+
+      assert_reply ref, :ok, %{runs: [%{"id" => ^run_id}]}
+
+      # Verify the run is claimed
+      run = Repo.reload!(run)
+      assert run.state == :claimed
+
+      # Manually trigger the timeout by sending the message directly
+      send(socket.channel_pid, {:claim_timeout, [run]})
+
+      # Wait a bit for the message to be processed
+      Process.sleep(100)
+
+      # Verify the run has been rolled back to available
+      run = Repo.reload!(run)
+      assert run.state == :available
+      assert run.claimed_at == nil
+      assert run.worker_name == nil
+
+      # Clean up
+      Application.delete_env(:lightning, :run_channel_join_timeout_seconds)
+    end
+
+    test "cancels timeout when run channel is joined", %{socket: socket} do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      {:ok, %{runs: [%{id: run_id} = run]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      # Set a short timeout for testing
+      Application.put_env(:lightning, :run_channel_join_timeout_seconds, 1)
+
+      ref =
+        push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
+
+      assert_reply ref, :ok, %{runs: [%{"id" => ^run_id, "token" => _token}]}
+
+      # Verify the run is claimed
+      run = Repo.reload!(run)
+      assert run.state == :claimed
+
+      # Immediately simulate joining the run channel by sending the notification message
+      # This should cancel the timeout before it fires
+      send(socket.channel_pid, {:run_channel_joined, run_id})
+
+      # Wait a bit for the message to be processed
+      Process.sleep(100)
+
+      # Verify the run is still claimed (timeout was cancelled)
+      run = Repo.reload!(run)
+      assert run.state == :claimed
+
+      # Clean up
+      Application.delete_env(:lightning, :run_channel_join_timeout_seconds)
+    end
   end
 end

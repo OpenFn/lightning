@@ -325,6 +325,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def run_channel_join_timeout_seconds do
+      Application.get_env(:lightning, :run_channel_join_timeout_seconds, 30)
+    end
+
+    @impl true
     def metrics_run_performance_age_seconds do
       metrics_config() |> Keyword.get(:run_performance_age_seconds)
     end
@@ -447,6 +452,7 @@ defmodule Lightning.Config do
   @callback external_metrics_module() :: module() | nil
   @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
+  @callback run_channel_join_timeout_seconds() :: pos_integer()
   @callback sentry() :: module()
   @callback webhook_retry() :: Keyword.t()
   @callback webhook_retry(key :: atom()) :: any()
@@ -682,6 +688,10 @@ defmodule Lightning.Config do
 
   def per_workflow_claim_limit do
     impl().per_workflow_claim_limit()
+  end
+
+  def run_channel_join_timeout_seconds do
+    impl().run_channel_join_timeout_seconds()
   end
 
   def sentry do

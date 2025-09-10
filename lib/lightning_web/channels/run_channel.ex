@@ -31,6 +31,16 @@ defmodule LightningWeb.RunChannel do
            Runs.get_project_id_for_run(run) do
       Sentry.Context.set_extra_context(%{run_id: id})
 
+      # Notify the worker channel that this run channel has been joined
+      case socket.assigns[:worker_channel_pid] do
+        nil ->
+          # No worker channel process ID available, continue normally
+          :ok
+
+        worker_channel_pid ->
+          send(worker_channel_pid, {:run_channel_joined, id})
+      end
+
       {:ok,
        socket
        |> assign(%{
