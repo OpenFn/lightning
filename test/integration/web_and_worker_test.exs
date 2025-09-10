@@ -16,27 +16,27 @@ defmodule Lightning.WebAndWorkerTest do
   setup :set_mox_from_context
   setup :verify_on_exit!
 
-  setup_all context do
+  setup_all do
     Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
     Mox.stub_with(LightningMock, Lightning.API)
-    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
 
     Mox.stub_with(
       Lightning.Extensions.MockUsageLimiter,
       Lightning.Extensions.UsageLimiter
     )
 
-    start_runtime_manager(context)
+    start_runtime_manager()
+
+    uri = LightningWeb.Endpoint.url()
+
+    %{uri: uri}
   end
 
   describe "webhook triggered runs" do
     setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
 
     @tag :integration
-    @tag timeout: 20_000
-    test "complete a run on a complex workflow with parallel jobs", %{
-      conn: conn
-    } do
+    test "complete a run on a complex workflow with parallel jobs", %{uri: uri} do
       project = insert(:project)
 
       %{triggers: [%{id: webhook_trigger_id}], edges: edges} =
@@ -56,10 +56,24 @@ defmodule Lightning.WebAndWorkerTest do
 
       # Post to webhook
       webhook_body = %{"x" => 1}
-      conn = post(conn, "/i/#{webhook_trigger_id}", webhook_body)
 
-      assert %{"work_order_id" => workorder_id} =
-               json_response(conn, 200)
+      response =
+        Tesla.client(
+          [
+            {Tesla.Middleware.BaseUrl, uri},
+            Tesla.Middleware.JSON
+          ],
+          {Tesla.Adapter.Finch, name: Lightning.Finch}
+        )
+        |> Tesla.post!("/i/#{webhook_trigger_id}", webhook_body)
+
+      assert response.status == 200
+      assert %{"work_order_id" => workorder_id} = response.body
+
+      # conn = post(conn, "/i/#{webhook_trigger_id}", webhook_body)
+
+      # assert %{"work_order_id" => workorder_id} =
+      #          json_response(conn, 200)
 
       assert %{runs: [run]} =
                WorkOrders.get(workorder_id, include: [:runs])
@@ -409,26 +423,19 @@ defmodule Lightning.WebAndWorkerTest do
     """
   end
 
-  defp start_runtime_manager(_context) do
+  defp start_runtime_manager(_context \\ nil) do
     opts =
       Application.get_env(:lightning, RuntimeManager)
       |> Keyword.merge(
         name: E2ETestRuntimeManager,
         start: true,
-        worker_secret: Lightning.Config.worker_secret(),
-        port: Enum.random(2223..3333)
+        endpoint: LightningWeb.Endpoint,
+        log: :debug,
+        port: Enum.random(2223..3333),
+        worker_secret: Lightning.Config.worker_secret()
       )
 
-    {:ok, rtm_server} = RuntimeManager.start_link(opts)
-
-    running =
-      Enum.any?(1..20, fn _i ->
-        Process.sleep(50)
-        %{runtime_port: port} = :sys.get_state(rtm_server)
-        port != nil
-      end)
-
-    if running, do: :ok, else: :error
+    start_supervised!({RuntimeManager, opts}, restart: :transient)
   end
 
   defp select_dataclip_body(uuid) do

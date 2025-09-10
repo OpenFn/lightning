@@ -103,7 +103,7 @@ defmodule Lightning.Collaboration.TestClient do
 
   def handle_info({:yjs, msg, from}, state) do
     # from is always from outside of this process
-    with {:ok, sync_message} <- Yex.Sync.message_decode(msg),
+    with {:ok, {:sync, sync_message}} <- Yex.Sync.message_decode(msg),
          {:ok, reply} <-
            Yex.Sync.read_sync_message(
              sync_message,
@@ -124,7 +124,7 @@ defmodule Lightning.Collaboration.TestClient do
       {:error, message} ->
         Logger.debug(":yjs " <> inspect(message))
 
-      :ok ->
+      _ ->
         Logger.debug(
           "handle_info :yjs :ok: #{Utils.decipher_message(msg) |> inspect}"
         )

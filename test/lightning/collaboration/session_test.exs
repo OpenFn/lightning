@@ -466,9 +466,9 @@ defmodule Lightning.SessionTest do
       GenServer.call(client_pid, {:observe, shared_doc_pid})
 
       jobs = GenServer.call(client_pid, :get_jobs)
-      assert length(jobs) == 2
+      assert length(jobs) == 3
 
-      assert get_jobs(shared_doc_pid) |> length() == 2
+      assert get_jobs(shared_doc_pid) |> length() == 3
     end
   end
 
