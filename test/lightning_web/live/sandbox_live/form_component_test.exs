@@ -160,11 +160,11 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
       sb = insert(:sandbox, parent: parent, name: "sb-1")
 
-      Mimic.stub(Lightning.Projects.Sandboxes, :update, fn parent_arg,
-                                                           user_arg,
-                                                           %Lightning.Projects.Project{} =
-                                                             current_sb,
-                                                           attrs ->
+      Mimic.stub(Lightning.Projects.Sandboxes, :update_sandbox, fn parent_arg,
+                                                                   user_arg,
+                                                                   %Lightning.Projects.Project{} =
+                                                                     current_sb,
+                                                                   attrs ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
 
