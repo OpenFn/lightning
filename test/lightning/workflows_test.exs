@@ -145,7 +145,7 @@ defmodule Lightning.WorkflowsTest do
         Lightning.Workflows.WorkflowVersion
         |> Repo.get_by!(workflow_id: workflow.id)
 
-      assert version.hash == hd(workflow.version_history)
+      assert "#{version.source}:#{version.hash}" == hd(workflow.version_history)
       assert version.source == "app"
     end
 
