@@ -81,7 +81,8 @@ defmodule LightningWeb.WorkerChannel do
           socket =
             if Enum.count(original_runs) > 0 do
               # Start a timeout to ensure the client joins the run channels
-              timeout_ms = run_channel_join_timeout_ms()
+              timeout_ms =
+                Lightning.Config.run_channel_join_timeout_seconds() * 1000
 
               timeout_ref =
                 :timer.send_after(
@@ -256,10 +257,5 @@ defmodule LightningWeb.WorkerChannel do
     |> Enum.into(%{})
     |> Runs.RunOptions.new()
     |> Ecto.Changeset.apply_changes()
-  end
-
-  defp run_channel_join_timeout_ms do
-    # Default to 30 seconds if not configured
-    Application.get_env(:lightning, :run_channel_join_timeout_seconds, 30) * 1000
   end
 end

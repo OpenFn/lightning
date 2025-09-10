@@ -22,7 +22,7 @@ defmodule LightningWeb.LayoutComponents do
       )}
     <% else %>
       <Common.combobox
-        items={assigns[:projects] || []}
+        items={(assigns[:projects] || []) |> Enum.sort_by(& &1.name)}
         selected_item={assigns[:project]}
         placeholder="Go to project"
         url_func={fn project -> ~p"/projects/#{project.id}/w" end}
