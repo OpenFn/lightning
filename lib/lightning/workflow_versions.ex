@@ -59,16 +59,18 @@ defmodule Lightning.WorkflowVersions do
   """
   @spec record_version(Workflow.t(), hash, String.t()) ::
           {:ok, Workflow.t()} | {:error, term()}
-  def record_version(%Workflow{id: id}, hash, source \\ "app")
+  def record_version(%Workflow{} = workflow, hash, source \\ "app")
       when is_binary(hash) and is_binary(source) do
     with true <- Hex.valid?(hash),
          true <- source in @sources do
       Multi.new()
       |> Multi.run(:latest_version, fn _repo, _changes ->
-        {:ok, latest_version(id)}
+        {:ok, latest_version(workflow.id)}
       end)
       |> Multi.run(:is_duplicate, fn _repo, %{latest_version: latest_version} ->
-        {:ok, is_map(latest_version) && latest_version.hash == hash}
+        {:ok,
+         is_map(latest_version) and latest_version.hash == hash and
+           latest_version.source == source}
       end)
       |> Multi.run(
         :should_squash,
@@ -81,34 +83,16 @@ defmodule Lightning.WorkflowVersions do
       )
       |> maybe_insert_new_version(
         WorkflowVersion.changeset(%WorkflowVersion{}, %{
-          workflow_id: id,
+          workflow_id: workflow.id,
           hash: hash,
           source: source
         })
       )
       |> maybe_delete_current_latest()
-      |> Multi.run(
-        :append_history,
-        fn repo, %{new_version: new_version, delete_latest: deleted_version} ->
-          wf =
-            from(w in Workflow, where: w.id == ^id, lock: "FOR UPDATE")
-            |> repo.one!()
-
-          new_hist =
-            build_version_history(
-              wf.version_history || [],
-              new_version,
-              deleted_version
-            )
-
-          wf
-          |> Changeset.change(version_history: new_hist)
-          |> repo.update()
-        end
-      )
+      |> update_workflow_history(workflow)
       |> Repo.transaction()
       |> case do
-        {:ok, %{append_history: updated}} -> {:ok, updated}
+        {:ok, %{update_workflow: updated}} -> {:ok, updated}
         {:error, _op, reason, _} -> {:error, reason}
       end
     else
@@ -144,114 +128,49 @@ defmodule Lightning.WorkflowVersions do
     )
   end
 
-  defp build_version_history(current_history, new_version, deleted_version) do
-    if new_version do
-      new_hist =
-        if deleted_version do
-          Enum.reject(current_history, fn hash ->
-            hash == deleted_version.hash
-          end)
-        else
-          current_history
-        end
+  defp update_workflow_history(multi, workflow) do
+    Multi.run(
+      multi,
+      :update_workflow,
+      fn repo, %{new_version: new_version, delete_latest: deleted_version} ->
+        workflow =
+          from(w in Workflow, where: w.id == ^workflow.id, lock: "FOR UPDATE")
+          |> repo.one!()
 
-      append_if_missing(new_hist, new_version.hash)
-    else
-      current_history
+        workflow
+        |> Changeset.change(
+          version_history:
+            build_version_history(
+              workflow.version_history || [],
+              new_version,
+              deleted_version
+            )
+        )
+        |> repo.update()
+      end
+    )
+  end
+
+  defp build_version_history(history, %{} = new_version, deleted_version) do
+    version_string = format_version(new_version)
+    hist = maybe_remove_squashed_version(history, deleted_version)
+    hist ++ [version_string]
+  end
+
+  defp build_version_history(history, nil, _deleted), do: history
+
+  defp maybe_remove_squashed_version(history, %{} = deleted_version) do
+    deleted_string = format_version(deleted_version)
+
+    case List.last(history) do
+      ^deleted_string -> List.delete_at(history, -1)
+      _ -> history
     end
   end
 
-  @doc """
-  Bulk record **many** heads at once and append them to `version_history`
-  **in order**, skipping duplicates both in the input and in the database.
+  defp maybe_remove_squashed_version(history, nil), do: history
 
-  Internally this:
-  * de-dups the input list (preserving first appearance order),
-  * `INSERT ... ON CONFLICT DO NOTHING` into `workflow_versions`, and
-  * locks the workflow row and appends only missing hashes.
-
-  The operation is **idempotent** and safe to call concurrently.
-
-  ## Parameters
-    * `workflow` — the workflow owning the history
-    * `hashes` — list of 12-char lowercase hex strings
-    * `source` — `"app"` or `"cli"` (defaults to `"app"`)
-
-  ## Returns
-    * `{:ok, %Workflow{}, inserted_count}` — number of **new** provenance rows
-      actually written (0 if everything already existed)
-    * `{:error, :invalid_input}` — when any hash or the source is invalid
-    * `{:error, reason}` — database error
-
-  ## Notes
-  * Passing `[]` is allowed and returns `{:ok, workflow, 0}`.
-  * Ordering of `version_history` matches the **input order** for newly appended hashes.
-
-  ## Examples
-
-      iex> WorkflowVersions.record_versions(wf, ~w(a1a1a1a1a1a1 b2b2b2b2b2b2), "cli")
-      {:ok, %Workflow{}, 2}
-
-      iex> WorkflowVersions.record_versions(wf, ["bad"], "app")
-      {:error, :invalid_input}
-  """
-  @spec record_versions(Workflow.t(), [hash], String.t()) ::
-          {:ok, Workflow.t(), non_neg_integer()} | {:error, term()}
-  def record_versions(%Workflow{id: id}, hashes, source \\ "app")
-      when is_list(hashes) do
-    if valid_input?(hashes, source) do
-      do_record_versions(id, Enum.uniq(hashes), source)
-    else
-      {:error, :invalid_input}
-    end
-  end
-
-  defp valid_input?(hashes, source) do
-    Enum.all?(hashes, &Hex.valid?/1) and source in @sources
-  end
-
-  defp do_record_versions(id, hashes, source) do
-    now = DateTime.utc_now(:microsecond)
-    rows = build_rows(id, hashes, source, now)
-
-    Multi.new()
-    |> Multi.insert_all(:rows, WorkflowVersion, rows)
-    |> Multi.run(:append_history, fn repo, _ ->
-      append_history(repo, id, hashes)
-    end)
-    |> Repo.transaction()
-    |> handle_bulk_txn()
-  end
-
-  defp build_rows(id, hashes, source, now) do
-    for h <- hashes,
-        do: %{workflow_id: id, hash: h, source: source, inserted_at: now}
-  end
-
-  defp append_history(repo, id, hashes) do
-    wf =
-      from(w in Workflow, where: w.id == ^id, lock: "FOR UPDATE")
-      |> repo.one!()
-
-    new_hist =
-      Enum.reduce(hashes, wf.version_history || [], fn h, acc ->
-        append_if_missing(acc, h)
-      end)
-
-    if new_hist == (wf.version_history || []) do
-      {:ok, wf}
-    else
-      wf |> Changeset.change(version_history: new_hist) |> repo.update()
-    end
-  end
-
-  defp handle_bulk_txn(
-         {:ok, %{rows: {inserted_count, _}, append_history: updated}}
-       ),
-       do: {:ok, updated, inserted_count}
-
-  defp handle_bulk_txn({:error, _op, reason, _}),
-    do: {:error, reason}
+  defp format_version(%{source: source, hash: hash}), do: "#{source}:#{hash}"
 
   @doc """
   Returns the **ordered** history of heads for a workflow.
@@ -539,9 +458,6 @@ defmodule Lightning.WorkflowVersions do
       {:diverged, _} -> :diverged
     end
   end
-
-  defp append_if_missing(list, hash),
-    do: if(Enum.member?(list, hash), do: list, else: list ++ [hash])
 
   defp common_prefix_len(a, b),
     do: Enum.zip(a, b) |> Enum.take_while(fn {x, y} -> x == y end) |> length()
