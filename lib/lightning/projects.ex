@@ -1420,12 +1420,14 @@ defmodule Lightning.Projects do
           | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
   defdelegate update_sandbox(parent, actor, sandbox, attrs),
     to: Sandboxes,
-    as: :update
+    as: :update_sandbox
 
   @doc """
   Delete a sandbox (child of `parent`) as `actor`.
   """
   @spec delete_sandbox(Project.t(), User.t(), Project.t() | Ecto.UUID.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
-  defdelegate delete_sandbox(parent, actor, sandbox), to: Sandboxes, as: :delete
+  defdelegate delete_sandbox(parent, actor, sandbox),
+    to: Sandboxes,
+    as: :delete_sandbox
 end
