@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Experimental feature - Collaborative Editing
+  [#3509](https://github.com/OpenFn/lightning/issues/3509)
 - API for provisioning Sandboxes
   [#3430](https://github.com/OpenFn/lightning/issues/3430)
 - Added DB support for sandboxes and workflow version provenance.
