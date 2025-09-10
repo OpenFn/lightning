@@ -35,6 +35,15 @@ Lightning.BuildMacros.html
 Lightning.CLI.Result.html
 Lightning.CLI.html
 Lightning.ChangesetUtils.html
+Lightning.Collaborate.html
+Lightning.Collaboration.DocumentState.html
+Lightning.Collaboration.DocumentSupervisor.html
+Lightning.Collaboration.Persistence.html
+Lightning.Collaboration.PersistenceWriter.html
+Lightning.Collaboration.Registry.html
+Lightning.Collaboration.Session.html
+Lightning.Collaboration.Supervisor.html
+Lightning.Collaboration.WorkflowReconciler.html
 Lightning.Collections.Collection.html
 Lightning.Collections.Item.html
 Lightning.Collections.html
@@ -321,6 +330,7 @@ LightningWeb.Plugs.Redirect.html
 LightningWeb.Plugs.WebhookAuth.html
 LightningWeb.ProfileLive.Components.html
 LightningWeb.ProfileLive.Edit.html
+LightningWeb.ProfileLive.ExperimentalFeaturesComponent.html
 LightningWeb.ProfileLive.FormComponent.html
 LightningWeb.ProfileLive.MfaComponent.html
 LightningWeb.ProjectFileController.html
@@ -356,6 +366,7 @@ LightningWeb.UserLive.Index.html
 LightningWeb.UserRegistrationController.html
 LightningWeb.UserResetPasswordController.html
 LightningWeb.UserSessionController.html
+LightningWeb.UserSocket.html
 LightningWeb.UserTOTPController.html
 LightningWeb.Utils.html
 LightningWeb.VersionControlController.html
@@ -363,6 +374,8 @@ LightningWeb.WebhooksController.html
 LightningWeb.WorkListener.html
 LightningWeb.WorkerChannel.html
 LightningWeb.WorkerSocket.html
+LightningWeb.WorkflowChannel.html
+LightningWeb.WorkflowLive.Collaborate.html
 LightningWeb.WorkflowLive.EditorPane.html
 LightningWeb.WorkflowLive.Helpers.html
 LightningWeb.WorkflowLive.JobView.html
@@ -393,8 +406,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-3554AEF9.js
-dist/sidebar_items-7E8CB621.js
+dist/search_data-E411097B.js
+dist/sidebar_items-09189F3A.js
 index.html
 provisioning.html
 readme.html
