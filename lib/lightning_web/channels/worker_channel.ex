@@ -50,7 +50,12 @@ defmodule LightningWeb.WorkerChannel do
     worker_id = socket.assigns[:worker_id] || socket.id
     Lightning.subscribe("worker_channel:#{worker_id}")
 
-    {:ok, assign(socket, work_listener_pid: pid, worker_id: worker_id, pending_run_timeouts: %{})}
+    {:ok,
+     assign(socket,
+       work_listener_pid: pid,
+       worker_id: worker_id,
+       pending_run_timeouts: %{}
+     )}
   end
 
   def join("worker:queue", _payload, _socket) do
@@ -107,8 +112,6 @@ defmodule LightningWeb.WorkerChannel do
             else
               socket
             end
-
-          Logger.error("Sending #{Enum.count(response_runs)} runs back!")
 
           {:reply, {:ok, %{runs: response_runs}}, socket}
         else
@@ -234,6 +237,7 @@ defmodule LightningWeb.WorkerChannel do
 
       # Roll back all pending runs at once
       run_ids = Map.keys(pending_run_timeouts)
+
       if not Enum.empty?(run_ids) do
         # We need to get the actual run structs to roll them back
         # For now, we'll log this - in practice, the runs will be rolled back
