@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Hide sandboxes from project lists and project picker
+  [#3573](https://github.com/OpenFn/lightning/issues/3573)
+
 ### Changed
 
 ### Fixed
