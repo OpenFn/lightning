@@ -288,7 +288,7 @@ defmodule Lightning.FailureAlertTest do
           Lightning.Config.worker_token_signer()
         )
 
-      expect(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
+      expect(Lightning.MockConfig, :default_max_run_duration_seconds, fn -> 1 end)
 
       run_options =
         UsageLimiter.get_run_options(%Context{

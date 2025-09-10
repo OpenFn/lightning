@@ -82,7 +82,7 @@ defmodule Lightning.Workers do
   defp calculate_token_expiry(run_timeout_ms) do
     Lightning.current_time()
     |> DateTime.add(run_timeout_ms, :millisecond)
-    |> DateTime.add(Lightning.Config.grace_period())
+    |> DateTime.add(Lightning.Config.grace_period_seconds(), :second)
     |> DateTime.to_unix()
   end
 

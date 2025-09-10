@@ -17,7 +17,7 @@ defmodule Lightning.Extensions.UsageLimiter do
   def get_run_options(context) do
     [
       save_dataclips: Lightning.Projects.save_dataclips?(context.project_id),
-      run_timeout_ms: Lightning.Config.default_max_run_duration() * 1000
+      run_timeout_ms: Lightning.Config.default_max_run_duration_seconds() * 1000
     ]
   end
 

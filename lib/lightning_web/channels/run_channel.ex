@@ -31,6 +31,20 @@ defmodule LightningWeb.RunChannel do
            Runs.get_project_id_for_run(run) do
       Sentry.Context.set_extra_context(%{run_id: id})
 
+      # Notify the worker channel that this run channel has been joined
+      # Use PubSub for cross-node communication in clustered environments
+      case socket.assigns[:worker_id] do
+        nil ->
+          # No worker ID available, continue normally
+          :ok
+
+        worker_id ->
+          Lightning.broadcast(
+            "worker_channel:#{worker_id}",
+            {:run_channel_joined, id, worker_id}
+          )
+      end
+
       {:ok,
        socket
        |> assign(%{

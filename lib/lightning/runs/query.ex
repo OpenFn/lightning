@@ -21,15 +21,16 @@ defmodule Lightning.Runs.Query do
   def lost do
     now = Lightning.current_time()
 
-    grace_period_ms = Lightning.Config.grace_period() * 1000
+    grace_period_seconds = Lightning.Config.grace_period_seconds()
+    grace_period_ms = grace_period_seconds * 1000
 
     # TODO: Remove after live deployment rollouts are done. ====================
-    fallback_max = Lightning.Config.default_max_run_duration()
+    fallback_max_seconds = Lightning.Config.default_max_run_duration_seconds()
 
     fallback_oldest_claim =
       now
-      |> DateTime.add(-fallback_max, :second)
-      |> DateTime.add(-grace_period_ms, :millisecond)
+      |> DateTime.add(-fallback_max_seconds, :second)
+      |> DateTime.add(-grace_period_seconds, :second)
 
     # ==========================================================================
 

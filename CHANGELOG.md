@@ -34,10 +34,16 @@ and this project adheres to
   [#1588](https://github.com/OpenFn/lightning/issues/1588)
 
 ### Fixed
+
 - Tooltip gets stuck when switching pages
   [#3559](https://github.com/OpenFn/lightning/pull/3559)
 - Current run dataclip stuck when switching nodes
   [#3560](https://github.com/OpenFn/lightning/pull/3560)
+- Release `:claimed` runs back to `:available` state if their `run_channel` is
+  never joined because of worker timeout/network issues. We can do this because
+  we know that if the run channel never gets joined, the worker never receives
+  data and cannot begin running the run.
+  [#3565](https://github.com/OpenFn/lightning/issues/3565)
 
 ## [v2.14.4] - 2025-09-09
 

@@ -279,6 +279,10 @@ defmodule Lightning.Config.Bootstrap do
            env!("WORKER_MAX_RUN_DURATION_SECONDS", :integer, 300)
 
     config :lightning,
+           :run_channel_join_timeout_seconds,
+           env!("RUN_CHANNEL_JOIN_TIMEOUT_SECONDS", :integer, 30)
+
+    config :lightning,
            :max_dataclip_size_bytes,
            env!("MAX_DATACLIP_SIZE_MB", :integer, 10) * 1_000_000
 
