@@ -60,7 +60,7 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project(Ecto.UUID.generate()) == nil
 
       project = project_fixture() |> unload_relation(:project_users)
-      assert Projects.get_project(project.id) == project
+      assert Projects.get_project(project.id) == Repo.preload(project, :parent)
     end
 
     test "get_project_with_users!/1 returns the project with given id" do
@@ -1820,7 +1820,7 @@ defmodule Lightning.ProjectsTest do
       assert {:error, %Ecto.Changeset{}} =
                Projects.update_project(project, @invalid_attrs)
 
-      assert project == Projects.get_project!(project.id)
+      assert Repo.preload(project, :parent) == Projects.get_project!(project.id)
     end
 
     test "update_project/2 calls the validate_changeset hook" do
