@@ -126,9 +126,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes", on_error: :raise)
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete, fn parent_arg,
-                                                             user_arg,
-                                                             %Project{id: id} ->
+      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
+                                                                     user_arg,
+                                                                     %Project{
+                                                                       id: id
+                                                                     } ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
         assert id == sb1.id
@@ -155,11 +157,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       target_id = sb2.id
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete, fn parent_arg,
-                                                             user_arg,
-                                                             %Project{
-                                                               id: ^target_id
-                                                             } ->
+      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
+                                                                     user_arg,
+                                                                     %Project{
+                                                                       id:
+                                                                         ^target_id
+                                                                     } ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
         {:error, :unauthorized}
@@ -176,11 +179,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "You don’t have permission to delete this sandbox"
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete, fn parent_arg,
-                                                             user_arg,
-                                                             %Project{
-                                                               id: ^target_id
-                                                             } ->
+      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
+                                                                     user_arg,
+                                                                     %Project{
+                                                                       id:
+                                                                         ^target_id
+                                                                     } ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
         {:error, :not_found}
@@ -197,11 +201,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "Sandbox not found"
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete, fn parent_arg,
-                                                             user_arg,
-                                                             %Project{
-                                                               id: ^target_id
-                                                             } ->
+      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
+                                                                     user_arg,
+                                                                     %Project{
+                                                                       id:
+                                                                         ^target_id
+                                                                     } ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
         {:error, :boom}
