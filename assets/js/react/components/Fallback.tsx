@@ -1,5 +1,4 @@
-import type { FallbackProps } from 'react-error-boundary';
-
+import type { FallbackProps } from "react-error-boundary";
 export type { FallbackProps };
 
 const renderStyle = "border border-gray-300 bg-[repeating-linear-gradient(45deg,theme(colors.gray.200)_0_12px,theme(colors.gray.100)_12px_24px)] dark:border-gray-600 dark:bg-[repeating-linear-gradient(45deg,theme(colors.gray.700)_0_12px,theme(colors.gray.800)_12px_24px)]"

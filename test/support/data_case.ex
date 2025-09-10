@@ -26,6 +26,7 @@ defmodule Lightning.DataCase do
 
       import Lightning.Factories
       import Lightning.ModelHelpers
+      import Lightning.TestUtils
 
       import Lightning.DataCase
 
@@ -67,6 +68,5 @@ defmodule Lightning.DataCase do
       )
 
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-    :ok
   end
 end

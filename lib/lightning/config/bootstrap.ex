@@ -50,6 +50,11 @@ defmodule Lightning.Config.Bootstrap do
       """
     end
 
+    if config_env() == :dev do
+      enabled = env!("LIVE_DEBUGGER", &Utils.ensure_boolean/1, true)
+      config :live_debugger, :disabled?, not enabled
+    end
+
     # Load storage and webhook retry config early so endpoint can respect it.
     setup_storage()
     setup_webhook_retry()
@@ -419,8 +424,19 @@ defmodule Lightning.Config.Bootstrap do
       queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
     host = env!("URL_HOST", :string, "example.com")
-    port = env!("PORT", :integer, 4000)
+
+    port =
+      env!(
+        "PORT",
+        :integer,
+        Utils.get_env([:lightning, LightningWeb.Endpoint, :http, :port])
+      )
+
     url_port = env!("URL_PORT", :integer, 443)
+
+    config :lightning, LightningWeb.Endpoint,
+      url: [port: port],
+      http: [port: port]
 
     config :lightning,
       cors_origin:
@@ -540,7 +556,8 @@ defmodule Lightning.Config.Bootstrap do
         pool_size: Enum.max([schedulers + 8, schedulers * 2])
 
       config :ex_unit,
-        assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 1000)
+        assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 1000),
+        timeout: env!("EX_UNIT_TIMEOUT", :integer, 60_000)
     end
 
     config :sentry,
@@ -684,6 +701,12 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           "lightning-cluster"
         )
+
+    # ==============================================================================
+
+    setup_storage()
+
+    config :lightning, :env, config_env()
 
     # Commenting this out because the React modules aren't being used in prod
     # Utils.get_env([:esbuild, :default, :args]) returns nil in prod

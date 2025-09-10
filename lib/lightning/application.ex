@@ -130,6 +130,7 @@ defmodule Lightning.Application do
         {Phoenix.PubSub, name: Lightning.PubSub},
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
+        {Lightning.Collaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
@@ -205,10 +206,12 @@ defmodule Lightning.Application do
   defp put_usage_tracking_cron_opts(cron_opts) do
     usage_tracking_opts = Lightning.Config.usage_tracking()
 
-    if usage_tracking_opts[:enabled] do
-      print_tracking_thanks_message()
-    else
-      print_tracking_opt_out_message()
+    if Lightning.Config.env() !== :test do
+      if usage_tracking_opts[:enabled] do
+        print_tracking_thanks_message()
+      else
+        print_tracking_opt_out_message()
+      end
     end
 
     Keyword.merge(

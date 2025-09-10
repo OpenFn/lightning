@@ -3,6 +3,7 @@ defmodule Lightning.Credentials.Schema do
   Structure that can parse JsonSchemas (using `ExJsonSchema`) and validate
   changesets for a given schema.
   """
+  import Lightning.Utils.Maps, only: [stringify_keys: 1]
 
   alias Ecto.Changeset
   alias ExJsonSchema.Validator
@@ -165,16 +166,6 @@ defmodule Lightning.Credentials.Schema do
       {String.to_existing_atom(field), type}
     end)
     |> Map.new()
-  end
-
-  defp stringify_keys(data) when is_map(data) do
-    Enum.reduce(data, %{}, fn
-      {key, value}, acc when is_atom(key) ->
-        Map.put(acc, key |> to_string(), value)
-
-      {key, value}, acc when is_binary(key) ->
-        Map.put(acc, key, value)
-    end)
   end
 
   defp validate_json_object(value) when is_binary(value) do

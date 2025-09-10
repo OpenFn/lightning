@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
     assert {"type", "application/json"} in actual_attrs
     assert {"id", "JobEditor-1"} in actual_attrs
-    assert {"phx-hook", "ReactComponent"} in actual_attrs
+    assert {"phx-hook", "HeexReactComponent"} in actual_attrs
     assert {"data-react-name", "JobEditor"} in actual_attrs
 
     assert inner_json["adaptor"] == "@openfn/language-common@1.6.2"

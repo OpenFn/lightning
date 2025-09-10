@@ -5,6 +5,7 @@ export {};
 declare global {
   interface Window {
     liveSocket?: LiveSocket | undefined;
-    triggerReconnect?: ((timeout?: number | undefined) => void) | undefined;
+    triggerReconnect?: ((timeout?: number) => void) | undefined;
+    triggerSessionReconnect?: ((timeout?: number) => void) | undefined;
   }
 }
