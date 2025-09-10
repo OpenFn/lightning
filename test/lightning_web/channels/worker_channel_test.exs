@@ -198,7 +198,9 @@ defmodule LightningWeb.WorkerChannelTest do
 
       # Immediately simulate joining the run channel by sending the notification message
       # This should cancel the timeout before it fires
-      send(socket.channel_pid, {:run_channel_joined, run_id})
+      # Use the PubSub message format for cross-node communication
+      worker_id = socket.assigns[:worker_id] || socket.id
+      Lightning.broadcast("worker_channel:#{worker_id}", {:run_channel_joined, run_id, worker_id})
 
       # Wait a bit for the message to be processed
       Process.sleep(100)

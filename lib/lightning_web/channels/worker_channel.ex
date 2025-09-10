@@ -13,6 +13,11 @@ defmodule LightningWeb.WorkerChannel do
   This prevents runs from being stuck in :claimed state if the client
   disconnects or fails to join the run channels after receiving the claim reply.
 
+  The mechanism works across a cluster of Lightning nodes using Phoenix.PubSub
+  for cross-node communication. When a run channel is joined on any node, it
+  broadcasts a message that the worker channel (potentially on a different node)
+  can receive and use to cancel the timeout.
+
   The timeout can be configured via the `:claim_timeout_seconds` application
   environment variable.
   """
@@ -36,8 +41,12 @@ defmodule LightningWeb.WorkerChannel do
         debounce_time_ms: socket.assigns[:work_listener_debounce_time]
       )
 
-    # Store the worker channel process ID so run channels can communicate with it
-    {:ok, assign(socket, work_listener_pid: pid, worker_channel_pid: self())}
+    # Subscribe to run channel join notifications for this worker
+    # This allows cross-node communication in clustered environments
+    worker_id = socket.assigns[:worker_id] || socket.id
+    Lightning.subscribe("worker_channel:#{worker_id}")
+
+    {:ok, assign(socket, work_listener_pid: pid, worker_id: worker_id)}
   end
 
   def join("worker:queue", _payload, _socket) do
@@ -161,6 +170,19 @@ defmodule LightningWeb.WorkerChannel do
     end
   end
 
+  def handle_info({:run_channel_joined, run_id, worker_id}, socket) do
+    # Handle PubSub message for run channel join notification
+    # Only process if this message is for this worker
+    case socket.assigns[:worker_id] do
+      ^worker_id ->
+        handle_info({:run_channel_joined, run_id}, socket)
+
+      _ ->
+        # Message not for this worker, ignore
+        {:noreply, socket}
+    end
+  end
+
   @impl true
   def terminate(_reason, socket) do
     work_listener_pid = socket.assigns[:work_listener_pid]
@@ -180,6 +202,15 @@ defmodule LightningWeb.WorkerChannel do
             {:EXIT, ^work_listener_pid, _reason} -> :ok
           end
       end
+    end
+
+    # Unsubscribe from PubSub
+    case socket.assigns[:worker_id] do
+      nil ->
+        :ok
+
+      worker_id ->
+        Lightning.unsubscribe("worker_channel:#{worker_id}")
     end
 
     # Clean up any pending claim timeout
