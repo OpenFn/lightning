@@ -61,7 +61,8 @@ defmodule Lightning.Projects do
       from(p in Project,
         left_join: w in assoc(p, :workflows),
         left_join: pu_all in assoc(p, :project_users),
-        where: p.allow_support_access and is_nil(w.deleted_at),
+        where:
+          p.allow_support_access and is_nil(w.deleted_at) and is_nil(p.parent_id),
         group_by: [p.id],
         select: %ProjectOverviewRow{
           id: p.id,
@@ -101,7 +102,8 @@ defmodule Lightning.Projects do
       left_join: w in assoc(p, :workflows),
       inner_join: pu in assoc(p, :project_users),
       left_join: pu_all in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(w.deleted_at),
+      where:
+        pu.user_id == ^user_id and is_nil(w.deleted_at) and is_nil(p.parent_id),
       group_by: [p.id, pu.role],
       select: %ProjectOverviewRow{
         id: p.id,
@@ -212,9 +214,9 @@ defmodule Lightning.Projects do
       ** (Ecto.NoResultsError)
 
   """
-  def get_project!(id), do: Repo.get!(Project, id)
+  def get_project!(id), do: Repo.get!(Project, id) |> Repo.preload(:parent)
 
-  def get_project(id), do: Repo.get(Project, id)
+  def get_project(id), do: Repo.get(Project, id) |> Repo.preload(:parent)
 
   @doc """
   Should input or output dataclips be saved for runs in this project?
@@ -659,12 +661,14 @@ defmodule Lightning.Projects do
   ## Returns
     - An Ecto queryable struct to fetch projects.
   """
-  @spec projects_for_user_query(user :: User.t()) ::
-          Ecto.Queryable.t()
+  @spec projects_for_user_query(user :: User.t()) :: Ecto.Queryable.t()
   def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion)
+      where:
+        pu.user_id == ^user_id and
+          is_nil(p.scheduled_deletion) and
+          is_nil(p.parent_id)
     )
   end
 
@@ -680,10 +684,18 @@ defmodule Lightning.Projects do
   """
   @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
   def get_projects_for_user(%User{support_user: true} = user) do
-    from(p in Project,
-      where: p.allow_support_access and is_nil(p.scheduled_deletion)
-    )
-    |> union(^projects_for_user_query(user))
+    support_projects =
+      from(p in Project,
+        where:
+          p.allow_support_access and
+            is_nil(p.scheduled_deletion) and
+            is_nil(p.parent_id)
+      )
+
+    user_projects = projects_for_user_query(user)
+
+    support_projects
+    |> union(^user_projects)
     |> Repo.all()
     |> Enum.uniq_by(& &1.id)
   end
