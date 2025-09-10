@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Make `:work_available` broadcast opt-out-able via ENV.
+  [#3574](https://github.com/OpenFn/lightning/pull/3574)
+
 ### Fixed
 
 ## [v2.14.4] - 2025-09-09
