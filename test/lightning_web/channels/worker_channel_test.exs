@@ -200,7 +200,11 @@ defmodule LightningWeb.WorkerChannelTest do
       # This should cancel the timeout before it fires
       # Use the PubSub message format for cross-node communication
       worker_id = socket.assigns[:worker_id] || socket.id
-      Lightning.broadcast("worker_channel:#{worker_id}", {:run_channel_joined, run_id, worker_id})
+
+      Lightning.broadcast(
+        "worker_channel:#{worker_id}",
+        {:run_channel_joined, run_id, worker_id}
+      )
 
       # Wait a bit for the message to be processed
       Process.sleep(100)

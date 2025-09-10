@@ -18,7 +18,7 @@ defmodule LightningWeb.WorkerChannel do
   broadcasts a message that the worker channel (potentially on a different node)
   can receive and use to cancel the timeout.
 
-  The timeout can be configured via the `:claim_timeout_seconds` application
+  The timeout can be configured via the `:run_channel_join_timeout_seconds` application
   environment variable.
   """
   use LightningWeb, :channel
@@ -78,7 +78,7 @@ defmodule LightningWeb.WorkerChannel do
         # Check if the socket is still alive
         if Process.alive?(socket.transport_pid) do
           # Start a timeout to ensure the client joins the run channels
-          timeout_ms = claim_timeout_ms()
+          timeout_ms = run_channel_join_timeout_ms()
 
           timeout_ref =
             :timer.send_after(
@@ -251,8 +251,8 @@ defmodule LightningWeb.WorkerChannel do
     |> Ecto.Changeset.apply_changes()
   end
 
-  defp claim_timeout_ms do
+  defp run_channel_join_timeout_ms do
     # Default to 30 seconds if not configured
-    Application.get_env(:lightning, :claim_timeout_seconds, 30) * 1000
+    Application.get_env(:lightning, :run_channel_join_timeout_seconds, 30) * 1000
   end
 end

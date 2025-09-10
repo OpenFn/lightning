@@ -39,7 +39,10 @@ defmodule LightningWeb.RunChannel do
           :ok
 
         worker_id ->
-          Lightning.broadcast("worker_channel:#{worker_id}", {:run_channel_joined, id, worker_id})
+          Lightning.broadcast(
+            "worker_channel:#{worker_id}",
+            {:run_channel_joined, id, worker_id}
+          )
       end
 
       {:ok,
