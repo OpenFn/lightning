@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.38.1">
+    <meta name="generator" content="ExDoc v0.38.4">
     <meta name="project" content="Lightning v2.14.5-pre">
 
 
     <title>Lightning.AuthProviders.WellKnown — Lightning v2.14.5-pre</title>
 
-    <link rel="stylesheet" href="dist/html-elixir-J3PIVQVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
     <script defer src="dist/sidebar_items-99FB563F.js"></script>
     <script defer src="docs_config.js"></script>
-    <script defer src="dist/html-DPJLHKSM.js"></script>
+    <script defer src="dist/html-Y223O6DN.js"></script>
 
   </head>
   <body>
@@ -561,6 +561,7 @@ exception in case of failure.</p></div>
       </a>
       <span class="text">Types</span>
     </h1>
+
     <div class="types-list">
 <section class="detail" id="t:body/0">
 
@@ -802,6 +803,7 @@ exception in case of failure.</p></div>
       </a>
       <span class="text">Functions</span>
     </h1>
+
     <div class="functions-list">
 <section class="detail" id="delete/3">
 
@@ -1811,14 +1813,14 @@ the method is set to <code class="inline">:get</code> or <code class="inline">:h
 <code class="inline">307</code>.</p><p>If the method is set to <code class="inline">:post</code>, then the only <code class="inline">status_code</code> that get's automatically
 followed is <code class="inline">303</code>.</p><p>If any other method or <code class="inline">status_code</code> is returned, then this function returns a
 returns a <code class="inline">{:ok, %HTTPoison.MaybeRedirect{}}</code> containing the <code class="inline">redirect_url</code> for you to
-re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/1-examples" class="section-heading"><a href="#request/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="0464328615-1">%</span><span class="nc" data-group-id="0464328615-1">HTTPoison.Request</span><span class="p" data-group-id="0464328615-1">{</span><span class="w">
+re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/1-examples" class="section-heading"><a href="#request/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="5758848904-1">%</span><span class="nc" data-group-id="5758848904-1">HTTPoison.Request</span><span class="p" data-group-id="5758848904-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0464328615-2">[</span><span class="p" data-group-id="0464328615-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="0464328615-3">}</span><span class="p" data-group-id="0464328615-2">]</span><span class="w">
-</span><span class="p" data-group-id="0464328615-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5758848904-2">[</span><span class="p" data-group-id="5758848904-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="5758848904-3">}</span><span class="p" data-group-id="5758848904-2">]</span><span class="w">
+</span><span class="p" data-group-id="5758848904-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="0464328615-4">(</span><span class="n">request</span><span class="p" data-group-id="0464328615-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="5758848904-4">(</span><span class="n">request</span><span class="p" data-group-id="5758848904-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1864,7 +1866,7 @@ the method is set to <code class="inline">:get</code> or <code class="inline">:h
 <code class="inline">307</code>.</p><p>If the method is set to <code class="inline">:post</code>, then the only <code class="inline">status_code</code> that get's automatically
 followed is <code class="inline">303</code>.</p><p>If any other method or <code class="inline">status_code</code> is returned, then this function returns a
 returns a <code class="inline">{:ok, %HTTPoison.MaybeRedirect{}}</code> containing the <code class="inline">redirect_url</code> for you to
-re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/5-examples" class="section-heading"><a href="#request/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="1806337248-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1806337248-2">[</span><span class="p" data-group-id="1806337248-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="1806337248-3">}</span><span class="p" data-group-id="1806337248-2">]</span><span class="p" data-group-id="1806337248-1">)</span></code></pre>
+re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/5-examples" class="section-heading"><a href="#request/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="2769430703-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2769430703-2">[</span><span class="p" data-group-id="2769430703-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2769430703-3">}</span><span class="p" data-group-id="2769430703-2">]</span><span class="p" data-group-id="2769430703-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/1">
@@ -2013,7 +2015,7 @@ request fails.</p>
 
       <p class="built-using">
         Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.1) for the
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.4) for the
 
           <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
