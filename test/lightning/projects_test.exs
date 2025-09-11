@@ -60,7 +60,7 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project(Ecto.UUID.generate()) == nil
 
       project = project_fixture() |> unload_relation(:project_users)
-      assert Projects.get_project(project.id) == project
+      assert Projects.get_project(project.id) == Repo.preload(project, :parent)
     end
 
     test "get_project_with_users!/1 returns the project with given id" do
@@ -1820,7 +1820,7 @@ defmodule Lightning.ProjectsTest do
       assert {:error, %Ecto.Changeset{}} =
                Projects.update_project(project, @invalid_attrs)
 
-      assert project == Projects.get_project!(project.id)
+      assert Repo.preload(project, :parent) == Projects.get_project!(project.id)
     end
 
     test "update_project/2 calls the validate_changeset hook" do
@@ -2331,6 +2331,45 @@ defmodule Lightning.ProjectsTest do
 
       assert {:error, :rollback} =
                Projects.provision_sandbox(parent, owner, %{name: ""})
+    end
+  end
+
+  describe "root_of/1" do
+    test "returns the same project when given a root" do
+      root = insert(:project, name: "root")
+      assert Projects.root_of(root).id == root.id
+    end
+
+    test "returns the top-most ancestor for a sandbox (one level)" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+
+      assert Projects.root_of(child).id == root.id
+    end
+
+    test "returns the top-most ancestor for deep nesting" do
+      root = insert(:project, name: "A")
+
+      last =
+        1..5
+        |> Enum.reduce(root, fn n, acc ->
+          insert(:project, name: "A-#{n}", parent: acc)
+        end)
+
+      assert Projects.root_of(last).id == root.id
+    end
+
+    test "works regardless of parent preload" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+
+      # Preloaded parent
+      preloaded = Repo.preload(child, :parent)
+      assert Projects.root_of(preloaded).id == root.id
+
+      # Not preloaded (fresh get)
+      fresh = Repo.get!(Project, child.id)
+      assert Projects.root_of(fresh).id == root.id
     end
   end
 
