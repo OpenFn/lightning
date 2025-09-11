@@ -10,8 +10,8 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
-  alias Lightning.Projects.Project
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
