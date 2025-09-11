@@ -198,7 +198,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
               autocomplete="off"
             />
 
-            <% hex = LightningWeb.Utils.normalize_hex(f[:color].value || "#336699") %>
+            <% hex = f[:color].value || "#336699" %>
             <.input
               type="color"
               field={f[:color]}
