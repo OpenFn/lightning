@@ -28,7 +28,7 @@ ARG ERL_FLAGS
 # install build and dev dependencies
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
   build-essential curl git inotify-tools openssl ca-certificates \
-  libsodium-dev
+  libsodium-dev cmake
 
 # Install Node.js from NodeSource
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION%%.*}.x | bash - && \

@@ -74,7 +74,11 @@ jobs:
       - run:
           name: "Install libsodium and sudo"
           command: |
-            apt-get update && apt-get install -y libsodium-dev sudo
+            apt-get update && apt-get install -y \
+              build-essential \
+              cmake \
+              libsodium-dev \
+              sudo
       - run: |
           echo 'Defaults env_keep += "ERL_FLAGS ASSERT_RECEIVE_TIMEOUT MIX_ENV"' | \
             sudo EDITOR='tee -a' visudo
