@@ -10,6 +10,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Project
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
@@ -62,6 +63,9 @@ defmodule LightningWeb.Hooks do
          |> assign(:side_menu_theme, "primary-theme")
          |> assign_new(:project_user, fn -> project_user end)
          |> assign_new(:project, fn -> root end)
+         |> assign_new(:sandbox, fn ->
+           if Project.sandbox?(current), do: current, else: nil
+         end)
          |> assign_new(:projects, fn -> projects end)
          |> assign_new(:sandboxes, fn -> sandboxes end)}
 
