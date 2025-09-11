@@ -235,13 +235,9 @@ defmodule LightningWeb.WorkerChannel do
         )
       end)
 
-      # Roll back all pending runs at once
       run_ids = Map.keys(pending_run_timeouts)
 
       if not Enum.empty?(run_ids) do
-        # We need to get the actual run structs to roll them back
-        # For now, we'll log this - in practice, the runs will be rolled back
-        # by other mechanisms when the worker disconnects
         Logger.warning(
           "Worker channel terminating with pending run timeouts for runs: #{Enum.join(run_ids, ", ")}"
         )
