@@ -684,7 +684,8 @@ defmodule Lightning.Projects do
       where:
         pu.user_id == ^user_id and
           is_nil(p.scheduled_deletion) and
-          is_nil(p.parent_id)
+          is_nil(p.parent_id),
+      order_by: p.name
     )
   end
 
