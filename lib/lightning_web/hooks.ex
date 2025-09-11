@@ -56,13 +56,13 @@ defmodule LightningWeb.Hooks do
         {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
-        scale = ProjectTheme.inline_primary_scale(project)
+        scale = ProjectTheme.inline_primary_scale(current)
 
         theme_style =
           [scale, ProjectTheme.inline_sidebar_vars()]
           |> Enum.reject(&is_nil/1)
           |> Enum.join(" ")
-          
+
         sandboxes = Lightning.Projects.list_sandboxes(root.id)
 
         {:cont,
