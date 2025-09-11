@@ -27,11 +27,6 @@ defmodule LightningWeb.LayoutComponents do
         placeholder="Go to project"
         url_func={fn project -> ~p"/projects/#{project.id}/w" end}
       />
-
-      <%= if assigns[:sandbox] do %>
-        <.sandbox_badge sandbox={@sandbox} />
-      <% end %>
-
       <%= if assigns[:project] do %>
         <Menu.project_items
           project_id={@project.id}
@@ -41,28 +36,6 @@ defmodule LightningWeb.LayoutComponents do
         <Menu.profile_items active_menu_item={@active_menu_item} />
       <% end %>
     <% end %>
-    """
-  end
-
-  defp sandbox_badge(assigns) do
-    ~H"""
-    <div class="sandbox-indicator border rounded-lg p-4 mb-4 mx-2">
-      <div class="flex flex-col items-center text-center">
-        <div class="mb-3">
-          <.icon name="hero-beaker" class="w-8 h-8" />
-        </div>
-        <div class="mb-2">
-          <div class="text-sm opacity-80">Active Sandbox</div>
-          <div class="font-medium">{@sandbox.name}</div>
-        </div>
-        <button
-          class="text-sm underline hover:no-underline"
-          phx-click="switch_sandbox"
-        >
-          Return to parent
-        </button>
-      </div>
-    </div>
     """
   end
 
