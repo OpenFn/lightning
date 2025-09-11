@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.14.5-pre] - 2025-09-11
+
+### Added
+
 - Experimental feature - Collaborative Editing
   [#3509](https://github.com/OpenFn/lightning/issues/3509)
 - API for provisioning Sandboxes
