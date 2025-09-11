@@ -213,13 +213,13 @@ You'll need to install `libsodium` in order for the application to compile.
 For Mac Users:
 
 ```sh
-brew install libsodium
+brew install libsodium cmake
 ```
 
 For Debian Users:
 
 ```sh
-sudo apt-get install libsodium-dev
+sudo apt-get install libsodium-dev cmake
 ```
 
 You can find more on
