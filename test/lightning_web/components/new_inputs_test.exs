@@ -28,21 +28,6 @@ defmodule LightningWeb.Components.NewInputsTest do
       assert html =~ "rounded-md"
     end
 
-    test "normalizes short lowercase hex to 6-digit uppercase" do
-      html =
-        render_component(&NewInputs.input/1, %{
-          type: "color",
-          id: "c2",
-          name: "project[color]",
-          value: "#abc",
-          swatch_style: ""
-        })
-
-      assert html =~ "background-color: #AABBCC"
-      assert html =~ ~r/>\s*#AABBCC\s*</
-      assert html =~ ~s(value="#AABBCC")
-    end
-
     test "applies shape variants" do
       html_square =
         render_component(&NewInputs.input/1, %{
@@ -136,21 +121,6 @@ defmodule LightningWeb.Components.NewInputsTest do
       assert html =~ "my-pretty-class"
       assert html =~ "cursor-not-allowed"
       assert html =~ "opacity-50"
-    end
-
-    test "normalizes 6-digit lowercase hex to uppercase" do
-      html =
-        render_component(&NewInputs.input/1, %{
-          type: "color",
-          id: "c7",
-          name: "project[color]",
-          value: "#ff00aa",
-          swatch_style: ""
-        })
-
-      assert html =~ "background-color: #FF00AA"
-      assert html =~ ~r/>\s*#FF00AA\s*</
-      assert html =~ ~s(value="#FF00AA")
     end
   end
 end

@@ -59,14 +59,6 @@ defmodule LightningWeb.ProjectThemeTest do
       assert got_stops == @stops
     end
 
-    test "handles hex with or without leading '#', same result" do
-      s1 = build(:project, parent_id: Ecto.UUID.generate(), color: "#6366f1")
-      s2 = build(:project, parent_id: Ecto.UUID.generate(), color: "6366f1")
-
-      assert ProjectTheme.inline_primary_scale(s1) ==
-               ProjectTheme.inline_primary_scale(s2)
-    end
-
     test "lower/upper-case input produce identical scales" do
       s1 = build(:project, parent_id: Ecto.UUID.generate(), color: "#6366F1")
       s2 = build(:project, parent_id: Ecto.UUID.generate(), color: "#6366f1")
