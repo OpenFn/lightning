@@ -17,12 +17,20 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.14.5-pre1] - 2025-09-11
+
+### Added
+
 - Hide sandboxes from project lists and project picker
   [#3573](https://github.com/OpenFn/lightning/issues/3573)
 
 ### Changed
 
-### Fixed
+- Update deps
 
 ## [v2.14.5-pre] - 2025-09-11
 
