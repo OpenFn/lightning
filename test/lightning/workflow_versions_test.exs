@@ -583,6 +583,55 @@ defmodule Lightning.WorkflowVersionsTest do
       hash = WorkflowVersions.generate_hash(workflow)
       assert String.length(hash) == 12
     end
+
+    test "generates the same hash for this simple workflow" do
+      predetermined_hash = "347277800299"
+
+      simple_workflow = %{
+        name: "Simple Workflow",
+        positions: nil,
+        jobs: [
+          %{
+            id: "job1",
+            name: "First Job",
+            body: "fn(state) => state",
+            adaptor: "@openfn/language-common@latest"
+          },
+          %{
+            id: "job2",
+            name: "Second Job",
+            body: "fn(state) => state",
+            adaptor: "@openfn/language-http@latest"
+          }
+        ],
+        triggers: [
+          %{
+            id: "trigger1",
+            type: :webhook,
+            enabled: true
+          }
+        ],
+        edges: [
+          %{
+            source_trigger_id: "trigger1",
+            target_job_id: "job1",
+            condition_type: :always,
+            enabled: true
+          },
+          %{
+            source_job_id: "job1",
+            target_job_id: "job2",
+            condition_type: :on_job_success,
+            enabled: true
+          }
+        ]
+      }
+
+      for _i <- 1..5 do
+        assert WorkflowVersions.generate_hash(simple_workflow) ==
+                 predetermined_hash
+      end
+    end
   end
 
   describe "concurrency safety (no duplicate append under contention)" do

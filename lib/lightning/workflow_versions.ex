@@ -289,10 +289,16 @@ defmodule Lightning.WorkflowVersions do
       iex> WorkflowVersions.generate_hash(workflow)
       "a1b2c3d4e5f6"
   """
-  @spec generate_hash(Workflow.t()) :: binary()
+  @spec generate_hash(Workflow.t() | map()) :: binary()
   def generate_hash(%Workflow{} = workflow) do
     workflow = Repo.preload(workflow, [:jobs, :edges, :triggers])
 
+    workflow
+    |> Map.from_struct()
+    |> generate_hash()
+  end
+
+  def generate_hash(%{} = workflow) do
     workflow_keys = [:name, :positions]
     job_keys = [:name, :adaptor, :project_credential_id, :body]
     trigger_keys = [:type, :cron_expression, :enabled]
@@ -378,7 +384,7 @@ defmodule Lightning.WorkflowVersions do
   defp edge_name(edge, workflow) do
     source_name =
       cond do
-        edge.source_trigger_id ->
+        edge[:source_trigger_id] ->
           trigger =
             Enum.find(workflow.triggers, fn t ->
               t.id == edge.source_trigger_id
@@ -386,7 +392,7 @@ defmodule Lightning.WorkflowVersions do
 
           trigger && trigger.type
 
-        edge.source_job_id ->
+        edge[:source_job_id] ->
           job = Enum.find(workflow.jobs, fn j -> j.id == edge.source_job_id end)
           job && job.name
 
