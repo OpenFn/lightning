@@ -168,7 +168,7 @@ defmodule LightningWeb.SandboxLive.Components do
     >
       <div class="flex items-stretch">
         <% hex = @sandbox.color || "#9ca3af" %>
-        <div class="w-16" style={"background-color: #{hex};"}></div>
+        <div class="w-3" style={"background-color: #{hex};"}></div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between">
           <div>
             <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800">
