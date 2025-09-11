@@ -24,7 +24,8 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp load_sandboxes(%{assigns: %{project: project}} = socket) do
-    sandboxes = Projects.list_sandboxes(project.id)
+    project_id = project.parent_id || project.id
+    sandboxes = Projects.list_sandboxes(project_id)
     assign(socket, sandboxes: sandboxes)
   end
 
