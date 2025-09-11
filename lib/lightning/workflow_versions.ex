@@ -384,7 +384,7 @@ defmodule Lightning.WorkflowVersions do
   defp edge_name(edge, workflow) do
     source_name =
       cond do
-        edge[:source_trigger_id] ->
+        Map.get(edge, :source_trigger_id) ->
           trigger =
             Enum.find(workflow.triggers, fn t ->
               t.id == edge.source_trigger_id
@@ -392,7 +392,7 @@ defmodule Lightning.WorkflowVersions do
 
           trigger && trigger.type
 
-        edge[:source_job_id] ->
+        Map.get(edge, :source_job_id) ->
           job = Enum.find(workflow.jobs, fn j -> j.id == edge.source_job_id end)
           job && job.name
 
