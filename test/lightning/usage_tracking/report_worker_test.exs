@@ -1,6 +1,7 @@
 defmodule Lightning.UsageTracking.ReportWorkerTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.Utils.Maps, only: [stringify_keys: 1]
   import Mock
   import Mox
   import Tesla.Mock
@@ -245,24 +246,6 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
 
       assert perform_job(ReportWorker, %{date: @date}) == :ok
     end
-  end
-
-  defp stringify_keys(map) do
-    map
-    |> Map.keys()
-    |> Enum.reduce(%{}, fn key, acc ->
-      acc |> stringify_key(key, map[key])
-    end)
-  end
-
-  defp stringify_key(acc, key, val) when is_map(val) and not is_struct(val) do
-    acc
-    |> Map.merge(%{to_string(key) => stringify_keys(val)})
-  end
-
-  defp stringify_key(acc, key, val) do
-    acc
-    |> Map.merge(%{to_string(key) => val})
   end
 
   defp metrics_match?(tesla_env, expected_instance_metrics) do

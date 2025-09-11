@@ -28,6 +28,14 @@ defmodule LightningWeb.Endpoint do
     ],
     longpoll: false
 
+  socket "/socket", LightningWeb.UserSocket,
+    websocket: [
+      error_handler: {LightningWeb.UserSocket, :handle_error, []},
+      connect_info: [:peer_data, :uri, :user_agent],
+      compress: true
+    ],
+    longpoll: false
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phx.digest

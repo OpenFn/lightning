@@ -40,7 +40,7 @@ defmodule Lightning.Runs.Queue do
              worker_name: worker_name
            ]
          ) do
-      {:ok, %{runs: {_, runs}}} ->
+      {:ok, %{runs: {_count, runs}}} ->
         {:ok, runs}
 
       {:error, _op, changeset, _changes} ->

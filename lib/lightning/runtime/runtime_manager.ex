@@ -45,6 +45,7 @@ defmodule Lightning.Runtime.RuntimeManager do
               repo_dir: nil,
               worker_secret: nil,
               endpoint: nil,
+              log: nil,
               ws_url: "ws://localhost:4000/worker",
               col_url: "http://localhost:4000/collections"
 
@@ -95,6 +96,9 @@ defmodule Lightning.Runtime.RuntimeManager do
 
         {:capacity, v} ->
           ~w(--capacity #{v})
+
+        {:log, v} ->
+          ~w(--log #{v})
 
         {:port, v} when is_integer(v) ->
           ~w(--port #{v})
@@ -243,15 +247,12 @@ defmodule Lightning.Runtime.RuntimeManager do
         reason,
         %{runtime_client: runtime_client} = state
       ) do
-    Task.async(fn ->
-      if reason not in [:timeout, :premature_termination] and
-           state.runtime_port do
-        Port.connect(state.runtime_port, self())
-        runtime_client.stop_runtime(state)
-        handle_pending_msg(state.runtime_port, state.buffer)
-      end
-    end)
-    |> Task.await(:infinity)
+    if reason not in [:timeout, :premature_termination] and
+         state.runtime_port do
+      Port.connect(state.runtime_port, self())
+      runtime_client.stop_runtime(state)
+      handle_pending_msg(state.runtime_port, state.buffer)
+    end
 
     state
   end
@@ -281,6 +282,8 @@ defmodule Lightning.Runtime.RuntimeManager do
         line: 1024,
         env: state.config |> Config.to_env()
       ]
+
+    Logger.debug("Starting runtime with opts: #{inspect(opts)}")
 
     port = Port.open(init_cmd, opts)
     {:os_pid, os_pid} = Port.info(port, :os_pid)

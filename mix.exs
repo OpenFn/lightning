@@ -131,8 +131,8 @@ defmodule Lightning.MixProject do
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tesla, "~> 1.13"},
-      {:tidewave, "~> 0.1.0", only: :dev},
+      {:tesla, "~> 1.13.0"},
+      {:tidewave, "~> 0.2.0", only: :dev},
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
@@ -150,7 +150,8 @@ defmodule Lightning.MixProject do
       {:earmark, "~> 1.4"},
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.3.1", only: :dev},
-      {:statistics, "~> 0.6", only: :dev}
+      {:statistics, "~> 0.6", only: :dev},
+      {:y_ex, "~> 0.8.0"}
     ]
   end
 

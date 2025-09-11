@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Experimental feature - Collaborative Editing
+  [#3509](https://github.com/OpenFn/lightning/issues/3509)
 - API for provisioning Sandboxes
   [#3430](https://github.com/OpenFn/lightning/issues/3430)
 - Added DB support for sandboxes and workflow version provenance.
@@ -30,12 +32,15 @@ and this project adheres to
 
 ### Changed
 
+- Make `:work_available` broadcast opt-out-able via ENV.
+  [#3574](https://github.com/OpenFn/lightning/pull/3574)
 - Enable X-Content-Type-Options header for static pages.
   [#3534](https://github.com/OpenFn/lightning/issues/3534)
 - Refactor webhook auth methods modals
   [#1588](https://github.com/OpenFn/lightning/issues/1588)
 
 ### Fixed
+
 - Tooltip gets stuck when switching pages
   [#3559](https://github.com/OpenFn/lightning/pull/3559)
 - Current run dataclip stuck when switching nodes

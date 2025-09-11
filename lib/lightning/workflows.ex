@@ -163,6 +163,12 @@ defmodule Lightning.Workflows do
 
         Events.workflow_updated(workflow)
 
+        # Reconcile changes with active collaborative editing sessions
+        Lightning.Collaboration.WorkflowReconciler.reconcile_workflow_changes(
+          changeset,
+          workflow
+        )
+
         {:ok, workflow}
 
       {:error, :workflow, changeset, _changes} ->

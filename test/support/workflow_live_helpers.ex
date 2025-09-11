@@ -178,7 +178,7 @@ defmodule Lightning.WorkflowLive.Helpers do
     idx = get_index_of_job(view)
 
     view
-    |> element("[phx-hook='ReactComponent'][data-react-name='JobEditor']")
+    |> element("[phx-hook='HeexReactComponent'][data-react-name='JobEditor']")
     |> render_hook("push-change", %{
       patches: [%{op: "replace", path: "/jobs/#{idx}/body", value: text}]
     })
@@ -548,7 +548,8 @@ defmodule Lightning.WorkflowLive.Helpers do
   # Element Helpers
 
   def editor_element(view) do
-    view |> element("[phx-hook=ReactComponent][data-react-name=WorkflowEditor]")
+    view
+    |> element("[phx-hook=HeexReactComponent][data-react-name=WorkflowEditor]")
   end
 
   def selected_adaptor_version_element(view, job) do
@@ -682,14 +683,14 @@ defmodule Lightning.WorkflowLive.Helpers do
   def dataclip_viewer(view, id) do
     view
     |> element(
-      "script[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{id}']"
+      "script[phx-hook='HeexReactComponent'][data-react-name='DataclipViewer'][id='#{id}']"
     )
   end
 
   def job_editor(view, id \\ 1) do
     view
     |> element(
-      "script[phx-hook='ReactComponent'][data-react-name='JobEditor'][id='JobEditor-#{id}']"
+      "script[phx-hook='HeexReactComponent'][data-react-name='JobEditor'][id='JobEditor-#{id}']"
     )
   end
 
