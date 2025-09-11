@@ -82,31 +82,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "Sandbox created"
     end
 
-    test "color input renders swatch + readout", %{
-      conn: conn,
-      parent: parent
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
-      html = render(view)
-
-      assert html =~ ~s(data-swatch)
-      assert html =~ "background-color: #336699"
-      assert html =~ "#336699"
-      assert html =~ "h-5 w-5 border border-slate-300"
-      assert html =~ "rounded-md"
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_change(%{
-        "project" => %{"raw_name" => "sb-1", "color" => "#abc"}
-      })
-
-      html = render(view)
-      assert html =~ "background-color: #abc"
-      assert html =~ "#abc"
-      assert html =~ "--ring: #abc"
-    end
-
     test "creating sandbox with blank name disables submit and keeps placeholder",
          %{
            conn: conn,

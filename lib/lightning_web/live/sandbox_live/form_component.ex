@@ -5,6 +5,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
+  alias LightningWeb.SandboxLive.Components
 
   @type mode :: :new | :edit
 
@@ -132,7 +133,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
     ~H"""
     <div class="text-xs">
-      <.modal show id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
+      <.modal show id={@id} width="xl:min-w-1/3 min-w-1/3 max-w-1/3 w-1/3">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">{@title}</span>
@@ -198,17 +199,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
               autocomplete="off"
             />
 
-            <% hex = f[:color].value || "#336699" %>
-            <.input
-              type="color"
-              field={f[:color]}
-              value={hex}
-              label="Color"
-              shape="rounded"
-              wrapper_class="mt-2"
-              swatch_class="ring-1 ring-offset-1"
-              swatch_style={"--ring: #{hex}; box-shadow: 0 0 0 1px var(--ring) inset, 0 0 0 2px white inset; border-color: var(--ring);"}
-            />
+            <Components.color_palette id="sandbox-color" field={f[:color]} />
           </div>
 
           <.modal_footer>

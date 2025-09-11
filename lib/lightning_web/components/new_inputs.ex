@@ -967,60 +967,6 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
-  def input(%{type: "color"} = assigns) do
-    assigns =
-      assigns
-      |> assign_new(:value, fn -> assigns[:value] || "#79B2D6" end)
-      |> then(fn a -> assign(a, :value, a.value) end)
-      |> assign_new(:disabled, fn ->
-        get_in(assigns, [:rest, :disabled]) || false
-      end)
-
-    ~H"""
-    <div phx-feedback-for={@name} class={@wrapper_class}>
-      <.label :if={@label} for={@id} class="mb-2 block">
-        {@label}
-        <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
-      </.label>
-
-      <label
-        for={"#{@id}-native"}
-        class={[
-          "inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white shadow-xs",
-          "px-2 py-2 cursor-pointer select-none",
-          @disabled && "cursor-not-allowed opacity-50",
-          @class
-        ]}
-        id={"#{@id}-pretty"}
-        phx-hook="ColorPicker"
-        data-input-id={"##{@id}-native"}
-      >
-        <span
-          data-swatch
-          class={[
-            "h-5 w-5 border border-slate-300",
-            color_shape_classes(@shape),
-            @swatch_class
-          ]}
-          style={["background-color: #{@value};", @swatch_style]}
-        />
-        <span data-readout class="font-mono text-sm text-slate-700">
-          {String.upcase(@value)}
-        </span>
-      </label>
-
-      <input
-        type="color"
-        id={"#{@id}-native"}
-        name={@name}
-        value={@value}
-        class="sr-only"
-        {@rest}
-      />
-    </div>
-    """
-  end
-
   # All other inputs text, datetime-local, url etc. are handled here...
   def input(assigns) do
     ~H"""
@@ -1289,8 +1235,4 @@ defmodule LightningWeb.Components.NewInputs do
     </p>
     """
   end
-
-  defp color_shape_classes("square"), do: "rounded-none"
-  defp color_shape_classes("rounded"), do: "rounded-md"
-  defp color_shape_classes("circle"), do: "rounded-full"
 end
