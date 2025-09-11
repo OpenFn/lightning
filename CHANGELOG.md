@@ -20,6 +20,15 @@ and this project adheres to
 - Sandbox Basic CRUD UI
   [#3412](https://github.com/OpenFn/lightning/issues/3412)
   [#3431](https://github.com/OpenFn/lightning/issues/3431)
+
+### Changed
+
+### Fixed
+
+## [v2.14.5-pre] - 2025-09-11
+
+### Added
+
 - Experimental feature - Collaborative Editing
   [#3509](https://github.com/OpenFn/lightning/issues/3509)
 - API for provisioning Sandboxes
