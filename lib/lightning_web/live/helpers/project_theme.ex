@@ -5,6 +5,7 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
   """
 
   alias Lightning.Projects.Project
+
   @stops [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
 
   @doc """
@@ -22,8 +23,7 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
         nil
 
       true ->
-        hex = normalize_hex(p.color)
-        scale = build_scale(hex)
+        scale = build_scale(p.color)
 
         @stops
         |> Enum.map_join(" ", fn stop ->
@@ -82,9 +82,6 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
       Map.put(acc, stop, from_hsl(h, s_adj, lt))
     end)
   end
-
-  defp normalize_hex("#" <> _ = hex), do: hex
-  defp normalize_hex(hex), do: "#" <> hex
 
   defp to_hsl(hex) do
     {r, g, b} = hex_to_rgb(hex)

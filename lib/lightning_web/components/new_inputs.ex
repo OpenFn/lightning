@@ -971,9 +971,7 @@ defmodule LightningWeb.Components.NewInputs do
     assigns =
       assigns
       |> assign_new(:value, fn -> assigns[:value] || "#79B2D6" end)
-      |> then(fn a ->
-        assign(a, :value, LightningWeb.Utils.normalize_hex(a.value))
-      end)
+      |> then(fn a -> assign(a, :value, a.value) end)
       |> assign_new(:disabled, fn ->
         get_in(assigns, [:rest, :disabled]) || false
       end)
