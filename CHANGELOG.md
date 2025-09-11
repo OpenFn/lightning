@@ -20,6 +20,8 @@ and this project adheres to
 - Sandbox Basic CRUD UI
   [#3412](https://github.com/OpenFn/lightning/issues/3412)
   [#3431](https://github.com/OpenFn/lightning/issues/3431)
+- Experimental feature - Collaborative Editing
+  [#3509](https://github.com/OpenFn/lightning/issues/3509)
 - API for provisioning Sandboxes
   [#3430](https://github.com/OpenFn/lightning/issues/3430)
 - Added DB support for sandboxes and workflow version provenance.
@@ -31,14 +33,26 @@ and this project adheres to
 
 ### Changed
 
+- Make `:work_available` broadcast opt-out-able via ENV.
+  [#3574](https://github.com/OpenFn/lightning/pull/3574)
 - Enable X-Content-Type-Options header for static pages.
   [#3534](https://github.com/OpenFn/lightning/issues/3534)
 - Refactor webhook auth methods modals
   [#1588](https://github.com/OpenFn/lightning/issues/1588)
 
 ### Fixed
+
+- Tooltip gets stuck when switching pages
+  [#3559](https://github.com/OpenFn/lightning/pull/3559)
 - Current run dataclip stuck when switching nodes
   [#3560](https://github.com/OpenFn/lightning/pull/3560)
+
+## [v2.14.4] - 2025-09-09
+
+### Fixed
+
+- Fix Workflow AI Assistant apearing above inspector panel
+  [#3567](https://github.com/OpenFn/lightning/issues/3567)
 
 ## [v2.14.3] - 2025-08-29
 

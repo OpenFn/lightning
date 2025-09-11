@@ -49,6 +49,7 @@ config :lightning, Lightning.Vault,
 # you can enable the server option below.
 config :lightning, LightningWeb.Endpoint,
   http: [port: 4002],
+  url: [scheme: "http"],
   secret_key_base:
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
   server: true
@@ -115,7 +116,7 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
-config :phoenix, :logger, false
+config :phoenix, :logger, true
 
 config :junit_formatter,
   report_file: "elixir_test_report.xml",

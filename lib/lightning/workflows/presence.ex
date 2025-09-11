@@ -58,6 +58,10 @@ defmodule Lightning.Workflows.Presence do
 
   """
   def track_user_presence(user, %Workflow{id: workflow_id}, pid) do
+    track_user_presence(user, workflow_id, pid)
+  end
+
+  def track_user_presence(user, workflow_id, pid) when is_binary(workflow_id) do
     joined_at = System.system_time(:microsecond)
     topic = workflow_topic(workflow_id)
 
@@ -84,12 +88,13 @@ defmodule Lightning.Workflows.Presence do
       :ok
 
   """
-  def untrack_user_presence(%User{id: user_id}, %Workflow{id: workflow_id}, pid) do
-    untrack(
-      pid,
-      workflow_topic(workflow_id),
-      user_id
-    )
+  def untrack_user_presence(%User{id: user_id}, workflow_id, pid)
+      when is_binary(workflow_id) do
+    untrack(pid, workflow_topic(workflow_id), user_id)
+  end
+
+  def untrack_user_presence(user, %Workflow{id: workflow_id}, pid) do
+    untrack_user_presence(user, workflow_id, pid)
   end
 
   @doc """

@@ -14,6 +14,7 @@ defmodule LightningWeb.UserAuthTest do
         :secret_key_base,
         LightningWeb.Endpoint.config(:secret_key_base)
       )
+      |> Plug.Conn.put_private(:phoenix_endpoint, @endpoint)
       |> init_test_session(%{})
       |> Phoenix.Controller.accepts(["html", "json"])
 

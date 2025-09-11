@@ -130,6 +130,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def env do
+      Application.get_env(:lightning, :env)
+    end
+
+    @impl true
     def email_sender_name do
       Application.get_env(:lightning, :emails, [])
       |> Keyword.get(:sender_name)
@@ -325,6 +330,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def broadcast_work_available? do
+      Application.get_env(:lightning, :broadcast_work_available)
+    end
+
+    @impl true
     def metrics_run_performance_age_seconds do
       metrics_config() |> Keyword.get(:run_performance_age_seconds)
     end
@@ -399,6 +409,7 @@ defmodule Lightning.Config do
   @callback cors_origin() :: list()
   @callback default_max_run_duration() :: integer()
   @callback email_sender_name() :: String.t()
+  @callback env() :: :dev | :test | :prod
   @callback get_extension_mod(key :: atom()) :: any()
   @callback google(key :: atom()) :: any()
   @callback grace_period() :: integer()
@@ -447,6 +458,7 @@ defmodule Lightning.Config do
   @callback external_metrics_module() :: module() | nil
   @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
+  @callback broadcast_work_available?() :: boolean()
   @callback sentry() :: module()
   @callback webhook_retry() :: Keyword.t()
   @callback webhook_retry(key :: atom()) :: any()
@@ -463,6 +475,15 @@ defmodule Lightning.Config do
   """
   def apollo(key \\ nil) do
     impl().apollo(key)
+  end
+
+  @doc """
+  Returns the environment.
+
+  Either :dev, :test, or :prod.
+  """
+  def env do
+    impl().env()
   end
 
   @doc """
@@ -682,6 +703,10 @@ defmodule Lightning.Config do
 
   def per_workflow_claim_limit do
     impl().per_workflow_claim_limit()
+  end
+
+  def broadcast_work_available? do
+    impl().broadcast_work_available?()
   end
 
   def sentry do
