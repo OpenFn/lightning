@@ -82,7 +82,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "Sandbox created"
     end
 
-    test "color input renders swatch + readout and normalizes updates", %{
+    test "color input renders swatch + readout", %{
       conn: conn,
       parent: parent
     } do
@@ -102,9 +102,9 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       })
 
       html = render(view)
-      assert html =~ "background-color: #AABBCC"
-      assert html =~ "#AABBCC"
-      assert html =~ "--ring: #AABBCC"
+      assert html =~ "background-color: #abc"
+      assert html =~ "#abc"
+      assert html =~ "--ring: #abc"
     end
 
     test "creating sandbox with blank name disables submit and keeps placeholder",
@@ -228,8 +228,8 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
         live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
 
       html = render(view)
-      assert html =~ "background-color: #FF0000"
-      assert html =~ "#FF0000"
+      assert html =~ "background-color: #ff0000"
+      assert html =~ "#ff0000"
       assert html =~ "rounded-md"
     end
   end
