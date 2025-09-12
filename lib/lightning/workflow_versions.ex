@@ -300,7 +300,15 @@ defmodule Lightning.WorkflowVersions do
 
   def generate_hash(%{} = workflow) do
     workflow_keys = [:name, :positions]
-    job_keys = [:name, :adaptor, :project_credential_id, :body]
+
+    job_keys = [
+      :name,
+      :adaptor,
+      :keychain_credential_id,
+      :project_credential_id,
+      :body
+    ]
+
     trigger_keys = [:type, :cron_expression, :enabled]
 
     edge_keys = [

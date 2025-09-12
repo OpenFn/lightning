@@ -585,7 +585,7 @@ defmodule Lightning.WorkflowVersionsTest do
     end
 
     test "generates the same hash for this simple workflow" do
-      predetermined_hash = "347277800299"
+      predetermined_hash = "173cfef43fe8"
 
       simple_workflow = %{
         name: "Simple Workflow",
@@ -595,13 +595,17 @@ defmodule Lightning.WorkflowVersionsTest do
             id: "job1",
             name: "First Job",
             body: "fn(state) => state",
-            adaptor: "@openfn/language-common@latest"
+            adaptor: "@openfn/language-common@latest",
+            project_credential_id: "credential1",
+            keychain_credential_id: nil
           },
           %{
             id: "job2",
             name: "Second Job",
             body: "fn(state) => state",
-            adaptor: "@openfn/language-http@latest"
+            adaptor: "@openfn/language-http@latest",
+            project_credential_id: nil,
+            keychain_credential_id: nil
           }
         ],
         triggers: [
