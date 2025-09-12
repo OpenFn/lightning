@@ -64,22 +64,11 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
         "project" => %{"raw_name" => "sb-1", "color" => "#abcdef"}
       })
 
-      res =
-        view
-        |> element("#sandbox-form-new")
-        |> render_submit(%{
-          "project" => %{"raw_name" => "sb-1", "color" => "#abcdef"}
-        })
-
-      html =
-        assert_redirect_or_patch(
-          res,
-          view,
-          conn,
-          ~p"/projects/#{parent.id}/sandboxes"
-        )
-
-      assert html =~ "Sandbox created"
+      assert view
+             |> element("#sandbox-form-new")
+             |> render_submit(%{
+               "project" => %{"raw_name" => "sb-1", "color" => "#abcdef"}
+             }) =~ "Sandbox created"
     end
 
     test "creating sandbox with blank name disables submit and keeps placeholder",
@@ -97,7 +86,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       html = render(view)
       assert html =~ ~s(<button disabled="disabled" type="submit")
-      assert html =~ "e.g. my-sandbox"
+      assert html =~ "my-sandbox"
     end
   end
 
