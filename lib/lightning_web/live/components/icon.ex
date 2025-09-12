@@ -35,7 +35,7 @@ defmodule LightningWeb.Components.Icon do
 
   def workflows(assigns), do: Heroicons.square_3_stack_3d(assigns)
 
-  def sandboxes(assigns), do: Heroicons.squares_plus(assigns)
+  def sandboxes(assigns), do: Heroicons.beaker(assigns)
 
   def branches(assigns) do
     ~H"""
