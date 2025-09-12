@@ -214,7 +214,7 @@ defmodule LightningWeb.SandboxLive.Index do
           mode={:edit}
           sandbox={@editing_sandbox}
           current_user={@current_user}
-          parent={@current_sandbox || @project}
+          parent={@editing_sandbox.parent}
           return_to={~p"/projects/#{(@current_sandbox || @project).id}/sandboxes"}
         />
       </LayoutComponents.centered>
