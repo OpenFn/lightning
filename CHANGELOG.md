@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Generate workflow version on save
+  [#3452](https://github.com/OpenFn/lightning/issues/3452)
+
 ### Changed
 
 ### Fixed
@@ -42,8 +45,6 @@ and this project adheres to
   [#3430](https://github.com/OpenFn/lightning/issues/3430)
 - Added DB support for sandboxes and workflow version provenance.
   [#3422](https://github.com/OpenFn/lightning/issues/3422)
-- Generate workflow version on save
-  [#3452](https://github.com/OpenFn/lightning/issues/3452)
 - Retry webhook events on transient database connection errors
   [#3097](https://github.com/OpenFn/lightning/issues/3097)
 - Allow users to retry followed runs from the job panel
