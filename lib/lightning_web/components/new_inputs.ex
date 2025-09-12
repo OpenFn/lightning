@@ -424,11 +424,6 @@ defmodule LightningWeb.Components.NewInputs do
     doc:
       "indicates if the tag input operates independently of a form's validation flow"
 
-  attr :shape, :string, default: "rounded", values: ~w(square rounded circle)
-  attr :wrapper_class, :string, default: ""
-  attr :swatch_class, :string, default: ""
-  attr :swatch_style, :any, default: nil
-
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do

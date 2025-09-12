@@ -35,11 +35,9 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
   defp generate_theme_preview(_parent, _color), do: nil
 
-  defp should_preview_theme?(:new, new_color, last_color) do
+  defp should_preview_theme?(new_color, last_color) do
     is_binary(new_color) and new_color != last_color
   end
-
-  defp should_preview_theme?(_mode, _new_color, _last_color), do: false
 
   defp send_theme_preview(parent, color) do
     theme = generate_theme_preview(parent, color)
@@ -67,15 +65,15 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     |> then(&Project.changeset(base, &1))
   end
 
-  defp base_struct(%{sandbox: %Project{} = sb}), do: sb
+  defp base_struct(%{sandbox: %Project{} = sandbox}), do: sandbox
   defp base_struct(_assigns), do: %Project{}
 
-  defp initial_params(%{sandbox: %Project{} = sb}) do
+  defp initial_params(%{sandbox: %Project{} = sandbox}) do
     %{
-      "name" => sb.name,
-      "raw_name" => sb.name,
-      "env" => sb.env,
-      "color" => sb.color
+      "name" => sandbox.name,
+      "raw_name" => sandbox.name,
+      "env" => sandbox.env,
+      "color" => sandbox.color
     }
   end
 
@@ -96,7 +94,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
     initial_color = Changeset.get_field(changeset, :color)
 
-    if should_preview_theme?(mode, initial_color, nil) do
+    if should_preview_theme?(initial_color, nil) do
       send_theme_preview(assigns.parent, initial_color)
     end
 
@@ -129,7 +127,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     new_color = params["color"]
     last_color = socket.assigns[:last_preview_color]
 
-    if should_preview_theme?(assigns.mode, new_color, last_color) do
+    if should_preview_theme?(new_color, last_color) do
       send_theme_preview(assigns.parent, new_color)
     end
 
