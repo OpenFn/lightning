@@ -146,7 +146,7 @@ defmodule LightningWeb.Components.Credentials do
             class={[
               "block w-full rounded-lg border border-secondary-300 bg-white",
               "sm:text-sm shadow-xs",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200/50",
               "disabled:cursor-not-allowed "
             ]}
             phx-change="add_selected_project"
