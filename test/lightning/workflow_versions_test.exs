@@ -585,7 +585,7 @@ defmodule Lightning.WorkflowVersionsTest do
     end
 
     test "generates the same hash for this simple workflow" do
-      predetermined_hash = "173cfef43fe8"
+      predetermined_hash = "a3605e1f6463"
 
       simple_workflow = %{
         name: "Simple Workflow",
@@ -612,6 +612,7 @@ defmodule Lightning.WorkflowVersionsTest do
           %{
             id: "trigger1",
             type: :webhook,
+            cron_expression: nil,
             enabled: true
           }
         ],
@@ -619,13 +620,19 @@ defmodule Lightning.WorkflowVersionsTest do
           %{
             source_trigger_id: "trigger1",
             target_job_id: "job1",
+            source_job_id: nil,
             condition_type: :always,
+            condition_label: nil,
+            condition_expression: nil,
             enabled: true
           },
           %{
+            source_trigger_id: nil,
             source_job_id: "job1",
             target_job_id: "job2",
             condition_type: :on_job_success,
+            condition_label: nil,
+            condition_expression: nil,
             enabled: true
           }
         ]
