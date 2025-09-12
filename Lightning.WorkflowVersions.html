@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-0BE9CFA0.js"></script>
+    <script defer src="dist/sidebar_items-DEF75E51.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -94,7 +94,7 @@ Lightning
 
     <section id="moduledoc">
 <p>Provenance + comparison helpers for workflow heads.</p><ul><li>Persists append-only rows in <code class="inline">workflow_versions</code> and maintains a materialized
-<code class="inline">workflows.version_history</code> array (12-char lowercase hex).</li><li><a href="#record_version/3"><code class="inline">record_version/3</code></a> and <a href="#record_versions/3"><code class="inline">record_versions/3</code></a> are <strong>idempotent</strong> (<code class="inline">ON CONFLICT DO NOTHING</code>)
+<code class="inline">workflows.version_history</code> array (12-char lowercase hex).</li><li><a href="#record_version/3"><code class="inline">record_version/3</code></a> and <code class="inline">record_versions/3</code> are <strong>idempotent</strong> (<code class="inline">ON CONFLICT DO NOTHING</code>)
 and <strong>concurrency-safe</strong> (row lock, append without dupes).</li><li><a href="#history_for/1"><code class="inline">history_for/1</code></a> and <a href="#latest_hash/1"><code class="inline">latest_hash/1</code></a> read the array first; when empty they fall back
 to the table with deterministic ordering by <code class="inline">(inserted_at, id)</code>.</li><li><a href="#reconcile_history!/1"><code class="inline">reconcile_history!/1</code></a> rebuilds the array from provenance rows.</li><li><a href="#classify/2"><code class="inline">classify/2</code></a> and <a href="#classify_with_delta/2"><code class="inline">classify_with_delta/2</code></a> compare two histories (same/ahead/diverged).</li></ul><p>Validation &amp; invariants:</p><ul><li><code class="inline">hash</code> must match <code class="inline">^[a-f0-9]{12}$</code>; <code class="inline">source</code> must be <code class="inline">&quot;app&quot;</code> or <code class="inline">&quot;cli&quot;</code>;
 <code class="inline">(workflow_id, hash)</code> is unique.</li></ul><p>Designed for fast diffs and consistent “latest head” lookups.</p>
@@ -150,6 +150,16 @@ to the table with deterministic ordering by <code class="inline">(inserted_at, i
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#generate_hash/1" data-no-tooltip="" translate="no">generate_hash(workflow)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Generates a deterministic hash for a workflow based on its structure.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#history_for/1" data-no-tooltip="" translate="no">history_for(workflow)</a>
 
       </div>
@@ -186,17 +196,6 @@ to the table with deterministic ordering by <code class="inline">(inserted_at, i
 
         <div class="summary-synopsis"><p>Records a <strong>single</strong> workflow head <code class="inline">hash</code> with provenance and keeps
 <code class="inline">workflows.version_history</code> in sync.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#record_versions/3" data-no-tooltip="" translate="no">record_versions(workflow, hashes, source \\ &quot;app&quot;)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Bulk record <strong>many</strong> heads at once and append them to <code class="inline">version_history</code>
-<strong>in order</strong>, skipping duplicates both in the input and in the database.</p></div>
 
     </div>
 
@@ -265,7 +264,7 @@ to the table with deterministic ordering by <code class="inline">(inserted_at, i
       <h1 class="signature" translate="no">classify(left, right)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L335" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L468" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -281,13 +280,13 @@ to the table with deterministic ordering by <code class="inline">(inserted_at, i
 
       </div>
 
-<p>Compares two histories and returns only the relation (no counts).</p><p>Wrapper around <a href="#classify_with_delta/2"><code class="inline">classify_with_delta/2</code></a>.</p><h2 id="classify/2-examples" class="section-heading"><a href="#classify/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="8648966238-1">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b)</span><span class="p" data-group-id="8648966238-1">)</span><span class="w">
+<p>Compares two histories and returns only the relation (no counts).</p><p>Wrapper around <a href="#classify_with_delta/2"><code class="inline">classify_with_delta/2</code></a>.</p><h2 id="classify/2-examples" class="section-heading"><a href="#classify/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="7314763304-1">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b)</span><span class="p" data-group-id="7314763304-1">)</span><span class="w">
 </span><span class="ss">:same</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="8648966238-2">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b c)</span><span class="p" data-group-id="8648966238-2">)</span><span class="w">
-</span><span class="p" data-group-id="8648966238-3">{</span><span class="ss">:ahead</span><span class="p">,</span><span class="w"> </span><span class="ss">:right</span><span class="p" data-group-id="8648966238-3">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="7314763304-2">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b c)</span><span class="p" data-group-id="7314763304-2">)</span><span class="w">
+</span><span class="p" data-group-id="7314763304-3">{</span><span class="ss">:ahead</span><span class="p">,</span><span class="w"> </span><span class="ss">:right</span><span class="p" data-group-id="7314763304-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="8648966238-4">(</span><span class="sx">~w(a x)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a y)</span><span class="p" data-group-id="8648966238-4">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify</span><span class="p" data-group-id="7314763304-4">(</span><span class="sx">~w(a x)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a y)</span><span class="p" data-group-id="7314763304-4">)</span><span class="w">
 </span><span class="ss">:diverged</span></code></pre>
   </section>
 </section>
@@ -301,7 +300,7 @@ to the table with deterministic ordering by <code class="inline">(inserted_at, i
       <h1 class="signature" translate="no">classify_with_delta(left, right)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L306" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L439" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -320,11 +319,40 @@ to the table with deterministic ordering by <code class="inline">(inserted_at, i
 
       </div>
 
-<p>Compares two histories and returns the relation <strong>with a delta</strong>.</p><p>Possible results:</p><ul><li><code class="inline">{:same, 0}</code> — sequences are identical</li><li><code class="inline">{:ahead, :right, n}</code> — <code class="inline">right</code> strictly extends <code class="inline">left</code> by <code class="inline">n</code> items</li><li><code class="inline">{:ahead, :left, n}</code> — <code class="inline">left</code>  strictly extends <code class="inline">right</code> by <code class="inline">n</code> items</li><li><code class="inline">{:diverged, k}</code> — sequences share a common prefix of length <code class="inline">k</code>, then diverge</li></ul><h2 id="classify_with_delta/2-examples" class="section-heading"><a href="#classify_with_delta/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify_with_delta</span><span class="p" data-group-id="3899594933-1">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b c d)</span><span class="p" data-group-id="3899594933-1">)</span><span class="w">
-</span><span class="p" data-group-id="3899594933-2">{</span><span class="ss">:ahead</span><span class="p">,</span><span class="w"> </span><span class="ss">:right</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="3899594933-2">}</span><span class="w">
+<p>Compares two histories and returns the relation <strong>with a delta</strong>.</p><p>Possible results:</p><ul><li><code class="inline">{:same, 0}</code> — sequences are identical</li><li><code class="inline">{:ahead, :right, n}</code> — <code class="inline">right</code> strictly extends <code class="inline">left</code> by <code class="inline">n</code> items</li><li><code class="inline">{:ahead, :left, n}</code> — <code class="inline">left</code>  strictly extends <code class="inline">right</code> by <code class="inline">n</code> items</li><li><code class="inline">{:diverged, k}</code> — sequences share a common prefix of length <code class="inline">k</code>, then diverge</li></ul><h2 id="classify_with_delta/2-examples" class="section-heading"><a href="#classify_with_delta/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify_with_delta</span><span class="p" data-group-id="1829259616-1">(</span><span class="sx">~w(a b)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b c d)</span><span class="p" data-group-id="1829259616-1">)</span><span class="w">
+</span><span class="p" data-group-id="1829259616-2">{</span><span class="ss">:ahead</span><span class="p">,</span><span class="w"> </span><span class="ss">:right</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="1829259616-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify_with_delta</span><span class="p" data-group-id="3899594933-3">(</span><span class="sx">~w(a b x)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b y)</span><span class="p" data-group-id="3899594933-3">)</span><span class="w">
-</span><span class="p" data-group-id="3899594933-4">{</span><span class="ss">:diverged</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="3899594933-4">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">classify_with_delta</span><span class="p" data-group-id="1829259616-3">(</span><span class="sx">~w(a b x)</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a b y)</span><span class="p" data-group-id="1829259616-3">)</span><span class="w">
+</span><span class="p" data-group-id="1829259616-4">{</span><span class="ss">:diverged</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="1829259616-4">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="generate_hash/1">
+
+  <div class="detail-header">
+    <a href="#generate_hash/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">generate_hash(workflow)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L293" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> generate_hash(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()</pre>
+
+      </div>
+
+<p>Generates a deterministic hash for a workflow based on its structure.</p><p>Algorithm:</p><ul><li>Create a list</li><li>Add the workflow name to the start of the list</li><li>For each node (trigger, job and edge) in a consistent order<ul><li>Get a sorted list of keys</li><li>Filter out ignored keys</li><li>Add each key and value to the list</li></ul></li><li>Join the list into a string, no separator</li><li>Hash the list with SHA 256</li><li>Truncate the resulting string to 12 characters</li></ul><h2 id="generate_hash/1-parameters" class="section-heading"><a href="#generate_hash/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> — the workflow struct to hash</li></ul><h2 id="generate_hash/1-returns" class="section-heading"><a href="#generate_hash/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>A 12-character lowercase hex string</li></ul><h2 id="generate_hash/1-examples" class="section-heading"><a href="#generate_hash/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">generate_hash</span><span class="p" data-group-id="5775193838-1">(</span><span class="n">workflow</span><span class="p" data-group-id="5775193838-1">)</span><span class="w">
+</span><span class="s">&quot;a1b2c3d4e5f6&quot;</span></code></pre>
   </section>
 </section>
 <section class="detail" id="history_for/1">
@@ -337,7 +365,7 @@ to the table with deterministic ordering by <code class="inline">(inserted_at, i
       <h1 class="signature" translate="no">history_for(workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L216" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L190" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -348,11 +376,11 @@ to the table with deterministic ordering by <code class="inline">(inserted_at, i
 
 <p>Returns the <strong>ordered</strong> history of heads for a workflow.</p><p>If <code class="inline">workflow.version_history</code> is present and non-empty, that array is returned.
 Otherwise, the function falls back to <code class="inline">workflow_versions</code> ordered by
-<code class="inline">inserted_at ASC, id ASC</code> to provide deterministic ordering for equal timestamps.</p><h2 id="history_for/1-examples" class="section-heading"><a href="#history_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">history_for</span><span class="p" data-group-id="9012693948-1">(</span><span class="p" data-group-id="9012693948-2">%</span><span class="nc" data-group-id="9012693948-2">Workflow</span><span class="p" data-group-id="9012693948-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9012693948-3">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="9012693948-3">]</span><span class="p" data-group-id="9012693948-2">}</span><span class="p" data-group-id="9012693948-1">)</span><span class="w">
-</span><span class="p" data-group-id="9012693948-4">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="9012693948-4">]</span><span class="w">
+<code class="inline">inserted_at ASC, id ASC</code> to provide deterministic ordering for equal timestamps.</p><h2 id="history_for/1-examples" class="section-heading"><a href="#history_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">history_for</span><span class="p" data-group-id="6959641109-1">(</span><span class="p" data-group-id="6959641109-2">%</span><span class="nc" data-group-id="6959641109-2">Workflow</span><span class="p" data-group-id="6959641109-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6959641109-3">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="6959641109-3">]</span><span class="p" data-group-id="6959641109-2">}</span><span class="p" data-group-id="6959641109-1">)</span><span class="w">
+</span><span class="p" data-group-id="6959641109-4">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="6959641109-4">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">history_for</span><span class="p" data-group-id="9012693948-5">(</span><span class="n">wf</span><span class="p" data-group-id="9012693948-5">)</span><span class="w"> </span><span class="c1"># when array is empty/nil</span><span class="w">
-</span><span class="p" data-group-id="9012693948-6">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;c&quot;</span><span class="p" data-group-id="9012693948-6">]</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">history_for</span><span class="p" data-group-id="6959641109-5">(</span><span class="n">wf</span><span class="p" data-group-id="6959641109-5">)</span><span class="w"> </span><span class="c1"># when array is empty/nil</span><span class="w">
+</span><span class="p" data-group-id="6959641109-6">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;c&quot;</span><span class="p" data-group-id="6959641109-6">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="latest_hash/1">
@@ -365,7 +393,7 @@ Otherwise, the function falls back to <code class="inline">workflow_versions</co
       <h1 class="signature" translate="no">latest_hash(wf)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L245" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L219" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -382,10 +410,10 @@ Otherwise, the function falls back to <code class="inline">workflow_versions</co
 
 <p>Returns the <strong>latest</strong> head for a workflow (or <code class="inline">nil</code> if none).</p><p>Uses <code class="inline">workflow.version_history</code> when populated (taking the last element).
 If empty/nil, reads from <code class="inline">workflow_versions</code> with
-<code class="inline">ORDER BY inserted_at DESC, id DESC LIMIT 1</code> for deterministic results.</p><h2 id="latest_hash/1-examples" class="section-heading"><a href="#latest_hash/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">latest_hash</span><span class="p" data-group-id="4424627875-1">(</span><span class="p" data-group-id="4424627875-2">%</span><span class="nc" data-group-id="4424627875-2">Workflow</span><span class="p" data-group-id="4424627875-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4424627875-3">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="4424627875-3">]</span><span class="p" data-group-id="4424627875-2">}</span><span class="p" data-group-id="4424627875-1">)</span><span class="w">
+<code class="inline">ORDER BY inserted_at DESC, id DESC LIMIT 1</code> for deterministic results.</p><h2 id="latest_hash/1-examples" class="section-heading"><a href="#latest_hash/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">latest_hash</span><span class="p" data-group-id="4600891054-1">(</span><span class="p" data-group-id="4600891054-2">%</span><span class="nc" data-group-id="4600891054-2">Workflow</span><span class="p" data-group-id="4600891054-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4600891054-3">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p" data-group-id="4600891054-3">]</span><span class="p" data-group-id="4600891054-2">}</span><span class="p" data-group-id="4600891054-1">)</span><span class="w">
 </span><span class="s">&quot;b&quot;</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">latest_hash</span><span class="p" data-group-id="4424627875-4">(</span><span class="n">wf_without_versions</span><span class="p" data-group-id="4424627875-4">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">latest_hash</span><span class="p" data-group-id="4600891054-4">(</span><span class="n">wf_without_versions</span><span class="p" data-group-id="4600891054-4">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -399,7 +427,7 @@ If empty/nil, reads from <code class="inline">workflow_versions</code> with
       <h1 class="signature" translate="no">reconcile_history!(wf)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L276" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L259" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -416,8 +444,8 @@ If empty/nil, reads from <code class="inline">workflow_versions</code> with
       </div>
 
 <p>Rebuilds and <strong>persists</strong> <code class="inline">workflow.version_history</code> from provenance rows.</p><p>This is useful for maintenance/migrations when the array drifts from the
-<code class="inline">workflow_versions</code> table. Ordering is <code class="inline">inserted_at ASC, id ASC</code>.</p><h2 id="reconcile_history!/1-returns" class="section-heading"><a href="#reconcile_history!/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">%Workflow{}</code> — updated workflow with a rebuilt <code class="inline">version_history</code></li></ul><h2 id="reconcile_history!/1-examples" class="section-heading"><a href="#reconcile_history!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">wf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">reconcile_history!</span><span class="p" data-group-id="6740710108-1">(</span><span class="n">wf</span><span class="p" data-group-id="6740710108-1">)</span><span class="w">
-</span><span class="p" data-group-id="6740710108-2">%</span><span class="nc" data-group-id="6740710108-2">Workflow</span><span class="p" data-group-id="6740710108-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6740710108-3">[</span><span class="n">...</span><span class="p" data-group-id="6740710108-3">]</span><span class="p" data-group-id="6740710108-2">}</span></code></pre>
+<code class="inline">workflow_versions</code> table. Ordering is <code class="inline">inserted_at ASC, id ASC</code>.</p><h2 id="reconcile_history!/1-returns" class="section-heading"><a href="#reconcile_history!/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">%Workflow{}</code> — updated workflow with a rebuilt <code class="inline">version_history</code></li></ul><h2 id="reconcile_history!/1-examples" class="section-heading"><a href="#reconcile_history!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">wf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">reconcile_history!</span><span class="p" data-group-id="1300028843-1">(</span><span class="n">wf</span><span class="p" data-group-id="1300028843-1">)</span><span class="w">
+</span><span class="p" data-group-id="1300028843-2">%</span><span class="nc" data-group-id="1300028843-2">Workflow</span><span class="p" data-group-id="1300028843-2">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1300028843-3">[</span><span class="n">...</span><span class="p" data-group-id="1300028843-3">]</span><span class="p" data-group-id="1300028843-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="record_version/3">
@@ -432,7 +460,7 @@ If empty/nil, reads from <code class="inline">workflow_versions</code> with
       <h1 class="signature" translate="no">record_version(workflow, hash, source \\ &quot;app&quot;)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L63" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L62" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -453,48 +481,11 @@ If empty/nil, reads from <code class="inline">workflow_versions</code> with
 it inserts into <code class="inline">workflow_versions</code> with <code class="inline">ON CONFLICT DO NOTHING</code>, then
 locks the workflow row (<code class="inline">FOR UPDATE</code>) and appends <code class="inline">hash</code> to the array only
 if it is not already present.</p><h2 id="record_version/3-parameters" class="section-heading"><a href="#record_version/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> — the workflow owning the history</li><li><code class="inline">hash</code> — 12-char lowercase hex (e.g., <code class="inline">&quot;deadbeefcafe&quot;</code>)</li><li><code class="inline">source</code> — <code class="inline">&quot;app&quot;</code> or <code class="inline">&quot;cli&quot;</code> (defaults to <code class="inline">&quot;app&quot;</code>)</li></ul><h2 id="record_version/3-returns" class="section-heading"><a href="#record_version/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, %Workflow{}}</code> — workflow (possibly unchanged) with an updated
-<code class="inline">version_history</code> if a new <code class="inline">hash</code> was appended</li><li><code class="inline">{:error, :invalid_input}</code> — when <code class="inline">hash</code>/<code class="inline">source</code> are invalid</li><li><code class="inline">{:error, reason}</code> — database error</li></ul><h2 id="record_version/3-examples" class="section-heading"><a href="#record_version/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_version</span><span class="p" data-group-id="7551064811-1">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;deadbeefcafe&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="p" data-group-id="7551064811-1">)</span><span class="w">
-</span><span class="p" data-group-id="7551064811-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7551064811-3">%</span><span class="nc" data-group-id="7551064811-3">Workflow</span><span class="p" data-group-id="7551064811-3">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7551064811-4">[</span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;deadbeefcafe&quot;</span><span class="p" data-group-id="7551064811-4">]</span><span class="p" data-group-id="7551064811-3">}</span><span class="p" data-group-id="7551064811-2">}</span><span class="w">
+<code class="inline">version_history</code> if a new <code class="inline">hash</code> was appended</li><li><code class="inline">{:error, reason}</code> — database error</li></ul><h2 id="record_version/3-examples" class="section-heading"><a href="#record_version/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_version</span><span class="p" data-group-id="6106303477-1">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;deadbeefcafe&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="p" data-group-id="6106303477-1">)</span><span class="w">
+</span><span class="p" data-group-id="6106303477-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6106303477-3">%</span><span class="nc" data-group-id="6106303477-3">Workflow</span><span class="p" data-group-id="6106303477-3">{</span><span class="ss">version_history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6106303477-4">[</span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;deadbeefcafe&quot;</span><span class="p" data-group-id="6106303477-4">]</span><span class="p" data-group-id="6106303477-3">}</span><span class="p" data-group-id="6106303477-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_version</span><span class="p" data-group-id="7551064811-5">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;NOT_HEX&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="p" data-group-id="7551064811-5">)</span><span class="w">
-</span><span class="p" data-group-id="7551064811-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:invalid_input</span><span class="p" data-group-id="7551064811-6">}</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="record_versions/3">
-
-    <span id="record_versions/2"></span>
-
-  <div class="detail-header">
-    <a href="#record_versions/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">record_versions(workflow, hashes, source \\ &quot;app&quot;)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflow_versions.ex#L139" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> record_versions(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), [<a href="#t:hash/0">hash</a>()], <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
-  {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
-
-      </div>
-
-<p>Bulk record <strong>many</strong> heads at once and append them to <code class="inline">version_history</code>
-<strong>in order</strong>, skipping duplicates both in the input and in the database.</p><p>Internally this:</p><ul><li>de-dups the input list (preserving first appearance order),</li><li><code class="inline">INSERT ... ON CONFLICT DO NOTHING</code> into <code class="inline">workflow_versions</code>, and</li><li>locks the workflow row and appends only missing hashes.</li></ul><p>The operation is <strong>idempotent</strong> and safe to call concurrently.</p><h2 id="record_versions/3-parameters" class="section-heading"><a href="#record_versions/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code> — the workflow owning the history</li><li><code class="inline">hashes</code> — list of 12-char lowercase hex strings</li><li><code class="inline">source</code> — <code class="inline">&quot;app&quot;</code> or <code class="inline">&quot;cli&quot;</code> (defaults to <code class="inline">&quot;app&quot;</code>)</li></ul><h2 id="record_versions/3-returns" class="section-heading"><a href="#record_versions/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, %Workflow{}, inserted_count}</code> — number of <strong>new</strong> provenance rows
-actually written (0 if everything already existed)</li><li><code class="inline">{:error, :invalid_input}</code> — when any hash or the source is invalid</li><li><code class="inline">{:error, reason}</code> — database error</li></ul><h2 id="record_versions/3-notes" class="section-heading"><a href="#record_versions/3-notes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Notes</span></h2><ul><li>Passing <code class="inline">[]</code> is allowed and returns <code class="inline">{:ok, workflow, 0}</code>.</li><li>Ordering of <code class="inline">version_history</code> matches the <strong>input order</strong> for newly appended hashes.</li></ul><h2 id="record_versions/3-examples" class="section-heading"><a href="#record_versions/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_versions</span><span class="p" data-group-id="4071938229-1">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="sx">~w(a1a1a1a1a1a1 b2b2b2b2b2b2)</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;cli&quot;</span><span class="p" data-group-id="4071938229-1">)</span><span class="w">
-</span><span class="p" data-group-id="4071938229-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4071938229-3">%</span><span class="nc" data-group-id="4071938229-3">Workflow</span><span class="p" data-group-id="4071938229-3">{</span><span class="p" data-group-id="4071938229-3">}</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="4071938229-2">}</span><span class="w">
-
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_versions</span><span class="p" data-group-id="4071938229-4">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4071938229-5">[</span><span class="s">&quot;bad&quot;</span><span class="p" data-group-id="4071938229-5">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="p" data-group-id="4071938229-4">)</span><span class="w">
-</span><span class="p" data-group-id="4071938229-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:invalid_input</span><span class="p" data-group-id="4071938229-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">WorkflowVersions</span><span class="o">.</span><span class="n">record_version</span><span class="p" data-group-id="6106303477-5">(</span><span class="n">wf</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;NOT_HEX&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="p" data-group-id="6106303477-5">)</span><span class="w">
+</span><span class="p" data-group-id="6106303477-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:invalid_input</span><span class="p" data-group-id="6106303477-6">}</span></code></pre>
   </section>
 </section>
 
