@@ -475,4 +475,451 @@ defmodule Lightning.Projects.Sandboxes do
       m -> m
     end
   end
+
+  @doc """
+  Merges a sandbox workflow back onto its parent workflow.
+
+  This function matches nodes between source and target workflows using:
+  1. Structural position in the DAG (primary criterion)
+  2. Name and/or adaptor for disambiguation when structure is ambiguous
+
+  Returns params compatible with `Provisioner.import_document`.
+
+  ## Parameters
+    * `source_workflow` - The sandbox workflow with modifications
+    * `target_workflow` - The parent workflow to merge changes onto
+
+  ## Returns
+    A map with the merged workflow structure ready for import:
+    * Matched nodes keep target UUIDs with source properties
+    * Unmatched source nodes get new UUIDs
+    * Unmatched target nodes are marked for deletion
+    * Edges are remapped to final node IDs
+  """
+  @spec merge_workflow(Workflow.t(), Workflow.t()) :: map()
+  def merge_workflow(
+        %Workflow{} = source_workflow,
+        %Workflow{} = target_workflow
+      ) do
+    source_workflow = preload_workflow(source_workflow)
+    target_workflow = preload_workflow(target_workflow)
+
+    # Build DAG structures for both workflows
+    source_dag = build_dag_structure(source_workflow)
+    target_dag = build_dag_structure(target_workflow)
+
+    # Match nodes between source and target
+    {job_matches, trigger_matches} = match_nodes(source_dag, target_dag)
+
+    # Build merged jobs
+    merged_jobs =
+      build_merged_jobs(
+        source_workflow.jobs,
+        target_workflow.jobs,
+        job_matches
+      )
+
+    # Build merged triggers (webhook and cron only)
+    merged_triggers =
+      build_merged_triggers(
+        source_workflow.triggers,
+        target_workflow.triggers,
+        trigger_matches
+      )
+
+    # Build ID mapping for edge remapping
+    id_map = build_id_map(job_matches, trigger_matches)
+
+    # Remap edges using the ID mapping
+    merged_edges = build_merged_edges(source_workflow.edges, id_map)
+
+    %{
+      "id" => target_workflow.id,
+      "name" => source_workflow.name,
+      "jobs" => merged_jobs,
+      "triggers" => merged_triggers,
+      "edges" => merged_edges
+    }
+  end
+
+  defp preload_workflow(workflow) do
+    Repo.preload(workflow, [:jobs, :triggers, :edges], force: true)
+  end
+
+  defp build_dag_structure(workflow) do
+    # Build adjacency lists for structural analysis
+    edges_by_source =
+      workflow.edges
+      |> Enum.group_by(fn edge ->
+        cond do
+          edge.source_trigger_id -> {:trigger, edge.source_trigger_id}
+          edge.source_job_id -> {:job, edge.source_job_id}
+          true -> nil
+        end
+      end)
+      |> Map.reject(fn {k, _} -> is_nil(k) end)
+
+    edges_by_target =
+      workflow.edges
+      |> Enum.group_by(fn edge ->
+        if edge.target_job_id, do: {:job, edge.target_job_id}, else: nil
+      end)
+      |> Map.reject(fn {k, _} -> is_nil(k) end)
+
+    jobs_map = Map.new(workflow.jobs, &{&1.id, &1})
+    triggers_map = Map.new(workflow.triggers, &{&1.id, &1})
+
+    %{
+      jobs: jobs_map,
+      triggers: triggers_map,
+      edges_by_source: edges_by_source,
+      edges_by_target: edges_by_target,
+      edges: workflow.edges
+    }
+  end
+
+  defp match_nodes(source_dag, target_dag) do
+    # Match triggers first (simpler: only webhook and cron)
+    trigger_matches = match_triggers(source_dag.triggers, target_dag.triggers)
+
+    # Match jobs using structural position and disambiguation
+    job_matches =
+      match_jobs_structurally(source_dag, target_dag, trigger_matches)
+
+    {job_matches, trigger_matches}
+  end
+
+  defp match_triggers(source_triggers, target_triggers) do
+    # Only handle webhook and cron triggers
+    source_list =
+      source_triggers
+      |> Map.values()
+      |> Enum.filter(&(&1.type in [:webhook, :cron]))
+
+    target_list =
+      target_triggers
+      |> Map.values()
+      |> Enum.filter(&(&1.type in [:webhook, :cron]))
+
+    # Try to match by type and structural position
+    Enum.reduce(source_list, %{}, fn source_trigger, acc ->
+      # Find candidates with same type
+      candidates = Enum.filter(target_list, &(&1.type == source_trigger.type))
+
+      matched_target =
+        case candidates do
+          [single] ->
+            single
+
+          multiple when length(multiple) > 1 ->
+            # Try to disambiguate using cron_expression for cron triggers
+            if source_trigger.type == :cron do
+              Enum.find(
+                multiple,
+                &(&1.cron_expression == source_trigger.cron_expression)
+              )
+            else
+              nil
+            end
+
+          _ ->
+            nil
+        end
+
+      if matched_target do
+        Map.put(acc, source_trigger.id, matched_target.id)
+      else
+        # New trigger - generate new ID
+        Map.put(acc, source_trigger.id, Ecto.UUID.generate())
+      end
+    end)
+  end
+
+  defp match_jobs_structurally(source_dag, target_dag, trigger_matches) do
+    source_jobs = Map.values(source_dag.jobs)
+    target_jobs = Map.values(target_dag.jobs)
+
+    # Build structural signatures for all jobs
+    source_signatures =
+      build_job_signatures(source_jobs, source_dag, trigger_matches)
+
+    target_signatures = build_job_signatures(target_jobs, target_dag, %{})
+
+    # Match jobs based on structural position
+    Enum.reduce(source_jobs, %{}, fn source_job, acc ->
+      source_sig = Map.get(source_signatures, source_job.id)
+
+      # Find target jobs with matching structural signature
+      candidates =
+        target_jobs
+        |> Enum.filter(fn target_job ->
+          target_sig = Map.get(target_signatures, target_job.id)
+          signatures_match?(source_sig, target_sig, trigger_matches)
+        end)
+        |> Enum.reject(fn target_job ->
+          # Don't match already matched targets
+          Map.values(acc) |> Enum.member?(target_job.id)
+        end)
+
+      matched_target =
+        case candidates do
+          [] ->
+            nil
+
+          [single] ->
+            single
+
+          multiple ->
+            # Disambiguate using name and/or adaptor
+            disambiguate_jobs(source_job, multiple)
+        end
+
+      if matched_target do
+        Map.put(acc, source_job.id, matched_target.id)
+      else
+        # New job - generate new ID
+        Map.put(acc, source_job.id, Ecto.UUID.generate())
+      end
+    end)
+  end
+
+  defp build_job_signatures(jobs, dag, id_map) do
+    Map.new(jobs, fn job ->
+      parents = get_parent_nodes(job.id, dag)
+      children = get_child_nodes(job.id, dag)
+
+      # Map parent/child IDs if needed
+      mapped_parents = map_node_refs(parents, id_map)
+      mapped_children = map_node_refs(children, id_map)
+
+      signature = %{
+        parents: mapped_parents |> Enum.sort(),
+        children: mapped_children |> Enum.sort(),
+        parent_count: length(mapped_parents),
+        child_count: length(mapped_children)
+      }
+
+      {job.id, signature}
+    end)
+  end
+
+  defp get_parent_nodes(job_id, dag) do
+    dag.edges_by_target
+    |> Map.get({:job, job_id}, [])
+    |> Enum.map(fn edge ->
+      cond do
+        edge.source_trigger_id -> {:trigger, edge.source_trigger_id}
+        edge.source_job_id -> {:job, edge.source_job_id}
+        true -> nil
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp get_child_nodes(job_id, dag) do
+    dag.edges_by_source
+    |> Map.get({:job, job_id}, [])
+    |> Enum.map(fn edge ->
+      if edge.target_job_id, do: {:job, edge.target_job_id}, else: nil
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp map_node_refs(node_refs, id_map) do
+    Enum.map(node_refs, fn {type, id} ->
+      mapped_id = Map.get(id_map, id, id)
+      {type, mapped_id}
+    end)
+  end
+
+  defp signatures_match?(source_sig, target_sig, trigger_matches) do
+    # Check if structural positions match
+    # Parent and child counts must match
+    # Check if parent sets match (accounting for trigger mapping)
+    # Children matching is more complex - we check count for now
+    source_sig.parent_count == target_sig.parent_count &&
+      source_sig.child_count == target_sig.child_count &&
+      parents_match?(source_sig.parents, target_sig.parents, trigger_matches) &&
+      length(source_sig.children) == length(target_sig.children)
+  end
+
+  defp parents_match?(source_parents, target_parents, trigger_matches) do
+    # Map source trigger parents using trigger_matches
+    mapped_source_parents =
+      Enum.map(source_parents, fn
+        {:trigger, id} -> {:trigger, Map.get(trigger_matches, id, id)}
+        other -> other
+      end)
+
+    # For now, check if counts match - more sophisticated matching could be added
+    length(mapped_source_parents) == length(target_parents)
+  end
+
+  defp disambiguate_jobs(source_job, candidates) do
+    # First try exact name match
+    by_name = Enum.find(candidates, &(&1.name == source_job.name))
+
+    if by_name do
+      by_name
+    else
+      # Try adaptor match
+      by_adaptor = Enum.find(candidates, &(&1.adaptor == source_job.adaptor))
+
+      if by_adaptor do
+        by_adaptor
+      else
+        # Can't disambiguate - no match
+        nil
+      end
+    end
+  end
+
+  defp build_merged_jobs(source_jobs, target_jobs, job_matches) do
+    source_job_map = Map.new(source_jobs, &{&1.id, &1})
+    target_job_map = Map.new(target_jobs, &{&1.id, &1})
+
+    # Get all matched target IDs
+    matched_target_ids = Map.values(job_matches) |> MapSet.new()
+
+    # Process source jobs (matched and new)
+    merged_from_source =
+      Enum.map(job_matches, fn {source_id, target_id} ->
+        source_job = Map.get(source_job_map, source_id)
+        target_job = Map.get(target_job_map, target_id)
+
+        if target_job do
+          # Matched job - use target ID, source properties, preserve credentials
+          %{
+            "id" => target_id,
+            "name" => source_job.name,
+            "body" => source_job.body,
+            "adaptor" => source_job.adaptor,
+            "project_credential_id" => target_job.project_credential_id,
+            "keychain_credential_id" => target_job.keychain_credential_id
+          }
+        else
+          # New job - source with new ID
+          %{
+            # This is actually a new UUID from job_matches
+            "id" => target_id,
+            "name" => source_job.name,
+            "body" => source_job.body,
+            "adaptor" => source_job.adaptor,
+            "project_credential_id" => source_job.project_credential_id,
+            "keychain_credential_id" => source_job.keychain_credential_id
+          }
+        end
+      end)
+
+    # Mark unmatched target jobs for deletion
+    deleted_targets =
+      target_jobs
+      |> Enum.filter(fn job ->
+        not MapSet.member?(matched_target_ids, job.id)
+      end)
+      |> Enum.map(fn job ->
+        %{
+          "id" => job.id,
+          "delete" => true
+        }
+      end)
+
+    merged_from_source ++ deleted_targets
+  end
+
+  defp build_merged_triggers(source_triggers, target_triggers, trigger_matches) do
+    # Only handle webhook and cron triggers
+    source_triggers =
+      Enum.filter(source_triggers, &(&1.type in [:webhook, :cron]))
+
+    target_triggers =
+      Enum.filter(target_triggers, &(&1.type in [:webhook, :cron]))
+
+    source_trigger_map = Map.new(source_triggers, &{&1.id, &1})
+
+    matched_target_ids = Map.values(trigger_matches) |> MapSet.new()
+
+    # Process source triggers (matched and new)
+    merged_from_source =
+      Enum.map(trigger_matches, fn {source_id, target_id} ->
+        source_trigger = Map.get(source_trigger_map, source_id)
+
+        if source_trigger do
+          base = %{
+            "id" => target_id,
+            "type" => to_string(source_trigger.type),
+            "enabled" => source_trigger.enabled,
+            "comment" => source_trigger.comment
+          }
+
+          # Add type-specific fields
+          base
+          |> maybe_add_webhook_fields(source_trigger)
+          |> maybe_add_cron_fields(source_trigger)
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    # Mark unmatched target triggers for deletion
+    deleted_targets =
+      target_triggers
+      |> Enum.filter(fn trigger ->
+        not MapSet.member?(matched_target_ids, trigger.id)
+      end)
+      |> Enum.map(fn trigger ->
+        %{
+          "id" => trigger.id,
+          "delete" => true
+        }
+      end)
+
+    merged_from_source ++ deleted_targets
+  end
+
+  defp maybe_add_webhook_fields(base, trigger) do
+    if trigger.type == :webhook do
+      Map.put(base, "custom_path", trigger.custom_path)
+    else
+      base
+    end
+  end
+
+  defp maybe_add_cron_fields(base, trigger) do
+    if trigger.type == :cron do
+      Map.put(base, "cron_expression", trigger.cron_expression)
+    else
+      base
+    end
+  end
+
+  defp build_id_map(job_matches, trigger_matches) do
+    Map.merge(job_matches, trigger_matches)
+  end
+
+  defp build_merged_edges(source_edges, id_map) do
+    Enum.map(source_edges, fn edge ->
+      %{
+        "id" => edge.id,
+        "source_trigger_id" =>
+          if(edge.source_trigger_id,
+            do: Map.get(id_map, edge.source_trigger_id),
+            else: nil
+          ),
+        "source_job_id" =>
+          if(edge.source_job_id,
+            do: Map.get(id_map, edge.source_job_id),
+            else: nil
+          ),
+        "target_job_id" =>
+          if(edge.target_job_id,
+            do: Map.get(id_map, edge.target_job_id),
+            else: nil
+          ),
+        "condition_type" => to_string(edge.condition_type),
+        "condition_expression" => edge.condition_expression,
+        "condition_label" => edge.condition_label,
+        "enabled" => edge.enabled
+      }
+    end)
+  end
 end
