@@ -11,6 +11,7 @@ defmodule LightningWeb.Components.Common do
       "success" -> "hero-check-circle-solid"
       "warning" -> "hero-exclamation-triangle"
       "danger" -> "hero-x-circle-solid"
+      "none" -> "none"
       _info -> "hero-information-circle-solid"
     end
   end

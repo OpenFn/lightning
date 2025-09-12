@@ -73,7 +73,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     } do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      view |> element("#create-sandbox") |> render_click()
+      view |> element("#create-sandbox-button") |> render_click()
 
       assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
       assert has_element?(view, "#sandbox-form-new")
@@ -152,7 +152,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb1.name})
         |> render_submit()
 
-      assert html =~ "Sandbox “#{sb1.name}” deleted"
+      assert html =~ "Sandbox #{sb1.name} deleted"
       assert has_element?(view, "#edit-sandbox-#{sb2.id}")
 
       target_id = sb2.id

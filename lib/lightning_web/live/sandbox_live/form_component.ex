@@ -5,9 +5,55 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
+  alias LightningWeb.Live.Helpers.ProjectTheme
   alias LightningWeb.SandboxLive.Components
 
   @type mode :: :new | :edit
+
+  defp get_random_color do
+    Components.color_palette_hex_colors() |> Enum.random()
+  end
+
+  defp generate_theme_preview(%Project{id: parent_id}, color)
+       when is_binary(parent_id) and is_binary(color) and color != "" do
+    temp_project = %Project{
+      id: Ecto.UUID.generate(),
+      color: String.trim(color),
+      parent_id: parent_id
+    }
+
+    case ProjectTheme.inline_primary_scale(temp_project) do
+      nil ->
+        nil
+
+      scale ->
+        [scale, ProjectTheme.inline_sidebar_vars()]
+        |> Enum.reject(&is_nil/1)
+        |> Enum.join(" ")
+    end
+  end
+
+  defp generate_theme_preview(_parent, _color), do: nil
+
+  defp should_preview_theme?(:new, new_color, last_color) do
+    is_binary(new_color) and new_color != last_color
+  end
+
+  defp should_preview_theme?(_mode, _new_color, _last_color), do: false
+
+  defp send_theme_preview(parent, color) do
+    theme = generate_theme_preview(parent, color)
+    send(self(), {:preview_theme, theme})
+  end
+
+  defp reset_theme_preview do
+    send(self(), {:preview_theme, nil})
+  end
+
+  defp return_path(socket) do
+    socket.assigns.return_to ||
+      ~p"/projects/#{socket.assigns.parent.id}/sandboxes"
+  end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw} = params) do
     Map.put(params, "name", Helpers.url_safe_name(raw))
@@ -33,6 +79,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     }
   end
 
+  defp initial_params(%{mode: :new}) do
+    %{"color" => get_random_color()}
+  end
+
   defp initial_params(_assigns), do: %{}
 
   @impl true
@@ -44,16 +94,24 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> form_changeset(initial_params(assigns))
       |> Map.put(:action, :validate)
 
+    initial_color = Changeset.get_field(changeset, :color)
+
+    if should_preview_theme?(mode, initial_color, nil) do
+      send_theme_preview(assigns.parent, initial_color)
+    end
+
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:last_preview_color, initial_color)
      |> assign(:changeset, changeset)
      |> assign(:name, Changeset.get_field(changeset, :name))}
   end
 
   @impl true
   def handle_event("close_modal", _params, socket) do
-    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
+    reset_theme_preview()
+    {:noreply, push_navigate(socket, to: return_path(socket))}
   end
 
   @impl true
@@ -68,10 +126,18 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> form_changeset(params)
       |> Map.put(:action, :validate)
 
+    new_color = params["color"]
+    last_color = socket.assigns[:last_preview_color]
+
+    if should_preview_theme?(assigns.mode, new_color, last_color) do
+      send_theme_preview(assigns.parent, new_color)
+    end
+
     {:noreply,
      socket
      |> assign(:changeset, changeset)
-     |> assign(:name, Changeset.get_field(changeset, :name))}
+     |> assign(:name, Changeset.get_field(changeset, :name))
+     |> assign(:last_preview_color, new_color)}
   end
 
   @impl true
@@ -104,13 +170,14 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       end
 
     case result do
-      {:ok, _sandbox} ->
-        msg = if mode == :new, do: "Sandbox created", else: "Sandbox updated"
+      {:ok, sandbox} ->
+        flash_message =
+          if mode == :new, do: "Sandbox created", else: "Sandbox updated"
 
         {:noreply,
          socket
-         |> put_flash(:info, msg)
-         |> push_navigate(to: return_to)}
+         |> put_flash(:info, flash_message)
+         |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply,
@@ -125,15 +192,26 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     assigns =
       assigns
       |> assign_new(:title, fn ->
-        if assigns.mode == :new, do: "Create a new sandbox", else: "Edit sandbox"
+        case assigns.mode do
+          :new -> "Create a new sandbox"
+          :edit -> "Edit sandbox"
+        end
       end)
       |> assign_new(:submit_label, fn ->
-        if assigns.mode == :new, do: "Create sandbox", else: "Save changes"
+        case assigns.mode do
+          :new -> "Create sandbox"
+          :edit -> "Save changes"
+        end
       end)
 
     ~H"""
-    <div class="text-xs">
-      <.modal show id={@id} width="xl:min-w-1/3 min-w-1/3 max-w-1/3 w-1/3">
+    <div id={@id}>
+      <.modal
+        show
+        id={"#{@id}-modal"}
+        width="w-full max-w-lg"
+        on_close={JS.push("close_modal", target: @myself)}
+      >
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">{@title}</span>
@@ -150,6 +228,14 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           </div>
         </:title>
 
+        <:subtitle :if={@mode == :new}>
+          <span class="text-sm text-slate-800">
+            This sandbox will be created under the
+            <span class="font-medium">{@parent.name}</span>
+            {if Project.sandbox?(@parent), do: "sandbox", else: "project"}.
+          </span>
+        </:subtitle>
+
         <.form
           :let={f}
           for={@changeset}
@@ -158,7 +244,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           phx-change="validate"
           phx-submit="save"
         >
-          <div class="container mx-auto space-y-6 bg-white">
+          <div class="space-y-6 bg-white">
             <div class="space-y-2">
               <.input
                 type="text"
@@ -167,25 +253,28 @@ defmodule LightningWeb.SandboxLive.FormComponent do
                 required
                 autocomplete="off"
                 placeholder="My Sandbox"
-                phx-debounce="250"
+                phx-debounce="300"
               />
               <.input type="hidden" field={f[:name]} />
 
               <small class={[
                 "block text-xs",
-                (to_string(f[:name].value) != "" && "text-gray-600") ||
-                  "text-gray-400"
+                if(to_string(f[:name].value) != "",
+                  do: "text-gray-600",
+                  else: "text-gray-400"
+                )
               ]}>
-                {if @mode == :new,
-                  do: "Your sandbox will be named",
-                  else: "The sandbox will be named"}
+                {case @mode do
+                  :new -> "Your sandbox will be named"
+                  :edit -> "The sandbox will be named"
+                end}
                 <%= if to_string(f[:name].value) != "" do %>
-                  <span class="ml-1 rounded-md border border-slate-300 bg-yellow-100 p-1 font-mono">
+                  <span class="ml-1 rounded-md border border-slate-300 bg-yellow-100 p-1 font-mono text-xs">
                     <%= @name %>
                   </span>.
                 <% else %>
-                  <span class="ml-1 rounded-md border border-slate-200 bg-gray-50 p-1 font-mono">
-                    e.g. my-sandbox
+                  <span class="ml-1 rounded-md border border-slate-200 bg-gray-50 p-1 font-mono text-xs">
+                    my-sandbox
                   </span>.
                 <% end %>
               </small>
@@ -199,7 +288,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
               autocomplete="off"
             />
 
-            <Components.color_palette id="sandbox-color" field={f[:color]} />
+            <Components.color_palette id="sandbox-color-picker" field={f[:color]} />
           </div>
 
           <.modal_footer>
