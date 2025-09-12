@@ -305,20 +305,20 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       socket = %Phoenix.LiveView.Socket{
         assigns: %{
           confirm_delete_sandbox: nil,
-          confirm_cs: :sentinel,
+          confirm_changeset: :sentinel,
           confirm_delete_input: ""
         }
       }
 
-      {:noreply, sock2} =
+      {:noreply, socket} =
         LightningWeb.SandboxLive.Index.handle_event(
           "confirm-delete-validate",
           %{"confirm" => %{}},
           socket
         )
 
-      assert sock2.assigns.confirm_cs == :sentinel
-      assert sock2.assigns.confirm_delete_input == ""
+      assert socket.assigns.confirm_changeset == :sentinel
+      assert socket.assigns.confirm_delete_input == ""
     end
 
     test "confirm-delete ignores event when no sandbox selected" do
@@ -327,7 +327,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           project: %Lightning.Projects.Project{id: Ecto.UUID.generate()},
           current_user: %Lightning.Accounts.User{id: Ecto.UUID.generate()},
           confirm_delete_sandbox: nil,
-          confirm_cs: :sentinel
+          confirm_changeset: :sentinel
         }
       }
 

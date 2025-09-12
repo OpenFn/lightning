@@ -37,7 +37,7 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:confirm_delete_open?, false)
     |> assign(:confirm_delete_sandbox, nil)
     |> assign(:confirm_delete_input, "")
-    |> assign(:confirm_cs, empty_confirm_changeset())
+    |> assign(:confirm_changeset, empty_confirm_changeset())
   end
 
   defp handle_sandbox_delete_result({:ok, _project}, sandbox, socket) do
@@ -102,7 +102,7 @@ defmodule LightningWeb.SandboxLive.Index do
          |> assign(:confirm_delete_open?, true)
          |> assign(:confirm_delete_sandbox, sandbox)
          |> assign(:confirm_delete_input, "")
-         |> assign(:confirm_cs, confirm_changeset(sandbox))}
+         |> assign(:confirm_changeset, confirm_changeset(sandbox))}
     end
   end
 
@@ -119,7 +119,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
         {:noreply,
          socket
-         |> assign(:confirm_cs, changeset)
+         |> assign(:confirm_changeset, changeset)
          |> assign(:confirm_delete_input, input_name)}
     end
   end
@@ -151,7 +151,7 @@ defmodule LightningWeb.SandboxLive.Index do
           updated_socket = handle_sandbox_delete_result(result, sandbox, socket)
           {:noreply, updated_socket}
         else
-          {:noreply, assign(socket, :confirm_cs, changeset)}
+          {:noreply, assign(socket, :confirm_changeset, changeset)}
         end
     end
   end
@@ -194,7 +194,7 @@ defmodule LightningWeb.SandboxLive.Index do
         <Components.confirm_delete_modal
           open?={@confirm_delete_open?}
           sandbox={@confirm_delete_sandbox}
-          confirm_cs={@confirm_cs}
+          changeset={@confirm_changeset}
         />
 
         <.live_component
