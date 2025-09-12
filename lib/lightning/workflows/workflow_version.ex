@@ -38,9 +38,5 @@ defmodule Lightning.Workflows.WorkflowVersion do
     |> validate_format(:hash, Hex.format())
     |> validate_inclusion(:source, @sources)
     |> foreign_key_constraint(:workflow_id)
-    |> unique_constraint(:hash,
-      name: :workflow_versions_workflow_id_hash_index,
-      message: "has already been taken"
-    )
   end
 end

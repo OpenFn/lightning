@@ -53,11 +53,11 @@ defmodule Lightning.Workflows.WorkflowVersionTest do
   end
 
   describe "uniqueness & timestamps" do
-    test "hash is unique per workflow but can repeat across workflows" do
+    test "hash not unique" do
       wf1 = insert(:workflow)
       wf2 = insert(:workflow)
 
-      # first insert ok
+      # same hash, same workflow -> allowed
       assert {:ok, _} =
                %WorkflowVersion{}
                |> WorkflowVersion.changeset(%{
@@ -67,8 +67,7 @@ defmodule Lightning.Workflows.WorkflowVersionTest do
                })
                |> Repo.insert()
 
-      # same workflow + same hash -> unique violation (named index)
-      assert {:error, cs} =
+      assert {:ok, _} =
                %WorkflowVersion{}
                |> WorkflowVersion.changeset(%{
                  hash: "aaaaaaaaaaaa",
@@ -76,8 +75,6 @@ defmodule Lightning.Workflows.WorkflowVersionTest do
                  workflow_id: wf1.id
                })
                |> Repo.insert()
-
-      assert "has already been taken" in errors_on(cs).hash
 
       # same hash, different workflow -> allowed
       assert {:ok, _} =
