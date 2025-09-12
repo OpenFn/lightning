@@ -519,7 +519,7 @@ defmodule Lightning.Projects.Sandboxes do
   def update_sandbox(%Project{} = parent, %User{} = actor, sandbox_id, attrs)
       when is_binary(sandbox_id) and is_map(attrs) do
     case Lightning.Projects.get_project(sandbox_id) do
-      %Project{} = sb -> update_sandbox(parent, actor, sb, attrs)
+      %Project{} = sandbox -> update_sandbox(parent, actor, sandbox, attrs)
       nil -> {:error, :not_found}
     end
   end
@@ -546,7 +546,7 @@ defmodule Lightning.Projects.Sandboxes do
   def delete_sandbox(%Project{} = parent, %User{} = actor, sandbox_id)
       when is_binary(sandbox_id) do
     case Lightning.Projects.get_project(sandbox_id) do
-      %Project{} = sb -> delete_sandbox(parent, actor, sb)
+      %Project{} = sandbox -> delete_sandbox(parent, actor, sandbox)
       nil -> {:error, :not_found}
     end
   end

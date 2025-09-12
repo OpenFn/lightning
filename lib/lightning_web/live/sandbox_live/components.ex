@@ -96,11 +96,11 @@ defmodule LightningWeb.SandboxLive.Components do
 
   attr :open?, :boolean, required: true
   attr :sandbox, Project, default: nil
-  attr :confirm_cs, :any, required: true
+  attr :changeset, :any, required: true
 
   def confirm_delete_modal(assigns) do
     assigns =
-      assign(assigns, :confirm_form, to_form(assigns.confirm_cs, as: :confirm))
+      assign(assigns, :confirm_form, to_form(assigns.changeset, as: :confirm))
 
     ~H"""
     <.modal
@@ -156,9 +156,9 @@ defmodule LightningWeb.SandboxLive.Components do
             <.button
               theme="danger"
               type="submit"
-              disabled={is_nil(@sandbox) || !@confirm_cs.valid?}
+              disabled={is_nil(@sandbox) || !@changeset.valid?}
               tooltip={
-                (!@confirm_cs.valid? && "Type the sandbox name to enable") || nil
+                (!@changeset.valid? && "Type the sandbox name to enable") || nil
               }
             >
               Delete Sandbox
