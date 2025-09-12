@@ -1250,7 +1250,11 @@ defmodule Lightning.Projects do
   """
   @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
   def list_sandboxes(parent_id) when is_binary(parent_id) do
-    from(p in Project, where: p.parent_id == ^parent_id, order_by: p.name)
+    from(p in Project,
+      where: p.parent_id == ^parent_id,
+      order_by: p.name,
+      preload: :parent
+    )
     |> Repo.all()
   end
 
