@@ -61,7 +61,8 @@ defmodule Lightning.Projects do
       from(p in Project,
         left_join: w in assoc(p, :workflows),
         left_join: pu_all in assoc(p, :project_users),
-        where: p.allow_support_access and is_nil(w.deleted_at),
+        where:
+          p.allow_support_access and is_nil(w.deleted_at) and is_nil(p.parent_id),
         group_by: [p.id],
         select: %ProjectOverviewRow{
           id: p.id,
@@ -101,7 +102,8 @@ defmodule Lightning.Projects do
       left_join: w in assoc(p, :workflows),
       inner_join: pu in assoc(p, :project_users),
       left_join: pu_all in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(w.deleted_at),
+      where:
+        pu.user_id == ^user_id and is_nil(w.deleted_at) and is_nil(p.parent_id),
       group_by: [p.id, pu.role],
       select: %ProjectOverviewRow{
         id: p.id,
@@ -199,22 +201,38 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Gets a single project.
+  Fetches a project by id (root **or** sandbox) and preloads its direct `:parent`.
 
-  Raises `Ecto.NoResultsError` if the Project does not exist.
-
-  ## Examples
-
-      iex> get_project!(123)
-      %Project{}
-
-      iex> get_project!(456)
-      ** (Ecto.NoResultsError)
-
+  Raises `Ecto.NoResultsError` if no project with the given id exists.
   """
-  def get_project!(id), do: Repo.get!(Project, id)
+  @spec get_project!(Ecto.UUID.t()) :: Project.t()
+  def get_project!(id), do: Repo.get!(Project, id) |> Repo.preload(:parent)
 
-  def get_project(id), do: Repo.get(Project, id)
+  @doc """
+  Fetches a project by id (root **or** sandbox) and preloads its direct `:parent`.
+
+  Returns `nil` if no project with the given id exists.
+  """
+  @spec get_project(Ecto.UUID.t()) :: Project.t() | nil
+  def get_project(id) do
+    case Repo.get(Project, id) do
+      nil -> nil
+      p -> Repo.preload(p, :parent)
+    end
+  end
+
+  @doc """
+  Returns the **root ancestor** of a project by walking up `parent_id` links.
+
+  Supports arbitrarily deep nesting. (Assumes the parent chain is well-formed.)
+  """
+  @spec root_of(Project.t()) :: Project.t()
+  def root_of(%Project{} = p) do
+    case p.parent_id do
+      nil -> p
+      pid -> root_of(Repo.get!(Project, pid))
+    end
+  end
 
   @doc """
   Should input or output dataclips be saved for runs in this project?
@@ -659,12 +677,15 @@ defmodule Lightning.Projects do
   ## Returns
     - An Ecto queryable struct to fetch projects.
   """
-  @spec projects_for_user_query(user :: User.t()) ::
-          Ecto.Queryable.t()
+  @spec projects_for_user_query(user :: User.t()) :: Ecto.Queryable.t()
   def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion)
+      where:
+        pu.user_id == ^user_id and
+          is_nil(p.scheduled_deletion) and
+          is_nil(p.parent_id),
+      order_by: p.name
     )
   end
 
@@ -681,7 +702,10 @@ defmodule Lightning.Projects do
   @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
   def get_projects_for_user(%User{support_user: true} = user) do
     from(p in Project,
-      where: p.allow_support_access and is_nil(p.scheduled_deletion)
+      where:
+        p.allow_support_access and
+          is_nil(p.scheduled_deletion) and
+          is_nil(p.parent_id)
     )
     |> union(^projects_for_user_query(user))
     |> Repo.all()
