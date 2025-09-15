@@ -1283,20 +1283,87 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns a read-only “workspace” view for a parent project: the parent itself
-  plus all of its direct sandboxes (unique set, no preloads).
+  Returns all projects in a workspace hierarchy - root plus ALL descendant sandboxes
+  at any depth level.
 
-  Use this for nav/filters where showing the parent alongside its sandboxes is needed.
-
-  ## Notes
-
-  * Order is not guaranteed. Sort the resulting list if a specific order is needed.
-  * Not recursive. If we later model deeper hierarchies, use a recursive CTE.
+  Uses a recursive CTE to traverse the entire project tree from root to leaves.
   """
-  @spec get_workspace_projects(Project.t()) :: [Project.t()]
-  def get_workspace_projects(%Project{id: parent_id} = parent) do
-    ([parent] ++ list_sandboxes(parent_id))
-    |> Enum.uniq_by(& &1.id)
+  @spec list_workspace_projects(Ecto.UUID.t()) :: %{
+          root: Project.t(),
+          descendants: [Project.t()]
+        }
+  def list_workspace_projects(project_id) when is_binary(project_id) do
+    project = get_project!(project_id)
+    root = root_of(project)
+
+    descendants_query =
+      from(p in Project,
+        where: p.parent_id == ^root.id,
+        select: %{id: p.id, parent_id: p.parent_id, level: 1}
+      )
+
+    recursive_query =
+      from(p in Project,
+        join: d in "descendants",
+        on: p.parent_id == d.id,
+        select: %{id: p.id, parent_id: p.parent_id, level: d.level + 1}
+      )
+
+    descendants =
+      Project
+      |> with_cte("descendants", as: ^descendants_query)
+      |> recursive_ctes(true)
+      |> with_cte("descendants",
+        as: ^union_all(descendants_query, ^recursive_query)
+      )
+      |> join(:inner, [p], d in "descendants", on: p.id == d.id)
+      |> order_by([p, d], asc: d.level, asc: p.name)
+      |> preload(:parent)
+      |> Repo.all()
+
+    %{root: root, descendants: descendants}
+  end
+
+  @spec list_workspace_projects(Project.t()) :: [Project.t()]
+  def list_workspace_projects(%Project{id: project_id}) do
+    list_workspace_projects(project_id)
+  end
+
+  @doc """
+  Returns the count of all projects in a workspace (root + all descendants).
+  """
+  @spec count_workspace_projects(Ecto.UUID.t()) :: integer()
+  def count_workspace_projects(project_id) when is_binary(project_id) do
+    project = get_project!(project_id)
+    root = root_of(project)
+
+    # Count descendants using recursive CTE
+    descendants_query =
+      from(p in Project,
+        where: p.parent_id == ^root.id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    recursive_query =
+      from(p in Project,
+        join: d in "descendants",
+        on: p.parent_id == d.id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    descendants_count =
+      Project
+      |> with_cte("descendants", as: ^descendants_query)
+      |> recursive_ctes(true)
+      |> with_cte("descendants",
+        as: ^union_all(descendants_query, ^recursive_query)
+      )
+      |> join(:inner, [p], d in "descendants", on: p.id == d.id)
+      |> select([p], count(p.id))
+      |> Repo.one()
+
+    # Root + descendants
+    1 + descendants_count
   end
 
   @doc """
