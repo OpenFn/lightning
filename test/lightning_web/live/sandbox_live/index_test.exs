@@ -64,7 +64,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Repo.delete!(sb2)
 
       html2 = render_patch(view, ~p"/projects/#{parent.id}/sandboxes")
-      assert html2 =~ "No sandboxes found."
+      assert html2 =~ "No sandboxes found"
     end
 
     test "navigates to new sandbox modal from header button", %{
@@ -137,9 +137,13 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         {:ok, %Project{}}
       end)
 
-      Mimic.expect(Lightning.Projects, :list_sandboxes, fn id ->
+      Mimic.expect(Lightning.Projects, :list_workspace_projects, fn id ->
         assert id == parent.id
-        [sb2]
+
+        %{
+          root: parent,
+          descendants: [sb2]
+        }
       end)
 
       Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
@@ -177,7 +181,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb2.name})
         |> render_submit()
 
-      assert html =~ "You don’t have permission to delete this sandbox"
+      assert html =~ "You don&#39;t have permission to delete this sandbox"
 
       Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
                                                                      user_arg,

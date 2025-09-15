@@ -14,7 +14,7 @@ defmodule LightningWeb.Components.Menu do
       <span class="inline-block align-middle">Workflows</span>
     </.menu_item>
 
-    <%= if @current_user.preferences["experimental_features"] do %>
+    <%= if Lightning.Accounts.experimental_features_enabled?(@current_user) do %>
       <.menu_item
         to={~p"/projects/#{@project_id}/sandboxes"}
         active={@active_menu_item == :sandboxes}

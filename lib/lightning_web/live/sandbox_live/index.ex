@@ -145,15 +145,13 @@ defmodule LightningWeb.SandboxLive.Index do
         changeset = confirm_changeset(sandbox, confirm_params)
 
         if changeset.valid? do
-          result =
-            Lightning.Projects.delete_sandbox(
-              parent_project,
-              current_user,
-              sandbox
-            )
-
-          updated_socket = handle_sandbox_delete_result(result, sandbox, socket)
-          {:noreply, updated_socket}
+          {:noreply,
+           Lightning.Projects.delete_sandbox(
+             parent_project,
+             current_user,
+             sandbox
+           )
+           |> handle_sandbox_delete_result(sandbox, socket)}
         else
           {:noreply, assign(socket, :confirm_changeset, changeset)}
         end
