@@ -14,7 +14,8 @@ defmodule LightningWeb.Components.MenuTest do
         active_menu_item: :settings,
         project: %{id: project_id, name: "project-1"},
         projects: [],
-        current_sandbox: nil
+        current_sandbox: nil,
+        current_user: %Lightning.Accounts.User{}
       }
 
       element =
@@ -40,7 +41,8 @@ defmodule LightningWeb.Components.MenuTest do
             active_menu_item: :settings,
             project: %{id: project_id, name: "project-1"},
             projects: [],
-            current_sandbox: nil
+            current_sandbox: nil,
+            current_user: %Lightning.Accounts.User{}
           }
         )
 

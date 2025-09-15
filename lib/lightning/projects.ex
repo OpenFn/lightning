@@ -1330,43 +1330,6 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns the count of all projects in a workspace (root + all descendants).
-  """
-  @spec count_workspace_projects(Ecto.UUID.t()) :: integer()
-  def count_workspace_projects(project_id) when is_binary(project_id) do
-    project = get_project!(project_id)
-    root = root_of(project)
-
-    # Count descendants using recursive CTE
-    descendants_query =
-      from(p in Project,
-        where: p.parent_id == ^root.id,
-        select: %{id: p.id, parent_id: p.parent_id}
-      )
-
-    recursive_query =
-      from(p in Project,
-        join: d in "descendants",
-        on: p.parent_id == d.id,
-        select: %{id: p.id, parent_id: p.parent_id}
-      )
-
-    descendants_count =
-      Project
-      |> with_cte("descendants", as: ^descendants_query)
-      |> recursive_ctes(true)
-      |> with_cte("descendants",
-        as: ^union_all(descendants_query, ^recursive_query)
-      )
-      |> join(:inner, [p], d in "descendants", on: p.id == d.id)
-      |> select([p], count(p.id))
-      |> Repo.one()
-
-    # Root + descendants
-    1 + descendants_count
-  end
-
-  @doc """
   Computes a deterministic 12-hex “project head” hash from the *latest* version
   hash per workflow.
 
