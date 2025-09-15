@@ -282,16 +282,22 @@ export default function MiniHistory({
                             {truncateUid(run.id)}
                           </button>
                           <span className="text-xs text-gray-800">&bull;</span>
-                          <span className="text-gray-500">
-                            {run.started_at
-                              ? formatRelative(new Date(run.started_at), now, {
-                                  locale: relativeLocale,
-                                })
-                              : formatRelative(new Date(run.finished_at), now, {
-                                  locale: relativeLocale,
-                                })}
-                          </span>
-                          <span className="text-xs text-gray-800">&bull;</span>
+                          {(run.started_at || run.finished_at) && (
+                            <>
+                              <span className="text-gray-500">
+                                {formatRelative(
+                                  new Date(run.started_at || run.finished_at),
+                                  now,
+                                  {
+                                    locale: relativeLocale,
+                                  }
+                                )}
+                                <span className="text-xs text-gray-800">
+                                  &bull;
+                                </span>
+                              </span>
+                            </>
+                          )}
                           <span className="text-gray-400 text-xs">
                             {!run.started_at || !run.finished_at
                               ? 'Not started'
