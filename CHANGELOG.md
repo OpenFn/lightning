@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Generate workflow version on save
+  [#3452](https://github.com/OpenFn/lightning/issues/3452)
+
 ### Changed
 
 ### Fixed

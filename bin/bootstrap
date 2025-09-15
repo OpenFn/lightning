@@ -37,6 +37,18 @@ if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
         exit 1
       fi
     fi
+
+    if brew list cmake &>/dev/null; then
+      echo "✅ cmake is installed"
+    else
+      echo "❌ cmake is not installed"
+      if brew install cmake; then
+        echo "✅ cmake has been installed"
+      else
+        echo "❌ Failed to install cmake"
+        exit 1
+      fi
+    fi
   else
     echo "❌ Homebrew is not installed"
     exit 1
