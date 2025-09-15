@@ -298,11 +298,11 @@ export default function MiniHistory({
                               </span>
                             </>
                           )}
-                          <span className="text-gray-400 text-xs">
-                            {!run.started_at || !run.finished_at
-                              ? 'Not started'
-                              : duration(run.started_at, run.finished_at)}
-                          </span>
+                          {run.started_at && run.finished_at && (
+                            <span className="text-gray-400 text-xs">
+                              {duration(run.started_at, run.finished_at)}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1">
                           <StatePill state={run.state} mini={true} />
