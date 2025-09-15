@@ -28,17 +28,11 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   attr :project, Project, required: true
-  attr :count, :integer, required: true
 
   def header(assigns) do
     ~H"""
     <div class="mb-6 flex items-center justify-between">
-      <h3 class="text-3xl font-bold">
-        Sandboxes
-        <span class="text-base font-normal text-gray-500">
-          ({@count})
-        </span>
-      </h3>
+      <h3 class="text-3xl font-bold">Sandboxes</h3>
       <.create_button project={@project} />
     </div>
     """
@@ -60,37 +54,88 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
-  attr :project, Project, required: true
+  attr :root_project, Project, default: nil
   attr :sandboxes, :list, required: true
+  attr :project, Project, required: true
   attr :current_sandbox, Project, default: nil
 
-  def list(assigns) do
+  def workspace_list(assigns) do
     ~H"""
-    <%= if Enum.empty?(@sandboxes) do %>
-      <div class="text-gray-500 text-center py-12">
-        <div class="space-y-4">
-          <div class="text-lg font-medium">No sandboxes found</div>
-          <div>
-            <.link
-              navigate={~p"/projects/#{@project.id}/sandboxes/new"}
-              class="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Create your first sandbox
-            </.link>
-            to start experimenting.
-          </div>
-        </div>
-      </div>
-    <% else %>
-      <div class="space-y-3">
-        <.sandbox_card
-          :for={sandbox <- @sandboxes}
-          project={@project}
-          sandbox={sandbox}
+    <div class="space-y-6">
+      <div>
+        <.root_project_card
+          root_project={@root_project}
           current_sandbox={@current_sandbox}
         />
       </div>
-    <% end %>
+      <div>
+        <%= if Enum.empty?(@sandboxes) do %>
+          <div class="text-gray-500 text-center py-8 rounded-lg border-2 border-dashed border-gray-200">
+            <div class="space-y-3">
+              <div class="text-base font-medium">No sandboxes found</div>
+              <div class="text-sm">
+                <.link
+                  navigate={~p"/projects/#{@project.id}/sandboxes/new"}
+                  class="text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Create your first sandbox
+                </.link>
+                to start experimenting.
+              </div>
+            </div>
+          </div>
+        <% else %>
+          <div class="space-y-3">
+            <.sandbox_card
+              :for={sandbox <- @sandboxes}
+              project={@project}
+              sandbox={sandbox}
+              current_sandbox={@current_sandbox}
+            />
+          </div>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  attr :root_project, Project, required: true
+  attr :current_sandbox, Project, default: nil
+
+  defp root_project_card(assigns) do
+    assigns = assign(assigns, :is_current, is_nil(assigns.current_sandbox))
+
+    ~H"""
+    <div
+      class="group block cursor-pointer rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-xs bg-white transition-all duration-200 overflow-hidden"
+      phx-click={JS.navigate(~p"/projects/#{@root_project.id}/w")}
+      role="button"
+      tabindex="0"
+    >
+      <div class="flex items-stretch">
+        <div class="w-3 flex-shrink-0 bg-indigo-600"></div>
+
+        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-1">
+              <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
+                {@root_project.name}
+              </h3>
+
+              <.active_indicator
+                :if={@is_current}
+                id={"active-indicator-#{@root_project.id}"}
+              />
+            </div>
+
+            <.environment_badge
+              :if={has_environment?(@root_project)}
+              env={@root_project.env}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
     """
   end
 
@@ -195,23 +240,27 @@ defmodule LightningWeb.SandboxLive.Components do
       tabindex="0"
     >
       <div class="flex items-stretch">
-        <% sandbox_color = @sandbox.color || "#9ca3af" %>
-        <div class="w-3 flex-shrink-0" style={"background-color: #{sandbox_color};"}>
+        <div
+          class="w-3 flex-shrink-0"
+          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+        >
         </div>
-
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-1">
               <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
                 {@sandbox.name}
               </h3>
-
-              <.active_indicator :if={@is_current} />
+              <.environment_badge
+                :if={has_environment?(@sandbox)}
+                env={@sandbox.env}
+              />
+              <.active_indicator
+                :if={@is_current}
+                id={"active-indicator-#{@sandbox.id}"}
+              />
             </div>
-
-            <.environment_badge :if={has_environment?(@sandbox)} env={@sandbox.env} />
           </div>
-
           <.sandbox_actions sandbox={@sandbox} project={@project} />
         </div>
       </div>
@@ -219,11 +268,15 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
+  attr :id, :string, required: true
+
   defp active_indicator(assigns) do
     ~H"""
     <span
+      id={@id}
       class="relative inline-flex items-center justify-center flex-shrink-0"
-      title="Currently active sandbox"
+      phx-hook="Tooltip"
+      aria-label="Currently active project"
     >
       <span class="absolute w-4 h-4 bg-green-400 rounded-full animate-pulse opacity-75">
       </span>
@@ -236,7 +289,7 @@ defmodule LightningWeb.SandboxLive.Components do
 
   defp environment_badge(assigns) do
     ~H"""
-    <span class="inline-block px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full truncate max-w-32">
+    <span class="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full truncate max-w-32">
       {@env}
     </span>
     """
