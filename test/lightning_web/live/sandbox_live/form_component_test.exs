@@ -39,14 +39,13 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
           {:error, changeset}
         else
-          {:ok,
-           %Lightning.Projects.Project{
-             id: Ecto.UUID.generate(),
-             parent_id: parent_arg.id,
-             name: name,
-             env: env,
-             color: color
-           }}
+          Lightning.Repo.insert(%Lightning.Projects.Project{
+            id: Ecto.UUID.generate(),
+            parent_id: parent_arg.id,
+            name: name,
+            env: env,
+            color: color
+          })
         end
       end)
 
@@ -64,11 +63,20 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
         "project" => %{"raw_name" => "sb-1", "color" => "#abcdef"}
       })
 
-      assert view
-             |> element("#sandbox-form-new")
-             |> render_submit(%{
-               "project" => %{"raw_name" => "sb-1", "color" => "#abcdef"}
-             }) =~ "Sandbox created"
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "sb-1", "color" => "#abcdef"}
+      })
+      |> follow_redirect(conn)
+
+      sandbox =
+        Lightning.Repo.get_by(Lightning.Projects.Project, parent_id: parent.id)
+
+      flash =
+        assert_redirected(view, ~p"/projects/#{sandbox.id}/w")
+
+      assert flash["info"] == "Sandbox created"
     end
 
     test "creating sandbox with blank name disables submit and keeps placeholder",
