@@ -2109,17 +2109,19 @@ defmodule Lightning.ProjectsTest do
       assert sandbox.name == "sandbox-1"
     end
 
-    test "get_workspace_projects/1 returns parent + its direct sandboxes (unique set)" do
+    test "lisr_workspace_project/1 returns parent + its direct sandboxes (unique set)" do
       parent = insert(:project, name: "root")
       c1 = insert(:project, name: "s-a", parent: parent)
       c2 = insert(:project, name: "s-b", parent: parent)
       _unrelated = insert(:project, name: "someone-else")
 
-      got = Projects.get_workspace_projects(parent)
+      %{root: root_project, descendants: sandboxes} =
+        Projects.list_workspace_projects(parent)
 
       # Ensure it contains exactly parent + children (order is not guaranteed)
-      expect_ids = MapSet.new([parent.id, c1.id, c2.id])
-      assert MapSet.new(Enum.map(got, & &1.id)) == expect_ids
+      expected_sandboxes_ids = MapSet.new([c1.id, c2.id])
+      assert MapSet.new(Enum.map(sandboxes, & &1.id)) == expected_sandboxes_ids
+      assert root_project.id == parent.id
     end
   end
 
