@@ -26,10 +26,14 @@ defmodule LightningWeb.SandboxLive.Index do
     Changeset.cast({%{}, @empty_changeset_types}, %{}, [:name])
   end
 
-  defp load_sandboxes(%{assigns: %{project: project}} = socket) do
-    project_id = project.parent_id || project.id
-    sandboxes = Projects.list_sandboxes(project_id)
-    assign(socket, :sandboxes, sandboxes)
+  defp load_workspace_projects(%{assigns: %{project: project}} = socket) do
+    %{root: root_project, descendants: descendants} =
+      Projects.list_workspace_projects(project.id)
+
+    socket
+    |> assign(:workspace_projects, [root_project | descendants])
+    |> assign(:root_project, root_project)
+    |> assign(:sandboxes, descendants)
   end
 
   defp reset_delete_modal_state(socket) do
@@ -44,7 +48,7 @@ defmodule LightningWeb.SandboxLive.Index do
     socket
     |> put_flash(:info, "Sandbox #{sandbox.name} deleted")
     |> reset_delete_modal_state()
-    |> load_sandboxes()
+    |> load_workspace_projects()
   end
 
   defp handle_sandbox_delete_result({:error, :unauthorized}, _sandbox, socket) do
@@ -71,23 +75,23 @@ defmodule LightningWeb.SandboxLive.Index do
      socket
      |> assign(:active_menu_item, :sandboxes)
      |> reset_delete_modal_state()
-     |> load_sandboxes()}
+     |> load_workspace_projects()}
   end
 
   @impl true
   def handle_params(
         %{"id" => id},
         _uri,
-        %{assigns: %{sandboxes: sandboxes}} = socket
+        %{assigns: %{workspace_projects: workspace_projects}} = socket
       )
       when socket.assigns.live_action == :edit do
-    editing_sandbox = Enum.find(sandboxes, &(&1.id == id))
+    editing_sandbox = Enum.find(workspace_projects, &(&1.id == id))
 
     {:noreply, assign(socket, :editing_sandbox, editing_sandbox)}
   end
 
   def handle_params(_params, _uri, socket) do
-    {:noreply, load_sandboxes(socket)}
+    {:noreply, load_workspace_projects(socket)}
   end
 
   @impl true
@@ -183,9 +187,10 @@ defmodule LightningWeb.SandboxLive.Index do
       </:header>
 
       <LayoutComponents.centered>
-        <Components.header project={@project} count={length(@sandboxes)} />
+        <Components.header project={@project} />
 
-        <Components.list
+        <Components.workspace_list
+          root_project={@root_project}
           sandboxes={@sandboxes}
           project={@project}
           current_sandbox={@current_sandbox}
