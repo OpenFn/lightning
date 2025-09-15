@@ -13,7 +13,8 @@ defmodule LightningWeb.Components.MenuTest do
       assigns = %{
         active_menu_item: :settings,
         project: %{id: project_id, name: "project-1"},
-        projects: []
+        projects: [],
+        current_sandbox: nil
       }
 
       element =
@@ -38,7 +39,8 @@ defmodule LightningWeb.Components.MenuTest do
           %{
             active_menu_item: :settings,
             project: %{id: project_id, name: "project-1"},
-            projects: []
+            projects: [],
+            current_sandbox: nil
           }
         )
 
