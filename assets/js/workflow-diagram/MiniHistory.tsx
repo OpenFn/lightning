@@ -281,27 +281,29 @@ export default function MiniHistory({
                           >
                             {truncateUid(run.id)}
                           </button>
-                          <span className="text-xs text-gray-800">&bull;</span>
                           {(run.started_at || run.finished_at) && (
                             <>
-                              <span className="text-gray-500">
-                                {formatRelative(
-                                  new Date(run.started_at || run.finished_at),
-                                  now,
-                                  {
-                                    locale: relativeLocale,
-                                  }
-                                )}
-                                <span className="text-xs text-gray-800">
-                                  &bull;
-                                </span>
+                              <span className="text-xs text-gray-800">
+                                &bull;
                               </span>
+                              {formatRelative(
+                                new Date(run.started_at || run.finished_at),
+                                now,
+                                {
+                                  locale: relativeLocale,
+                                }
+                              )}
                             </>
                           )}
                           {run.started_at && run.finished_at && (
-                            <span className="text-gray-400 text-xs">
-                              {duration(run.started_at, run.finished_at)}
-                            </span>
+                            <>
+                              <span className="text-xs text-gray-800">
+                                &bull;
+                              </span>
+                              <span className="text-gray-400 text-xs">
+                                {duration(run.started_at, run.finished_at)}
+                              </span>
+                            </>
                           )}
                         </div>
                         <div className="flex items-center gap-1">
