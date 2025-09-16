@@ -207,7 +207,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       <.modal
         show
         id={"#{@id}-modal"}
-        width="w-full max-w-lg"
+        width="max-w-28rem"
         on_close={JS.push("close_modal", target: @myself)}
       >
         <:title>

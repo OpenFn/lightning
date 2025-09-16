@@ -5,22 +5,20 @@ defmodule LightningWeb.SandboxLive.Components do
   alias Phoenix.LiveView.JS
 
   @color_palette [
-    {"#E64A2E", "Tomato"},
-    {"#E33D63", "Crimson"},
-    {"#8E3FB1", "Purple"},
-    {"#5E3FB8", "Deep Purple"},
-    {"#4A55C5", "Indigo"},
-    {"#5AA1F0", "Azure"},
-    {"#67C1E2", "Sky"},
-    {"#4AC1CE", "Teal"},
-    {"#2E9B92", "Sea Green"},
-    {"#56B15A", "Green"},
-    {"#9AD04E", "Lime"},
-    {"#C9E145", "Chartreuse"},
-    {"#FFF35A", "Yellow"},
-    {"#F4C644", "Amber"},
-    {"#F39B33", "Orange"},
-    {"#F0682E", "Vermilion"}
+    {"#F44336", "Tomato"},
+    {"#E91E63", "Crimson"},
+    {"#9C27B0", "Purple"},
+    {"#673AB7", "Deep Purple"},
+    {"#3F51B5", "Indigo"},
+    {"#1E88E5", "Azure"},
+    {"#03A9F4", "Sky"},
+    {"#00BCD4", "Teal"},
+    {"#009688", "Sea Green"},
+    {"#4CAF50", "Green"},
+    {"#8BC34A", "Lime"},
+    {"#FDD835", "Yellow"},
+    {"#FFC107", "Amber"},
+    {"#FF9800", "Orange"}
   ]
 
   def color_palette_hex_colors do
@@ -404,7 +402,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div class="space-y-3">
         <div
           role="radiogroup"
-          class="grid grid-cols-4 sm:grid-cols-8 gap-0.5 select-none w-fit"
+          class="grid grid-cols-4 sm:grid-cols-7 gap-0.5 select-none w-fit"
           aria-label="Choose a color for your sandbox"
         >
           <.color_option
