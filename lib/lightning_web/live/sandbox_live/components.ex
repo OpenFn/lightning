@@ -274,11 +274,11 @@ defmodule LightningWeb.SandboxLive.Components do
       id={@id}
       class="relative inline-flex items-center justify-center flex-shrink-0"
       phx-hook="Tooltip"
-      aria-label="Currently active project"
+      aria-label="This is the currently active version of this project"
     >
-      <span class="absolute w-4 h-4 bg-green-400 rounded-full animate-pulse opacity-75">
+      <span class="ml-4 border-solid border-1 border-slate-500 bg-white rounded-xs text-xs px-2 py-1">
+      ACTIVE
       </span>
-      <span class="relative w-2.5 h-2.5 bg-green-500 rounded-full"></span>
     </span>
     """
   end
