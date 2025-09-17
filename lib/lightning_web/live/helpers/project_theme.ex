@@ -7,6 +7,7 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
   alias Lightning.Projects.Project
 
   @stops [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
+  @openfn_blue "#6366f1"
 
   @doc """
   If the project is a sandbox with a color, returns a string of CSS custom
@@ -54,8 +55,20 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
   end
 
   defp build_scale(hex) do
-    {h, s, _l} = to_hsl(hex)
+    try do
+      %{h: h, s: s, l: _l} = Chameleon.convert(hex, Chameleon.HSL)
+      build_scale_with_hsl(h, s)
+    rescue
+      _ -> build_default_scale()
+    end
+  end
 
+  defp build_default_scale do
+    %{h: h, s: s, l: _l} = Chameleon.convert(@openfn_blue, Chameleon.HSL)
+    build_scale_with_hsl(h, s)
+  end
+
+  defp build_scale_with_hsl(h, s) do
     targets = %{
       50 => 0.98,
       100 => 0.95,
@@ -70,107 +83,20 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
       950 => 0.20
     }
 
-    Enum.reduce(targets, %{}, fn {stop, lt}, acc ->
-      s_adj =
+    Enum.reduce(targets, %{}, fn {stop, target_lightness}, acc ->
+      adjusted_saturation =
         cond do
-          lt >= 0.9 -> s * 0.75
-          lt >= 0.7 -> s * 0.9
-          lt >= 0.5 -> s
-          true -> min(1.0, s * 1.05)
+          target_lightness >= 0.9 -> s * 0.75
+          target_lightness >= 0.7 -> s * 0.9
+          target_lightness >= 0.5 -> s
+          true -> min(100, s * 1.05)
         end
 
-      Map.put(acc, stop, from_hsl(h, s_adj, lt))
+      color =
+        %Chameleon.HSL{h: h, s: adjusted_saturation, l: target_lightness * 100}
+        |> Chameleon.convert(Chameleon.Hex)
+
+      Map.put(acc, stop, "##{color.hex}")
     end)
   end
-
-  defp to_hsl(hex) do
-    {r, g, b} = hex_to_rgb(hex)
-    {h, s, l} = rgb_to_hsl(r / 255, g / 255, b / 255)
-    {h, s, l}
-  end
-
-  defp from_hsl(h, s, l) do
-    {r, g, b} = hsl_to_rgb(h, s, l)
-    rgb_to_hex({round(r * 255), round(g * 255), round(b * 255)})
-  end
-
-  defp hex_to_rgb("#" <> hex) do
-    case String.length(hex) do
-      3 ->
-        <<r::binary-size(1), g::binary-size(1), b::binary-size(1)>> = hex
-        {dup(r), dup(g), dup(b)}
-
-      6 ->
-        <<r::binary-size(2), g::binary-size(2), b::binary-size(2)>> = hex
-
-        {String.to_integer(r, 16), String.to_integer(g, 16),
-         String.to_integer(b, 16)}
-
-      8 ->
-        <<r::binary-size(2), g::binary-size(2), b::binary-size(2),
-          _a::binary-size(2)>> = hex
-
-        {String.to_integer(r, 16), String.to_integer(g, 16),
-         String.to_integer(b, 16)}
-
-      _ ->
-        {99, 102, 241}
-    end
-  end
-
-  defp rgb_to_hex({r, g, b}),
-    do:
-      "#" <>
-        for(
-          c <- [r, g, b],
-          into: "",
-          do: Integer.to_string(c, 16) |> String.pad_leading(2, "0")
-        )
-
-  defp dup(<<x>>), do: String.to_integer(<<x, x>>, 16)
-
-  defp rgb_to_hsl(r, g, b) do
-    max = max(r, max(g, b))
-    min = min(r, min(g, b))
-    l = (max + min) / 2
-    d = max - min
-
-    {h, s} =
-      if d == 0 do
-        {0.0, 0.0}
-      else
-        s = d / (1 - abs(2 * l - 1))
-
-        h =
-          cond do
-            max == r -> 60 * remf((g - b) / d, 6.0)
-            max == g -> 60 * ((b - r) / d + 2)
-            true -> 60 * ((r - g) / d + 4)
-          end
-
-        {h, s}
-      end
-
-    {remf(h, 360.0), s, l}
-  end
-
-  defp hsl_to_rgb(h, s, l) do
-    c = (1 - abs(2 * l - 1)) * s
-    x = c * (1 - abs(remf(h / 60, 2.0) - 1))
-    m = l - c / 2
-
-    {r1, g1, b1} =
-      cond do
-        h < 60 -> {c, x, 0}
-        h < 120 -> {x, c, 0}
-        h < 180 -> {0, c, x}
-        h < 240 -> {0, x, c}
-        h < 300 -> {x, 0, c}
-        true -> {c, 0, x}
-      end
-
-    {r1 + m, g1 + m, b1 + m}
-  end
-
-  defp remf(a, b), do: a - b * Float.floor(a / b)
 end
