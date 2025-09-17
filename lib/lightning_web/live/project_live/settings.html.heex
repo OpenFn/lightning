@@ -220,7 +220,8 @@
                   Routes.project_project_settings_path(
                     @socket,
                     :delete,
-                    @project.id
+                    @project.id,
+                    if(@current_sandbox, do: @current_sandbox.name, else: "main")
                   )
                 }
               >

@@ -163,7 +163,7 @@ defmodule Lightning.Projects.Sandboxes do
           sandbox
 
         {:error, changeset} ->
-          {:error, changeset}
+          Repo.rollback(changeset)
       end
     end)
     |> case do

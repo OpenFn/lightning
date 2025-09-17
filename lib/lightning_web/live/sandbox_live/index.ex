@@ -69,6 +69,9 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:confirm_delete_open?, false)
   end
 
+  defp get_current_sandbox_name(%{current_sandbox: %{name: name}}), do: name
+  defp get_current_sandbox_name(_assigns), do: "main"
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
@@ -176,6 +179,8 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :sandbox_name, get_current_sandbox_name(assigns))
+
     ~H"""
     <LayoutComponents.page_content>
       <:header>
@@ -185,13 +190,14 @@ defmodule LightningWeb.SandboxLive.Index do
       </:header>
 
       <LayoutComponents.centered>
-        <Components.header project={@project} />
+        <Components.header project={@project} sandbox_name={@sandbox_name} />
 
         <Components.workspace_list
           root_project={@root_project}
           sandboxes={@sandboxes}
           project={@project}
           current_sandbox={@current_sandbox}
+          sandbox_name={@sandbox_name}
         />
 
         <Components.confirm_delete_modal
@@ -206,8 +212,8 @@ defmodule LightningWeb.SandboxLive.Index do
           id="sandbox-form-component-new"
           mode={:new}
           current_user={@current_user}
-          parent={@current_sandbox || @project}
-          return_to={nil}
+          parent={@project}
+          sandbox_name={@sandbox_name}
         />
 
         <.live_component
@@ -217,8 +223,8 @@ defmodule LightningWeb.SandboxLive.Index do
           mode={:edit}
           sandbox={@editing_sandbox}
           current_user={@current_user}
-          parent={@editing_sandbox.parent}
-          return_to={~p"/projects/#{(@current_sandbox || @project).id}/sandboxes"}
+          parent={@project}
+          sandbox_name={@sandbox_name}
         />
       </LayoutComponents.centered>
     </LayoutComponents.page_content>

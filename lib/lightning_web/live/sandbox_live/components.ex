@@ -28,17 +28,19 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   attr :project, Project, required: true
+  attr :sandbox_name, :string, required: true
 
   def header(assigns) do
     ~H"""
     <div class="mb-6 flex items-center justify-between">
       <h3 class="text-3xl font-bold">Sandboxes</h3>
-      <.create_button project={@project} />
+      <.create_button project={@project} sandbox_name={@sandbox_name} />
     </div>
     """
   end
 
   attr :project, Project, required: true
+  attr :sandbox_name, :string, required: true
 
   def create_button(assigns) do
     ~H"""
@@ -47,7 +49,9 @@ defmodule LightningWeb.SandboxLive.Components do
       theme="primary"
       size="lg"
       type="button"
-      phx-click={JS.patch(~p"/projects/#{@project.id}/sandboxes/new")}
+      phx-click={
+        JS.patch(~p"/projects/#{@project.id}/#{@sandbox_name}/sandboxes/new")
+      }
     >
       Create Sandbox
     </.button>
@@ -58,6 +62,7 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :sandboxes, :list, required: true
   attr :project, Project, required: true
   attr :current_sandbox, Project, default: nil
+  attr :sandbox_name, :string, required: true
 
   def workspace_list(assigns) do
     ~H"""
@@ -75,7 +80,9 @@ defmodule LightningWeb.SandboxLive.Components do
               <div class="text-base font-medium">No sandboxes found</div>
               <div class="text-sm">
                 <.link
-                  navigate={~p"/projects/#{@project.id}/sandboxes/new"}
+                  navigate={
+                    ~p"/projects/#{@project.id}/#{@sandbox_name}/sandboxes/new"
+                  }
                   class="text-blue-600 hover:text-blue-800 font-medium"
                 >
                   Create your first sandbox
@@ -235,7 +242,7 @@ defmodule LightningWeb.SandboxLive.Components do
     ~H"""
     <div
       class="group block cursor-pointer rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-xs bg-white transition-all duration-200 overflow-hidden"
-      phx-click={JS.navigate(~p"/projects/#{@sandbox.id}/w")}
+      phx-click={JS.navigate(~p"/projects/#{@project.id}/#{@sandbox.name}/w")}
       role="button"
       tabindex="0"
     >
@@ -322,7 +329,7 @@ defmodule LightningWeb.SandboxLive.Components do
         icon_type="heroicon"
         icon_name="hero-pencil-square"
         label="Edit this sandbox"
-        action={JS.patch(~p"/projects/#{@project.id}/sandboxes/#{@sandbox.id}/edit")}
+        action={JS.patch(~p"/projects/#{@project.id}/#{@sandbox.name}/edit")}
         icon_class="text-slate-700"
       />
 

@@ -182,23 +182,33 @@ defmodule LightningWeb.Router do
       live "/mfa_required", ProjectLive.MFARequired, :index
 
       scope "/projects/:project_id", as: :project do
+        get "/jobs", Plugs.SandboxRedirect, []
+        get "/settings/delete", Plugs.SandboxRedirect, []
+        get "/history", Plugs.SandboxRedirect, []
+        get "/runs/:id", Plugs.SandboxRedirect, []
+        get "/dataclips/:id/show", Plugs.SandboxRedirect, []
+        get "/w", Plugs.SandboxRedirect, []
+        get "/w/new", Plugs.SandboxRedirect, []
+        get "/w/:id", Plugs.SandboxRedirect, []
+        get "/w/:id/collaborate", Plugs.SandboxRedirect, []
+        get "/sandboxes", Plugs.SandboxRedirect, []
+        get "/sandboxes/new", Plugs.SandboxRedirect, []
+        get "/sandboxes/:id/edit", Plugs.SandboxRedirect, []
+      end
+
+      scope "/projects/:project_id/:sandbox_name", as: :project do
         live "/jobs", JobLive.Index, :index
-
         live "/settings/delete", ProjectLive.Settings, :delete
-
         live "/history", RunLive.Index, :index
         live "/runs/:id", RunLive.Show, :show
-
         live "/dataclips/:id/show", DataclipLive.Show, :show
-
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Edit, :new
         live "/w/:id", WorkflowLive.Edit, :edit
         live "/w/:id/collaborate", WorkflowLive.Collaborate, :edit
-
         live "/sandboxes", SandboxLive.Index, :index
         live "/sandboxes/new", SandboxLive.Index, :new
-        live "/sandboxes/:id/edit", SandboxLive.Index, :edit
+        live "/edit", SandboxLive.Index, :edit
       end
 
       live "/credentials", CredentialLive.Index, :index

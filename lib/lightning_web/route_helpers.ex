@@ -4,11 +4,12 @@ defmodule LightningWeb.RouteHelpers do
   """
   alias LightningWeb.Router.Helpers, as: Routes
 
-  def project_dashboard_url(project_id) do
+  def project_dashboard_url(project_id, sandbox_name \\ "main") do
     Routes.project_workflow_index_url(
       LightningWeb.Endpoint,
       :index,
-      project_id
+      project_id,
+      sandbox_name
     )
   end
 

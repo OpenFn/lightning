@@ -107,8 +107,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
-              
-    <!-- Add collaborative editor toggle (beaker icon only) -->
+
               <.link
                 :if={
                   show_collaborative_editor_toggle?(

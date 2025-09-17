@@ -4,7 +4,9 @@ defmodule LightningWeb.Components.Menu do
   """
   use LightningWeb, :component
 
-  def project_items(assigns) do
+  def project_items(%{current_sandbox: sandbox} = assigns) do
+    assigns = assign(assigns, :sandbox_name, (sandbox && sandbox.name) || "main")
+
     ~H"""
     <.menu_item
       to={~p"/projects/#{@project_id}/w"}
@@ -16,7 +18,7 @@ defmodule LightningWeb.Components.Menu do
 
     <%= if Lightning.Accounts.experimental_features_enabled?(@current_user) do %>
       <.menu_item
-        to={~p"/projects/#{@project_id}/sandboxes"}
+        to={~p"/projects/#{@project_id}/#{@sandbox_name}/sandboxes"}
         active={@active_menu_item == :sandboxes}
       >
         <Icon.sandboxes class="h-5 w-5 inline-block mr-2 align-middle" />
@@ -39,15 +41,6 @@ defmodule LightningWeb.Components.Menu do
       <Icon.settings class="h-5 w-5 inline-block mr-2" />
       <span class="inline-block align-middle">Settings</span>
     </.menu_item>
-    <!-- # Commented out until new dataclips/globals list is fully functional. -->
-    <!--
-      <.menu_item
-        to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
-        active={@active_menu_item == :dataclips}>
-        <Icon.dataclips class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Dataclips</span>
-      </.menu_item>
-    -->
     """
   end
 

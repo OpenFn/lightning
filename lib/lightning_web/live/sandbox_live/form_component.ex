@@ -2,13 +2,41 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Ecto.Changeset
-  alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias LightningWeb.Live.Helpers.ProjectTheme
   alias LightningWeb.SandboxLive.Components
 
   @type mode :: :new | :edit
+
+  defmodule SandboxForm do
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    embedded_schema do
+      field :raw_name, :string
+      field :name, :string
+      field :color, :string
+      field :env, :string
+    end
+
+    def changeset(sandbox \\ %__MODULE__{}, attrs \\ %{}) do
+      sandbox
+      |> cast(attrs, [:raw_name, :name, :color, :env])
+      |> validate_required([:raw_name])
+      |> put_name_from_raw_name()
+    end
+
+    defp put_name_from_raw_name(changeset) do
+      case get_change(changeset, :raw_name) do
+        nil ->
+          changeset
+
+        raw_name ->
+          put_change(changeset, :name, Lightning.Helpers.url_safe_name(raw_name))
+      end
+    end
+  end
 
   defp get_random_color do
     Components.color_palette_hex_colors() |> Enum.random()
@@ -35,7 +63,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
   defp generate_theme_preview(_parent, _color), do: nil
 
-  defp should_preview_theme?(new_color, last_color) do
+  defp should_preview_theme?(new_color, last_color \\ nil) do
     is_binary(new_color) and new_color != last_color
   end
 
@@ -48,25 +76,9 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     send(self(), {:preview_theme, nil})
   end
 
-  defp return_path(socket) do
-    socket.assigns.return_to ||
-      ~p"/projects/#{socket.assigns.parent.id}/sandboxes"
+  defp form_changeset(attrs) do
+    SandboxForm.changeset(attrs)
   end
-
-  defp coerce_raw_name_to_safe_name(%{"raw_name" => raw} = params) do
-    Map.put(params, "name", Helpers.url_safe_name(raw))
-  end
-
-  defp coerce_raw_name_to_safe_name(params), do: params
-
-  defp form_changeset(%Project{} = base, params) do
-    params
-    |> coerce_raw_name_to_safe_name()
-    |> then(&Project.changeset(base, &1))
-  end
-
-  defp base_struct(%{sandbox: %Project{} = sandbox}), do: sandbox
-  defp base_struct(_assigns), do: %Project{}
 
   defp initial_params(%{sandbox: %Project{} = sandbox}) do
     %{
@@ -83,25 +95,47 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
   defp initial_params(_assigns), do: %{}
 
+  defp return_path(%{assigns: %{return_to: return_to}})
+       when not is_nil(return_to) do
+    return_to
+  end
+
+  defp return_path(%{assigns: %{parent: parent, current_sandbox: sandbox}}) do
+    ~p"/projects/#{parent.id}/#{sandbox.name}/sandboxes"
+  end
+
+  defp return_path(%{assigns: %{parent: parent}}) do
+    ~p"/projects/#{parent.id}/main/sandboxes"
+  end
+
   @impl true
   def update(%{mode: mode} = assigns, socket) when mode in [:new, :edit] do
-    base = base_struct(assigns)
-
     changeset =
-      base
-      |> form_changeset(initial_params(assigns))
-      |> Map.put(:action, :validate)
+      if socket.assigns[:changeset] do
+        socket.assigns.changeset
+      else
+        assigns
+        |> initial_params()
+        |> form_changeset()
+      end
 
     initial_color = Changeset.get_field(changeset, :color)
 
-    if should_preview_theme?(initial_color, nil) do
+    should_send_preview =
+      should_preview_theme?(initial_color) and
+        not Map.has_key?(socket.assigns, :last_preview_color)
+
+    if should_send_preview do
       send_theme_preview(assigns.parent, initial_color)
     end
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:last_preview_color, initial_color)
+     |> assign(
+       :last_preview_color,
+       socket.assigns[:last_preview_color] || initial_color
+     )
      |> assign(:changeset, changeset)
      |> assign(:name, Changeset.get_field(changeset, :name))}
   end
@@ -115,20 +149,19 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   @impl true
   def handle_event(
         "validate",
-        %{"project" => params},
-        %{assigns: assigns} = socket
+        %{"sandbox" => params},
+        socket
       ) do
     changeset =
-      assigns
-      |> base_struct()
-      |> form_changeset(params)
+      params
+      |> form_changeset()
       |> Map.put(:action, :validate)
 
     new_color = params["color"]
     last_color = socket.assigns[:last_preview_color]
 
     if should_preview_theme?(new_color, last_color) do
-      send_theme_preview(assigns.parent, new_color)
+      send_theme_preview(socket.assigns.parent, new_color)
     end
 
     {:noreply,
@@ -141,13 +174,12 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   @impl true
   def handle_event(
         "save",
-        %{"project" => params},
+        %{"sandbox" => params},
         %{
           assigns: %{
             mode: mode,
             parent: parent,
-            current_user: actor,
-            return_to: return_to
+            current_user: actor
           }
         } = socket
       )
@@ -172,17 +204,49 @@ defmodule LightningWeb.SandboxLive.FormComponent do
         flash_message =
           if mode == :new, do: "Sandbox created", else: "Sandbox updated"
 
+        navigation_path =
+          case mode do
+            :new -> ~p"/projects/#{parent.id}/#{sandbox.name}/w"
+            :edit -> return_path(socket)
+          end
+
         {:noreply,
          socket
          |> put_flash(:info, flash_message)
-         |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
+         |> push_navigate(to: navigation_path)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        form_changeset = to_form_changeset(changeset, params)
+
         {:noreply,
          socket
-         |> assign(:changeset, changeset)
-         |> assign(:name, Changeset.get_field(changeset, :name))}
+         |> assign(:changeset, form_changeset)
+         |> assign(:name, Changeset.get_field(form_changeset, :name))}
+
+      {:error, reason} ->
+        error_message =
+          case reason do
+            :unauthorized -> "You don't have permission to perform this action"
+            :not_found -> "Project not found"
+            _ -> "An error occurred: #{inspect(reason)}"
+          end
+
+        {:noreply,
+         socket
+         |> put_flash(:error, error_message)
+         |> push_navigate(to: return_path(socket))}
     end
+  end
+
+  defp to_form_changeset(%{errors: errors}, params) do
+    changeset = form_changeset(params)
+
+    errors
+    |> Enum.filter(fn {field, _} -> field in [:name, :color, :env] end)
+    |> Enum.reduce(changeset, fn {field, {message, opts}}, acc_changeset ->
+      Changeset.add_error(acc_changeset, field, message, opts)
+    end)
+    |> Map.put(:action, :insert)
   end
 
   @impl true
@@ -237,6 +301,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
         <.form
           :let={f}
           for={@changeset}
+          as={:sandbox}
           id={"sandbox-form-#{if @mode == :edit, do: @sandbox.id, else: "new"}"}
           phx-target={@myself}
           phx-change="validate"

@@ -223,6 +223,34 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Finds a sandbox by name within a parent project.
+  Returns the parent project itself when sandbox_name is "main".
+  Returns `nil` if not found.
+  """
+  @spec get_sandbox_by_name(Ecto.UUID.t(), String.t()) :: Project.t() | nil
+  def get_sandbox_by_name(parent_project_id, "main") do
+    get_project(parent_project_id)
+  end
+
+  def get_sandbox_by_name(parent_project_id, sandbox_name)
+      when is_binary(sandbox_name) do
+    Repo.get_by(Project, parent_id: parent_project_id, name: sandbox_name)
+  end
+
+  @doc """
+  Same as `get_sandbox_by_name/2` but raises `Ecto.NoResultsError` if not found.
+  """
+  @spec get_sandbox_by_name!(Ecto.UUID.t(), String.t()) :: Project.t()
+  def get_sandbox_by_name!(parent_project_id, "main") do
+    get_project!(parent_project_id)
+  end
+
+  def get_sandbox_by_name!(parent_project_id, sandbox_name)
+      when is_binary(sandbox_name) do
+    Repo.get_by!(Project, parent_id: parent_project_id, name: sandbox_name)
+  end
+
+  @doc """
   Returns the **root ancestor** of a project by walking up `parent_id` links.
 
   Supports arbitrarily deep nesting. (Assumes the parent chain is well-formed.)
