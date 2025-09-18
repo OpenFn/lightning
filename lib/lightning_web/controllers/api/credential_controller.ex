@@ -9,10 +9,36 @@ defmodule LightningWeb.API.CredentialController do
   action_fallback LightningWeb.FallbackController
 
   @doc """
-  Lists all credentials owned by the authenticated user.
+  Lists credentials based on the parameters:
 
-  The response excludes the credential body for security reasons.
+  - With project_id: Lists all credentials for that specific project.
+    The user must have access to the project. Includes all credentials
+    (regardless of owner) that have access to the project.
+
+  - Without project_id: Lists all credentials owned by the authenticated user.
+
+  In both cases, the response excludes the credential body for security reasons.
   """
+  def index(conn, %{"project_id" => project_id}) do
+    current_user = conn.assigns.current_resource
+
+    with project when not is_nil(project) <- Projects.get_project(project_id),
+         :ok <- ProjectUsers
+                |> Permissions.can(
+                  :access_project,
+                  current_user,
+                  project
+                ) do
+      credentials = Credentials.list_credentials(project)
+      render(conn, "index.json", credentials: credentials)
+    else
+      nil ->
+        {:error, :not_found}
+      {:error, :unauthorized} ->
+        {:error, :forbidden}
+    end
+  end
+
   def index(conn, _params) do
     current_user = conn.assigns.current_resource
     credentials = Credentials.list_credentials(current_user)

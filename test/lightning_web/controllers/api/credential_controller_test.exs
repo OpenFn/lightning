@@ -13,6 +13,11 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
 
+    test "project credentials index gets a 401", %{conn: conn} do
+      conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/credentials")
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
     test "create gets a 401", %{conn: conn} do
       conn = post(conn, ~p"/api/credentials", %{})
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
@@ -29,6 +34,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
       token = "InvalidToken"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = get(conn, ~p"/api/credentials")
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "project credentials index gets a 401", %{conn: conn} do
+      token = "InvalidToken"
+      conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+      conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/credentials")
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
 
@@ -123,6 +135,118 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert credential_data["name"] == "Project Credential"
       assert length(credential_data["project_credentials"]) == 1
       assert length(credential_data["projects"]) == 1
+
+      project_data = List.first(credential_data["projects"])
+      assert project_data["id"] == project.id
+      assert project_data["name"] == project.name
+    end
+  end
+
+  describe "index for specific project" do
+    setup [:assign_bearer_for_api]
+
+    test "lists all credentials in a project when user has access", %{conn: conn, user: user} do
+      project = insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+
+      # Create credentials for different users but in the same project
+      _user_credential = insert(:credential,
+        user: user,
+        name: "User Credential",
+        project_credentials: [%{project_id: project.id}]
+      )
+
+      other_user = insert(:user)
+      _other_user_credential = insert(:credential,
+        user: other_user,
+        name: "Other User Credential",
+        project_credentials: [%{project_id: project.id}]
+      )
+
+      # Create a credential not in this project (should not appear)
+      _unrelated_credential = insert(:credential, user: user, name: "Unrelated Credential")
+
+      conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
+      response = json_response(conn, 200)
+
+      assert %{
+        "credentials" => credentials,
+        "errors" => %{}
+      } = response
+
+      assert length(credentials) == 2
+
+      # Should include credentials from all users that have access to this project
+      returned_names = Enum.map(credentials, & &1["name"]) |> Enum.sort()
+      assert returned_names == ["Other User Credential", "User Credential"]
+
+      # Verify body field is excluded for security
+      Enum.each(credentials, fn credential ->
+        refute Map.has_key?(credential, "body")
+      end)
+    end
+
+    test "returns 403 when user lacks access to project", %{conn: conn, user: _user} do
+      other_user = insert(:user)
+      project = insert(:project, project_users: [%{user_id: other_user.id, role: :owner}])
+
+      conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "returns 404 when project does not exist", %{conn: conn, user: _user} do
+      non_existent_id = Ecto.UUID.generate()
+
+      conn = get(conn, ~p"/api/projects/#{non_existent_id}/credentials")
+      assert json_response(conn, 404) == %{"error" => "Not Found"}
+    end
+
+    test "returns empty list when project has no credentials", %{conn: conn, user: user} do
+      project = insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
+      response = json_response(conn, 200)
+
+      assert %{
+        "credentials" => [],
+        "errors" => %{}
+      } = response
+    end
+
+    test "allows access for support users with project access", %{conn: conn} do
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: true)
+
+      _credential = insert(:credential,
+        user: support_user,
+        name: "Support Credential",
+        project_credentials: [%{project_id: project.id}]
+      )
+
+      token = Lightning.Accounts.generate_api_token(support_user)
+      conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+
+      conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
+      response = json_response(conn, 200)
+
+      assert %{"credentials" => [credential_data]} = response
+      assert credential_data["name"] == "Support Credential"
+    end
+
+    test "includes project information in credential data", %{conn: conn, user: user} do
+      project = insert(:project, project_users: [%{user_id: user.id, role: :admin}])
+
+      _credential = insert(:credential,
+        user: user,
+        name: "Project Credential",
+        project_credentials: [%{project_id: project.id}]
+      )
+
+      conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
+      response = json_response(conn, 200)
+
+      assert %{"credentials" => [credential_data]} = response
+      assert length(credential_data["projects"]) == 1
+      assert length(credential_data["project_credentials"]) == 1
 
       project_data = List.first(credential_data["projects"])
       assert project_data["id"] == project.id
