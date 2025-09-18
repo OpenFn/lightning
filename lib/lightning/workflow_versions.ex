@@ -195,7 +195,7 @@ defmodule Lightning.WorkflowVersions do
     from(v in WorkflowVersion,
       where: v.workflow_id == ^id,
       order_by: [asc: v.inserted_at, asc: v.id],
-      select: v.hash
+      select: fragment("? || ':' || ?", v.source, v.hash)
     )
     |> Repo.all()
   end
@@ -226,7 +226,7 @@ defmodule Lightning.WorkflowVersions do
           where: v.workflow_id == ^wf.id,
           order_by: [desc: v.inserted_at, desc: v.id],
           limit: 1,
-          select: v.hash
+          select: fragment("? || ':' || ?", v.source, v.hash)
         )
         |> Repo.one()
     end
