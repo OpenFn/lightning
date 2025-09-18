@@ -18,7 +18,8 @@ defmodule LightningWeb.API.CredentialController do
   def create(conn, params) do
     current_user = conn.assigns.current_resource
 
-    with {:ok, validated_params} <- validate_and_authorize_projects(params, current_user),
+    with {:ok, validated_params} <-
+           validate_and_authorize_projects(params, current_user),
          {:ok, credential} <- Credentials.create_credential(validated_params) do
       conn
       |> put_status(:created)
@@ -53,6 +54,7 @@ defmodule LightningWeb.API.CredentialController do
         case Projects.get_project(project_id) do
           nil ->
             true
+
           project ->
             case ProjectUsers
                  |> Permissions.can(

@@ -26,7 +26,10 @@ defmodule LightningWeb.API.CredentialControllerTest do
   describe "create" do
     setup [:assign_bearer_for_api]
 
-    test "creates a basic credential without project associations", %{conn: conn, user: user} do
+    test "creates a basic credential without project associations", %{
+      conn: conn,
+      user: user
+    } do
       credential_attrs = %{
         "name" => "Test Credential",
         "body" => %{"username" => "test", "password" => "secret"},
@@ -37,26 +40,29 @@ defmodule LightningWeb.API.CredentialControllerTest do
       response = json_response(conn, 201)
 
       assert %{
-        "credential" => %{
-          "id" => id,
-          "name" => "Test Credential",
-          "schema" => "raw",
-          "production" => false,
-          "external_id" => nil,
-          "user_id" => user_id,
-          "project_credentials" => [],
-          "projects" => []
-        },
-        "errors" => %{}
-      } = response
+               "credential" => %{
+                 "id" => id,
+                 "name" => "Test Credential",
+                 "schema" => "raw",
+                 "production" => false,
+                 "external_id" => nil,
+                 "user_id" => user_id,
+                 "project_credentials" => [],
+                 "projects" => []
+               },
+               "errors" => %{}
+             } = response
 
       assert is_binary(id)
       assert user_id == user.id
-      refute Map.has_key?(response["credential"], "body")  # body should be excluded
+      # body should be excluded
+      refute Map.has_key?(response["credential"], "body")
     end
 
-    test "creates a credential with project associations when user has access", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+    test "creates a credential with project associations when user has access",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
 
       credential_attrs = %{
         "name" => "Project Credential",
@@ -71,14 +77,14 @@ defmodule LightningWeb.API.CredentialControllerTest do
       response = json_response(conn, 201)
 
       assert %{
-        "credential" => %{
-          "id" => id,
-          "name" => "Project Credential",
-          "user_id" => user_id,
-          "project_credentials" => [project_credential],
-          "projects" => [project_data]
-        }
-      } = response
+               "credential" => %{
+                 "id" => id,
+                 "name" => "Project Credential",
+                 "user_id" => user_id,
+                 "project_credentials" => [project_credential],
+                 "projects" => [project_data]
+               }
+             } = response
 
       assert is_binary(id)
       assert user_id == user.id
@@ -87,9 +93,15 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert project_data["name"] == project.name
     end
 
-    test "creates a credential with multiple project associations", %{conn: conn, user: user} do
-      project1 = insert(:project, project_users: [%{user_id: user.id, role: :admin}])
-      project2 = insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+    test "creates a credential with multiple project associations", %{
+      conn: conn,
+      user: user
+    } do
+      project1 =
+        insert(:project, project_users: [%{user_id: user.id, role: :admin}])
+
+      project2 =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
 
       credential_attrs = %{
         "name" => "Multi-Project Credential",
@@ -105,11 +117,11 @@ defmodule LightningWeb.API.CredentialControllerTest do
       response = json_response(conn, 201)
 
       assert %{
-        "credential" => %{
-          "project_credentials" => project_credentials,
-          "projects" => projects
-        }
-      } = response
+               "credential" => %{
+                 "project_credentials" => project_credentials,
+                 "projects" => projects
+               }
+             } = response
 
       assert length(project_credentials) == 2
       assert length(projects) == 2
@@ -121,7 +133,11 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
     test "fails when user lacks access to project", %{conn: conn, user: _user} do
       other_user = insert(:user)
-      project = insert(:project, project_users: [%{user_id: other_user.id, role: :owner}])
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: other_user.id, role: :owner}]
+        )
 
       credential_attrs = %{
         "name" => "Unauthorized Credential",
@@ -136,8 +152,12 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
     end
 
-    test "fails when user has insufficient role (viewer) on project", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :viewer}])
+    test "fails when user has insufficient role (viewer) on project", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :viewer}])
 
       credential_attrs = %{
         "name" => "Viewer Credential",
@@ -166,7 +186,9 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
     end
 
-    test "allows access when user is support user with project access", %{conn: conn} do
+    test "allows access when user is support user with project access", %{
+      conn: conn
+    } do
       support_user = insert(:user, support_user: true)
       project = insert(:project, allow_support_access: true)
 
@@ -186,18 +208,19 @@ defmodule LightningWeb.API.CredentialControllerTest do
       response = json_response(conn, 201)
 
       assert %{
-        "credential" => %{
-          "name" => "Support User Credential",
-          "user_id" => user_id
-        }
-      } = response
+               "credential" => %{
+                 "name" => "Support User Credential",
+                 "user_id" => user_id
+               }
+             } = response
 
       assert user_id == support_user.id
     end
 
     test "fails with invalid credential data", %{conn: conn, user: _user} do
       credential_attrs = %{
-        "name" => "",  # Invalid: empty name
+        # Invalid: empty name
+        "name" => "",
         "body" => %{"secret" => "value"},
         "schema" => "raw"
       }
@@ -229,7 +252,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
         "name" => "Test Credential",
         "body" => %{"secret" => "value"},
         "schema" => "raw",
-        "user_id" => other_user.id  # This should be ignored
+        # This should be ignored
+        "user_id" => other_user.id
       }
 
       conn = post(conn, ~p"/api/credentials", credential_attrs)
@@ -251,9 +275,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 201)
     end
 
-    test "handles partial project access - allows accessible, denies inaccessible", %{conn: conn, user: user} do
-      accessible_project = insert(:project, project_users: [%{user_id: user.id, role: :editor}])
-      inaccessible_project = insert(:project)  # No user access
+    test "handles partial project access - allows accessible, denies inaccessible",
+         %{conn: conn, user: user} do
+      accessible_project =
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+
+      # No user access
+      inaccessible_project = insert(:project)
 
       credential_attrs = %{
         "name" => "Mixed Access Credential",
@@ -274,7 +302,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
     setup [:assign_bearer_for_api]
 
     test "editor can create project credentials", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
 
       credential_attrs = %{
         "name" => "Editor Credential",
@@ -292,7 +321,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
     setup [:assign_bearer_for_api]
 
     test "admin can create project credentials", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :admin}])
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :admin}])
 
       credential_attrs = %{
         "name" => "Admin Credential",
@@ -310,7 +340,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
     setup [:assign_bearer_for_api]
 
     test "owner can create project credentials", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
 
       credential_attrs = %{
         "name" => "Owner Credential",
