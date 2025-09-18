@@ -5,28 +5,17 @@ orbs:
 
 commands:
   install_node:
-    description: "Install NodeJS"
+    description: "Install NodeJS from NodeSource"
     parameters:
       version:
         type: string
     steps:
-      - restore_cache:
-          key: v4-nodejs-<< parameters.version >>
-
       - run:
-          name: "Install Node.js and npm"
+          name: "Install Node.js from NodeSource"
           command: |
-            ./bin/install_node --no-cleanup << parameters.version >>
-
-      - save_cache:
-          key: v4-nodejs-<< parameters.version >>
-          paths:
-            - ./node-v<< parameters.version >>-linux-x64.tar.gz
-
-      - run:
-          name: "Cleanup NodeJS install files"
-          command: |
-            rm ./node-v*.tar.gz
+            NODE_MAJOR=$(echo "<< parameters.version >>" | cut -d'.' -f1)
+            curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash -
+            apt-get install -y nodejs=<< parameters.version >>-1nodesource1
 
 jobs:
   build:

@@ -19,8 +19,11 @@ and this project adheres to
 
 - Generate workflow version on save
   [#3452](https://github.com/OpenFn/lightning/issues/3452)
+- Add `bin/update-images` script for automated Dockerfile version management
 
 ### Changed
+
+- Fix aarch64 (Apple Silicon) Dockerfile-dev build
 
 ### Fixed
 

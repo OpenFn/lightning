@@ -1,0 +1,462 @@
+#!/bin/bash
+set -e
+
+# Constants
+readonly DOCKER_HUB_API_BASE="https://registry.hub.docker.com/v2/repositories/hexpm/elixir/tags"
+readonly REQUIRED_DOCKERFILE_ARGS=("ELIXIR_VERSION" "OTP_VERSION" "NODE_VERSION" "DEBIAN_VERSION")
+readonly DOCKERFILE_NAMES=("Dockerfile" "Dockerfile-dev")
+
+# Global variables extracted from .tool-versions
+ELIXIR_VERSION_RAW=$(grep elixir .tool-versions | cut -d' ' -f2)
+ELIXIR_VERSION=${ELIXIR_VERSION_RAW%-otp-*}
+OTP_VERSION=$(grep erlang .tool-versions | cut -d' ' -f2)
+NODE_VERSION=$(grep nodejs .tool-versions | cut -d' ' -f2)
+
+# Display usage information and available commands
+# Shows the help text with command descriptions and examples
+show_help() {
+  echo "Usage: $0 [COMMAND]"
+  echo ""
+  echo "Commands:"
+  echo "  update              Update Dockerfile(s) with versions from .tool-versions (default)"
+  echo "  --update-debian     Update Dockerfile(s) and check for newer Debian date within same base"
+  echo "  --dry-run           Show what would be updated without making changes"
+  echo "  show-debian-images  Show available Debian versions without updating"
+  echo "  help, --help        Show this help message"
+  echo ""
+  echo "Examples:"
+  echo "  $0                           # Update with current Debian version"
+  echo "  $0 --update-debian           # Update and fetch latest Debian version within same base"
+  echo "  $0 --dry-run                 # Show what would be updated"
+  echo "  $0 show-debian-images        # List available Debian versions"
+}
+
+# Validate that a dockerfile exists and contains required ARGs
+# Takes dockerfile path, returns 0 if valid, 1 if invalid
+validate_dockerfile() {
+  local dockerfile="$1"
+
+  if [[ -z "$dockerfile" ]]; then
+    echo "Error: dockerfile path is required" >&2
+    return 1
+  fi
+
+  if [[ ! -f "$dockerfile" ]]; then
+    echo "Error: $dockerfile not found" >&2
+    return 1
+  fi
+
+  local missing_args=()
+  for arg in "${REQUIRED_DOCKERFILE_ARGS[@]}"; do
+    if ! grep -q "^ARG $arg=" "$dockerfile"; then
+      missing_args+=("$arg")
+    fi
+  done
+
+  if [[ ${#missing_args[@]} -gt 0 ]]; then
+    echo "Error: Missing ARGs in $dockerfile: ${missing_args[*]}" >&2
+    return 1
+  fi
+
+  return 0
+}
+
+# Parse dockerfile values into global variables
+# Takes dockerfile path, sets global variable for DEBIAN_VERSION only
+parse_dockerfile_values() {
+  local dockerfile="$1"
+
+  if [[ -z "$dockerfile" ]]; then
+    echo "Error: dockerfile path is required" >&2
+    return 1
+  fi
+
+  if ! validate_dockerfile "$dockerfile"; then
+    return 1
+  fi
+
+  # Only parse the DEBIAN_VERSION since that's all we need
+  DOCKERFILE_DEBIAN_VERSION=$(grep "^ARG DEBIAN_VERSION=" "$dockerfile" | cut -d'=' -f2)
+}
+
+# Search for Debian versions using Docker Hub API
+# Takes a search pattern and returns available Debian version suffixes
+# Example: given "1.18.3-erlang-27.3.3-debian", returns "bookworm-20250428", "bullseye-20250407", etc.
+search_debian_versions() {
+  local search_pattern="$1"
+
+  if [[ -z "$search_pattern" ]]; then
+    echo "Error: search pattern is required" >&2
+    return 1
+  fi
+
+  local response
+  response=$(curl -s "${DOCKER_HUB_API_BASE}?page_size=100&name=$search_pattern")
+
+  # Check if response is valid JSON
+  if ! echo "$response" | jq -e . >/dev/null 2>&1; then
+    echo "Error: Docker Hub API returned invalid response (likely temporary timeout)" >&2
+    return 1
+  fi
+
+  echo "$response" |
+    jq -r ".results[].name" |
+    grep "^$ELIXIR_VERSION-erlang-$OTP_VERSION-debian-" |
+    sed "s/^$ELIXIR_VERSION-erlang-$OTP_VERSION-debian-//" |
+    sort -V
+}
+
+# Find the first available dockerfile and parse its values
+# Returns 0 if successful, 1 if no valid dockerfile found
+find_and_parse_dockerfile() {
+  for dockerfile in "${DOCKERFILE_NAMES[@]}"; do
+    if [[ -f "$dockerfile" ]] && parse_dockerfile_values "$dockerfile"; then
+      return 0
+    fi
+  done
+
+  echo "Error: No valid Dockerfile found" >&2
+  return 1
+}
+
+# Show all available Debian versions for current Elixir/OTP combination
+# Fetches from Docker Hub, compares with current version, and displays with highlighting
+# The current version in Dockerfile-dev is marked with an asterisk
+show_debian_images() {
+  echo "Searching for Debian versions matching elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION-debian..."
+
+  local search_pattern="$ELIXIR_VERSION-erlang-$OTP_VERSION-debian"
+  local available_tags
+
+  if ! available_tags=$(search_debian_versions "$search_pattern"); then
+    echo "Error: Failed to fetch available versions from Docker Hub. Please try again later." >&2
+    return 1
+  fi
+
+  if [[ -n "$available_tags" ]]; then
+    if ! find_and_parse_dockerfile; then
+      return 1
+    fi
+
+    local current_debian="$DOCKERFILE_DEBIAN_VERSION"
+
+    echo ""
+    echo "Available Debian versions for elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION:"
+    echo ""
+
+    while IFS= read -r version; do
+      if [[ "$version" == "$current_debian" ]]; then
+        echo "* $version (current)"
+      else
+        echo "  $version"
+      fi
+    done <<<"$available_tags"
+  else
+    echo ""
+    echo "No Debian versions found for elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION."
+    echo "This may mean no Debian images exist for this Elixir/OTP combination."
+    echo ""
+    echo "View all available tags at: https://hub.docker.com/r/hexpm/elixir/tags?name=$ELIXIR_VERSION-erlang-$OTP_VERSION"
+  fi
+}
+
+# Find newer Debian version within the same base (bookworm, bullseye, etc) and variant (slim/regular)
+# Parses current version, searches for newer dates within same base, returns the newest version
+# Won't switch between bases (e.g., bookworm to bullseye) for safety
+update_debian() {
+  echo "Searching for newer Debian version for elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION..."
+
+  if ! find_and_parse_dockerfile; then
+    return 1
+  fi
+
+  local current_debian="$DOCKERFILE_DEBIAN_VERSION"
+  echo "Current Debian version: $current_debian"
+
+  # Extract base (e.g., bookworm, buster) and variant (slim suffix)
+  local debian_base="" debian_variant=""
+
+  if [[ "$current_debian" =~ ^([a-z]+)(-[0-9]+)(-slim)?$ ]]; then
+    debian_base="${BASH_REMATCH[1]}"
+    debian_variant="${BASH_REMATCH[3]}"
+  else
+    echo "Warning: Could not parse current Debian version format, keeping current" >&2
+    echo "$current_debian"
+    return 0
+  fi
+
+  echo "Debian base: $debian_base, variant: ${debian_variant:-regular}"
+
+  # Search within same Debian base and variant only
+  local search_pattern="$ELIXIR_VERSION-erlang-$OTP_VERSION-debian-$debian_base"
+  local all_base_versions available_versions
+
+  if ! all_base_versions=$(search_debian_versions "$search_pattern"); then
+    echo "Error: Failed to fetch available versions from Docker Hub. Keeping current version." >&2
+    echo "$current_debian"
+    return 0
+  fi
+
+  available_versions=$(echo "$all_base_versions" | grep "^$debian_base.*$debian_variant$")
+
+  if [[ -n "$available_versions" ]]; then
+    local latest_debian
+    latest_debian=$(echo "$available_versions" | tail -1)
+
+    if [[ "$latest_debian" == "$current_debian" ]]; then
+      echo "Already using the latest $debian_base${debian_variant} version: $current_debian"
+      echo "$current_debian"
+    else
+      echo "Found newer $debian_base${debian_variant} version: $latest_debian (current: $current_debian)"
+      echo "$latest_debian"
+    fi
+  else
+    echo "Warning: Could not find any $debian_base${debian_variant} versions for elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION, keeping current" >&2
+    echo "View all available tags at: https://hub.docker.com/r/hexpm/elixir/tags?name=$ELIXIR_VERSION-erlang-$OTP_VERSION"
+    echo "$current_debian"
+  fi
+}
+
+# Create a preview of what the dockerfile would look like after updates
+# Takes dockerfile path and Debian version, returns the updated content
+generate_updated_dockerfile_content() {
+  local dockerfile="$1"
+  local debian_version="$2"
+
+  sed \
+    -e "s/ARG ELIXIR_VERSION=.*/ARG ELIXIR_VERSION=$ELIXIR_VERSION/" \
+    -e "s/ARG OTP_VERSION=.*/ARG OTP_VERSION=$OTP_VERSION/" \
+    -e "s/ARG NODE_VERSION=.*/ARG NODE_VERSION=$NODE_VERSION/" \
+    -e "s/ARG DEBIAN_VERSION=.*/ARG DEBIAN_VERSION=$debian_version/" \
+    "$dockerfile"
+}
+
+# Show side-by-side diff for dry-run
+# Takes dockerfile path and Debian version
+show_dockerfile_diff() {
+  local dockerfile="$1"
+  local debian_version="$2"
+
+  echo "=== $dockerfile ==="
+
+  # Create temporary file with updated content
+  local temp_updated
+  temp_updated=$(mktemp)
+  generate_updated_dockerfile_content "$dockerfile" "$debian_version" >"$temp_updated"
+
+  # Show side-by-side diff, focusing on ARG lines and surrounding context
+  if command -v diff >/dev/null 2>&1; then
+    if diff --help 2>&1 | grep -q -- --side-by-side; then
+      # GNU diff with side-by-side support
+      local diff_output
+      diff_output=$(diff --side-by-side --width=120 --suppress-common-lines "$dockerfile" "$temp_updated" 2>/dev/null || true)
+      if [[ -n "$diff_output" ]]; then
+        echo "$diff_output"
+      else
+        echo "No changes needed"
+      fi
+    else
+      # Fallback to unified diff
+      echo "Side-by-side diff not available, showing unified diff:"
+      local diff_output
+      diff_output=$(diff -u "$dockerfile" "$temp_updated" 2>/dev/null || true)
+      if [[ -n "$diff_output" ]]; then
+        echo "$diff_output"
+      else
+        echo "No changes needed"
+      fi
+    fi
+  else
+    echo "diff command not available, showing before/after comparison:"
+    echo ""
+    echo "BEFORE:"
+    grep "^ARG " "$dockerfile"
+    echo ""
+    echo "AFTER:"
+    grep "^ARG " "$temp_updated"
+  fi
+
+  rm -f "$temp_updated"
+  echo ""
+}
+
+# Update a single dockerfile with new version numbers
+# Takes dockerfile path, Debian version, and optional dry-run flag
+# Creates atomic updates - either all succeed or none are applied
+update_single_dockerfile() {
+  local dockerfile="$1"
+  local debian_version="$2"
+  local dry_run="${3:-false}"
+
+  if [[ -z "$dockerfile" ]]; then
+    echo "Error: dockerfile path is required" >&2
+    return 1
+  fi
+
+  if [[ -z "$debian_version" ]]; then
+    echo "Error: debian version is required" >&2
+    return 1
+  fi
+
+  if ! validate_dockerfile "$dockerfile"; then
+    return 1
+  fi
+
+  if [[ "$dry_run" == "true" ]]; then
+    show_dockerfile_diff "$dockerfile" "$debian_version"
+    return 0
+  fi
+
+  # Make the updates atomically
+  if ! sed -i.bak \
+    -e "s/ARG ELIXIR_VERSION=.*/ARG ELIXIR_VERSION=$ELIXIR_VERSION/" \
+    -e "s/ARG OTP_VERSION=.*/ARG OTP_VERSION=$OTP_VERSION/" \
+    -e "s/ARG NODE_VERSION=.*/ARG NODE_VERSION=$NODE_VERSION/" \
+    -e "s/ARG DEBIAN_VERSION=.*/ARG DEBIAN_VERSION=$debian_version/" \
+    "$dockerfile"; then
+    echo "Error: Failed to update $dockerfile" >&2
+    return 1
+  fi
+
+  echo "Updated $dockerfile"
+  return 0
+}
+
+# Clean up backup files after successful update
+# Takes array of filenames that were successfully updated
+cleanup_backup_files() {
+  local files=("$@")
+
+  for file in "${files[@]}"; do
+    if [[ -f "${file}.bak" ]]; then
+      rm "${file}.bak"
+    fi
+  done
+}
+
+# Update both Dockerfile and Dockerfile-dev with new version numbers
+# Ensures atomic updates - if any file fails, all changes are reverted
+update_dockerfiles() {
+  local debian_version="$1"
+  local dry_run="${2:-false}"
+  local files_to_update=()
+  local updated_files=()
+
+  if [[ -z "$debian_version" ]]; then
+    echo "Error: debian version is required" >&2
+    return 1
+  fi
+
+  # Identify files that exist and need updating
+  for dockerfile in "${DOCKERFILE_NAMES[@]}"; do
+    if [[ -f "$dockerfile" ]] && validate_dockerfile "$dockerfile"; then
+      files_to_update+=("$dockerfile")
+    fi
+  done
+
+  if [[ ${#files_to_update[@]} -eq 0 ]]; then
+    echo "Error: No valid Dockerfile found to update" >&2
+    return 1
+  fi
+
+  if [[ "$dry_run" == "true" ]]; then
+    echo "Dry run - showing diffs for ${#files_to_update[@]} file(s):"
+    echo ""
+  fi
+
+  # Update each file
+  for dockerfile in "${files_to_update[@]}"; do
+    if update_single_dockerfile "$dockerfile" "$debian_version" "$dry_run"; then
+      updated_files+=("$dockerfile")
+    else
+      if [[ "$dry_run" != "true" ]]; then
+        # Rollback any successful updates
+        for rollback_file in "${updated_files[@]}"; do
+          if [[ -f "${rollback_file}.bak" ]]; then
+            mv "${rollback_file}.bak" "$rollback_file"
+            echo "Rolled back $rollback_file"
+          fi
+        done
+        echo "Error: Update failed - all changes reverted" >&2
+      fi
+      return 1
+    fi
+  done
+
+  if [[ "$dry_run" != "true" ]]; then
+    # Clean up backup files on success
+    cleanup_backup_files "${updated_files[@]}"
+
+    echo ""
+    echo "Successfully updated ${#updated_files[@]} file(s):"
+    printf "  %s\n" "${updated_files[@]}"
+    echo ""
+    echo "Version updates applied:"
+    echo "  elixir: $ELIXIR_VERSION (from $ELIXIR_VERSION_RAW)"
+    echo "  otp: $OTP_VERSION"
+    echo "  node: $NODE_VERSION"
+    echo "  debian: $debian_version"
+  fi
+}
+
+# Main entry point - validates and dispatches commands
+# Handles command validation, calls appropriate functions, and manages the overall flow
+# Default command is 'update' if no argument is provided
+main() {
+  local command=${1:-update}
+
+  # Validate command
+  case "$command" in
+  "update" | "--update-debian" | "--dry-run" | "show-debian-images" | "help" | "--help")
+    # Valid commands, continue
+    ;;
+  *)
+    echo "Error: Unknown command '$command'" >&2
+    echo ""
+    show_help
+    return 1
+    ;;
+  esac
+
+  # Execute command
+  case "$command" in
+  "help" | "--help")
+    show_help
+    ;;
+  "show-debian-images")
+    if ! show_debian_images; then
+      return 1
+    fi
+    ;;
+  "--update-debian")
+    local debian_version
+    if ! debian_version=$(update_debian); then
+      return 1
+    fi
+    if ! update_dockerfiles "$debian_version"; then
+      return 1
+    fi
+    ;;
+  "--dry-run")
+    if ! find_and_parse_dockerfile; then
+      return 1
+    fi
+    local current_debian="$DOCKERFILE_DEBIAN_VERSION"
+    if ! update_dockerfiles "$current_debian" "true"; then
+      return 1
+    fi
+    ;;
+  "update")
+    if ! find_and_parse_dockerfile; then
+      return 1
+    fi
+    local current_debian="$DOCKERFILE_DEBIAN_VERSION"
+    if ! update_dockerfiles "$current_debian"; then
+      return 1
+    fi
+    ;;
+  esac
+}
+
+# Run main function with all arguments
+main "$@"
