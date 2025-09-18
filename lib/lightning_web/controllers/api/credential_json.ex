@@ -21,15 +21,18 @@ defmodule LightningWeb.API.CredentialJSON do
       production: credential.production,
       external_id: credential.external_id,
       user_id: credential.user_id,
-      project_credentials: render_project_credentials(credential.project_credentials),
+      project_credentials:
+        render_project_credentials(credential.project_credentials),
       projects: render_projects(credential.projects),
       inserted_at: credential.inserted_at,
       updated_at: credential.updated_at
     }
+
     # Note: body field is intentionally excluded for security reasons
   end
 
-  defp render_project_credentials(project_credentials) when is_list(project_credentials) do
+  defp render_project_credentials(project_credentials)
+       when is_list(project_credentials) do
     Enum.map(project_credentials, &render_project_credential/1)
   end
 
