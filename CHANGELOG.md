@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Optimized queue query planner stability to prevent 60s+ spikes
+  [#3564](https://github.com/OpenFn/lightning/issues/3564)
+
 ### Fixed
 
 - Wrong timestamp information in mini-history for in-progress runs
