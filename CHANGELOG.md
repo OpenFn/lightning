@@ -24,6 +24,8 @@ and this project adheres to
 
 - Optimized queue query planner stability to prevent 60s+ spikes
   [#3564](https://github.com/OpenFn/lightning/issues/3564)
+- Fix aarch64 (Apple Silicon) Dockerfile-dev build
+  [PR#3589](https://github.com/OpenFn/lightning/pull/3589)
 
 ### Fixed
 
