@@ -70,6 +70,8 @@ and this project adheres to
 
 ### Added
 
+- REST API for Credential creation, deletion, list
+  [#3583](https://github.com/OpenFn/lightning/issues/3583)
 - Hide sandboxes from project lists and project picker
   [#3573](https://github.com/OpenFn/lightning/issues/3573)
 
