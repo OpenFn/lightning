@@ -61,7 +61,7 @@ defmodule LightningWeb.SandboxLive.Components do
 
   def workspace_list(assigns) do
     ~H"""
-    <div class="space-y-6">
+    <div class="space-y-3">
       <div>
         <.root_project_card
           root_project={@root_project}
@@ -107,7 +107,7 @@ defmodule LightningWeb.SandboxLive.Components do
 
     ~H"""
     <div
-      class="group block cursor-pointer rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-xs bg-white transition-all duration-200 overflow-hidden"
+      class="group block cursor-pointer rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
       phx-click={JS.navigate(~p"/projects/#{@root_project.id}/w")}
       role="button"
       tabindex="0"
@@ -121,6 +121,7 @@ defmodule LightningWeb.SandboxLive.Components do
               <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
                 {@root_project.name}
               </h3>
+              <.environment_badge env="main" />
 
               <.active_indicator
                 :if={@is_current}
@@ -234,7 +235,7 @@ defmodule LightningWeb.SandboxLive.Components do
 
     ~H"""
     <div
-      class="group block cursor-pointer rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-xs bg-white transition-all duration-200 overflow-hidden"
+      class="group block cursor-pointer rounded-xl bg-white border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
       phx-click={JS.navigate(~p"/projects/#{@sandbox.id}/w")}
       role="button"
       tabindex="0"

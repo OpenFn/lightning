@@ -55,12 +55,10 @@ defmodule LightningWeb.Live.Helpers.ProjectTheme do
   end
 
   defp build_scale(hex) do
-    try do
-      %{h: h, s: s, l: _l} = Chameleon.convert(hex, Chameleon.HSL)
-      build_scale_with_hsl(h, s)
-    rescue
-      _ -> build_default_scale()
-    end
+    %{h: h, s: s, l: _l} = Chameleon.convert(hex, Chameleon.HSL)
+    build_scale_with_hsl(h, s)
+  rescue
+    _ -> build_default_scale()
   end
 
   defp build_default_scale do

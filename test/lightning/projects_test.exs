@@ -2109,7 +2109,7 @@ defmodule Lightning.ProjectsTest do
       assert sandbox.name == "sandbox-1"
     end
 
-    test "lisr_workspace_project/1 returns parent + its direct sandboxes (unique set)" do
+    test "list_workspace_project/1 returns parent + its direct sandboxes (unique set)" do
       parent = insert(:project, name: "root")
       c1 = insert(:project, name: "s-a", parent: parent)
       c2 = insert(:project, name: "s-b", parent: parent)
@@ -2122,6 +2122,273 @@ defmodule Lightning.ProjectsTest do
       expected_sandboxes_ids = MapSet.new([c1.id, c2.id])
       assert MapSet.new(Enum.map(sandboxes, & &1.id)) == expected_sandboxes_ids
       assert root_project.id == parent.id
+    end
+
+    test "returns root and all descendants sorted by name ascending by default" do
+      root = insert(:project, name: "root")
+
+      # Level 1 children (unordered names to test sorting)
+      c2 = insert(:project, name: "Z-child", parent: root)
+      c1 = insert(:project, name: "A-child", parent: root)
+      c3 = insert(:project, name: "M-child", parent: root)
+
+      # Level 2 children (grandchildren)
+      gc1 = insert(:project, name: "B-grandchild", parent: c1)
+      gc2 = insert(:project, name: "Y-grandchild", parent: c2)
+
+      # Unrelated project in different workspace
+      _other_root = insert(:project, name: "other-root")
+
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      # Check root is correct
+      assert returned_root.id == root.id
+
+      # Check all descendants are included and sorted alphabetically
+      expected_names = [
+        "A-child",
+        "B-grandchild",
+        "M-child",
+        "Y-grandchild",
+        "Z-child"
+      ]
+
+      assert Enum.map(descendants, & &1.name) == expected_names
+
+      # Verify correct IDs are returned
+      expected_ids = [c1.id, gc1.id, c3.id, gc2.id, c2.id]
+      assert Enum.map(descendants, & &1.id) == expected_ids
+    end
+
+    test "accepts Project struct and delegates to binary version" do
+      root = insert(:project, name: "root")
+      _c1 = insert(:project, name: "child-A", parent: root)
+
+      # Call with struct
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root)
+
+      assert returned_root.id == root.id
+      assert Enum.map(descendants, & &1.name) == ["child-A"]
+    end
+
+    test "works when called with child project - finds correct root" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      # Call with grandchild - should find root and return entire workspace
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(grandchild.id)
+
+      assert returned_root.id == root.id
+      assert Enum.map(descendants, & &1.name) == ["child", "grandchild"]
+    end
+
+    test "returns empty descendants list when root has no children" do
+      root = insert(:project, name: "lonely-root")
+
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      assert returned_root.id == root.id
+      assert descendants == []
+    end
+
+    test "sort_by: :name, sort_order: :desc sorts names descending" do
+      root = insert(:project, name: "root")
+      insert(:project, name: "Alpha", parent: root)
+      insert(:project, name: "Zeta", parent: root)
+      insert(:project, name: "Beta", parent: root)
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id,
+          sort_by: :name,
+          sort_order: :desc
+        )
+
+      assert Enum.map(descendants, & &1.name) == ["Zeta", "Beta", "Alpha"]
+    end
+
+    test "sort_by: :inserted_at sorts by creation time" do
+      root = insert(:project, name: "root")
+
+      # Insert with specific timestamps to control order
+      _old_child =
+        insert(:project,
+          name: "old",
+          parent: root,
+          inserted_at: ~N[2023-01-01 10:00:00]
+        )
+
+      _new_child =
+        insert(:project,
+          name: "new",
+          parent: root,
+          inserted_at: ~N[2023-01-01 12:00:00]
+        )
+
+      _mid_child =
+        insert(:project,
+          name: "mid",
+          parent: root,
+          inserted_at: ~N[2023-01-01 11:00:00]
+        )
+
+      # Sort by inserted_at ascending
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id,
+          sort_by: :inserted_at,
+          sort_order: :asc
+        )
+
+      assert Enum.map(descendants, & &1.name) == ["old", "mid", "new"]
+
+      # Sort by inserted_at descending
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id,
+          sort_by: :inserted_at,
+          sort_order: :desc
+        )
+
+      assert Enum.map(descendants, & &1.name) == ["new", "mid", "old"]
+    end
+
+    test "sort_by: :updated_at sorts by update time" do
+      root = insert(:project, name: "root")
+
+      old_time = ~N[2023-01-01 10:00:00]
+      new_time = ~N[2023-01-01 11:00:00]
+
+      _child1 =
+        insert(:project,
+          name: "child1-updated",
+          parent: root,
+          updated_at: old_time
+        )
+
+      _child2 =
+        insert(:project,
+          name: "child2-updated",
+          parent: root,
+          updated_at: new_time
+        )
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id,
+          sort_by: :updated_at,
+          sort_order: :desc
+        )
+
+      assert Enum.map(descendants, & &1.name) == [
+               "child2-updated",
+               "child1-updated"
+             ]
+    end
+
+    test "raises ArgumentError for invalid sort_by option" do
+      root = insert(:project, name: "root")
+
+      assert_raise ArgumentError,
+                   ~r/Invalid sort_by option: invalid_field/,
+                   fn ->
+                     Projects.list_workspace_projects(root.id,
+                       sort_by: :invalid_field
+                     )
+                   end
+    end
+
+    test "raises ArgumentError for invalid sort_order option" do
+      root = insert(:project, name: "root")
+
+      assert_raise ArgumentError,
+                   ~r/Invalid sort_order option: invalid_order/,
+                   fn ->
+                     Projects.list_workspace_projects(root.id,
+                       sort_order: :invalid_order
+                     )
+                   end
+    end
+
+    test "excludes projects from other workspaces" do
+      # Workspace 1
+      root1 = insert(:project, name: "root1")
+      _child1 = insert(:project, name: "workspace1-child", parent: root1)
+
+      # Workspace 2
+      root2 = insert(:project, name: "root2")
+      child2 = insert(:project, name: "workspace2-child", parent: root2)
+
+      # Get workspace 1 projects
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root1.id)
+
+      assert returned_root.id == root1.id
+      assert Enum.map(descendants, & &1.name) == ["workspace1-child"]
+
+      # Ensure workspace 2 projects are not included
+      descendant_ids = Enum.map(descendants, & &1.id)
+      refute child2.id in descendant_ids
+      refute root2.id in descendant_ids
+    end
+
+    test "handles deep nesting correctly" do
+      root = insert(:project, name: "root")
+      l1 = insert(:project, name: "level1", parent: root)
+      l2 = insert(:project, name: "level2", parent: l1)
+      l3 = insert(:project, name: "level3", parent: l2)
+      _l4 = insert(:project, name: "level4", parent: l3)
+
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      assert returned_root.id == root.id
+
+      assert Enum.map(descendants, & &1.name) == [
+               "level1",
+               "level2",
+               "level3",
+               "level4"
+             ]
+    end
+
+    test "preloads parent associations" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      # Find the grandchild in results
+      grandchild_result = Enum.find(descendants, &(&1.id == grandchild.id))
+
+      # Parent should be preloaded
+      assert grandchild_result.parent.id == child.id
+      assert grandchild_result.parent.name == "child"
+    end
+
+    test "same names at different levels sort correctly" do
+      root = insert(:project, name: "root")
+      _child1 = insert(:project, name: "duplicate", parent: root)
+      child2 = insert(:project, name: "other", parent: root)
+      _grandchild = insert(:project, name: "duplicate", parent: child2)
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      # Should get both "duplicate" projects in alphabetical order
+      names = Enum.map(descendants, & &1.name)
+      assert names == ["duplicate", "duplicate", "other"]
+    end
+
+    test "raises when project doesn't exist" do
+      fake_id = Ecto.UUID.generate()
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Projects.list_workspace_projects(fake_id)
+      end
     end
   end
 

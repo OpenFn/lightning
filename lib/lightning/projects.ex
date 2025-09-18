@@ -1283,18 +1283,51 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns all projects in a workspace hierarchy - root plus ALL descendant sandboxes
-  at any depth level.
+  Returns all projects in a workspace hierarchy.
 
+  Returns a map with the root project and all its descendant sandboxes at any depth level.
   Uses a recursive CTE to traverse the entire project tree from root to leaves.
+  Descendants are sorted as a flat list according to the specified options.
+
+  ## Options
+  - `sort_by`: Field to sort by (`:name`, `:inserted_at`, `:updated_at`). Defaults to `:name`.
+  - `sort_order`: Sort direction (`:asc` or `:desc`). Defaults to `:asc`.
+
+  ## Examples
+      # Default sorting (name ascending)
+      Projects.list_workspace_projects(project_id)
+
+      # Sort by name descending
+      Projects.list_workspace_projects(project_id, sort_by: :name, sort_order: :desc)
+
+      # Sort by creation date
+      Projects.list_workspace_projects(project_id, sort_by: :inserted_at, sort_order: :desc)
   """
-  @spec list_workspace_projects(Ecto.UUID.t()) :: %{
+  def list_workspace_projects(project_id_or_struct, opts \\ [])
+
+  @spec list_workspace_projects(Ecto.UUID.t(), keyword()) :: %{
           root: Project.t(),
           descendants: [Project.t()]
         }
-  def list_workspace_projects(project_id) when is_binary(project_id) do
+  def list_workspace_projects(project_id, opts) when is_binary(project_id) do
     project = get_project!(project_id)
     root = root_of(project)
+
+    sort_by = Keyword.get(opts, :sort_by, :name)
+    sort_order = Keyword.get(opts, :sort_order, :asc)
+
+    valid_sort_fields = [:name, :inserted_at, :updated_at]
+    valid_sort_orders = [:asc, :desc]
+
+    unless sort_by in valid_sort_fields do
+      raise ArgumentError,
+            "Invalid sort_by option: #{sort_by}. Valid options are: #{inspect(valid_sort_fields)}"
+    end
+
+    unless sort_order in valid_sort_orders do
+      raise ArgumentError,
+            "Invalid sort_order option: #{sort_order}. Valid options are: #{inspect(valid_sort_orders)}"
+    end
 
     descendants_query =
       from(p in Project,
@@ -1309,6 +1342,12 @@ defmodule Lightning.Projects do
         select: %{id: p.id, parent_id: p.parent_id, level: d.level + 1}
       )
 
+    order_by_clause =
+      case {sort_order, sort_by} do
+        {:asc, field} -> [asc: dynamic([p, d], field(p, ^field))]
+        {:desc, field} -> [desc: dynamic([p, d], field(p, ^field))]
+      end
+
     descendants =
       Project
       |> with_cte("descendants", as: ^descendants_query)
@@ -1317,16 +1356,19 @@ defmodule Lightning.Projects do
         as: ^union_all(descendants_query, ^recursive_query)
       )
       |> join(:inner, [p], d in "descendants", on: p.id == d.id)
-      |> order_by([p, d], asc: d.level, asc: p.name)
+      |> order_by(^order_by_clause)
       |> preload(:parent)
       |> Repo.all()
 
     %{root: root, descendants: descendants}
   end
 
-  @spec list_workspace_projects(Project.t()) :: [Project.t()]
-  def list_workspace_projects(%Project{id: project_id}) do
-    list_workspace_projects(project_id)
+  @spec list_workspace_projects(Project.t(), keyword()) :: %{
+          root: Project.t(),
+          descendants: [Project.t()]
+        }
+  def list_workspace_projects(%Project{id: project_id}, opts) do
+    list_workspace_projects(project_id, opts)
   end
 
   @doc """
