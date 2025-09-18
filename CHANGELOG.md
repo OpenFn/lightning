@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Wrong timestamp information in mini-history for in-progress runs
+  [#3579](https://github.com/OpenFn/lightning/pull/3579)
+
 ## [v2.14.5-pre1] - 2025-09-11
 
 ### Added
@@ -65,8 +68,6 @@ and this project adheres to
   [#3559](https://github.com/OpenFn/lightning/pull/3559)
 - Current run dataclip stuck when switching nodes
   [#3560](https://github.com/OpenFn/lightning/pull/3560)
-- Wrong timestamp information in mini-history for in-progress runs
-  [#3579](https://github.com/OpenFn/lightning/pull/3579)
 
 ## [v2.14.4] - 2025-09-09
 
