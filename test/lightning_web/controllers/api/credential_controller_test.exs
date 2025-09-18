@@ -69,15 +69,17 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       # Create a credential for another user (should not appear)
       other_user = insert(:user)
-      _other_credential = insert(:credential, user: other_user, name: "Other User Credential")
+
+      _other_credential =
+        insert(:credential, user: other_user, name: "Other User Credential")
 
       conn = get(conn, ~p"/api/credentials")
       response = json_response(conn, 200)
 
       assert %{
-        "credentials" => credentials,
-        "errors" => %{}
-      } = response
+               "credentials" => credentials,
+               "errors" => %{}
+             } = response
 
       assert length(credentials) == 2
 
@@ -92,41 +94,51 @@ defmodule LightningWeb.API.CredentialControllerTest do
       end)
 
       # Check specific credential structure
-      first_credential = Enum.find(credentials, &(&1["name"] == "First Credential"))
+      first_credential =
+        Enum.find(credentials, &(&1["name"] == "First Credential"))
+
       assert %{
-        "id" => _,
-        "name" => "First Credential",
-        "schema" => _,
-        "production" => _,
-        "external_id" => _,
-        "user_id" => user_id,
-        "project_credentials" => _,
-        "projects" => _,
-        "inserted_at" => _,
-        "updated_at" => _
-      } = first_credential
+               "id" => _,
+               "name" => "First Credential",
+               "schema" => _,
+               "production" => _,
+               "external_id" => _,
+               "user_id" => user_id,
+               "project_credentials" => _,
+               "projects" => _,
+               "inserted_at" => _,
+               "updated_at" => _
+             } = first_credential
 
       assert user_id == user.id
     end
 
-    test "returns empty list when user has no credentials", %{conn: conn, user: _user} do
+    test "returns empty list when user has no credentials", %{
+      conn: conn,
+      user: _user
+    } do
       conn = get(conn, ~p"/api/credentials")
       response = json_response(conn, 200)
 
       assert %{
-        "credentials" => [],
-        "errors" => %{}
-      } = response
+               "credentials" => [],
+               "errors" => %{}
+             } = response
     end
 
-    test "includes project associations in the response", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+    test "includes project associations in the response", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
 
-      _credential = insert(:credential,
-        user: user,
-        name: "Project Credential",
-        project_credentials: [%{project_id: project.id}]
-      )
+      _credential =
+        insert(:credential,
+          user: user,
+          name: "Project Credential",
+          project_credentials: [%{project_id: project.id}]
+        )
 
       conn = get(conn, ~p"/api/credentials")
       response = json_response(conn, 200)
@@ -145,33 +157,41 @@ defmodule LightningWeb.API.CredentialControllerTest do
   describe "index for specific project" do
     setup [:assign_bearer_for_api]
 
-    test "lists all credentials in a project when user has access", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+    test "lists all credentials in a project when user has access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
 
       # Create credentials for different users but in the same project
-      _user_credential = insert(:credential,
-        user: user,
-        name: "User Credential",
-        project_credentials: [%{project_id: project.id}]
-      )
+      _user_credential =
+        insert(:credential,
+          user: user,
+          name: "User Credential",
+          project_credentials: [%{project_id: project.id}]
+        )
 
       other_user = insert(:user)
-      _other_user_credential = insert(:credential,
-        user: other_user,
-        name: "Other User Credential",
-        project_credentials: [%{project_id: project.id}]
-      )
+
+      _other_user_credential =
+        insert(:credential,
+          user: other_user,
+          name: "Other User Credential",
+          project_credentials: [%{project_id: project.id}]
+        )
 
       # Create a credential not in this project (should not appear)
-      _unrelated_credential = insert(:credential, user: user, name: "Unrelated Credential")
+      _unrelated_credential =
+        insert(:credential, user: user, name: "Unrelated Credential")
 
       conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
       response = json_response(conn, 200)
 
       assert %{
-        "credentials" => credentials,
-        "errors" => %{}
-      } = response
+               "credentials" => credentials,
+               "errors" => %{}
+             } = response
 
       assert length(credentials) == 2
 
@@ -185,9 +205,16 @@ defmodule LightningWeb.API.CredentialControllerTest do
       end)
     end
 
-    test "returns 403 when user lacks access to project", %{conn: conn, user: _user} do
+    test "returns 403 when user lacks access to project", %{
+      conn: conn,
+      user: _user
+    } do
       other_user = insert(:user)
-      project = insert(:project, project_users: [%{user_id: other_user.id, role: :owner}])
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: other_user.id, role: :owner}]
+        )
 
       conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
@@ -200,27 +227,32 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 404) == %{"error" => "Not Found"}
     end
 
-    test "returns empty list when project has no credentials", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+    test "returns empty list when project has no credentials", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
 
       conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
       response = json_response(conn, 200)
 
       assert %{
-        "credentials" => [],
-        "errors" => %{}
-      } = response
+               "credentials" => [],
+               "errors" => %{}
+             } = response
     end
 
     test "allows access for support users with project access", %{conn: conn} do
       support_user = insert(:user, support_user: true)
       project = insert(:project, allow_support_access: true)
 
-      _credential = insert(:credential,
-        user: support_user,
-        name: "Support Credential",
-        project_credentials: [%{project_id: project.id}]
-      )
+      _credential =
+        insert(:credential,
+          user: support_user,
+          name: "Support Credential",
+          project_credentials: [%{project_id: project.id}]
+        )
 
       token = Lightning.Accounts.generate_api_token(support_user)
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
@@ -232,14 +264,19 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert credential_data["name"] == "Support Credential"
     end
 
-    test "includes project information in credential data", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :admin}])
+    test "includes project information in credential data", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :admin}])
 
-      _credential = insert(:credential,
-        user: user,
-        name: "Project Credential",
-        project_credentials: [%{project_id: project.id}]
-      )
+      _credential =
+        insert(:credential,
+          user: user,
+          name: "Project Credential",
+          project_credentials: [%{project_id: project.id}]
+        )
 
       conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
       response = json_response(conn, 200)
@@ -606,9 +643,14 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 404) == %{"error" => "Not Found"}
     end
 
-    test "returns 403 when trying to delete credential owned by another user", %{conn: conn, user: _user} do
+    test "returns 403 when trying to delete credential owned by another user", %{
+      conn: conn,
+      user: _user
+    } do
       other_user = insert(:user)
-      other_credential = insert(:credential, user: other_user, name: "Other User Credential")
+
+      other_credential =
+        insert(:credential, user: other_user, name: "Other User Credential")
 
       conn = delete(conn, ~p"/api/credentials/#{other_credential.id}")
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
@@ -617,14 +659,19 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert Lightning.Credentials.get_credential(other_credential.id)
     end
 
-    test "deletes credential with project associations", %{conn: conn, user: user} do
-      project = insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+    test "deletes credential with project associations", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
 
-      credential = insert(:credential,
-        user: user,
-        name: "Credential with Projects",
-        project_credentials: [%{project_id: project.id}]
-      )
+      credential =
+        insert(:credential,
+          user: user,
+          name: "Credential with Projects",
+          project_credentials: [%{project_id: project.id}]
+        )
 
       conn = delete(conn, ~p"/api/credentials/#{credential.id}")
       assert response(conn, 204) == ""
