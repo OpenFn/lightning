@@ -11,7 +11,6 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
@@ -42,22 +41,21 @@ defmodule LightningWeb.Hooks do
         _session,
         %{assigns: %{current_user: current_user}} = socket
       ) do
-    current = Lightning.Projects.get_project(project_id)
-    root = if current, do: Lightning.Projects.root_of(current)
+    project = Lightning.Projects.get_project(project_id)
     projects = Lightning.Projects.get_projects_for_user(current_user)
 
     project_user =
-      root && Lightning.Projects.get_project_user(root, current_user)
+      project && Lightning.Projects.get_project_user(project, current_user)
 
     can_access_project =
-      Permissions.can?(ProjectUsers, :access_project, current_user, root)
+      Permissions.can?(ProjectUsers, :access_project, current_user, project)
 
     cond do
-      can_access_project and root.requires_mfa and !current_user.mfa_enabled ->
+      can_access_project and project.requires_mfa and !current_user.mfa_enabled ->
         {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
-        scale = ProjectTheme.inline_primary_scale(current)
+        scale = ProjectTheme.inline_primary_scale(project)
 
         theme_style =
           [scale, ProjectTheme.inline_sidebar_vars()]
@@ -69,10 +67,7 @@ defmodule LightningWeb.Hooks do
          |> assign(:side_menu_theme, "primary-theme")
          |> assign(:theme_style, theme_style)
          |> assign_new(:project_user, fn -> project_user end)
-         |> assign_new(:project, fn -> root end)
-         |> assign_new(:current_sandbox, fn ->
-           if Project.sandbox?(current), do: current, else: nil
-         end)
+         |> assign_new(:project, fn -> project end)
          |> assign_new(:projects, fn -> projects end)}
 
       true ->

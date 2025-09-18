@@ -185,13 +185,12 @@ defmodule LightningWeb.SandboxLive.Index do
       </:header>
 
       <LayoutComponents.centered>
-        <Components.header project={@project} />
+        <Components.header current_project={@project} />
 
         <Components.workspace_list
           root_project={@root_project}
+          current_project={@project}
           sandboxes={@sandboxes}
-          project={@project}
-          current_sandbox={@current_sandbox}
         />
 
         <Components.confirm_delete_modal
@@ -206,7 +205,7 @@ defmodule LightningWeb.SandboxLive.Index do
           id="sandbox-form-component-new"
           mode={:new}
           current_user={@current_user}
-          parent={@current_sandbox || @project}
+          parent={@project}
           return_to={nil}
         />
 
@@ -218,7 +217,7 @@ defmodule LightningWeb.SandboxLive.Index do
           sandbox={@editing_sandbox}
           current_user={@current_user}
           parent={@editing_sandbox.parent}
-          return_to={~p"/projects/#{(@current_sandbox || @project).id}/sandboxes"}
+          return_to={~p"/projects/#{@project.id}/sandboxes"}
         />
       </LayoutComponents.centered>
     </LayoutComponents.page_content>

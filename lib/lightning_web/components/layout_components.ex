@@ -29,7 +29,7 @@ defmodule LightningWeb.LayoutComponents do
       />
       <%= if assigns[:project] do %>
         <Menu.project_items
-          project_id={(@current_sandbox || @project).id}
+          project_id={@project.id}
           current_user={@current_user}
           active_menu_item={@active_menu_item}
         />

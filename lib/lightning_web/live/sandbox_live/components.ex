@@ -27,18 +27,18 @@ defmodule LightningWeb.SandboxLive.Components do
     Enum.map(@color_palette, fn {hex, _name} -> hex end)
   end
 
-  attr :project, Project, required: true
+  attr :current_project, Project, required: true
 
   def header(assigns) do
     ~H"""
     <div class="mb-6 flex items-center justify-between">
       <h3 class="text-3xl font-bold">Sandboxes</h3>
-      <.create_button project={@project} />
+      <.create_button current_project={@current_project} />
     </div>
     """
   end
 
-  attr :project, Project, required: true
+  attr :current_project, Project, required: true
 
   def create_button(assigns) do
     ~H"""
@@ -47,7 +47,7 @@ defmodule LightningWeb.SandboxLive.Components do
       theme="primary"
       size="lg"
       type="button"
-      phx-click={JS.patch(~p"/projects/#{@project.id}/sandboxes/new")}
+      phx-click={JS.patch(~p"/projects/#{@current_project.id}/sandboxes/new")}
     >
       Create Sandbox
     </.button>
@@ -55,9 +55,8 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   attr :root_project, Project, default: nil
+  attr :current_project, Project, required: true
   attr :sandboxes, :list, required: true
-  attr :project, Project, required: true
-  attr :current_sandbox, Project, default: nil
 
   def workspace_list(assigns) do
     ~H"""
@@ -65,7 +64,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div>
         <.root_project_card
           root_project={@root_project}
-          current_sandbox={@current_sandbox}
+          is_current={@current_project.id == @root_project.id}
         />
       </div>
       <div>
@@ -75,7 +74,7 @@ defmodule LightningWeb.SandboxLive.Components do
               <div class="text-base font-medium">No sandboxes found</div>
               <div class="text-sm">
                 <.link
-                  navigate={~p"/projects/#{@project.id}/sandboxes/new"}
+                  navigate={~p"/projects/#{@current_project.id}/sandboxes/new"}
                   class="text-blue-600 hover:text-blue-800 font-medium"
                 >
                   Create your first sandbox
@@ -88,9 +87,8 @@ defmodule LightningWeb.SandboxLive.Components do
           <div class="space-y-3">
             <.sandbox_card
               :for={sandbox <- @sandboxes}
-              project={@project}
+              is_current={@current_project.id == sandbox.id}
               sandbox={sandbox}
-              current_sandbox={@current_sandbox}
             />
           </div>
         <% end %>
@@ -100,11 +98,9 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   attr :root_project, Project, required: true
-  attr :current_sandbox, Project, default: nil
+  attr :is_current, :boolean, required: true
 
   defp root_project_card(assigns) do
-    assigns = assign(assigns, :is_current, is_nil(assigns.current_sandbox))
-
     ~H"""
     <div
       class="group block cursor-pointer rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
@@ -121,19 +117,63 @@ defmodule LightningWeb.SandboxLive.Components do
               <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
                 {@root_project.name}
               </h3>
-              <.environment_badge env="main" />
-
-              <.active_indicator
+              <.badge
+                id={"env-badge-#{@root_project.id}"}
+                env={
+                  if has_environment?(@root_project),
+                    do: @root_project.env,
+                    else: "main"
+                }
+              />
+              <.badge
                 :if={@is_current}
-                id={"active-indicator-#{@root_project.id}"}
+                id={"active-badge-#{@root_project.id}"}
+                env="active"
               />
             </div>
-
-            <.environment_badge
-              :if={has_environment?(@root_project)}
-              env={@root_project.env}
-            />
           </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :sandbox, Project, required: true
+  attr :is_current, :boolean, required: true
+
+  defp sandbox_card(assigns) do
+    ~H"""
+    <div
+      class="group block cursor-pointer rounded-xl bg-white border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
+      phx-click={JS.navigate(~p"/projects/#{@sandbox.id}/w")}
+      role="button"
+      tabindex="0"
+    >
+      <div class="flex items-stretch">
+        <div
+          class="w-3 flex-shrink-0"
+          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+        >
+        </div>
+        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-1">
+              <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
+                {@sandbox.name}
+              </h3>
+              <.badge
+                :if={has_environment?(@sandbox)}
+                id={"env-badge-#{@sandbox.id}"}
+                env={@sandbox.env}
+              />
+              <.badge
+                :if={@is_current}
+                id={"active-badge-#{@sandbox.id}"}
+                env="active"
+              />
+            </div>
+          </div>
+          <.sandbox_actions sandbox={@sandbox} />
         </div>
       </div>
     </div>
@@ -223,52 +263,6 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
-  attr :project, Project, required: true
-  attr :sandbox, Project, required: true
-  attr :current_sandbox, Project, default: nil
-
-  defp sandbox_card(assigns) do
-    is_current_sandbox =
-      assigns.current_sandbox && assigns.sandbox.id == assigns.current_sandbox.id
-
-    assigns = assign(assigns, :is_current, is_current_sandbox)
-
-    ~H"""
-    <div
-      class="group block cursor-pointer rounded-xl bg-white border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
-      phx-click={JS.navigate(~p"/projects/#{@sandbox.id}/w")}
-      role="button"
-      tabindex="0"
-    >
-      <div class="flex items-stretch">
-        <div
-          class="w-3 flex-shrink-0"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
-        >
-        </div>
-        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-3 mb-1">
-              <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
-                {@sandbox.name}
-              </h3>
-              <.environment_badge
-                :if={has_environment?(@sandbox)}
-                env={@sandbox.env}
-              />
-              <.active_indicator
-                :if={@is_current}
-                id={"active-indicator-#{@sandbox.id}"}
-              />
-            </div>
-          </div>
-          <.sandbox_actions sandbox={@sandbox} project={@project} />
-        </div>
-      </div>
-    </div>
-    """
-  end
-
   attr :id, :string, required: true
 
   defp active_indicator(assigns) do
@@ -286,18 +280,21 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
+  attr :id, :string, required: true
   attr :env, :string, required: true
 
-  defp environment_badge(assigns) do
+  defp badge(assigns) do
     ~H"""
-    <span class="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full truncate max-w-32">
+    <span
+      id={@id}
+      class="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full truncate max-w-32"
+    >
       {@env}
     </span>
     """
   end
 
   attr :sandbox, Project, required: true
-  attr :project, Project, required: true
 
   defp sandbox_actions(assigns) do
     ~H"""
@@ -323,7 +320,9 @@ defmodule LightningWeb.SandboxLive.Components do
         icon_type="heroicon"
         icon_name="hero-pencil-square"
         label="Edit this sandbox"
-        action={JS.patch(~p"/projects/#{@project.id}/sandboxes/#{@sandbox.id}/edit")}
+        action={
+          JS.patch(~p"/projects/#{@sandbox.parent_id}/sandboxes/#{@sandbox.id}/edit")
+        }
         icon_class="text-slate-700"
       />
 
