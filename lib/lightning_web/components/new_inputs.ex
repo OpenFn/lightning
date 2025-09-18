@@ -556,7 +556,7 @@ defmodule LightningWeb.Components.NewInputs do
           >
             <li
               :for={option <- @options}
-              class="relative cursor-default py-2 pr-4 pl-8 text-gray-900 select-none group hover:bg-indigo-600 hover:text-white hover:outline-hidden"
+              class="relative cursor-default py-2 pr-4 pl-8 text-gray-900 select-none group hover:bg-primary-600 hover:text-white hover:outline-hidden"
               role="option"
               phx-click={
                 JS.set_attribute(
@@ -585,7 +585,7 @@ defmodule LightningWeb.Components.NewInputs do
 
               <span
                 :if={option == @selected_option}
-                class="absolute inset-y-0 left-0 flex items-center pl-1.5 text-indigo-600 group-hover:text-white"
+                class="absolute inset-y-0 left-0 flex items-center pl-1.5 text-primary-600 group-hover:text-white"
               >
                 <.icon name="hero-check" class="size-5" />
               </span>
@@ -668,7 +668,7 @@ defmodule LightningWeb.Components.NewInputs do
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
             @class,
             @errors == [] &&
-              "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+              "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
             @errors != [] && @field && @field.field == @name && @field.errors != [] &&
               "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
           ]}
@@ -704,7 +704,7 @@ defmodule LightningWeb.Components.NewInputs do
       checked={@checked}
       value={@value}
       class={[
-        "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600",
+        "h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-600",
         @class
       ]}
       {@rest}
@@ -761,7 +761,7 @@ defmodule LightningWeb.Components.NewInputs do
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
             @errors == [] &&
-              "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+              "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
             @errors != [] &&
               "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
             @class
@@ -823,9 +823,9 @@ defmodule LightningWeb.Components.NewInputs do
         "relative inline-flex h-6 w-11 shrink-0",
         "cursor-pointer rounded-full border-2 border-transparent",
         "transition-colors duration-200 ease-in-out",
-        "focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2",
+        "focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2",
         "disabled:cursor-not-allowed",
-        "bg-gray-200 aria-checked:bg-indigo-600 group"
+        "bg-gray-200 aria-checked:bg-primary-600 group"
       ]}
       role="switch"
       aria-checked={"#{@value == "1" || false}"}
@@ -898,8 +898,8 @@ defmodule LightningWeb.Components.NewInputs do
             aria-checked={@checked}
             class={[
               "relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 ease-in-out border-2 border-transparent",
-              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
-              @checked && "bg-indigo-600",
+              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
+              @checked && "bg-primary-600",
               !@checked && "bg-gray-200",
               if(@rest[:disabled],
                 do: "opacity-50 cursor-not-allowed",
@@ -930,7 +930,7 @@ defmodule LightningWeb.Components.NewInputs do
                 ]}
                 aria-hidden="true"
               >
-                <.icon name="hero-check-micro" class="h-4 w-4 text-indigo-600" />
+                <.icon name="hero-check-micro" class="h-4 w-4 text-primary-600" />
               </span>
             </span>
           </div>
@@ -1033,7 +1033,7 @@ defmodule LightningWeb.Components.NewInputs do
         "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
         "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
         @errors == [] &&
-          "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+          "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
         @errors != [] &&
           "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
         @class
@@ -1074,7 +1074,7 @@ defmodule LightningWeb.Components.NewInputs do
         "sm:text-sm sm:leading-6",
         "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
         @errors == [] &&
-          "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+          "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
         @errors != [] &&
           "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
         @class
@@ -1123,9 +1123,9 @@ defmodule LightningWeb.Components.NewInputs do
       name={@name}
       value={to_string(@checked_value)}
       checked={@checked}
-      class={["rounded border-gray-300 text-indigo-600 focus:ring-indigo-600
-        checked:disabled:bg-indigo-300 checked:disabled:border-indigo-300
-        checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none
+      class={["rounded border-gray-300 text-primary-600 focus:ring-primary-600
+        checked:disabled:bg-primary-300 checked:disabled:border-primary-300
+        checked:bg-primary-600 checked:border-primary-600 focus:outline-none
         transition duration-200 cursor-pointer", @class]}
       {@rest}
     />
