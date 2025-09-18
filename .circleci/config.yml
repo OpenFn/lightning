@@ -13,7 +13,8 @@ commands:
       - run:
           name: "Install Node.js from NodeSource"
           command: |
-            curl -fsSL https://deb.nodesource.com/setup_<< parameters.version | cut -d'.' -f1 >>.x | bash -
+            NODE_MAJOR=$(echo "<< parameters.version >>" | cut -d'.' -f1)
+            curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash -
             apt-get install -y nodejs=<< parameters.version >>-1nodesource1
 
 jobs:
