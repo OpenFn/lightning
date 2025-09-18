@@ -267,13 +267,15 @@ defmodule LightningWeb.SandboxLive.FormComponent do
                   :edit -> "The sandbox will be named"
                 end}
                 <%= if to_string(f[:name].value) != "" do %>
-                  <span class="ml-1 rounded-md border border-slate-300 bg-yellow-100 p-1 font-mono text-xs">
-                    <%= @name %>
-                  </span>.
+                  <span class={[
+                    "ml-1 rounded-md border border-slate-300",
+                    "bg-yellow-100 p-1 font-mono text-xs"
+                  ]}><%= @name %></span>.
                 <% else %>
-                  <span class="ml-1 rounded-md border border-slate-200 bg-gray-50 p-1 font-mono text-xs">
-                    my-sandbox
-                  </span>.
+                  <span class={[
+                    "ml-1 rounded-md border border-slate-200",
+                    "bg-gray-50 p-1 font-mono text-xs"
+                  ]}>my-sandbox</span>.
                 <% end %>
               </small>
             </div>
