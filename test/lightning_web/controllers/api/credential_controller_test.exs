@@ -8,18 +8,125 @@ defmodule LightningWeb.API.CredentialControllerTest do
   end
 
   describe "without a token" do
-    test "gets a 401", %{conn: conn} do
+    test "index gets a 401", %{conn: conn} do
+      conn = get(conn, ~p"/api/credentials")
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "create gets a 401", %{conn: conn} do
       conn = post(conn, ~p"/api/credentials", %{})
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "delete gets a 401", %{conn: conn} do
+      conn = delete(conn, ~p"/api/credentials/#{Ecto.UUID.generate()}")
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
   end
 
   describe "with invalid token" do
-    test "gets a 401", %{conn: conn} do
+    test "index gets a 401", %{conn: conn} do
+      token = "InvalidToken"
+      conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+      conn = get(conn, ~p"/api/credentials")
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "create gets a 401", %{conn: conn} do
       token = "InvalidToken"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = post(conn, ~p"/api/credentials", %{})
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "delete gets a 401", %{conn: conn} do
+      token = "InvalidToken"
+      conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+      conn = delete(conn, ~p"/api/credentials/#{Ecto.UUID.generate()}")
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+  end
+
+  describe "index" do
+    setup [:assign_bearer_for_api]
+
+    test "lists all credentials owned by the user", %{conn: conn, user: user} do
+      # Create some credentials for the user
+      _credential1 = insert(:credential, user: user, name: "First Credential")
+      _credential2 = insert(:credential, user: user, name: "Second Credential")
+
+      # Create a credential for another user (should not appear)
+      other_user = insert(:user)
+      _other_credential = insert(:credential, user: other_user, name: "Other User Credential")
+
+      conn = get(conn, ~p"/api/credentials")
+      response = json_response(conn, 200)
+
+      assert %{
+        "credentials" => credentials,
+        "errors" => %{}
+      } = response
+
+      assert length(credentials) == 2
+
+      # Check that credentials are returned without body field
+      returned_names = Enum.map(credentials, & &1["name"]) |> Enum.sort()
+      assert returned_names == ["First Credential", "Second Credential"]
+
+      # Verify body field is excluded for security
+      Enum.each(credentials, fn credential ->
+        refute Map.has_key?(credential, "body")
+        assert credential["user_id"] == user.id
+      end)
+
+      # Check specific credential structure
+      first_credential = Enum.find(credentials, &(&1["name"] == "First Credential"))
+      assert %{
+        "id" => _,
+        "name" => "First Credential",
+        "schema" => _,
+        "production" => _,
+        "external_id" => _,
+        "user_id" => user_id,
+        "project_credentials" => _,
+        "projects" => _,
+        "inserted_at" => _,
+        "updated_at" => _
+      } = first_credential
+
+      assert user_id == user.id
+    end
+
+    test "returns empty list when user has no credentials", %{conn: conn, user: _user} do
+      conn = get(conn, ~p"/api/credentials")
+      response = json_response(conn, 200)
+
+      assert %{
+        "credentials" => [],
+        "errors" => %{}
+      } = response
+    end
+
+    test "includes project associations in the response", %{conn: conn, user: user} do
+      project = insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      _credential = insert(:credential,
+        user: user,
+        name: "Project Credential",
+        project_credentials: [%{project_id: project.id}]
+      )
+
+      conn = get(conn, ~p"/api/credentials")
+      response = json_response(conn, 200)
+
+      assert %{"credentials" => [credential_data]} = response
+      assert credential_data["name"] == "Project Credential"
+      assert length(credential_data["project_credentials"]) == 1
+      assert length(credential_data["projects"]) == 1
+
+      project_data = List.first(credential_data["projects"])
+      assert project_data["id"] == project.id
+      assert project_data["name"] == project.name
     end
   end
 
@@ -352,6 +459,59 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       conn = post(conn, ~p"/api/credentials", credential_attrs)
       assert json_response(conn, 201)
+    end
+  end
+
+  describe "delete" do
+    setup [:assign_bearer_for_api]
+
+    test "deletes a credential owned by the user", %{conn: conn, user: user} do
+      credential = insert(:credential, user: user, name: "To Be Deleted")
+
+      conn = delete(conn, ~p"/api/credentials/#{credential.id}")
+      assert response(conn, 204) == ""
+
+      # Verify credential is deleted
+      refute Lightning.Credentials.get_credential(credential.id)
+    end
+
+    test "returns 404 when credential does not exist", %{conn: conn, user: _user} do
+      non_existent_id = Ecto.UUID.generate()
+
+      conn = delete(conn, ~p"/api/credentials/#{non_existent_id}")
+      assert json_response(conn, 404) == %{"error" => "Not Found"}
+    end
+
+    test "returns 403 when trying to delete credential owned by another user", %{conn: conn, user: _user} do
+      other_user = insert(:user)
+      other_credential = insert(:credential, user: other_user, name: "Other User Credential")
+
+      conn = delete(conn, ~p"/api/credentials/#{other_credential.id}")
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+
+      # Verify credential still exists
+      assert Lightning.Credentials.get_credential(other_credential.id)
+    end
+
+    test "deletes credential with project associations", %{conn: conn, user: user} do
+      project = insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      credential = insert(:credential,
+        user: user,
+        name: "Credential with Projects",
+        project_credentials: [%{project_id: project.id}]
+      )
+
+      conn = delete(conn, ~p"/api/credentials/#{credential.id}")
+      assert response(conn, 204) == ""
+
+      # Verify credential and associations are deleted
+      refute Lightning.Credentials.get_credential(credential.id)
+    end
+
+    test "handles invalid UUID format", %{conn: conn, user: _user} do
+      conn = delete(conn, ~p"/api/credentials/invalid-uuid")
+      assert json_response(conn, 404) == %{"error" => "Not Found"}
     end
   end
 end

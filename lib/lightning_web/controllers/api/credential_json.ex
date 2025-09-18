@@ -6,6 +6,13 @@ defmodule LightningWeb.API.CredentialJSON do
   alias Lightning.Credentials.Credential
   alias Lightning.Projects.ProjectCredential
 
+  def index(%{credentials: credentials}) do
+    %{
+      credentials: Enum.map(credentials, &credential_data/1),
+      errors: %{}
+    }
+  end
+
   def create(%{credential: credential}) do
     %{
       credential: credential_data(credential),

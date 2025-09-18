@@ -9,6 +9,18 @@ defmodule LightningWeb.API.CredentialController do
   action_fallback LightningWeb.FallbackController
 
   @doc """
+  Lists all credentials owned by the authenticated user.
+
+  The response excludes the credential body for security reasons.
+  """
+  def index(conn, _params) do
+    current_user = conn.assigns.current_resource
+    credentials = Credentials.list_credentials(current_user)
+
+    render(conn, "index.json", credentials: credentials)
+  end
+
+  @doc """
   Creates a new credential and optionally grants it access to specified projects.
 
   The authenticated user must have access to any projects specified in the
@@ -24,6 +36,46 @@ defmodule LightningWeb.API.CredentialController do
       conn
       |> put_status(:created)
       |> render("create.json", credential: credential)
+    end
+  end
+
+  @doc """
+  Deletes a credential owned by the authenticated user.
+
+  Only the owner of the credential can delete it.
+  """
+  def delete(conn, %{"id" => id}) do
+    current_user = conn.assigns.current_resource
+
+    with :ok <- validate_uuid(id),
+         credential when not is_nil(credential) <- Credentials.get_credential(id),
+         :ok <- validate_credential_ownership(credential, current_user),
+         {:ok, _} <- Credentials.delete_credential(credential) do
+      send_resp(conn, :no_content, "")
+    else
+      {:error, :invalid_uuid} ->
+        {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+      {:error, :forbidden} ->
+        {:error, :forbidden}
+      error ->
+        error
+    end
+  end
+
+  defp validate_uuid(id) do
+    case Ecto.UUID.dump(to_string(id)) do
+      {:ok, _bin} -> :ok
+      :error -> {:error, :invalid_uuid}
+    end
+  end
+
+  defp validate_credential_ownership(credential, current_user) do
+    if credential.user_id == current_user.id do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 
