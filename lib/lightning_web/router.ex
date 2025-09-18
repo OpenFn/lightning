@@ -90,7 +90,8 @@ defmodule LightningWeb.Router do
     resources "/jobs", API.JobController, only: [:index, :show]
     # resources "/runs", API.RunController, only: [:index, :show]
 
-    resources "/credentials", API.CredentialController, only: [:index, :create, :delete]
+    resources "/credentials", API.CredentialController,
+      only: [:index, :create, :delete]
   end
 
   ## Collections

@@ -23,17 +23,19 @@ defmodule LightningWeb.API.CredentialController do
     current_user = conn.assigns.current_resource
 
     with project when not is_nil(project) <- Projects.get_project(project_id),
-         :ok <- ProjectUsers
-                |> Permissions.can(
-                  :access_project,
-                  current_user,
-                  project
-                ) do
+         :ok <-
+           ProjectUsers
+           |> Permissions.can(
+             :access_project,
+             current_user,
+             project
+           ) do
       credentials = Credentials.list_credentials(project)
       render(conn, "index.json", credentials: credentials)
     else
       nil ->
         {:error, :not_found}
+
       {:error, :unauthorized} ->
         {:error, :forbidden}
     end
@@ -74,17 +76,21 @@ defmodule LightningWeb.API.CredentialController do
     current_user = conn.assigns.current_resource
 
     with :ok <- validate_uuid(id),
-         credential when not is_nil(credential) <- Credentials.get_credential(id),
+         credential when not is_nil(credential) <-
+           Credentials.get_credential(id),
          :ok <- validate_credential_ownership(credential, current_user),
          {:ok, _} <- Credentials.delete_credential(credential) do
       send_resp(conn, :no_content, "")
     else
       {:error, :invalid_uuid} ->
         {:error, :not_found}
+
       nil ->
         {:error, :not_found}
+
       {:error, :forbidden} ->
         {:error, :forbidden}
+
       error ->
         error
     end
