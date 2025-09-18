@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Changed
 
+- Fix aarch64 (Apple Silicon) Dockerfile-dev build
+
 ### Fixed
 
 ## [v2.14.5-pre1] - 2025-09-11
