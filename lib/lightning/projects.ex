@@ -1379,21 +1379,23 @@ defmodule Lightning.Projects do
 
     order_by_clause =
       case {sort_order, sort_by} do
-        {:asc, field} -> [asc: dynamic([p, d], field(p, ^field))]
-        {:desc, field} -> [desc: dynamic([p, d], field(p, ^field))]
+        {:asc, field} -> [asc: dynamic([p], field(p, ^field))]
+        {:desc, field} -> [desc: dynamic([p], field(p, ^field))]
       end
 
-    descendants =
+    {[root | _rest], descendants} =
       Project
       |> with_cte("descendants", as: ^descendants_query)
       |> recursive_ctes(true)
       |> with_cte("descendants",
         as: ^union_all(descendants_query, ^recursive_query)
       )
-      |> join(:inner, [p], d in "descendants", on: p.id == d.id)
+      |> join(:left, [p], d in "descendants", on: p.id == d.id)
+      |> where([p, d], p.id == ^root.id or not is_nil(d.id))
       |> order_by(^order_by_clause)
       |> preload([:parent, :project_users])
       |> Repo.all()
+      |> Enum.split_with(&(&1.id == root.id))
 
     %{root: root, descendants: descendants}
   end

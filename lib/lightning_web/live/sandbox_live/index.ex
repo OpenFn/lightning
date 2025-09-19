@@ -32,25 +32,37 @@ defmodule LightningWeb.SandboxLive.Index do
 
     current_user = socket.assigns.current_user
 
+    can_create_sandbox =
+      Lightning.Policies.Permissions.can?(
+        :sandboxes,
+        :provision_sandbox,
+        current_user,
+        project
+      )
+
+    manage_permissions =
+      Lightning.Policies.Sandboxes.check_manage_permissions(
+        descendants,
+        current_user,
+        root_project
+      )
+
     sandboxes =
       Enum.map(descendants, fn sandbox ->
-        is_owner =
-          Enum.any?(
-            sandbox.project_users,
-            &(&1.user_id == current_user.id && &1.role == :owner)
-          )
-
-        is_current = project.id == sandbox.id
+        perms =
+          Map.get(manage_permissions, sandbox.id, %{update: false, delete: false})
 
         sandbox
-        |> Map.put(:can_delete, is_owner)
-        |> Map.put(:is_current, is_current)
+        |> Map.put(:can_edit, perms.update)
+        |> Map.put(:can_delete, perms.delete)
+        |> Map.put(:is_current, project.id == sandbox.id)
       end)
 
     socket
     |> assign(:workspace_projects, [root_project | descendants])
     |> assign(:root_project, root_project)
     |> assign(:sandboxes, sandboxes)
+    |> assign(:can_create_sandbox, can_create_sandbox)
   end
 
   defp reset_delete_modal_state(socket) do
@@ -121,12 +133,54 @@ defmodule LightningWeb.SandboxLive.Index do
   def handle_params(
         %{"id" => id},
         _uri,
-        %{assigns: %{workspace_projects: workspace_projects}} = socket
+        %{
+          assigns: %{
+            sandboxes: sandboxes,
+            project: project,
+            live_action: live_action
+          }
+        } = socket
       )
-      when socket.assigns.live_action == :edit do
-    editing_sandbox = Enum.find(workspace_projects, &(&1.id == id))
+      when live_action == :edit do
+    case Enum.find(sandboxes, &(&1.id == id)) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
-    {:noreply, assign(socket, :editing_sandbox, editing_sandbox)}
+      sandbox ->
+        if sandbox.can_edit do
+          {:noreply, assign(socket, :editing_sandbox, sandbox)}
+        else
+          {:noreply,
+           socket
+           |> put_flash(:error, "You are not authorized to edit this sandbox")
+           |> push_navigate(to: ~p"/projects/#{project.id}/sandboxes")}
+        end
+    end
+  end
+
+  def handle_params(
+        _params,
+        _uri,
+        %{
+          assigns: %{
+            can_create_sandbox: can_create_sandbox,
+            project: project,
+            live_action: live_action
+          }
+        } = socket
+      )
+      when live_action == :new do
+    if can_create_sandbox do
+      {:noreply, load_workspace_projects(socket)}
+    else
+      {:noreply,
+       socket
+       |> put_flash(
+         :error,
+         "You are not authorized to create sandboxes in this workspace"
+       )
+       |> push_navigate(to: ~p"/projects/#{project.id}/sandboxes")}
+    end
   end
 
   def handle_params(_params, _uri, socket) do
@@ -140,12 +194,18 @@ defmodule LightningWeb.SandboxLive.Index do
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
       sandbox ->
-        {:noreply,
-         socket
-         |> assign(:confirm_delete_open?, true)
-         |> assign(:confirm_delete_sandbox, sandbox)
-         |> assign(:confirm_delete_input, "")
-         |> assign(:confirm_changeset, confirm_changeset(sandbox))}
+        if sandbox.can_delete do
+          {:noreply,
+           socket
+           |> assign(:confirm_delete_open?, true)
+           |> assign(:confirm_delete_sandbox, sandbox)
+           |> assign(:confirm_delete_input, "")
+           |> assign(:confirm_changeset, confirm_changeset(sandbox))}
+        else
+          {:noreply,
+           socket
+           |> put_flash(:error, "You are not authorized to delete this sandbox")}
+        end
     end
   end
 
@@ -226,12 +286,16 @@ defmodule LightningWeb.SandboxLive.Index do
       </:header>
 
       <LayoutComponents.centered>
-        <Components.header current_project={@project} />
+        <Components.header
+          current_project={@project}
+          can_create_sandbox={@can_create_sandbox}
+        />
 
         <Components.workspace_list
           root_project={@root_project}
           current_project={@project}
           sandboxes={@sandboxes}
+          can_create_sandbox={@can_create_sandbox}
         />
 
         <Components.confirm_delete_modal
