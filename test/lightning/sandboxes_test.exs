@@ -200,6 +200,637 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "merge_workflow/2" do
+    test "matches nodes structurally despite name and adaptor changes" do
+      # Parent: webhook -> "Extract Data" (@openfn/http@1.0.0) -> "Transform" (@openfn/common@1.0.0)
+      parent_workflow = insert(:workflow)
+
+      parent_trigger =
+        insert(:trigger, %{workflow: parent_workflow, type: :webhook})
+
+      parent_job1 =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Extract Data",
+          adaptor: "@openfn/http@1.0.0",
+          body: "fetch()"
+        })
+
+      parent_job2 =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Transform",
+          adaptor: "@openfn/common@1.0.0",
+          body: "transform()"
+        })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job1.id
+      })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_job_id: parent_job1.id,
+        target_job_id: parent_job2.id
+      })
+
+      # Sandbox: webhook -> "Fetch Data" (@openfn/http@2.0.0) -> "Process" (@openfn/common@2.0.0)
+      sandbox_workflow = insert(:workflow)
+
+      sandbox_trigger =
+        insert(:trigger, %{workflow: sandbox_workflow, type: :webhook})
+
+      sandbox_job1 =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Fetch Data",
+          adaptor: "@openfn/http@2.0.0",
+          body: "fetchV2()"
+        })
+
+      sandbox_job2 =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Process",
+          adaptor: "@openfn/common@2.0.0",
+          body: "processV2()"
+        })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_trigger.id,
+        target_job_id: sandbox_job1.id
+      })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_job_id: sandbox_job1.id,
+        target_job_id: sandbox_job2.id
+      })
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      # Jobs should match structurally and keep parent UUIDs with sandbox properties
+      jobs = result["jobs"]
+      assert length(jobs) == 2
+
+      job1 = Enum.find(jobs, &(&1["name"] == "Fetch Data"))
+      assert job1["id"] == parent_job1.id
+      assert job1["adaptor"] == "@openfn/http@2.0.0"
+      assert job1["body"] == "fetchV2()"
+
+      job2 = Enum.find(jobs, &(&1["name"] == "Process"))
+      assert job2["id"] == parent_job2.id
+      assert job2["adaptor"] == "@openfn/common@2.0.0"
+      assert job2["body"] == "processV2()"
+
+      # Trigger should match
+      triggers = result["triggers"]
+      assert length(triggers) == 1
+      trigger = hd(triggers)
+      assert trigger["id"] == parent_trigger.id
+    end
+
+    test "uses name to disambiguate when structure is ambiguous" do
+      # Parent: webhook -> "Job A" (@openfn/http@1.0.0)
+      #                  -> "Job B" (@openfn/http@1.0.0)
+      parent_workflow = insert(:workflow)
+
+      parent_trigger =
+        insert(:trigger, %{workflow: parent_workflow, type: :webhook})
+
+      parent_job_a =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Job A",
+          adaptor: "@openfn/http@1.0.0"
+        })
+
+      parent_job_b =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Job B",
+          adaptor: "@openfn/http@1.0.0"
+        })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job_a.id
+      })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job_b.id
+      })
+
+      # Sandbox: webhook -> "Job A" (@openfn/http@2.0.0)
+      #                  -> "Job C" (@openfn/http@1.0.0)
+      sandbox_workflow = insert(:workflow)
+
+      sandbox_trigger =
+        insert(:trigger, %{workflow: sandbox_workflow, type: :webhook})
+
+      sandbox_job_a =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Job A",
+          adaptor: "@openfn/http@2.0.0"
+        })
+
+      sandbox_job_c =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Job C",
+          adaptor: "@openfn/http@1.0.0"
+        })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_trigger.id,
+        target_job_id: sandbox_job_a.id
+      })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_trigger.id,
+        target_job_id: sandbox_job_c.id
+      })
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      jobs = result["jobs"]
+      assert length(jobs) == 3
+
+      # Job A matches by name
+      job_a = Enum.find(jobs, &(&1["name"] == "Job A"))
+      assert job_a["id"] == parent_job_a.id
+      assert job_a["adaptor"] == "@openfn/http@2.0.0"
+
+      # Job B marked for deletion
+      job_b = Enum.find(jobs, &(&1["id"] == parent_job_b.id))
+      assert job_b["delete"] == true
+
+      # Job C is new
+      job_c = Enum.find(jobs, &(&1["name"] == "Job C"))
+      refute job_c["id"] == parent_job_a.id
+      refute job_c["id"] == parent_job_b.id
+      assert job_c["adaptor"] == "@openfn/http@1.0.0"
+    end
+
+    test "treats as no match when ambiguity cannot be resolved" do
+      # Parent: webhook -> "Process" (@openfn/common@1.0.0)
+      #                 -> "Process" (@openfn/common@1.0.0) [duplicate]
+      parent_workflow = insert(:workflow)
+
+      parent_trigger =
+        insert(:trigger, %{workflow: parent_workflow, type: :webhook})
+
+      parent_job1 =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Process 1",
+          adaptor: "@openfn/common@1.0.0"
+        })
+
+      parent_job2 =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Process 2",
+          adaptor: "@openfn/common@1.0.0"
+        })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job1.id
+      })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job2.id
+      })
+
+      # Sandbox: webhook -> "Transform" (@openfn/http@1.0.0)
+      sandbox_workflow = insert(:workflow)
+
+      sandbox_trigger =
+        insert(:trigger, %{workflow: sandbox_workflow, type: :webhook})
+
+      sandbox_job =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Transform",
+          adaptor: "@openfn/http@1.0.0"
+        })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_trigger.id,
+        target_job_id: sandbox_job.id
+      })
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      jobs = result["jobs"]
+      assert length(jobs) == 3
+
+      # Both parent jobs marked for deletion
+      deleted_jobs = Enum.filter(jobs, &(&1["delete"] == true))
+      assert length(deleted_jobs) == 2
+      assert parent_job1.id in Enum.map(deleted_jobs, & &1["id"])
+      assert parent_job2.id in Enum.map(deleted_jobs, & &1["id"])
+
+      # Transform is new
+      transform_job = Enum.find(jobs, &(&1["name"] == "Transform"))
+      refute transform_job["id"] == parent_job1.id
+      refute transform_job["id"] == parent_job2.id
+      refute transform_job["delete"]
+    end
+
+    test "handles complex DAG with additions and branches" do
+      # Parent: cron -> "Job1" -> "Job2"
+      parent_workflow = insert(:workflow)
+
+      parent_trigger =
+        insert(:trigger, %{
+          workflow: parent_workflow,
+          type: :cron,
+          cron_expression: "0 * * * *"
+        })
+
+      parent_job1 =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Job1"
+        })
+
+      parent_job2 =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Job2"
+        })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job1.id
+      })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_job_id: parent_job1.id,
+        target_job_id: parent_job2.id
+      })
+
+      # Sandbox: cron -> "Step1" -> "Step2" -> "Step3" [added]
+      #                          \-> "Step4" [added branch]
+      sandbox_workflow = insert(:workflow)
+
+      sandbox_trigger =
+        insert(:trigger, %{
+          workflow: sandbox_workflow,
+          type: :cron,
+          cron_expression: "0 * * * *"
+        })
+
+      sandbox_job1 =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Step1"
+        })
+
+      sandbox_job2 =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Step2"
+        })
+
+      sandbox_job3 =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Step3"
+        })
+
+      sandbox_job4 =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Step4"
+        })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_trigger.id,
+        target_job_id: sandbox_job1.id
+      })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_job_id: sandbox_job1.id,
+        target_job_id: sandbox_job2.id
+      })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_job_id: sandbox_job2.id,
+        target_job_id: sandbox_job3.id
+      })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_job_id: sandbox_job1.id,
+        target_job_id: sandbox_job4.id
+      })
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      jobs = result["jobs"]
+      assert length(jobs) == 4
+
+      # Step1 matches Job1
+      step1 = Enum.find(jobs, &(&1["name"] == "Step1"))
+      assert step1["id"] == parent_job1.id
+
+      # Step2 matches Job2
+      step2 = Enum.find(jobs, &(&1["name"] == "Step2"))
+      assert step2["id"] == parent_job2.id
+
+      # Step3 and Step4 are new
+      step3 = Enum.find(jobs, &(&1["name"] == "Step3"))
+      step4 = Enum.find(jobs, &(&1["name"] == "Step4"))
+      refute step3["id"] in [parent_job1.id, parent_job2.id]
+      refute step4["id"] in [parent_job1.id, parent_job2.id]
+
+      # Edges are remapped correctly
+      edges = result["edges"]
+      assert length(edges) == 4
+
+      # Check edge connections use correct IDs
+      edge_to_step2 = Enum.find(edges, &(&1["target_job_id"] == step2["id"]))
+      assert edge_to_step2["source_job_id"] == step1["id"]
+
+      edge_to_step3 = Enum.find(edges, &(&1["target_job_id"] == step3["id"]))
+      assert edge_to_step3["source_job_id"] == step2["id"]
+
+      edge_to_step4 = Enum.find(edges, &(&1["target_job_id"] == step4["id"]))
+      assert edge_to_step4["source_job_id"] == step1["id"]
+    end
+
+    test "preserves target credential references for matched jobs" do
+      parent_workflow = insert(:workflow)
+
+      parent_trigger =
+        insert(:trigger, %{workflow: parent_workflow, type: :webhook})
+
+      # Create credentials
+      parent_pc = insert(:project_credential)
+      _parent_kc = insert(:keychain_credential)
+
+      parent_job =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Job",
+          project_credential_id: parent_pc.id
+        })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job.id
+      })
+
+      # Sandbox with different credentials
+      sandbox_workflow = insert(:workflow)
+
+      sandbox_trigger =
+        insert(:trigger, %{workflow: sandbox_workflow, type: :webhook})
+
+      sandbox_pc = insert(:project_credential)
+      _sandbox_kc = insert(:keychain_credential)
+
+      sandbox_job =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Modified Job",
+          project_credential_id: sandbox_pc.id
+        })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_trigger.id,
+        target_job_id: sandbox_job.id
+      })
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      jobs = result["jobs"]
+      job = hd(jobs)
+
+      # Should keep parent's credentials
+      assert job["project_credential_id"] == parent_pc.id
+      # But use sandbox's other properties
+      assert job["name"] == "Modified Job"
+    end
+
+    test "preserves target keychain credential references for matched jobs" do
+      parent_workflow = insert(:workflow)
+
+      parent_trigger =
+        insert(:trigger, %{workflow: parent_workflow, type: :webhook})
+
+      # Create keychain credential
+      parent_kc = insert(:keychain_credential)
+
+      parent_job =
+        insert(:job, %{
+          workflow: parent_workflow,
+          name: "Job",
+          keychain_credential_id: parent_kc.id
+        })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job.id
+      })
+
+      # Sandbox with different keychain credential
+      sandbox_workflow = insert(:workflow)
+
+      sandbox_trigger =
+        insert(:trigger, %{workflow: sandbox_workflow, type: :webhook})
+
+      sandbox_kc = insert(:keychain_credential)
+
+      sandbox_job =
+        insert(:job, %{
+          workflow: sandbox_workflow,
+          name: "Modified Job",
+          keychain_credential_id: sandbox_kc.id
+        })
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_trigger.id,
+        target_job_id: sandbox_job.id
+      })
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      jobs = result["jobs"]
+      job = hd(jobs)
+
+      # Should keep parent's keychain credential
+      assert job["keychain_credential_id"] == parent_kc.id
+      # But use sandbox's other properties
+      assert job["name"] == "Modified Job"
+    end
+
+    test "handles multiple triggers correctly" do
+      # Parent with webhook and cron
+      parent_workflow = insert(:workflow)
+
+      parent_webhook =
+        insert(:trigger, %{workflow: parent_workflow, type: :webhook})
+
+      parent_cron =
+        insert(:trigger, %{
+          workflow: parent_workflow,
+          type: :cron,
+          cron_expression: "0 * * * *"
+        })
+
+      parent_job = insert(:job, %{workflow: parent_workflow, name: "Job"})
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_webhook.id,
+        target_job_id: parent_job.id
+      })
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_cron.id,
+        target_job_id: parent_job.id
+      })
+
+      # Sandbox with modified cron and removed webhook
+      sandbox_workflow = insert(:workflow)
+
+      sandbox_cron =
+        insert(:trigger, %{
+          workflow: sandbox_workflow,
+          type: :cron,
+          cron_expression: "*/5 * * * *"
+        })
+
+      sandbox_job = insert(:job, %{workflow: sandbox_workflow, name: "Job"})
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_cron.id,
+        target_job_id: sandbox_job.id
+      })
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      triggers = result["triggers"]
+      assert length(triggers) == 2
+
+      # Webhook marked for deletion
+      webhook = Enum.find(triggers, &(&1["id"] == parent_webhook.id))
+      assert webhook["delete"] == true
+
+      # Cron updated with new expression
+      cron = Enum.find(triggers, &(&1["type"] == "cron" && !&1["delete"]))
+      assert cron["cron_expression"] == "*/5 * * * *"
+    end
+
+    test "ignores kafka triggers" do
+      parent_workflow = insert(:workflow)
+
+      _parent_kafka =
+        insert(:trigger, %{workflow: parent_workflow, type: :kafka})
+
+      _parent_webhook =
+        insert(:trigger, %{workflow: parent_workflow, type: :webhook})
+
+      sandbox_workflow = insert(:workflow)
+
+      _sandbox_kafka =
+        insert(:trigger, %{workflow: sandbox_workflow, type: :kafka})
+
+      _sandbox_webhook =
+        insert(:trigger, %{workflow: sandbox_workflow, type: :webhook})
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      triggers = result["triggers"]
+      # Only webhook trigger should be in result
+      assert length(triggers) == 1
+      assert hd(triggers)["type"] == "webhook"
+    end
+
+    test "returns proper format for Provisioner.import_document" do
+      parent_workflow = insert(:workflow, name: "Parent Workflow")
+
+      parent_trigger =
+        insert(:trigger, %{workflow: parent_workflow, type: :webhook})
+
+      parent_job = insert(:job, %{workflow: parent_workflow})
+
+      insert(:edge, %{
+        workflow: parent_workflow,
+        source_trigger_id: parent_trigger.id,
+        target_job_id: parent_job.id
+      })
+
+      sandbox_workflow = insert(:workflow, name: "Modified Workflow")
+
+      sandbox_trigger =
+        insert(:trigger, %{workflow: sandbox_workflow, type: :webhook})
+
+      sandbox_job = insert(:job, %{workflow: sandbox_workflow})
+
+      insert(:edge, %{
+        workflow: sandbox_workflow,
+        source_trigger_id: sandbox_trigger.id,
+        target_job_id: sandbox_job.id
+      })
+
+      result = Sandboxes.merge_workflow(sandbox_workflow, parent_workflow)
+
+      # Check required fields for import_document
+      assert result["id"] == parent_workflow.id
+      assert result["name"] == "Modified Workflow"
+      assert is_list(result["jobs"])
+      assert is_list(result["triggers"])
+      assert is_list(result["edges"])
+
+      # All jobs should have required fields
+      Enum.each(result["jobs"], fn job ->
+        assert job["id"]
+        assert is_binary(job["name"]) || job["delete"] == true
+      end)
+
+      # All triggers should have required fields
+      Enum.each(result["triggers"], fn trigger ->
+        assert trigger["id"]
+        assert is_binary(trigger["type"]) || trigger["delete"] == true
+      end)
+
+      # All edges should have required fields
+      Enum.each(result["edges"], fn edge ->
+        assert edge["id"]
+        assert edge["condition_type"]
+      end)
+    end
+  end
+
   defp attach_keychain!(
          %Project{} = project,
          %User{} = creator,
