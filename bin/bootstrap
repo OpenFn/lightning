@@ -49,6 +49,19 @@ if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
         exit 1
       fi
     fi
+
+
+    if brew list rust &>/dev/null; then
+      echo "✅ rust is installed"
+    else
+      echo "❌ rust is not installed"
+      if brew install rust; then
+        echo "✅ rust has been installed"
+      else
+        echo "❌ Failed to install rust"
+        exit 1
+      fi
+    fi
   else
     echo "❌ Homebrew is not installed"
     exit 1
@@ -60,6 +73,15 @@ mix local.rebar --if-missing
 mix deps.get
 mix deps.compile
 
+# <!-- If you have already compiled Rambo explicitly via `mix compile.rambo`, and you
+# are still seeing the following error:
+
+# ```
+# sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
+# sh: line 0: exec: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: cannot execute: No such file or directory
+# ```
+
+# You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`. -->
 if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
   mix compile.rambo
 fi
