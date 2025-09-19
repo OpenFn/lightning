@@ -28,17 +28,22 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   attr :current_project, Project, required: true
+  attr :can_create_sandbox, :boolean, required: true
 
   def header(assigns) do
     ~H"""
     <div class="mb-6 flex items-center justify-between">
       <h3 class="text-3xl font-bold">Sandboxes</h3>
-      <.create_button current_project={@current_project} />
+      <.create_button
+        current_project={@current_project}
+        disabled={not @can_create_sandbox}
+      />
     </div>
     """
   end
 
   attr :current_project, Project, required: true
+  attr :disabled, :boolean, required: true
 
   def create_button(assigns) do
     ~H"""
@@ -47,6 +52,12 @@ defmodule LightningWeb.SandboxLive.Components do
       theme="primary"
       size="lg"
       type="button"
+      disabled={@disabled}
+      tooltip={
+        if @disabled,
+          do: "You are not authorized to create sandboxes in this workspace",
+          else: "Create a sandbox in this workspace"
+      }
       phx-click={JS.patch(~p"/projects/#{@current_project.id}/sandboxes/new")}
     >
       Create Sandbox
@@ -57,6 +68,7 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :root_project, Project, default: nil
   attr :current_project, Project, required: true
   attr :sandboxes, :list, required: true
+  attr :can_create_sandbox, :boolean, required: true
 
   def workspace_list(assigns) do
     ~H"""
@@ -73,13 +85,17 @@ defmodule LightningWeb.SandboxLive.Components do
             <div class="space-y-3">
               <div class="text-base font-medium">No sandboxes found</div>
               <div class="text-sm">
-                <.link
-                  navigate={~p"/projects/#{@current_project.id}/sandboxes/new"}
-                  class="text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Create your first sandbox
-                </.link>
-                to start experimenting.
+                <%= if @can_create_sandbox do %>
+                  <.link
+                    navigate={~p"/projects/#{@current_project.id}/sandboxes/new"}
+                    class="text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Create your first sandbox
+                  </.link>
+                  to start experimenting.
+                <% else %>
+                  You are not authorized to create sandboxes in this workspace.
+                <% end %>
               </div>
             </div>
           </div>
@@ -243,9 +259,7 @@ defmodule LightningWeb.SandboxLive.Components do
               theme="danger"
               type="submit"
               disabled={!@changeset.valid?}
-              tooltip={
-                (!@changeset.valid? && "Type the sandbox name to enable") || nil
-              }
+              {if !@changeset.valid?, do: [tooltip: "Type the sandbox name to enable"], else: []}
             >
               Delete Sandbox
             </.button>
@@ -260,23 +274,6 @@ defmodule LightningWeb.SandboxLive.Components do
         </.form>
       </section>
     </.modal>
-    """
-  end
-
-  attr :id, :string, required: true
-
-  defp active_indicator(assigns) do
-    ~H"""
-    <span
-      id={@id}
-      class="relative inline-flex items-center justify-center flex-shrink-0"
-      phx-hook="Tooltip"
-      aria-label="Currently active project"
-    >
-      <span class="absolute w-4 h-4 bg-green-400 rounded-full animate-pulse opacity-75">
-      </span>
-      <span class="relative w-2.5 h-2.5 bg-green-500 rounded-full"></span>
-    </span>
     """
   end
 
@@ -304,7 +301,9 @@ defmodule LightningWeb.SandboxLive.Components do
         icon_type="custom"
         icon_name="branches"
         label="Branch/Rewire (coming soon)"
-        disabled
+        disabled={true}
+        icon_class="text-slate-300"
+        button_class="cursor-not-allowed"
       />
 
       <.action_button
@@ -312,18 +311,39 @@ defmodule LightningWeb.SandboxLive.Components do
         icon_type="heroicon"
         icon_name="hero-clipboard-document"
         label="Duplicate (coming soon)"
-        disabled
+        disabled={true}
+        icon_class="text-slate-300"
+        button_class="cursor-not-allowed"
       />
 
       <.action_button
         id={"edit-sandbox-#{@sandbox.id}"}
         icon_type="heroicon"
         icon_name="hero-pencil-square"
-        label="Edit this sandbox"
-        action={
-          JS.patch(~p"/projects/#{@sandbox.parent_id}/sandboxes/#{@sandbox.id}/edit")
+        label={
+          if not @sandbox.can_edit do
+            "You are not authorized to edit this sandbox"
+          else
+            "Edit this sandbox"
+          end
         }
-        icon_class="text-slate-700"
+        action={
+          if @sandbox.can_edit,
+            do:
+              JS.patch(
+                ~p"/projects/#{@sandbox.parent_id}/sandboxes/#{@sandbox.id}/edit"
+              ),
+            else: %JS{}
+        }
+        disabled={not @sandbox.can_edit}
+        icon_class={
+          if @sandbox.can_edit, do: "text-slate-700", else: "text-slate-300"
+        }
+        button_class={
+          if @sandbox.can_edit,
+            do: "hover:bg-slate-100",
+            else: "cursor-not-allowed"
+        }
       />
 
       <.action_button
@@ -332,7 +352,7 @@ defmodule LightningWeb.SandboxLive.Components do
         icon_name="hero-trash"
         label={
           if not @sandbox.can_delete do
-            "Only sandbox owners can delete sandboxes"
+            "You are not authorized to delete this sandbox"
           else
             "Delete this sandbox"
           end
@@ -377,6 +397,7 @@ defmodule LightningWeb.SandboxLive.Components do
         phx-click={(@disabled && %JS{}) || @action}
         phx-stop-click
         disabled={@disabled}
+        aria-disabled={@disabled}
       >
         <%= if @icon_type == "custom" do %>
           <Icon.branches class={["h-4 w-4", @icon_class]} />

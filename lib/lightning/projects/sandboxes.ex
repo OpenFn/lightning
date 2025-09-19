@@ -23,8 +23,9 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Authorization
 
-  * **Provisioning**: Requires `:owner` or `:admin` role on the parent project
-  * **Updates/Deletion**: Requires `:owner` or `:admin` role on the sandbox itself
+  * **Provisioning**: Requires `:owner` or `:admin` role on the parent project or superuser
+  * **Updates/Deletion**: Requires `:owner` or `:admin` role on the sandbox itself,
+                          or `:owner` or `:admin` on the root project, or superuser
 
   ## Transaction safety
 
@@ -35,6 +36,7 @@ defmodule Lightning.Projects.Sandboxes do
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
@@ -103,12 +105,16 @@ defmodule Lightning.Projects.Sandboxes do
           {:ok, Project.t()}
           | {:error, :unauthorized | Ecto.Changeset.t() | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
-    case Lightning.Projects.get_project_user_role(actor, parent) do
-      actor_role when actor_role in [:owner, :admin] ->
-        create_sandbox_from_parent(parent, actor, attrs)
-
-      _ ->
-        {:error, :unauthorized}
+    Permissions.can?(
+      :sandboxes,
+      :provision_sandbox,
+      actor,
+      parent
+    )
+    |> if do
+      create_sandbox_from_parent(parent, actor, attrs)
+    else
+      {:error, :unauthorized}
     end
   end
 
@@ -137,13 +143,17 @@ defmodule Lightning.Projects.Sandboxes do
           | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
   def update_sandbox(%Project{} = sandbox, %User{} = actor, attrs)
       when is_map(attrs) do
-    case Lightning.Projects.get_project_user_role(actor, sandbox) do
-      actor_role when actor_role in [:owner, :admin] ->
-        allowed_attrs = Map.take(attrs, [:name, :color, :env])
-        Lightning.Projects.update_project(sandbox, allowed_attrs, actor)
-
-      _ ->
-        {:error, :unauthorized}
+    Permissions.can?(
+      :sandboxes,
+      :update_sandbox,
+      actor,
+      sandbox
+    )
+    |> if do
+      allowed_attrs = Map.take(attrs, [:name, :color, :env])
+      Lightning.Projects.update_project(sandbox, allowed_attrs, actor)
+    else
+      {:error, :unauthorized}
     end
   end
 
@@ -177,16 +187,20 @@ defmodule Lightning.Projects.Sandboxes do
   @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def delete_sandbox(%Project{} = sandbox, %User{} = actor) do
-    case Lightning.Projects.get_project_user_role(actor, sandbox) do
-      actor_role when actor_role in [:owner, :admin] ->
-        Lightning.Projects.delete_project(sandbox)
-
-      _ ->
-        {:error, :unauthorized}
+    Permissions.can?(
+      :sandboxes,
+      :delete_sandbox,
+      actor,
+      sandbox
+    )
+    |> if do
+      Lightning.Projects.delete_project(sandbox)
+    else
+      {:error, :unauthorized}
     end
   end
 
-  def delete_sandbox(%User{} = actor, sandbox_id) when is_binary(sandbox_id) do
+  def delete_sandbox(sandbox_id, %User{} = actor) when is_binary(sandbox_id) do
     case Lightning.Projects.get_project(sandbox_id) do
       %Project{} = sandbox -> delete_sandbox(sandbox, actor)
       nil -> {:error, :not_found}
@@ -214,10 +228,8 @@ defmodule Lightning.Projects.Sandboxes do
 
       case create_empty_sandbox(parent_with_data, sandbox_attrs) do
         {:ok, sandbox} ->
-          # Preload project_users to ensure type compatibility
-          sandbox_with_users = Repo.preload(sandbox, :project_users)
-
-          sandbox_with_users
+          sandbox
+          |> Repo.preload(:project_users)
           |> clone_credentials_from_parent(parent_with_data)
           |> clone_keychains_from_parent(parent_with_data, actor)
           |> clone_workflows_from_parent(parent_with_data)
