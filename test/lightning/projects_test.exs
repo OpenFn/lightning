@@ -2591,6 +2591,216 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "descendant_of?/3" do
+    test "returns true when child is direct descendant of parent" do
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      # Preload the parent association for the child
+      child_with_parent = Repo.preload(child, :parent)
+
+      assert Projects.descendant_of?(child_with_parent, parent)
+    end
+
+    test "returns false when projects are siblings (same parent)" do
+      parent = insert(:project, name: "parent")
+      sibling1 = insert(:project, name: "sibling1", parent: parent)
+      sibling2 = insert(:project, name: "sibling2", parent: parent)
+
+      # Preload parent associations
+      sibling1_with_parent = Repo.preload(sibling1, :parent)
+      sibling2_with_parent = Repo.preload(sibling2, :parent)
+
+      refute Projects.descendant_of?(sibling1_with_parent, sibling2_with_parent)
+      refute Projects.descendant_of?(sibling2_with_parent, sibling1_with_parent)
+    end
+
+    test "returns true for multi-level descendants (grandchild, great-grandchild, etc.)" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      great_grandchild =
+        insert(:project, name: "great_grandchild", parent: grandchild)
+
+      # Build the chain with preloaded parents
+      great_grandchild = Repo.preload(great_grandchild, :parent)
+      grandchild = Repo.preload(grandchild, :parent)
+      child = Repo.preload(child, :parent)
+
+      # Update the preloaded associations to form the complete chain
+      great_grandchild = %{great_grandchild | parent: grandchild}
+      grandchild = %{grandchild | parent: child}
+      child = %{child | parent: root}
+
+      great_grandchild = %{
+        great_grandchild
+        | parent: %{grandchild | parent: child}
+      }
+
+      assert Projects.descendant_of?(great_grandchild, root)
+      assert Projects.descendant_of?(great_grandchild, child)
+      assert Projects.descendant_of?(great_grandchild, grandchild)
+      assert Projects.descendant_of?(grandchild, root)
+      assert Projects.descendant_of?(grandchild, child)
+      assert Projects.descendant_of?(child, root)
+    end
+
+    test "returns false when child is the root (no parent)" do
+      root = insert(:project, name: "root")
+      other_root = insert(:project, name: "other_root")
+
+      # Preload to ensure parent is nil
+      root_with_parent = Repo.preload(root, :parent)
+      other_root_with_parent = Repo.preload(other_root, :parent)
+
+      refute Projects.descendant_of?(root_with_parent, other_root_with_parent)
+      refute Projects.descendant_of?(other_root_with_parent, root_with_parent)
+    end
+
+    test "returns false when child has reached the root in the recursive walk" do
+      root = insert(:project, name: "root")
+      other_root = insert(:project, name: "other_root")
+
+      child_of_other =
+        insert(:project, name: "child_of_other", parent: other_root)
+
+      # Preload associations properly
+      child_with_parent = Repo.preload(child_of_other, :parent)
+
+      refute Projects.descendant_of?(child_with_parent, root)
+    end
+
+    test "returns false when child's parent_id equals root_project.id (stops recursion)" do
+      root = insert(:project, name: "root")
+      direct_child = insert(:project, name: "direct_child", parent: root)
+      other_project = insert(:project, name: "other_project")
+
+      # Preload the parent association
+      child_with_parent = Repo.preload(direct_child, :parent)
+
+      # When the child's parent is the root, it should not be considered a descendant of other_project
+      refute Projects.descendant_of?(child_with_parent, other_project, root)
+    end
+
+    test "handles nil parent_id correctly (stops recursion)" do
+      # This has nil parent_id
+      root = insert(:project, name: "root")
+      other_project = insert(:project, name: "other_project")
+
+      # Preload to ensure parent is nil
+      root_with_parent = Repo.preload(root, :parent)
+
+      refute Projects.descendant_of?(root_with_parent, other_project)
+    end
+
+    test "uses provided root_project parameter correctly" do
+      workspace_root = insert(:project, name: "workspace_root")
+      child = insert(:project, name: "child", parent: workspace_root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      # Different workspace
+      other_root = insert(:project, name: "other_root")
+
+      # Build proper parent chain
+      grandchild = Repo.preload(grandchild, :parent)
+      child = Repo.preload(child, :parent)
+      grandchild = %{grandchild | parent: %{child | parent: workspace_root}}
+
+      # When root_project is provided, recursion should stop at that root
+      assert Projects.descendant_of?(grandchild, child, workspace_root)
+
+      # Should return false when checking against different root
+      refute Projects.descendant_of?(grandchild, other_root, workspace_root)
+    end
+
+    test "auto-discovers root when root_project parameter is nil" do
+      root = insert(:project, name: "auto_discovered_root")
+      child = insert(:project, name: "child", parent: root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      # Build parent chain
+      grandchild = Repo.preload(grandchild, :parent)
+      child = Repo.preload(child, :parent)
+      grandchild = %{grandchild | parent: %{child | parent: root}}
+
+      # Should auto-discover root and work correctly
+      assert Projects.descendant_of?(grandchild, child, nil)
+      assert Projects.descendant_of?(grandchild, root, nil)
+    end
+
+    test "complex hierarchy with multiple branches" do
+      # Create a complex tree structure
+      root = insert(:project, name: "root")
+
+      # Branch 1
+      branch1 = insert(:project, name: "branch1", parent: root)
+      branch1_child = insert(:project, name: "branch1_child", parent: branch1)
+
+      # Branch 2
+      branch2 = insert(:project, name: "branch2", parent: root)
+      branch2_child = insert(:project, name: "branch2_child", parent: branch2)
+
+      # Build proper parent chains
+      branch1_child = Repo.preload(branch1_child, :parent)
+      branch1 = Repo.preload(branch1, :parent)
+      branch1_child = %{branch1_child | parent: %{branch1 | parent: root}}
+
+      branch2_child = Repo.preload(branch2_child, :parent)
+      branch2 = Repo.preload(branch2, :parent)
+      branch2_child = %{branch2_child | parent: %{branch2 | parent: root}}
+
+      # Test relationships within branches
+      assert Projects.descendant_of?(branch1_child, branch1)
+      assert Projects.descendant_of?(branch1_child, root)
+      assert Projects.descendant_of?(branch2_child, branch2)
+      assert Projects.descendant_of?(branch2_child, root)
+
+      # Test cross-branch relationships (should be false)
+      refute Projects.descendant_of?(branch1_child, branch2)
+      refute Projects.descendant_of?(branch2_child, branch1)
+      refute Projects.descendant_of?(branch1_child, branch2_child)
+    end
+
+    test "edge case: project compared to itself" do
+      project = insert(:project, name: "self")
+      project_with_parent = Repo.preload(project, :parent)
+
+      # A project is not considered a descendant of itself
+      refute Projects.descendant_of?(project_with_parent, project_with_parent)
+    end
+
+    test "edge case: deeply nested hierarchy performance" do
+      # Test with a very deep hierarchy to ensure it doesn't hit stack overflow
+      root = insert(:project, name: "deep_root")
+
+      # Create a chain of 10 levels deep
+      deepest =
+        Enum.reduce(1..10, root, fn level, parent ->
+          insert(:project, name: "level_#{level}", parent: parent)
+        end)
+
+      # Build the complete parent chain by preloading recursively
+      current = Repo.preload(deepest, :parent)
+
+      # Walk up the chain to build proper associations
+      current = build_parent_chain(current)
+
+      assert Projects.descendant_of?(current, root)
+    end
+  end
+
+  defp build_parent_chain(project) do
+    case project.parent do
+      nil ->
+        project
+
+      parent ->
+        parent_with_chain = build_parent_chain(Repo.preload(parent, :parent))
+        %{project | parent: parent_with_chain}
+    end
+  end
+
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =
