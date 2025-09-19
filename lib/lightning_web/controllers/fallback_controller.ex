@@ -38,7 +38,7 @@ defmodule LightningWeb.FallbackController do
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
-    |> put_view(json: LightningWeb.ChangesetJSON)
+    |> put_view(LightningWeb.ChangesetView)
     |> render("error.json", changeset: changeset)
   end
 
