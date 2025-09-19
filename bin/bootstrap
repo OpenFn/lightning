@@ -170,6 +170,16 @@ main() {
   mix deps.get
   mix deps.compile
 
+  # If you have already compiled Rambo explicitly via `mix compile.rambo`, and you
+  # are still seeing the following error:
+  #
+  # ```
+  # sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
+  # sh: line 0: exec: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: cannot execute: No such file or directory
+  # ```
+  #
+  # You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`.
+
   # Compile platform-specific dependencies
   if [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
     echo "🔨 Compiling platform-specific dependencies..."

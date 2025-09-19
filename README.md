@@ -470,16 +470,6 @@ Install the Rust compiler so a binary can be prepared for you.
 You can resolve this error by installing the Rust compiler using Homebrew. Run
 the following command in your terminal: `brew install rust`
 
-If you have already compiled Rambo explicitly via `mix compile.rambo`, and you
-are still seeing the following error:
-
-```
-sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
-sh: line 0: exec: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: cannot execute: No such file or directory
-```
-
-You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`.
-
 If neither of the approaches above work, please raise an issue.
 
 ## Support
