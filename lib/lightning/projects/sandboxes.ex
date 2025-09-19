@@ -477,449 +477,614 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Merges a sandbox workflow back onto its parent workflow.
+  Merges a sandbox workflow back onto its parent workflow using UUID mapping.
 
-  This function matches nodes between source and target workflows using:
-  1. Structural position in the DAG (primary criterion)
-  2. Name and/or adaptor for disambiguation when structure is ambiguous
+  Maps nodes and edges from source to target workflow, preserving UUIDs where
+  possible when merging two workflows (likely one is a fork of the other).
 
-  Returns params compatible with `Provisioner.import_document`.
+  The algorithm follows these phases:
+  1. Direct ID Matching - matches nodes with identical IDs
+  2. Root Node Mapping - always maps root nodes
+  3. Structural and Expression Matching - iterative matching using parents, children, and expression
+  4. Edge Mapping - maps edges based on node mappings
 
   ## Parameters
     * `source_workflow` - The sandbox workflow with modifications
     * `target_workflow` - The parent workflow to merge changes onto
 
   ## Returns
-    A map with the merged workflow structure ready for import:
-    * Matched nodes keep target UUIDs with source properties
-    * Unmatched source nodes get new UUIDs
-    * Unmatched target nodes are marked for deletion
-    * Edges are remapped to final node IDs
+    A map with the merged workflow structure ready for import, containing
+    UUID mappings and workflow data.
   """
   @spec merge_workflow(Workflow.t(), Workflow.t()) :: map()
   def merge_workflow(
         %Workflow{} = source_workflow,
         %Workflow{} = target_workflow
       ) do
-    source_workflow = preload_workflow(source_workflow)
-    target_workflow = preload_workflow(target_workflow)
+    source_workflow = Repo.preload(source_workflow, [:jobs, :triggers, :edges])
+    target_workflow = Repo.preload(target_workflow, [:jobs, :triggers, :edges])
 
-    # Build DAG structures for both workflows
-    source_dag = build_dag_structure(source_workflow)
-    target_dag = build_dag_structure(target_workflow)
+    node_mappings = map_workflow_node_ids(source_workflow, target_workflow)
 
-    # Match nodes between source and target
-    {job_matches, trigger_matches} = match_nodes(source_dag, target_dag)
-
-    # Build merged jobs
-    merged_jobs =
-      build_merged_jobs(
-        source_workflow.jobs,
-        target_workflow.jobs,
-        job_matches
-      )
-
-    # Build merged triggers (webhook and cron only)
-    merged_triggers =
-      build_merged_triggers(
-        source_workflow.triggers,
-        target_workflow.triggers,
-        trigger_matches
-      )
-
-    # Build ID mapping for edge remapping
-    id_map = build_id_map(job_matches, trigger_matches)
-
-    # Remap edges using the ID mapping
-    merged_edges = build_merged_edges(source_workflow.edges, id_map)
-
-    %{
-      "id" => target_workflow.id,
-      "name" => source_workflow.name,
-      "jobs" => merged_jobs,
-      "triggers" => merged_triggers,
-      "edges" => merged_edges
-    }
+    # Build the merged workflow structure using the mappings
+    build_merged_workflow(
+      source_workflow,
+      target_workflow,
+      node_mappings
+    )
   end
 
-  defp preload_workflow(workflow) do
-    Repo.preload(workflow, [:jobs, :triggers, :edges], force: true)
+  defp map_workflow_node_ids(source_workflow, target_workflow) do
+    node_mappings = %{}
+
+    # Phase 1: Direct ID Matching
+    node_mappings =
+      match_nodes_by_id(node_mappings, source_workflow, target_workflow)
+
+    # Phase 2: Triggers Mapping
+    node_mappings = map_triggers(node_mappings, source_workflow, target_workflow)
+
+    # Phase 3: Structural and Expression Matching
+    map_jobs(
+      node_mappings,
+      source_workflow,
+      target_workflow
+    )
   end
 
-  defp build_dag_structure(workflow) do
-    # Build adjacency lists for structural analysis
-    edges_by_source =
-      workflow.edges
-      |> Enum.group_by(fn edge ->
-        cond do
-          edge.source_trigger_id -> {:trigger, edge.source_trigger_id}
-          edge.source_job_id -> {:job, edge.source_job_id}
-          true -> nil
+  # source -> target map
+  defp match_nodes_by_id(node_mappings, source_workflow, target_workflow) do
+    source_nodes = get_all_nodes(source_workflow)
+    target_nodes = get_all_nodes(target_workflow)
+
+    Enum.reduce(
+      source_nodes,
+      node_mappings,
+      fn source_node, acc ->
+        target_node = find_node_by_id(target_nodes, source_node.id)
+
+        if target_node do
+          Map.put(acc, source_node.id, target_node.id)
+        else
+          acc
         end
-      end)
-      |> Map.reject(fn {k, _} -> is_nil(k) end)
-
-    edges_by_target =
-      workflow.edges
-      |> Enum.group_by(fn edge ->
-        if edge.target_job_id, do: {:job, edge.target_job_id}, else: nil
-      end)
-      |> Map.reject(fn {k, _} -> is_nil(k) end)
-
-    jobs_map = Map.new(workflow.jobs, &{&1.id, &1})
-    triggers_map = Map.new(workflow.triggers, &{&1.id, &1})
-
-    %{
-      jobs: jobs_map,
-      triggers: triggers_map,
-      edges_by_source: edges_by_source,
-      edges_by_target: edges_by_target,
-      edges: workflow.edges
-    }
+      end
+    )
   end
 
-  defp match_nodes(source_dag, target_dag) do
-    # Match triggers first (simpler: only webhook and cron)
-    trigger_matches = match_triggers(source_dag.triggers, target_dag.triggers)
-
-    # Match jobs using structural position and disambiguation
-    job_matches =
-      match_jobs_structurally(source_dag, target_dag, trigger_matches)
-
-    {job_matches, trigger_matches}
+  defp map_triggers(node_mappings, %{triggers: [source_trigger]}, %{
+         triggers: [target_trigger]
+       }) do
+    Map.put(node_mappings, source_trigger.id, target_trigger.id)
   end
 
-  defp match_triggers(source_triggers, target_triggers) do
-    # Only handle webhook and cron triggers
-    source_list =
-      source_triggers
-      |> Map.values()
-      |> Enum.filter(&(&1.type in [:webhook, :cron]))
-
-    target_list =
-      target_triggers
-      |> Map.values()
-      |> Enum.filter(&(&1.type in [:webhook, :cron]))
-
-    # Try to match by type and structural position
-    Enum.reduce(source_list, %{}, fn source_trigger, acc ->
-      # Find candidates with same type
-      candidates = Enum.filter(target_list, &(&1.type == source_trigger.type))
-
+  defp map_triggers(node_mappings, source_workflow, target_workflow) do
+    source_workflow.triggers
+    |> Enum.reject(fn trigger -> trigger.id in Map.keys(node_mappings) end)
+    |> Enum.reduce(node_mappings, fn source_trigger, acc ->
       matched_target =
-        case candidates do
-          [single] ->
-            single
-
-          multiple when length(multiple) > 1 ->
-            # Try to disambiguate using cron_expression for cron triggers
-            if source_trigger.type == :cron do
-              Enum.find(
-                multiple,
-                &(&1.cron_expression == source_trigger.cron_expression)
-              )
-            else
-              nil
-            end
-
-          _ ->
-            nil
-        end
+        find_matching_trigger(source_trigger, target_workflow.triggers, acc)
 
       if matched_target do
         Map.put(acc, source_trigger.id, matched_target.id)
       else
-        # New trigger - generate new ID
-        Map.put(acc, source_trigger.id, Ecto.UUID.generate())
+        acc
       end
     end)
   end
 
-  defp match_jobs_structurally(source_dag, target_dag, trigger_matches) do
-    source_jobs = Map.values(source_dag.jobs)
-    target_jobs = Map.values(target_dag.jobs)
+  defp find_matching_trigger(source_trigger, target_triggers, node_mappings) do
+    # Filter out already mapped triggers
+    # Match trigger by type
 
-    # Build structural signatures for all jobs
-    source_signatures =
-      build_job_signatures(source_jobs, source_dag, trigger_matches)
-
-    target_signatures = build_job_signatures(target_jobs, target_dag, %{})
-
-    # Match jobs based on structural position
-    Enum.reduce(source_jobs, %{}, fn source_job, acc ->
-      source_sig = Map.get(source_signatures, source_job.id)
-
-      # Find target jobs with matching structural signature
-      candidates =
-        target_jobs
-        |> Enum.filter(fn target_job ->
-          target_sig = Map.get(target_signatures, target_job.id)
-          signatures_match?(source_sig, target_sig, trigger_matches)
-        end)
-        |> Enum.reject(fn target_job ->
-          # Don't match already matched targets
-          Map.values(acc) |> Enum.member?(target_job.id)
-        end)
-
-      matched_target =
-        case candidates do
-          [] ->
-            nil
-
-          [single] ->
-            single
-
-          multiple ->
-            # Disambiguate using name and/or adaptor
-            disambiguate_jobs(source_job, multiple)
-        end
-
-      if matched_target do
-        Map.put(acc, source_job.id, matched_target.id)
-      else
-        # New job - generate new ID
-        Map.put(acc, source_job.id, Ecto.UUID.generate())
-      end
+    target_triggers
+    |> Enum.reject(fn target ->
+      target.id in Map.values(node_mappings)
+    end)
+    |> Enum.find(fn target ->
+      target.type == source_trigger.type
     end)
   end
 
-  defp build_job_signatures(jobs, dag, id_map) do
-    Map.new(jobs, fn job ->
-      parents = get_parent_nodes(job.id, dag)
-      children = get_child_nodes(job.id, dag)
+  defp map_jobs(
+         node_mappings,
+         source_workflow,
+         target_workflow
+       ) do
+    source_adjacency_map = build_workflow_parent_children_map(source_workflow)
+    target_adjacency_map = build_workflow_parent_children_map(target_workflow)
 
-      # Map parent/child IDs if needed
-      mapped_parents = map_node_refs(parents, id_map)
-      mapped_children = map_node_refs(children, id_map)
+    all_matching_scores =
+      Map.new(source_workflow.jobs, fn source_job ->
+        scores =
+          calculate_job_match_scores(
+            source_job,
+            source_workflow,
+            source_adjacency_map,
+            target_workflow,
+            target_adjacency_map
+          )
 
-      signature = %{
-        parents: mapped_parents |> Enum.sort(),
-        children: mapped_children |> Enum.sort(),
-        parent_count: length(mapped_parents),
-        child_count: length(mapped_children)
-      }
-
-      {job.id, signature}
-    end)
-  end
-
-  defp get_parent_nodes(job_id, dag) do
-    dag.edges_by_target
-    |> Map.get({:job, job_id}, [])
-    |> Enum.map(fn edge ->
-      cond do
-        edge.source_trigger_id -> {:trigger, edge.source_trigger_id}
-        edge.source_job_id -> {:job, edge.source_job_id}
-        true -> nil
-      end
-    end)
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp get_child_nodes(job_id, dag) do
-    dag.edges_by_source
-    |> Map.get({:job, job_id}, [])
-    |> Enum.map(fn edge ->
-      if edge.target_job_id, do: {:job, edge.target_job_id}, else: nil
-    end)
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp map_node_refs(node_refs, id_map) do
-    Enum.map(node_refs, fn {type, id} ->
-      mapped_id = Map.get(id_map, id, id)
-      {type, mapped_id}
-    end)
-  end
-
-  defp signatures_match?(source_sig, target_sig, trigger_matches) do
-    # Check if structural positions match
-    # Parent and child counts must match
-    # Check if parent sets match (accounting for trigger mapping)
-    # Children matching is more complex - we check count for now
-    source_sig.parent_count == target_sig.parent_count &&
-      source_sig.child_count == target_sig.child_count &&
-      parents_match?(source_sig.parents, target_sig.parents, trigger_matches) &&
-      length(source_sig.children) == length(target_sig.children)
-  end
-
-  defp parents_match?(source_parents, target_parents, trigger_matches) do
-    # Map source trigger parents using trigger_matches
-    mapped_source_parents =
-      Enum.map(source_parents, fn
-        {:trigger, id} -> {:trigger, Map.get(trigger_matches, id, id)}
-        other -> other
+        {source_job.id, scores}
       end)
 
-    # For now, check if counts match - more sophisticated matching could be added
-    length(mapped_source_parents) == length(target_parents)
+    # Transform scores to find best source matches for each target job
+    # Result: %{target_job_id => [source_job1, source_job2, ...]} sorted by match score
+    ranked_source_jobs_per_target =
+      Map.new(target_workflow.jobs, fn target_job ->
+        source_jobs = sort_matching_source_jobs(target_job, all_matching_scores)
+
+        {target_job.id, source_jobs}
+      end)
+
+    # Create stable mappings using recursive matching
+    # Each source job tries to match with its best target, but only succeeds if:
+    # 1. The target's better choices (if any) can match elsewhere
+    # 2. Or this source is the target's best available choice
+
+    Enum.reduce(source_workflow.jobs, node_mappings, fn source_job, mappings ->
+      try_match_source_job(
+        source_job.id,
+        all_matching_scores,
+        ranked_source_jobs_per_target,
+        mappings
+      )
+    end)
   end
 
-  defp disambiguate_jobs(source_job, candidates) do
-    # First try exact name match
-    by_name = Enum.find(candidates, &(&1.name == source_job.name))
-
-    if by_name do
-      by_name
+  # Recursively try to match a source job with its best available target
+  defp try_match_source_job(
+         source_job_id,
+         all_matching_scores,
+         ranked_source_jobs_per_target,
+         mappings
+       ) do
+    # Skip if already mapped
+    if Map.has_key?(mappings, source_job_id) do
+      mappings
     else
-      # Try adaptor match
-      by_adaptor = Enum.find(candidates, &(&1.adaptor == source_job.adaptor))
+      # Get targets for this source and sort by total score
+      sorted_targets =
+        all_matching_scores
+        |> Map.get(source_job_id, %{})
+        |> Enum.sort_by(
+          fn {_target_id, scores} ->
+            scores |> Map.values() |> Enum.sum()
+          end,
+          :desc
+        )
+        |> Enum.map(fn {target_id, _} -> target_id end)
 
-      if by_adaptor do
-        by_adaptor
+      # Try to match with each target in order of preference
+      try_match_with_targets(
+        source_job_id,
+        sorted_targets,
+        all_matching_scores,
+        ranked_source_jobs_per_target,
+        mappings
+      )
+    end
+  end
+
+  defp try_match_with_targets(
+         _source_job_id,
+         [],
+         _all_matching_scores,
+         _ranked_source_jobs_per_target,
+         mappings
+       ) do
+    # No more targets to try
+    mappings
+  end
+
+  defp try_match_with_targets(
+         source_job_id,
+         [target_id | rest_targets],
+         all_matching_scores,
+         ranked_source_jobs_per_target,
+         mappings
+       ) do
+    # Skip if target is already mapped
+    if target_id in Map.values(mappings) do
+      try_match_with_targets(
+        source_job_id,
+        rest_targets,
+        all_matching_scores,
+        ranked_source_jobs_per_target,
+        mappings
+      )
+    else
+      # Check if we can claim this target
+      if can_claim_target?(
+           source_job_id,
+           target_id,
+           all_matching_scores,
+           ranked_source_jobs_per_target,
+           mappings
+         ) do
+        # We can claim it!
+        Map.put(mappings, source_job_id, target_id)
       else
-        # Can't disambiguate - no match
-        nil
+        # Can't claim this target, try next
+        try_match_with_targets(
+          source_job_id,
+          rest_targets,
+          all_matching_scores,
+          ranked_source_jobs_per_target,
+          mappings
+        )
       end
     end
   end
 
-  defp build_merged_jobs(source_jobs, target_jobs, job_matches) do
-    source_job_map = Map.new(source_jobs, &{&1.id, &1})
-    target_job_map = Map.new(target_jobs, &{&1.id, &1})
+  # Check if a source can claim a target
+  # Returns true if either:
+  # 1. This source is the target's best unmapped choice
+  # 2. All better choices for the target can match elsewhere
+  defp can_claim_target?(
+         source_job_id,
+         target_id,
+         all_matching_scores,
+         ranked_source_jobs_per_target,
+         mappings
+       ) do
+    # Get all source jobs ranked for this target
+    target_preferences = Map.get(ranked_source_jobs_per_target, target_id, [])
 
-    # Get all matched target IDs
-    matched_target_ids = Map.values(job_matches) |> MapSet.new()
+    # Find unmapped sources that this target prefers
+    better_sources =
+      target_preferences
+      |> Enum.take_while(fn s -> s != source_job_id end)
+      |> Enum.filter(fn s -> not Map.has_key?(mappings, s) end)
 
-    # Process source jobs (matched and new)
-    merged_from_source =
-      Enum.map(job_matches, fn {source_id, target_id} ->
-        source_job = Map.get(source_job_map, source_id)
-        target_job = Map.get(target_job_map, target_id)
-
-        if target_job do
-          # Matched job - use target ID, source properties, preserve credentials
-          %{
-            "id" => target_id,
-            "name" => source_job.name,
-            "body" => source_job.body,
-            "adaptor" => source_job.adaptor,
-            "project_credential_id" => target_job.project_credential_id,
-            "keychain_credential_id" => target_job.keychain_credential_id
-          }
-        else
-          # New job - source with new ID
-          %{
-            # This is actually a new UUID from job_matches
-            "id" => target_id,
-            "name" => source_job.name,
-            "body" => source_job.body,
-            "adaptor" => source_job.adaptor,
-            "project_credential_id" => source_job.project_credential_id,
-            "keychain_credential_id" => source_job.keychain_credential_id
-          }
-        end
+    # If no better unmapped sources, we can claim
+    if Enum.empty?(better_sources) do
+      true
+    else
+      # Check if all better sources can match with other targets they prefer more
+      Enum.all?(better_sources, fn better_source_id ->
+        can_match_elsewhere?(
+          better_source_id,
+          target_id,
+          all_matching_scores,
+          ranked_source_jobs_per_target,
+          mappings
+        )
       end)
+    end
+  end
+
+  # Check if a source can match with a target other than the given excluded_target
+  defp can_match_elsewhere?(
+         source_job_id,
+         excluded_target_id,
+         all_matching_scores,
+         ranked_source_jobs_per_target,
+         mappings
+       ) do
+    # Get this source's preferences
+    source_targets = Map.get(all_matching_scores, source_job_id, [])
+
+    # Get targets this source prefers over or equal to the excluded target
+    preferred_targets =
+      source_targets
+      |> Enum.take_while(fn {target_id, _} ->
+        # Take targets until we reach the excluded one (not including it)
+        target_id != excluded_target_id
+      end)
+      |> Enum.map(fn {target_id, _} -> target_id end)
+      |> Enum.reject(fn target_id ->
+        # Only consider unmapped targets
+        target_id in Map.values(mappings)
+      end)
+
+    # Check if source can claim any of these preferred targets
+    Enum.any?(preferred_targets, fn alt_target_id ->
+      # Recursively check if source can claim this alternative target
+      can_claim_target?(
+        source_job_id,
+        alt_target_id,
+        all_matching_scores,
+        ranked_source_jobs_per_target,
+        mappings
+      )
+    end)
+  end
+
+  defp sort_matching_source_jobs(target_job, source_jobs_matching_scores) do
+    source_jobs_matching_scores
+    |> Enum.map(fn {source_job_id, target_scores} ->
+      scores = Map.get(target_scores, target_job.id)
+
+      # Calculate total score (sum of all individual scores)
+      total_score =
+        if scores do
+          scores |> Map.values() |> Enum.sum()
+        else
+          0
+        end
+
+      {source_job_id, total_score}
+    end)
+    |> Enum.sort_by(fn {_source_job_id, score} -> score end, :desc)
+    |> Enum.map(fn {source_job_id, _score} -> source_job_id end)
+  end
+
+  defp calculate_job_match_scores(
+         source_job,
+         _source_workflow,
+         source_adjacency_map,
+         target_workflow,
+         target_adjacency_map
+       ) do
+    source_depths = calculate_node_depth(source_adjacency_map, source_job.id)
+
+    {source_adaptor, _vsn} =
+      Lightning.AdaptorRegistry.resolve_package_name(source_job.adaptor)
+
+    # Calculate scores for each target job
+    Enum.reduce(target_workflow.jobs, %{}, fn target_job, acc ->
+      name_score =
+        String.jaro_distance(source_job.name || "", target_job.name || "")
+
+      {target_adaptor, _vsn} =
+        Lightning.AdaptorRegistry.resolve_package_name(target_job.adaptor)
+
+      adaptor_score = if target_adaptor == source_adaptor, do: 1, else: 0
+
+      target_depths = calculate_node_depth(target_adjacency_map, target_job.id)
+
+      depth_score =
+        if Enum.any?(source_depths, &(&1 in target_depths)), do: 1, else: 0
+
+      Map.put(acc, target_job.id, %{
+        name: name_score,
+        adaptor: adaptor_score,
+        depth: depth_score
+      })
+    end)
+  end
+
+  # Get all nodes from a workflow (jobs + triggers)
+  defp get_all_nodes(workflow) do
+    workflow.jobs ++ workflow.triggers
+  end
+
+  defp find_node_by_id(nodes, id) do
+    Enum.find(nodes, &(&1.id == id))
+  end
+
+  # Get all edges as parent -> [children] map
+  defp build_workflow_parent_children_map(workflow) do
+    Enum.reduce(workflow.edges, %{}, fn edge, acc ->
+      parent_id = edge.source_trigger_id || edge.source_job_id
+      child_id = edge.target_job_id
+
+      if parent_id && child_id do
+        Map.update(acc, parent_id, [child_id], fn children ->
+          [child_id | children]
+        end)
+      else
+        acc
+      end
+    end)
+  end
+
+  # Calculate all possible depths of a node in the workflow DAG
+  # Returns a list of depths from all possible paths
+  # Depth starts at 1 for root nodes
+  defp calculate_node_depth(parent_children_map, node_id) do
+    parents =
+      parent_children_map
+      |> Enum.filter(fn {_parent_id, children} ->
+        node_id in children
+      end)
+      |> Enum.map(fn {parent_id, _children} -> parent_id end)
+
+    if Enum.empty?(parents) do
+      # This is a root node
+      [1]
+    else
+      # The + 1 represents moving one level deeper in the DAG.
+      # Each child is one step further from the root than its parent.
+      parents
+      |> Enum.flat_map(fn parent_id ->
+        calculate_node_depth(parent_children_map, parent_id)
+      end)
+      |> Enum.map(&(&1 + 1))
+      |> Enum.uniq()
+      |> Enum.sort()
+    end
+  end
+
+  defp find_edge(edges, source_node_id, target_node_id) do
+    Enum.find(edges, fn edge ->
+      from_id =
+        Map.get(edge, :source_job_id) || Map.fetch(edge, :source_trigger_id)
+
+      to_id = Map.get(edge, :target_job_id)
+
+      from_id == source_node_id and to_id == target_node_id
+    end)
+  end
+
+  # Build the final merged workflow structure
+  defp build_merged_workflow(source_workflow, target_workflow, node_mappings) do
+    # Separate job and trigger mappings
+    source_trigger_ids = Enum.map(source_workflow.triggers, & &1.id)
+
+    {trigger_mappings, job_mappings} =
+      Map.split(node_mappings, source_trigger_ids)
+
+    # Build merged components
+    {job_mappings, merged_jobs} =
+      build_merged_jobs(
+        source_workflow.jobs,
+        target_workflow.jobs,
+        job_mappings
+      )
+
+    {trigger_mappings, merged_triggers} =
+      build_merged_triggers(
+        source_workflow.triggers,
+        target_workflow.triggers,
+        trigger_mappings
+      )
+
+    # Build complete ID map for edge remapping
+    node_mappings = Map.merge(job_mappings, trigger_mappings)
+
+    merged_edges =
+      build_merged_edges(
+        source_workflow.edges,
+        target_workflow.edges,
+        node_mappings
+      )
+
+    initial_positions = Map.get(source_workflow, :positions) || %{}
+
+    merged_positions =
+      Map.new(initial_positions, fn {job_id, position} ->
+        {Map.fetch(node_mappings, job_id), position}
+      end)
+
+    source_workflow
+    |> Map.take([:name, :concurrency, :enable_job_logs])
+    |> Lightning.Utils.Maps.stringify_keys()
+    |> Map.merge(%{
+      "id" => target_workflow.id,
+      "positions" => merged_positions,
+      "jobs" => merged_jobs,
+      "triggers" => merged_triggers,
+      "edges" => merged_edges
+    })
+  end
+
+  defp build_merged_jobs(source_jobs, target_jobs, job_mappings) do
+    # Process source jobs (matched and new)
+    {new_mapping, merged_from_source} =
+      Enum.reduce(
+        source_jobs,
+        {%{}, []},
+        fn source_job, {new_mapping, merged_jobs} ->
+          mapped_id =
+            Map.get(job_mappings, source_job.id) || Ecto.UUID.generate()
+
+          merged_job =
+            source_job
+            |> Map.take([
+              :name,
+              :body,
+              :adaptor,
+              :project_credential_id,
+              :keychain_credential_id
+            ])
+            |> Map.put(:id, mapped_id)
+            |> Lightning.Utils.Maps.stringify_keys()
+
+          {Map.put(new_mapping, source_job.id, mapped_id),
+           [merged_job | merged_jobs]}
+        end
+      )
 
     # Mark unmatched target jobs for deletion
     deleted_targets =
       target_jobs
-      |> Enum.filter(fn job ->
-        not MapSet.member?(matched_target_ids, job.id)
+      |> Enum.reject(fn job ->
+        job.id in Map.values(job_mappings)
       end)
       |> Enum.map(fn job ->
-        %{
-          "id" => job.id,
-          "delete" => true
-        }
+        %{"id" => job.id, "delete" => true}
       end)
 
-    merged_from_source ++ deleted_targets
+    {new_mapping, merged_from_source ++ deleted_targets}
   end
 
-  defp build_merged_triggers(source_triggers, target_triggers, trigger_matches) do
-    # Only handle webhook and cron triggers
-    source_triggers =
-      Enum.filter(source_triggers, &(&1.type in [:webhook, :cron]))
-
-    target_triggers =
-      Enum.filter(target_triggers, &(&1.type in [:webhook, :cron]))
-
-    source_trigger_map = Map.new(source_triggers, &{&1.id, &1})
-
-    matched_target_ids = Map.values(trigger_matches) |> MapSet.new()
-
+  defp build_merged_triggers(source_triggers, target_triggers, trigger_mappings) do
     # Process source triggers (matched and new)
-    merged_from_source =
-      Enum.map(trigger_matches, fn {source_id, target_id} ->
-        source_trigger = Map.get(source_trigger_map, source_id)
+    {new_mapping, merged_from_source} =
+      Enum.reduce(
+        source_triggers,
+        {%{}, []},
+        fn source_trigger, {new_mapping, merged_triggers} ->
+          mapped_id =
+            Map.get(trigger_mappings, source_trigger.id) || Ecto.UUID.generate()
 
-        if source_trigger do
-          base = %{
-            "id" => target_id,
-            "type" => to_string(source_trigger.type),
-            "enabled" => source_trigger.enabled,
-            "comment" => source_trigger.comment
-          }
+          merged_trigger =
+            source_trigger
+            |> Map.take([
+              :comment,
+              :custom_path,
+              :cron_expression,
+              :type,
+              :kafka_configuration
+            ])
+            |> Map.put(:id, mapped_id)
+            |> Lightning.Utils.Maps.stringify_keys()
 
-          # Add type-specific fields
-          base
-          |> maybe_add_webhook_fields(source_trigger)
-          |> maybe_add_cron_fields(source_trigger)
+          {Map.put(new_mapping, source_trigger.id, mapped_id),
+           [merged_trigger | merged_triggers]}
         end
-      end)
-      |> Enum.reject(&is_nil/1)
+      )
 
     # Mark unmatched target triggers for deletion
     deleted_targets =
       target_triggers
-      |> Enum.filter(fn trigger ->
-        not MapSet.member?(matched_target_ids, trigger.id)
+      |> Enum.reject(fn trigger ->
+        trigger.id in Map.values(trigger_mappings)
       end)
       |> Enum.map(fn trigger ->
-        %{
-          "id" => trigger.id,
-          "delete" => true
-        }
+        %{"id" => trigger.id, "delete" => true}
+      end)
+
+    {new_mapping, merged_from_source ++ deleted_targets}
+  end
+
+  defp build_merged_edges(source_edges, target_edges, node_mappings) do
+    merged_from_source =
+      Enum.map(source_edges, fn source_edge ->
+        from_id =
+          Map.get(source_edge, :source_trigger_id) ||
+            Map.get(source_edge, :source_job_id)
+
+        mapped_from_id = Map.fetch!(node_mappings, from_id)
+        to_id = Map.get(source_edge, :target_job_id)
+        mapped_to_id = Map.fetch!(node_mappings, to_id)
+
+        target_edge = find_edge(target_edges, mapped_from_id, mapped_to_id)
+
+        mapped_id =
+          if target_edge, do: target_edge.id, else: Ecto.UUID.generate()
+
+        source_edge
+        |> Map.take([
+          :condition_type,
+          :condition_expression,
+          :condition_label,
+          :enabled
+        ])
+        |> Map.merge(%{
+          id: mapped_id,
+          source_job_id: Map.get(source_edge, :source_job_id) && mapped_from_id,
+          source_trigger_id:
+            Map.get(source_edge, :source_trigger_id) && mapped_from_id,
+          target_job_id: mapped_to_id
+        })
+        |> Lightning.Utils.Maps.stringify_keys()
+      end)
+
+    merged_trigger_ids = Enum.map(merged_from_source, fn edge -> edge["id"] end)
+
+    # Mark unmatched target edges for deletion
+    deleted_targets =
+      target_edges
+      |> Enum.reject(fn trigger ->
+        trigger.id in merged_trigger_ids
+      end)
+      |> Enum.map(fn trigger ->
+        %{"id" => trigger.id, "delete" => true}
       end)
 
     merged_from_source ++ deleted_targets
-  end
-
-  defp maybe_add_webhook_fields(base, trigger) do
-    if trigger.type == :webhook do
-      Map.put(base, "custom_path", trigger.custom_path)
-    else
-      base
-    end
-  end
-
-  defp maybe_add_cron_fields(base, trigger) do
-    if trigger.type == :cron do
-      Map.put(base, "cron_expression", trigger.cron_expression)
-    else
-      base
-    end
-  end
-
-  defp build_id_map(job_matches, trigger_matches) do
-    Map.merge(job_matches, trigger_matches)
-  end
-
-  defp build_merged_edges(source_edges, id_map) do
-    Enum.map(source_edges, fn edge ->
-      %{
-        "id" => edge.id,
-        "source_trigger_id" =>
-          if(edge.source_trigger_id,
-            do: Map.get(id_map, edge.source_trigger_id),
-            else: nil
-          ),
-        "source_job_id" =>
-          if(edge.source_job_id,
-            do: Map.get(id_map, edge.source_job_id),
-            else: nil
-          ),
-        "target_job_id" =>
-          if(edge.target_job_id,
-            do: Map.get(id_map, edge.target_job_id),
-            else: nil
-          ),
-        "condition_type" => to_string(edge.condition_type),
-        "condition_expression" => edge.condition_expression,
-        "condition_label" => edge.condition_label,
-        "enabled" => edge.enabled
-      }
-    end)
   end
 end
