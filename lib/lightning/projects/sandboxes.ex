@@ -525,28 +525,25 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Deletes a sandbox (child project) under `parent` on behalf of `actor`.
+  Deletes a sandbox (child project) on behalf of `actor`.
 
-  Authorization: `actor` must be `:owner` or `:admin` on the **parent** project.
-  The `sandbox` must belong to the given `parent`.
+  Authorization: `actor` must be `:owner` of the sandbox.
   """
-  @spec delete_sandbox(Project.t(), User.t(), Project.t() | Ecto.UUID.t()) ::
+  @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
-  def delete_sandbox(%Project{} = parent, %User{} = actor, %Project{} = sandbox) do
-    with true <- sandbox.parent_id == parent.id || {:error, :not_found},
-         role when role in [:owner, :admin] <-
-           Lightning.Projects.get_project_user_role(actor, parent) do
-      Lightning.Projects.delete_project(sandbox)
-    else
-      {:error, reason} -> {:error, reason}
-      _ -> {:error, :unauthorized}
+  def delete_sandbox(%Project{} = sandbox, %User{} = actor) do
+    case Lightning.Projects.get_project_user_role(actor, sandbox) do
+      role when role in [:owner] ->
+        Lightning.Projects.delete_project(sandbox)
+
+      _ ->
+        {:error, :unauthorized}
     end
   end
 
-  def delete_sandbox(%Project{} = parent, %User{} = actor, sandbox_id)
-      when is_binary(sandbox_id) do
+  def delete_sandbox(%User{} = actor, sandbox_id) when is_binary(sandbox_id) do
     case Lightning.Projects.get_project(sandbox_id) do
-      %Project{} = sandbox -> delete_sandbox(parent, actor, sandbox)
+      %Project{} = sandbox -> delete_sandbox(actor, sandbox)
       nil -> {:error, :not_found}
     end
   end

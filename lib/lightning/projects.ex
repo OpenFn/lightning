@@ -236,6 +236,41 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns true if `child_project` is a descendant of `parent_project`.
+
+  Walks up the parent chain using preloaded `:parent` associations to determine
+  if `child_project` has `parent_project` anywhere in its ancestry.
+
+  ## Parameters
+  - `child_project`: The project to check (must have `:parent` preloaded)
+  - `parent_project`: The potential parent/ancestor project
+  - `root_project`: Optional root project to use as stopping condition
+
+  ## Examples
+      iex> Projects.is_descendant_of?(sandbox, parent_project)
+      true
+
+      iex> Projects.is_descendant_of?(sibling, parent_project)
+      false
+  """
+  @spec is_descendant_of?(Project.t(), Project.t(), Project.t() | nil) ::
+          boolean()
+  def is_descendant_of?(child_project, parent_project, root_project \\ nil) do
+    root = root_project || root_of(child_project)
+
+    cond do
+      child_project.parent_id == parent_project.id ->
+        true
+
+      child_project.parent_id == root.id or is_nil(child_project.parent_id) ->
+        false
+
+      true ->
+        is_descendant_of?(child_project.parent, parent_project, root)
+    end
+  end
+
+  @doc """
   Should input or output dataclips be saved for runs in this project?
   """
   def save_dataclips?(id) do
@@ -1357,7 +1392,7 @@ defmodule Lightning.Projects do
       )
       |> join(:inner, [p], d in "descendants", on: p.id == d.id)
       |> order_by(^order_by_clause)
-      |> preload(:parent)
+      |> preload([:parent, :project_users])
       |> Repo.all()
 
     %{root: root, descendants: descendants}
@@ -1499,11 +1534,11 @@ defmodule Lightning.Projects do
     as: :update_sandbox
 
   @doc """
-  Delete a sandbox (child of `parent`) as `actor`.
+  Delete a sandbox as `actor`.
   """
-  @spec delete_sandbox(Project.t(), User.t(), Project.t() | Ecto.UUID.t()) ::
+  @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
-  defdelegate delete_sandbox(parent, actor, sandbox),
+  defdelegate delete_sandbox(sandbox, actor),
     to: Sandboxes,
     as: :delete_sandbox
 end
