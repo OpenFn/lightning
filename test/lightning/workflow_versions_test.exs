@@ -181,7 +181,11 @@ defmodule Lightning.WorkflowVersionsTest do
 
       Repo.insert_all(WorkflowVersion, rows)
 
-      assert WorkflowVersions.history_for(wf) == [@a, @b, @c]
+      assert WorkflowVersions.history_for(wf) == [
+               "cli:#{@a}",
+               "app:#{@b}",
+               "app:#{@c}"
+             ]
     end
   end
 
@@ -210,7 +214,7 @@ defmodule Lightning.WorkflowVersionsTest do
 
       Repo.insert_all(WorkflowVersion, rows)
 
-      assert WorkflowVersions.latest_hash(wf) == @c
+      assert WorkflowVersions.latest_hash(wf) == "app:#{@c}"
     end
   end
 
@@ -229,8 +233,13 @@ defmodule Lightning.WorkflowVersionsTest do
       ])
 
       updated = WorkflowVersions.reconcile_history!(wf)
-      assert updated.version_history == [@a, @b, @c]
-      assert Repo.reload!(%Workflow{id: wf.id}).version_history == [@a, @b, @c]
+      assert updated.version_history == ["app:#{@a}", "cli:#{@b}", "app:#{@c}"]
+
+      assert Repo.reload!(%Workflow{id: wf.id}).version_history == [
+               "app:#{@a}",
+               "cli:#{@b}",
+               "app:#{@c}"
+             ]
     end
   end
 

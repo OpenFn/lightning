@@ -35,6 +35,27 @@ defmodule LightningWeb.Components.Icon do
 
   def workflows(assigns), do: Heroicons.square_3_stack_3d(assigns)
 
+  def sandboxes(assigns), do: Heroicons.beaker(assigns)
+
+  def branches(assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      class={@class}
+      aria-hidden="true"
+    >
+      <circle cx="6" cy="6" r="2.25" />
+      <circle cx="18" cy="6" r="2.25" />
+      <circle cx="18" cy="18" r="2.25" />
+      <path d="M6 8v10a4 4 0 0 0 4 4h8" />
+      <path d="M8 6h8" />
+    </svg>
+    """
+  end
+
   def runs(assigns), do: Heroicons.rectangle_stack(assigns)
 
   def pencil(assigns), do: Heroicons.pencil(assigns)

@@ -124,7 +124,7 @@
       hover:underline hover:underline-offset-2
       whitespace-nowrap
       inline-block
-      text-indigo-400 hover:text-indigo-500
+      text-primary-400 hover:text-primary-500
       /* disabled state */
       disabled:cursor-not-allowed
       disabled:text-gray-400
@@ -413,7 +413,7 @@
 
   .icon-button {
     @apply cursor-pointer
-  hover:text-indigo-500
+  hover:text-primary-500
   font-bold
   text-secondary-600
   transition
