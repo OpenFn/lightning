@@ -69,7 +69,7 @@ defmodule LightningWeb.SandboxLive.Index do
        ) do
     should_redirect =
       current_project.id == deleted_sandbox.id or
-        Projects.is_descendant_of?(
+        Projects.descendant_of?(
           current_project,
           deleted_sandbox,
           root_project

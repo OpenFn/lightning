@@ -3,6 +3,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Ecto.Query
 
   alias Lightning.Repo
   alias Lightning.Projects.Project
@@ -33,7 +34,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           name: "sb-1",
           color: "#ff0000",
           env: "staging",
-          parent: parent
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
         )
 
       sb2 =
@@ -41,7 +43,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           name: "sb-2",
           color: "#00ff00",
           env: "dev",
-          parent: parent
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
         )
 
       {:ok, parent: parent, sb1: sb1, sb2: sb2}
@@ -59,6 +62,13 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ "Sandboxes"
       assert has_element?(view, "#edit-sandbox-#{sb1.id}")
       assert has_element?(view, "#edit-sandbox-#{sb2.id}")
+
+      # Delete project_users first to avoid foreign key constraint
+      from(pu in Lightning.Projects.ProjectUser, where: pu.project_id == ^sb1.id)
+      |> Repo.delete_all()
+
+      from(pu in Lightning.Projects.ProjectUser, where: pu.project_id == ^sb2.id)
+      |> Repo.delete_all()
 
       Repo.delete!(sb1)
       Repo.delete!(sb2)
@@ -87,7 +97,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     } do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      view |> element("#edit-sandbox-#{sb1.id}") |> render_click()
+      view |> element("#edit-sandbox-#{sb1.id} button") |> render_click()
 
       assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit")
       assert has_element?(view, "#sandbox-form-#{sb1.id}")
@@ -101,7 +111,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     } do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
       assert has_element?(view, "#confirm-delete-sandbox")
 
       view
@@ -126,14 +136,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes", on_error: :raise)
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
-                                                                     user_arg,
-                                                                     %Project{
-                                                                       id: id
-                                                                     } ->
-        assert parent_arg.id == parent.id
-        assert user_arg.id == user.id
+      # Updated to match the new function signature: delete_sandbox(sandbox, current_user)
+      Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{id: id},
+                                                           user_arg ->
         assert id == sb1.id
+        assert user_arg.id == user.id
         {:ok, %Project{}}
       end)
 
@@ -146,35 +153,35 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         }
       end)
 
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
       Mimic.allow(Lightning.Projects, self(), view.pid)
 
-      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
 
       html =
         view
         |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb1.name})
         |> render_submit()
 
-      assert html =~ "Sandbox #{sb1.name} deleted"
+      # Updated flash message to match implementation
+      assert html =~
+               "Sandbox #{sb1.name} and all its associated descendants deleted"
+
       assert has_element?(view, "#edit-sandbox-#{sb2.id}")
 
       target_id = sb2.id
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
-                                                                     user_arg,
-                                                                     %Project{
-                                                                       id:
-                                                                         ^target_id
-                                                                     } ->
-        assert parent_arg.id == parent.id
+      # Updated to match the new function signature
+      Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
+                                                             id: ^target_id
+                                                           },
+                                                           user_arg ->
         assert user_arg.id == user.id
         {:error, :unauthorized}
       end)
 
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
 
-      view |> element("#delete-sandbox-#{target_id}") |> render_click()
+      view |> element("#delete-sandbox-#{target_id} button") |> render_click()
 
       html =
         view
@@ -183,20 +190,18 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "You don&#39;t have permission to delete this sandbox"
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
-                                                                     user_arg,
-                                                                     %Project{
-                                                                       id:
-                                                                         ^target_id
-                                                                     } ->
-        assert parent_arg.id == parent.id
+      # Updated to match the new function signature
+      Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
+                                                             id: ^target_id
+                                                           },
+                                                           user_arg ->
         assert user_arg.id == user.id
         {:error, :not_found}
       end)
 
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
 
-      view |> element("#delete-sandbox-#{target_id}") |> render_click()
+      view |> element("#delete-sandbox-#{target_id} button") |> render_click()
 
       html =
         view
@@ -205,20 +210,18 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "Sandbox not found"
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn parent_arg,
-                                                                     user_arg,
-                                                                     %Project{
-                                                                       id:
-                                                                         ^target_id
-                                                                     } ->
-        assert parent_arg.id == parent.id
+      # Updated to match the new function signature
+      Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
+                                                             id: ^target_id
+                                                           },
+                                                           user_arg ->
         assert user_arg.id == user.id
         {:error, :boom}
       end)
 
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
 
-      view |> element("#delete-sandbox-#{target_id}") |> render_click()
+      view |> element("#delete-sandbox-#{target_id} button") |> render_click()
 
       html =
         view
@@ -248,7 +251,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     } do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
       assert has_element?(view, "#confirm-delete-sandbox")
 
       _html_before = render(view)
@@ -266,7 +269,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     } do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
       assert has_element?(view, "#confirm-delete-sandbox")
 
       _html =
@@ -282,7 +285,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     } do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
       assert has_element?(view, "#confirm-delete-sandbox")
 
       view
@@ -291,7 +294,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       refute has_element?(view, "#confirm-delete-sandbox")
 
-      view |> element("#delete-sandbox-#{sb1.id}") |> render_click()
+      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
       assert has_element?(view, "#confirm-delete-sandbox")
 
       view

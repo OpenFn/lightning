@@ -2561,7 +2561,7 @@ defmodule Lightning.ProjectsTest do
       assert is_list(sandbox.version_history)
     end
 
-    test "update_sandbox/4 updates basic fields on the child" do
+    test "update_sandbox/3 updates basic fields on the sandbox" do
       owner = insert(:user)
 
       parent =
@@ -2570,12 +2570,12 @@ defmodule Lightning.ProjectsTest do
       {:ok, sandbox} = Projects.provision_sandbox(parent, owner, %{name: "old"})
 
       {:ok, updated} =
-        Projects.update_sandbox(parent, owner, sandbox, %{name: "new"})
+        Projects.update_sandbox(sandbox, owner, %{name: "new"})
 
       assert updated.name == "new"
     end
 
-    test "delete_sandbox/3 removes the child project" do
+    test "delete_sandbox/2 removes the child project" do
       owner = insert(:user)
 
       parent =
@@ -2585,7 +2585,7 @@ defmodule Lightning.ProjectsTest do
         Projects.provision_sandbox(parent, owner, %{name: "to-delete"})
 
       assert {:ok, %Lightning.Projects.Project{}} =
-               Projects.delete_sandbox(parent, owner, sandbox)
+               Projects.delete_sandbox(sandbox, owner)
 
       refute Repo.get(Lightning.Projects.Project, sandbox.id)
     end

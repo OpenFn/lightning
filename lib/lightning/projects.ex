@@ -247,15 +247,15 @@ defmodule Lightning.Projects do
   - `root_project`: Optional root project to use as stopping condition
 
   ## Examples
-      iex> Projects.is_descendant_of?(sandbox, parent_project)
+      iex> Projects.descendant_of?(sandbox, parent_project)
       true
 
-      iex> Projects.is_descendant_of?(sibling, parent_project)
+      iex> Projects.descendant_of?(sibling, parent_project)
       false
   """
-  @spec is_descendant_of?(Project.t(), Project.t(), Project.t() | nil) ::
+  @spec descendant_of?(Project.t(), Project.t(), Project.t() | nil) ::
           boolean()
-  def is_descendant_of?(child_project, parent_project, root_project \\ nil) do
+  def descendant_of?(child_project, parent_project, root_project \\ nil) do
     root = root_project || root_of(child_project)
 
     cond do
@@ -266,7 +266,7 @@ defmodule Lightning.Projects do
         false
 
       true ->
-        is_descendant_of?(child_project.parent, parent_project, root)
+        descendant_of?(child_project.parent, parent_project, root)
     end
   end
 
@@ -1513,8 +1513,19 @@ defmodule Lightning.Projects do
     do: if(Enum.member?(list, h), do: list, else: list ++ [h])
 
   @doc """
-  Provision a sandbox under `parent` on behalf of `actor`.
-  See `Lightning.Projects.Sandboxes.provision/3` for details.
+  Creates a new sandbox project by cloning from a parent project.
+
+  ## Parameters
+  * `parent` - Project to clone from
+  * `actor` - User creating the sandbox (needs `:owner` or `:admin` role on parent)
+  * `attrs` - Creation attributes (name, color, env, collaborators, dataclip_ids)
+
+  ## Returns
+  * `{:ok, sandbox_project}` - Successfully created sandbox
+  * `{:error, :unauthorized}` - Actor lacks permission on parent
+  * `{:error, changeset}` - Validation or database error
+
+  See `Lightning.Projects.Sandboxes.provision/3` for detailed behavior.
   """
   @spec provision_sandbox(Project.t(), User.t(), Sandboxes.provision_attrs()) ::
           {:ok, Project.t()} | {:error, term()}
@@ -1523,22 +1534,41 @@ defmodule Lightning.Projects do
     as: :provision
 
   @doc """
-  Update a sandbox (child of `parent`) as `actor`.
-  Accepts only basic fields like :name, :color, :env.
+  Updates a sandbox project's basic attributes (name, color, env).
+
+  ## Parameters
+  * `sandbox` - Sandbox to update (project struct or ID string)
+  * `actor` - User performing update (needs `:owner` or `:admin` role on sandbox)
+  * `attrs` - Map with name, color, and/or env keys
+
+  ## Returns
+  * `{:ok, updated_sandbox}` - Successfully updated
+  * `{:error, :unauthorized}` - Actor lacks permission
+  * `{:error, :not_found}` - Sandbox not found
+  * `{:error, changeset}` - Validation error
   """
-  @spec update_sandbox(Project.t(), User.t(), Project.t() | Ecto.UUID.t(), map()) ::
+  @spec update_sandbox(Project.t() | Ecto.UUID.t(), User.t(), map()) ::
           {:ok, Project.t()}
           | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
-  defdelegate update_sandbox(parent, actor, sandbox, attrs),
+  defdelegate update_sandbox(sandbox, actor, attrs),
     to: Sandboxes,
     as: :update_sandbox
 
   @doc """
-  Delete a sandbox as `actor`.
+  Deletes a sandbox and all its descendant projects.
+
+  **Warning**: Permanently removes the sandbox and any nested sandboxes.
+
+  ## Parameters
+  * `sandbox` - Sandbox to delete (project struct or ID string)
+  * `actor` - User performing deletion (needs `:owner` or `:admin` role on sandbox)
+
+  ## Returns
+  * `{:ok, deleted_sandbox}` - Successfully deleted
+  * `{:error, :unauthorized}` - Actor lacks permission
+  * `{:error, :not_found}` - Sandbox not found
   """
   @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
-  defdelegate delete_sandbox(sandbox, actor),
-    to: Sandboxes,
-    as: :delete_sandbox
+  defdelegate delete_sandbox(sandbox, actor), to: Sandboxes, as: :delete_sandbox
 end
