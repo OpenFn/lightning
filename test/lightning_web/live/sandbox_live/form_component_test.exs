@@ -17,14 +17,14 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
     setup %{conn: conn, user: user} do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
 
-      Mimic.stub(Lightning.Projects.Sandboxes, :provision, fn parent_arg,
-                                                              user_arg,
-                                                              attrs ->
+      # Updated to match the new function signature: provision_sandbox(parent, user, attrs)
+      Mimic.stub(Lightning.Projects, :provision_sandbox, fn parent_arg,
+                                                            user_arg,
+                                                            attrs ->
         assert parent_arg.id == parent.id
         assert user_arg.id == user.id
 
-        raw = attrs[:raw_name] || attrs["raw_name"]
-        name = attrs[:name] || attrs["name"] || raw
+        name = attrs[:name] || attrs["name"]
         env = attrs[:env] || attrs["env"]
         color = attrs[:color] || attrs["color"]
 
@@ -55,7 +55,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
     test "creating sandbox succeeds", %{conn: conn, parent: parent} do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
 
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
 
       view
       |> element("#sandbox-form-new")
@@ -85,7 +85,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
            parent: parent
          } do
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
 
       render_submit(
         element(view, "#sandbox-form-new"),
@@ -132,34 +132,34 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
       sb = insert(:sandbox, parent: parent, name: "sb-1")
 
-      Mimic.stub(Lightning.Projects.Sandboxes, :update_sandbox, fn parent_arg,
-                                                                   user_arg,
-                                                                   %Lightning.Projects.Project{} =
-                                                                     current_sb,
-                                                                   attrs ->
-        assert parent_arg.id == parent.id
-        assert user_arg.id == user.id
+      # Updated to match the new function signature: update_sandbox(sandbox, user, attrs)
+      Mimic.stub(
+        Lightning.Projects,
+        :update_sandbox,
+        fn %Lightning.Projects.Project{} = current_sb, user_arg, attrs ->
+          assert user_arg.id == user.id
 
-        name = attrs[:name] || attrs["name"]
-        env = attrs[:env] || attrs["env"]
-        color = attrs[:color] || attrs["color"]
+          name = attrs[:name] || attrs["name"]
+          env = attrs[:env] || attrs["env"]
+          color = attrs[:color] || attrs["color"]
 
-        if name in [nil, ""] do
-          {:error,
-           %Ecto.Changeset{}
-           |> Ecto.Changeset.change(current_sb)
-           |> Map.put(:action, :update)
-           |> Ecto.Changeset.add_error(:name, "can't be blank")}
-        else
-          {:ok,
-           %Lightning.Projects.Project{
-             current_sb
-             | name: name,
-               env: env,
-               color: color
-           }}
+          if name in [nil, ""] do
+            {:error,
+             %Ecto.Changeset{}
+             |> Ecto.Changeset.change(current_sb)
+             |> Map.put(:action, :update)
+             |> Ecto.Changeset.add_error(:name, "can't be blank")}
+          else
+            {:ok,
+             %Lightning.Projects.Project{
+               current_sb
+               | name: name,
+                 env: env,
+                 color: color
+             }}
+          end
         end
-      end)
+      )
 
       {:ok, conn: conn, user: user, parent: parent, sb: sb}
     end
@@ -168,7 +168,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       {:ok, view, _} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
 
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
 
       view
       |> element("#sandbox-form-#{sb.id}")

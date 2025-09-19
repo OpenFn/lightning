@@ -750,7 +750,7 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  describe "update/4" do
+  describe "update_sandbox/3" do
     setup do
       parent = insert(:project, name: "parent")
       actor = insert(:user)
@@ -759,63 +759,59 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "fails with unauthorized actor", %{
-      parent: parent,
       actor: actor,
       sandbox: sb
     } do
-      ensure_member!(parent, actor, :editor)
-
       assert {:error, :unauthorized} =
-               Sandboxes.update_sandbox(parent, actor, sb, %{name: "X"})
+               Sandboxes.update_sandbox(sb, actor, %{name: "X"})
     end
 
-    test "fails when sandbox not child of parent", %{actor: actor} do
-      parent = insert(:project, name: "p1")
-      other_parent = insert(:project, name: "p2")
-      sb = insert(:project, parent: other_parent, name: "sb")
-
-      ensure_member!(parent, actor, :owner)
-
-      assert {:error, :not_found} =
-               Sandboxes.update_sandbox(parent, actor, sb, %{name: "X"})
-    end
-
-    test "succeeds with owner/admin", %{
-      parent: parent,
+    test "succeeds with owner", %{
       actor: actor,
       sandbox: sb
     } do
-      ensure_member!(parent, actor, :owner)
+      ensure_member!(sb, actor, :owner)
 
       {:ok, updated} =
-        Sandboxes.update_sandbox(parent, actor, sb, %{name: "updated"})
+        Sandboxes.update_sandbox(sb, actor, %{name: "updated"})
 
       assert updated.name == "updated"
     end
 
-    test "uuid not found returns not_found", %{parent: parent, actor: actor} do
-      ensure_member!(parent, actor, :owner)
+    test "succeeds with admin", %{
+      actor: actor,
+      sandbox: sb
+    } do
+      ensure_member!(sb, actor, :admin)
+
+      {:ok, updated} =
+        Sandboxes.update_sandbox(sb, actor, %{name: "updated"})
+
+      assert updated.name == "updated"
+    end
+
+    test "uuid not found returns not_found", %{actor: actor} do
       bad_id = Ecto.UUID.generate()
 
       assert {:error, :not_found} =
-               Sandboxes.update_sandbox(parent, actor, bad_id, %{name: "x"})
+               Sandboxes.update_sandbox(bad_id, actor, %{name: "x"})
     end
 
     test "uuid found delegates to project update", %{
       parent: parent,
       actor: actor
     } do
-      ensure_member!(parent, actor, :owner)
       sb = insert(:project, parent: parent, name: "to-change")
+      ensure_member!(sb, actor, :owner)
 
       {:ok, updated} =
-        Sandboxes.update_sandbox(parent, actor, sb.id, %{name: "changed"})
+        Sandboxes.update_sandbox(sb.id, actor, %{name: "changed"})
 
       assert updated.name == "changed"
     end
   end
 
-  describe "delete_sandbox/3" do
+  describe "delete_sandbox/2" do
     setup do
       parent = insert(:project, name: "parent")
       actor = insert(:user)
@@ -824,50 +820,33 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "fails with unauthorized actor", %{
-      parent: parent,
       actor: actor,
       sandbox: sb
     } do
-      ensure_member!(parent, actor, :editor)
-
-      assert {:error, :unauthorized} =
-               Sandboxes.delete_sandbox(parent, actor, sb)
+      assert {:error, :unauthorized} = Sandboxes.delete_sandbox(sb, actor)
     end
 
-    test "fails when sandbox not child of parent", %{actor: actor} do
-      parent = insert(:project, name: "p1")
-      other_parent = insert(:project, name: "p2")
-      sb = insert(:project, parent: other_parent, name: "sb")
-
-      ensure_member!(parent, actor, :owner)
-      assert {:error, :not_found} = Sandboxes.delete_sandbox(parent, actor, sb)
-    end
-
-    test "succeeds with owner/admin", %{
-      parent: parent,
+    test "succeeds with owner", %{
       actor: actor,
       sandbox: sb
     } do
-      ensure_member!(parent, actor, :admin)
-      {:ok, deleted} = Sandboxes.delete_sandbox(parent, actor, sb)
+      ensure_member!(sb, actor, :owner)
+      {:ok, deleted} = Sandboxes.delete_sandbox(sb, actor)
       refute Repo.get(Project, deleted.id)
     end
 
-    test "uuid not found returns not_found", %{parent: parent, actor: actor} do
-      ensure_member!(parent, actor, :owner)
+    test "uuid not found returns not_found", %{actor: actor} do
       bad_id = Ecto.UUID.generate()
-
-      assert {:error, :not_found} =
-               Sandboxes.delete_sandbox(parent, actor, bad_id)
+      assert {:error, :not_found} = Sandboxes.delete_sandbox(actor, bad_id)
     end
 
     test "uuid found delegates to project delete_sandbox", %{
       parent: parent,
       actor: actor
     } do
-      ensure_member!(parent, actor, :owner)
       sb = insert(:project, parent: parent, name: "to-del")
-      {:ok, deleted} = Sandboxes.delete_sandbox(parent, actor, sb.id)
+      ensure_member!(sb, actor, :owner)
+      {:ok, deleted} = Sandboxes.delete_sandbox(actor, sb.id)
       refute Repo.get(Project, deleted.id)
     end
   end

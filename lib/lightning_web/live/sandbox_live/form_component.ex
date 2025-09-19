@@ -144,37 +144,58 @@ defmodule LightningWeb.SandboxLive.FormComponent do
         %{"project" => params},
         %{
           assigns: %{
-            mode: mode,
+            mode: :new,
             parent: parent,
             current_user: actor,
             return_to: return_to
           }
         } = socket
-      )
-      when mode in [:new, :edit] do
+      ) do
     attrs = %{
       name: params["name"],
       color: params["color"],
       env: params["env"]
     }
 
-    result =
-      case mode do
-        :new ->
-          Projects.provision_sandbox(parent, actor, attrs)
-
-        :edit ->
-          Projects.update_sandbox(parent, actor, socket.assigns.sandbox, attrs)
-      end
-
-    case result do
+    case Projects.provision_sandbox(parent, actor, attrs) do
       {:ok, sandbox} ->
-        flash_message =
-          if mode == :new, do: "Sandbox created", else: "Sandbox updated"
-
         {:noreply,
          socket
-         |> put_flash(:info, flash_message)
+         |> put_flash(:info, "Sandbox created")
+         |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply,
+         socket
+         |> assign(:changeset, changeset)
+         |> assign(:name, Changeset.get_field(changeset, :name))}
+    end
+  end
+
+  @impl true
+  def handle_event(
+        "save",
+        %{"project" => params},
+        %{
+          assigns: %{
+            mode: :edit,
+            sandbox: sandbox,
+            current_user: actor,
+            return_to: return_to
+          }
+        } = socket
+      ) do
+    attrs = %{
+      name: params["name"],
+      color: params["color"],
+      env: params["env"]
+    }
+
+    case Projects.update_sandbox(sandbox, actor, attrs) do
+      {:ok, sandbox} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Sandbox updated")
          |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
