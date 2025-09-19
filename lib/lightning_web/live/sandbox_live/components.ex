@@ -85,11 +85,7 @@ defmodule LightningWeb.SandboxLive.Components do
           </div>
         <% else %>
           <div class="space-y-3">
-            <.sandbox_card
-              :for={sandbox <- @sandboxes}
-              is_current={@current_project.id == sandbox.id}
-              sandbox={sandbox}
-            />
+            <.sandbox_card :for={sandbox <- @sandboxes} sandbox={sandbox} />
           </div>
         <% end %>
       </div>
@@ -138,8 +134,7 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
-  attr :sandbox, Project, required: true
-  attr :is_current, :boolean, required: true
+  attr :sandbox, :map, required: true
 
   defp sandbox_card(assigns) do
     ~H"""
@@ -167,7 +162,7 @@ defmodule LightningWeb.SandboxLive.Components do
                 env={@sandbox.env}
               />
               <.badge
-                :if={@is_current}
+                :if={@sandbox.is_current}
                 id={"active-badge-#{@sandbox.id}"}
                 env="active"
               />
@@ -181,8 +176,9 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   attr :open?, :boolean, required: true
-  attr :sandbox, Project, default: nil
+  attr :sandbox, Project, required: true
   attr :changeset, :any, required: true
+  attr :root_project, Project, required: true
 
   def confirm_delete_modal(assigns) do
     assigns =
@@ -215,6 +211,10 @@ defmodule LightningWeb.SandboxLive.Components do
       <section class="space-y-4">
         <p class="text-gray-700">
           Deleting a sandbox permanently removes its workflows, triggers, versions, keychain clones, and dataclips.
+          <%= if @sandbox.is_current do %>
+            You are currently viewing this project.
+            After deletion, you'll be redirected to <strong>{@root_project.name}</strong>.
+          <% end %>
           To confirm, type the sandbox name below.
         </p>
 
@@ -232,7 +232,7 @@ defmodule LightningWeb.SandboxLive.Components do
             type="text"
             field={@confirm_form[:name]}
             label="Sandbox name"
-            placeholder={if @sandbox, do: @sandbox.name, else: ""}
+            placeholder={@sandbox.name}
             autocomplete="off"
             required
           />
@@ -242,7 +242,7 @@ defmodule LightningWeb.SandboxLive.Components do
             <.button
               theme="danger"
               type="submit"
-              disabled={is_nil(@sandbox) || !@changeset.valid?}
+              disabled={!@changeset.valid?}
               tooltip={
                 (!@changeset.valid? && "Type the sandbox name to enable") || nil
               }
@@ -294,7 +294,7 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
-  attr :sandbox, Project, required: true
+  attr :sandbox, :map, required: true
 
   defp sandbox_actions(assigns) do
     ~H"""
@@ -330,9 +330,27 @@ defmodule LightningWeb.SandboxLive.Components do
         id={"delete-sandbox-#{@sandbox.id}"}
         icon_type="heroicon"
         icon_name="hero-trash"
-        label="Delete this sandbox"
-        action={JS.push("open-delete-modal", value: %{id: @sandbox.id})}
-        icon_class="text-slate-700"
+        label={
+          if not @sandbox.can_delete do
+            "Only sandbox owners can delete sandboxes"
+          else
+            "Delete this sandbox"
+          end
+        }
+        action={
+          if @sandbox.can_delete,
+            do: JS.push("open-delete-modal", value: %{id: @sandbox.id}),
+            else: %JS{}
+        }
+        disabled={not @sandbox.can_delete}
+        icon_class={
+          if @sandbox.can_delete, do: "text-slate-700", else: "text-slate-300"
+        }
+        button_class={
+          if @sandbox.can_delete,
+            do: "hover:bg-slate-100",
+            else: "cursor-not-allowed"
+        }
       />
     </div>
     """
@@ -349,22 +367,24 @@ defmodule LightningWeb.SandboxLive.Components do
 
   defp action_button(assigns) do
     ~H"""
-    <button
-      id={@id}
-      type="button"
-      class={["rounded-lg p-2 transition-colors", @button_class]}
-      phx-click={@action}
-      phx-stop-click
-      phx-hook="Tooltip"
-      aria-label={@label}
-      disabled={@disabled}
-    >
-      <%= if @icon_type == "custom" do %>
-        <Icon.branches class={["h-4 w-4", @icon_class]} />
-      <% else %>
-        <.icon name={@icon_name} class={["h-4 w-4", @icon_class]} />
-      <% end %>
-    </button>
+    <span id={@id} class="inline-block" phx-hook="Tooltip" aria-label={@label}>
+      <button
+        type="button"
+        class={[
+          "rounded-lg p-2 transition-colors flex items-center justify-center",
+          @button_class
+        ]}
+        phx-click={(@disabled && %JS{}) || @action}
+        phx-stop-click
+        disabled={@disabled}
+      >
+        <%= if @icon_type == "custom" do %>
+          <Icon.branches class={["h-4 w-4", @icon_class]} />
+        <% else %>
+          <.icon name={@icon_name} class={["h-4 w-4", @icon_class]} />
+        <% end %>
+      </button>
+    </span>
     """
   end
 

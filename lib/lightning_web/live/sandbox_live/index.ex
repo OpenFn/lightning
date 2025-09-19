@@ -30,10 +30,27 @@ defmodule LightningWeb.SandboxLive.Index do
     %{root: root_project, descendants: descendants} =
       Projects.list_workspace_projects(project.id)
 
+    current_user = socket.assigns.current_user
+
+    sandboxes =
+      Enum.map(descendants, fn sandbox ->
+        is_owner =
+          Enum.any?(
+            sandbox.project_users,
+            &(&1.user_id == current_user.id && &1.role == :owner)
+          )
+
+        is_current = project.id == sandbox.id
+
+        sandbox
+        |> Map.put(:can_delete, is_owner)
+        |> Map.put(:is_current, is_current)
+      end)
+
     socket
     |> assign(:workspace_projects, [root_project | descendants])
     |> assign(:root_project, root_project)
-    |> assign(:sandboxes, descendants)
+    |> assign(:sandboxes, sandboxes)
   end
 
   defp reset_delete_modal_state(socket) do
@@ -44,11 +61,33 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:confirm_changeset, empty_confirm_changeset())
   end
 
-  defp handle_sandbox_delete_result({:ok, _project}, sandbox, socket) do
-    socket
-    |> put_flash(:info, "Sandbox #{sandbox.name} deleted")
-    |> reset_delete_modal_state()
-    |> load_workspace_projects()
+  defp handle_sandbox_delete_result(
+         {:ok, _project},
+         deleted_sandbox,
+         %{assigns: %{project: current_project, root_project: root_project}} =
+           socket
+       ) do
+    should_redirect =
+      current_project.id == deleted_sandbox.id or
+        Projects.is_descendant_of?(
+          current_project,
+          deleted_sandbox,
+          root_project
+        )
+
+    socket_to_return =
+      socket
+      |> put_flash(
+        :info,
+        "Sandbox #{deleted_sandbox.name} and all its associated descendants deleted"
+      )
+      |> reset_delete_modal_state()
+
+    if should_redirect do
+      push_navigate(socket_to_return, to: ~p"/projects/#{root_project.id}/w")
+    else
+      load_workspace_projects(socket_to_return)
+    end
   end
 
   defp handle_sandbox_delete_result({:error, :unauthorized}, _sandbox, socket) do
@@ -129,13 +168,16 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   @impl true
-  def handle_event("confirm-delete", params, socket) do
-    %{
-      project: parent_project,
-      current_user: current_user,
-      confirm_delete_sandbox: sandbox
-    } = socket.assigns
-
+  def handle_event(
+        "confirm-delete",
+        params,
+        %{
+          assigns: %{
+            current_user: current_user,
+            confirm_delete_sandbox: sandbox
+          }
+        } = socket
+      ) do
     case sandbox do
       nil ->
         {:noreply, socket}
@@ -147,9 +189,8 @@ defmodule LightningWeb.SandboxLive.Index do
         if changeset.valid? do
           {:noreply,
            Lightning.Projects.delete_sandbox(
-             parent_project,
-             current_user,
-             sandbox
+             sandbox,
+             current_user
            )
            |> handle_sandbox_delete_result(sandbox, socket)}
         else
@@ -194,9 +235,11 @@ defmodule LightningWeb.SandboxLive.Index do
         />
 
         <Components.confirm_delete_modal
+          :if={@confirm_delete_sandbox}
           open?={@confirm_delete_open?}
           sandbox={@confirm_delete_sandbox}
           changeset={@confirm_changeset}
+          root_project={@root_project}
         />
 
         <.live_component
