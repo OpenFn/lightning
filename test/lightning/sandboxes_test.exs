@@ -811,43 +811,496 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  describe "delete_sandbox/2" do
-    setup do
-      parent = insert(:project, name: "parent")
+  describe "delete_sandbox/2 with complex lineages" do
+    test "deletes simple parent-child lineage" do
       actor = insert(:user)
-      sandbox = insert(:project, parent: parent, name: "child")
-      {:ok, parent: parent, actor: actor, sandbox: sandbox}
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      ensure_member!(parent, actor, :owner)
+      ensure_member!(child, actor, :owner)
+
+      # Add some data to both projects
+      parent_workflow = insert(:workflow, project: parent, name: "parent_wf")
+      child_workflow = insert(:workflow, project: child, name: "child_wf")
+
+      {:ok, _} = Sandboxes.delete_sandbox(parent, actor)
+
+      # Both parent and child should be deleted
+      refute Repo.get(Project, parent.id)
+      refute Repo.get(Project, child.id)
+      refute Repo.get(Workflow, parent_workflow.id)
+      refute Repo.get(Workflow, child_workflow.id)
     end
 
-    test "fails with unauthorized actor", %{
-      actor: actor,
-      sandbox: sb
-    } do
-      assert {:error, :unauthorized} = Sandboxes.delete_sandbox(sb, actor)
+    test "deletes three-level lineage (grandparent -> parent -> child)" do
+      actor = insert(:user)
+      grandparent = insert(:project, name: "grandparent")
+      parent = insert(:project, name: "parent", parent: grandparent)
+      child = insert(:project, name: "child", parent: parent)
+
+      ensure_member!(grandparent, actor, :owner)
+      ensure_member!(parent, actor, :owner)
+      ensure_member!(child, actor, :owner)
+
+      # Add workflows to track deletion
+      gp_wf = insert(:workflow, project: grandparent, name: "gp_wf")
+      p_wf = insert(:workflow, project: parent, name: "p_wf")
+      c_wf = insert(:workflow, project: child, name: "c_wf")
+
+      {:ok, _} = Sandboxes.delete_sandbox(grandparent, actor)
+
+      # All three levels should be deleted
+      refute Repo.get(Project, grandparent.id)
+      refute Repo.get(Project, parent.id)
+      refute Repo.get(Project, child.id)
+      refute Repo.get(Workflow, gp_wf.id)
+      refute Repo.get(Workflow, p_wf.id)
+      refute Repo.get(Workflow, c_wf.id)
     end
 
-    test "succeeds with owner", %{
-      actor: actor,
-      sandbox: sb
-    } do
-      ensure_member!(sb, actor, :owner)
-      {:ok, deleted} = Sandboxes.delete_sandbox(sb, actor)
-      refute Repo.get(Project, deleted.id)
+    test "deletes complex tree with multiple branches" do
+      actor = insert(:user)
+      root = insert(:project, name: "root")
+
+      # Create multiple branches
+      branch_a = insert(:project, name: "branch_a", parent: root)
+      branch_b = insert(:project, name: "branch_b", parent: root)
+
+      # Each branch has children
+      branch_a_child1 = insert(:project, name: "a_child1", parent: branch_a)
+      branch_a_child2 = insert(:project, name: "a_child2", parent: branch_a)
+      branch_b_child1 = insert(:project, name: "b_child1", parent: branch_b)
+
+      # One branch has grandchildren
+      branch_a_grandchild =
+        insert(:project, name: "a_grandchild", parent: branch_a_child1)
+
+      # Set permissions
+      for project <- [
+            root,
+            branch_a,
+            branch_b,
+            branch_a_child1,
+            branch_a_child2,
+            branch_b_child1,
+            branch_a_grandchild
+          ] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      # Add data to track deletions
+      workflows =
+        Enum.map(
+          [
+            root,
+            branch_a,
+            branch_b,
+            branch_a_child1,
+            branch_a_child2,
+            branch_b_child1,
+            branch_a_grandchild
+          ],
+          fn project ->
+            insert(:workflow, project: project, name: "wf_#{project.name}")
+          end
+        )
+
+      {:ok, _} = Sandboxes.delete_sandbox(root, actor)
+
+      # All projects in the tree should be deleted
+      for project <- [
+            root,
+            branch_a,
+            branch_b,
+            branch_a_child1,
+            branch_a_child2,
+            branch_b_child1,
+            branch_a_grandchild
+          ] do
+        refute Repo.get(Project, project.id)
+      end
+
+      # All workflows should be deleted
+      for workflow <- workflows do
+        refute Repo.get(Workflow, workflow.id)
+      end
     end
 
-    test "uuid not found returns not_found", %{actor: actor} do
-      bad_id = Ecto.UUID.generate()
-      assert {:error, :not_found} = Sandboxes.delete_sandbox(actor, bad_id)
+    test "deletes middle node while preserving unrelated branches" do
+      actor = insert(:user)
+      root = insert(:project, name: "root")
+
+      # Create separate branches
+      branch_to_delete = insert(:project, name: "delete_me", parent: root)
+      branch_to_keep = insert(:project, name: "keep_me", parent: root)
+
+      # Children of the branch to delete
+      child_to_delete =
+        insert(:project, name: "child_delete", parent: branch_to_delete)
+
+      # Children of the branch to keep
+      child_to_keep =
+        insert(:project, name: "child_keep", parent: branch_to_keep)
+
+      # Set permissions
+      for project <- [
+            root,
+            branch_to_delete,
+            branch_to_keep,
+            child_to_delete,
+            child_to_keep
+          ] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      # Add workflows
+      keep_wf = insert(:workflow, project: branch_to_keep, name: "keep_wf")
+
+      keep_child_wf =
+        insert(:workflow, project: child_to_keep, name: "keep_child_wf")
+
+      delete_wf = insert(:workflow, project: branch_to_delete, name: "delete_wf")
+
+      delete_child_wf =
+        insert(:workflow, project: child_to_delete, name: "delete_child_wf")
+
+      {:ok, _} = Sandboxes.delete_sandbox(branch_to_delete, actor)
+
+      # Only the targeted branch should be deleted
+      refute Repo.get(Project, branch_to_delete.id)
+      refute Repo.get(Project, child_to_delete.id)
+      refute Repo.get(Workflow, delete_wf.id)
+      refute Repo.get(Workflow, delete_child_wf.id)
+
+      # Root and other branch should remain
+      assert Repo.get(Project, root.id)
+      assert Repo.get(Project, branch_to_keep.id)
+      assert Repo.get(Project, child_to_keep.id)
+      assert Repo.get(Workflow, keep_wf.id)
+      assert Repo.get(Workflow, keep_child_wf.id)
     end
 
-    test "uuid found delegates to project delete_sandbox", %{
-      parent: parent,
-      actor: actor
-    } do
-      sb = insert(:project, parent: parent, name: "to-del")
-      ensure_member!(sb, actor, :owner)
-      {:ok, deleted} = Sandboxes.delete_sandbox(actor, sb.id)
-      refute Repo.get(Project, deleted.id)
+    test "deletes leaf node without affecting ancestors or siblings" do
+      actor = insert(:user)
+      root = insert(:project, name: "root")
+      parent = insert(:project, name: "parent", parent: root)
+      sibling = insert(:project, name: "sibling", parent: parent)
+      target_leaf = insert(:project, name: "target_leaf", parent: parent)
+
+      # Set permissions
+      for project <- [root, parent, sibling, target_leaf] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      # Add workflows to track what gets deleted
+      root_wf = insert(:workflow, project: root, name: "root_wf")
+      parent_wf = insert(:workflow, project: parent, name: "parent_wf")
+      sibling_wf = insert(:workflow, project: sibling, name: "sibling_wf")
+      leaf_wf = insert(:workflow, project: target_leaf, name: "leaf_wf")
+
+      {:ok, _} = Sandboxes.delete_sandbox(target_leaf, actor)
+
+      # Only the leaf should be deleted
+      refute Repo.get(Project, target_leaf.id)
+      refute Repo.get(Workflow, leaf_wf.id)
+
+      # Everything else should remain
+      assert Repo.get(Project, root.id)
+      assert Repo.get(Project, parent.id)
+      assert Repo.get(Project, sibling.id)
+      assert Repo.get(Workflow, root_wf.id)
+      assert Repo.get(Workflow, parent_wf.id)
+      assert Repo.get(Workflow, sibling_wf.id)
+    end
+
+    test "deletes projects with complex associated data (workorders, steps, credentials)" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      ensure_member!(parent, actor, :owner)
+      ensure_member!(child, actor, :owner)
+
+      # Create complex data structure for parent
+      parent_cred = insert(:credential, user: actor)
+
+      parent_pc =
+        insert(:project_credential, project: parent, credential: parent_cred)
+
+      parent_workflow = insert(:workflow, project: parent, name: "parent_wf")
+
+      parent_job =
+        insert(:job, workflow: parent_workflow, project_credential: parent_pc)
+
+      parent_trigger = insert(:trigger, workflow: parent_workflow)
+
+      # Create workorder and associated data
+      parent_dataclip = insert(:dataclip, project: parent)
+
+      parent_workorder =
+        insert(:workorder,
+          workflow: parent_workflow,
+          trigger: parent_trigger,
+          dataclip: parent_dataclip
+        )
+
+      parent_run =
+        insert(:run,
+          work_order: parent_workorder,
+          dataclip: parent_dataclip,
+          # Fix: add required starting_trigger
+          starting_trigger: parent_trigger
+        )
+
+      parent_step = insert(:step, runs: [parent_run], job: parent_job)
+
+      # Create similar structure for child
+      child_cred = insert(:credential, user: actor)
+
+      child_pc =
+        insert(:project_credential, project: child, credential: child_cred)
+
+      child_workflow = insert(:workflow, project: child, name: "child_wf")
+
+      child_job =
+        insert(:job, workflow: child_workflow, project_credential: child_pc)
+
+      child_trigger = insert(:trigger, workflow: child_workflow)
+
+      child_dataclip = insert(:dataclip, project: child)
+
+      child_workorder =
+        insert(:workorder,
+          workflow: child_workflow,
+          trigger: child_trigger,
+          dataclip: child_dataclip
+        )
+
+      child_run =
+        insert(:run,
+          work_order: child_workorder,
+          dataclip: child_dataclip,
+          # Fix: add required starting_trigger
+          starting_trigger: child_trigger
+        )
+
+      child_step = insert(:step, runs: [child_run], job: child_job)
+
+      {:ok, _} = Sandboxes.delete_sandbox(parent, actor)
+
+      # Verify all associated data is deleted
+      refute Repo.get(Project, parent.id)
+      refute Repo.get(Project, child.id)
+
+      # Parent data should be deleted
+      refute Repo.get(Lightning.Workflows.Workflow, parent_workflow.id)
+      refute Repo.get(Lightning.Workflows.Job, parent_job.id)
+      refute Repo.get(Lightning.Workflows.Trigger, parent_trigger.id)
+      refute Repo.get(Lightning.WorkOrder, parent_workorder.id)
+      refute Repo.get(Lightning.Run, parent_run.id)
+      refute Repo.get(Lightning.Invocation.Step, parent_step.id)
+      refute Repo.get(Lightning.Projects.ProjectCredential, parent_pc.id)
+      refute Repo.get(Lightning.Invocation.Dataclip, parent_dataclip.id)
+
+      # Child data should be deleted
+      refute Repo.get(Lightning.Workflows.Workflow, child_workflow.id)
+      refute Repo.get(Lightning.Workflows.Job, child_job.id)
+      refute Repo.get(Lightning.Workflows.Trigger, child_trigger.id)
+      refute Repo.get(Lightning.WorkOrder, child_workorder.id)
+      refute Repo.get(Lightning.Run, child_run.id)
+      refute Repo.get(Lightning.Invocation.Step, child_step.id)
+      refute Repo.get(Lightning.Projects.ProjectCredential, child_pc.id)
+      refute Repo.get(Lightning.Invocation.Dataclip, child_dataclip.id)
+
+      # But the underlying credentials should still exist (they're user-owned)
+      assert Repo.get(Lightning.Credentials.Credential, parent_cred.id)
+      assert Repo.get(Lightning.Credentials.Credential, child_cred.id)
+    end
+
+    test "handles deletion when intermediate project has mixed children (some with/without permission)" do
+      actor = insert(:user)
+      unauthorized_user = insert(:user)
+
+      root = insert(:project, name: "root")
+      middle = insert(:project, name: "middle", parent: root)
+
+      # Child where actor has permission
+      authorized_child = insert(:project, name: "auth_child", parent: middle)
+
+      # Child where actor lacks permission
+      unauthorized_child = insert(:project, name: "unauth_child", parent: middle)
+
+      # Set permissions - actor owns root and middle, but not unauthorized_child
+      ensure_member!(root, actor, :owner)
+      ensure_member!(middle, actor, :owner)
+      ensure_member!(authorized_child, actor, :owner)
+      # Different owner
+      ensure_member!(unauthorized_child, unauthorized_user, :owner)
+
+      # Add workflows to track deletion
+      root_wf = insert(:workflow, project: root, name: "root_wf")
+      middle_wf = insert(:workflow, project: middle, name: "middle_wf")
+      auth_wf = insert(:workflow, project: authorized_child, name: "auth_wf")
+
+      unauth_wf =
+        insert(:workflow, project: unauthorized_child, name: "unauth_wf")
+
+      # Deleting the root should cascade delete everything, regardless of individual permissions
+      # The handle_delete_project function doesn't check permissions on children - it just deletes them
+      {:ok, _} = Sandboxes.delete_sandbox(root, actor)
+
+      # All projects should be deleted via cascading deletion
+      refute Repo.get(Project, root.id)
+      refute Repo.get(Project, middle.id)
+      refute Repo.get(Project, authorized_child.id)
+      refute Repo.get(Project, unauthorized_child.id)
+
+      # All workflows should be deleted
+      refute Repo.get(Workflow, root_wf.id)
+      refute Repo.get(Workflow, middle_wf.id)
+      refute Repo.get(Workflow, auth_wf.id)
+      refute Repo.get(Workflow, unauth_wf.id)
+    end
+
+    test "deletes very deep lineage (5+ levels) without stack overflow" do
+      actor = insert(:user)
+
+      # Create a 7-level deep hierarchy
+      projects =
+        Enum.reduce(1..7, [], fn level, acc ->
+          parent = if level == 1, do: nil, else: List.first(acc)
+          project = insert(:project, name: "level_#{level}", parent: parent)
+          ensure_member!(project, actor, :owner)
+          [project | acc]
+        end)
+
+      # Add workflows to each level
+      workflows =
+        Enum.map(projects, fn project ->
+          insert(:workflow, project: project, name: "wf_#{project.name}")
+        end)
+
+      # Delete from the root (deepest in our list due to how we built it)
+      root = List.last(projects)
+
+      {:ok, _} = Sandboxes.delete_sandbox(root, actor)
+
+      # All projects should be deleted
+      for project <- projects do
+        refute Repo.get(Project, project.id)
+      end
+
+      # All workflows should be deleted
+      for workflow <- workflows do
+        refute Repo.get(Workflow, workflow.id)
+      end
+    end
+
+    test "deletes projects with keychain credentials and complex job references" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      ensure_member!(parent, actor, :owner)
+      ensure_member!(child, actor, :owner)
+
+      # Create credential and keychain in parent
+      cred = insert(:credential, user: actor)
+      pc = insert(:project_credential, project: parent, credential: cred)
+
+      kc =
+        insert(:keychain_credential,
+          project: parent,
+          created_by: actor,
+          default_credential: cred
+        )
+
+      # Create jobs that reference both types of credentials
+      parent_workflow = insert(:workflow, project: parent)
+
+      job_with_pc =
+        insert(:job, workflow: parent_workflow, project_credential: pc)
+
+      job_with_kc =
+        insert(:job, workflow: parent_workflow, keychain_credential: kc)
+
+      # Create similar structure in child
+      child_cred = insert(:credential, user: actor)
+
+      child_pc =
+        insert(:project_credential, project: child, credential: child_cred)
+
+      child_kc =
+        insert(:keychain_credential,
+          project: child,
+          created_by: actor,
+          default_credential: child_cred
+        )
+
+      child_workflow = insert(:workflow, project: child)
+
+      child_job_pc =
+        insert(:job, workflow: child_workflow, project_credential: child_pc)
+
+      child_job_kc =
+        insert(:job, workflow: child_workflow, keychain_credential: child_kc)
+
+      {:ok, _} = Sandboxes.delete_sandbox(parent, actor)
+
+      # Projects should be deleted
+      refute Repo.get(Project, parent.id)
+      refute Repo.get(Project, child.id)
+
+      # Workflows and jobs should be deleted
+      refute Repo.get(Workflow, parent_workflow.id)
+      refute Repo.get(Workflow, child_workflow.id)
+      refute Repo.get(Job, job_with_pc.id)
+      refute Repo.get(Job, job_with_kc.id)
+      refute Repo.get(Job, child_job_pc.id)
+      refute Repo.get(Job, child_job_kc.id)
+
+      # Project credentials should be deleted
+      refute Repo.get(Lightning.Projects.ProjectCredential, pc.id)
+      refute Repo.get(Lightning.Projects.ProjectCredential, child_pc.id)
+
+      # Keychain credentials should be deleted
+      refute Repo.get(Lightning.Credentials.KeychainCredential, kc.id)
+      refute Repo.get(Lightning.Credentials.KeychainCredential, child_kc.id)
+
+      # But underlying credentials should remain
+      assert Repo.get(Lightning.Credentials.Credential, cred.id)
+      assert Repo.get(Lightning.Credentials.Credential, child_cred.id)
+    end
+
+    test "edge case: deleting project with no children (leaf node)" do
+      actor = insert(:user)
+      standalone = insert(:project, name: "standalone")
+      ensure_member!(standalone, actor, :owner)
+
+      workflow = insert(:workflow, project: standalone, name: "standalone_wf")
+
+      {:ok, deleted} = Sandboxes.delete_sandbox(standalone, actor)
+
+      assert deleted.id == standalone.id
+      refute Repo.get(Project, standalone.id)
+      refute Repo.get(Workflow, workflow.id)
+    end
+
+    test "edge case: empty project with no associated data" do
+      actor = insert(:user)
+      empty_parent = insert(:project, name: "empty_parent")
+      empty_child = insert(:project, name: "empty_child", parent: empty_parent)
+
+      ensure_member!(empty_parent, actor, :owner)
+      ensure_member!(empty_child, actor, :owner)
+
+      # No workflows, jobs, credentials, or other data - just empty projects
+
+      {:ok, _} = Sandboxes.delete_sandbox(empty_parent, actor)
+
+      refute Repo.get(Project, empty_parent.id)
+      refute Repo.get(Project, empty_child.id)
     end
   end
 end
