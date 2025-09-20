@@ -8,6 +8,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
   setup_all do
     Mimic.copy(Lightning.Projects)
     Mimic.copy(Lightning.Projects.Sandboxes)
+    Mimic.copy(LightningWeb.Live.Helpers.ProjectTheme)
     :ok
   end
 
@@ -17,7 +18,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
     setup %{conn: conn, user: user} do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
 
-      # Updated to match the new function signature: provision_sandbox(parent, user, attrs)
       Mimic.stub(Lightning.Projects, :provision_sandbox, fn parent_arg,
                                                             user_arg,
                                                             attrs ->
@@ -132,7 +132,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
       sb = insert(:sandbox, parent: parent, name: "sb-1")
 
-      # Updated to match the new function signature: update_sandbox(sandbox, user, attrs)
       Mimic.stub(
         Lightning.Projects,
         :update_sandbox,
@@ -203,6 +202,57 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "background-color: #ff0000"
       assert html =~ "#ff0000"
       assert html =~ "rounded-md"
+    end
+  end
+
+  describe "theme preview edge cases" do
+    setup %{user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      Mimic.stub(
+        LightningWeb.Live.Helpers.ProjectTheme,
+        :inline_primary_scale,
+        fn _project ->
+          nil
+        end
+      )
+
+      {:ok, parent: parent}
+    end
+
+    test "generate_theme_preview returns nil when inline_primary_scale returns nil",
+         %{
+           conn: conn,
+           parent: parent
+         } do
+      Mimic.allow(
+        LightningWeb.Live.Helpers.ProjectTheme,
+        self(),
+        spawn(fn -> :ok end)
+      )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{"project" => %{"color" => "#ff0000"}})
+
+      html = render(view)
+
+      assert html =~ "Create a new sandbox"
+
+      assert html =~ ~s(background-color: #ff0000)
+      assert html =~ ~s(#ff0000)
+
+      assert html =~ ~s(name="project[color]")
+      assert html =~ ~s(Selected: #ff0000)
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{"project" => %{"color" => "#00ff00"}})
+
+      updated_html = render(view)
+      assert updated_html =~ ~s(background-color: #00ff00)
     end
   end
 
