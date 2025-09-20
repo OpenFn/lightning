@@ -236,7 +236,7 @@ defmodule Lightning.Projects.Sandboxes do
           |> finalize_sandbox_setup(parent_with_data, attrs)
 
         {:error, changeset} ->
-          {:error, changeset}
+          Repo.rollback(changeset)
       end
     end)
     |> case do
@@ -624,7 +624,11 @@ defmodule Lightning.Projects.Sandboxes do
             dataclip.id in ^dataclip_ids and
             dataclip.type in ^@allowed_dataclip_types and
             not is_nil(dataclip.name),
-        select: %{name: dataclip.name, body: dataclip.body, type: dataclip.type}
+        select: %{
+          name: dataclip.name,
+          body: type(dataclip.body, :map),
+          type: dataclip.type
+        }
       )
       |> Repo.all()
 
