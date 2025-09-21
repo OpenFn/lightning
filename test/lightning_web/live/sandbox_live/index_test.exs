@@ -26,7 +26,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       parent =
         insert(:project,
           name: "parent",
-          # No environment to trigger "main" badge
           env: nil,
           project_users: [%{user: user, role: :owner}]
         )
@@ -53,7 +52,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         insert(:project,
           name: "sb-no-env",
           color: "#0000ff",
-          # No environment
           env: nil,
           parent: parent,
           project_users: [%{user: user, role: :owner}]
@@ -76,7 +74,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert has_element?(view, "#edit-sandbox-#{sb1.id}")
       assert has_element?(view, "#edit-sandbox-#{sb2.id}")
 
-      # Delete ALL sandboxes to trigger empty state
       for sandbox <- [sb1, sb2, sb_no_env] do
         from(pu in Lightning.Projects.ProjectUser,
           where: pu.project_id == ^sandbox.id
@@ -94,29 +91,48 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       conn: conn,
       parent: parent
     } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # Should show "main" badge for root project without environment (line 137)
-      # From the HTML output, we can see it shows both main and active badges
-      assert html =~ "main"
-      assert html =~ ~s(id="env-badge-#{parent.id}")
+      badge = element(view, "#env-badge-#{parent.id}")
+
+      assert render(badge) =~ "main"
+    end
+
+    test "root project with environment shows env badge with actual environment",
+         %{
+           conn: conn,
+           user: user
+         } do
+      parent_with_env =
+        insert(:project,
+          name: "parent-with-env",
+          env: "production",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{parent_with_env.id}/sandboxes")
+
+      badge = element(view, "#env-badge-#{parent_with_env.id}")
+
+      assert render(badge) =~ "production"
+      refute render(badge) =~ "main"
     end
 
     test "sandbox with environment shows env badge, sandbox without env shows no badge",
          %{
            conn: conn,
            parent: parent,
-           sb1: _sb1,
+           sb1: sb1,
            sb_no_env: sb_no_env
          } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # Sandbox with environment should show env badge (line 178)
-      assert html =~ "staging"
+      badge = element(view, "#env-badge-#{sb1.id}")
 
-      # Check that sandbox without environment doesn't show env badge
-      # This tests the :if condition on line 177-178
-      refute html =~ ~s(id="env-badge-#{sb_no_env.id}")
+      assert render(badge) =~ "staging"
+
+      refute element(view, "#env-badge-#{sb_no_env.id}") |> has_element?()
     end
 
     test "current sandbox shows active badge", %{
@@ -124,13 +140,13 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       parent: parent,
       sb1: _sb1
     } do
-      # Navigate to the parent project where we can see the sandbox that's currently active
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # The parent project should show an active badge since we're viewing it (line 181-183)
-      # From the HTML output, we can see the parent shows both main and active badges
-      assert html =~ "active"
-      assert html =~ ~s(id="active-badge-#{parent.id}")
+      env_badge = element(view, "#env-badge-#{parent.id}")
+      active_badge = element(view, "#active-badge-#{parent.id}")
+
+      assert render(env_badge) =~ "main"
+      assert render(active_badge) =~ "active"
     end
 
     test "delete modal shows redirect warning when deleting current project", %{
@@ -139,16 +155,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       sb1: sb1,
       user: _user
     } do
-      # Navigate to the sandbox we're going to delete (makes it current)
       {:ok, view, _} = live(conn, ~p"/projects/#{sb1.id}/sandboxes")
 
-      # Open delete modal for the current project (sb1)
       view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
 
       html = render(view)
 
-      # Should show redirect warning (lines 230-233)
-      # From the HTML output, we can see it shows: "You are currently viewing this project. After deletion, you'll be redirected to parent."
       assert html =~ "You are currently viewing this project"
       assert html =~ "you&#39;ll be redirected to"
       assert html =~ "#{parent.name}"
@@ -160,15 +172,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
            parent: parent,
            sb1: sb1
          } do
-      # Stay on parent project (don't navigate to sandbox)
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # Open delete modal for a different project (not current)
       view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
 
       html = render(view)
 
-      # Should NOT show redirect warning
       refute html =~ "You are currently viewing this project"
       refute html =~ "After deletion, you'll be redirected to"
     end
@@ -232,7 +241,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       {:ok, view, _} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes", on_error: :raise)
 
-      # Updated to match the new function signature: delete_sandbox(sandbox, current_user)
       Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{id: id},
                                                            user_arg ->
         assert id == sb1.id
@@ -258,7 +266,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb1.name})
         |> render_submit()
 
-      # Updated flash message to match implementation
       assert html =~
                "Sandbox #{sb1.name} and all its associated descendants deleted"
 
@@ -266,7 +273,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       target_id = sb2.id
 
-      # Updated to match the new function signature
       Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
                                                              id: ^target_id
                                                            },
@@ -286,7 +292,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "You don&#39;t have permission to delete this sandbox"
 
-      # Updated to match the new function signature
       Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
                                                              id: ^target_id
                                                            },
@@ -306,7 +311,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "Sandbox not found"
 
-      # Updated to match the new function signature
       Mimic.expect(Lightning.Projects, :delete_sandbox, fn %Project{
                                                              id: ^target_id
                                                            },
@@ -449,7 +453,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     setup :register_and_log_in_user
 
     setup %{user: owner_user} do
-      # Create viewer user with limited permissions
       viewer_user = insert(:user)
 
       parent =
@@ -467,7 +470,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           parent: parent,
           project_users: [
             %{user: owner_user, role: :owner},
-            # Viewer can't edit/delete
             %{user: viewer_user, role: :viewer}
           ]
         )
@@ -488,7 +490,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       conn = log_in_user(conn, viewer_user)
       {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # Edit button should be disabled (lines 336-346)
       assert html =~ ~s(cursor-not-allowed)
       assert html =~ ~s(text-slate-300)
       assert html =~ "You are not authorized to edit this sandbox"
@@ -503,7 +504,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       conn = log_in_user(conn, owner_user)
       {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # Edit button should be enabled (lines 340-343)
       assert html =~ ~s(hover:bg-slate-100)
       assert html =~ ~s(text-slate-700)
       assert html =~ "Edit this sandbox"
@@ -518,7 +518,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       conn = log_in_user(conn, viewer_user)
       {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # Delete button should be disabled (lines 354-367)
       assert html =~ "You are not authorized to delete this sandbox"
       assert html =~ ~s(cursor-not-allowed)
     end
@@ -532,7 +531,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       conn = log_in_user(conn, owner_user)
       {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # Delete button should be enabled (lines 360-367)
       assert html =~ "Delete this sandbox"
       assert html =~ ~s(hover:bg-slate-100)
     end
@@ -581,7 +579,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       result =
         live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sandbox.id}/edit")
 
-      # Should redirect with unauthorized message
       assert {:error, {:live_redirect, %{to: redirect_path, flash: flash}}} =
                result
 
@@ -598,7 +595,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       result = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
 
-      # Should redirect with unauthorized message
       assert {:error, {:live_redirect, %{to: redirect_path, flash: flash}}} =
                result
 
@@ -621,8 +617,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
     end
   end
 
-  # Add to LightningWeb.SandboxLive.IndexTest
-
   describe "Delete sandbox with descendant checking" do
     setup :register_and_log_in_user
 
@@ -633,7 +627,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           project_users: [%{user: user, role: :owner}]
         )
 
-      # Create a sandbox that is a descendant
       child_sandbox =
         insert(:project,
           name: "child-sandbox",
@@ -641,7 +634,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           project_users: [%{user: user, role: :owner}]
         )
 
-      # Create a grandchild sandbox
       grandchild_sandbox =
         insert(:project,
           name: "grandchild-sandbox",
@@ -662,31 +654,26 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       grandchild_sandbox: grandchild_sandbox,
       user: user
     } do
-      # Navigate to grandchild (makes it current)
       {:ok, view, _} =
         live(conn, ~p"/projects/#{grandchild_sandbox.id}/sandboxes")
 
-      # Mock delete of child sandbox (grandchild's parent)
       Mimic.expect(Lightning.Projects, :delete_sandbox, fn sandbox, user_arg ->
         assert sandbox.id == child_sandbox.id
         assert user_arg.id == user.id
         {:ok, %Project{}}
       end)
 
-      # Mock descendant check - grandchild should be considered descendant of child
       Mimic.expect(Lightning.Projects, :descendant_of?, fn current,
                                                            deleted,
                                                            root ->
         assert current.id == grandchild_sandbox.id
         assert deleted.id == child_sandbox.id
         assert root.id == parent.id
-        # Current project IS a descendant of deleted sandbox
         true
       end)
 
       Mimic.allow(Lightning.Projects, self(), view.pid)
 
-      # Open delete modal and delete child sandbox
       view
       |> element("#delete-sandbox-#{child_sandbox.id} button")
       |> render_click()
@@ -697,7 +684,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       )
       |> render_submit()
 
-      # Should redirect to root project (line 99)
       assert_redirect(view, ~p"/projects/#{parent.id}/w")
     end
 
@@ -708,7 +694,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
            child_sandbox: child_sandbox,
            user: _user
          } do
-      # Stay on parent project (current project is not descendant)
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
       Mimic.expect(Lightning.Projects, :delete_sandbox, fn sandbox, _user_arg ->
@@ -716,7 +701,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         {:ok, %Project{}}
       end)
 
-      # Mock updated workspace list after deletion
       Mimic.expect(Lightning.Projects, :list_workspace_projects, fn id ->
         assert id == parent.id
         %{root: parent, descendants: []}
@@ -735,11 +719,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         )
         |> render_submit()
 
-      # Should reload workspace projects (line 101), not redirect
-      # Check that we're still on the same page and no redirect occurred
       assert html =~ "Sandboxes"
       assert html =~ parent.name
-      # Verify the view is still connected (not redirected)
       assert render(view) =~ "Sandboxes"
     end
   end
