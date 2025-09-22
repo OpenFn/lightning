@@ -1,77 +1,206 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 # This script installs all dependencies required to setup Lightning for development.
 
-set -e
+set -euo pipefail
 
-trap 'echo "❌ Script interrupted"; exit 1' INT
+trap 'echo "❌ Script interrupted at line $LINENO"; exit 1' ERR INT
 
-if ! command -v node &>/dev/null; then
-  echo "❌ Node.js is not installed"
-  exit 1
-else
-  echo "✅ Node.js is installed"
-fi
+# Global environment facts
+declare -g OS ARCH
+declare -g HAS_RUST HAS_HOMEBREW
+declare -g HOMEBREW_PACKAGES_INSTALLED
+declare -A MISSING_SYSTEM_DEPS
+declare -A MISSING_BREW_PACKAGES
 
-if ! command -v elixir &>/dev/null; then
-  echo "❌ Elixir is not installed"
-  exit 1
-else
-  echo "✅ Elixir is installed"
-fi
+# Function to gather environment facts
+gather_environment_facts() {
+  echo "🔍 Gathering environment information..."
 
-if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
-  echo "ℹ️ Running on macOS with ARM64 architecture"
+  # System information
+  OS="$(uname)"
+  ARCH="$(uname -m)"
+  echo "Platform: $OS $ARCH"
 
-  if command -v brew &>/dev/null; then
-    echo "✅ Homebrew is installed"
-    if brew list libsodium &>/dev/null; then
-      echo "✅ libsodium is installed"
-      export CPATH=/opt/homebrew/include
-      export LIBRARY_PATH=/opt/homebrew/lib
-    else
-      echo "❌ libsodium is not installed"
-      if brew install libsodium; then
-        echo "✅ libsodium has been installed"
-      else
-        echo "❌ Failed to install libsodium"
-        exit 1
-      fi
-    fi
-
-    if brew list cmake &>/dev/null; then
-      echo "✅ cmake is installed"
-    else
-      echo "❌ cmake is not installed"
-      if brew install cmake; then
-        echo "✅ cmake has been installed"
-      else
-        echo "❌ Failed to install cmake"
-        exit 1
-      fi
-    fi
+  # Check system commands
+  if command -v node &>/dev/null; then
+    echo "✅ Node.js: $(node --version)"
   else
-    echo "❌ Homebrew is not installed"
+    MISSING_SYSTEM_DEPS[node]="Node.js"
+  fi
+
+  if command -v elixir &>/dev/null; then
+    local elixir_version
+    elixir_version="$(elixir --version 2>/dev/null | head -1 || echo "version unknown")"
+    echo "✅ Elixir: $elixir_version"
+  else
+    MISSING_SYSTEM_DEPS[elixir]="Elixir"
+  fi
+
+  if command -v rustc &>/dev/null; then
+    HAS_RUST=true
+    echo "✅ Rust: $(rustc --version)"
+  else
+    HAS_RUST=false
+    MISSING_BREW_PACKAGES[rust]="Rust"
+  fi
+
+  # Check Homebrew availability
+  if command -v brew &>/dev/null; then
+    HAS_HOMEBREW=true
+    echo "✅ Homebrew: $(brew --version | head -1)"
+
+    # Get installed packages once
+    HOMEBREW_PACKAGES_INSTALLED="$(brew list -1 2>/dev/null || true)"
+  else
+    HAS_HOMEBREW=false
+  fi
+
+  # Check Homebrew packages if available
+  if [[ "$HAS_HOMEBREW" == true ]]; then
+    local -ra required_brew_packages=(libsodium cmake)
+
+    for package in "${required_brew_packages[@]}"; do
+      if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^$package$"; then
+        echo "✅ $package (via Homebrew)"
+      else
+        MISSING_BREW_PACKAGES[$package]="$package"
+      fi
+    done
+
+    # Add rust to missing brew packages if not installed via system
+    if [[ "$HAS_RUST" == false ]]; then
+      if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^rust$"; then
+        echo "✅ Rust (via Homebrew)"
+        # Remove from missing since it's available via homebrew
+        unset 'MISSING_BREW_PACKAGES[rust]'
+      fi
+    fi
+  fi
+
+  echo ""
+}
+
+# Function to display environment status and exit if critical dependencies missing
+check_environment_status() {
+  echo "📋 Environment Status Summary:"
+
+  local has_critical_missing=false
+  local has_installable_missing=false
+
+  # Check critical system dependencies
+  if [[ -v MISSING_SYSTEM_DEPS ]] && ((${#MISSING_SYSTEM_DEPS[@]} > 0)); then
+    echo "❌ Missing critical system dependencies:"
+    for dep in "${MISSING_SYSTEM_DEPS[@]}"; do
+      echo "   - $dep"
+    done
+    has_critical_missing=true
+  fi
+
+  # Check installable homebrew dependencies
+  if [[ -v MISSING_BREW_PACKAGES ]] && ((${#MISSING_BREW_PACKAGES[@]} > 0)); then
+    if [[ "$HAS_HOMEBREW" == true ]]; then
+      echo "📦 Missing Homebrew packages (will install):"
+      for package in "${!MISSING_BREW_PACKAGES[@]}"; do
+        echo "   - ${MISSING_BREW_PACKAGES[$package]}"
+      done
+      has_installable_missing=true
+    else
+      echo "❌ Homebrew not available, cannot install:"
+      for package in "${!MISSING_BREW_PACKAGES[@]}"; do
+        echo "   - ${MISSING_BREW_PACKAGES[$package]}"
+      done
+      has_critical_missing=true
+    fi
+  fi
+
+  # Exit if critical dependencies missing
+  if [[ "$has_critical_missing" == true ]]; then
+    echo ""
+    echo "❌ Critical dependencies are missing. Please install them manually and re-run this script."
     exit 1
   fi
-fi
-mix local.hex --if-missing
-mix local.rebar --if-missing
 
-mix deps.get
-mix deps.compile
+  if [[ "$has_installable_missing" == false ]]; then
+    echo "✅ All dependencies are satisfied"
+  fi
 
-if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
-  mix compile.rambo
-fi
+  echo ""
+}
 
-npm install --prefix assets
+# Function to install missing homebrew packages
+install_missing_homebrew_packages() {
+  if [[ -v MISSING_BREW_PACKAGES ]] && ((${#MISSING_BREW_PACKAGES[@]} > 0)) && [[ "$HAS_HOMEBREW" == true ]]; then
+    local packages_to_install=("${!MISSING_BREW_PACKAGES[@]}")
 
-mix assets.setup
+    echo "📦 Installing missing Homebrew packages: ${packages_to_install[*]}"
+    if brew install "${packages_to_install[@]}"; then
+      echo "✅ All missing packages have been installed"
+    else
+      echo "❌ Failed to install some packages"
+      exit 1
+    fi
+    echo ""
+  fi
+}
 
-mix "do" ecto.create, ecto.migrate
+# Function to set environment variables
+setup_environment_variables() {
+  if [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
+    # Check if libsodium is available (either already installed or just installed)
+    if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^libsodium$" || brew list libsodium &>/dev/null; then
+      export CPATH=/opt/homebrew/include
+      export LIBRARY_PATH=/opt/homebrew/lib
+      echo "🔧 Set environment variables for libsodium"
+    fi
+  fi
+}
 
-mix lightning.install_runtime
-mix lightning.install_schemas
-mix lightning.install_adaptor_icons
+# Main execution flow
+main() {
+  gather_environment_facts
+  check_environment_status
+  install_missing_homebrew_packages
+  setup_environment_variables
 
-echo "✅ All dependencies installed"
+  echo "🔧 Setting up Elixir environment..."
+  mix local.hex --if-missing
+  mix local.rebar --if-missing
+
+  echo "📦 Installing Elixir dependencies..."
+  mix deps.get
+  mix deps.compile
+
+  # If you have already compiled Rambo explicitly via `mix compile.rambo`, and you
+  # are still seeing the following error:
+  #
+  # ```
+  # sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
+  # sh: line 0: exec: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: cannot execute: No such file or directory
+  # ```
+  #
+  # You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`.
+
+  # Compile platform-specific dependencies
+  if [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
+    echo "🔨 Compiling platform-specific dependencies..."
+    mix compile.rambo
+  fi
+
+  echo "📦 Installing Node.js dependencies..."
+  npm install --prefix assets
+
+  echo "🔧 Setting up assets..."
+  mix assets.setup
+
+  echo "🗄️ Setting up database..."
+  mix "do" ecto.create, ecto.migrate
+
+  echo "⚡ Installing Lightning components..."
+  mix lightning.install_runtime
+  mix lightning.install_schemas
+  mix lightning.install_adaptor_icons
+
+  echo "✅ All dependencies installed successfully!"
+}
+
+main "$@"
