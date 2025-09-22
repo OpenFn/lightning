@@ -390,4 +390,405 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert edge["condition_expression"] == "state.success"
     end
   end
+
+  describe "merge_project/2" do
+    test "merge project with matching workflow names" do
+      # Generate UUIDs for target project
+      target_project_id = Ecto.UUID.generate()
+      target_workflow_id = Ecto.UUID.generate()
+      source_project_id = Ecto.UUID.generate()
+      source_workflow_id = Ecto.UUID.generate()
+
+      # Target project with one workflow
+      target_project = %{
+        id: target_project_id,
+        name: "Target Project",
+        description: "Original description",
+        workflows: [
+          %{
+            id: target_workflow_id,
+            name: "shared_workflow",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          }
+        ]
+      }
+
+      # Source project with matching workflow name but different content
+      source_project = %{
+        id: source_project_id,
+        name: "Source Project",
+        description: "Updated description",
+        workflows: [
+          %{
+            id: source_workflow_id,
+            name: "shared_workflow",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          }
+        ]
+      }
+
+      result = MergeProjects.merge_project(source_project, target_project)
+
+      # Should preserve target project ID but use source metadata
+      assert result["id"] == target_project_id
+      assert result["name"] == "Source Project"
+      assert result["description"] == "Updated description"
+
+      # Should have one workflow (merged)
+      assert length(result["workflows"]) == 1
+      workflow = hd(result["workflows"])
+
+      # Workflow should preserve target ID but use source name
+      assert workflow["id"] == target_workflow_id
+      assert workflow["name"] == "shared_workflow"
+
+      # Workflow should not be marked for deletion
+      refute workflow["delete"]
+    end
+
+    test "merge project with new workflow in source" do
+      target_project_id = Ecto.UUID.generate()
+      target_workflow_id = Ecto.UUID.generate()
+      source_project_id = Ecto.UUID.generate()
+      source_workflow1_id = Ecto.UUID.generate()
+      source_workflow2_id = Ecto.UUID.generate()
+
+      # Target project with one workflow
+      target_project = %{
+        id: target_project_id,
+        name: "Target Project",
+        workflows: [
+          %{
+            id: target_workflow_id,
+            name: "existing_workflow",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          }
+        ]
+      }
+
+      # Source project with existing workflow + new one
+      source_project = %{
+        id: source_project_id,
+        name: "Source Project",
+        workflows: [
+          %{
+            id: source_workflow1_id,
+            name: "existing_workflow",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          },
+          %{
+            id: source_workflow2_id,
+            name: "new_workflow",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          }
+        ]
+      }
+
+      result = MergeProjects.merge_project(source_project, target_project)
+
+      # Should have two workflows
+      assert length(result["workflows"]) == 2
+
+      workflow_names =
+        result["workflows"] |> Enum.map(& &1["name"]) |> Enum.sort()
+
+      assert workflow_names == ["existing_workflow", "new_workflow"]
+
+      # Existing workflow should preserve target ID
+      existing_workflow =
+        Enum.find(result["workflows"], &(&1["name"] == "existing_workflow"))
+
+      assert existing_workflow["id"] == target_workflow_id
+      refute existing_workflow["delete"]
+
+      # New workflow should get a new UUID (not source ID)
+      new_workflow =
+        Enum.find(result["workflows"], &(&1["name"] == "new_workflow"))
+
+      assert new_workflow["id"] != source_workflow2_id
+      refute new_workflow["delete"]
+    end
+
+    test "merge project with removed workflow in source" do
+      target_project_id = Ecto.UUID.generate()
+      target_workflow1_id = Ecto.UUID.generate()
+      target_workflow2_id = Ecto.UUID.generate()
+      source_project_id = Ecto.UUID.generate()
+      source_workflow_id = Ecto.UUID.generate()
+
+      # Target project with two workflows
+      target_project = %{
+        id: target_project_id,
+        name: "Target Project",
+        workflows: [
+          %{
+            id: target_workflow1_id,
+            name: "workflow_to_keep",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          },
+          %{
+            id: target_workflow2_id,
+            name: "workflow_to_remove",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          }
+        ]
+      }
+
+      # Source project with only one workflow (removed one)
+      source_project = %{
+        id: source_project_id,
+        name: "Source Project",
+        workflows: [
+          %{
+            id: source_workflow_id,
+            name: "workflow_to_keep",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          }
+        ]
+      }
+
+      result = MergeProjects.merge_project(source_project, target_project)
+
+      # Should have two workflows (kept + deleted)
+      assert length(result["workflows"]) == 2
+
+      kept_workflow =
+        Enum.find(result["workflows"], &(&1["name"] == "workflow_to_keep"))
+
+      assert kept_workflow["id"] == target_workflow1_id
+      refute kept_workflow["delete"]
+
+      # Removed workflow should be marked for deletion
+      deleted_workflow =
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow2_id))
+
+      assert deleted_workflow["delete"]
+    end
+
+    test "merge project with no matching workflows" do
+      target_project_id = Ecto.UUID.generate()
+      target_workflow_id = Ecto.UUID.generate()
+      source_project_id = Ecto.UUID.generate()
+      source_workflow_id = Ecto.UUID.generate()
+
+      # Target project with one workflow
+      target_project = %{
+        id: target_project_id,
+        name: "Target Project",
+        workflows: [
+          %{
+            id: target_workflow_id,
+            name: "target_workflow",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          }
+        ]
+      }
+
+      # Source project with completely different workflow
+      source_project = %{
+        id: source_project_id,
+        name: "Source Project",
+        workflows: [
+          %{
+            id: source_workflow_id,
+            name: "source_workflow",
+            triggers: [],
+            jobs: [],
+            edges: [],
+            positions: %{}
+          }
+        ]
+      }
+
+      result = MergeProjects.merge_project(source_project, target_project)
+
+      # Should have two workflows
+      assert length(result["workflows"]) == 2
+
+      # Source workflow should get new UUID
+      new_workflow =
+        Enum.find(result["workflows"], &(&1["name"] == "source_workflow"))
+
+      assert new_workflow["id"] != source_workflow_id
+      refute new_workflow["delete"]
+
+      # Target workflow should be marked for deletion
+      deleted_workflow =
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow_id))
+
+      assert deleted_workflow["delete"]
+    end
+
+    test "merge empty projects" do
+      target_project_id = Ecto.UUID.generate()
+      source_project_id = Ecto.UUID.generate()
+
+      target_project = %{
+        id: target_project_id,
+        name: "Target Project",
+        workflows: []
+      }
+
+      source_project = %{
+        id: source_project_id,
+        name: "Source Project",
+        workflows: []
+      }
+
+      result = MergeProjects.merge_project(source_project, target_project)
+
+      # Should preserve target ID but use source name
+      assert result["id"] == target_project_id
+      assert result["name"] == "Source Project"
+      assert result["workflows"] == []
+    end
+
+    test "merge project with workflow containing jobs - integration test" do
+      # Test that workflow merging logic works correctly within project merging
+      target_project_id = Ecto.UUID.generate()
+      target_workflow_id = Ecto.UUID.generate()
+      target_trigger_id = Ecto.UUID.generate()
+      target_job_id = Ecto.UUID.generate()
+      target_edge_id = Ecto.UUID.generate()
+
+      source_project_id = Ecto.UUID.generate()
+      source_workflow_id = Ecto.UUID.generate()
+
+      # Target project with workflow containing a job
+      target_project = %{
+        id: target_project_id,
+        name: "Target Project",
+        workflows: [
+          %{
+            id: target_workflow_id,
+            name: "data_processing",
+            triggers: [
+              %{
+                id: target_trigger_id,
+                name: "webhook_trigger",
+                type: :webhook,
+                enabled: true
+              }
+            ],
+            jobs: [
+              %{
+                id: target_job_id,
+                name: "process_data",
+                body: "fn(s => s)",
+                adaptor: "@openfn/language-common@latest"
+              }
+            ],
+            edges: [
+              %{
+                id: target_edge_id,
+                source_trigger_id: target_trigger_id,
+                source_job_id: nil,
+                target_job_id: target_job_id,
+                condition_type: :always,
+                enabled: true
+              }
+            ],
+            positions: %{}
+          }
+        ]
+      }
+
+      # Source project with same workflow name but different job adaptor
+      source_project = %{
+        id: source_project_id,
+        name: "Source Project",
+        workflows: [
+          %{
+            id: source_workflow_id,
+            name: "data_processing",
+            triggers: [
+              %{
+                # Same ID to test UUID preservation
+                id: target_trigger_id,
+                name: "webhook_trigger",
+                type: :webhook,
+                enabled: true
+              }
+            ],
+            jobs: [
+              %{
+                # Same ID to test UUID preservation
+                id: target_job_id,
+                name: "process_data",
+                body: "fn(s => s)",
+                # Different adaptor
+                adaptor: "@openfn/language-http@latest"
+              }
+            ],
+            edges: [
+              %{
+                id: target_edge_id,
+                source_trigger_id: target_trigger_id,
+                source_job_id: nil,
+                target_job_id: target_job_id,
+                condition_type: :always,
+                enabled: true
+              }
+            ],
+            positions: %{}
+          }
+        ]
+      }
+
+      result = MergeProjects.merge_project(source_project, target_project)
+
+      # Should have one workflow (merged)
+      assert length(result["workflows"]) == 1
+      workflow = hd(result["workflows"])
+
+      # Workflow should preserve target ID
+      assert workflow["id"] == target_workflow_id
+      assert workflow["name"] == "data_processing"
+
+      # Should have one job with updated adaptor but preserved UUID
+      job = hd(workflow["jobs"])
+      assert job["id"] == target_job_id
+      assert job["name"] == "process_data"
+      # Source adaptor used
+      assert job["adaptor"] == "@openfn/language-http@latest"
+      refute job["delete"]
+
+      # Should have one trigger with preserved UUID
+      trigger = hd(workflow["triggers"])
+      assert trigger["id"] == target_trigger_id
+      refute trigger["delete"]
+
+      # Should have one edge with preserved UUID
+      edge = hd(workflow["edges"])
+      assert edge["id"] == target_edge_id
+      refute edge["delete"]
+    end
+  end
 end
