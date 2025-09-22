@@ -20,6 +20,8 @@ and this project adheres to
 - Generate workflow version on save
   [#3452](https://github.com/OpenFn/lightning/issues/3452)
 - Add `bin/update-images` script for automated Dockerfile version management
+- Add project merging functionality
+  [#3432](https://github.com/OpenFn/lightning/issues/3432)
 
 ### Changed
 
