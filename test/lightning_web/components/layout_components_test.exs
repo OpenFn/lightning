@@ -12,14 +12,15 @@ defmodule LightningWeb.LayoutComponentsTest do
 
     Application.put_env(:lightning, :menu_items, %{
       component: &Menu.project_items/1,
-      assigns_keys: [:project_id, :active_menu_item]
+      assigns_keys: [:project_id, :active_menu_item, :current_user]
     })
 
     project_id = Ecto.UUID.generate()
 
     assigns = %{
       active_menu_item: :settings,
-      project_id: project_id
+      project_id: project_id,
+      current_user: %Lightning.Accounts.User{}
     }
 
     element =

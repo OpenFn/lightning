@@ -23,6 +23,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
@@ -231,6 +232,41 @@ defmodule Lightning.Projects do
     case p.parent_id do
       nil -> p
       pid -> root_of(Repo.get!(Project, pid))
+    end
+  end
+
+  @doc """
+  Returns true if `child_project` is a descendant of `parent_project`.
+
+  Walks up the parent chain using preloaded `:parent` associations to determine
+  if `child_project` has `parent_project` anywhere in its ancestry.
+
+  ## Parameters
+  - `child_project`: The project to check (must have `:parent` preloaded)
+  - `parent_project`: The potential parent/ancestor project
+  - `root_project`: Optional root project to use as stopping condition
+
+  ## Examples
+      iex> Projects.descendant_of?(sandbox, parent_project)
+      true
+
+      iex> Projects.descendant_of?(sibling, parent_project)
+      false
+  """
+  @spec descendant_of?(Project.t(), Project.t(), Project.t() | nil) ::
+          boolean()
+  def descendant_of?(child_project, parent_project, root_project \\ nil) do
+    root = root_project || root_of(child_project)
+
+    cond do
+      child_project.parent_id == parent_project.id ->
+        true
+
+      child_project.parent_id == root.id or is_nil(child_project.parent_id) ->
+        false
+
+      true ->
+        descendant_of?(child_project.parent, parent_project, root)
     end
   end
 
@@ -1249,7 +1285,11 @@ defmodule Lightning.Projects do
   """
   @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
   def list_sandboxes(parent_id) when is_binary(parent_id) do
-    from(p in Project, where: p.parent_id == ^parent_id, order_by: p.name)
+    from(p in Project,
+      where: p.parent_id == ^parent_id,
+      order_by: p.name,
+      preload: :parent
+    )
     |> Repo.all()
   end
 
@@ -1278,20 +1318,94 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns a read-only “workspace” view for a parent project: the parent itself
-  plus all of its direct sandboxes (unique set, no preloads).
+  Returns all projects in a workspace hierarchy.
 
-  Use this for nav/filters where showing the parent alongside its sandboxes is needed.
+  Returns a map with the root project and all its descendant sandboxes at any depth level.
+  Uses a recursive CTE to traverse the entire project tree from root to leaves.
+  Descendants are sorted as a flat list according to the specified options.
 
-  ## Notes
+  ## Options
+  - `sort_by`: Field to sort by (`:name`, `:inserted_at`, `:updated_at`). Defaults to `:name`.
+  - `sort_order`: Sort direction (`:asc` or `:desc`). Defaults to `:asc`.
 
-  * Order is not guaranteed. Sort the resulting list if a specific order is needed.
-  * Not recursive. If we later model deeper hierarchies, use a recursive CTE.
+  ## Examples
+      # Default sorting (name ascending)
+      Projects.list_workspace_projects(project_id)
+
+      # Sort by name descending
+      Projects.list_workspace_projects(project_id, sort_by: :name, sort_order: :desc)
+
+      # Sort by creation date
+      Projects.list_workspace_projects(project_id, sort_by: :inserted_at, sort_order: :desc)
   """
-  @spec get_workspace_projects(Project.t()) :: [Project.t()]
-  def get_workspace_projects(%Project{id: parent_id} = parent) do
-    ([parent] ++ list_sandboxes(parent_id))
-    |> Enum.uniq_by(& &1.id)
+  def list_workspace_projects(project_id_or_struct, opts \\ [])
+
+  @spec list_workspace_projects(Ecto.UUID.t(), keyword()) :: %{
+          root: Project.t(),
+          descendants: [Project.t()]
+        }
+  def list_workspace_projects(project_id, opts) when is_binary(project_id) do
+    project = get_project!(project_id)
+    root = root_of(project)
+
+    sort_by = Keyword.get(opts, :sort_by, :name)
+    sort_order = Keyword.get(opts, :sort_order, :asc)
+
+    valid_sort_fields = [:name, :inserted_at, :updated_at]
+    valid_sort_orders = [:asc, :desc]
+
+    unless sort_by in valid_sort_fields do
+      raise ArgumentError,
+            "Invalid sort_by option: #{sort_by}. Valid options are: #{inspect(valid_sort_fields)}"
+    end
+
+    unless sort_order in valid_sort_orders do
+      raise ArgumentError,
+            "Invalid sort_order option: #{sort_order}. Valid options are: #{inspect(valid_sort_orders)}"
+    end
+
+    descendants_query =
+      from(p in Project,
+        where: p.parent_id == ^root.id,
+        select: %{id: p.id, parent_id: p.parent_id, level: 1}
+      )
+
+    recursive_query =
+      from(p in Project,
+        join: d in "descendants",
+        on: p.parent_id == d.id,
+        select: %{id: p.id, parent_id: p.parent_id, level: d.level + 1}
+      )
+
+    order_by_clause =
+      case {sort_order, sort_by} do
+        {:asc, field} -> [asc: dynamic([p], field(p, ^field))]
+        {:desc, field} -> [desc: dynamic([p], field(p, ^field))]
+      end
+
+    {[root | _rest], descendants} =
+      Project
+      |> with_cte("descendants", as: ^descendants_query)
+      |> recursive_ctes(true)
+      |> with_cte("descendants",
+        as: ^union_all(descendants_query, ^recursive_query)
+      )
+      |> join(:left, [p], d in "descendants", on: p.id == d.id)
+      |> where([p, d], p.id == ^root.id or not is_nil(d.id))
+      |> order_by(^order_by_clause)
+      |> preload([:parent, :project_users])
+      |> Repo.all()
+      |> Enum.split_with(&(&1.id == root.id))
+
+    %{root: root, descendants: descendants}
+  end
+
+  @spec list_workspace_projects(Project.t(), keyword()) :: %{
+          root: Project.t(),
+          descendants: [Project.t()]
+        }
+  def list_workspace_projects(%Project{id: project_id}, opts) do
+    list_workspace_projects(project_id, opts)
   end
 
   @doc """
@@ -1401,42 +1515,62 @@ defmodule Lightning.Projects do
     do: if(Enum.member?(list, h), do: list, else: list ++ [h])
 
   @doc """
-  Provisions a **sandbox (child) project** under the given `parent`.
+  Creates a new sandbox project by cloning from a parent project.
 
-  This is a thin wrapper around `Lightning.Projects.Sandboxes.provision/3`.
+  ## Parameters
+  * `parent` - Project to clone from
+  * `actor` - User creating the sandbox (needs `:owner` or `:admin` role on parent)
+  * `attrs` - Creation attributes (name, color, env, collaborators, dataclip_ids)
 
-  ## Authorization
-  The `actor` must be an `:owner` or `:admin` **of the parent project**.
-  Returns `{:error, :unauthorized}` otherwise.
+  ## Returns
+  * `{:ok, sandbox_project}` - Successfully created sandbox
+  * `{:error, :unauthorized}` - Actor lacks permission on parent
+  * `{:error, changeset}` - Validation or database error
 
-  ## Attributes (`attrs`)
-    * `:name` (required) — Sandbox name (must be unique per `parent_id`).
-    * `:color` — Optional hex color (string) for the project.
-    * `:env` — Optional environment slug to set on the project.
-    * `:collaborators` — Optional list of `%{user_id: Ecto.UUID.t(), role: atom()}`.
-      The `actor` is always added as `:owner`; extra `:owner` entries are ignored.
-    * `:dataclip_ids` — Optional list of named dataclip IDs to copy
-      (eligible types: `:global | :saved_input | :http_request`).
-
-  ## Behavior
-    * Clones a subset of project settings from the parent.
-    * **References** existing credentials via `project_credentials` (no credential duplication).
-    * Clones the workflow DAG (jobs, triggers, edges), **disables triggers** in the clone,
-      **remaps node positions**, and copies the latest workflow head/version per workflow.
-    * Does **not** copy runs/history.
-
-  ## Examples
-
-      iex> provision_sandbox(parent, actor, %{name: "SB-1", color: "#aabbcc"})
-      {:ok, %Lightning.Projects.Project{}}
-
-      iex> provision_sandbox(parent, viewer, %{name: "SB-1"})
-      {:error, :unauthorized}
-
+  See `Lightning.Projects.Sandboxes.provision/3` for detailed behavior.
   """
-  @spec provision_sandbox(Project.t(), User.t(), map()) ::
+  @spec provision_sandbox(Project.t(), User.t(), Sandboxes.provision_attrs()) ::
           {:ok, Project.t()} | {:error, term()}
-  def provision_sandbox(%Project{} = parent, %User{} = actor, attrs) do
-    Lightning.Projects.Sandboxes.provision(parent, actor, attrs)
-  end
+  defdelegate provision_sandbox(parent, actor, attrs),
+    to: Sandboxes,
+    as: :provision
+
+  @doc """
+  Updates a sandbox project's basic attributes (name, color, env).
+
+  ## Parameters
+  * `sandbox` - Sandbox to update (project struct or ID string)
+  * `actor` - User performing update (needs `:owner` or `:admin` role on sandbox)
+  * `attrs` - Map with name, color, and/or env keys
+
+  ## Returns
+  * `{:ok, updated_sandbox}` - Successfully updated
+  * `{:error, :unauthorized}` - Actor lacks permission
+  * `{:error, :not_found}` - Sandbox not found
+  * `{:error, changeset}` - Validation error
+  """
+  @spec update_sandbox(Project.t() | Ecto.UUID.t(), User.t(), map()) ::
+          {:ok, Project.t()}
+          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+  defdelegate update_sandbox(sandbox, actor, attrs),
+    to: Sandboxes,
+    as: :update_sandbox
+
+  @doc """
+  Deletes a sandbox and all its descendant projects.
+
+  **Warning**: Permanently removes the sandbox and any nested sandboxes.
+
+  ## Parameters
+  * `sandbox` - Sandbox to delete (project struct or ID string)
+  * `actor` - User performing deletion (needs `:owner` or `:admin` role on sandbox)
+
+  ## Returns
+  * `{:ok, deleted_sandbox}` - Successfully deleted
+  * `{:error, :unauthorized}` - Actor lacks permission
+  * `{:error, :not_found}` - Sandbox not found
+  """
+  @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  defdelegate delete_sandbox(sandbox, actor), to: Sandboxes, as: :delete_sandbox
 end

@@ -545,7 +545,7 @@ defmodule LightningWeb.Components.Common do
         type="text"
         spellcheck="false"
         placeholder={@placeholder || "Search..."}
-        value={@selected_item && @selected_item.name}
+        value={root_name(@selected_item)}
         class="w-full rounded-md border-0 py-1.5 pl-3 pr-12 shadow-xs ring-1 ring-inset focus:ring-2 sm:text-sm sm:leading-6"
         role="combobox"
         aria-controls="options"
@@ -667,4 +667,9 @@ defmodule LightningWeb.Components.Common do
     </div>
     """
   end
+
+  defp root_name(nil), do: ""
+
+  defp root_name(%Lightning.Projects.Project{} = selected_item),
+    do: Lightning.Projects.root_of(selected_item).name
 end
