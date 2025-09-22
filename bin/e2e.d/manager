@@ -8,6 +8,7 @@ export LOG_LEVEL=${LOG_LEVEL:-info}
 export RTM=${RTM:-false}
 export DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@localhost/lightning_test_e2e}
 export LIVE_DEBUGGER=${LIVE_DEBUGGER:-false}
+export USAGE_TRACKING_ENABLED=false
 SNAPSHOT_FILE="${SNAPSHOT_FILE:-/tmp/demo_data_snapshot.sql}"
 
 # Helper functions
@@ -28,7 +29,8 @@ Usage: $script_name [COMMAND] [OPTIONS]
 E2E test environment management for Lightning
 
 Commands:
-  server          Start the e2e test server
+  start           Start e2e environment with full setup (migrations, snapshot, server)
+  server          Start the e2e test server only (with warnings for missing setup)
   reset           Fast reset using snapshot (truncate + restore)
   reset --full    Full database reset with confirmation
   reset --quiet   Fast reset with minimal output
@@ -37,8 +39,14 @@ Commands:
   help            Show this help message (default)
 
 Getting Started:
-  For first-time setup, run 'setup' to initialize your database with demo data
-  and create an initial snapshot. This gives you a clean baseline for testing.
+  For first-time setup or when you want everything ready, run 'start'. This will:
+  - Run any pending migrations
+  - Create demo data and snapshot if missing
+  - Start the server on port 4003
+
+  For quick server startup (assuming setup is done), use 'server'. This will:
+  - Check compilation and warn about issues
+  - Start the server with warnings for missing snapshots/migrations
 
   During development, use 'reset' between test runs for instant database restore.
   This is perfect for iterative testing where you need consistent starting data.
@@ -46,9 +54,6 @@ Getting Started:
   When you need to pick up schema changes or fresh migrations, use 'reset --full'
   to rebuild everything from scratch. This is slower but ensures you have the
   latest database structure.
-
-  To start the test server on port 4003, run 'server'. This runs independently 
-  from your main development server on port 4000.
 
 CI Environments:
 
@@ -113,10 +118,126 @@ restore_snapshot() {
   fi
 }
 
+# Check if Elixir application is compiled
+check_compilation() {
+  echo "Checking if Elixir application is compiled..."
+
+  # Change to project root for compilation check
+  if [[ -n "${PROJECT_ROOT}" && -d "${PROJECT_ROOT}" ]]; then
+    cd "${PROJECT_ROOT}"
+  fi
+
+  # Check if _build directory exists and has compiled beam files
+  if [[ ! -d "_build/${MIX_ENV}/lib/lightning/ebin" ]]; then
+    echo "❌ Application not compiled. Please run 'mix compile' first."
+    echo "Run from project root: mix compile"
+    exit 1
+  fi
+
+  # Check if beam files exist
+  local beam_count=$(find "_build/${MIX_ENV}/lib/lightning/ebin" -name "*.beam" | wc -l)
+  if [[ $beam_count -eq 0 ]]; then
+    echo "❌ No compiled beam files found. Please run 'mix compile' first."
+    echo "Run from project root: mix compile"
+    exit 1
+  fi
+
+  # Quick compilation check - this will be fast if already compiled
+  echo "Verifying compilation status..."
+  if ! run_in_project_root "mix compile --warnings-as-errors" >/dev/null 2>&1; then
+    echo "❌ Compilation failed or has warnings. Please fix compilation errors first."
+    echo "Run from project root: mix compile"
+    exit 1
+  fi
+}
+
+# Check for pending migrations
+check_pending_migrations() {
+  local migrations_output
+  migrations_output=$(run_in_project_root "mix ecto.migrations" 2>/dev/null)
+
+  if echo "$migrations_output" | grep -q "^  down"; then
+    echo "⚠️  WARNING: Pending migrations detected!"
+    echo "The following migrations are not applied:"
+    echo "$migrations_output" | grep "^  down"
+    echo "Run 'mix ecto.migrate' to apply them."
+    return 1
+  fi
+
+  return 0
+}
+
+# Check if snapshot exists and warn if missing
+check_snapshot() {
+  if [ ! -f "$SNAPSHOT_FILE" ]; then
+    echo "⚠️  WARNING: No snapshot file found at: $SNAPSHOT_FILE"
+    echo "Without a snapshot, database resets will be slow."
+    echo "Run 'bin/e2e setup' to create a snapshot for faster resets."
+    return 1
+  fi
+  return 0
+}
+
 # Command functions
+cmd_start() {
+  local pid_file="/tmp/lightning_e2e_server"
+
+  # Check if server is already running first
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid=$(cat "$pid_file" 2>/dev/null)
+    if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" 2>/dev/null; then
+      echo "🔄 E2E server already running (PID: $existing_pid) on port $PORT"
+      echo "✅ Reusing existing server for tests"
+      return 0
+    else
+      echo "🧹 Cleaning up stale PID file..."
+      rm -f "$pid_file"
+    fi
+  fi
+
+  echo "🚀 Starting E2E environment with full setup..."
+
+  # Check compilation first
+  check_compilation
+
+  # Run migrations to ensure database is up to date
+  echo "Running database migrations..."
+  if ! run_in_project_root "mix ecto.migrate" >/dev/null 2>&1; then
+    echo "❌ Database migration failed. Please check database connection and migration files."
+    echo "Run from project root: mix ecto.migrate"
+    exit 1
+  fi
+  echo "✅ Database migrations completed"
+
+  # Check if snapshot exists, create if missing
+  if [ ! -f "$SNAPSHOT_FILE" ]; then
+    echo "📸 No snapshot found, creating demo data and snapshot..."
+
+    # Truncate existing data
+    echo "Truncating existing data..."
+    truncate_data >/dev/null 2>&1
+
+    # Seed demo data
+    echo "Seeding demo data..."
+    seed_demo_data >/dev/null 2>&1
+
+    # Create snapshot
+    echo "Creating snapshot for fast resets..."
+    create_snapshot >/dev/null 2>&1
+
+    echo "✅ Snapshot created successfully"
+  else
+    echo "✅ Snapshot found at: $SNAPSHOT_FILE"
+  fi
+
+  # Now start the server
+  echo "🔥 Starting E2E server..."
+  cmd_server
+}
+
 cmd_server() {
   local pid_file="/tmp/lightning_e2e_server"
-  
+
   # Check if server is already running
   if [[ -f "$pid_file" ]]; then
     local existing_pid=$(cat "$pid_file" 2>/dev/null)
@@ -129,29 +250,38 @@ cmd_server() {
       rm -f "$pid_file"
     fi
   fi
-  
+
+  # Check compilation before starting server
+  check_compilation
+
+  # Check for pending migrations and warn
+  check_pending_migrations
+
+  # Check for snapshot and warn if missing
+  check_snapshot
+
   # Set up PID file cleanup on exit
   cleanup_pid_file() {
     echo "Shutting down server..."
     rm -f "$pid_file"
   }
   trap cleanup_pid_file SIGINT SIGTERM EXIT
-  
+
   echo "Starting Phoenix server on port $PORT..."
-  
+
   # Change to project root if needed and start server
   if [[ -n "${PROJECT_ROOT}" && -d "${PROJECT_ROOT}" ]]; then
     cd "${PROJECT_ROOT}"
   fi
-  
+
   # Start server and write PID after it starts
   mix phx.server &
   local server_pid=$!
-  
+
   # Write PID to file
   echo "$server_pid" > "$pid_file"
   echo "Server PID $server_pid written to $pid_file"
-  
+
   # Wait for the server process
   wait $server_pid
 }
@@ -204,7 +334,7 @@ cmd_reset() {
       echo "Run 'bin/e2e setup' to create the snapshot, or use 'reset --full' for a complete rebuild."
       exit 1
     fi
-    
+
     if [ "$quiet" = true ]; then
       truncate_data >/dev/null 2>&1
       restore_snapshot >/dev/null 2>&1
@@ -243,6 +373,9 @@ COMMAND="${1:-help}"
 shift || true
 
 case "$COMMAND" in
+start)
+  cmd_start "$@"
+  ;;
 server)
   cmd_server "$@"
   ;;
