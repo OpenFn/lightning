@@ -107,12 +107,12 @@ defmodule Lightning.Projects.Project do
     |> disallow_self_parent()
   end
 
-  defp disallow_self_parent(%{data: %{id: nil}} = cs), do: cs
+  defp disallow_self_parent(%{data: %{id: nil}} = changeset), do: changeset
 
-  defp disallow_self_parent(cs) do
-    if get_field(cs, :parent_id) == cs.data.id,
-      do: add_error(cs, :parent_id, "cannot be self"),
-      else: cs
+  defp disallow_self_parent(changeset) do
+    if get_field(changeset, :parent_id) == changeset.data.id,
+      do: add_error(changeset, :parent_id, "cannot be self"),
+      else: changeset
   end
 
   @doc """
