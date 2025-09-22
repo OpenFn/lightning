@@ -19,10 +19,19 @@ and this project adheres to
 
 - Generate workflow version on save
   [#3452](https://github.com/OpenFn/lightning/issues/3452)
+- Add `bin/update-images` script for automated Dockerfile version management
 
 ### Changed
 
+- Optimized queue query planner stability to prevent 60s+ spikes
+  [#3564](https://github.com/OpenFn/lightning/issues/3564)
+- Fix aarch64 (Apple Silicon) Dockerfile-dev build
+  [PR#3589](https://github.com/OpenFn/lightning/pull/3589)
+
 ### Fixed
+
+- Wrong timestamp information in mini-history for in-progress runs
+  [#3579](https://github.com/OpenFn/lightning/pull/3579)
 
 ## [v2.14.5-pre1] - 2025-09-11
 
