@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-DEF75E51.js"></script>
+    <script defer src="dist/sidebar_items-A45625BB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -93,16 +93,10 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Provision <strong>sandbox</strong> projects as children of an existing project.</p><p>A sandbox is a full project that:</p><ul><li>clones core <strong>project settings</strong> from the parent,</li><li><strong>references</strong> the same credentials via <code class="inline">project_credentials</code> (no new credentials are created),</li><li>clones the <strong>workflow DAG</strong> (workflows, jobs, triggers, edges),</li><li><strong>disables all triggers</strong> in the sandbox,</li><li><strong>remaps positions</strong> (node coordinates) to the new node IDs,</li><li>copies the <strong>latest</strong> <code class="inline">WorkflowVersion</code> per workflow to seed version history,</li><li>can optionally <strong>copy a subset of named dataclips</strong>,</li><li><strong>clones Keychain credentials (metadata only) actually used by parent jobs</strong> and
-rewires sandbox jobs to those cloned keychains, and</li><li>assigns the <strong>creator as :owner</strong>; any <strong>non-owner collaborators</strong> provided are
-included <strong>at creation time</strong> (duplicate/owner entries are filtered).</li></ul><h3 id="module-authorization" class="section-heading"><a href="#module-authorization" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authorization</span></h3><p>The <code class="inline">actor</code> must be <code class="inline">:owner</code> or <code class="inline">:admin</code> on the <strong>parent</strong> project.
-Otherwise <code class="inline">{:error, :unauthorized}</code> is returned and nothing is created.</p><h3 id="module-invariants-side-effects" class="section-heading"><a href="#module-invariants-side-effects" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Invariants &amp; side effects</span></h3><ul><li>The sandbox is created in a single DB <strong>transaction</strong>.</li><li>The creator is added as the owner and any <strong>non-owner collaborators</strong> from
-<code class="inline">:collaborators</code> are also added at creation time (we ensure exactly one owner).</li><li>Credentials are <strong>not duplicated</strong>; we create <code class="inline">project_credentials</code> rows
-that reference the parent’s existing <code class="inline">credentials</code>.</li><li><strong>Keychain credentials are cloned as metadata (name/path/default_credential)</strong> into
-the sandbox project; <strong>no secrets are duplicated</strong>. Because we copy
-<code class="inline">project_credentials</code> first, the keychain’s <code class="inline">default_credential_id</code> remains valid
-in the sandbox and passes validation.</li><li>Trigger rows are cloned but always persisted with <code class="inline">enabled: false</code>.</li><li>Positions are remapped by translating old node IDs to new ones; if no valid
-positions remain, we store <code class="inline">nil</code> (UI → auto-layout).</li><li>There are <strong>no runs</strong> or dataclips copied by default.</li></ul><p>See the <a href="#provision/3"><code class="inline">provision/3</code></a> docs below for attribute details and return values.</p>
+<p>Manage <strong>sandbox projects</strong> - isolated copies of existing projects for safe experimentation.</p><p>Sandboxes allow developers to test changes, experiment with workflows, and collaborate
+without affecting production projects. They share credentials with their parent but
+maintain separate workflow execution environments.</p><h2 id="module-what-gets-copied-to-a-sandbox" class="section-heading"><a href="#module-what-gets-copied-to-a-sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">What gets copied to a sandbox</span></h2><ul><li><strong>Project settings</strong>: retention policies, concurrency limits, MFA requirements</li><li><strong>Workflow structure</strong>: jobs, triggers (disabled), edges, and node positions</li><li><strong>Credentials</strong>: references to parent credentials (no secrets duplicated)</li><li><strong>Keychain metadata</strong>: cloned for jobs that use them</li><li><strong>Version history</strong>: latest workflow version per workflow</li><li><strong>Optional dataclips</strong>: named clips of specific types can be selectively copied</li></ul><h2 id="module-operations" class="section-heading"><a href="#module-operations" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Operations</span></h2><ul><li><a href="#provision/3"><code class="inline">provision/3</code></a> - Create a new sandbox from a parent project</li><li><a href="#update_sandbox/3"><code class="inline">update_sandbox/3</code></a> - Update sandbox name, color, or environment</li><li><a href="#delete_sandbox/2"><code class="inline">delete_sandbox/2</code></a> - Delete a sandbox and all its descendants</li></ul><h2 id="module-authorization" class="section-heading"><a href="#module-authorization" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authorization</span></h2><ul><li><strong>Provisioning</strong>: Requires <code class="inline">:owner</code> or <code class="inline">:admin</code> role on the parent project or superuser</li><li><strong>Updates/Deletion</strong>: Requires <code class="inline">:owner</code> or <code class="inline">:admin</code> role on the sandbox itself,<pre><code class="makeup elixir" translate="no"><span class="w">                  </span><span class="ow">or</span><span class="w"> </span><span class="err">`</span><span class="ss">:owner</span><span class="err">`</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="err">`</span><span class="ss">:admin</span><span class="err">`</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">root</span><span class="w"> </span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">superuser</span></code></pre></li></ul><h2 id="module-transaction-safety" class="section-heading"><a href="#module-transaction-safety" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Transaction safety</span></h2><p>All operations are performed within database transactions to ensure consistency.
+Failed operations leave no partial state behind.</p>
     </section>
 
 </div>
@@ -125,7 +119,7 @@ positions remain, we store <code class="inline">nil</code> (UI → auto-layout).
 
       </div>
 
-        <div class="summary-synopsis"><p>Attributes accepted by <a><code class="inline">provision/3</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Attributes for creating a new sandbox via <a><code class="inline">provision/3</code></a>.</p></div>
 
     </div>
 
@@ -137,11 +131,31 @@ positions remain, we store <code class="inline">nil</code> (UI → auto-layout).
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#delete_sandbox/2" data-no-tooltip="" translate="no">delete_sandbox(sandbox, actor)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Deletes a sandbox and all its descendant projects.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#provision/3" data-no-tooltip="" translate="no">provision(parent, actor, attrs)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Provisions a sandbox project under <code class="inline">parent</code> on behalf of <code class="inline">actor</code>.</p></div>
+        <div class="summary-synopsis"><p>Creates a new sandbox project by cloning from a parent project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update_sandbox/3" data-no-tooltip="" translate="no">update_sandbox(sandbox, actor, attrs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Updates a sandbox project's basic attributes.</p></div>
 
     </div>
 
@@ -169,7 +183,7 @@ positions remain, we store <code class="inline">nil</code> (UI → auto-layout).
       <h1 class="signature" translate="no">provision_attrs()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L64" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -184,15 +198,17 @@ positions remain, we store <code class="inline">nil</code> (UI → auto-layout).
   :name =&gt; <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   optional(:color) =&gt; <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   optional(:env) =&gt; <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  optional(:collaborators) =&gt; [%{user_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), role: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()}],
+  optional(:collaborators) =&gt; [
+    %{user_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), role: :admin | :editor | :viewer}
+  ],
   optional(:dataclip_ids) =&gt; [<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()]
 }</pre>
 
       </div>
 
-<p>Attributes accepted by <a href="#provision/3"><code class="inline">provision/3</code></a>.</p><ul><li><code class="inline">:name</code> (<strong>required</strong>) – sandbox name (scoped unique per <code class="inline">parent_id</code>)</li><li><code class="inline">:color</code> (optional) – UI color string (e.g. <code class="inline">&quot;#336699&quot;</code>)</li><li><code class="inline">:env</code> (optional) – environment slug for the project (e.g. <code class="inline">&quot;staging&quot;</code>)</li><li><code class="inline">:collaborators</code> (optional) – list of <code class="inline">%{user_id: Ecto.UUID.t(), role: atom()}</code>
-to add in addition to the creator (owner). Any <code class="inline">:owner</code> entries are ignored
-and duplicates by <code class="inline">user_id</code> are removed.</li><li><code class="inline">:dataclip_ids</code> (optional) – list of dataclip IDs to copy <strong>if</strong> they are:<ul><li>named (<code class="inline">name</code> not <code class="inline">nil</code>) <strong>and</strong></li><li>of type in <code class="inline">[:global, :saved_input, :http_request]</code>.</li></ul></li></ul>
+<p>Attributes for creating a new sandbox via <a href="#provision/3"><code class="inline">provision/3</code></a>.</p><h2 id="t:provision_attrs/0-required" class="section-heading"><a href="#t:provision_attrs/0-required" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Required</span></h2><ul><li><code class="inline">:name</code> - Sandbox name (must be unique within the parent project)</li></ul><h2 id="t:provision_attrs/0-optional" class="section-heading"><a href="#t:provision_attrs/0-optional" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Optional</span></h2><ul><li><code class="inline">:color</code> - UI color hex string (e.g. <code class="inline">&quot;#336699&quot;</code>)</li><li><code class="inline">:env</code> - Environment identifier (e.g. <code class="inline">&quot;staging&quot;</code>, <code class="inline">&quot;dev&quot;</code>)</li><li><p><code class="inline">:collaborators</code> - List of <code class="inline">%{user_id: UUID, role: :admin | :editor | :viewer}</code>
+Note: <code class="inline">:owner</code> roles and duplicate users are automatically filtered out</p></li><li><code class="inline">:dataclip_ids</code> - UUIDs of dataclips to copy (only copies named dataclips
+of types <code class="inline">:global</code>, <code class="inline">:saved_input</code>, or <code class="inline">:http_request</code>)</li></ul>
   </section>
 </section>
 
@@ -208,6 +224,40 @@ and duplicates by <code class="inline">user_id</code> are removed.</li><li><code
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="delete_sandbox/2">
+
+  <div class="detail-header">
+    <a href="#delete_sandbox/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_sandbox(sandbox, actor)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L189" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> delete_sandbox(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()
+) ::
+  {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()}
+  | {:error, :unauthorized | :not_found | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Deletes a sandbox and all its descendant projects.</p><p><strong>Warning</strong>: This permanently removes the sandbox and any nested sandboxes
+within it. This action cannot be undone.</p><h2 id="delete_sandbox/2-parameters" class="section-heading"><a href="#delete_sandbox/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">sandbox</code> - Sandbox project to delete (or sandbox ID as string)</li><li><code class="inline">actor</code> - User performing the deletion (needs <code class="inline">:owner</code> or <code class="inline">:admin</code> role on sandbox)</li></ul><h2 id="delete_sandbox/2-returns" class="section-heading"><a href="#delete_sandbox/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, deleted_sandbox}</code> - Successfully deleted sandbox and descendants</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on sandbox</li><li><code class="inline">{:error, :not_found}</code> - Sandbox ID not found (when using string ID)</li><li><code class="inline">{:error, reason}</code> - Database or other deletion error</li></ul><h2 id="delete_sandbox/2-example" class="section-heading"><a href="#delete_sandbox/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="7318455425-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">deleted</span><span class="p" data-group-id="7318455425-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">delete_sandbox</span><span class="p" data-group-id="7318455425-2">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="7318455425-2">)</span></code></pre>
+  </section>
+</section>
 <section class="detail" id="provision/3">
 
   <div class="detail-header">
@@ -218,7 +268,7 @@ and duplicates by <code class="inline">user_id</code> are removed.</li><li><code
       <h1 class="signature" translate="no">provision(parent, actor, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L120" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L107" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -239,16 +289,47 @@ and duplicates by <code class="inline">user_id</code> are removed.</li><li><code
 
       </div>
 
-<p>Provisions a sandbox project under <code class="inline">parent</code> on behalf of <code class="inline">actor</code>.</p><p>This function performs the full sandbox provisioning workflow described in the
-module documentation. It returns either the newly created sandbox project or
-an error tuple without side effects outside the transaction.</p><h2 id="provision/3-parameters" class="section-heading"><a href="#provision/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">parent</code> – the parent <code class="inline">%Lightning.Projects.Project{}</code> to clone from</li><li><code class="inline">actor</code> – the <code class="inline">%Lightning.Accounts.User{}</code> performing the action; must be
-<code class="inline">:owner</code> or <code class="inline">:admin</code> on the <strong>parent</strong></li><li><code class="inline">attrs</code> – map of attributes (see <a href="#t:provision_attrs/0"><code class="inline">provision_attrs/0</code></a> for details)</li></ul><h2 id="provision/3-returns" class="section-heading"><a href="#provision/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, %Lightning.Projects.Project{}}</code> on success</li><li><code class="inline">{:error, :unauthorized}</code> if <code class="inline">actor</code> lacks permission on <code class="inline">parent</code></li><li><p><code class="inline">{:error, Ecto.Changeset.t() | term()}</code> for validation/DB errors</p></li></ul><h2 id="provision/3-what-gets-cloned" class="section-heading"><a href="#provision/3-what-gets-cloned" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">What gets cloned</span></h2><ul><li>Project settings: <code class="inline">allow_support_access</code>, <code class="inline">concurrency</code>, <code class="inline">description</code>,
-<code class="inline">requires_mfa</code>, <code class="inline">retention_policy</code>, <code class="inline">history_retention_period</code>,
-<code class="inline">dataclip_retention_period</code>.</li><li>Credentials: <code class="inline">project_credentials</code> rows pointing at the <strong>same</strong>
-underlying credentials (no new <code class="inline">credentials</code>).</li><li><strong>Keychain credentials (metadata)</strong>: only the keychains actually used by
-parent jobs are cloned into the sandbox (<code class="inline">name</code>, <code class="inline">path</code>, <code class="inline">default_credential_id</code>);
-sandbox jobs are rewired to those cloned keychains.</li><li>DAG: workflows, jobs, triggers (disabled), edges, webhook auth methods.</li><li>Positions: remapped from parent node IDs to child node IDs; <code class="inline">nil</code> when
-nothing remaps (UI → auto-layout).</li><li>Version heads: latest <code class="inline">WorkflowVersion</code> per workflow (<code class="inline">hash</code>, <code class="inline">source</code>).</li></ul>
+<p>Creates a new sandbox project by cloning from a parent project.</p><p>The creator becomes the sandbox owner, and all workflow triggers are disabled.
+Credentials are shared (not duplicated) between parent and sandbox.</p><h2 id="provision/3-parameters" class="section-heading"><a href="#provision/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">parent</code> - Project to clone from</li><li><code class="inline">actor</code> - User creating the sandbox (needs <code class="inline">:owner</code> or <code class="inline">:admin</code> role on parent)</li><li><code class="inline">attrs</code> - Creation attributes (see <a href="#t:provision_attrs/0"><code class="inline">provision_attrs/0</code></a>)</li></ul><h2 id="provision/3-returns" class="section-heading"><a href="#provision/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, sandbox_project}</code> - Successfully created sandbox</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on parent</li><li><code class="inline">{:error, changeset}</code> - Validation or database error</li></ul><h2 id="provision/3-example" class="section-heading"><a href="#provision/3-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="3191639302-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">sandbox</span><span class="p" data-group-id="3191639302-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">provision</span><span class="p" data-group-id="3191639302-2">(</span><span class="n">parent_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3191639302-3">%{</span><span class="w">
+  </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;test-environment&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#336699&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">collaborators</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3191639302-4">[</span><span class="p" data-group-id="3191639302-5">%{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="n">other_user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:editor</span><span class="p" data-group-id="3191639302-5">}</span><span class="p" data-group-id="3191639302-4">]</span><span class="w">
+</span><span class="p" data-group-id="3191639302-3">}</span><span class="p" data-group-id="3191639302-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="update_sandbox/3">
+
+  <div class="detail-header">
+    <a href="#update_sandbox/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_sandbox(sandbox, actor, attrs)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L144" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> update_sandbox(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
+) ::
+  {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()}
+  | {:error, :unauthorized | :not_found | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+<p>Updates a sandbox project's basic attributes.</p><h2 id="update_sandbox/3-parameters" class="section-heading"><a href="#update_sandbox/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">sandbox</code> - Sandbox project to update (or sandbox ID as string)</li><li><code class="inline">actor</code> - User performing the update (needs <code class="inline">:owner</code> or <code class="inline">:admin</code> role on sandbox)</li><li><code class="inline">attrs</code> - Map with <code class="inline">:name</code>, <code class="inline">:color</code>, and/or <code class="inline">:env</code> keys</li></ul><h2 id="update_sandbox/3-returns" class="section-heading"><a href="#update_sandbox/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, updated_sandbox}</code> - Successfully updated sandbox</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on sandbox</li><li><code class="inline">{:error, :not_found}</code> - Sandbox ID not found (when using string ID)</li><li><code class="inline">{:error, changeset}</code> - Validation error</li></ul><h2 id="update_sandbox/3-example" class="section-heading"><a href="#update_sandbox/3-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><p> = Sandboxes.update_sandbox(sandbox, user, %{</p><pre><code class="makeup elixir" translate="no"><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new-name&quot;</span><span class="p">,</span><span class="w">
+</span><span class="ss">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#ff6b35&quot;</span></code></pre><p>  })</p>
   </section>
 </section>
 

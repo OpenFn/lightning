@@ -117,6 +117,7 @@ Lightning.Policies.Exports.html
 Lightning.Policies.Permissions.html
 Lightning.Policies.ProjectUsers.html
 Lightning.Policies.Provisioning.html
+Lightning.Policies.Sandboxes.html
 Lightning.Policies.Users.html
 Lightning.Policies.Workflows.html
 Lightning.Projects.Audit.html
@@ -312,6 +313,7 @@ LightningWeb.Live.AiAssistant.Modes.JobCode.Form.Options.html
 LightningWeb.Live.AiAssistant.Modes.JobCode.html
 LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate.html
 LightningWeb.Live.AiAssistant.PaginationMeta.html
+LightningWeb.Live.Helpers.ProjectTheme.html
 LightningWeb.Live.Helpers.TableHelpers.html
 LightningWeb.LiveComponentPortal.html
 LightningWeb.LiveHelpers.html
@@ -354,6 +356,9 @@ LightningWeb.RunLive.RunViewerLive.html
 LightningWeb.RunLive.Show.html
 LightningWeb.RunLive.Streaming.html
 LightningWeb.RunLive.WorkOrderComponent.html
+LightningWeb.SandboxLive.Components.html
+LightningWeb.SandboxLive.FormComponent.html
+LightningWeb.SandboxLive.Index.html
 LightningWeb.Telemetry.html
 LightningWeb.TokensLive.Index.html
 LightningWeb.UiMetrics.html
@@ -406,8 +411,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-3B393B6D.js
-dist/sidebar_items-DEF75E51.js
+dist/search_data-93D09B28.js
+dist/sidebar_items-A45625BB.js
 index.html
 provisioning.html
 readme.html
