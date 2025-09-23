@@ -5,7 +5,7 @@ defmodule Lightning.Projects.MergeProjects do
   """
   import Lightning.Utils.Maps, only: [stringify_keys: 1]
 
-  alias Lightning.AdaptorRegistry
+  # alias Lightning.AdaptorRegistry
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
@@ -102,38 +102,14 @@ defmodule Lightning.Projects.MergeProjects do
   defp map_workflow_node_ids(source_workflow, target_workflow) do
     node_mappings = %{}
 
-    # Phase 1: Direct ID Matching
-    node_mappings =
-      match_nodes_by_id(node_mappings, source_workflow, target_workflow)
-
-    # Phase 2: Triggers Mapping
+    # Phase 1: Triggers Mapping
     node_mappings = map_triggers(node_mappings, source_workflow, target_workflow)
 
-    # Phase 3: Structural and Expression Matching
+    # Phase 2: Jobs Mapping
     map_jobs(
       node_mappings,
       source_workflow,
       target_workflow
-    )
-  end
-
-  # source -> target map
-  defp match_nodes_by_id(node_mappings, source_workflow, target_workflow) do
-    source_nodes = get_all_nodes(source_workflow)
-    target_nodes = get_all_nodes(target_workflow)
-
-    Enum.reduce(
-      source_nodes,
-      node_mappings,
-      fn source_node, acc ->
-        target_node = find_node_by_id(target_nodes, source_node.id)
-
-        if target_node do
-          Map.put(acc, source_node.id, target_node.id)
-        else
-          acc
-        end
-      end
     )
   end
 
@@ -179,265 +155,282 @@ defmodule Lightning.Projects.MergeProjects do
     source_adjacency_map = build_workflow_parent_children_map(source_workflow)
     target_adjacency_map = build_workflow_parent_children_map(target_workflow)
 
-    all_matching_scores =
-      Map.new(source_workflow.jobs, fn source_job ->
-        scores =
-          calculate_job_match_scores(
-            source_job,
-            source_workflow,
-            source_adjacency_map,
-            target_workflow,
-            target_adjacency_map
-          )
+    # Step 1: Direct name matching
+    node_mappings =
+      match_jobs_by_name(node_mappings, source_workflow, target_workflow)
 
-        {source_job.id, scores}
-      end)
-
-    # Transform scores to find best source matches for each target job
-    # Result: %{target_job_id => [source_job1, source_job2, ...]} sorted by match score
-    ranked_source_jobs_per_target =
-      Map.new(target_workflow.jobs, fn target_job ->
-        source_jobs = sort_matching_source_jobs(target_job, all_matching_scores)
-
-        {target_job.id, source_jobs}
-      end)
-
-    # Create stable mappings using recursive matching
-    # Each source job tries to match with its best target, but only succeeds if:
-    # 1. The target's better choices (if any) can match elsewhere
-    # 2. Or this source is the target's best available choice
-
-    Enum.reduce(source_workflow.jobs, node_mappings, fn source_job, mappings ->
-      try_match_source_job(
-        source_job.id,
-        all_matching_scores,
-        ranked_source_jobs_per_target,
-        mappings
+    # Step 2: Parent/children signature matching for remaining unmapped jobs
+    node_mappings =
+      match_jobs_by_signatures(
+        node_mappings,
+        source_workflow,
+        target_workflow,
+        source_adjacency_map,
+        target_adjacency_map
       )
+
+    # Step 3: Map any remaining unmapped source jobs to available target jobs
+    map_remaining_jobs(node_mappings, source_workflow, target_workflow)
+  end
+
+  # Step 1: Match jobs by exact name
+  defp match_jobs_by_name(node_mappings, source_workflow, target_workflow) do
+    Enum.reduce(source_workflow.jobs, node_mappings, fn source_job, acc ->
+      # Skip if already mapped
+      if Map.has_key?(acc, source_job.id) do
+        acc
+      else
+        # Find target job with exact name match
+        target_job =
+          Enum.find(target_workflow.jobs, fn target_job ->
+            target_job.name == source_job.name and
+              target_job.id not in Map.values(acc)
+          end)
+
+        if target_job do
+          Map.put(acc, source_job.id, target_job.id)
+        else
+          acc
+        end
+      end
     end)
   end
 
-  # Recursively try to match a source job with its best available target
-  defp try_match_source_job(
-         source_job_id,
-         all_matching_scores,
-         ranked_source_jobs_per_target,
-         mappings
+  # Step 2: Match jobs by parent/children signatures (iterative)
+  defp match_jobs_by_signatures(
+         node_mappings,
+         source_workflow,
+         target_workflow,
+         source_adjacency_map,
+         target_adjacency_map
        ) do
-    # Skip if already mapped
-    if Map.has_key?(mappings, source_job_id) do
-      mappings
+    # Iterate until no more mappings are found
+    iterate_signature_matching(
+      node_mappings,
+      source_workflow,
+      target_workflow,
+      source_adjacency_map,
+      target_adjacency_map,
+      _max_iterations = length(source_workflow.jobs)
+    )
+  end
+
+  # Iteratively match jobs until no more progress is made
+  defp iterate_signature_matching(
+         node_mappings,
+         source_workflow,
+         target_workflow,
+         source_adjacency_map,
+         target_adjacency_map,
+         max_iterations
+       ) do
+    if max_iterations <= 0 do
+      node_mappings
     else
-      # Get targets for this source and sort by total score
-      sorted_targets =
-        all_matching_scores
-        |> Map.get(source_job_id, %{})
-        |> Enum.sort_by(
-          fn {_target_id, scores} ->
-            scores |> Map.values() |> Enum.sum()
-          end,
-          :desc
+      new_mappings =
+        attempt_signature_matching(
+          node_mappings,
+          source_workflow,
+          target_workflow,
+          source_adjacency_map,
+          target_adjacency_map
         )
-        |> Enum.map(fn {target_id, _} -> target_id end)
 
-      # Try to match with each target in order of preference
-      try_match_with_targets(
-        source_job_id,
-        sorted_targets,
-        all_matching_scores,
-        ranked_source_jobs_per_target,
-        mappings
-      )
-    end
-  end
-
-  defp try_match_with_targets(
-         _source_job_id,
-         [],
-         _all_matching_scores,
-         _ranked_source_jobs_per_target,
-         mappings
-       ) do
-    # No more targets to try
-    mappings
-  end
-
-  defp try_match_with_targets(
-         source_job_id,
-         [target_id | rest_targets],
-         all_matching_scores,
-         ranked_source_jobs_per_target,
-         mappings
-       ) do
-    # Skip if target is already mapped
-    if target_id in Map.values(mappings) do
-      try_match_with_targets(
-        source_job_id,
-        rest_targets,
-        all_matching_scores,
-        ranked_source_jobs_per_target,
-        mappings
-      )
-    else
-      # Check if we can claim this target
-      if can_claim_target?(
-           source_job_id,
-           target_id,
-           all_matching_scores,
-           ranked_source_jobs_per_target,
-           mappings
-         ) do
-        # We can claim it!
-        Map.put(mappings, source_job_id, target_id)
+      # If no new mappings were found, we're done
+      if map_size(new_mappings) == map_size(node_mappings) do
+        new_mappings
       else
-        # Can't claim this target, try next
-        try_match_with_targets(
-          source_job_id,
-          rest_targets,
-          all_matching_scores,
-          ranked_source_jobs_per_target,
-          mappings
+        # Continue iterating with new mappings
+        iterate_signature_matching(
+          new_mappings,
+          source_workflow,
+          target_workflow,
+          source_adjacency_map,
+          target_adjacency_map,
+          max_iterations - 1
         )
       end
     end
   end
 
-  # Check if a source can claim a target
-  # Returns true if either:
-  # 1. This source is the target's best unmapped choice
-  # 2. All better choices for the target can match elsewhere
-  defp can_claim_target?(
-         source_job_id,
-         target_id,
-         all_matching_scores,
-         ranked_source_jobs_per_target,
-         mappings
+  # Single iteration of signature matching
+  defp attempt_signature_matching(
+         node_mappings,
+         source_workflow,
+         target_workflow,
+         source_adjacency_map,
+         target_adjacency_map
        ) do
-    # Get all source jobs ranked for this target
-    target_preferences = Map.get(ranked_source_jobs_per_target, target_id, [])
+    # Get unmapped source jobs
+    unmapped_source_jobs =
+      Enum.reject(source_workflow.jobs, fn job ->
+        Map.has_key?(node_mappings, job.id)
+      end)
 
-    # Find unmapped sources that this target prefers
-    better_sources =
-      target_preferences
-      |> Enum.take_while(fn s -> s != source_job_id end)
-      |> Enum.filter(fn s -> not Map.has_key?(mappings, s) end)
-
-    # If no better unmapped sources, we can claim
-    if Enum.empty?(better_sources) do
-      true
-    else
-      # Check if all better sources can match with other targets they prefer more
-      Enum.all?(better_sources, fn better_source_id ->
-        can_match_elsewhere?(
-          better_source_id,
-          target_id,
-          all_matching_scores,
-          ranked_source_jobs_per_target,
-          mappings
+    # Process each unmapped source job
+    Enum.reduce(unmapped_source_jobs, node_mappings, fn source_job, acc ->
+      candidates =
+        find_signature_candidates(
+          source_job,
+          target_workflow.jobs,
+          acc,
+          source_adjacency_map,
+          target_adjacency_map
         )
+
+      case candidates do
+        [single_candidate] ->
+          # Exactly one candidate - accept immediately
+          Map.put(acc, source_job.id, single_candidate.id)
+
+        multiple_candidates when length(multiple_candidates) > 1 ->
+          # Multiple candidates - use job body matching
+          best_match = find_best_match_by_body(source_job, multiple_candidates)
+
+          if best_match do
+            Map.put(acc, source_job.id, best_match.id)
+          else
+            acc
+          end
+
+        [] ->
+          # No candidates - leave unmapped for this iteration
+          acc
+      end
+    end)
+  end
+
+  # Find target job candidates based on parent/children signatures
+  defp find_signature_candidates(
+         source_job,
+         target_jobs,
+         node_mappings,
+         source_adjacency_map,
+         target_adjacency_map
+       ) do
+    # Get already mapped targets to exclude
+    mapped_target_ids = Map.values(node_mappings)
+
+    # Filter to unmapped target jobs
+    available_targets =
+      Enum.reject(target_jobs, fn job -> job.id in mapped_target_ids end)
+
+    # Get parent and children signatures for source job
+    source_parents =
+      get_mapped_parents(source_job.id, source_adjacency_map, node_mappings)
+
+    source_children =
+      get_mapped_children(source_job.id, source_adjacency_map, node_mappings)
+
+    # Only proceed if we have at least one mapped parent or child
+    # This ensures we only match based on actual signature information
+    if Enum.empty?(source_parents) and Enum.empty?(source_children) do
+      []
+    else
+      # Filter candidates by parent/children signatures
+      Enum.filter(available_targets, fn target_job ->
+        target_parents = get_parents(target_job.id, target_adjacency_map)
+        target_children = get_children(target_job.id, target_adjacency_map)
+
+        parent_match =
+          Enum.empty?(source_parents) or
+            MapSet.equal?(MapSet.new(source_parents), MapSet.new(target_parents))
+
+        children_match =
+          Enum.empty?(source_children) or
+            MapSet.equal?(
+              MapSet.new(source_children),
+              MapSet.new(target_children)
+            )
+
+        parent_match and children_match
       end)
     end
   end
 
-  # Check if a source can match with a target other than the given excluded_target
-  defp can_match_elsewhere?(
-         source_job_id,
-         excluded_target_id,
-         all_matching_scores,
-         ranked_source_jobs_per_target,
-         mappings
-       ) do
-    # Get this source's preferences
-    source_targets = Map.get(all_matching_scores, source_job_id, [])
-
-    # Get targets this source prefers over or equal to the excluded target
-    preferred_targets =
-      source_targets
-      |> Enum.take_while(fn {target_id, _} ->
-        # Take targets until we reach the excluded one (not including it)
-        target_id != excluded_target_id
-      end)
-      |> Enum.map(fn {target_id, _} -> target_id end)
-      |> Enum.reject(fn target_id ->
-        # Only consider unmapped targets
-        target_id in Map.values(mappings)
-      end)
-
-    # Check if source can claim any of these preferred targets
-    Enum.any?(preferred_targets, fn alt_target_id ->
-      # Recursively check if source can claim this alternative target
-      can_claim_target?(
-        source_job_id,
-        alt_target_id,
-        all_matching_scores,
-        ranked_source_jobs_per_target,
-        mappings
-      )
-    end)
+  # Get mapped parent IDs for a source job
+  defp get_mapped_parents(job_id, adjacency_map, node_mappings) do
+    get_parents(job_id, adjacency_map)
+    |> Enum.map(fn parent_id -> Map.get(node_mappings, parent_id) end)
+    |> Enum.reject(&is_nil/1)
   end
 
-  defp sort_matching_source_jobs(target_job, source_jobs_matching_scores) do
-    source_jobs_matching_scores
-    |> Enum.map(fn {source_job_id, target_scores} ->
-      scores = Map.get(target_scores, target_job.id)
-
-      # Calculate total score (sum of all individual scores)
-      total_score =
-        if scores do
-          scores |> Map.values() |> Enum.sum()
-        else
-          0
-        end
-
-      {source_job_id, total_score}
-    end)
-    |> Enum.sort_by(fn {_source_job_id, score} -> score end, :desc)
-    |> Enum.map(fn {source_job_id, _score} -> source_job_id end)
+  # Get mapped children IDs for a source job
+  defp get_mapped_children(job_id, adjacency_map, node_mappings) do
+    get_children(job_id, adjacency_map)
+    |> Enum.map(fn child_id -> Map.get(node_mappings, child_id) end)
+    |> Enum.reject(&is_nil/1)
   end
 
-  defp calculate_job_match_scores(
-         source_job,
-         _source_workflow,
-         source_adjacency_map,
-         target_workflow,
-         target_adjacency_map
-       ) do
-    source_depths = calculate_node_depth(source_adjacency_map, source_job.id)
+  # Get parent IDs for a job
+  defp get_parents(job_id, adjacency_map) do
+    adjacency_map
+    |> Enum.filter(fn {_parent_id, children} -> job_id in children end)
+    |> Enum.map(fn {parent_id, _children} -> parent_id end)
+  end
 
-    {source_adaptor, _vsn} =
-      AdaptorRegistry.resolve_package_name(source_job.adaptor)
+  # Get children IDs for a job
+  defp get_children(job_id, adjacency_map) do
+    Map.get(adjacency_map, job_id, [])
+  end
 
-    # Calculate scores for each target job
-    Enum.reduce(target_workflow.jobs, %{}, fn target_job, acc ->
-      name_score =
-        String.jaro_distance(source_job.name || "", target_job.name || "")
+  # Find best match among candidates using job body comparison
+  defp find_best_match_by_body(source_job, candidates) do
+    source_body = source_job.body || ""
 
-      {target_adaptor, _vsn} =
-        AdaptorRegistry.resolve_package_name(target_job.adaptor)
-
-      adaptor_score = if target_adaptor == source_adaptor, do: 1, else: 0
-
-      target_depths = calculate_node_depth(target_adjacency_map, target_job.id)
-
-      depth_score =
-        if Enum.any?(source_depths, &(&1 in target_depths)), do: 1, else: 0
-
-      Map.put(acc, target_job.id, %{
-        name: name_score,
-        adaptor: adaptor_score,
-        depth: depth_score
-      })
+    candidates
+    |> Enum.map(fn candidate ->
+      candidate_body = candidate.body || ""
+      similarity = String.jaro_distance(source_body, candidate_body)
+      {candidate, similarity}
     end)
+    |> Enum.max_by(fn {_candidate, similarity} -> similarity end, fn -> nil end)
+    |> case do
+      {candidate, similarity} when similarity > 0.8 -> candidate
+      _ -> nil
+    end
+  end
+
+  # Step 3: Handle remaining unmapped jobs according to the rules:
+  # - Unmapped target jobs -> marked for deletion
+  # - Unmapped source jobs -> added as new jobs
+  # - Exception: if exactly 1 unmapped source and 1 unmapped target, map them together
+  defp map_remaining_jobs(node_mappings, source_workflow, target_workflow) do
+    # Get unmapped source jobs
+    unmapped_source_jobs =
+      Enum.reject(source_workflow.jobs, fn job ->
+        Map.has_key?(node_mappings, job.id)
+      end)
+
+    # Get unmapped target jobs
+    mapped_target_ids = Map.values(node_mappings)
+
+    unmapped_target_jobs =
+      Enum.reject(target_workflow.jobs, fn job ->
+        job.id in mapped_target_ids
+      end)
+
+    # Special case: exactly 1 unmapped source and 1 unmapped target
+    case {unmapped_source_jobs, unmapped_target_jobs} do
+      {[single_source], [single_target]} ->
+        # Map the single remaining source to single remaining target
+        Map.put(node_mappings, single_source.id, single_target.id)
+
+      _ ->
+        # Normal case: unmapped source jobs will be created as new,
+        # unmapped target jobs will be marked for deletion in build_merged_jobs
+        node_mappings
+    end
   end
 
   # Get all nodes from a workflow (jobs + triggers)
-  defp get_all_nodes(workflow) do
-    workflow.jobs ++ workflow.triggers
-  end
+  # defp get_all_nodes(workflow) do
+  #   workflow.jobs ++ workflow.triggers
+  # end
 
-  defp find_node_by_id(nodes, id) do
-    Enum.find(nodes, &(&1.id == id))
-  end
+  # defp find_node_by_id(nodes, id) do
+  #   Enum.find(nodes, &(&1.id == id))
+  # end
 
   # Get all edges as parent -> [children] map
   defp build_workflow_parent_children_map(workflow) do
@@ -458,29 +451,29 @@ defmodule Lightning.Projects.MergeProjects do
   # Calculate all possible depths of a node in the workflow DAG
   # Returns a list of depths from all possible paths
   # Depth starts at 1 for root nodes
-  defp calculate_node_depth(parent_children_map, node_id) do
-    parents =
-      parent_children_map
-      |> Enum.filter(fn {_parent_id, children} ->
-        node_id in children
-      end)
-      |> Enum.map(fn {parent_id, _children} -> parent_id end)
+  # defp calculate_node_depth(parent_children_map, node_id) do
+  #   parents =
+  #     parent_children_map
+  #     |> Enum.filter(fn {_parent_id, children} ->
+  #       node_id in children
+  #     end)
+  #     |> Enum.map(fn {parent_id, _children} -> parent_id end)
 
-    if Enum.empty?(parents) do
-      # This is a root node
-      [1]
-    else
-      # The + 1 represents moving one level deeper in the DAG.
-      # Each child is one step further from the root than its parent.
-      parents
-      |> Enum.flat_map(fn parent_id ->
-        calculate_node_depth(parent_children_map, parent_id)
-      end)
-      |> Enum.map(&(&1 + 1))
-      |> Enum.uniq()
-      |> Enum.sort()
-    end
-  end
+  #   if Enum.empty?(parents) do
+  #     # This is a root node
+  #     [1]
+  #   else
+  #     # The + 1 represents moving one level deeper in the DAG.
+  #     # Each child is one step further from the root than its parent.
+  #     parents
+  #     |> Enum.flat_map(fn parent_id ->
+  #       calculate_node_depth(parent_children_map, parent_id)
+  #     end)
+  #     |> Enum.map(&(&1 + 1))
+  #     |> Enum.uniq()
+  #     |> Enum.sort()
+  #   end
+  # end
 
   defp find_edge(edges, source_node_id, target_node_id) do
     Enum.find(edges, fn edge ->
