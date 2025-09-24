@@ -275,10 +275,10 @@ defmodule Lightning.Projects.MergeProjects do
       end)
       |> Enum.sort_by(
         fn job ->
-          parents = get_mapped_parents(job, source_adjacency_map, node_mappings)
+          parents = get_parents(job, source_adjacency_map)
 
           children =
-            get_mapped_children(job, source_adjacency_map, node_mappings)
+            get_children(job, source_adjacency_map)
 
           Enum.count(parents) + Enum.count(children)
         end,
@@ -350,23 +350,49 @@ defmodule Lightning.Projects.MergeProjects do
         get_children(parent_id, target_adjacency_map)
       end)
 
-    candidate_ids =
-      if length(target_candidates_from_parents) == 1 do
-        target_candidates_from_parents
-      else
-        target_candidates_from_children =
-          Enum.flat_map(mapped_source_children, fn child_id ->
-            get_parents(child_id, target_adjacency_map)
-          end)
+    target_candidates_from_children =
+      Enum.flat_map(mapped_source_children, fn child_id ->
+        get_parents(child_id, target_adjacency_map)
+      end)
 
-        MapSet.union(
-          MapSet.new(target_candidates_from_parents),
-          MapSet.new(target_candidates_from_children)
-        )
-        |> MapSet.to_list()
+    # Prioritize candidates that match both parent and children constraints
+    candidates_from_both =
+      MapSet.intersection(
+        MapSet.new(target_candidates_from_parents),
+        MapSet.new(target_candidates_from_children)
+      )
+      |> MapSet.to_list()
+
+    candidate_ids =
+      cond do
+        # If we have candidates that satisfy both constraints, use only those
+        length(candidates_from_both) > 0 ->
+          candidates_from_both
+
+        # If we have a single parent candidate, prefer it
+        length(target_candidates_from_parents) == 1 ->
+          target_candidates_from_parents
+
+        # Otherwise, union parent and children candidates
+        true ->
+          MapSet.union(
+            MapSet.new(target_candidates_from_parents),
+            MapSet.new(target_candidates_from_children)
+          )
+          |> MapSet.to_list()
       end
 
-    Enum.filter(available_targets, fn target -> target.id in candidate_ids end)
+    available_targets
+    |> Enum.filter(fn target -> target.id in candidate_ids end)
+    |> Enum.sort_by(
+      fn target ->
+        # Sort by number of children (desc), then by number of parents (desc) for tie-breaking
+        children_count = target.id |> get_children(target_adjacency_map) |> Enum.count()
+        parents_count = target.id |> get_parents(target_adjacency_map) |> Enum.count()
+        {children_count, parents_count}
+      end,
+      :desc
+    )
   end
 
   # Get mapped parent IDs for a source job
