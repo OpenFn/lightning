@@ -101,19 +101,8 @@ defmodule LightningWeb.Pagination do
   slot :action, required: false
 
   def pagination_bar(assigns) do
-    rounded_class =
-      case assigns.rounded do
-        "none" -> ""
-        size -> "rounded-b-#{size}"
-      end
-
-    assigns = assign(assigns, :rounded_class, rounded_class)
-
     ~H"""
-    <div class={[
-      "bg-white px-4 py-3 flex items-center justify-between sm:px-6",
-      @rounded_class
-    ]}>
+    <div class={"bg-white px-4 py-3 flex items-center justify-between sm:px-6 rounded-b-#{@rounded}"}>
       <div class="flex items-center space-x-4">
         <div>
           <%= if @async_page == Phoenix.LiveView.AsyncResult.loading() do %>
