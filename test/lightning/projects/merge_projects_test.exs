@@ -2079,6 +2079,374 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
   end
 
+  describe "merge_workflow/2 - merge attributes" do
+    test "maps workflow-level attributes from source" do
+      # source workflow attributes (name, concurrency, enable_job_logs) are used
+      source_trigger = build(:trigger, type: :webhook)
+      source_job = build(:job, name: "test_job")
+
+      source =
+        build(:workflow,
+          name: "Source Workflow",
+          concurrency: 5,
+          enable_job_logs: true
+        )
+        |> with_trigger(source_trigger)
+        |> with_job(source_job)
+        |> with_edge({source_trigger, source_job})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      target_job = build(:job, name: "test_job")
+
+      target =
+        build(:workflow,
+          name: "Target Workflow",
+          concurrency: 10,
+          enable_job_logs: false
+        )
+        |> with_trigger(target_trigger)
+        |> with_job(target_job)
+        |> with_edge({target_trigger, target_job})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Should preserve target ID but use source attributes
+      assert result["id"] == target.id
+      assert result["name"] == source.name
+      assert result["concurrency"] == source.concurrency
+      assert result["enable_job_logs"] == source.enable_job_logs
+    end
+
+    test "maps job attributes from source" do
+      #  (name, body, adaptor, credentials) are used from source
+      source_trigger = build(:trigger, type: :webhook)
+
+      source_job =
+        build(:job,
+          name: "process_data",
+          body: "fn(state => ({ ...state, processed: true }))",
+          adaptor: "@openfn/language-http@latest"
+        )
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job)
+        |> with_edge({source_trigger, source_job})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+
+      target_job =
+        build(:job,
+          name: "process_data",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest"
+        )
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job)
+        |> with_edge({target_trigger, target_job})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      result_job = hd(result["jobs"])
+      source_job = hd(source.jobs)
+      # Should preserve target ID but use source attributes
+      assert result_job["id"] == target_job.id
+      assert result_job["name"] == source_job.name
+      assert result_job["body"] == source_job.body
+      assert result_job["adaptor"] == source_job.adaptor
+    end
+
+    test "maps trigger attributes from source" do
+      source_trigger =
+        build(:trigger,
+          type: :cron,
+          cron_expression: "0 */2 * * *",
+          comment: "Every 2 hours"
+        )
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> insert()
+
+      target_trigger =
+        build(:trigger,
+          type: :webhook
+        )
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      result_trigger = hd(result["triggers"])
+      source_trigger = hd(source.triggers)
+      # Should preserve target ID but use source attributes
+      assert result_trigger["id"] == target_trigger.id
+      assert result_trigger["type"] == source_trigger.type
+      assert result_trigger["cron_expression"] == source_trigger.cron_expression
+      assert result_trigger["comment"] == source_trigger.comment
+    end
+
+    test "maps edge attributes from source" do
+      # Test that edge attributes (condition_type, condition_expression, etc.) are used from source
+      source_trigger = build(:trigger, type: :webhook)
+      source_job = build(:job, name: "test_job")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job)
+        |> with_edge({source_trigger, source_job},
+          condition_type: :js_expression,
+          condition_expression: "state.shouldProcess",
+          condition_label: "Process if flag is set",
+          enabled: false
+        )
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      target_job = build(:job, name: "test_job")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job)
+        |> with_edge({target_trigger, target_job},
+          condition_type: :always,
+          condition_expression: nil,
+          condition_label: nil,
+          enabled: true
+        )
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      result_edge = hd(result["edges"])
+      target_edge = hd(target.edges)
+      source_edge = hd(source.edges)
+
+      # Should preserve target ID but use source attributes
+      assert result_edge["id"] == target_edge.id
+      assert result_edge["condition_type"] == source_edge.condition_type
+
+      assert result_edge["condition_expression"] ==
+               source_edge.condition_expression
+
+      assert result_edge["condition_label"] == source_edge.condition_label
+      assert result_edge["enabled"] == source_edge.enabled
+    end
+
+    test "maps workflow positions correctly" do
+      source_trigger = build(:trigger, type: :webhook)
+      source_job_a = build(:job, name: "job_a")
+      source_job_b = build(:job, name: "job_b")
+
+      # Source has specific positions
+      source_positions = %{
+        source_trigger.id => %{"x" => 100, "y" => 200},
+        source_job_a.id => %{"x" => 300, "y" => 400},
+        source_job_b.id => %{"x" => 500, "y" => 600}
+      }
+
+      source =
+        build(:workflow, positions: source_positions)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job_a)
+        |> with_job(source_job_b)
+        |> with_edge({source_trigger, source_job_a})
+        |> with_edge({source_job_a, source_job_b})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      target_job_a = build(:job, name: "job_a")
+      target_job_b = build(:job, name: "job_b")
+
+      # Target has different positions
+      target_positions = %{
+        target_trigger.id => %{"x" => 0, "y" => 0},
+        target_job_a.id => %{"x" => 0, "y" => 0},
+        target_job_b.id => %{"x" => 0, "y" => 0}
+      }
+
+      target =
+        build(:workflow, positions: target_positions)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job_a)
+        |> with_job(target_job_b)
+        |> with_edge({target_trigger, target_job_a})
+        |> with_edge({target_job_a, target_job_b})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Positions should be from source but with target IDs
+      expected_positions = %{
+        target_trigger.id => %{"x" => 100, "y" => 200},
+        target_job_a.id => %{"x" => 300, "y" => 400},
+        target_job_b.id => %{"x" => 500, "y" => 600}
+      }
+
+      assert result["positions"] == expected_positions
+    end
+
+    test "handles missing positions gracefully" do
+      # Test when source has no positions defined
+      source_trigger = build(:trigger, type: :webhook)
+      source_job = build(:job, name: "test_job")
+
+      source =
+        build(:workflow, positions: nil)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job)
+        |> with_edge({source_trigger, source_job})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      target_job = build(:job, name: "test_job")
+
+      target =
+        build(:workflow,
+          positions: %{target_job.id => %{"x" => 100, "y" => 200}}
+        )
+        |> with_trigger(target_trigger)
+        |> with_job(target_job)
+        |> with_edge({target_trigger, target_job})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Should result in empty positions
+      assert result["positions"] == %{}
+    end
+
+    test "maps positions for renamed jobs correctly" do
+      source_trigger = build(:trigger, type: :webhook)
+      source_job_a = build(:job, name: "source_job")
+
+      source_positions = %{
+        source_job_a.id => %{"x" => 100, "y" => 200}
+      }
+
+      source =
+        build(:workflow, positions: source_positions)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job_a)
+        |> with_edge({source_trigger, source_job_a})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      target_job_x = build(:job, name: "target_job")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job_x)
+        |> with_edge({target_trigger, target_job_x})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Position should be mapped to target job ID but preserve source coordinates
+      expected_positions = %{
+        target_job_x.id => %{"x" => 100, "y" => 200}
+      }
+
+      assert result["positions"] == expected_positions
+    end
+
+    test "preserves webhook trigger custom_path" do
+      source_trigger =
+        build(:trigger,
+          type: :webhook,
+          custom_path: "/custom/webhook/path"
+        )
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> insert()
+
+      target_trigger =
+        build(:trigger,
+          type: :webhook,
+          custom_path: "/different/path"
+        )
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      result_trigger = hd(result["triggers"])
+      source_trigger = hd(source.triggers)
+      assert result_trigger["custom_path"] == source_trigger.custom_path
+    end
+
+    test "preserves kafka trigger configuration" do
+      # Test that kafka trigger configuration is preserved from source
+      source_kafka_config = %{
+        "hosts" => ["localhost:9092"],
+        "topic" => "source_topic",
+        "partition" => 0
+      }
+
+      source_trigger =
+        build(:trigger,
+          type: :kafka,
+          kafka_configuration: source_kafka_config
+        )
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> insert()
+
+      target_kafka_config = %{
+        "hosts" => ["different:9092"],
+        "topic" => "target_topic",
+        "partition" => 1
+      }
+
+      target_trigger =
+        build(:trigger,
+          type: :kafka,
+          kafka_configuration: target_kafka_config
+        )
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      result_trigger = hd(result["triggers"])
+      # Kafka configuration should contain the source values (as a struct)
+      kafka_config = result_trigger["kafka_configuration"]
+
+      # The kafka_configuration appears to be a mix of struct fields and map values
+      # Check that the source values are preserved in the map part
+      assert Map.get(kafka_config, "hosts") == source_kafka_config["hosts"]
+      assert Map.get(kafka_config, "topic") == source_kafka_config["topic"]
+
+      assert Map.get(kafka_config, "partition") ==
+               source_kafka_config["partition"]
+    end
+  end
+
   defp find_edge_by_names(workflow, source_name, target_name) do
     workflow = stringify_keys(workflow)
 
