@@ -170,7 +170,13 @@ defmodule Lightning.Projects.MergeProjects do
       )
 
     # Step 3: Map any remaining unmapped source jobs to available target jobs
-    map_remaining_jobs(node_mappings, source_workflow, target_workflow)
+    map_remaining_jobs(
+      node_mappings,
+      source_workflow,
+      target_workflow,
+      source_adjacency_map,
+      target_adjacency_map
+    )
   end
 
   # Step 1: Match jobs by exact name
@@ -259,13 +265,25 @@ defmodule Lightning.Projects.MergeProjects do
          source_workflow,
          target_workflow,
          source_adjacency_map,
-         target_adjacency_map
+         target_adjacency_map,
+         last_iteration? \\ false
        ) do
     # Get unmapped source jobs
     unmapped_source_jobs =
       Enum.reject(source_workflow.jobs, fn job ->
         Map.has_key?(node_mappings, job.id)
       end)
+      |> Enum.sort_by(
+        fn job ->
+          parents = get_mapped_parents(job, source_adjacency_map, node_mappings)
+
+          children =
+            get_mapped_children(job, source_adjacency_map, node_mappings)
+
+          Enum.count(parents) + Enum.count(children)
+        end,
+        :desc
+      )
 
     # Process each unmapped source job
     Enum.reduce(unmapped_source_jobs, node_mappings, fn source_job, acc ->
@@ -285,12 +303,17 @@ defmodule Lightning.Projects.MergeProjects do
 
         multiple_candidates when length(multiple_candidates) > 1 ->
           # Multiple candidates - use job body matching
-          best_match = find_best_match_by_body(source_job, multiple_candidates)
+          body_matches = filter_matching_by_body(source_job, multiple_candidates)
 
-          if best_match do
-            Map.put(acc, source_job.id, best_match.id)
-          else
-            acc
+          case body_matches do
+            [single_match] ->
+              Map.put(acc, source_job.id, single_match.id)
+
+            [position_match | _rest] when last_iteration? ->
+              Map.put(acc, source_job.id, position_match.id)
+
+            _other ->
+              acc
           end
 
         [] ->
@@ -316,36 +339,34 @@ defmodule Lightning.Projects.MergeProjects do
       Enum.reject(target_jobs, fn job -> job.id in mapped_target_ids end)
 
     # Get parent and children signatures for source job
-    source_parents =
+    mapped_source_parents =
       get_mapped_parents(source_job.id, source_adjacency_map, node_mappings)
 
-    source_children =
+    mapped_source_children =
       get_mapped_children(source_job.id, source_adjacency_map, node_mappings)
 
-    # Only proceed if we have at least one mapped parent or child
-    # This ensures we only match based on actual signature information
-    if Enum.empty?(source_parents) and Enum.empty?(source_children) do
-      []
-    else
-      # Filter candidates by parent/children signatures
-      Enum.filter(available_targets, fn target_job ->
-        target_parents = get_parents(target_job.id, target_adjacency_map)
-        target_children = get_children(target_job.id, target_adjacency_map)
-
-        parent_match =
-          Enum.empty?(source_parents) or
-            MapSet.equal?(MapSet.new(source_parents), MapSet.new(target_parents))
-
-        children_match =
-          Enum.empty?(source_children) or
-            MapSet.equal?(
-              MapSet.new(source_children),
-              MapSet.new(target_children)
-            )
-
-        parent_match and children_match
+    target_candidates_from_parents =
+      Enum.flat_map(mapped_source_parents, fn parent_id ->
+        get_children(parent_id, target_adjacency_map)
       end)
-    end
+
+    candidate_ids =
+      if length(target_candidates_from_parents) == 1 do
+        target_candidates_from_parents
+      else
+        target_candidates_from_children =
+          Enum.flat_map(mapped_source_children, fn child_id ->
+            get_parents(child_id, target_adjacency_map)
+          end)
+
+        MapSet.union(
+          MapSet.new(target_candidates_from_parents),
+          MapSet.new(target_candidates_from_children)
+        )
+        |> MapSet.to_list()
+      end
+
+    Enum.filter(available_targets, fn target -> target.id in candidate_ids end)
   end
 
   # Get mapped parent IDs for a source job
@@ -374,28 +395,27 @@ defmodule Lightning.Projects.MergeProjects do
     Map.get(adjacency_map, job_id, [])
   end
 
-  # Find best match among candidates using job body comparison
-  defp find_best_match_by_body(source_job, candidates) do
+  # Find match among candidates using job body comparison
+  defp filter_matching_by_body(source_job, candidates) do
     source_body = source_job.body || ""
 
     candidates
-    |> Enum.map(fn candidate ->
+    |> Enum.filter(fn candidate ->
       candidate_body = candidate.body || ""
-      similarity = String.jaro_distance(source_body, candidate_body)
-      {candidate, similarity}
+      String.trim(source_body) == String.trim(candidate_body)
     end)
-    |> Enum.max_by(fn {_candidate, similarity} -> similarity end, fn -> nil end)
-    |> case do
-      {candidate, similarity} when similarity > 0.8 -> candidate
-      _ -> nil
-    end
   end
 
-  # Step 3: Handle remaining unmapped jobs according to the rules:
-  # - Unmapped target jobs -> marked for deletion
-  # - Unmapped source jobs -> added as new jobs
-  # - Exception: if exactly 1 unmapped source and 1 unmapped target, map them together
-  defp map_remaining_jobs(node_mappings, source_workflow, target_workflow) do
+  # Step 3: Handle remaining unmapped jobs:
+  # - if exactly 1 unmapped source and 1 unmapped target, map them together
+  # - otherwise, attempt the signature mapping one last time.
+  defp map_remaining_jobs(
+         node_mappings,
+         source_workflow,
+         target_workflow,
+         source_adjacency_map,
+         target_adjacency_map
+       ) do
     # Get unmapped source jobs
     unmapped_source_jobs =
       Enum.reject(source_workflow.jobs, fn job ->
@@ -417,20 +437,17 @@ defmodule Lightning.Projects.MergeProjects do
         Map.put(node_mappings, single_source.id, single_target.id)
 
       _ ->
-        # Normal case: unmapped source jobs will be created as new,
-        # unmapped target jobs will be marked for deletion in build_merged_jobs
-        node_mappings
+        # attempt last signature mapping
+        attempt_signature_matching(
+          node_mappings,
+          source_workflow,
+          target_workflow,
+          source_adjacency_map,
+          target_adjacency_map,
+          true
+        )
     end
   end
-
-  # Get all nodes from a workflow (jobs + triggers)
-  # defp get_all_nodes(workflow) do
-  #   workflow.jobs ++ workflow.triggers
-  # end
-
-  # defp find_node_by_id(nodes, id) do
-  #   Enum.find(nodes, &(&1.id == id))
-  # end
 
   # Get all edges as parent -> [children] map
   defp build_workflow_parent_children_map(workflow) do
@@ -447,33 +464,6 @@ defmodule Lightning.Projects.MergeProjects do
       end
     end)
   end
-
-  # Calculate all possible depths of a node in the workflow DAG
-  # Returns a list of depths from all possible paths
-  # Depth starts at 1 for root nodes
-  # defp calculate_node_depth(parent_children_map, node_id) do
-  #   parents =
-  #     parent_children_map
-  #     |> Enum.filter(fn {_parent_id, children} ->
-  #       node_id in children
-  #     end)
-  #     |> Enum.map(fn {parent_id, _children} -> parent_id end)
-
-  #   if Enum.empty?(parents) do
-  #     # This is a root node
-  #     [1]
-  #   else
-  #     # The + 1 represents moving one level deeper in the DAG.
-  #     # Each child is one step further from the root than its parent.
-  #     parents
-  #     |> Enum.flat_map(fn parent_id ->
-  #       calculate_node_depth(parent_children_map, parent_id)
-  #     end)
-  #     |> Enum.map(&(&1 + 1))
-  #     |> Enum.uniq()
-  #     |> Enum.sort()
-  #   end
-  # end
 
   defp find_edge(edges, source_node_id, target_node_id) do
     Enum.find(edges, fn edge ->
