@@ -91,26 +91,13 @@ defmodule Lightning.Projects.MergeProjects do
   def merge_workflow(source_workflow, target_workflow) do
     node_mappings = map_workflow_node_ids(source_workflow, target_workflow)
 
-    # Build the merged workflow structure using the mappings
-    build_merged_workflow(
-      source_workflow,
-      target_workflow,
-      node_mappings
-    )
+    build_merged_workflow(source_workflow, target_workflow, node_mappings)
   end
 
   defp map_workflow_node_ids(source_workflow, target_workflow) do
-    node_mappings = %{}
-
-    # Phase 1: Triggers Mapping
-    node_mappings = map_triggers(node_mappings, source_workflow, target_workflow)
-
-    # Phase 2: Jobs Mapping
-    map_jobs(
-      node_mappings,
-      source_workflow,
-      target_workflow
-    )
+    %{}
+    |> map_triggers(source_workflow, target_workflow)
+    |> map_jobs(source_workflow, target_workflow)
   end
 
   defp map_triggers(node_mappings, %{triggers: [source_trigger]}, %{
@@ -135,9 +122,6 @@ defmodule Lightning.Projects.MergeProjects do
   end
 
   defp find_matching_trigger(source_trigger, target_triggers, node_mappings) do
-    # Filter out already mapped triggers
-    # Match trigger by type
-
     target_triggers
     |> Enum.reject(fn target ->
       target.id in Map.values(node_mappings)
@@ -161,7 +145,7 @@ defmodule Lightning.Projects.MergeProjects do
 
     # Step 2: Parent/children signature matching for remaining unmapped jobs
     node_mappings =
-      match_jobs_by_signatures(
+      match_jobs_by_structure(
         node_mappings,
         source_workflow,
         target_workflow,
@@ -169,7 +153,7 @@ defmodule Lightning.Projects.MergeProjects do
         target_adjacency_map
       )
 
-    # Step 3: Map any remaining unmapped source jobs to available target jobs
+    # Step 3: Try to map any remaining unmapped source jobs
     map_remaining_jobs(
       node_mappings,
       source_workflow,
@@ -179,14 +163,11 @@ defmodule Lightning.Projects.MergeProjects do
     )
   end
 
-  # Step 1: Match jobs by exact name
   defp match_jobs_by_name(node_mappings, source_workflow, target_workflow) do
     Enum.reduce(source_workflow.jobs, node_mappings, fn source_job, acc ->
-      # Skip if already mapped
       if Map.has_key?(acc, source_job.id) do
         acc
       else
-        # Find target job with exact name match
         target_job =
           Enum.find(target_workflow.jobs, fn target_job ->
             target_job.name == source_job.name and
@@ -202,16 +183,14 @@ defmodule Lightning.Projects.MergeProjects do
     end)
   end
 
-  # Step 2: Match jobs by parent/children signatures (iterative)
-  defp match_jobs_by_signatures(
+  defp match_jobs_by_structure(
          node_mappings,
          source_workflow,
          target_workflow,
          source_adjacency_map,
          target_adjacency_map
        ) do
-    # Iterate until no more mappings are found
-    iterate_signature_matching(
+    iterate_structure_matching(
       node_mappings,
       source_workflow,
       target_workflow,
@@ -221,8 +200,7 @@ defmodule Lightning.Projects.MergeProjects do
     )
   end
 
-  # Iteratively match jobs until no more progress is made
-  defp iterate_signature_matching(
+  defp iterate_structure_matching(
          node_mappings,
          source_workflow,
          target_workflow,
@@ -234,7 +212,7 @@ defmodule Lightning.Projects.MergeProjects do
       node_mappings
     else
       new_mappings =
-        attempt_signature_matching(
+        attempt_structural_matching(
           node_mappings,
           source_workflow,
           target_workflow,
@@ -246,8 +224,7 @@ defmodule Lightning.Projects.MergeProjects do
       if map_size(new_mappings) == map_size(node_mappings) do
         new_mappings
       else
-        # Continue iterating with new mappings
-        iterate_signature_matching(
+        iterate_structure_matching(
           new_mappings,
           source_workflow,
           target_workflow,
@@ -259,8 +236,7 @@ defmodule Lightning.Projects.MergeProjects do
     end
   end
 
-  # Single iteration of signature matching
-  defp attempt_signature_matching(
+  defp attempt_structural_matching(
          node_mappings,
          source_workflow,
          target_workflow,
@@ -268,27 +244,14 @@ defmodule Lightning.Projects.MergeProjects do
          target_adjacency_map,
          last_iteration? \\ false
        ) do
-    # Get unmapped source jobs
     unmapped_source_jobs =
       Enum.reject(source_workflow.jobs, fn job ->
         Map.has_key?(node_mappings, job.id)
       end)
-      |> Enum.sort_by(
-        fn job ->
-          parents = get_parents(job, source_adjacency_map)
 
-          children =
-            get_children(job, source_adjacency_map)
-
-          Enum.count(parents) + Enum.count(children)
-        end,
-        :desc
-      )
-
-    # Process each unmapped source job
     Enum.reduce(unmapped_source_jobs, node_mappings, fn source_job, acc ->
       candidates =
-        find_signature_candidates(
+        find_matching_candidates_by_structure(
           source_job,
           target_workflow.jobs,
           acc,
@@ -324,7 +287,7 @@ defmodule Lightning.Projects.MergeProjects do
   end
 
   # Find target job candidates based on parent/children signatures
-  defp find_signature_candidates(
+  defp find_matching_candidates_by_structure(
          source_job,
          target_jobs,
          node_mappings,
@@ -387,8 +350,12 @@ defmodule Lightning.Projects.MergeProjects do
     |> Enum.sort_by(
       fn target ->
         # Sort by number of children (desc), then by number of parents (desc) for tie-breaking
-        children_count = target.id |> get_children(target_adjacency_map) |> Enum.count()
-        parents_count = target.id |> get_parents(target_adjacency_map) |> Enum.count()
+        children_count =
+          target.id |> get_children(target_adjacency_map) |> Enum.count()
+
+        parents_count =
+          target.id |> get_parents(target_adjacency_map) |> Enum.count()
+
         {children_count, parents_count}
       end,
       :desc
@@ -432,7 +399,6 @@ defmodule Lightning.Projects.MergeProjects do
     end)
   end
 
-  # Step 3: Handle remaining unmapped jobs:
   # - if exactly 1 unmapped source and 1 unmapped target, map them together
   # - otherwise, attempt the signature mapping one last time.
   defp map_remaining_jobs(
@@ -448,7 +414,6 @@ defmodule Lightning.Projects.MergeProjects do
         Map.has_key?(node_mappings, job.id)
       end)
 
-    # Get unmapped target jobs
     mapped_target_ids = Map.values(node_mappings)
 
     unmapped_target_jobs =
@@ -464,7 +429,7 @@ defmodule Lightning.Projects.MergeProjects do
 
       _ ->
         # attempt last signature mapping
-        attempt_signature_matching(
+        attempt_structural_matching(
           node_mappings,
           source_workflow,
           target_workflow,
@@ -502,15 +467,12 @@ defmodule Lightning.Projects.MergeProjects do
     end)
   end
 
-  # Build the final merged workflow structure
   defp build_merged_workflow(source_workflow, target_workflow, node_mappings) do
-    # Separate job and trigger mappings
     source_trigger_ids = Enum.map(source_workflow.triggers, & &1.id)
 
     {trigger_mappings, job_mappings} =
       Map.split(node_mappings, source_trigger_ids)
 
-    # Build merged components
     {job_mappings, merged_jobs} =
       build_merged_jobs(
         source_workflow.jobs,
@@ -682,8 +644,6 @@ defmodule Lightning.Projects.MergeProjects do
 
     merged_from_source ++ deleted_targets
   end
-
-  # Project merging helper functions
 
   defp map_project_workflow_names(source_project, target_project) do
     # Map source workflow names to target workflow IDs using exact name matching
