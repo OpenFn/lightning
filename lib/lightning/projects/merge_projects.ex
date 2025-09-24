@@ -95,21 +95,17 @@ defmodule Lightning.Projects.MergeProjects do
   end
 
   defp map_workflow_node_ids(source_workflow, target_workflow) do
-    %{}
-    |> map_triggers(source_workflow, target_workflow)
+    source_workflow
+    |> map_triggers(target_workflow)
     |> map_jobs(source_workflow, target_workflow)
   end
 
-  defp map_triggers(node_mappings, %{triggers: [source_trigger]}, %{
-         triggers: [target_trigger]
-       }) do
-    Map.put(node_mappings, source_trigger.id, target_trigger.id)
+  defp map_triggers(%{triggers: [source_trigger]}, %{triggers: [target_trigger]}) do
+    Map.new([{source_trigger.id, target_trigger.id}])
   end
 
-  defp map_triggers(node_mappings, source_workflow, target_workflow) do
-    source_workflow.triggers
-    |> Enum.reject(fn trigger -> trigger.id in Map.keys(node_mappings) end)
-    |> Enum.reduce(node_mappings, fn source_trigger, acc ->
+  defp map_triggers(source_workflow, target_workflow) do
+    Enum.reduce(source_workflow.triggers, %{}, fn source_trigger, acc ->
       matched_target =
         find_matching_trigger(source_trigger, target_workflow.triggers, acc)
 

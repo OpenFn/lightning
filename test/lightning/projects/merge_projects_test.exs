@@ -5,111 +5,60 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
   describe "merge_project/2" do
     test "merge project with matching workflow names" do
-      # Generate UUIDs for target project
-      target_project_id = Ecto.UUID.generate()
-      target_workflow_id = Ecto.UUID.generate()
-      source_project_id = Ecto.UUID.generate()
-      source_workflow_id = Ecto.UUID.generate()
+      # Create projects using factory
+      target_project =
+        insert(:project,
+          name: "Target Project",
+          description: "Original description"
+        )
 
-      # Target project with one workflow
-      target_project = %{
-        id: target_project_id,
-        name: "Target Project",
-        description: "Original description",
-        workflows: [
-          %{
-            id: target_workflow_id,
-            name: "shared_workflow",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          }
-        ]
-      }
+      source_project =
+        insert(:project,
+          name: "Source Project",
+          description: "Updated description"
+        )
 
-      # Source project with matching workflow name but different content
-      source_project = %{
-        id: source_project_id,
-        name: "Source Project",
-        description: "Updated description",
-        workflows: [
-          %{
-            id: source_workflow_id,
-            name: "shared_workflow",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          }
-        ]
-      }
+      # Create workflows using factory
+      target_workflow =
+        insert(:workflow, name: "shared_workflow", project: target_project)
+
+      source_workflow =
+        insert(:workflow, name: "shared_workflow", project: source_project)
 
       result = MergeProjects.merge_project(source_project, target_project)
 
       # Should preserve target project ID but use source metadata
-      assert result["id"] == target_project_id
-      assert result["name"] == "Source Project"
-      assert result["description"] == "Updated description"
+      assert result["id"] == target_project.id
+      assert result["name"] == source_project.name
+      assert result["description"] == source_project.description
 
       # Should have one workflow (merged)
       assert length(result["workflows"]) == 1
       workflow = hd(result["workflows"])
 
       # Workflow should preserve target ID but use source name
-      assert workflow["id"] == target_workflow_id
-      assert workflow["name"] == "shared_workflow"
+      assert workflow["id"] == target_workflow.id
+      assert workflow["name"] == source_workflow.name
 
       # Workflow should not be marked for deletion
       refute workflow["delete"]
     end
 
     test "merge project with new workflow in source" do
-      target_project_id = Ecto.UUID.generate()
-      target_workflow_id = Ecto.UUID.generate()
-      source_project_id = Ecto.UUID.generate()
-      source_workflow1_id = Ecto.UUID.generate()
-      source_workflow2_id = Ecto.UUID.generate()
+      # Create projects
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
 
       # Target project with one workflow
-      target_project = %{
-        id: target_project_id,
-        name: "Target Project",
-        workflows: [
-          %{
-            id: target_workflow_id,
-            name: "existing_workflow",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          }
-        ]
-      }
+      target_workflow =
+        insert(:workflow, name: "existing_workflow", project: target_project)
 
       # Source project with existing workflow + new one
-      source_project = %{
-        id: source_project_id,
-        name: "Source Project",
-        workflows: [
-          %{
-            id: source_workflow1_id,
-            name: "existing_workflow",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          },
-          %{
-            id: source_workflow2_id,
-            name: "new_workflow",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          }
-        ]
-      }
+      _source_workflow1 =
+        insert(:workflow, name: "existing_workflow", project: source_project)
+
+      source_workflow2 =
+        insert(:workflow, name: "new_workflow", project: source_project)
 
       result = MergeProjects.merge_project(source_project, target_project)
 
@@ -125,63 +74,32 @@ defmodule Lightning.Projects.MergeProjectsTest do
       existing_workflow =
         Enum.find(result["workflows"], &(&1["name"] == "existing_workflow"))
 
-      assert existing_workflow["id"] == target_workflow_id
+      assert existing_workflow["id"] == target_workflow.id
       refute existing_workflow["delete"]
 
       # New workflow should get a new UUID (not source ID)
       new_workflow =
         Enum.find(result["workflows"], &(&1["name"] == "new_workflow"))
 
-      assert new_workflow["id"] != source_workflow2_id
+      assert new_workflow["id"] != source_workflow2.id
       refute new_workflow["delete"]
     end
 
     test "merge project with removed workflow in source" do
-      target_project_id = Ecto.UUID.generate()
-      target_workflow1_id = Ecto.UUID.generate()
-      target_workflow2_id = Ecto.UUID.generate()
-      source_project_id = Ecto.UUID.generate()
-      source_workflow_id = Ecto.UUID.generate()
+      # Create projects
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
 
       # Target project with two workflows
-      target_project = %{
-        id: target_project_id,
-        name: "Target Project",
-        workflows: [
-          %{
-            id: target_workflow1_id,
-            name: "workflow_to_keep",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          },
-          %{
-            id: target_workflow2_id,
-            name: "workflow_to_remove",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          }
-        ]
-      }
+      target_workflow1 =
+        insert(:workflow, name: "workflow_to_keep", project: target_project)
+
+      target_workflow2 =
+        insert(:workflow, name: "workflow_to_remove", project: target_project)
 
       # Source project with only one workflow (removed one)
-      source_project = %{
-        id: source_project_id,
-        name: "Source Project",
-        workflows: [
-          %{
-            id: source_workflow_id,
-            name: "workflow_to_keep",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          }
-        ]
-      }
+      _source_workflow =
+        insert(:workflow, name: "workflow_to_keep", project: source_project)
 
       result = MergeProjects.merge_project(source_project, target_project)
 
@@ -191,53 +109,28 @@ defmodule Lightning.Projects.MergeProjectsTest do
       kept_workflow =
         Enum.find(result["workflows"], &(&1["name"] == "workflow_to_keep"))
 
-      assert kept_workflow["id"] == target_workflow1_id
+      assert kept_workflow["id"] == target_workflow1.id
       refute kept_workflow["delete"]
 
       # Removed workflow should be marked for deletion
       deleted_workflow =
-        Enum.find(result["workflows"], &(&1["id"] == target_workflow2_id))
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow2.id))
 
       assert deleted_workflow["delete"]
     end
 
     test "merge project with no matching workflows" do
-      target_project_id = Ecto.UUID.generate()
-      target_workflow_id = Ecto.UUID.generate()
-      source_project_id = Ecto.UUID.generate()
-      source_workflow_id = Ecto.UUID.generate()
+      # Create projects
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
 
       # Target project with one workflow
-      target_project = %{
-        id: target_project_id,
-        name: "Target Project",
-        workflows: [
-          %{
-            id: target_workflow_id,
-            name: "target_workflow",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          }
-        ]
-      }
+      target_workflow =
+        insert(:workflow, name: "target_workflow", project: target_project)
 
       # Source project with completely different workflow
-      source_project = %{
-        id: source_project_id,
-        name: "Source Project",
-        workflows: [
-          %{
-            id: source_workflow_id,
-            name: "source_workflow",
-            triggers: [],
-            jobs: [],
-            edges: [],
-            positions: %{}
-          }
-        ]
-      }
+      source_workflow =
+        insert(:workflow, name: "source_workflow", project: source_project)
 
       result = MergeProjects.merge_project(source_project, target_project)
 
@@ -248,131 +141,68 @@ defmodule Lightning.Projects.MergeProjectsTest do
       new_workflow =
         Enum.find(result["workflows"], &(&1["name"] == "source_workflow"))
 
-      assert new_workflow["id"] != source_workflow_id
+      assert new_workflow["id"] != source_workflow.id
       refute new_workflow["delete"]
 
       # Target workflow should be marked for deletion
       deleted_workflow =
-        Enum.find(result["workflows"], &(&1["id"] == target_workflow_id))
+        Enum.find(result["workflows"], &(&1["id"] == target_workflow.id))
 
       assert deleted_workflow["delete"]
     end
 
     test "merge empty projects" do
-      target_project_id = Ecto.UUID.generate()
-      source_project_id = Ecto.UUID.generate()
-
-      target_project = %{
-        id: target_project_id,
-        name: "Target Project",
-        workflows: []
-      }
-
-      source_project = %{
-        id: source_project_id,
-        name: "Source Project",
-        workflows: []
-      }
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
 
       result = MergeProjects.merge_project(source_project, target_project)
 
       # Should preserve target ID but use source name
-      assert result["id"] == target_project_id
-      assert result["name"] == "Source Project"
+      assert result["id"] == target_project.id
+      assert result["name"] == source_project.name
       assert result["workflows"] == []
     end
 
     test "merge project with workflow containing jobs - integration test" do
       # Test that workflow merging logic works correctly within project merging
-      target_project_id = Ecto.UUID.generate()
-      target_workflow_id = Ecto.UUID.generate()
-      target_trigger_id = Ecto.UUID.generate()
-      target_job_id = Ecto.UUID.generate()
-      target_edge_id = Ecto.UUID.generate()
 
-      source_project_id = Ecto.UUID.generate()
-      source_workflow_id = Ecto.UUID.generate()
+      # Create projects
+      target_project = insert(:project, name: "Target Project")
+      source_project = insert(:project, name: "Source Project")
 
       # Target project with workflow containing a job
-      target_project = %{
-        id: target_project_id,
-        name: "Target Project",
-        workflows: [
-          %{
-            id: target_workflow_id,
-            name: "data_processing",
-            triggers: [
-              %{
-                id: target_trigger_id,
-                name: "webhook_trigger",
-                type: :webhook,
-                enabled: true
-              }
-            ],
-            jobs: [
-              %{
-                id: target_job_id,
-                name: "process_data",
-                body: "fn(s => s)",
-                adaptor: "@openfn/language-common@latest"
-              }
-            ],
-            edges: [
-              %{
-                id: target_edge_id,
-                source_trigger_id: target_trigger_id,
-                source_job_id: nil,
-                target_job_id: target_job_id,
-                condition_type: :always,
-                enabled: true
-              }
-            ],
-            positions: %{}
-          }
-        ]
-      }
+      target_trigger = build(:trigger, type: :webhook)
+
+      target_job =
+        build(:job,
+          name: "process_data",
+          body: "fn(s => s)",
+          adaptor: "@openfn/language-common@latest"
+        )
+
+      target_workflow =
+        build(:workflow, name: "data_processing", project: target_project)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job)
+        |> with_edge({target_trigger, target_job})
+        |> insert()
 
       # Source project with same workflow name but different job adaptor
-      source_project = %{
-        id: source_project_id,
-        name: "Source Project",
-        workflows: [
-          %{
-            id: source_workflow_id,
-            name: "data_processing",
-            triggers: [
-              %{
-                # Same ID to test UUID preservation
-                id: target_trigger_id,
-                name: "webhook_trigger",
-                type: :webhook,
-                enabled: true
-              }
-            ],
-            jobs: [
-              %{
-                # Same ID to test UUID preservation
-                id: target_job_id,
-                name: "process_data",
-                body: "fn(s => s)",
-                # Different adaptor
-                adaptor: "@openfn/language-http@latest"
-              }
-            ],
-            edges: [
-              %{
-                id: target_edge_id,
-                source_trigger_id: target_trigger_id,
-                source_job_id: nil,
-                target_job_id: target_job_id,
-                condition_type: :always,
-                enabled: true
-              }
-            ],
-            positions: %{}
-          }
-        ]
-      }
+      source_trigger = build(:trigger, type: :webhook)
+
+      source_job =
+        build(:job,
+          name: "process_data",
+          body: "fn(s => s)",
+          adaptor: "@openfn/language-http@latest"
+        )
+
+      source_workflow =
+        build(:workflow, name: "data_processing", project: source_project)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job)
+        |> with_edge({source_trigger, source_job})
+        |> insert()
 
       result = MergeProjects.merge_project(source_project, target_project)
 
@@ -381,25 +211,26 @@ defmodule Lightning.Projects.MergeProjectsTest do
       workflow = hd(result["workflows"])
 
       # Workflow should preserve target ID
-      assert workflow["id"] == target_workflow_id
-      assert workflow["name"] == "data_processing"
+      assert workflow["id"] == target_workflow.id
+      assert workflow["name"] == source_workflow.name
 
       # Should have one job with updated adaptor but preserved UUID
       job = hd(workflow["jobs"])
-      assert job["id"] == target_job_id
-      assert job["name"] == "process_data"
+      assert job["id"] == target_job.id
+      assert job["name"] == source_job.name
       # Source adaptor used
-      assert job["adaptor"] == "@openfn/language-http@latest"
+      assert job["adaptor"] == source_job.adaptor
       refute job["delete"]
 
       # Should have one trigger with preserved UUID
       trigger = hd(workflow["triggers"])
-      assert trigger["id"] == target_trigger_id
+      assert trigger["id"] == target_trigger.id
       refute trigger["delete"]
 
       # Should have one edge with preserved UUID
       edge = hd(workflow["edges"])
-      assert edge["id"] == target_edge_id
+      target_edge = hd(target_workflow.edges)
+      assert edge["id"] == target_edge.id
       refute edge["delete"]
     end
   end
@@ -2444,6 +2275,107 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       assert Map.get(kafka_config, "partition") ==
                source_kafka_config["partition"]
+    end
+
+    test "preserves attributes with multiple triggers feeding same job" do
+      # Source workflow - cron trigger only
+      source_cron_trigger =
+        build(:trigger,
+          type: :cron,
+          cron_expression: "0 */6 * * *",
+          comment: "Every 6 hours"
+        )
+
+      source_job =
+        build(:job,
+          name: "process_data",
+          body: "fn(state => ({ ...state, processed: true }))",
+          adaptor: "@openfn/language-http@latest"
+        )
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_cron_trigger)
+        |> with_job(source_job)
+        |> with_edge({source_cron_trigger, source_job})
+        |> insert()
+
+      # Target workflow - webhook + cron triggers with different attributes
+      target_webhook_trigger =
+        build(:trigger,
+          type: :webhook,
+          custom_path: "/target/webhook"
+        )
+
+      target_cron_trigger =
+        build(:trigger,
+          type: :cron,
+          cron_expression: "0 * * * *",
+          comment: "Every hour"
+        )
+
+      target_job =
+        build(:job,
+          name: "process_data",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest"
+        )
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_webhook_trigger)
+        |> with_trigger(target_cron_trigger)
+        |> with_job(target_job)
+        |> with_edge({target_webhook_trigger, target_job})
+        |> with_edge({target_cron_trigger, target_job})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      assert result["id"] == target.id
+
+      assert length(result["triggers"]) == 2
+
+      # Cron trigger should preserve target ID but use source attributes
+      result_cron_trigger = Enum.find(result["triggers"], &(&1["type"] == :cron))
+
+      assert result_cron_trigger["id"] == target_cron_trigger.id
+
+      assert result_cron_trigger["cron_expression"] ==
+               source_cron_trigger.cron_expression
+
+      assert result_cron_trigger["comment"] == source_cron_trigger.comment
+      refute result_cron_trigger["delete"]
+
+      # Webhook trigger is deleted
+      [result_webhook_trigger] = result["triggers"] -- [result_cron_trigger]
+      assert result_webhook_trigger["id"] == target_webhook_trigger.id
+      assert result_webhook_trigger["delete"]
+
+      # Should have 1 job with source attributes but target ID
+      assert length(result["jobs"]) == 1
+      result_job = hd(result["jobs"])
+
+      assert result_job["id"] == target_job.id
+      assert result_job["name"] == source_job.name
+      assert result_job["body"] == source_job.body
+      assert result_job["adaptor"] == source_job.adaptor
+      refute result_job["delete"]
+
+      assert length(result["edges"]) == 2
+
+      cron_edge =
+        Enum.find(
+          result["edges"],
+          &(&1["source_trigger_id"] == target_cron_trigger.id)
+        )
+
+      [webhook_edge] = result["edges"] -- [cron_edge]
+
+      assert webhook_edge["delete"], "webhook edge is deleted"
+
+      assert cron_edge["target_job_id"] == target_job.id
+      refute cron_edge["delete"]
     end
   end
 
