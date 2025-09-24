@@ -35,6 +35,8 @@ and this project adheres to
 - Wrong timestamp information in mini-history for in-progress runs
   [#3579](https://github.com/OpenFn/lightning/pull/3579)
 
+## [v2.14.5] - 2025-09-24
+
 ## [v2.14.5-pre1] - 2025-09-11
 
 ### Added
