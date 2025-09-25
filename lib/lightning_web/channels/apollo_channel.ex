@@ -14,10 +14,19 @@ defmodule LightningWeb.ApolloChannel do
   end
 
   def handle_info({:apollo_event, type, data}, socket) do
+    session_id = socket.assigns[:session_id]
+
     case type do
-      "CHUNK" -> push(socket, "chunk", %{data: data})
-      "STATUS" -> push(socket, "status", %{data: data})
-      _ -> push(socket, "event", %{type: type, data: data})
+      "CHUNK" ->
+        push(socket, "chunk", %{data: data})
+        if session_id, do: broadcast_chunk_to_ui(session_id, data)
+
+      "STATUS" ->
+        push(socket, "status", %{data: data})
+        if session_id, do: broadcast_status_to_ui(session_id, data)
+
+      _ ->
+        push(socket, "event", %{type: type, data: data})
     end
     {:noreply, socket}
   end
@@ -75,5 +84,19 @@ defmodule LightningWeb.ApolloChannel do
     # Now returning a mock stream reference
     stream_ref = :crypto.strong_rand_bytes(16) |> Base.encode64()
     {:ok, stream_ref}
+  end
+
+  defp broadcast_chunk_to_ui(session_id, content) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:update, %{streaming_chunk: %{content: content}}}
+    )
+  end
+
+  defp broadcast_status_to_ui(session_id, status) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:update, %{status_update: %{status: status}}}
+    )
   end
 end
