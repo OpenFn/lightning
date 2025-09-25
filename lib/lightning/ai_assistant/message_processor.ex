@@ -57,6 +57,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     end
   end
 
+
   @doc """
   Defines the job timeout based on Apollo configuration.
 
@@ -123,7 +124,39 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           []
       end
 
-    AiAssistant.query(enriched_session, message.content, options)
+    # Use streaming for job messages
+    stream_job_message(enriched_session, message.content, options)
+  end
+
+  @doc false
+  @spec stream_job_message(AiAssistant.ChatSession.t(), String.t(), keyword()) ::
+          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+  defp stream_job_message(session, content, options) do
+    # For now, start streaming and use existing query as fallback
+    try do
+      start_streaming_request(session, content, options)
+      # Return success immediately - streaming happens async
+      {:ok, session}
+    rescue
+      _ ->
+        # Fallback to non-streaming if streaming fails
+        AiAssistant.query(session, content, options)
+    end
+  end
+
+  @doc false
+  @spec start_streaming_request(AiAssistant.ChatSession.t(), String.t(), keyword()) :: :ok
+  defp start_streaming_request(session, content, _options) do
+    # Send test streaming events for now
+    broadcast_status_update(session.id, "Starting...")
+
+    # Simulate some streaming chunks
+    Process.send_after(self(), {:stream_chunk, session.id, "Hello "}, 500)
+    Process.send_after(self(), {:stream_chunk, session.id, "from "}, 1000)
+    Process.send_after(self(), {:stream_chunk, session.id, "streaming!"}, 1500)
+    Process.send_after(self(), {:stream_complete, session.id}, 2000)
+
+    :ok
   end
 
   @doc false
@@ -147,6 +180,24 @@ defmodule Lightning.AiAssistant.MessageProcessor do
          status: status,
          session_id: session_id
        }}
+    )
+  end
+
+  @doc false
+  @spec broadcast_chunk(String.t(), String.t()) :: :ok
+  defp broadcast_chunk(session_id, content) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:update, %{streaming_chunk: %{content: content}}}
+    )
+  end
+
+  @doc false
+  @spec broadcast_status_update(String.t(), String.t()) :: :ok
+  defp broadcast_status_update(session_id, status_message) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:update, %{status_update: %{status: status_message}}}
     )
   end
 
