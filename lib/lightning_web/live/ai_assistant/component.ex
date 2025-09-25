@@ -43,7 +43,9 @@ defmodule LightningWeb.AiAssistant.Component do
        callbacks: %{},
        selected_message: nil,
        registered_session_id: nil,
-       registered_component_id: nil
+       registered_component_id: nil,
+       streaming_content: "",
+       streaming_status: nil
      })
      |> assign_async(:endpoint_available, fn ->
        {:ok, %{endpoint_available: AiAssistant.endpoint_available?()}}
@@ -53,6 +55,14 @@ defmodule LightningWeb.AiAssistant.Component do
   @impl true
   def update(%{message_status_changed: status}, socket) do
     {:ok, handle_message_status(status, socket)}
+  end
+
+  def update(%{streaming_chunk: chunk_data}, socket) do
+    {:ok, handle_streaming_chunk(chunk_data, socket)}
+  end
+
+  def update(%{status_update: status_data}, socket) do
+    {:ok, handle_status_update(status_data, socket)}
   end
 
   def update(%{action: :code_error} = assigns, socket) do
@@ -175,8 +185,20 @@ defmodule LightningWeb.AiAssistant.Component do
   defp handle_message_status({:error, session}, socket) do
     assign(socket,
       session: session,
-      pending_message: AsyncResult.ok(nil)
+      pending_message: AsyncResult.ok(nil),
+      streaming_content: "",
+      streaming_status: nil
     )
+  end
+
+  defp handle_streaming_chunk(chunk_data, socket) do
+    current_content = socket.assigns.streaming_content
+    new_content = current_content <> chunk_data.content
+    assign(socket, streaming_content: new_content)
+  end
+
+  defp handle_status_update(status_data, socket) do
+    assign(socket, streaming_status: status_data.status)
   end
 
   defp handle_code_error(socket, assigns) do
@@ -1187,7 +1209,11 @@ defmodule LightningWeb.AiAssistant.Component do
 
         <.async_result assign={@pending_message}>
           <:loading>
-            <.assistant_typing_indicator handler={@handler} />
+            <.assistant_typing_indicator
+              handler={@handler}
+              streaming_status={@streaming_status}
+              streaming_content={@streaming_content}
+            />
           </:loading>
 
           <:failed :let={failure}>
@@ -1431,7 +1457,10 @@ defmodule LightningWeb.AiAssistant.Component do
             >
             </div>
           </div>
-          <p class="text-xs text-gray-500 mt-2">Processing...</p>
+          <p class="text-xs text-gray-500 mt-2">{@streaming_status || "Processing..."}</p>
+          <div :if={@streaming_content != ""} class="mt-2 text-sm text-gray-800">
+            {@streaming_content}
+          </div>
         </div>
       </div>
     </div>

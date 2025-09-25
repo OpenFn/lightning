@@ -1,3 +1,4 @@
+
 defmodule LightningWeb.ApolloChannel do
   @moduledoc """
   Websocket channel to handle streaming AI responses from Apollo server.
@@ -5,6 +6,31 @@ defmodule LightningWeb.ApolloChannel do
   use LightningWeb, :channel
 
   require Logger
+
+  @impl true
+  def handle_info({:apollo_log, data}, socket) do
+    push(socket, "log", %{data: data})
+    {:noreply, socket}
+  end
+
+  def handle_info({:apollo_event, type, data}, socket) do
+    case type do
+      "CHUNK" -> push(socket, "chunk", %{data: data})
+      "STATUS" -> push(socket, "status", %{data: data})
+      _ -> push(socket, "event", %{type: type, data: data})
+    end
+    {:noreply, socket}
+  end
+
+  def handle_info({:apollo_complete, data}, socket) do
+    push(socket, "complete", %{data: data})
+    {:noreply, socket}
+  end
+
+  def handle_info({:apollo_error, error}, socket) do
+    push(socket, "error", %{message: error})
+    {:noreply, socket}
+  end
 
   @impl true
   def join("apollo:stream", _payload, socket) do
