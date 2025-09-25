@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.14.6-pre] - 2025-09-25
+
+### Added
+
 - Sandbox Basic CRUD UI [#3412](https://github.com/OpenFn/lightning/issues/3412)
   [#3431](https://github.com/OpenFn/lightning/issues/3431)
 - Generate workflow version on save
