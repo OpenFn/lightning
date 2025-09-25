@@ -84,6 +84,7 @@ defmodule LightningWeb.Components.Table do
   slot :header
   slot :body
   slot :footer
+  slot :pagination_actions
   attr :class, :string, default: nil
   attr :page, :map, default: nil
   attr :url, :any, default: nil
@@ -111,7 +112,11 @@ defmodule LightningWeb.Components.Table do
             page={@page}
             url={@url}
             rounded="lg"
-          />
+          >
+            <:action>
+              {render_slot(@pagination_actions)}
+            </:action>
+          </LightningWeb.Pagination.pagination_bar>
         </div>
       <% end %>
     </div>
