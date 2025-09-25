@@ -107,7 +107,11 @@ defmodule LightningWeb.Components.Table do
       </table>
       <%= if @page && @url do %>
         <div class={@divide && "border-t border-gray-200"}>
-          <LightningWeb.Pagination.pagination_bar page={@page} url={@url} />
+          <LightningWeb.Pagination.pagination_bar
+            page={@page}
+            url={@url}
+            rounded="lg"
+          />
         </div>
       <% end %>
     </div>

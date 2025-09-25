@@ -32,6 +32,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix pagination bar rounding to match table corners
+  [#3595](https://github.com/OpenFn/lightning/issues/3595)
 - Wrong timestamp information in mini-history for in-progress runs
   [#3579](https://github.com/OpenFn/lightning/pull/3579)
 
