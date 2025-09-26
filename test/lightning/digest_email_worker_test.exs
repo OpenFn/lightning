@@ -104,6 +104,90 @@ defmodule Lightning.DigestEmailWorkerTest do
       assert result.notified_users == []
       assert length(result.skipped_users) == 1
     end
+
+    test "includes all final failure states in failed workorders count" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, digest: :daily}])
+
+      workflow = insert(:simple_workflow, project: project)
+
+      # Test all final states that should be counted as failed
+      # According to Run.final_states: [:success, :failed, :crashed, :cancelled, :killed, :exception, :lost]
+      failure_states = [:failed, :crashed, :cancelled, :killed, :exception, :lost]
+
+      # Create workorders for each failure state
+      Enum.each(failure_states, fn state ->
+        create_runs(workflow, [state])
+      end)
+
+      # Also create some successful runs to ensure they're not counted as failed
+      create_runs(workflow, [:success])
+
+      start_date = DigestEmailWorker.digest_to_date(:daily)
+      end_date = Timex.now()
+
+      digest_data = DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
+
+      # Should count all 6 failure states
+      assert digest_data.failed_workorders == length(failure_states)
+      # Should count 1 successful run
+      assert digest_data.successful_workorders == 1
+    end
+
+    test "does not include pending or running workorders in failed count" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, digest: :daily}])
+
+      workflow = insert(:simple_workflow, project: project)
+
+      # Create workorders in non-final states (these should not be counted as failed)
+      create_runs(workflow, [:pending, :running])
+
+      # Create one actual failed run for comparison
+      create_runs(workflow, [:failed])
+
+      start_date = DigestEmailWorker.digest_to_date(:daily)
+      end_date = Timex.now()
+
+      digest_data = DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
+
+      # Should only count the actual failed run, not pending/running
+      assert digest_data.failed_workorders == 1
+      assert digest_data.successful_workorders == 0
+    end
+
+    test "dynamically includes all failure states from Run.final_states" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, digest: :daily}])
+
+      workflow = insert(:simple_workflow, project: project)
+
+      # Get all failure states dynamically (should be all final states except :success)
+      expected_failure_states = Lightning.Run.final_states() -- [:success]
+
+      # Create workorders for each failure state
+      Enum.each(expected_failure_states, fn state ->
+        create_runs(workflow, [state])
+      end)
+
+      start_date = DigestEmailWorker.digest_to_date(:daily)
+      end_date = Timex.now()
+
+      digest_data = DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
+
+      # Should count all failure states dynamically
+      assert digest_data.failed_workorders == length(expected_failure_states)
+      assert digest_data.successful_workorders == 0
+
+      # Verify we're testing the expected states (this will help catch if final_states changes)
+      assert expected_failure_states == [:failed, :crashed, :cancelled, :killed, :exception, :lost]
+    end
   end
 
   describe "get_digest_data/3" do
@@ -129,7 +213,7 @@ defmodule Lightning.DigestEmailWorkerTest do
 
       assert DigestEmailWorker.get_digest_data(workflow_a, start_date, end_date) ==
                %{
-                 failed_workorders: 1,
+                 failed_workorders: 0,
                  #  rerun_workorders: 1,
                  successful_workorders: 2,
                  workflow: workflow_a

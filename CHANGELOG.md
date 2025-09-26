@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Fixed
 
+- Updated Project Digest to include count of work orders in an unsuccessful state
+
 ## [v2.14.6-pre1] - 2025-09-26
 
 ### Changed
