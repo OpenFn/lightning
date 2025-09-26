@@ -21,6 +21,12 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.14.6-pre1] - 2025-09-26
+
+### Changed
+
+- Modify `Common.root_name` to display any map with a `:name` key
+
 ## [v2.14.6-pre] - 2025-09-25
 
 ### Added
