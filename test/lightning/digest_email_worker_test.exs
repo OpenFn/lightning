@@ -178,7 +178,7 @@ defmodule Lightning.DigestEmailWorkerTest do
       workflow = insert(:simple_workflow, project: project)
 
       # Get all failure states dynamically (should be all final states except :success)
-      expected_failure_states = Lightning.Run.final_states() -- [:success]
+      expected_failure_states = Lightning.Run.failure_states()
 
       # Create workorders for each failure state
       Enum.each(expected_failure_states, fn state ->
