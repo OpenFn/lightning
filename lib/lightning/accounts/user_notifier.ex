@@ -306,10 +306,10 @@ defmodule Lightning.Accounts.UserNotifier do
 
     """
     #{workflow.name}:
-    - #{successful_workorders} workorders correctly processed #{digest_lookup[digest]}
-    - #{failed_workorders} work orders that failed, crashed or timed out
-    Click the link below to view this in the history page:
-    #{build_digest_url(workflow, start_date, end_date)}
+    • #{successful_workorders} workorders were successful #{digest_lookup[digest]}
+    • #{failed_workorders} workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+    Click this link to review: #{build_digest_url(workflow, start_date, end_date)}
 
     """
   end
