@@ -116,11 +116,14 @@ defmodule Lightning.DigestEmailWorker do
       })
 
     failed_count =
-      count_workorders(project, build_failed_status_params(%{
-        "date_after" => start_date,
-        "date_before" => end_date,
-        "workflow_id" => workflow.id
-      }))
+      count_workorders(
+        project,
+        build_failed_status_params(%{
+          "date_after" => start_date,
+          "date_before" => end_date,
+          "workflow_id" => workflow.id
+        })
+      )
 
     %{
       workflow: workflow,

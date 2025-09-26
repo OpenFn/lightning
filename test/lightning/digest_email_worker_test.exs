@@ -115,7 +115,14 @@ defmodule Lightning.DigestEmailWorkerTest do
 
       # Test all final states that should be counted as failed
       # According to Run.final_states: [:success, :failed, :crashed, :cancelled, :killed, :exception, :lost]
-      failure_states = [:failed, :crashed, :cancelled, :killed, :exception, :lost]
+      failure_states = [
+        :failed,
+        :crashed,
+        :cancelled,
+        :killed,
+        :exception,
+        :lost
+      ]
 
       # Create workorders for each failure state
       Enum.each(failure_states, fn state ->
@@ -128,7 +135,8 @@ defmodule Lightning.DigestEmailWorkerTest do
       start_date = DigestEmailWorker.digest_to_date(:daily)
       end_date = Timex.now()
 
-      digest_data = DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
+      digest_data =
+        DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
 
       # Should count all 6 failure states
       assert digest_data.failed_workorders == length(failure_states)
@@ -153,7 +161,8 @@ defmodule Lightning.DigestEmailWorkerTest do
       start_date = DigestEmailWorker.digest_to_date(:daily)
       end_date = Timex.now()
 
-      digest_data = DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
+      digest_data =
+        DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
 
       # Should only count the actual failed run, not pending/running
       assert digest_data.failed_workorders == 1
@@ -179,14 +188,22 @@ defmodule Lightning.DigestEmailWorkerTest do
       start_date = DigestEmailWorker.digest_to_date(:daily)
       end_date = Timex.now()
 
-      digest_data = DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
+      digest_data =
+        DigestEmailWorker.get_digest_data(workflow, start_date, end_date)
 
       # Should count all failure states dynamically
       assert digest_data.failed_workorders == length(expected_failure_states)
       assert digest_data.successful_workorders == 0
 
       # Verify we're testing the expected states (this will help catch if final_states changes)
-      assert expected_failure_states == [:failed, :crashed, :cancelled, :killed, :exception, :lost]
+      assert expected_failure_states == [
+               :failed,
+               :crashed,
+               :cancelled,
+               :killed,
+               :exception,
+               :lost
+             ]
     end
   end
 
