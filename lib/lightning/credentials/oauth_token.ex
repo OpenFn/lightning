@@ -32,7 +32,9 @@ defmodule Lightning.Credentials.OauthToken do
           user: User.t() | nil,
           credential: Credential.t() | nil,
           inserted_at: DateTime.t() | nil,
-          updated_at: DateTime.t() | nil
+          updated_at: DateTime.t() | nil,
+          credential_body_id: Ecto.UUID.t() | nil,
+          credential_body: Lightning.Credentials.CredentialBody.t() | nil
         }
 
   schema "oauth_tokens" do
@@ -45,6 +47,7 @@ defmodule Lightning.Credentials.OauthToken do
 
     belongs_to :oauth_client, OauthClient
     belongs_to :user, User
+    belongs_to :credential_body, Lightning.Credentials.CredentialBody
 
     has_one :credential, Credential
 
@@ -89,7 +92,14 @@ defmodule Lightning.Credentials.OauthToken do
 
   def changeset(oauth_token, attrs) do
     oauth_token
-    |> cast(attrs, [:body, :scopes, :oauth_client_id, :user_id, :last_refreshed])
+    |> cast(attrs, [
+      :body,
+      :scopes,
+      :oauth_client_id,
+      :user_id,
+      :last_refreshed,
+      :credential_body_id
+    ])
     |> validate_required([
       :body,
       :scopes,
@@ -99,6 +109,7 @@ defmodule Lightning.Credentials.OauthToken do
     ])
     |> assoc_constraint(:oauth_client)
     |> assoc_constraint(:user)
+    |> assoc_constraint(:credential_body)
     |> validate_change(:body, &validate_oauth_body/2)
   end
 
@@ -145,8 +156,9 @@ defmodule Lightning.Credentials.OauthToken do
   @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
   def update_changeset(oauth_token, attrs) do
     oauth_token
-    |> cast(attrs, [:body, :scopes, :last_refreshed])
+    |> cast(attrs, [:body, :scopes, :last_refreshed, :credential_body_id])
     |> validate_required([:body, :scopes, :last_refreshed])
+    |> assoc_constraint(:credential_body)
   end
 
   @doc """
