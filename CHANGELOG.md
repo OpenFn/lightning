@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Bumped devDeps `ws-worker` version to `1.15.0` to better handle job
+  compilation memory issues
+  [#3613](https://github.com/OpenFn/lightning/pull/3613)
+
 ### Fixed
 
 ## [v2.14.6-pre1] - 2025-09-26
@@ -39,9 +43,6 @@ and this project adheres to
 
 ### Changed
 
-- Bumped devDeps `ws-worker` version to `1.15.0` to better handle job
-  compilation memory issues
-  [#3613](https://github.com/OpenFn/lightning/pull/3613)
 - Optimized queue query planner stability to prevent 60s+ spikes
   [#3564](https://github.com/OpenFn/lightning/issues/3564)
 - Fix aarch64 (Apple Silicon) Dockerfile-dev build
