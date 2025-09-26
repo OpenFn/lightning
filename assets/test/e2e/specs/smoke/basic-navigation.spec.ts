@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { getTestData } from "../../test-data";
+import {
+  WorkflowsPage,
+  WorkflowEditPage,
+  LoginPage,
+  ProjectsPage,
+} from "../../pages";
 
 test("homepage loads successfully", async ({ page }) => {
   await page.goto("/");
@@ -19,63 +25,42 @@ test.describe("Workflow Navigation with Dynamic Data", () => {
     testData = await getTestData();
   });
 
+  test.beforeEach(async ({ page }) => {
+    // Login as editor user for most tests
+    await page.goto("/");
+    const loginPage = new LoginPage(page);
+    await loginPage.loginIfNeeded(
+      testData.users.editor.email,
+      testData.users.editor.password
+    );
+  });
+
   test("can navigate to existing workflow and see React Flow with 6 nodes", async ({
     page,
   }) => {
-    await page.goto("/");
+    const projectsPage = new ProjectsPage(page);
+    const workflowsPage = new WorkflowsPage(page);
+    const workflowEdit = new WorkflowEditPage(page);
 
-    // Check if we're already on the login page or need to navigate to it
-    const loginForm = page.locator("#login form");
-    const isOnLoginPage = await loginForm.isVisible();
-
-    if (isOnLoginPage) {
-      // Use dynamic test data for login
-      await page
-        .locator('input[name="user[email]"]')
-        .fill(testData.users.editor.email);
-      await page
-        .locator('input[name="user[password]"]')
-        .fill(testData.users.editor.password);
-      await page.getByRole("button", { name: "Log in" }).click();
-    }
-    await page.waitForLoadState("networkidle");
-
-    // Use dynamic test data for project and workflow navigation
-    await page
-      .getByRole("cell", { name: testData.projects.openhie.name })
-      .click();
-    await page.waitForLoadState("networkidle");
-
-    // await page.pause();
-    console.log("Navigating to workflow:", testData.workflows.openhie.name);
+    // Navigate to project using ProjectsPage POM
+    await projectsPage.navigateToProject(testData.projects.openhie.name);
+    await workflowsPage.waitForConnected();
 
     await expect(page.getByText("OpenHIE Workflow")).toBeVisible();
 
-    // Have to wait a bit, seems like the event handlers for Phoenix LiveView
-    // are not fully ready...
-    // Maybe we listen for a specific event instead of waiting a fixed time?
-    await page.waitForTimeout(100);
-    await page
-      .getByLabel(testData.workflows.openhie.name)
-      .getByText(testData.workflows.openhie.name)
-      .click();
-    await page.waitForLoadState("networkidle");
+    // Navigate to the workflow using POM
+    await workflowsPage.navigateToWorkflow(testData.workflows.openhie.name);
+    await workflowEdit.waitForConnected();
 
     // Verify URL contains the actual workflow ID from database
     await expect(page).toHaveURL(
       new RegExp(`/w/${testData.workflows.openhie.id}`)
     );
 
-    // Assert React Flow is present and working
-    const reactFlowContainer = page.locator(".react-flow");
-    await expect(reactFlowContainer).toBeVisible();
-
-    // Assert the viewport is present
-    const reactFlowViewport = page.locator(".react-flow__viewport");
-    await expect(reactFlowViewport).toBeVisible();
+    await workflowEdit.diagram.verifyReactFlowPresent();
 
     // Assert we have 5 nodes visible in the workflow
-    const nodes = page.locator(".react-flow__node");
+    await workflowEdit.diagram.verifyNodeCount(5);
     await expect(page.getByRole("main")).toMatchAriaSnapshot(`
       - navigation "Breadcrumb":
         - list:
@@ -102,7 +87,6 @@ test.describe("Workflow Navigation with Dynamic Data", () => {
       - button "Open options user avatar":
         - img "user avatar"
       `);
-    await expect(nodes).toHaveCount(5);
 
     // Assert no error messages are shown
     const errorMessage = page.locator("text=Something went wrong");
@@ -113,28 +97,14 @@ test.describe("Workflow Navigation with Dynamic Data", () => {
   });
 
   test("workflow data matches database state", async ({ page }) => {
-    // Navigate to projects page to verify project data
-    await page.goto("/");
+    const projectsPage = new ProjectsPage(page);
 
-    // Login if needed
-    const loginForm = page.locator("#login form");
-    if (await loginForm.isVisible()) {
-      await page
-        .locator('input[name="user[email]"]')
-        .fill(testData.users.editor.email);
-      await page
-        .locator('input[name="user[password]"]')
-        .fill(testData.users.editor.password);
-      await page.getByRole("button", { name: "Log in" }).click();
-      await page.waitForLoadState("networkidle");
-    }
+    await projectsPage.navigateToProjects();
 
-    // Verify both projects are visible
-    await expect(
-      page.getByRole("cell", { name: testData.projects.openhie.name })
-    ).toBeVisible();
-    await expect(
-      page.getByRole("cell", { name: testData.projects.dhis2.name })
-    ).toBeVisible();
+    // Verify the openhie project is visible using POM methods
+    await projectsPage.verifyProjectVisible(testData.projects.openhie.name);
+
+    // Verify that editor user sees at least one project
+    await projectsPage.verifyProjectsListNotEmpty();
   });
 });

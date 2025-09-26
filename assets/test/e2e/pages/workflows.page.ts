@@ -35,22 +35,7 @@ export class WorkflowsPage extends LiveViewPage {
   }
 
   async navigateToWorkflow(workflowName: string): Promise<void> {
-    await this.page
-      .getByRole("cell", { name: new RegExp(workflowName) })
-      .click();
-  }
-
-  /**
-   * Navigate to a specific project's workflows page
-   * TODO: move this to a ProjectsPage class when we have one
-   * @param projectName - The name of the project to navigate to
-   */
-  async navigateToProject(projectName: string): Promise<void> {
-    const projectRow = this.page
-      .getByRole("cell", { name: projectName })
-      .locator("..");
-    await this.waitForEventAttached(projectRow, "click");
-    await expect(projectRow).toBeVisible();
-    await projectRow.click();
+    // Use the correct selector approach that works with the workflow listing
+    await this.page.getByLabel(workflowName).getByText(workflowName).click();
   }
 }

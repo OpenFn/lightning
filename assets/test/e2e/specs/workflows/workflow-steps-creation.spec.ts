@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { getTestData } from "../../test-data";
-import { WorkflowEditPage, WorkflowsPage } from "../../pages";
+import { WorkflowEditPage, WorkflowsPage, ProjectsPage } from "../../pages";
 
 test.describe("US-022: Workflow Steps - Add and Configure", () => {
   let testData: Awaited<ReturnType<typeof getTestData>>;
@@ -28,11 +28,10 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     const workflowsPage = new WorkflowsPage(page);
     const workflowEdit = new WorkflowEditPage(page);
 
-    // Test follows exact steps from US-022 documentation
+    const projectsPage = new ProjectsPage(page);
+    await projectsPage.navigateToProject("openhie-project");
 
     // 1. Create a new event-based workflow
-    await workflowsPage.navigateToProject("openhie-project");
-
     await workflowsPage.clickNewWorkflow();
     await workflowEdit.selectWorkflowType("Event-based Workflow");
     await workflowEdit.clickCreateWorkflow();

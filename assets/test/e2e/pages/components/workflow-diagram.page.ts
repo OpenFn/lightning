@@ -154,4 +154,30 @@ export class WorkflowDiagramPage extends LiveViewPage {
     await expect(fitViewButton).toBeVisible();
     await fitViewButton.click();
   }
+
+  /**
+   * Verify that React Flow is present and working
+   */
+  async verifyReactFlowPresent(): Promise<void> {
+    const reactFlowContainer = this.page.locator(this.selectors.reactFlow);
+    await expect(reactFlowContainer).toBeVisible();
+
+    const reactFlowViewport = this.page.locator(this.selectors.viewport);
+    await expect(reactFlowViewport).toBeVisible();
+  }
+
+  /**
+   * Get all workflow nodes
+   */
+  get allNodes(): Locator {
+    return this.page.locator(this.selectors.nodes);
+  }
+
+  /**
+   * Verify the expected number of nodes are present
+   * @param expectedCount - Expected number of nodes
+   */
+  async verifyNodeCount(expectedCount: number): Promise<void> {
+    await expect(this.allNodes).toHaveCount(expectedCount);
+  }
 }
