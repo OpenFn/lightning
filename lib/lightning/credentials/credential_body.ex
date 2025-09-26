@@ -10,6 +10,18 @@ defmodule Lightning.Credentials.CredentialBody do
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthToken
 
+  @type t :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          name: String.t(),
+          body: map() | nil,
+          credential_id: Ecto.UUID.t(),
+          credential: Credential.t() | Ecto.Association.NotLoaded.t(),
+          oauth_token: OauthToken.t() | Ecto.Association.NotLoaded.t() | nil,
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
+
   schema "credential_bodies" do
     field :name, :string
     field :body, Lightning.Encrypted.Map, redact: true

@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add database changes for credentials environments support
+  [#3597](https://github.com/OpenFn/lightning/issues/3597)
+
 ### Changed
 
 ### Fixed
