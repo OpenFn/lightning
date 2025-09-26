@@ -224,4 +224,4 @@ Lightning uses external Node.js workers for job execution:
   use Tidewave MCP to check the logs, or run `mix esbuild default`
 - When running npm or npx commands, always cd into the assets directory
   beforehand.
-- When checking for JS/TS issues, prefer mcp**ide**getDiagnostics over tsc
+- When checking for JS/TS issues, prefer mcp__ide__getDiagnostics over tsc
