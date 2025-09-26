@@ -30,7 +30,9 @@ E2E test environment management for Lightning
 
 Commands:
   start           Start e2e environment with full setup (migrations, snapshot, server)
+  start --force   Stop any running server and start fresh
   server          Start the e2e test server only (with warnings for missing setup)
+  stop            Stop the running e2e server
   reset           Fast reset using snapshot (truncate + restore)
   reset --full    Full database reset with confirmation
   reset --quiet   Fast reset with minimal output
@@ -118,6 +120,48 @@ restore_snapshot() {
   fi
 }
 
+warm_npm_cache() {
+  local server_node="lightning_e2e@127.0.0.1"
+  local client_node="client_$$@127.0.0.1"
+  echo "Warming up npm cache by connecting to server node..."
+
+  # Initial wait before first attempt
+  sleep 1
+
+  local max_attempts=10
+  local attempt=1
+
+  while [[ $attempt -le $max_attempts ]]; do
+    echo "Attempting to connect to server (attempt $attempt/$max_attempts)..."
+
+    if run_in_project_root "elixir --name $client_node --rpc-eval $server_node '
+try do
+  adaptors = Lightning.AdaptorRegistry.all()
+  IO.puts(\"✅ NPM cache warmed successfully - loaded #{length(adaptors)} adaptors\")
+rescue
+  error ->
+    IO.puts(\"⚠️  Warning: Failed to warm NPM cache: #{inspect(error)}\")
+    exit(1)
+end
+'" 2>/dev/null; then
+      # Success - cache warmed
+      return 0
+    else
+      # Failed - server not ready yet
+      if [[ $attempt -eq $max_attempts ]]; then
+        echo "⚠️  Failed to connect to server after $max_attempts attempts"
+        echo "NPM cache warming skipped - adaptors may load slower on first use"
+        return 1
+      fi
+
+      # Wait before next attempt (1s, 2s, 3s, etc.)
+      echo "Server not ready, waiting ${attempt}s before retry..."
+      sleep $attempt
+      ((attempt++))
+    fi
+  done
+}
+
 # Check if Elixir application is compiled
 check_compilation() {
   echo "Checking if Elixir application is compiled..."
@@ -178,17 +222,78 @@ check_snapshot() {
   return 0
 }
 
+cmd_stop() {
+  local pid_file="/tmp/lightning_e2e_server"
+
+  if [[ ! -f "$pid_file" ]]; then
+    echo "No PID file found - server may not be running"
+    return 0
+  fi
+
+  local existing_pid=$(cat "$pid_file" 2>/dev/null)
+  if [[ -z "$existing_pid" ]]; then
+    echo "Empty PID file - cleaning up"
+    rm -f "$pid_file"
+    return 0
+  fi
+
+  if kill -0 "$existing_pid" 2>/dev/null; then
+    echo "Stopping E2E server (PID: $existing_pid)..."
+    kill -SIGQUIT "$existing_pid"
+
+    # Wait up to 10 seconds for graceful shutdown
+    local count=0
+    while kill -0 "$existing_pid" 2>/dev/null && [[ $count -lt 10 ]]; do
+      sleep 1
+      ((count++))
+    done
+
+    if kill -0 "$existing_pid" 2>/dev/null; then
+      echo "Server didn't stop gracefully, force killing..."
+      kill -9 "$existing_pid" 2>/dev/null || true
+    fi
+
+    echo "✅ E2E server stopped"
+  else
+    echo "Server not running (stale PID file)"
+  fi
+
+  rm -f "$pid_file"
+}
+
 # Command functions
 cmd_start() {
   local pid_file="/tmp/lightning_e2e_server"
+  local force_restart=false
+
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --force)
+      force_restart=true
+      shift
+      ;;
+    *)
+      echo "Unknown flag: $1"
+      echo "Use 'help' for usage information"
+      exit 1
+      ;;
+    esac
+  done
 
   # Check if server is already running first
   if [[ -f "$pid_file" ]]; then
     local existing_pid=$(cat "$pid_file" 2>/dev/null)
     if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" 2>/dev/null; then
-      echo "🔄 E2E server already running (PID: $existing_pid) on port $PORT"
-      echo "✅ Reusing existing server for tests"
-      return 0
+      if [[ "$force_restart" == "true" ]]; then
+        echo "🔄 Force restart requested - stopping existing server..."
+        cmd_stop
+      else
+        echo "🔄 E2E server already running (PID: $existing_pid) on port $PORT"
+        echo "✅ Reusing existing server for tests"
+        echo "Use 'start --force' to restart the server"
+        return 0
+      fi
     else
       echo "🧹 Cleaning up stale PID file..."
       rm -f "$pid_file"
@@ -274,13 +379,16 @@ cmd_server() {
     cd "${PROJECT_ROOT}"
   fi
 
-  # Start server and write PID after it starts
-  mix phx.server &
+  # Start server with named node and write PID after it starts
+  elixir --name lightning_e2e@127.0.0.1 -S mix phx.server &
   local server_pid=$!
 
   # Write PID to file
   echo "$server_pid" > "$pid_file"
   echo "Server PID $server_pid written to $pid_file"
+
+  # Warm NPM cache in background with retry logic
+  warm_npm_cache 
 
   # Wait for the server process
   wait $server_pid
@@ -378,6 +486,9 @@ start)
   ;;
 server)
   cmd_server "$@"
+  ;;
+stop)
+  cmd_stop "$@"
   ;;
 reset)
   cmd_reset "$@"

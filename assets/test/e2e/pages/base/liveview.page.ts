@@ -13,6 +13,13 @@ export abstract class LiveViewPage {
 
   constructor(protected page: Page) {}
 
+  async clickMenuItem(itemText: string): Promise<void> {
+    await this.page
+      .locator("#side-menu")
+      .getByRole("link", { name: itemText })
+      .click();
+  }
+
   /**
    * Wait for the Phoenix LiveView connection to be established
    *
@@ -36,6 +43,21 @@ export abstract class LiveViewPage {
       .locator(this.baseSelectors.flashMessage)
       .filter({ hasText: text });
     await expect(flashMessage).toBeVisible();
+  }
+
+  /**
+   * Wait for the Phoenix LiveView WebSocket to be settled
+   *
+   * This _hopefully_ ensures that any pending messages have been processed.
+   *
+   * NOTE: still needs to be verified.
+   */
+  async waitForSocketSettled(): Promise<void> {
+    await this.page.waitForFunction(() => {
+      return new Promise(resolve => {
+        window.liveSocket.socket.ping(resolve);
+      });
+    });
   }
 
   /**

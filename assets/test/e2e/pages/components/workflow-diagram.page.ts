@@ -23,22 +23,11 @@ export class WorkflowDiagramPage extends LiveViewPage {
   }
 
   /**
-   * Find a workflow node by its display name/text
-   * @param nodeName - The text displayed on the node (e.g., "Fetch User Data")
-   * @returns Locator for the node's group container
-   */
-  getNodeByName(nodeName: string): Locator {
-    return this.page
-      .locator(this.selectors.nodeWithDataAttribute)
-      .filter({ hasText: nodeName });
-  }
-
-  /**
    * Find a React Flow node container by its display name/text
    * @param nodeName - The text displayed on the node
    * @returns Locator for the .react-flow__node container
    */
-  getReactFlowNodeByName(nodeName: string): Locator {
+  getNodeByName(nodeName: string): Locator {
     return this.page
       .locator(this.selectors.nodes)
       .filter({ hasText: nodeName });
@@ -69,9 +58,7 @@ export class WorkflowDiagramPage extends LiveViewPage {
    * @param nodeName - The text displayed on the node
    */
   private getNodePlusButton(nodeName: string): Locator {
-    return this.page.locator(
-      `${this.selectors.nodeWithDataAttribute}:has-text("${nodeName}") ${this.selectors.nodeConnector}`
-    );
+    return this.getNodeByName(nodeName).locator(this.selectors.nodeConnector);
   }
 
   /**
@@ -110,7 +97,7 @@ export class WorkflowDiagramPage extends LiveViewPage {
    * Get the current placeholder node (there should only be one at a time)
    * @returns Locator for the placeholder node
    */
-  getPlaceholderNode(): Locator {
+  get placeholderNode(): Locator {
     return this.page.locator(this.selectors.placeholderNode);
   }
 
@@ -119,15 +106,15 @@ export class WorkflowDiagramPage extends LiveViewPage {
    * @param nodeName - The name to give the new node
    */
   async fillPlaceholderNodeName(nodeName: string): Promise<void> {
-    const placeholderNode = this.getPlaceholderNode();
-    await expect(placeholderNode).toBeVisible();
+    await expect(this.placeholderNode).toBeVisible();
 
     // Find the textbox within the placeholder node
-    const textbox = placeholderNode.locator(
+    const textbox = this.placeholderNode.locator(
       'input[type="text"], input:not([type]), [role="textbox"]'
     );
     await expect(textbox).toBeVisible();
 
+    await textbox.click();
     await textbox.fill(nodeName);
     await textbox.press("Enter");
   }

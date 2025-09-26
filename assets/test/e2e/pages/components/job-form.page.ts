@@ -10,13 +10,14 @@ export class JobFormPage extends LiveViewPage {
 
   protected selectors = {
     workflowForm: "#workflow-form",
-    workflowFormHeader: "#workflow-form > div",
+    workflowFormHeader: "#workflow-form div",
     closeNodePanelButton: '[data-testid="CloseNodePanelViaEscape"]',
   };
 
   constructor(page: Page, jobIndex: number = 0) {
     super(page);
     this.jobIndex = jobIndex;
+    this.selectors.workflowForm = `[data-testid='job-pane-${this.jobIndex}']`;
   }
 
   /**
@@ -41,14 +42,11 @@ export class JobFormPage extends LiveViewPage {
     return this.page.locator(this.selectors.workflowForm);
   }
 
-  get header(): Locator {
-    return this.page.locator(`${this.selectors.workflowForm} div.font-bold`);
-  }
   /**
    * Get the workflow form header
    */
-  get workflowFormHeader(): Locator {
-    return this.page.locator(this.selectors.workflowFormHeader);
+  get header(): Locator {
+    return this.page.locator(`${this.selectors.workflowForm} div.font-bold`);
   }
 
   /**

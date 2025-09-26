@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { getTestData } from "../../test-data";
 import { WorkflowEditPage, WorkflowsPage } from "../../pages";
 
-test.describe("US-010: Workflow Steps - Basic Creation", () => {
+test.describe("US-022: Workflow Steps - Add and Configure", () => {
   let testData: Awaited<ReturnType<typeof getTestData>>;
 
   test.beforeAll(async () => {
@@ -24,26 +24,23 @@ test.describe("US-010: Workflow Steps - Basic Creation", () => {
     }
   });
 
-  test("TC-010: Add and configure workflow steps", async ({ page }) => {
+  test("TC-022: Add and configure workflow steps", async ({ page }) => {
     const workflowsPage = new WorkflowsPage(page);
     const workflowEdit = new WorkflowEditPage(page);
 
-    // Test follows exact steps from US-010 documentation
+    // Test follows exact steps from US-022 documentation
 
     // 1. Create a new event-based workflow
-    // TODO: Update the user stories to reflect that you can't create a blank
-    // workflow, you pick either event-based or scheduled.
     await workflowsPage.navigateToProject("openhie-project");
 
-    await workflowsPage.waitForConnected();
     await workflowsPage.clickNewWorkflow();
     await workflowEdit.selectWorkflowType("Event-based Workflow");
     await workflowEdit.clickCreateWorkflow();
 
     // 2. Configure the first job
     await workflowEdit.diagram.clickJobNodeByIndex(0);
-    // TODO: assert the canvas node is selected, has a border or something
 
+    // Verify job form is displayed in sidebar
     await expect(workflowEdit.jobForm(0).workflowForm).toBeAttached();
 
     await workflowEdit
@@ -54,19 +51,9 @@ test.describe("US-010: Workflow Steps - Basic Creation", () => {
       "@openfn/language-http@7.2.2"
     );
     await workflowEdit.jobForm(0).nameInput.click();
-    // TODO: is there a better way to clear the text box? Or can fill just overwrite?
-    // await workflowEdit.jobForm(0).nameInput.press("ControlOrMeta+a");
     await workflowEdit.jobForm(0).nameInput.fill("Fetch User Data");
-    // Verify canvas node text is updated, right now I can't select it, z-index issue?
-    // Verify the node icon is now the HTTP icon, not the common icon.
 
-    // 3. Add second step: Common adaptor
-    // - Click "+" button after first step
-    // - Select Common adaptor
-    // - Name: "Transform Data"
-    // - Description: "Process and validate user data"
-
-    // TODO: reference 'fit-view' button instead of hardcoding button index
+    // 3. Add second job: Common adaptor
     await workflowEdit.diagram.clickFitView();
 
     await workflowEdit.diagram.clickNodePlusButtonOn("Fetch User Data");
@@ -78,43 +65,72 @@ test.describe("US-010: Workflow Steps - Basic Creation", () => {
       "@openfn/language-common@latest"
     );
 
-    // TODO: expect the save button to have the red dot, indicating unsaved changes.
+    // 4. Verify unsaved changes indicator and save
     await expect(workflowEdit.unsavedChangesIndicator()).toBeVisible();
 
     await workflowEdit.clickSaveWorkflow();
     await workflowEdit.expectFlashMessage("Workflow saved successfully.");
-    // TODO: what is getTestId
 
-    // 2. Add first step: HTTP adaptor
-    // - Click "Add Step" or "+" button
-    // - Verify adaptor selection dialog appears
-    // - Browse available adaptors
-    // - Select HTTP adaptor
-    // - Choose latest version
-    // TODO: There is no Add or Confirm button, changes are immediate
-    // - Click "Add" or confirm
+    // 5. Add third job: PostgreSQL adaptor
+    await workflowEdit.diagram.clickNodePlusButtonOn("Transform Data");
+    await workflowEdit.diagram.fillPlaceholderNodeName("Save to Database");
 
-    // 3. Configure first step:
-    // - Name: "Fetch User Data"
-    // TODO: there is no such thing as description yet
-    // - Description: "Retrieve users from external API"
-    // - Verify step appears on canvas connected to trigger
+    await expect(workflowEdit.jobForm(2).header).toHaveText("Save to Database");
 
-    // 5. Add third step: PostgreSQL adaptor (or another available database adaptor)
-    // - Name: "Save to Database"
-    // - Description: "Insert processed users into database"
+    // Select PostgreSQL adaptor (or fallback to another database adaptor)
+    await workflowEdit.jobForm(2).adaptorSelect.selectOption("postgresql");
 
-    // 6. Verify workflow structure:
-    // - All steps appear visually connected with arrows
-    // - Step names display clearly on the canvas
-    // - Steps are ordered visually (numbered or sequential)
+    // Verify PostgreSQL adaptor version is selected
+    await expect(workflowEdit.jobForm(2).versionSelect).toHaveValue(
+      /@openfn\/language-postgresql@\d\.\d\.\d/
+    );
 
-    // 7. Test step selection:
-    // - Click on each step
-    // - Verify step is highlighted/selected
+    // 6. Verify workflow structure
+    // Check that all jobs appear visually connected with arrows
+    await workflowEdit.diagram.verifyNodeExists("Fetch User Data");
+    await workflowEdit.diagram.verifyNodeExists("Transform Data");
+    await workflowEdit.diagram.verifyNodeExists("Save to Database");
 
-    // 8. Save workflow
+    // 7. Test job selection
+    // Click on each job and verify job form opens in sidebar
+    await workflowEdit.diagram.clickNode("Fetch User Data");
+    await expect(workflowEdit.jobForm(0).header).toHaveText(/Fetch User Data/);
 
-    // 9. Reopen the workflow and verify the structure persists
+    await workflowEdit.diagram.clickNode(" Transform Data ");
+    console.log(workflowEdit.jobForm(1).header);
+    await expect(workflowEdit.jobForm(1).header).toHaveText(/Transform Data/);
+
+    await workflowEdit.diagram.clickNode("Save to Database");
+    await expect(workflowEdit.jobForm(2).header).toHaveText("Save to Database");
+
+    await workflowEdit.waitForSocketSettled();
+
+    // 8. Save and verify persistence
+    await workflowEdit.clickSaveWorkflow();
+    await workflowEdit.expectFlashMessage("Workflow saved successfully.");
+
+    await workflowsPage.clickMenuItem("Workflows");
+    await workflowsPage.navigateToWorkflow("Event-based Workflow");
+
+    // Verify all jobs still exist and structure persists
+    await workflowEdit.diagram.verifyNodeExists("Fetch User Data");
+    await workflowEdit.diagram.verifyNodeExists("Transform Data");
+    await workflowEdit.diagram.verifyNodeExists("Save to Database");
+
+    // Verify job configurations persist
+    await workflowEdit.diagram.clickNode("Fetch User Data");
+    await expect(workflowEdit.jobForm(0).versionSelect).toHaveValue(
+      "@openfn/language-http@7.2.2"
+    );
+
+    await workflowEdit.diagram.clickNode("Transform Data");
+    await expect(workflowEdit.jobForm(1).versionSelect).toHaveValue(
+      "@openfn/language-common@latest"
+    );
+
+    await workflowEdit.diagram.clickNode("Save to Database");
+    await expect(workflowEdit.jobForm(2).versionSelect).toHaveValue(
+      /@openfn\/language-postgresql@\d\.\d\.\d/
+    );
   });
 });

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { getTestData } from "./test-data";
+import { getTestData } from "../../test-data";
 
 test("homepage loads successfully", async ({ page }) => {
   await page.goto("/");
