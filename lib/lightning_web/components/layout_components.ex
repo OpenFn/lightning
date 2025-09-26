@@ -100,7 +100,10 @@ defmodule LightningWeb.LayoutComponents do
         }
       }
     />
-    <div class="flex-none bg-white shadow-xs border-b border-gray-200">
+    <div
+      class="flex-none bg-white shadow-xs border-b border-gray-200"
+      data-testid="top-bar"
+    >
       <div class={[@title_class, @title_height]}>
         <%= if @current_user do %>
           <nav class="flex" aria-label="Breadcrumb">

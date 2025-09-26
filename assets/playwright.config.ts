@@ -1,18 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
+import { binPath } from "./test/e2e/e2e-helper";
 
-import { binPath, checkServerRunning } from "./test/e2e/e2e-helper";
-
-const serverAlreadyRunning = checkServerRunning();
-
-if (serverAlreadyRunning) {
-  console.log("🔄 Detected existing e2e server, will reuse it");
-}
+const testDir = new URL("./test/e2e", import.meta.url).pathname;
 
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: "./test/e2e",
+  testDir,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -37,9 +32,9 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: `${binPath} server`,
+    command: `${binPath} start`,
     url: `http://localhost:${process.env.PORT || 4003}`,
-    reuseExistingServer: serverAlreadyRunning || !process.env.CI,
+    reuseExistingServer: !process.env.CI, // Always reuse in dev, never in CI
     timeout: 60 * 1000,
   },
 });
