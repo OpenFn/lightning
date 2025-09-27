@@ -94,7 +94,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           breadcrumbs={[{"Workflows", "/projects/#{@project.id}/w"}]}
         >
           <:title>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
               {@page_title}
 
               <LightningWeb.Components.Common.snapshot_version_chip
@@ -107,7 +107,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
-              
+
     <!-- Add collaborative editor toggle (beaker icon only) -->
               <.link
                 :if={
@@ -117,7 +117,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   )
                 }
                 navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}/collaborate"}
-                class="inline-flex items-center justify-center w-6 h-6 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
+                class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
                 phx-hook="Tooltip"
                 data-placement="bottom"
                 aria-label="Switch to collaborative editor (experimental)"

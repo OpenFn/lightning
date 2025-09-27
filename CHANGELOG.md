@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed vertical alignment in breadcrumbs
+  [#3612](https://github.com/OpenFn/lightning/issues/3612)
 - Updated Project Digest to include count of work orders in an unsuccessful
   state [#3616](https://github.com/OpenFn/lightning/issues/3616)
 
