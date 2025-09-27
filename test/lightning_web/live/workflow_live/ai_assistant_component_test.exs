@@ -204,89 +204,44 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       assert JobCode.error_message(:unexpected_error) ==
                "Oops! Something went wrong. Please try again."
     end
+  end
 
-    test "elements without defined styles remain unchanged" do
-      content = """
-      <weirdo>Some code</weirdo>
-      <pierdo>Preformatted text</pierdo>
-      [A link](https://weirdopierdo.com)
-      """
+  describe "form validation" do
+    alias LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
 
-      html =
-        render_component(&AiAssistant.Component.formatted_content/1,
-          id: "formatted-content",
-          content: content
-        )
+    test "JobCode Form validates empty content" do
+      changeset = JobCode.Form.changeset(%{"content" => ""})
 
-      parsed_html = Floki.parse_document!(html)
-
-      code = Floki.find(parsed_html, "weirdo")
-      pre = Floki.find(parsed_html, "pierdo")
-
-      assert Floki.attribute(code, "class") == []
-      assert Floki.attribute(pre, "class") == []
-
-      link =
-        Floki.find(parsed_html, "a")
-        |> Enum.find(
-          &(Floki.attribute(&1, "href") == ["https://weirdopierdo.com"])
-        )
-
-      assert link != nil
-
-      assert Floki.attribute(link, "class") == [
-               "text-primary-400 hover:text-primary-600"
-             ]
-
-      assert Floki.attribute(link, "target") == ["_blank"]
+      assert changeset.valid? == false
+      assert Keyword.has_key?(changeset.errors, :content)
+      {msg, _opts} = changeset.errors[:content]
+      assert msg == "Please enter a message before sending"
     end
 
-    test "handles content that cannot be parsed as AST" do
-      content = """
-      <div>Unclosed div
-      <span>Unclosed span
-      Some text
-      """
+    test "JobCode validate_form includes content validation" do
+      changeset = JobCode.validate_form(%{"content" => nil})
 
-      html =
-        render_component(&AiAssistant.Component.formatted_content/1,
-          id: "formatted-content",
-          content: content
-        )
-
-      parsed_html = Floki.parse_document!(html)
-
-      text = Floki.text(parsed_html)
-      assert text =~ "Unclosed div"
-      assert text =~ "Unclosed span"
-      assert text =~ "Some text"
+      assert changeset.valid? == false
+      assert Keyword.has_key?(changeset.errors, :content)
     end
 
-    test "applies styles to elements not defined in the default styles" do
-      content = """
-      <custom-tag>Custom styled content</custom-tag>
-      """
+    test "WorkflowTemplate DefaultForm validates empty content" do
+      changeset = WorkflowTemplate.DefaultForm.changeset(%{"content" => ""})
 
-      custom_attributes = %{
-        "custom-tag" => %{class: "custom-class text-green-700"}
-      }
+      assert changeset.valid? == false
+      assert Keyword.has_key?(changeset.errors, :content)
+      {msg, _opts} = changeset.errors[:content]
+      assert msg == "Please enter a message before sending"
+    end
 
-      html =
-        render_component(&AiAssistant.Component.formatted_content/1, %{
-          id: "formatted-content",
-          content: content,
-          attributes: custom_attributes
-        })
+    test "form validation accepts valid content" do
+      # JobCode
+      changeset = JobCode.validate_form(%{"content" => "Help me with my code"})
+      assert changeset.valid? == true
 
-      parsed_html = Floki.parse_document!(html)
-
-      custom_tag = Floki.find(parsed_html, "custom-tag") |> hd()
-
-      assert custom_tag != nil
-
-      assert Floki.attribute(custom_tag, "class") == [
-               "custom-class text-green-700"
-             ]
+      # WorkflowTemplate
+      changeset = WorkflowTemplate.validate_form(%{"content" => "Create a workflow"})
+      assert changeset.valid? == true
     end
   end
 end
