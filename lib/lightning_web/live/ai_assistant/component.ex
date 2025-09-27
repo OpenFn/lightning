@@ -250,6 +250,7 @@ defmodule LightningWeb.AiAssistant.Component do
         socket
       ) do
     cleared_params = Map.put(params, "content", nil)
+    trimmed_content = if is_binary(content), do: String.trim(content), else: ""
 
     cond do
       not socket.assigns.can_edit ->
@@ -263,6 +264,17 @@ defmodule LightningWeb.AiAssistant.Component do
       socket.assigns.ai_limit_result != :ok ->
         {:noreply, socket}
 
+      trimmed_content == "" ->
+        changeset = socket.assigns.handler.validate_form(%{"content" => ""})
+        changeset = Ecto.Changeset.add_error(changeset, :content, "Please enter a message before sending")
+
+        {:noreply,
+         socket
+         |> assign(
+           changeset: changeset,
+           alert: "Please enter a message before sending"
+         )}
+
       true ->
         {:noreply,
          socket
@@ -272,7 +284,7 @@ defmodule LightningWeb.AiAssistant.Component do
            :changeset,
            socket.assigns.handler.validate_form(cleared_params)
          )
-         |> save_message(socket.assigns.action, content)}
+         |> save_message(socket.assigns.action, trimmed_content)}
     end
   end
 
@@ -447,7 +459,9 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp handle_save_error(socket, error) do
-    assign(socket, alert: socket.assigns.handler.error_message(error))
+    socket
+    |> assign(alert: socket.assigns.handler.error_message(error))
+    |> assign(pending_message: AsyncResult.ok(nil))
   end
 
   defp redirect_url(base_url, query_params) do
@@ -679,11 +693,11 @@ defmodule LightningWeb.AiAssistant.Component do
           <.simple_button_with_tooltip
             id={"ai-assistant-form-submit-btn-#{@id}"}
             type="submit"
-            disabled={@disabled}
+            disabled={@disabled || form_content_empty?(@form[:content].value)}
             form={@form_id}
             class={[
               "p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center h-7 w-7",
-              if(@disabled,
+              if(@disabled || form_content_empty?(@form[:content].value),
                 do:
                   "text-gray-400 bg-gray-300 cursor-not-allowed focus:ring-gray-300",
                 else:
@@ -931,6 +945,15 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp recent_activity?(datetime) do
     Timex.diff(DateTime.utc_now(), datetime, :hours) < 1
+  end
+
+  defp form_content_empty?(value) do
+    case value do
+      nil -> true
+      "" -> true
+      content when is_binary(content) -> String.trim(content) == ""
+      _ -> false
+    end
   end
 
   defp render_onboarding(assigns) do

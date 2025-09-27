@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix canvas "lockup" after AI chat errors, prevent sending empty message to AI
+  [3605](https://github.com/OpenFn/lightning/issues/3605)
 - Fixed GDPR Compliance component
   [#3611](https://github.com/OpenFn/lightning/issues/3611)
 - Fixed vertical alignment in breadcrumbs
