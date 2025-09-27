@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed GDPR Compliance component
+  [#3611](https://github.com/OpenFn/lightning/issues/3611)
 - Fixed vertical alignment in breadcrumbs
   [#3612](https://github.com/OpenFn/lightning/issues/3612)
 - Updated Project Digest to include count of work orders in an unsuccessful
