@@ -266,7 +266,13 @@ defmodule LightningWeb.AiAssistant.Component do
 
       trimmed_content == "" ->
         changeset = socket.assigns.handler.validate_form(%{"content" => ""})
-        changeset = Ecto.Changeset.add_error(changeset, :content, "Please enter a message before sending")
+
+        changeset =
+          Ecto.Changeset.add_error(
+            changeset,
+            :content,
+            "Please enter a message before sending"
+          )
 
         {:noreply,
          socket

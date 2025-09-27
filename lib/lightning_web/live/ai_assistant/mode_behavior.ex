@@ -237,8 +237,13 @@ defmodule LightningWeb.Live.AiAssistant.ModeBehavior do
         def changeset(params \\ %{}) do
           %__MODULE__{}
           |> cast(params, [:content])
-          |> validate_required([:content], message: "Please enter a message before sending")
-          |> validate_length(:content, min: 1, message: "Please enter a message before sending")
+          |> validate_required([:content],
+            message: "Please enter a message before sending"
+          )
+          |> validate_length(:content,
+            min: 1,
+            message: "Please enter a message before sending"
+          )
         end
 
         @doc false

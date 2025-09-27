@@ -324,7 +324,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       assert changeset.valid? == true
 
       # WorkflowTemplate
-      changeset = WorkflowTemplate.validate_form(%{"content" => "Create a workflow"})
+      changeset =
+        WorkflowTemplate.validate_form(%{"content" => "Create a workflow"})
+
       assert changeset.valid? == true
     end
   end
