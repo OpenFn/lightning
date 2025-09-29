@@ -243,6 +243,15 @@ defmodule Lightning.ProjectsTest do
 
       t1 = insert(:trigger, %{workflow: w1, type: :webhook})
 
+      # Add webhook auth method to test edge case deletion
+      wam1 = insert(:webhook_auth_method, project: p1)
+      t1 =
+        t1
+        |> Repo.preload(:webhook_auth_methods)
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:webhook_auth_methods, [wam1])
+        |> Repo.update!()
+
       e1 =
         insert(:edge, %{
           workflow: w1,
@@ -331,6 +340,8 @@ defmodule Lightning.ProjectsTest do
 
       jobs_query = Lightning.Projects.project_jobs_query(p1)
 
+      wam_query = Lightning.Projects.project_webhook_auth_methods_query(p1)
+
       assert steps_query |> Repo.aggregate(:count, :id) == 2
 
       assert work_order_query |> Repo.aggregate(:count, :id) == 1
@@ -352,6 +363,8 @@ defmodule Lightning.ProjectsTest do
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() == 5
 
+      assert wam_query |> Repo.aggregate(:count, :id) == 1
+
       assert {:ok, %Project{}} = Projects.delete_project(p1)
 
       assert steps_query |> Repo.aggregate(:count, :id) == 0
@@ -369,6 +382,8 @@ defmodule Lightning.ProjectsTest do
       assert workflows_query |> Repo.aggregate(:count, :id) == 0
 
       assert jobs_query |> Repo.aggregate(:count, :id) == 0
+
+      assert wam_query |> Repo.aggregate(:count, :id) == 0
 
       assert only_record_for_type?(p2_log_line)
 

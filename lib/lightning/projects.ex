@@ -681,6 +681,10 @@ defmodule Lightning.Projects do
     )
   end
 
+  def project_webhook_auth_methods_query(project) do
+    from(wam in Lightning.Workflows.WebhookAuthMethod, where: wam.project_id == ^project.id)
+  end
+
   @doc """
   Returns an `%Ecto.Changeset{}` for tracking project changes.
 
