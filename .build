@@ -241,6 +241,8 @@ Lightning.Workflows.WorkflowTemplate.html
 Lightning.Workflows.WorkflowVersion.html
 Lightning.Workflows.html
 Lightning.html
+LightningWeb.API.CredentialController.html
+LightningWeb.API.CredentialJSON.html
 LightningWeb.API.Helpers.html
 LightningWeb.API.JobController.html
 LightningWeb.API.ProjectController.html
@@ -411,8 +413,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-F39FB930.js
-dist/sidebar_items-09DB7844.js
+dist/search_data-5FC936DE.js
+dist/sidebar_items-0C86804E.js
 index.html
 provisioning.html
 readme.html
