@@ -9,8 +9,6 @@ defmodule Lightning.Extensions.ProjectHook do
   alias Lightning.Projects.Project
   alias Lightning.Repo
 
-  import Ecto.Query
-
   @spec handle_create_project(map()) ::
           {:ok, Project.t()} | {:error, Changeset.t()}
   def handle_create_project(attrs) do
@@ -29,11 +27,7 @@ defmodule Lightning.Extensions.ProjectHook do
 
     Projects.delete_project_workorders(project)
     Projects.project_jobs_query(project) |> Repo.delete_all()
-
-    # Clean up webhook auth method associations before deleting triggers
-    delete_webhook_auth_method_associations(project)
     Projects.project_webhook_auth_methods_query(project) |> Repo.delete_all()
-
     Projects.project_triggers_query(project) |> Repo.delete_all()
     Projects.project_workflows_query(project) |> Repo.delete_all()
     Projects.project_users_query(project) |> Repo.delete_all()
@@ -43,22 +37,6 @@ defmodule Lightning.Extensions.ProjectHook do
     Repo.delete(project)
   end
 
-  defp delete_webhook_auth_method_associations(project) do
-    # Get all webhook auth method IDs for this project
-    wam_ids =
-      from(wam in Lightning.Workflows.WebhookAuthMethod,
-        where: wam.project_id == ^project.id,
-        select: wam.id
-      )
-      |> Repo.all()
-      |> Enum.map(&Ecto.UUID.dump!/1)
-
-    # Clean up the many-to-many join table
-    from(j in "trigger_webhook_auth_methods",
-      where: j.webhook_auth_method_id in ^wam_ids
-    )
-    |> Repo.delete_all()
-  end
 
   @spec handle_project_validation(Changeset.t(Project.t())) ::
           Changeset.t(Project.t())
