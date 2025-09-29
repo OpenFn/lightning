@@ -28,6 +28,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed `purge_deleted` job by ensuring that webhook auth methods are cleaned
+  before related triggers are removed.
+  [#3621](https://github.com/OpenFn/lightning/pull/3621)
 - Fixed GDPR Compliance component
   [#3611](https://github.com/OpenFn/lightning/issues/3611)
 - Fixed vertical alignment in breadcrumbs
