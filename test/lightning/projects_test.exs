@@ -245,6 +245,7 @@ defmodule Lightning.ProjectsTest do
 
       # Add webhook auth method to test edge case deletion
       wam1 = insert(:webhook_auth_method, project: p1)
+
       t1 =
         t1
         |> Repo.preload(:webhook_auth_methods)
