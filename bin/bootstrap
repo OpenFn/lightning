@@ -5,12 +5,15 @@ set -euo pipefail
 
 trap 'echo "❌ Script interrupted at line $LINENO"; exit 1' ERR INT
 
-# Global environment facts
-declare -g OS ARCH
-declare -g HAS_RUST HAS_HOMEBREW
-declare -g HOMEBREW_PACKAGES_INSTALLED
-declare -A MISSING_SYSTEM_DEPS
-declare -A MISSING_BREW_PACKAGES
+# Global environment facts (no declare -g needed at global scope)
+OS=""
+ARCH=""
+HAS_RUST=""
+HAS_HOMEBREW=""
+HOMEBREW_PACKAGES_INSTALLED=""
+# Use regular arrays instead of associative arrays
+MISSING_SYSTEM_DEPS=()
+MISSING_BREW_PACKAGES=()
 
 # Function to gather environment facts
 gather_environment_facts() {
@@ -25,7 +28,7 @@ gather_environment_facts() {
   if command -v node &>/dev/null; then
     echo "✅ Node.js: $(node --version)"
   else
-    MISSING_SYSTEM_DEPS[node]="Node.js"
+    MISSING_SYSTEM_DEPS+=("Node.js")
   fi
 
   if command -v elixir &>/dev/null; then
@@ -33,7 +36,7 @@ gather_environment_facts() {
     elixir_version="$(elixir --version 2>/dev/null | head -1 || echo "version unknown")"
     echo "✅ Elixir: $elixir_version"
   else
-    MISSING_SYSTEM_DEPS[elixir]="Elixir"
+    MISSING_SYSTEM_DEPS+=("Elixir")
   fi
 
   if command -v rustc &>/dev/null; then
@@ -41,7 +44,7 @@ gather_environment_facts() {
     echo "✅ Rust: $(rustc --version)"
   else
     HAS_RUST=false
-    MISSING_BREW_PACKAGES[rust]="Rust"
+    MISSING_BREW_PACKAGES+=("rust")
   fi
 
   # Check Homebrew availability
@@ -57,13 +60,14 @@ gather_environment_facts() {
 
   # Check Homebrew packages if available
   if [[ "$HAS_HOMEBREW" == true ]]; then
-    local -ra required_brew_packages=(libsodium cmake)
+    local required_brew_packages
+    required_brew_packages=(libsodium cmake)
 
     for package in "${required_brew_packages[@]}"; do
       if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^$package$"; then
         echo "✅ $package (via Homebrew)"
       else
-        MISSING_BREW_PACKAGES[$package]="$package"
+        MISSING_BREW_PACKAGES+=("$package")
       fi
     done
 
@@ -71,8 +75,14 @@ gather_environment_facts() {
     if [[ "$HAS_RUST" == false ]]; then
       if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^rust$"; then
         echo "✅ Rust (via Homebrew)"
-        # Remove from missing since it's available via homebrew
-        unset 'MISSING_BREW_PACKAGES[rust]'
+        # Remove rust from missing packages (need to rebuild array)
+        local new_missing=()
+        for pkg in "${MISSING_BREW_PACKAGES[@]}"; do
+          if [[ "$pkg" != "rust" ]]; then
+            new_missing+=("$pkg")
+          fi
+        done
+        MISSING_BREW_PACKAGES=("${new_missing[@]}")
       fi
     fi
   fi
@@ -88,7 +98,7 @@ check_environment_status() {
   local has_installable_missing=false
 
   # Check critical system dependencies
-  if [[ -v MISSING_SYSTEM_DEPS ]] && ((${#MISSING_SYSTEM_DEPS[@]} > 0)); then
+  if [[ ${#MISSING_SYSTEM_DEPS[@]} -gt 0 ]]; then
     echo "❌ Missing critical system dependencies:"
     for dep in "${MISSING_SYSTEM_DEPS[@]}"; do
       echo "   - $dep"
@@ -97,17 +107,17 @@ check_environment_status() {
   fi
 
   # Check installable homebrew dependencies
-  if [[ -v MISSING_BREW_PACKAGES ]] && ((${#MISSING_BREW_PACKAGES[@]} > 0)); then
+  if [[ ${#MISSING_BREW_PACKAGES[@]} -gt 0 ]]; then
     if [[ "$HAS_HOMEBREW" == true ]]; then
       echo "📦 Missing Homebrew packages (will install):"
-      for package in "${!MISSING_BREW_PACKAGES[@]}"; do
-        echo "   - ${MISSING_BREW_PACKAGES[$package]}"
+      for package in "${MISSING_BREW_PACKAGES[@]}"; do
+        echo "   - $package"
       done
       has_installable_missing=true
     else
       echo "❌ Homebrew not available, cannot install:"
-      for package in "${!MISSING_BREW_PACKAGES[@]}"; do
-        echo "   - ${MISSING_BREW_PACKAGES[$package]}"
+      for package in "${MISSING_BREW_PACKAGES[@]}"; do
+        echo "   - $package"
       done
       has_critical_missing=true
     fi
@@ -129,11 +139,9 @@ check_environment_status() {
 
 # Function to install missing homebrew packages
 install_missing_homebrew_packages() {
-  if [[ -v MISSING_BREW_PACKAGES ]] && ((${#MISSING_BREW_PACKAGES[@]} > 0)) && [[ "$HAS_HOMEBREW" == true ]]; then
-    local packages_to_install=("${!MISSING_BREW_PACKAGES[@]}")
-
-    echo "📦 Installing missing Homebrew packages: ${packages_to_install[*]}"
-    if brew install "${packages_to_install[@]}"; then
+  if [[ ${#MISSING_BREW_PACKAGES[@]} -gt 0 ]] && [[ "$HAS_HOMEBREW" == true ]]; then
+    echo "📦 Installing missing Homebrew packages: ${MISSING_BREW_PACKAGES[*]}"
+    if brew install "${MISSING_BREW_PACKAGES[@]}"; then
       echo "✅ All missing packages have been installed"
     else
       echo "❌ Failed to install some packages"
@@ -145,7 +153,7 @@ install_missing_homebrew_packages() {
 
 # Function to set environment variables
 setup_environment_variables() {
-  if [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
+  if [[ "$OS" == "Darwin" ]]; then
     # Check if libsodium is available (either already installed or just installed)
     if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^libsodium$" || brew list libsodium &>/dev/null; then
       export CPATH=/opt/homebrew/include
