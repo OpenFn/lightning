@@ -60,6 +60,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix project deletion for projects with webhook auth methods
+  [#3619](https://github.com/OpenFn/lightning/issues/3619),
+  [#3523](https://github.com/OpenFn/lightning/issues/3523)
 - Fix pagination bar rounding to match table corners
   [#3595](https://github.com/OpenFn/lightning/issues/3595)
 - Restore export history button
