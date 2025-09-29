@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- REST API for Credential creation, deletion, list
+  [#3583](https://github.com/OpenFn/lightning/issues/3583)
+
 ### Changed
 
 - Bumped devDeps `ws-worker` version to `1.15.0` to better handle job
