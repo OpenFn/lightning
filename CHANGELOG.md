@@ -19,7 +19,8 @@ and this project adheres to
 
 ### Changed
 
-- Optimized map and join with Enum.map_join `c112f3d`
+- Optimized map and join with `Enum.map_join/3`
+  [`c112f3d`](https://github.com/OpenFn/lightning/commit/c112f3df29f8ab83b187f3695fdaf32c0837a016)
 
 ### Fixed
 
