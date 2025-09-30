@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.14.7] - 2025-09-30
+
+### Changed
+
 - Optimized map and join with `Enum.map_join/3`
   [`c112f3d`](https://github.com/OpenFn/lightning/commit/c112f3df29f8ab83b187f3695fdaf32c0837a016)
 
@@ -27,7 +33,7 @@ and this project adheres to
 - Fixed tests for dataclip live viewer
   [#3648](https://github.com/OpenFn/lightning/issues/3648)
 
-## [v2.14.7-pre] 2025-09-30
+## [v2.14.7-pre] - 2025-09-30
 
 ### Added
 
