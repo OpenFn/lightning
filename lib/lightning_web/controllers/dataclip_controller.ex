@@ -43,13 +43,13 @@ defmodule LightningWeb.DataclipController do
   defp respond_with_body(conn, dataclip_id) do
     import Ecto.Query
 
-    # Query body as JSON text directly from PostgreSQL, avoiding expensive
+    # Query body as pretty-printed JSON text directly from PostgreSQL, avoiding expensive
     # deserialization to Elixir map (saves ~38x memory amplification!)
     result =
       from(d in Lightning.Invocation.Dataclip,
         where: d.id == ^dataclip_id,
         select: %{
-          body_json: fragment("?::text", d.body),
+          body_json: fragment("jsonb_pretty(?)", d.body),
           type: d.type,
           id: d.id,
           updated_at: d.updated_at
@@ -69,7 +69,7 @@ defmodule LightningWeb.DataclipController do
         }
         DataclipScrubber.scrub_dataclip_body!(dataclip_for_scrubbing)
       else
-        # No scrubbing needed - return JSON text directly
+        # No scrubbing needed - return pretty-printed JSON text directly
         result.body_json
       end
 
