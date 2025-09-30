@@ -156,7 +156,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       "content" => content,
       "context" => context,
       "history" => history,
-      "meta" => %{}
+      "meta" => %{},
+      "stream" => true
     }
 
     # Start Apollo WebSocket stream
@@ -168,6 +169,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
       {:error, reason} ->
         Logger.error("[MessageProcessor] Failed to start Apollo stream: #{inspect(reason)}")
+        Logger.info("[MessageProcessor] Falling back to HTTP client")
+        # Fall back to existing HTTP implementation
+        raise "WebSocket failed, falling back to HTTP (not implemented yet)"
     end
 
     :ok
@@ -175,11 +179,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   defp get_apollo_ws_url do
     base_url = Lightning.Config.apollo(:endpoint)
-    # Convert HTTP(S) to WS(S)
+    # Convert HTTP(S) to WS(S) and point to job_chat service
     base_url
     |> String.replace("https://", "wss://")
     |> String.replace("http://", "ws://")
-    |> then(&"#{&1}/stream")
+    |> then(&"#{&1}/services/job_chat")
   end
 
   defp get_chat_history(session) do
@@ -216,23 +220,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     )
   end
 
-  @doc false
-  @spec broadcast_chunk(String.t(), String.t()) :: :ok
-  defp broadcast_chunk(session_id, content) do
-    Lightning.broadcast(
-      "ai_session:#{session_id}",
-      {:update, %{streaming_chunk: %{content: content}}}
-    )
-  end
-
-  @doc false
-  @spec broadcast_status_update(String.t(), String.t()) :: :ok
-  defp broadcast_status_update(session_id, status_message) do
-    Lightning.broadcast(
-      "ai_session:#{session_id}",
-      {:update, %{status_update: %{status: status_message}}}
-    )
-  end
 
   @doc """
   Updates a message's status and broadcasts the change.

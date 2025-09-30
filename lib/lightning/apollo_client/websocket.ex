@@ -40,19 +40,33 @@ defmodule Lightning.ApolloClient.WebSocket do
   def handle_connect(_conn, state) do
     Logger.info("[ApolloWebSocket] Connected to Apollo streaming")
 
-    # Send initial payload
-    message = Jason.encode!(state.payload)
+    # Send message in Apollo's expected format
+    message = Jason.encode!(%{
+      "event" => "start",
+      "data" => state.payload
+    })
+
+    # Send the message immediately after connecting
+    send(self(), {:send_start_message, message})
+    {:ok, state}
+  end
+
+  @impl WebSockex
+  def handle_info({:send_start_message, message}, state) do
     {:reply, {:text, message}, state}
   end
 
   @impl WebSockex
   def handle_frame({:text, msg}, state) do
     case Jason.decode(msg) do
-      {:ok, %{"event" => event_type, "data" => data}} ->
+      {:ok, %{"event" => "log", "data" => data}} ->
+        Logger.debug("[ApolloWebSocket] Log: #{data}")
+
+      {:ok, %{"event" => "event", "type" => event_type, "data" => data}} ->
         handle_apollo_event(event_type, data, state)
 
-      {:ok, %{"type" => event_type, "data" => data}} ->
-        handle_apollo_event(event_type, data, state)
+      {:ok, %{"event" => "complete", "data" => data}} ->
+        send_to_channel({:apollo_complete, data}, state)
 
       {:ok, %{"error" => error}} ->
         Logger.error("[ApolloWebSocket] Apollo error: #{inspect(error)}")
@@ -62,7 +76,7 @@ defmodule Lightning.ApolloClient.WebSocket do
         Logger.error("[ApolloWebSocket] JSON decode error: #{inspect(decode_error)}")
 
       _ ->
-        Logger.warn("[ApolloWebSocket] Unknown message format: #{msg}")
+        Logger.warning("[ApolloWebSocket] Unknown message format: #{msg}")
     end
 
     {:ok, state}
