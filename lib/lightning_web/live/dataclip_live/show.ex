@@ -21,7 +21,7 @@ defmodule LightningWeb.DataclipLive.Show do
      socket
      |> assign(:id, id)
      |> assign(:page_title, "Dataclip #{String.slice(id, 0..7)}")
-     |> assign(:dataclip, Invocation.get_dataclip_details!(id))}
+     |> assign(:dataclip, Invocation.get_dataclip!(id))}
   end
 
   @impl true
@@ -37,23 +37,8 @@ defmodule LightningWeb.DataclipLive.Show do
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Metadata Section -->
         <div class="bg-white shadow rounded-lg mb-6">
-          <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div class="px-6 py-4 border-b border-gray-200">
             <h3 class="text-lg font-medium text-gray-900">Dataclip Details</h3>
-            <%= unless @dataclip.wiped_at do %>
-              <button
-                type="button"
-                id={"copy-dataclip-#{@dataclip.id}"}
-                phx-hook="Copy"
-                data-content={Jason.encode!(@dataclip.body, pretty: true)}
-                class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-md px-2 py-1"
-                title="Copy dataclip body to clipboard"
-              >
-                <LightningWeb.Components.Icons.icon
-                  name="hero-clipboard-document"
-                  class="h-4 w-4"
-                /> Click to copy JSON body
-              </button>
-            <% end %>
           </div>
           <div class="px-6 py-4">
             <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -98,7 +83,7 @@ defmodule LightningWeb.DataclipLive.Show do
             </dl>
           </div>
         </div>
-        
+
     <!-- Body Section -->
         <div class="bg-white shadow rounded-lg">
           <div class="h-96 overflow-hidden">
