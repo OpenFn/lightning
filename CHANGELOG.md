@@ -30,6 +30,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fix memory bloat on dataclip viewer in dataclip detail page
+  [#3641](https://github.com/OpenFn/lightning/issues/3641)
+- Ameliorate memory usage when scrubbing dataclips for security
+  [#3641](https://github.com/OpenFn/lightning/issues/3641)
 - Fixed bootstrap script compatibility for Intel Macs and older Bash versions
   (3.1+) [#3623](https://github.com/OpenFn/lightning/pull/3623)
 - Fixed GDPR Compliance component

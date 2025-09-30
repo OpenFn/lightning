@@ -83,14 +83,24 @@ defmodule Lightning.Scrubber do
     Agent.update(agent, &State.add_samples(&1, new_encoded_samples))
   end
 
+  @doc """
+  This is used for scrubbing logs (is_list) and JSON (is_binary)
+  """
   def scrub(agent, lines) when is_list(lines) do
     state = Agent.get(agent, & &1)
     lines |> Enum.map(fn line -> State.scrub(state, line) end)
   end
 
-  def scrub(agent, data) do
-    agent |> Agent.get(&State.scrub(&1, data))
+  def scrub(agent, data) when is_binary(data) do
+    state = agent |> Agent.get(fn state -> state end)
+
+    # Process line-by-line to avoid keeping multiple copies of large strings in memory
+    String.split(data, "\n")
+    |> Enum.map(fn line -> State.scrub(state, line) end)
+    |> Enum.join("\n")
   end
+
+  def scrub(_agent, data), do: data
 
   @doc """
   Prepare a list of sensitive samples (strings) into a potentially bigger list
