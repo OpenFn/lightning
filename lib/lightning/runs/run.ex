@@ -32,6 +32,13 @@ defmodule Lightning.Run do
   """
   def final_states, do: @final_states
 
+  @doc """
+  Returns the list of failure states for a run.
+
+  These are all final states except :success.
+  """
+  def failure_states, do: final_states() -- [:success]
+
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,

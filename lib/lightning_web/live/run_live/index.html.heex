@@ -746,6 +746,19 @@
               <% end %>
             </.async_result>
           </:body>
+          <:pagination_actions>
+            <button
+              :if={@page.total_entries > 0}
+              id="export-history-button"
+              type="button"
+              phx-click="show-export-modal"
+              class="icon-button inline-flex items-center"
+              phx-hook="Tooltip"
+              aria-label={"Export all #{@page.total_entries} results matching your query"}
+            >
+              <.icon name="hero-cloud-arrow-down" class="w-5 h-5" />
+            </button>
+          </:pagination_actions>
         </.table>
       </div>
     </div>

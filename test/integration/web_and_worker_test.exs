@@ -250,7 +250,7 @@ defmodule Lightning.WebAndWorkerTest do
 
       version_logs = pick_out_version_logs(run)
       assert version_logs["@openfn/language-http"] =~ "3.1.12"
-      assert version_logs["worker"] =~ "1.13"
+      assert version_logs["worker"] =~ "1.15"
       assert version_logs["node.js"] =~ "22.12"
       assert version_logs["@openfn/language-common"] == "3.0.2"
 

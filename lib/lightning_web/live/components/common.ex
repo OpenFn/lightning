@@ -672,4 +672,6 @@ defmodule LightningWeb.Components.Common do
 
   defp root_name(%Lightning.Projects.Project{} = selected_item),
     do: Lightning.Projects.root_of(selected_item).name
+
+  defp root_name(%{name: name}), do: name
 end

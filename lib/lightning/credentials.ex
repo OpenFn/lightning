@@ -19,6 +19,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.CredentialBody
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthToken
@@ -183,30 +184,56 @@ defmodule Lightning.Credentials do
     if oauth_credential?(attrs) do
       build_oauth_create_multi(changeset, attrs)
     else
-      Multi.insert(Multi.new(), :credential, changeset)
+      # Credential environments foundation: During the migration period, we maintain
+      # dual storage where both credentials.body and credential_bodies contain the same data.
+      # Once the runtime switches to using credential_bodies exclusively, remove this
+      # credential_body creation and the credentials.body field will become unused.
+      Multi.new()
+      |> Multi.insert(:credential, changeset)
+      |> Multi.insert(:credential_body, fn %{credential: credential} ->
+        %CredentialBody{}
+        |> CredentialBody.changeset(%{
+          credential_id: credential.id,
+          name: "main",
+          body: attrs |> coerce_json_field("body") |> Map.get("body")
+        })
+      end)
     end
   end
 
   defp oauth_credential?(attrs), do: attrs["schema"] == "oauth"
 
-  defp build_oauth_create_multi(
-         changeset,
-         %{
-           "body" => body,
-           "oauth_token" => token
-         } = attrs
-       ) do
+  defp build_oauth_create_multi(changeset, %{"oauth_token" => token} = attrs) do
     Multi.new()
     |> Multi.run(:prepare_token_data, fn _repo, _changes ->
       prepare_oauth_token_data(token, attrs)
     end)
-    |> Multi.insert(:oauth_token, fn %{prepare_token_data: token_attrs} ->
-      OauthToken.changeset(%OauthToken{}, token_attrs)
+    |> Multi.insert(:credential, changeset)
+    |> Multi.insert(:credential_body, fn %{credential: credential} ->
+      # Environments migration: Creating matching credential_body for new credentials.
+      # When environments go live, this becomes the primary storage and credentials.body
+      # can be deprecated. The "main" environment represents the current single environment.
+      %CredentialBody{}
+      |> CredentialBody.changeset(%{
+        credential_id: credential.id,
+        name: "main",
+        body: attrs |> coerce_json_field("body") |> Map.get("body")
+      })
     end)
-    |> Multi.insert(:credential, fn %{oauth_token: fresh_token} ->
-      changeset
-      |> Ecto.Changeset.put_change(:oauth_token_id, fresh_token.id)
-      |> Ecto.Changeset.put_change(:body, body)
+    |> Multi.insert(:oauth_token, fn %{
+                                       prepare_token_data: token_attrs,
+                                       credential_body: cb
+                                     } ->
+      token_attrs
+      |> Map.put(:credential_body_id, cb.id)
+      |> then(&OauthToken.changeset(%OauthToken{}, &1))
+    end)
+    |> Multi.update(:update_credential, fn %{
+                                             oauth_token: fresh_token,
+                                             credential: credential
+                                           } ->
+      credential
+      |> Ecto.Changeset.change(oauth_token_id: fresh_token.id)
     end)
   end
 
@@ -268,7 +295,46 @@ defmodule Lightning.Credentials do
     if should_update_oauth?(credential, attrs) do
       build_oauth_update_multi(credential, changeset, attrs)
     else
-      Multi.update(Multi.new(), :credential, changeset)
+      Multi.new()
+      |> Multi.update(:credential, changeset)
+      |> maybe_sync_credential_body(credential, attrs)
+    end
+  end
+
+  defp maybe_sync_credential_body(multi, credential, attrs) do
+    if Map.has_key?(attrs, "body") do
+      multi
+      |> Multi.run(:credential_body, fn _repo, _changes ->
+        sync_credential_body_for_update(credential, attrs)
+      end)
+    else
+      multi
+    end
+  end
+
+  defp sync_credential_body_for_update(credential, attrs) do
+    # Synchronization layer: Keep credential_bodies in sync with credentials table changes.
+    # This ensures data consistency during the environments transition period.
+    # Remove this function when credential_bodies becomes the source of truth.
+    processed_attrs = attrs |> coerce_json_field("body")
+
+    case get_or_create_main_credential_body(credential.id) do
+      {:ok, credential_body} ->
+        credential_body
+        |> CredentialBody.changeset(%{
+          body: processed_attrs["body"]
+        })
+        |> Repo.update()
+
+      {:error, :not_found} ->
+        # Handle credentials created before the environments migration
+        %CredentialBody{}
+        |> CredentialBody.changeset(%{
+          credential_id: credential.id,
+          name: "main",
+          body: processed_attrs["body"]
+        })
+        |> Repo.insert()
     end
   end
 
@@ -298,6 +364,47 @@ defmodule Lightning.Credentials do
       )
       |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
     end)
+    |> Multi.run(:credential_body, fn _repo, %{credential: updated_credential} ->
+      # Dual-write pattern: Update both credentials.body and credential_bodies during migration.
+      # When environments are fully implemented, remove this sync logic and update only
+      # the specific environment's credential_body instead of the "main" environment.
+      processed_attrs = attrs |> coerce_json_field("body")
+
+      case get_or_create_main_credential_body(updated_credential.id) do
+        {:ok, credential_body} ->
+          credential_body
+          |> CredentialBody.changeset(%{
+            body: Map.get(processed_attrs, "body", credential.body)
+          })
+          |> Repo.update()
+
+        _error ->
+          # Backfill credential_body for existing OAuth credentials
+          %CredentialBody{}
+          |> CredentialBody.changeset(%{
+            credential_id: updated_credential.id,
+            name: "main",
+            body: Map.get(processed_attrs, "body", credential.body)
+          })
+          |> Repo.insert()
+      end
+    end)
+  end
+
+  defp get_or_create_main_credential_body(credential_id) do
+    # Helper for the transition period. When environments are fully implemented,
+    # this function should be removed and callers should work directly with
+    # the appropriate environment's credential_body rather than defaulting to "main".
+    case Repo.get_by(Lightning.Credentials.CredentialBody,
+           credential_id: credential_id,
+           name: "main"
+         ) do
+      nil ->
+        {:error, :not_found}
+
+      credential_body ->
+        {:ok, credential_body}
+    end
   end
 
   defp prepare_oauth_update_data(existing_token, new_token_data, attrs) do

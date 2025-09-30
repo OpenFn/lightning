@@ -54,13 +54,6 @@ defmodule LightningWeb.ProfileLive.Components do
         user={@current_user}
         return_to={~p"/profile"}
       />
-      <%= if assigns[:gdpr_preferences] do %>
-        <.live_component
-          module={@gdpr_preferences.component}
-          id={@gdpr_preferences.id}
-          current_user={@current_user}
-        />
-      <% end %>
       <.live_component
         module={LightningWeb.ProfileLive.MfaComponent}
         id={"#{@current_user.id}_mfa_section"}
@@ -76,6 +69,13 @@ defmodule LightningWeb.ProfileLive.Components do
         id="experimental-features"
         user={@current_user}
       />
+      <%= if assigns[:gdpr_preferences] do %>
+        <.live_component
+          module={@gdpr_preferences.component}
+          id={@gdpr_preferences.id}
+          current_user={@current_user}
+        />
+      <% end %>
       <.delete_user_card url={@delete_user_url} />
     </div>
     """

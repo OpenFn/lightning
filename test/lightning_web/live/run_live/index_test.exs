@@ -475,4 +475,16 @@ defmodule LightningWeb.RunLive.IndexTest do
                "Rerun #{length(selected_workorders)} selected work orders from selected job"
     end
   end
+
+  describe "Export History" do
+    test "export history button is present", %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      assert has_element?(view, "button#export-history-button")
+    end
+  end
 end

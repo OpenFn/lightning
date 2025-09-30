@@ -225,6 +225,22 @@ defmodule Lightning.Factories do
     }
   end
 
+  def credential_body_factory do
+    %Lightning.Credentials.CredentialBody{
+      name: "main",
+      body: %{"api_key" => "secret_value"},
+      credential: build(:credential)
+    }
+  end
+
+  def credential_body_with_environment_factory do
+    %Lightning.Credentials.CredentialBody{
+      name: sequence(:environment_name, ["main", "staging", "prod"]),
+      body: %{"api_key" => "secret_value"},
+      credential: build(:credential)
+    }
+  end
+
   def oauth_client_factory do
     %Lightning.Credentials.OauthClient{
       name: sequence(:oauth_client_name, &"oauth-client#{&1}"),

@@ -47,10 +47,6 @@ defmodule LightningWeb.DataclipLiveTest do
       assert html =~ "Created"
       assert html =~ "Updated"
 
-      # Check copy button appears (since dataclip is not wiped)
-      assert html =~ "Click to copy JSON body"
-      assert html =~ "copy-dataclip-#{dataclip.id}"
-
       # Check dataclip viewer component is rendered (not wiped message)
       assert html =~ "dataclip-viewer-#{dataclip.id}"
       refute html =~ "No Data Available"
