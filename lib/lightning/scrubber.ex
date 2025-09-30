@@ -83,6 +83,9 @@ defmodule Lightning.Scrubber do
     Agent.update(agent, &State.add_samples(&1, new_encoded_samples))
   end
 
+  @doc """
+  This is used for scrubbing logs (is_list) and JSON (fallthrough)
+  """
   def scrub(agent, lines) when is_list(lines) do
     state = Agent.get(agent, & &1)
     lines |> Enum.map(fn line -> State.scrub(state, line) end)
