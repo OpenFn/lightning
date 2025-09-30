@@ -48,14 +48,20 @@ defmodule Lightning.DataclipScrubber do
       credentials ->
         {:ok, scrubber} = Scrubber.start_link([])
 
-        credentials
-        |> Enum.reduce(scrubber, fn credential, scrubber ->
-          samples = Credentials.sensitive_values_for(credential)
-          basic_auth = Credentials.basic_auth_for(credential)
-          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-          scrubber
-        end)
-        |> Scrubber.scrub(body_str)
+        scrubber =
+          credentials
+          |> Enum.reduce(scrubber, fn credential, scrubber ->
+            samples = Credentials.sensitive_values_for(credential)
+            basic_auth = Credentials.basic_auth_for(credential)
+            :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
+            scrubber
+          end)
+
+        # Process line-by-line to avoid keeping multiple copies of large strings in memory
+        body_str
+        |> String.split("\n")
+        |> then(&Scrubber.scrub(scrubber, &1))
+        |> Enum.join("\n")
     end
   end
 
