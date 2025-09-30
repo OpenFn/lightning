@@ -111,8 +111,9 @@ Benchee.run(
       :ok
     end
   },
-  memory_time: 3,
-  time: 10,
+  warmup: 0.5,         # Minimal warmup
+  time: 2,             # Just enough for accuracy
+  memory_time: 1,      # Quick memory measurement
   formatters: [
     {Benchee.Formatters.Console,
      extended_statistics: true}
