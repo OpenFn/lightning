@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
+  import LightningWeb.Live.MemoryDebug
   import React
 
   alias Lightning.Accounts
@@ -107,7 +108,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
-              
+
     <!-- Add collaborative editor toggle (beaker icon only) -->
               <.link
                 :if={
@@ -1389,6 +1390,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def mount(_params, _session, %{assigns: assigns} = socket) do
+    log_memory("WorkflowLive.Edit mount start")
+
     view_only_users_ids =
       assigns.project
       |> view_only_users()
@@ -1397,7 +1400,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     workflow_ai_chat_id = "workflow-ai-chat-panel"
     new_workflow_panel_id = "new-workflow-panel"
 
-    {:ok,
+    socket =
      socket
      |> authorize()
      |> assign(
@@ -1459,12 +1462,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
          VersionControl.get_repo_connection_for_project(assigns.project.id),
        max_concurrency: assigns.project.concurrency
      )
-     |> assign(initial_presence_summary(assigns.current_user))}
+     |> assign(initial_presence_summary(assigns.current_user))
+
+    log_memory("WorkflowLive.Edit mount complete",
+      socket: socket,
+      assigns: [:workflow, :snapshot])
+
+    {:ok, socket}
   end
 
   @impl true
   def handle_params(params, _url, socket) do
-    {:noreply,
+    log_memory("WorkflowLive.Edit handle_params start", socket: socket)
+
+    socket =
      socket
      |> assign(
        active_modal: nil,
@@ -1489,7 +1500,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
            })
          end
        end
-     end)}
+     end)
+
+    log_memory("WorkflowLive.Edit handle_params complete",
+      socket: socket,
+      assigns: [:workflow, :snapshot, :selected_run])
+
+    {:noreply, socket}
   end
 
   defp authorize(%{assigns: %{live_action: :new}} = socket) do
@@ -1577,7 +1594,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       _ ->
         # TODO we shouldn't be calling Repo from here
-        workflow = get_workflow_by_id(workflow_id)
+        workflow = measure("load workflow #{workflow_id}", fn ->
+          get_workflow_by_id(workflow_id)
+        end)
 
         if workflow do
           run_id = Map.get(params, "a")
