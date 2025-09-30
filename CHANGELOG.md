@@ -19,10 +19,29 @@ and this project adheres to
 
 - Add database changes for credentials environments support
   [#3597](https://github.com/OpenFn/lightning/issues/3597)
+- REST API for Credential creation, deletion, list
+  [#3583](https://github.com/OpenFn/lightning/issues/3583)
 
 ### Changed
 
+- Bumped devDeps `ws-worker` version to `1.15.0` to better handle job
+  compilation memory issues
+  [#3613](https://github.com/OpenFn/lightning/pull/3613)
+
 ### Fixed
+
+- Fixed GDPR Compliance component
+  [#3611](https://github.com/OpenFn/lightning/issues/3611)
+- Fixed vertical alignment in breadcrumbs
+  [#3612](https://github.com/OpenFn/lightning/issues/3612)
+- Updated Project Digest to include count of work orders in an unsuccessful
+  state [#3616](https://github.com/OpenFn/lightning/issues/3616)
+
+## [v2.14.6-pre1] - 2025-09-26
+
+### Changed
+
+- Modify `Common.root_name` to display any map with a `:name` key
 
 ## [v2.14.6-pre] - 2025-09-25
 
@@ -43,6 +62,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix project deletion for projects with webhook auth methods
+  [#3619](https://github.com/OpenFn/lightning/issues/3619),
+  [#3523](https://github.com/OpenFn/lightning/issues/3523)
 - Fix pagination bar rounding to match table corners
   [#3595](https://github.com/OpenFn/lightning/issues/3595)
 - Restore export history button
