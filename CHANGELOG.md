@@ -19,7 +19,12 @@ and this project adheres to
 
 ### Changed
 
+- Optimized map and join with Enum.map_join `c112f3d`
+
 ### Fixed
+
+- Fixed tests for dataclip live viewer
+  [#3648](https://github.com/OpenFn/lightning/issues/3648)
 
 ## [v2.14.7-pre] 2025-09-30
 
