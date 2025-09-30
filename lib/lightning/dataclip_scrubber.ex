@@ -57,11 +57,7 @@ defmodule Lightning.DataclipScrubber do
             scrubber
           end)
 
-        # Process line-by-line to avoid keeping multiple copies of large strings in memory
-        body_str
-        |> String.split("\n")
-        |> then(&Scrubber.scrub(scrubber, &1))
-        |> Enum.join("\n")
+        Scrubber.scrub(scrubber, body_str)
     end
   end
 

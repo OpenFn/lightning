@@ -32,7 +32,8 @@ export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
     ).clipboard;
 
     // Remove focus after click to prevent outline
-    (e.currentTarget as HTMLButtonElement).blur();
+    const button = e.currentTarget as unknown as { blur: () => void };
+    button.blur();
 
     if (clipboard?.writeText) {
       void clipboard
