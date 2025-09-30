@@ -5,26 +5,31 @@ set -euo pipefail
 
 trap 'echo "❌ Script interrupted at line $LINENO"; exit 1' ERR INT
 
-# Global environment facts (no declare -g needed at global scope)
 OS=""
 ARCH=""
 HAS_RUST=""
 HAS_HOMEBREW=""
 HOMEBREW_PACKAGES_INSTALLED=""
-# Use regular arrays instead of associative arrays
+HOMEBREW_PREFIX=""
 MISSING_SYSTEM_DEPS=()
 MISSING_BREW_PACKAGES=()
 
-# Function to gather environment facts
 gather_environment_facts() {
   echo "🔍 Gathering environment information..."
 
-  # System information
   OS="$(uname)"
   ARCH="$(uname -m)"
   echo "Platform: $OS $ARCH"
 
-  # Check system commands
+  if [[ "$OS" == "Darwin" ]]; then
+    if [[ "$ARCH" == "arm64" ]]; then
+      HOMEBREW_PREFIX="/opt/homebrew"
+    else
+      HOMEBREW_PREFIX="/usr/local"
+    fi
+    echo "Homebrew prefix: $HOMEBREW_PREFIX"
+  fi
+
   if command -v node &>/dev/null; then
     echo "✅ Node.js: $(node --version)"
   else
@@ -47,18 +52,15 @@ gather_environment_facts() {
     MISSING_BREW_PACKAGES+=("rust")
   fi
 
-  # Check Homebrew availability
   if command -v brew &>/dev/null; then
     HAS_HOMEBREW=true
     echo "✅ Homebrew: $(brew --version | head -1)"
 
-    # Get installed packages once
     HOMEBREW_PACKAGES_INSTALLED="$(brew list -1 2>/dev/null || true)"
   else
     HAS_HOMEBREW=false
   fi
 
-  # Check Homebrew packages if available
   if [[ "$HAS_HOMEBREW" == true ]]; then
     local required_brew_packages
     required_brew_packages=(libsodium cmake)
@@ -71,11 +73,9 @@ gather_environment_facts() {
       fi
     done
 
-    # Add rust to missing brew packages if not installed via system
     if [[ "$HAS_RUST" == false ]]; then
       if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^rust$"; then
         echo "✅ Rust (via Homebrew)"
-        # Remove rust from missing packages (need to rebuild array)
         local new_missing=()
         for pkg in "${MISSING_BREW_PACKAGES[@]}"; do
           if [[ "$pkg" != "rust" ]]; then
@@ -87,26 +87,49 @@ gather_environment_facts() {
     fi
   fi
 
+  if [[ "$OS" == "Darwin" ]]; then
+    if xcode-select -p &>/dev/null; then
+      echo "✅ Xcode Command Line Tools: $(xcode-select -p)"
+    else
+      echo "❌ Xcode Command Line Tools not installed"
+      MISSING_SYSTEM_DEPS+=("Xcode Command Line Tools")
+    fi
+
+    if echo '#include <cstddef>' | clang++ -x c++ -c - &>/dev/null; then
+      echo "✅ C++ standard library headers found"
+    else
+      echo "⚠️  C++ headers not accessible - this often requires reinstalling Command Line Tools"
+      echo ""
+      echo "   Try these solutions in order:"
+      echo "   1. Reset Xcode path: sudo xcode-select --reset"
+      echo "   2. If that doesn't work, completely reinstall CLT:"
+      echo "      sudo rm -rf /Library/Developer/CommandLineTools"
+      echo "      xcode-select --install"
+      echo ""
+      echo "   Note: The reinstall can take 10-15 minutes to download and install."
+    fi
+  fi
+
   echo ""
 }
 
-# Function to display environment status and exit if critical dependencies missing
 check_environment_status() {
   echo "📋 Environment Status Summary:"
 
   local has_critical_missing=false
   local has_installable_missing=false
 
-  # Check critical system dependencies
   if [[ ${#MISSING_SYSTEM_DEPS[@]} -gt 0 ]]; then
     echo "❌ Missing critical system dependencies:"
     for dep in "${MISSING_SYSTEM_DEPS[@]}"; do
       echo "   - $dep"
+      if [[ "$dep" == "Xcode Command Line Tools" ]]; then
+        echo "     Run: xcode-select --install"
+      fi
     done
     has_critical_missing=true
   fi
 
-  # Check installable homebrew dependencies
   if [[ ${#MISSING_BREW_PACKAGES[@]} -gt 0 ]]; then
     if [[ "$HAS_HOMEBREW" == true ]]; then
       echo "📦 Missing Homebrew packages (will install):"
@@ -123,7 +146,6 @@ check_environment_status() {
     fi
   fi
 
-  # Exit if critical dependencies missing
   if [[ "$has_critical_missing" == true ]]; then
     echo ""
     echo "❌ Critical dependencies are missing. Please install them manually and re-run this script."
@@ -137,7 +159,6 @@ check_environment_status() {
   echo ""
 }
 
-# Function to install missing homebrew packages
 install_missing_homebrew_packages() {
   if [[ ${#MISSING_BREW_PACKAGES[@]} -gt 0 ]] && [[ "$HAS_HOMEBREW" == true ]]; then
     echo "📦 Installing missing Homebrew packages: ${MISSING_BREW_PACKAGES[*]}"
@@ -151,19 +172,26 @@ install_missing_homebrew_packages() {
   fi
 }
 
-# Function to set environment variables
 setup_environment_variables() {
   if [[ "$OS" == "Darwin" ]]; then
-    # Check if libsodium is available (either already installed or just installed)
     if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^libsodium$" || brew list libsodium &>/dev/null; then
-      export CPATH=/opt/homebrew/include
-      export LIBRARY_PATH=/opt/homebrew/lib
-      echo "🔧 Set environment variables for libsodium"
+      export CPATH="$HOMEBREW_PREFIX/include"
+      export LIBRARY_PATH="$HOMEBREW_PREFIX/lib"
+      echo "🔧 Set environment variables for libsodium (using $HOMEBREW_PREFIX)"
+    fi
+
+    if command -v xcrun &>/dev/null; then
+      local sdk_path
+      sdk_path=$(xcrun --show-sdk-path 2>/dev/null || echo "")
+      if [[ -n "$sdk_path" ]]; then
+        export SDKROOT="$sdk_path"
+        export CPATH="$CPATH:$SDKROOT/usr/include"
+        echo "🔧 Set SDKROOT to $SDKROOT"
+      fi
     fi
   fi
 }
 
-# Main execution flow
 main() {
   gather_environment_facts
   check_environment_status
@@ -188,8 +216,7 @@ main() {
   #
   # You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`.
 
-  # Compile platform-specific dependencies
-  if [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
+  if [[ "$OS" == "Darwin" ]]; then
     echo "🔨 Compiling platform-specific dependencies..."
     mix compile.rambo
   fi
