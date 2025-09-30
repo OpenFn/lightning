@@ -21,15 +21,6 @@ gather_environment_facts() {
   ARCH="$(uname -m)"
   echo "Platform: $OS $ARCH"
 
-  if [[ "$OS" == "Darwin" ]]; then
-    if [[ "$ARCH" == "arm64" ]]; then
-      HOMEBREW_PREFIX="/opt/homebrew"
-    else
-      HOMEBREW_PREFIX="/usr/local"
-    fi
-    echo "Homebrew prefix: $HOMEBREW_PREFIX"
-  fi
-
   if command -v node &>/dev/null; then
     echo "✅ Node.js: $(node --version)"
   else
@@ -55,6 +46,9 @@ gather_environment_facts() {
   if command -v brew &>/dev/null; then
     HAS_HOMEBREW=true
     echo "✅ Homebrew: $(brew --version | head -1)"
+    
+    HOMEBREW_PREFIX="$(brew --prefix)"
+    echo "   Using prefix: $HOMEBREW_PREFIX"
 
     HOMEBREW_PACKAGES_INSTALLED="$(brew list -1 2>/dev/null || true)"
   else
