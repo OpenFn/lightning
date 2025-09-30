@@ -37,6 +37,8 @@ and this project adheres to
 - Updated Project Digest to include count of work orders in an unsuccessful
   state [#3616](https://github.com/OpenFn/lightning/issues/3616)
 
+## [v2.14.6] - 2025-09-30
+
 ## [v2.14.6-pre1] - 2025-09-26
 
 ### Changed
