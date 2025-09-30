@@ -146,17 +146,50 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec start_streaming_request(AiAssistant.ChatSession.t(), String.t(), keyword()) :: :ok
-  defp start_streaming_request(session, content, _options) do
-    # Send test streaming events for now
-    broadcast_status_update(session.id, "Starting...")
+  defp start_streaming_request(session, content, options) do
+    # Build payload for Apollo
+    context = Keyword.get(options, :context, %{})
+    history = get_chat_history(session)
 
-    # Simulate some streaming chunks
-    Process.send_after(self(), {:stream_chunk, session.id, "Hello "}, 500)
-    Process.send_after(self(), {:stream_chunk, session.id, "from "}, 1000)
-    Process.send_after(self(), {:stream_chunk, session.id, "streaming!"}, 1500)
-    Process.send_after(self(), {:stream_complete, session.id}, 2000)
+    payload = %{
+      "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
+      "content" => content,
+      "context" => context,
+      "history" => history,
+      "meta" => %{}
+    }
+
+    # Start Apollo WebSocket stream
+    apollo_ws_url = get_apollo_ws_url()
+
+    case Lightning.ApolloClient.WebSocket.start_stream(apollo_ws_url, payload) do
+      {:ok, _pid} ->
+        Logger.info("[MessageProcessor] Started Apollo WebSocket stream for session #{session.id}")
+
+      {:error, reason} ->
+        Logger.error("[MessageProcessor] Failed to start Apollo stream: #{inspect(reason)}")
+    end
 
     :ok
+  end
+
+  defp get_apollo_ws_url do
+    base_url = Lightning.Config.apollo(:endpoint)
+    # Convert HTTP(S) to WS(S)
+    base_url
+    |> String.replace("https://", "wss://")
+    |> String.replace("http://", "ws://")
+    |> then(&"#{&1}/stream")
+  end
+
+  defp get_chat_history(session) do
+    session.messages
+    |> Enum.map(fn message ->
+      %{
+        "role" => to_string(message.role),
+        "content" => message.content
+      }
+    end)
   end
 
   @doc false
