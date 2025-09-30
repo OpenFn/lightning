@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.14.7-pre] 2025-09-30
+
+### Added
+
 - Add database changes for credentials environments support
   [#3597](https://github.com/OpenFn/lightning/issues/3597)
 - REST API for Credential creation, deletion, list
