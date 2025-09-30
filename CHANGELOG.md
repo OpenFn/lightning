@@ -30,6 +30,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed bootstrap script compatibility for Intel Macs and older Bash versions
+  (3.1+) [#3623](https://github.com/OpenFn/lightning/pull/3623)
 - Fixed GDPR Compliance component
   [#3611](https://github.com/OpenFn/lightning/issues/3611)
 - Fixed vertical alignment in breadcrumbs
