@@ -43,6 +43,8 @@ defmodule LightningWeb.ApolloChannel do
 
   @impl true
   def join("apollo:stream", _payload, socket) do
+    # Subscribe to Apollo WebSocket events
+    Phoenix.PubSub.subscribe(Lightning.PubSub, "apollo:events")
     {:ok, socket}
   end
 
@@ -80,10 +82,27 @@ defmodule LightningWeb.ApolloChannel do
   end
 
   defp start_apollo_stream(payload) do
-    # TODO implement the actual connection to Apollo
-    # Now returning a mock stream reference
-    stream_ref = :crypto.strong_rand_bytes(16) |> Base.encode64()
-    {:ok, stream_ref}
+    apollo_ws_url = get_apollo_ws_url()
+
+    case Lightning.ApolloClient.WebSocket.start_stream(apollo_ws_url, payload) do
+      {:ok, pid} ->
+        # Store pid for cleanup
+        stream_ref = :erlang.phash2(pid) |> Integer.to_string()
+        {:ok, stream_ref}
+
+      {:error, reason} ->
+        Logger.error("[ApolloChannel] Failed to start Apollo WebSocket: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  defp get_apollo_ws_url do
+    base_url = Lightning.Config.apollo(:endpoint)
+    # Convert HTTP(S) to WS(S)
+    base_url
+    |> String.replace("https://", "wss://")
+    |> String.replace("http://", "ws://")
+    |> then(&"#{&1}/stream")
   end
 
   defp broadcast_chunk_to_ui(session_id, content) do
