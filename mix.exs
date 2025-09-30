@@ -153,7 +153,8 @@ defmodule Lightning.MixProject do
       {:benchee, "~> 1.3.1", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
       {:y_ex, "~> 0.8.0"},
-      {:chameleon, "~> 2.5"}
+      {:chameleon, "~> 2.5"},
+      {:websockex, "~> 0.4.3"}
     ]
   end
 
