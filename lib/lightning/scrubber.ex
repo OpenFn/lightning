@@ -96,8 +96,7 @@ defmodule Lightning.Scrubber do
 
     # Process line-by-line to avoid keeping multiple copies of large strings in memory
     String.split(data, "\n")
-    |> Enum.map(fn line -> State.scrub(state, line) end)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", fn line -> State.scrub(state, line) end)
   end
 
   def scrub(_agent, data), do: data
