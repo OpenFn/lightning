@@ -28,6 +28,7 @@ defmodule Lightning.Credentials.Credential do
 
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
+    has_many :credential_bodies, Lightning.Credentials.CredentialBody
 
     timestamps()
   end
