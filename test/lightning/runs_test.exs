@@ -354,7 +354,7 @@ defmodule Lightning.RunsTest do
         |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
 
       assert step.exit_reason == "success"
-      assert step.output_dataclip.body == %{"foo" => "bar"}
+      assert Jason.decode!(step.output_dataclip.body) == %{"foo" => "bar"}
     end
 
     test "wipes the dataclip if erase_all retention policy is specified at the project level when the run is created" do

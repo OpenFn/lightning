@@ -42,7 +42,7 @@ defmodule Lightning.Workflows.SchedulerTest do
         Repo.preload(run, dataclip: Invocation.Query.dataclip_with_body())
 
       assert run.dataclip.type == :global
-      assert run.dataclip.body == %{}
+      assert Jason.decode!(run.dataclip.body) == %{}
     end
 
     test "enqueues a cron job that has been run before" do
@@ -113,7 +113,9 @@ defmodule Lightning.Workflows.SchedulerTest do
 
       refute new_run.id == run.id
       assert new_run.dataclip.type == :step_result
-      assert new_run.dataclip.body == old_step.output_dataclip.body
+
+      assert Jason.decode!(new_run.dataclip.body) ==
+               old_step.output_dataclip.body
     end
   end
 end

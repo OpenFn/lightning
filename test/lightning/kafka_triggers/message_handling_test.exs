@@ -74,8 +74,9 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       assert created_workorder.state == :pending
 
       %{dataclip: dataclip} = created_workorder
-      assert dataclip.body["data"] == %{"interesting" => "stuff"}
-      assert dataclip.body["request"] == message.metadata |> persisted_metadata()
+      parsed_body = Jason.decode!(dataclip.body)
+      assert parsed_body["data"] == %{"interesting" => "stuff"}
+      assert parsed_body["request"] == message.metadata |> persisted_metadata()
       assert dataclip.type == :kafka
       assert dataclip.project_id == workflow.project_id
     end
@@ -102,8 +103,9 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       assert created_workorder.state == :pending
 
       %{dataclip: dataclip} = created_workorder
-      assert dataclip.body["data"] == %{"interesting" => "stuff"}
-      assert dataclip.body["request"] == message.metadata |> persisted_metadata()
+      parsed_body = Jason.decode!(dataclip.body)
+      assert parsed_body["data"] == %{"interesting" => "stuff"}
+      assert parsed_body["request"] == message.metadata |> persisted_metadata()
       assert dataclip.type == :kafka
       assert dataclip.project_id == workflow.project_id
     end
@@ -162,8 +164,9 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       assert created_workorder.state == :rejected
 
       %{dataclip: dataclip} = created_workorder
-      assert dataclip.body["data"] == %{"interesting" => "stuff"}
-      assert dataclip.body["request"] == message.metadata |> stringify_keys()
+      parsed_body = Jason.decode!(dataclip.body)
+      assert parsed_body["data"] == %{"interesting" => "stuff"}
+      assert parsed_body["request"] == message.metadata |> stringify_keys()
       assert dataclip.type == :kafka
       assert dataclip.project_id == workflow.project_id
     end

@@ -19,7 +19,22 @@ and this project adheres to
 
 ### Changed
 
+- Removed unused functions for getting dataclip bodies from postgres as
+  JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
+
 ### Fixed
+
+- Fix canvas "lockup" after AI chat errors, prevent sending empty message to AI
+  [3605](https://github.com/OpenFn/lightning/issues/3605)
+
+## [v2.14.8] - 2025-10-01
+
+## [v2.14.8-pre1] - 2025-10-01
+
+### Fixed
+
+- Send back `null` if a requested dataclip has been wiped
+  [PR#3652](https://github.com/OpenFn/lightning/pull/3652)
 
 ## [v2.14.8-pre] - 2025-10-01
 
