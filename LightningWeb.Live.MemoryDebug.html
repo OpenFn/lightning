@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.4">
+    <meta name="project" content="Lightning v2.14.7">
+
+
+    <title>LightningWeb.Live.MemoryDebug — Lightning v2.14.7</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
+
+    <script defer src="dist/sidebar_items-3AB84445.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-Y223O6DN.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.14.7
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">LightningWeb.Live.MemoryDebug</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.14.7)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/memory_debug.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Memory debugging utilities for LiveViews to track memory usage and help
+diagnose OOM issues.</p><p>Usage in a LiveView:</p><pre><code class="makeup elixir" translate="no"><span class="kn">import</span><span class="w"> </span><span class="nc">LightningWeb.Live.MemoryDebug</span><span class="w">
+
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">mount</span><span class="p" data-group-id="9051434273-1">(</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="9051434273-1">)</span><span class="w"> </span><span class="k" data-group-id="9051434273-2">do</span><span class="w">
+  </span><span class="n">log_memory</span><span class="p" data-group-id="9051434273-3">(</span><span class="s">&quot;mount start&quot;</span><span class="p" data-group-id="9051434273-3">)</span><span class="w">
+
+  </span><span class="c1"># ... your code ...</span><span class="w">
+
+  </span><span class="n">socket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assign</span><span class="p" data-group-id="9051434273-4">(</span><span class="n">socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:data</span><span class="p">,</span><span class="w"> </span><span class="n">large_data</span><span class="p" data-group-id="9051434273-4">)</span><span class="w">
+  </span><span class="n">log_memory</span><span class="p" data-group-id="9051434273-5">(</span><span class="s">&quot;after loading large data&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">socket</span><span class="p">:</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="9051434273-5">)</span><span class="w">
+
+  </span><span class="p" data-group-id="9051434273-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="9051434273-6">}</span><span class="w">
+</span><span class="k" data-group-id="9051434273-2">end</span></code></pre>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#compare_snapshots/3" data-no-tooltip="" translate="no">compare_snapshots(before, after_snap, label)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Compares two memory snapshots and logs the difference.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#log_memory/2" data-no-tooltip="" translate="no">log_memory(label, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Logs current memory usage for the calling process and optionally the socket assigns.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#measure/2" data-no-tooltip="" translate="no">measure(label, fun)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Wraps a function call with before/after memory logging.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#measure_assigns/2" data-no-tooltip="" translate="no">measure_assigns(socket, keys)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Measures memory of specific socket assigns.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#snapshot/0" data-no-tooltip="" translate="no">snapshot()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gets a memory snapshot as a map (useful for comparing before/after).</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="compare_snapshots/3">
+
+  <div class="detail-header">
+    <a href="#compare_snapshots/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">compare_snapshots(before, after_snap, label)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/memory_debug.ex#L133" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Compares two memory snapshots and logs the difference.</p>
+  </section>
+</section>
+<section class="detail" id="log_memory/2">
+
+    <span id="log_memory/1"></span>
+
+  <div class="detail-header">
+    <a href="#log_memory/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">log_memory(label, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/memory_debug.ex#L32" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Logs current memory usage for the calling process and optionally the socket assigns.</p><h2 id="log_memory/2-options" class="section-heading"><a href="#log_memory/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:socket</code> - Phoenix.LiveView.Socket to measure assigns memory</li><li><code class="inline">:assigns</code> - List of assign keys to measure individually (e.g., [:dataclip, :workflow])</li></ul>
+  </section>
+</section>
+<section class="detail" id="measure/2">
+
+  <div class="detail-header">
+    <a href="#measure/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">measure(label, fun)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/memory_debug.ex#L82" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Wraps a function call with before/after memory logging.</p><h2 id="measure/2-examples" class="section-heading"><a href="#measure/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">measure</span><span class="p" data-group-id="1748472210-1">(</span><span class="s">&quot;load dataclip&quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="1748472210-2">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+  </span><span class="nc">Invocation</span><span class="o">.</span><span class="n">get_dataclip!</span><span class="p" data-group-id="1748472210-3">(</span><span class="n">id</span><span class="p" data-group-id="1748472210-3">)</span><span class="w">
+</span><span class="k" data-group-id="1748472210-2">end</span><span class="p" data-group-id="1748472210-1">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="measure_assigns/2">
+
+  <div class="detail-header">
+    <a href="#measure_assigns/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">measure_assigns(socket, keys)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/memory_debug.ex#L92" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Measures memory of specific socket assigns.</p>
+  </section>
+</section>
+<section class="detail" id="snapshot/0">
+
+  <div class="detail-header">
+    <a href="#snapshot/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">snapshot()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/memory_debug.ex#L114" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Gets a memory snapshot as a map (useful for comparing before/after).</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.4) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>
