@@ -49,7 +49,7 @@ defmodule LightningWeb.DataclipController do
       from(d in Lightning.Invocation.Dataclip,
         where: d.id == ^dataclip_id,
         select: %{
-          body_json: fragment("jsonb_pretty(?)", d.body),
+          body_json: fragment("?::text", d.body),
           type: d.type,
           id: d.id,
           updated_at: d.updated_at
