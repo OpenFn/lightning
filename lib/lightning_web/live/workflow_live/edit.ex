@@ -108,7 +108,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
-
+              
     <!-- Add collaborative editor toggle (beaker icon only) -->
               <.link
                 :if={
@@ -1401,72 +1401,73 @@ defmodule LightningWeb.WorkflowLive.Edit do
     new_workflow_panel_id = "new-workflow-panel"
 
     socket =
-     socket
-     |> authorize()
-     |> assign(
-       view_only_users_ids: view_only_users_ids,
-       active_menu_item: :overview,
-       expanded_job: nil,
-       ai_assistant_enabled: AiAssistant.enabled?(),
-       workflow_chat_session_id: nil,
-       job_chat_session_id: nil,
-       selected_template: nil,
-       follow_run: nil,
-       step: nil,
-       manual_run_form: nil,
-       page_title: "",
-       selected_edge: nil,
-       selected_job: nil,
-       selected_run: nil,
-       selected_trigger: nil,
-       selection_mode: nil,
-       base_url: nil,
-       query_params: %{
-         "s" => nil,
-         "m" => nil,
-         "a" => nil,
-         "v" => nil,
-         "w-chat" => nil,
-         "j-chat" => nil,
-         "method" => nil
-       },
-       workflow: nil,
-       snapshot: nil,
-       changeset: nil,
-       snapshot_version_tag: "latest",
-       workflow_name: "",
-       workflow_params: %{},
-       selected_credential_type: nil,
-       oauth_clients: OauthClients.list_clients(assigns.project),
-       show_missing_dataclip_selector: false,
-       show_new_workflow_panel: assigns.live_action == :new,
-       show_canvas_placeholder: assigns.live_action == :new,
-       show_workflow_ai_chat: false,
-       show_job_credential_modal: false,
-       active_modal: nil,
-       active_modal_assigns: nil,
-       admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
-       show_github_sync_modal: false,
-       publish_template: false,
-       method: nil,
-       workflow_code: nil,
-       workflow_code_with_ids: nil,
-       workflow_ai_chat_id: workflow_ai_chat_id,
-       workflow_ai_assistant_id: "#{workflow_ai_chat_id}-assistant",
-       new_workflow_panel_id: new_workflow_panel_id,
-       new_workflow_ai_assistant_id: "#{new_workflow_panel_id}-assistant",
-       job_ai_assistant_id_fn: fn job_id -> "job-#{job_id}-ai-assistant" end,
-       ai_assistant_registry: %{},
-       sending_ai_message: false,
-       project_repo_connection:
-         VersionControl.get_repo_connection_for_project(assigns.project.id),
-       max_concurrency: assigns.project.concurrency
-     )
-     |> assign(initial_presence_summary(assigns.current_user))
+      socket
+      |> authorize()
+      |> assign(
+        view_only_users_ids: view_only_users_ids,
+        active_menu_item: :overview,
+        expanded_job: nil,
+        ai_assistant_enabled: AiAssistant.enabled?(),
+        workflow_chat_session_id: nil,
+        job_chat_session_id: nil,
+        selected_template: nil,
+        follow_run: nil,
+        step: nil,
+        manual_run_form: nil,
+        page_title: "",
+        selected_edge: nil,
+        selected_job: nil,
+        selected_run: nil,
+        selected_trigger: nil,
+        selection_mode: nil,
+        base_url: nil,
+        query_params: %{
+          "s" => nil,
+          "m" => nil,
+          "a" => nil,
+          "v" => nil,
+          "w-chat" => nil,
+          "j-chat" => nil,
+          "method" => nil
+        },
+        workflow: nil,
+        snapshot: nil,
+        changeset: nil,
+        snapshot_version_tag: "latest",
+        workflow_name: "",
+        workflow_params: %{},
+        selected_credential_type: nil,
+        oauth_clients: OauthClients.list_clients(assigns.project),
+        show_missing_dataclip_selector: false,
+        show_new_workflow_panel: assigns.live_action == :new,
+        show_canvas_placeholder: assigns.live_action == :new,
+        show_workflow_ai_chat: false,
+        show_job_credential_modal: false,
+        active_modal: nil,
+        active_modal_assigns: nil,
+        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
+        show_github_sync_modal: false,
+        publish_template: false,
+        method: nil,
+        workflow_code: nil,
+        workflow_code_with_ids: nil,
+        workflow_ai_chat_id: workflow_ai_chat_id,
+        workflow_ai_assistant_id: "#{workflow_ai_chat_id}-assistant",
+        new_workflow_panel_id: new_workflow_panel_id,
+        new_workflow_ai_assistant_id: "#{new_workflow_panel_id}-assistant",
+        job_ai_assistant_id_fn: fn job_id -> "job-#{job_id}-ai-assistant" end,
+        ai_assistant_registry: %{},
+        sending_ai_message: false,
+        project_repo_connection:
+          VersionControl.get_repo_connection_for_project(assigns.project.id),
+        max_concurrency: assigns.project.concurrency
+      )
+      |> assign(initial_presence_summary(assigns.current_user))
 
     log_memory("WorkflowLive.Edit mount complete",
       socket: socket,
-      assigns: [:workflow, :snapshot])
+      assigns: [:workflow, :snapshot]
+    )
 
     {:ok, socket}
   end
@@ -1476,35 +1477,36 @@ defmodule LightningWeb.WorkflowLive.Edit do
     log_memory("WorkflowLive.Edit handle_params start", socket: socket)
 
     socket =
-     socket
-     |> assign(
-       active_modal: nil,
-       active_modal_assigns: nil
-     )
-     |> apply_action(socket.assigns.live_action, params)
-     |> track_user_presence()
-     |> apply_query_params(params)
-     |> prepare_workflow_template()
-     |> maybe_show_manual_run()
-     |> tap(fn socket ->
-       if connected?(socket) do
-         Workflows.Events.subscribe(socket.assigns.project.id)
+      socket
+      |> assign(
+        active_modal: nil,
+        active_modal_assigns: nil
+      )
+      |> apply_action(socket.assigns.live_action, params)
+      |> track_user_presence()
+      |> apply_query_params(params)
+      |> prepare_workflow_template()
+      |> maybe_show_manual_run()
+      |> tap(fn socket ->
+        if connected?(socket) do
+          Workflows.Events.subscribe(socket.assigns.project.id)
 
-         if changed?(socket, :selected_job) do
-           Helpers.broadcast_updated_params(socket, %{
-             job_id:
-               case socket.assigns.selected_job do
-                 nil -> nil
-                 job -> job.id
-               end
-           })
-         end
-       end
-     end)
+          if changed?(socket, :selected_job) do
+            Helpers.broadcast_updated_params(socket, %{
+              job_id:
+                case socket.assigns.selected_job do
+                  nil -> nil
+                  job -> job.id
+                end
+            })
+          end
+        end
+      end)
 
     log_memory("WorkflowLive.Edit handle_params complete",
       socket: socket,
-      assigns: [:workflow, :snapshot, :selected_run])
+      assigns: [:workflow, :snapshot, :selected_run]
+    )
 
     {:noreply, socket}
   end
@@ -1594,9 +1596,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       _ ->
         # TODO we shouldn't be calling Repo from here
-        workflow = measure("load workflow #{workflow_id}", fn ->
-          get_workflow_by_id(workflow_id)
-        end)
+        workflow =
+          measure("load workflow #{workflow_id}", fn ->
+            get_workflow_by_id(workflow_id)
+          end)
 
         if workflow do
           run_id = Map.get(params, "a")

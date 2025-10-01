@@ -67,6 +67,7 @@ defmodule LightningWeb.DataclipController do
           type: result.type,
           id: result.id
         }
+
         DataclipScrubber.scrub_dataclip_body!(dataclip_for_scrubbing)
       else
         # No scrubbing needed - return pretty-printed JSON text directly

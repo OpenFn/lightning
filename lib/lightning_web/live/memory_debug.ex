@@ -36,14 +36,18 @@ defmodule LightningWeb.Live.MemoryDebug do
       [{:memory, memory}, {:message_queue_len, queue_len}] ->
         memory_mb = Float.round(memory / 1_048_576, 2)
 
-        base_msg = "MEMORY [#{label}] Process: #{memory_mb}MB, Queue: #{queue_len}"
+        base_msg =
+          "MEMORY [#{label}] Process: #{memory_mb}MB, Queue: #{queue_len}"
 
         extra_info =
           case Keyword.get(opts, :socket) do
             nil ->
               ""
+
             socket ->
-              assigns_info = measure_assigns(socket, Keyword.get(opts, :assigns, []))
+              assigns_info =
+                measure_assigns(socket, Keyword.get(opts, :assigns, []))
+
               ", #{assigns_info}"
           end
 
@@ -53,7 +57,10 @@ defmodule LightningWeb.Live.MemoryDebug do
         if memory_mb > 50 do
           total_mb = Float.round(:erlang.memory(:total) / 1_048_576, 2)
           processes_mb = Float.round(:erlang.memory(:processes) / 1_048_576, 2)
-          Logger.warning("MEMORY [#{label}] ⚠️  HIGH USAGE - System total: #{total_mb}MB, Processes: #{processes_mb}MB")
+
+          Logger.warning(
+            "MEMORY [#{label}] ⚠️  HIGH USAGE - System total: #{total_mb}MB, Processes: #{processes_mb}MB"
+          )
         end
 
       nil ->
@@ -82,7 +89,8 @@ defmodule LightningWeb.Live.MemoryDebug do
   @doc """
   Measures memory of specific socket assigns.
   """
-  def measure_assigns(%Phoenix.LiveView.Socket{assigns: assigns}, keys) when is_list(keys) do
+  def measure_assigns(%Phoenix.LiveView.Socket{assigns: assigns}, keys)
+      when is_list(keys) do
     measurements =
       for key <- keys, Map.has_key?(assigns, key) do
         value = Map.get(assigns, key)
@@ -113,6 +121,7 @@ defmodule LightningWeb.Live.MemoryDebug do
           system_total_mb: Float.round(:erlang.memory(:total) / 1_048_576, 2),
           processes_mb: Float.round(:erlang.memory(:processes) / 1_048_576, 2)
         }
+
       nil ->
         %{error: :process_info_unavailable}
     end
@@ -128,7 +137,7 @@ defmodule LightningWeb.Live.MemoryDebug do
 
       Logger.info(
         "MEMORY [#{label}] Change: #{format_diff(diff_mb)}MB process, " <>
-        "#{format_diff(system_diff)}MB system total"
+          "#{format_diff(system_diff)}MB system total"
       )
     end
   end

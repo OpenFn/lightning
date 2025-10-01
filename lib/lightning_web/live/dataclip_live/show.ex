@@ -24,9 +24,10 @@ defmodule LightningWeb.DataclipLive.Show do
     log_memory("DataclipLive.Show handle_params start", socket: socket)
 
     # Get dataclip (should NOT load body due to load_in_query: false)
-    dataclip = measure("load dataclip metadata", fn ->
-      Invocation.get_dataclip!(id)
-    end)
+    dataclip =
+      measure("load dataclip metadata", fn ->
+        Invocation.get_dataclip!(id)
+      end)
 
     socket =
       socket
@@ -36,7 +37,8 @@ defmodule LightningWeb.DataclipLive.Show do
 
     log_memory("DataclipLive.Show handle_params complete",
       socket: socket,
-      assigns: [:dataclip])
+      assigns: [:dataclip]
+    )
 
     {:noreply, socket}
   end
@@ -100,7 +102,7 @@ defmodule LightningWeb.DataclipLive.Show do
             </dl>
           </div>
         </div>
-
+        
     <!-- Body Section -->
         <div class="bg-white shadow rounded-lg">
           <div class="h-96 overflow-hidden">
