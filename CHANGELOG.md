@@ -24,6 +24,8 @@ and this project adheres to
 - Fix canvas "lockup" after AI chat errors, prevent sending empty message to AI
   [3605](https://github.com/OpenFn/lightning/issues/3605)
 
+## [v2.14.8] - 2025-10-01
+
 ## [v2.14.8-pre1] - 2025-10-01
 
 ### Fixed
