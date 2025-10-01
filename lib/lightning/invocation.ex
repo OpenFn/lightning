@@ -93,16 +93,18 @@ defmodule Lightning.Invocation do
   def get_dataclip_with_body!(id) do
     # Query body as pretty-printed JSON text directly from PostgreSQL, avoiding expensive
     # deserialization to Elixir map (saves ~38x memory amplification!)
-    from(d in Lightning.Invocation.Dataclip,
-      where: d.id == ^id,
-      select: %{
-        body_json: fragment("?::text", d.body),
-        type: d.type,
-        id: d.id,
-        updated_at: d.updated_at
-      }
-    )
-    |> Repo.one!()
+    # For http_request/kafka types, wraps body in {"data": ..., "request": ...} structure
+    dataclip =
+      from(d in Lightning.Invocation.Dataclip, where: d.id == ^id)
+      |> Query.select_as_input_text()
+      |> Repo.one!()
+
+    %{
+      body_json: dataclip.body,
+      type: dataclip.type,
+      id: dataclip.id,
+      updated_at: dataclip.updated_at
+    }
   end
 
   @spec get_dataclip_for_run(run_id :: Ecto.UUID.t()) ::
