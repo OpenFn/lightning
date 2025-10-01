@@ -213,7 +213,8 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                |> Repo.get_by(trigger_id: trigger.id)
                |> Repo.preload(dataclip: Invocation.Query.dataclip_with_body())
 
-      assert dataclip.body["data"] == message.data |> Jason.decode!()
+      parsed_body = Jason.decode!(dataclip.body)
+      assert parsed_body["data"] == message.data |> Jason.decode!()
     end
 
     test "records the message for the purposes of future deduplication", %{
