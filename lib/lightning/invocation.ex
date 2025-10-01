@@ -77,9 +77,33 @@ defmodule Lightning.Invocation do
     |> maybe_filter_uuid_prefix(user_filters)
   end
 
+  # TODO - remove this once done with benchmarking -----------------------------
   @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
   def get_dataclip_details!(id),
     do: Repo.get!(Query.dataclip_with_body(), id)
+
+  # ----------------------------------------------------------------------------
+
+  @spec get_dataclip_with_body!(id :: Ecto.UUID.t()) :: %{
+          body_json: String.t(),
+          type: atom(),
+          id: Ecto.UUID.t(),
+          updated_at: DateTime.t()
+        }
+  def get_dataclip_with_body!(id) do
+    # Query body as pretty-printed JSON text directly from PostgreSQL, avoiding expensive
+    # deserialization to Elixir map (saves ~38x memory amplification!)
+    from(d in Lightning.Invocation.Dataclip,
+      where: d.id == ^id,
+      select: %{
+        body_json: fragment("?::text", d.body),
+        type: d.type,
+        id: d.id,
+        updated_at: d.updated_at
+      }
+    )
+    |> Repo.one!()
+  end
 
   @spec get_dataclip_for_run(run_id :: Ecto.UUID.t()) ::
           Dataclip.t() | nil

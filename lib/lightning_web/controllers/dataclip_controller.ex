@@ -5,7 +5,6 @@ defmodule LightningWeb.DataclipController do
   alias Lightning.Invocation
   alias Lightning.Policies.Dataclips
   alias Lightning.Policies.Permissions
-  alias Lightning.Repo
 
   @max_age 86_400
 
@@ -41,44 +40,30 @@ defmodule LightningWeb.DataclipController do
   end
 
   defp respond_with_body(conn, dataclip_id) do
-    import Ecto.Query
-
-    # Query body as pretty-printed JSON text directly from PostgreSQL, avoiding expensive
-    # deserialization to Elixir map (saves ~38x memory amplification!)
-    result =
-      from(d in Lightning.Invocation.Dataclip,
-        where: d.id == ^dataclip_id,
-        select: %{
-          body_json: fragment("?::text", d.body),
-          type: d.type,
-          id: d.id,
-          updated_at: d.updated_at
-        }
-      )
-      |> Repo.one!()
+    dataclip = Invocation.get_dataclip_with_body!(dataclip_id)
 
     # Only scrub step_result dataclips (most don't need scrubbing)
     body =
-      if result.type == :step_result do
+      if dataclip.type == :step_result do
         # For step_result, we need to scrub credentials
         # Pass a minimal struct with just what scrubber needs
         dataclip_for_scrubbing = %{
-          body: result.body_json,
-          type: result.type,
-          id: result.id
+          body: dataclip.body_json,
+          type: dataclip.type,
+          id: dataclip.id
         }
 
         DataclipScrubber.scrub_dataclip_body!(dataclip_for_scrubbing)
       else
         # No scrubbing needed - return pretty-printed JSON text directly
-        result.body_json
+        dataclip.body_json
       end
 
     conn
     |> put_resp_content_type("application/json")
     |> put_resp_header("vary", "Accept-Encoding, Cookie")
     |> put_resp_header("cache-control", "private, max-age=#{@max_age}")
-    |> put_resp_header("last-modified", to_rfc1123!(result.updated_at))
+    |> put_resp_header("last-modified", to_rfc1123!(dataclip.updated_at))
     |> send_resp(200, body)
   end
 
