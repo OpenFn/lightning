@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.14.8-pre1] - 2025-10-01
+
+### Fixed
+
 - Send back `null` if a requested dataclip has been wiped
   [PR#3652](https://github.com/OpenFn/lightning/pull/3652)
 
