@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Removed unused functions for getting dataclip bodies from postgres as
+  JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
+
 ### Fixed
 
 ## [v2.14.8-pre1] - 2025-10-01
