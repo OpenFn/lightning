@@ -5,35 +5,37 @@ alias Lightning.Invocation
 alias Lightning.Repo
 import Ecto.Query
 
-# Use a known dataclip ID
-dataclip_id = "f1b8d127-beb6-4cac-a4f1-7000526bb693"
+IO.puts("\n=== Dataclip Controller Memory Benchmark ===\n")
 
-IO.puts("\n=== Dataclip Controller Memory Benchmark ===")
-IO.puts("Dataclip ID: #{dataclip_id}\n")
-
-# Verify dataclip exists and get info
+# Find any dataclip with a reasonably large body (prefer >100KB)
 dataclip_info =
   from(d in Lightning.Invocation.Dataclip,
-    where: d.id == ^dataclip_id,
     select: %{
       id: d.id,
       type: d.type,
       size_bytes: fragment("pg_column_size(?)", d.body),
-      size_mb: fragment("round(pg_column_size(?)::numeric / 1048576, 2)", d.body)
-    }
+      size_mb: fragment("pg_column_size(?)::numeric / 1048576", d.body)
+    },
+    where: fragment("pg_column_size(?)", d.body) > 100_000,
+    order_by: [desc: fragment("pg_column_size(?)", d.body)],
+    limit: 1
   )
   |> Repo.one()
 
 case dataclip_info do
   nil ->
-    IO.puts("Error: Dataclip with ID #{dataclip_id} not found")
+    IO.puts("Error: No dataclips found with body >100KB")
+    IO.puts("Please create a dataclip with substantial data to benchmark")
     :error
 
   info ->
+    dataclip_id = info.id
+    size_mb = Decimal.to_float(info.size_mb)
+
     IO.puts("Dataclip Info:")
     IO.puts("  ID: #{info.id}")
     IO.puts("  Type: #{info.type}")
-    IO.puts("  Database Size: #{info.size_mb} MB (#{info.size_bytes} bytes)")
+    IO.puts("  Database Size: #{:erlang.float_to_binary(size_mb, decimals: 2)} MB (#{info.size_bytes} bytes)")
     IO.puts("")
 
     Benchee.run(
@@ -74,9 +76,9 @@ case dataclip_info do
           :ok
         end
       },
-      warmup: 0.5,         # Minimal warmup
-      time: 2,             # Just enough for accuracy
-      memory_time: 1,      # Quick memory measurement
+      warmup: 1,
+      time: 3,
+      memory_time: 2,
       formatters: [
         {Benchee.Formatters.Console,
          extended_statistics: true}
@@ -88,13 +90,24 @@ case dataclip_info do
       ]
     )
 
+    # Calculate metrics
+    memory_amplification = 38
+    old_peak_mb = size_mb * memory_amplification
+    new_peak_mb = size_mb
+    memory_reduction_pct = ((old_peak_mb - new_peak_mb) / old_peak_mb * 100) |> round()
+
+    memory_limit_mb = 2000
+    old_concurrent = max(1, floor(memory_limit_mb / old_peak_mb))
+    new_concurrent = max(1, floor(memory_limit_mb / new_peak_mb))
+    capacity_improvement = if old_concurrent > 0, do: floor(new_concurrent / old_concurrent), else: "N/A"
+
     IO.puts("\n=== Analysis ===")
     IO.puts("""
     This benchmark demonstrates the memory optimization for serving dataclip bodies.
 
     Problem:
-      PostgreSQL stores JSON as compact JSONB (#{info.size_mb} MB for this dataclip).
-      When loaded as an Elixir map, it expands ~38x due to:
+      PostgreSQL stores JSON as compact JSONB (#{:erlang.float_to_binary(size_mb, decimals: 2)} MB for this dataclip).
+      When loaded as an Elixir map, it expands ~#{memory_amplification}x due to:
         - Immutable data structure overhead
         - Metadata for every map/list/string
         - Deep nesting creates many small allocations
@@ -102,21 +115,21 @@ case dataclip_info do
     Solutions Compared:
 
       1. OLD APPROACH (baseline):
-         - Query JSONB → Elixir map (~38x memory amplification)
+         - Query JSONB → Elixir map (~#{memory_amplification}x memory amplification)
          - Jason.encode!(map) → JSON string (creates another copy)
-         - Peak memory: ~#{Float.round(Decimal.to_float(info.size_mb) * 38 + Decimal.to_float(info.size_mb), 1)} MB for this dataclip!
+         - Peak memory: ~#{:erlang.float_to_binary(old_peak_mb, decimals: 1)} MB for this dataclip
 
       2. NEW APPROACH (optimized):
          - Query with fragment("?::text", d.body) → JSON string directly
          - PostgreSQL does the conversion, no Elixir map
-         - Peak memory: ~#{info.size_mb} MB for this dataclip
-         - Memory reduction: ~#{round(((38 * Decimal.to_float(info.size_mb)) / (39 * Decimal.to_float(info.size_mb))) * 100)}%
+         - Peak memory: ~#{:erlang.float_to_binary(new_peak_mb, decimals: 2)} MB for this dataclip
+         - Memory reduction: ~#{memory_reduction_pct}%
 
     Impact on Production:
-      With 2GB memory limit and #{info.size_mb}MB dataclips:
-        - OLD: ~#{div(2000, round(Decimal.to_float(info.size_mb) * 39))} concurrent requests before OOM
-        - NEW: ~#{div(2000, round(Decimal.to_float(info.size_mb) * 2))} concurrent requests before OOM
-        - Improvement: #{div(div(2000, round(Decimal.to_float(info.size_mb) * 2)), max(1, div(2000, round(Decimal.to_float(info.size_mb) * 39))))}x more capacity!
+      With #{memory_limit_mb}MB memory limit and #{:erlang.float_to_binary(size_mb, decimals: 2)}MB dataclips:
+        - OLD: ~#{old_concurrent} concurrent requests before OOM
+        - NEW: ~#{new_concurrent} concurrent requests before OOM
+        - Improvement: #{capacity_improvement}x more capacity!
 
     Additional Benefits:
       - Faster response times (no map deserialization)
