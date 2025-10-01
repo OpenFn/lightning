@@ -38,6 +38,10 @@ import {
   createCredentialStore,
 } from "../stores/createCredentialStore";
 import {
+  createSessionContextStore,
+  type SessionContextStoreInstance,
+} from "../stores/createSessionContextStore";
+import {
   createWorkflowStore,
   type WorkflowStoreInstance,
 } from "../stores/createWorkflowStore";
@@ -48,6 +52,7 @@ export interface StoreContextValue {
   credentialStore: CredentialStoreInstance;
   awarenessStore: AwarenessStoreInstance;
   workflowStore: WorkflowStoreInstance;
+  sessionContextStore: SessionContextStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -67,6 +72,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     credentialStore: createCredentialStore(),
     awarenessStore: createAwarenessStore(),
     workflowStore: createWorkflowStore(),
+    sessionContextStore: createSessionContextStore(),
   }));
 
   // Initialize awareness when both awareness instance and userData are available
@@ -103,11 +109,15 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
 
       const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
       const cleanup2 = stores.credentialStore._connectChannel(session.provider);
+      const cleanup3 = stores.sessionContextStore._connectChannel(
+        session.provider
+      );
 
       return () => {
         logger.debug("Disconnecting stores from channel");
         cleanup1();
         cleanup2();
+        cleanup3();
       };
     }
     return undefined;
