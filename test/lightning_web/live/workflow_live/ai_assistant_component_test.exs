@@ -289,4 +289,45 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
              ]
     end
   end
+
+  describe "form validation" do
+    alias LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
+
+    test "JobCode Form validates empty content" do
+      changeset = JobCode.Form.changeset(%{"content" => ""})
+
+      assert changeset.valid? == false
+      assert Keyword.has_key?(changeset.errors, :content)
+      {msg, _opts} = changeset.errors[:content]
+      assert msg == "Please enter a message before sending"
+    end
+
+    test "JobCode validate_form includes content validation" do
+      changeset = JobCode.validate_form(%{"content" => nil})
+
+      assert changeset.valid? == false
+      assert Keyword.has_key?(changeset.errors, :content)
+    end
+
+    test "WorkflowTemplate DefaultForm validates empty content" do
+      changeset = WorkflowTemplate.DefaultForm.changeset(%{"content" => ""})
+
+      assert changeset.valid? == false
+      assert Keyword.has_key?(changeset.errors, :content)
+      {msg, _opts} = changeset.errors[:content]
+      assert msg == "Please enter a message before sending"
+    end
+
+    test "form validation accepts valid content" do
+      # JobCode
+      changeset = JobCode.validate_form(%{"content" => "Help me with my code"})
+      assert changeset.valid? == true
+
+      # WorkflowTemplate
+      changeset =
+        WorkflowTemplate.validate_form(%{"content" => "Create a workflow"})
+
+      assert changeset.valid? == true
+    end
+  end
 end

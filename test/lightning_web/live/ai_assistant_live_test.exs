@@ -308,7 +308,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
         assert has_element?(input_element)
         refute render(input_element) =~ "disabled=\"disabled\""
         assert has_element?(submit_btn)
-        refute render(submit_btn) =~ "disabled=\"disabled\""
+        # Submit button should be disabled when no content is entered
+        assert render(submit_btn) =~ "disabled=\"disabled\""
 
         html =
           view
@@ -2354,7 +2355,8 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       refute render(input_element) =~ "disabled=\"disabled\""
-      refute render(submit_btn) =~ "disabled=\"disabled\""
+      # Submit button should be disabled when no content is entered
+      assert render(submit_btn) =~ "disabled=\"disabled\""
 
       refute render(input_element) =~ "Save your workflow first"
     end
