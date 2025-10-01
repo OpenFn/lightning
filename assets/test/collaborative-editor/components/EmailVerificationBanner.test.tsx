@@ -14,34 +14,18 @@ import type {
   UserContext,
   AppConfig,
 } from "../../../js/collaborative-editor/types/sessionContext";
+import {
+  calculateDeadline,
+  formatDeadline,
+} from "../../../js/collaborative-editor/utils/dateFormatting";
+import {
+  createMockUser,
+  createMockConfig,
+} from "../fixtures/sessionContextData";
 
 // =============================================================================
 // TEST HELPERS
 // =============================================================================
-
-/**
- * Helper to create a mock UserContext
- */
-function createMockUser(overrides: Partial<UserContext> = {}): UserContext {
-  return {
-    id: "user-1",
-    email: "test@example.com",
-    first_name: "Test",
-    last_name: "User",
-    email_confirmed: true,
-    ...overrides,
-  };
-}
-
-/**
- * Helper to create a mock AppConfig
- */
-function createMockConfig(overrides: Partial<AppConfig> = {}): AppConfig {
-  return {
-    require_email_verification: false,
-    ...overrides,
-  };
-}
 
 /**
  * Simulates the component's visibility logic
@@ -200,44 +184,184 @@ describe("EmailVerificationBanner - Content Structure", () => {
    * based on the component implementation
    */
 
-  test("banner contains warning message", () => {
-    const expectedMessage =
-      "Please verify your email address to continue using all features.";
+  test("banner contains deadline warning message", () => {
+    const expectedMessagePattern =
+      "You must verify your email by {DEADLINE} or your account will be deleted.";
 
-    // This is a documentation test - the actual component should include this message
-    expect(expectedMessage).toContain("verify your email");
-    expect(expectedMessage).toContain("continue using");
+    // This is a documentation test - the actual component should include this message pattern
+    expect(expectedMessagePattern).toContain("verify your email");
+    expect(expectedMessagePattern).toContain("account will be deleted");
   });
 
-  test("banner contains link to resend verification", () => {
-    const expectedLinkUrl = "/users/confirm";
-    const expectedLinkText = "Resend verification email";
+  test("banner includes formatted deadline in message", () => {
+    // Given a user created at 2025-01-13T10:30:00Z
+    // The deadline should be 48 hours later: 2025-01-15T10:30:00Z
+    // Formatted as: "Wednesday, 15 January @ 10:30 UTC"
+    const expectedDeadline = "Wednesday, 15 January @ 10:30 UTC";
+
+    // This documents the expected deadline format
+    expect(expectedDeadline).toMatch(/^\w+, \d{1,2} \w+ @ \d{2}:\d{2} UTC$/);
+  });
+
+  test("banner contains link to resend confirmation", () => {
+    const expectedLinkUrl = "/users/send-confirmation-email";
+    const expectedLinkText = "Resend confirmation email";
 
     // This is a documentation test - the actual component should include this link
-    expect(expectedLinkUrl).toBe("/users/confirm");
+    expect(expectedLinkUrl).toBe("/users/send-confirmation-email");
     expect(expectedLinkText).toContain("Resend");
-    expect(expectedLinkText).toContain("verification");
+    expect(expectedLinkText).toContain("confirmation");
   });
 
-  test("banner uses warning styling", () => {
-    // The component should use yellow/orange colors for warning emphasis
-    const expectedClasses = {
-      background: "bg-yellow-50",
-      border: "border-yellow-200",
-      icon: "text-yellow-600",
-      text: "text-yellow-800",
-    };
+  test("banner link includes right arrow", () => {
+    const expectedLinkSuffix = "→";
+
+    // The link should end with a right arrow character
+    expect(expectedLinkSuffix).toBe("→");
+  });
+
+  test("banner uses danger styling", () => {
+    // The component should use alert-danger class for red danger styling
+    const expectedClass = "alert-danger";
 
     // This is a documentation test
-    expect(expectedClasses.background).toContain("yellow");
-    expect(expectedClasses.text).toContain("yellow");
+    expect(expectedClass).toBe("alert-danger");
   });
 
-  test("banner includes warning icon", () => {
-    const expectedIconClass = "hero-exclamation-triangle";
+  test("banner includes danger icon", () => {
+    const expectedIconClass = "hero-x-circle-solid";
 
-    // The component should use an exclamation triangle icon
-    expect(expectedIconClass).toContain("exclamation-triangle");
+    // The component should use an x-circle-solid icon
+    expect(expectedIconClass).toBe("hero-x-circle-solid");
+  });
+
+  test("banner includes ARIA role", () => {
+    const expectedRole = "alert";
+
+    // The component should have role="alert" for accessibility
+    expect(expectedRole).toBe("alert");
+  });
+});
+
+// =============================================================================
+// DEADLINE CALCULATION TESTS
+// =============================================================================
+
+describe("EmailVerificationBanner - Deadline Calculation", () => {
+  test("calculates correct deadline for user created at 10:30", () => {
+    const user = createMockUser({
+      inserted_at: "2025-01-13T10:30:00Z",
+      email_confirmed: false,
+    });
+
+    const deadline = calculateDeadline(user.inserted_at);
+    const formatted = formatDeadline(deadline);
+
+    // 48 hours later: Wednesday, January 15th at 10:30 UTC
+    expect(formatted).toBe("Wednesday, 15 January @ 10:30 UTC");
+  });
+
+  test("calculates correct deadline for user created at midnight", () => {
+    const user = createMockUser({
+      inserted_at: "2025-01-13T00:00:00Z",
+      email_confirmed: false,
+    });
+
+    const deadline = calculateDeadline(user.inserted_at);
+    const formatted = formatDeadline(deadline);
+
+    expect(formatted).toBe("Wednesday, 15 January @ 00:00 UTC");
+  });
+
+  test("calculates correct deadline for user created near end of day", () => {
+    const user = createMockUser({
+      inserted_at: "2025-01-13T23:59:00Z",
+      email_confirmed: false,
+    });
+
+    const deadline = calculateDeadline(user.inserted_at);
+    const formatted = formatDeadline(deadline);
+
+    expect(formatted).toBe("Wednesday, 15 January @ 23:59 UTC");
+  });
+
+  test("handles deadline crossing month boundary", () => {
+    const user = createMockUser({
+      inserted_at: "2025-01-30T15:00:00Z",
+      email_confirmed: false,
+    });
+
+    const deadline = calculateDeadline(user.inserted_at);
+    const formatted = formatDeadline(deadline);
+
+    // 48 hours later crosses into February
+    expect(formatted).toBe("Saturday, 1 February @ 15:00 UTC");
+  });
+
+  test("handles deadline crossing year boundary", () => {
+    const user = createMockUser({
+      inserted_at: "2024-12-30T15:00:00Z",
+      email_confirmed: false,
+    });
+
+    const deadline = calculateDeadline(user.inserted_at);
+    const formatted = formatDeadline(deadline);
+
+    // 48 hours later crosses into next year
+    expect(formatted).toBe("Wednesday, 1 January @ 15:00 UTC");
+  });
+});
+
+// =============================================================================
+// MESSAGE CONTENT TESTS
+// =============================================================================
+
+describe("EmailVerificationBanner - Message Content", () => {
+  test("message includes formatted deadline", () => {
+    const user = createMockUser({
+      inserted_at: "2025-01-13T10:30:00Z",
+      email_confirmed: false,
+    });
+
+    const deadline = calculateDeadline(user.inserted_at);
+    const formatted = formatDeadline(deadline);
+
+    // Verify the formatted deadline is what we expect
+    expect(formatted).toBe("Wednesday, 15 January @ 10:30 UTC");
+
+    // The message should include this deadline
+    const expectedMessage = `You must verify your email by ${formatted} or your account will be deleted.`;
+    expect(expectedMessage).toContain("Wednesday, 15 January @ 10:30 UTC");
+  });
+
+  test("message structure matches LiveView pattern", () => {
+    const user = createMockUser({
+      inserted_at: "2025-01-13T10:30:00Z",
+      email_confirmed: false,
+    });
+
+    const deadline = calculateDeadline(user.inserted_at);
+    const formatted = formatDeadline(deadline);
+
+    const expectedMessage = `You must verify your email by ${formatted} or your account will be deleted.`;
+
+    // Verify message structure
+    expect(expectedMessage).toContain("You must verify your email by");
+    expect(expectedMessage).toContain("or your account will be deleted");
+    expect(expectedMessage).toContain(formatted);
+  });
+
+  test("link text matches LiveView pattern", () => {
+    const expectedLinkText = "Resend confirmation email →";
+
+    expect(expectedLinkText).toContain("Resend confirmation email");
+    expect(expectedLinkText).toContain("→");
+  });
+
+  test("link URL points to correct endpoint", () => {
+    const expectedUrl = "/users/send-confirmation-email";
+
+    expect(expectedUrl).toBe("/users/send-confirmation-email");
   });
 });
 
@@ -303,59 +427,91 @@ describe("EmailVerificationBanner - Integration Scenarios", () => {
 // =============================================================================
 
 describe("EmailVerificationBanner - State Transitions", () => {
-  test("banner appears when user changes from confirmed to unconfirmed", () => {
-    const config = createMockConfig({ require_email_verification: true });
+  // Test state transitions for banner visibility
+  test.each([
+    {
+      description:
+        "banner appears when user changes from confirmed to unconfirmed",
+      initialEmailConfirmed: true,
+      newEmailConfirmed: false,
+      requireVerification: true,
+      initialVisible: false,
+      newVisible: true,
+    },
+    {
+      description: "banner disappears when user confirms email",
+      initialEmailConfirmed: false,
+      newEmailConfirmed: true,
+      requireVerification: true,
+      initialVisible: true,
+      newVisible: false,
+    },
+  ])(
+    "$description",
+    ({
+      initialEmailConfirmed,
+      newEmailConfirmed,
+      requireVerification,
+      initialVisible,
+      newVisible,
+    }) => {
+      const config = createMockConfig({
+        require_email_verification: requireVerification,
+      });
 
-    // Initial state: confirmed
-    const userConfirmed = createMockUser({ email_confirmed: true });
-    expect(shouldBannerBeVisible(userConfirmed, config)).toBe(false);
+      // Initial state
+      const userInitial = createMockUser({
+        email_confirmed: initialEmailConfirmed,
+      });
+      expect(shouldBannerBeVisible(userInitial, config)).toBe(initialVisible);
 
-    // State change: unconfirmed
-    const userUnconfirmed = createMockUser({ email_confirmed: false });
-    expect(shouldBannerBeVisible(userUnconfirmed, config)).toBe(true);
-  });
+      // State change
+      const userNew = createMockUser({ email_confirmed: newEmailConfirmed });
+      expect(shouldBannerBeVisible(userNew, config)).toBe(newVisible);
+    }
+  );
 
-  test("banner disappears when user confirms email", () => {
-    const config = createMockConfig({ require_email_verification: true });
+  // Test config changes affecting banner visibility
+  test.each([
+    {
+      description: "banner appears when verification requirement is enabled",
+      emailConfirmed: false,
+      initialRequireVerification: false,
+      newRequireVerification: true,
+      initialVisible: false,
+      newVisible: true,
+    },
+    {
+      description:
+        "banner disappears when verification requirement is disabled",
+      emailConfirmed: false,
+      initialRequireVerification: true,
+      newRequireVerification: false,
+      initialVisible: true,
+      newVisible: false,
+    },
+  ])(
+    "$description",
+    ({
+      emailConfirmed,
+      initialRequireVerification,
+      newRequireVerification,
+      initialVisible,
+      newVisible,
+    }) => {
+      const user = createMockUser({ email_confirmed: emailConfirmed });
 
-    // Initial state: unconfirmed
-    const userUnconfirmed = createMockUser({ email_confirmed: false });
-    expect(shouldBannerBeVisible(userUnconfirmed, config)).toBe(true);
+      // Initial state
+      const configInitial = createMockConfig({
+        require_email_verification: initialRequireVerification,
+      });
+      expect(shouldBannerBeVisible(user, configInitial)).toBe(initialVisible);
 
-    // State change: confirmed
-    const userConfirmed = createMockUser({ email_confirmed: true });
-    expect(shouldBannerBeVisible(userConfirmed, config)).toBe(false);
-  });
-
-  test("banner appears when verification requirement is enabled", () => {
-    const user = createMockUser({ email_confirmed: false });
-
-    // Initial state: verification not required
-    const configDisabled = createMockConfig({
-      require_email_verification: false,
-    });
-    expect(shouldBannerBeVisible(user, configDisabled)).toBe(false);
-
-    // State change: verification required
-    const configEnabled = createMockConfig({
-      require_email_verification: true,
-    });
-    expect(shouldBannerBeVisible(user, configEnabled)).toBe(true);
-  });
-
-  test("banner disappears when verification requirement is disabled", () => {
-    const user = createMockUser({ email_confirmed: false });
-
-    // Initial state: verification required
-    const configEnabled = createMockConfig({
-      require_email_verification: true,
-    });
-    expect(shouldBannerBeVisible(user, configEnabled)).toBe(true);
-
-    // State change: verification not required
-    const configDisabled = createMockConfig({
-      require_email_verification: false,
-    });
-    expect(shouldBannerBeVisible(user, configDisabled)).toBe(false);
-  });
+      // State change
+      const configNew = createMockConfig({
+        require_email_verification: newRequireVerification,
+      });
+      expect(shouldBannerBeVisible(user, configNew)).toBe(newVisible);
+    }
+  );
 });

@@ -9,24 +9,7 @@ import { describe, expect, test } from "vitest";
 
 import { getAvatarInitials } from "../../../js/collaborative-editor/utils/avatar";
 import type { UserContext } from "../../../js/collaborative-editor/types/sessionContext";
-
-// =============================================================================
-// TEST HELPERS
-// =============================================================================
-
-/**
- * Helper to create a mock UserContext with specified properties
- */
-function createMockUser(overrides: Partial<UserContext> = {}): UserContext {
-  return {
-    id: "user-1",
-    email: "test@example.com",
-    first_name: "Test",
-    last_name: "User",
-    email_confirmed: true,
-    ...overrides,
-  };
-}
+import { createMockUser } from "../fixtures/sessionContextData";
 
 // =============================================================================
 // NORMAL CASES
@@ -84,49 +67,41 @@ describe("getAvatarInitials - Normal Cases", () => {
 // =============================================================================
 
 describe("getAvatarInitials - Whitespace Handling", () => {
-  test("trims leading and trailing whitespace from first name", () => {
-    const user = createMockUser({
+  // Test various whitespace scenarios are trimmed correctly
+  test.each([
+    {
+      description: "leading and trailing whitespace from first name",
       first_name: "  John  ",
       last_name: "Doe",
-    });
-
-    expect(getAvatarInitials(user)).toBe("JD");
-  });
-
-  test("trims leading and trailing whitespace from last name", () => {
-    const user = createMockUser({
+      expected: "JD",
+    },
+    {
+      description: "leading and trailing whitespace from last name",
       first_name: "John",
       last_name: "  Doe  ",
-    });
-
-    expect(getAvatarInitials(user)).toBe("JD");
-  });
-
-  test("trims whitespace from both names", () => {
-    const user = createMockUser({
+      expected: "JD",
+    },
+    {
+      description: "whitespace from both names",
       first_name: "  John  ",
       last_name: "  Doe  ",
-    });
-
-    expect(getAvatarInitials(user)).toBe("JD");
-  });
-
-  test("handles tab characters in names", () => {
-    const user = createMockUser({
+      expected: "JD",
+    },
+    {
+      description: "tab characters in names",
       first_name: "\tJohn\t",
       last_name: "\tDoe\t",
-    });
-
-    expect(getAvatarInitials(user)).toBe("JD");
-  });
-
-  test("handles newline characters in names", () => {
-    const user = createMockUser({
+      expected: "JD",
+    },
+    {
+      description: "newline characters in names",
       first_name: "\nJohn\n",
       last_name: "\nDoe\n",
-    });
-
-    expect(getAvatarInitials(user)).toBe("JD");
+      expected: "JD",
+    },
+  ])("trims $description", ({ first_name, last_name, expected }) => {
+    const user = createMockUser({ first_name, last_name });
+    expect(getAvatarInitials(user)).toBe(expected);
   });
 });
 
@@ -139,30 +114,28 @@ describe("getAvatarInitials - Null and Undefined Cases", () => {
     expect(getAvatarInitials(null)).toBe("??");
   });
 
-  test("returns fallback when first_name is undefined", () => {
-    const user = createMockUser({
-      first_name: undefined as any,
+  // Test various undefined scenarios return fallback
+  test.each([
+    {
+      description: "first_name is undefined",
+      first_name: undefined,
       last_name: "Doe",
-    });
-
-    expect(getAvatarInitials(user)).toBe("??");
-  });
-
-  test("returns fallback when last_name is undefined", () => {
-    const user = createMockUser({
+    },
+    {
+      description: "last_name is undefined",
       first_name: "John",
-      last_name: undefined as any,
-    });
-
-    expect(getAvatarInitials(user)).toBe("??");
-  });
-
-  test("returns fallback when both names are undefined", () => {
+      last_name: undefined,
+    },
+    {
+      description: "both names are undefined",
+      first_name: undefined,
+      last_name: undefined,
+    },
+  ])("returns fallback when $description", ({ first_name, last_name }) => {
     const user = createMockUser({
-      first_name: undefined as any,
-      last_name: undefined as any,
+      first_name: first_name as any,
+      last_name: last_name as any,
     });
-
     expect(getAvatarInitials(user)).toBe("??");
   });
 });
@@ -172,57 +145,40 @@ describe("getAvatarInitials - Null and Undefined Cases", () => {
 // =============================================================================
 
 describe("getAvatarInitials - Empty String Cases", () => {
-  test("returns fallback for empty first name", () => {
-    const user = createMockUser({
+  // Test various empty/whitespace scenarios return fallback
+  test.each([
+    {
+      description: "empty first name",
       first_name: "",
       last_name: "Doe",
-    });
-
-    expect(getAvatarInitials(user)).toBe("??");
-  });
-
-  test("returns fallback for empty last name", () => {
-    const user = createMockUser({
+    },
+    {
+      description: "empty last name",
       first_name: "John",
       last_name: "",
-    });
-
-    expect(getAvatarInitials(user)).toBe("??");
-  });
-
-  test("returns fallback for both empty names", () => {
-    const user = createMockUser({
+    },
+    {
+      description: "both empty names",
       first_name: "",
       last_name: "",
-    });
-
-    expect(getAvatarInitials(user)).toBe("??");
-  });
-
-  test("returns fallback for whitespace-only first name", () => {
-    const user = createMockUser({
+    },
+    {
+      description: "whitespace-only first name",
       first_name: "   ",
       last_name: "Doe",
-    });
-
-    expect(getAvatarInitials(user)).toBe("??");
-  });
-
-  test("returns fallback for whitespace-only last name", () => {
-    const user = createMockUser({
+    },
+    {
+      description: "whitespace-only last name",
       first_name: "John",
       last_name: "   ",
-    });
-
-    expect(getAvatarInitials(user)).toBe("??");
-  });
-
-  test("returns fallback for both whitespace-only names", () => {
-    const user = createMockUser({
+    },
+    {
+      description: "both whitespace-only names",
       first_name: "   ",
       last_name: "   ",
-    });
-
+    },
+  ])("returns fallback for $description", ({ first_name, last_name }) => {
+    const user = createMockUser({ first_name, last_name });
     expect(getAvatarInitials(user)).toBe("??");
   });
 });
@@ -232,41 +188,35 @@ describe("getAvatarInitials - Empty String Cases", () => {
 // =============================================================================
 
 describe("getAvatarInitials - Special Characters", () => {
-  test("handles names with accented characters", () => {
-    const user = createMockUser({
+  // Test various special character scenarios
+  test.each([
+    {
+      description: "names with accented characters",
       first_name: "Élise",
       last_name: "Müller",
-    });
-
-    expect(getAvatarInitials(user)).toBe("ÉM");
-  });
-
-  test("handles names with hyphens", () => {
-    const user = createMockUser({
+      expected: "ÉM",
+    },
+    {
+      description: "names with hyphens",
       first_name: "Mary-Jane",
       last_name: "Smith-Jones",
-    });
-
-    // Takes first character before hyphen
-    expect(getAvatarInitials(user)).toBe("MS");
-  });
-
-  test("handles names with apostrophes", () => {
-    const user = createMockUser({
+      expected: "MS",
+    },
+    {
+      description: "names with apostrophes",
       first_name: "O'Brien",
       last_name: "D'Angelo",
-    });
-
-    expect(getAvatarInitials(user)).toBe("OD");
-  });
-
-  test("handles names with numbers", () => {
-    const user = createMockUser({
+      expected: "OD",
+    },
+    {
+      description: "names with numbers",
       first_name: "John2",
       last_name: "Doe3",
-    });
-
-    expect(getAvatarInitials(user)).toBe("JD");
+      expected: "JD",
+    },
+  ])("handles $description", ({ first_name, last_name, expected }) => {
+    const user = createMockUser({ first_name, last_name });
+    expect(getAvatarInitials(user)).toBe(expected);
   });
 });
 
@@ -289,30 +239,31 @@ describe("getAvatarInitials - Unicode Cases", () => {
     expect(result.length).toBe(2);
   });
 
-  test("handles names with Chinese characters", () => {
-    const user = createMockUser({
+  // Test various international character sets
+  test.each([
+    {
+      description: "Chinese characters",
       first_name: "李",
       last_name: "明",
-    });
-
-    expect(getAvatarInitials(user)).toBe("李明");
-  });
-
-  test("handles names with Cyrillic characters", () => {
-    const user = createMockUser({
+      expected: "李明",
+    },
+    {
+      description: "Cyrillic characters",
       first_name: "Иван",
       last_name: "Петров",
-    });
-
-    expect(getAvatarInitials(user)).toBe("ИП");
-  });
-
-  test("handles names with Arabic characters", () => {
-    const user = createMockUser({
+      expected: "ИП",
+    },
+    {
+      description: "Arabic characters",
       first_name: "أحمد",
       last_name: "محمد",
-    });
-
-    expect(getAvatarInitials(user)).toBe("أم");
-  });
+      expected: "أم",
+    },
+  ])(
+    "handles names with $description",
+    ({ first_name, last_name, expected }) => {
+      const user = createMockUser({ first_name, last_name });
+      expect(getAvatarInitials(user)).toBe(expected);
+    }
+  );
 });

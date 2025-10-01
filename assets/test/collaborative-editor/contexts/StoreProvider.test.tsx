@@ -16,11 +16,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
 import type { SessionStoreInstance } from "../../../js/collaborative-editor/stores/createSessionStore";
-import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createCredentialStore } from "../../../js/collaborative-editor/stores/createCredentialStore";
-import { createAwarenessStore } from "../../../js/collaborative-editor/stores/createAwarenessStore";
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 import {
   createMockPhoenixChannel,
@@ -29,49 +24,10 @@ import {
   type MockPhoenixChannel,
 } from "../mocks/phoenixChannel";
 import { createMockSocket } from "../mocks/phoenixSocket";
-
-// =============================================================================
-// TEST HELPERS - Simulate StoreProvider behavior
-// =============================================================================
-
-/**
- * Creates a stores object matching StoreProvider's structure
- */
-function createStores(): StoreContextValue {
-  return {
-    adaptorStore: createAdaptorStore(),
-    credentialStore: createCredentialStore(),
-    awarenessStore: createAwarenessStore(),
-    workflowStore: createWorkflowStore(),
-    sessionContextStore: createSessionContextStore(),
-  };
-}
-
-/**
- * Simulates the channel connection effect from StoreProvider
- */
-function simulateChannelConnection(
-  stores: StoreContextValue,
-  sessionStore: SessionStoreInstance
-): () => void {
-  const session = sessionStore.getSnapshot();
-
-  if (session.provider && session.isConnected) {
-    const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
-    const cleanup2 = stores.credentialStore._connectChannel(session.provider);
-    const cleanup3 = stores.sessionContextStore._connectChannel(
-      session.provider
-    );
-
-    return () => {
-      cleanup1();
-      cleanup2();
-      cleanup3();
-    };
-  }
-
-  return () => {};
-}
+import {
+  createStores,
+  simulateChannelConnection,
+} from "../__helpers__/storeProviderHelpers";
 
 // =============================================================================
 // TEST SETUP

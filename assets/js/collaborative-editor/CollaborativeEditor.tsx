@@ -64,7 +64,7 @@ function BreadcrumbContent({
       <BreadcrumbLink href="/projects" key="projects">
         Projects
       </BreadcrumbLink>,
-      <BreadcrumbLink href={`/projects/${projectId}`} key="project">
+      <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
         {projectName}
       </BreadcrumbLink>,
       <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">

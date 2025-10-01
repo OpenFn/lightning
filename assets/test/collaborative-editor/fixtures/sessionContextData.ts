@@ -163,3 +163,52 @@ export function createMockSessionContext(
     config: overrides.config || mockAppConfig,
   };
 }
+
+/**
+ * Helper to create a mock UserContext with custom properties
+ *
+ * Creates a user context object with sensible defaults that can be
+ * overridden for specific test scenarios.
+ *
+ * @param overrides - Partial UserContext to override defaults
+ * @returns Complete UserContext object
+ *
+ * @example
+ * const user = createMockUser({ email_confirmed: false });
+ * expect(user.email_confirmed).toBe(false);
+ */
+export function createMockUser(
+  overrides: Partial<UserContext> = {}
+): UserContext {
+  return {
+    id: "user-1",
+    email: "test@example.com",
+    first_name: "Test",
+    last_name: "User",
+    email_confirmed: true,
+    inserted_at: "2025-01-13T10:30:00Z",
+    ...overrides,
+  };
+}
+
+/**
+ * Helper to create a mock AppConfig with custom properties
+ *
+ * Creates an app config object with sensible defaults that can be
+ * overridden for specific test scenarios.
+ *
+ * @param overrides - Partial AppConfig to override defaults
+ * @returns Complete AppConfig object
+ *
+ * @example
+ * const config = createMockConfig({ require_email_verification: true });
+ * expect(config.require_email_verification).toBe(true);
+ */
+export function createMockConfig(
+  overrides: Partial<AppConfig> = {}
+): AppConfig {
+  return {
+    require_email_verification: false,
+    ...overrides,
+  };
+}

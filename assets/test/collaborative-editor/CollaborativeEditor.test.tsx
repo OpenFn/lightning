@@ -17,99 +17,13 @@
 import { describe, expect, test } from "vitest";
 
 import type { ProjectContext } from "../../js/collaborative-editor/types/sessionContext";
-
-// =============================================================================
-// TEST HELPERS
-// =============================================================================
-
-/**
- * Helper to create a mock ProjectContext
- */
-function createMockProject(
-  overrides: Partial<ProjectContext> = {}
-): ProjectContext {
-  return {
-    id: "project-123",
-    name: "Test Project",
-    ...overrides,
-  };
-}
-
-/**
- * Simulates the BreadcrumbContent component's data selection logic
- * Returns the project data that would be used for rendering
- */
-function selectBreadcrumbProjectData(
-  projectFromStore: ProjectContext | null,
-  projectIdFallback?: string,
-  projectNameFallback?: string
-): { projectId: string | undefined; projectName: string | undefined } {
-  // This matches the logic from BreadcrumbContent:
-  // const projectId = projectFromStore?.id ?? projectIdFallback;
-  // const projectName = projectFromStore?.name ?? projectNameFallback;
-
-  const projectId = projectFromStore?.id ?? projectIdFallback;
-  const projectName = projectFromStore?.name ?? projectNameFallback;
-
-  return { projectId, projectName };
-}
-
-/**
- * Simulates breadcrumb URL generation
- */
-function generateBreadcrumbUrls(projectId: string | undefined): {
-  projectUrl: string;
-  workflowsUrl: string;
-} {
-  return {
-    projectUrl: `/projects/${projectId}`,
-    workflowsUrl: `/projects/${projectId}/w`,
-  };
-}
-
-/**
- * Simulates the complete breadcrumb structure
- */
-interface BreadcrumbItem {
-  type: "link" | "text";
-  href?: string;
-  text: string;
-  icon?: string;
-}
-
-function generateBreadcrumbStructure(
-  projectId: string | undefined,
-  projectName: string | undefined,
-  workflowName: string
-): BreadcrumbItem[] {
-  return [
-    {
-      type: "link",
-      href: "/",
-      text: "Home",
-      icon: "hero-home-mini",
-    },
-    {
-      type: "link",
-      href: "/projects",
-      text: "Projects",
-    },
-    {
-      type: "link",
-      href: `/projects/${projectId}`,
-      text: projectName ?? "",
-    },
-    {
-      type: "link",
-      href: `/projects/${projectId}/w`,
-      text: "Workflows",
-    },
-    {
-      type: "text",
-      text: workflowName,
-    },
-  ];
-}
+import {
+  createMockProject,
+  selectBreadcrumbProjectData,
+  generateBreadcrumbUrls,
+  generateBreadcrumbStructure,
+  type BreadcrumbItem,
+} from "./__helpers__/breadcrumbHelpers";
 
 // =============================================================================
 // STORE-FIRST WITH PROPS-FALLBACK PATTERN TESTS
@@ -209,7 +123,7 @@ describe("CollaborativeEditor - Breadcrumb URL Generation", () => {
 
     const urls = generateBreadcrumbUrls(projectId);
 
-    expect(urls.projectUrl).toBe("/projects/project-123");
+    expect(urls.projectUrl).toBe("/projects/project-123/w");
   });
 
   test("generates correct workflows URL from project ID", () => {
@@ -226,7 +140,7 @@ describe("CollaborativeEditor - Breadcrumb URL Generation", () => {
     const urls = generateBreadcrumbUrls(projectId);
 
     expect(urls.projectUrl).toBe(
-      "/projects/550e8400-e29b-41d4-a716-446655440000"
+      "/projects/550e8400-e29b-41d4-a716-446655440000/w"
     );
     expect(urls.workflowsUrl).toBe(
       "/projects/550e8400-e29b-41d4-a716-446655440000/w"
@@ -238,7 +152,7 @@ describe("CollaborativeEditor - Breadcrumb URL Generation", () => {
 
     const urls = generateBreadcrumbUrls(projectId);
 
-    expect(urls.projectUrl).toBe("/projects/undefined");
+    expect(urls.projectUrl).toBe("/projects/undefined/w");
     expect(urls.workflowsUrl).toBe("/projects/undefined/w");
   });
 });
@@ -306,7 +220,7 @@ describe("CollaborativeEditor - Complete Breadcrumb Structure", () => {
 
     const projectBreadcrumb = breadcrumbs[2];
     expect(projectBreadcrumb.type).toBe("link");
-    expect(projectBreadcrumb.href).toBe("/projects/project-123");
+    expect(projectBreadcrumb.href).toBe("/projects/project-123/w");
     expect(projectBreadcrumb.text).toBe("Test Project");
   });
 
@@ -359,7 +273,7 @@ describe("CollaborativeEditor - Complete Breadcrumb Structure", () => {
 
     // Verify store data is used in breadcrumbs
     expect(breadcrumbs[2].text).toBe("Store Project Name");
-    expect(breadcrumbs[2].href).toBe("/projects/store-project-123");
+    expect(breadcrumbs[2].href).toBe("/projects/store-project-123/w");
     expect(breadcrumbs[3].href).toBe("/projects/store-project-123/w");
   });
 
@@ -381,8 +295,35 @@ describe("CollaborativeEditor - Complete Breadcrumb Structure", () => {
 
     // Verify fallback data is used in breadcrumbs
     expect(breadcrumbs[2].text).toBe("Fallback Name");
-    expect(breadcrumbs[2].href).toBe("/projects/fallback-id");
+    expect(breadcrumbs[2].href).toBe("/projects/fallback-id/w");
     expect(breadcrumbs[3].href).toBe("/projects/fallback-id/w");
+  });
+
+  test("project name and workflows breadcrumbs link to same URL (intentional)", () => {
+    // This test documents the intentional design where both the project name
+    // and workflows breadcrumbs link to the same workflows list page.
+    // This matches the LiveView implementation and provides a larger click target.
+    const projectId = "project-123";
+    const projectName = "Test Project";
+    const workflowName = "Test Workflow";
+
+    const breadcrumbs = generateBreadcrumbStructure(
+      projectId,
+      projectName,
+      workflowName
+    );
+
+    const projectBreadcrumb = breadcrumbs[2]; // "Test Project"
+    const workflowsBreadcrumb = breadcrumbs[3]; // "Workflows"
+
+    // Both should link to the workflows list page
+    expect(projectBreadcrumb.href).toBe("/projects/project-123/w");
+    expect(workflowsBreadcrumb.href).toBe("/projects/project-123/w");
+    expect(projectBreadcrumb.href).toBe(workflowsBreadcrumb.href);
+
+    // But have different text content
+    expect(projectBreadcrumb.text).toBe("Test Project");
+    expect(workflowsBreadcrumb.text).toBe("Workflows");
   });
 });
 
@@ -412,7 +353,7 @@ describe("CollaborativeEditor - Breadcrumb Integration Scenarios", () => {
 
     // Should render with props data
     expect(breadcrumbs[2].text).toBe("Props Project Name");
-    expect(breadcrumbs[2].href).toBe("/projects/prop-project-123");
+    expect(breadcrumbs[2].href).toBe("/projects/prop-project-123/w");
   });
 
   test("scenario: after store hydration (store data available)", () => {
@@ -439,7 +380,7 @@ describe("CollaborativeEditor - Breadcrumb Integration Scenarios", () => {
 
     // Should render with store data
     expect(breadcrumbs[2].text).toBe("Store Hydrated Name");
-    expect(breadcrumbs[2].href).toBe("/projects/store-project-789");
+    expect(breadcrumbs[2].href).toBe("/projects/store-project-789/w");
   });
 
   test("scenario: collaborative session with live updates", () => {
@@ -482,7 +423,7 @@ describe("CollaborativeEditor - Breadcrumb Integration Scenarios", () => {
 
     expect(updatedBreadcrumbs[2].text).toBe("Updated Project Name");
     // ID should remain the same
-    expect(updatedBreadcrumbs[2].href).toBe("/projects/collab-project-123");
+    expect(updatedBreadcrumbs[2].href).toBe("/projects/collab-project-123/w");
   });
 
   test("scenario: migration phase with both props and store", () => {

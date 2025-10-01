@@ -1,4 +1,4 @@
-import { Doc as YDoc, applyUpdate, encodeStateAsUpdate } from "yjs";
+import { Doc as YDoc } from "yjs";
 
 import {
   createSessionStore,
@@ -8,6 +8,12 @@ import {
 
 import { createMockSocket } from "./mocks/phoenixSocket";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import {
+  triggerProviderSync,
+  triggerProviderStatus,
+  applyProviderUpdate,
+  waitForState,
+} from "./__helpers__/sessionStoreHelpers";
 
 // =============================================================================
 // CORE STORE INTERFACE TESTS
@@ -938,50 +944,4 @@ test("settling is reset on reconnection", async () => {
   expect(store.settled).toBe(false); // destroy should reset settled to false
 });
 
-function triggerProviderSync(store: SessionStore, synced: boolean) {
-  store.provider!.emit("sync", [synced]);
-}
-
-function triggerProviderStatus(
-  store: SessionStore,
-  status: "connected" | "disconnected" | "connecting"
-) {
-  store.provider!.emit("status", [{ status }]);
-}
-
-function applyProviderUpdate(ydoc: YDoc, provider: PhoenixChannelProvider) {
-  const doc2 = new YDoc();
-  doc2.getArray("test").insert(0, ["hello"]);
-
-  const update = encodeStateAsUpdate(doc2);
-  applyUpdate(ydoc, update, provider);
-}
-
-async function waitForState(
-  store: SessionStore,
-  callback: (state: SessionState) => boolean,
-  timeout = 200
-) {
-  const stack = new Error().stack;
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      const error = new Error("Timeout waiting for state");
-      error.stack = stack;
-
-      reject(error);
-    }, timeout);
-
-    const unsubscribe = store.subscribe(() => {
-      try {
-        const result = callback(store.getSnapshot());
-        if (result) {
-          unsubscribe();
-          clearTimeout(timeoutId);
-          resolve(result);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-}
+// Helper functions are now imported from __helpers__/sessionStoreHelpers

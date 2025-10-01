@@ -1,15 +1,17 @@
 /**
  * # Email Verification Banner
  *
- * Displays a warning banner when email verification is required but not completed.
+ * Displays a danger banner when email verification is required but not completed.
  * Only shows when:
  * - config.require_email_verification === true
  * - user.email_confirmed === false
  *
- * Uses yellow/orange styling for warning emphasis.
+ * Shows a 48-hour deadline for verification calculated from user.inserted_at.
+ * Uses red danger styling to match LiveView banner appearance.
  */
 
 import { useAppConfig, useUser } from "../hooks/useSessionContext";
+import { calculateDeadline, formatDeadline } from "../utils/dateFormatting";
 
 export function EmailVerificationBanner() {
   const user = useUser();
@@ -20,22 +22,25 @@ export function EmailVerificationBanner() {
     return null;
   }
 
+  // Calculate and format the verification deadline
+  const deadline = calculateDeadline(user.inserted_at);
+  const formattedDeadline = formatDeadline(deadline);
+
   return (
-    <div className="bg-yellow-50 border-b border-yellow-200">
-      <div className="mx-auto sm:px-6 lg:px-8 py-3">
-        <div className="flex items-center gap-3">
-          <span className="hero-exclamation-triangle h-5 w-5 text-yellow-600 flex-shrink-0" />
-          <p className="text-sm text-yellow-800">
-            Please verify your email address to continue using all features.{" "}
-            <a
-              href="/users/confirm"
-              className="font-semibold underline hover:text-yellow-900"
-            >
-              Resend verification email
-            </a>
-          </p>
-        </div>
-      </div>
+    <div
+      className="alert-danger"
+      role="alert"
+      phx-click="lv:clear-flash"
+      phx-value-key="info"
+    >
+      <span className="hero-x-circle-solid" />
+      <p>
+        You must verify your email by {formattedDeadline} or your account will
+        be deleted.{" "}
+        <a href="/users/send-confirmation-email">
+          Resend confirmation email &rarr;
+        </a>
+      </p>
     </div>
   );
 }
