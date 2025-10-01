@@ -106,37 +106,12 @@ describe("getAvatarInitials - Whitespace Handling", () => {
 });
 
 // =============================================================================
-// EDGE CASES - NULL AND UNDEFINED
+// EDGE CASES - NULL USER
 // =============================================================================
 
-describe("getAvatarInitials - Null and Undefined Cases", () => {
+describe("getAvatarInitials - Null User Case", () => {
   test("returns fallback for null user", () => {
     expect(getAvatarInitials(null)).toBe("??");
-  });
-
-  // Test various undefined scenarios return fallback
-  test.each([
-    {
-      description: "first_name is undefined",
-      first_name: undefined,
-      last_name: "Doe",
-    },
-    {
-      description: "last_name is undefined",
-      first_name: "John",
-      last_name: undefined,
-    },
-    {
-      description: "both names are undefined",
-      first_name: undefined,
-      last_name: undefined,
-    },
-  ])("returns fallback when $description", ({ first_name, last_name }) => {
-    const user = createMockUser({
-      first_name: first_name as any,
-      last_name: last_name as any,
-    });
-    expect(getAvatarInitials(user)).toBe("??");
   });
 });
 

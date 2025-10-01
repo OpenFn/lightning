@@ -20,7 +20,7 @@ import type { SessionContextStoreInstance } from "../../../js/collaborative-edit
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-  waitForAsync,
+  waitForCondition,
   type MockPhoenixChannel,
 } from "../mocks/phoenixChannel";
 import { createMockSocket } from "../mocks/phoenixSocket";
@@ -137,7 +137,10 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     );
 
     // Wait for provider to be ready
-    await waitForAsync(100);
+    await waitForCondition(() => {
+      const session = sessionStore!.getSnapshot();
+      return session.provider !== null && session.isConnected;
+    });
 
     // Verify provider is available in session
     const session = sessionStore!.getSnapshot();
@@ -164,41 +167,20 @@ describe("StoreProvider - SessionContextStore Integration", () => {
 
   test("sessionContextStore registers channel event listeners", async () => {
     const mockSocket = createMockSocket();
-
-    // Initialize and connect
-    sessionStore!.initializeSession(
-      mockSocket,
-      "test:workflow",
-      {
-        id: "user-1",
-        name: "Test User",
-        color: "#ff0000",
-      },
-      { connect: true }
+    const mockProvider = createMockPhoenixChannelProvider(
+      createMockPhoenixChannel()
     );
 
-    // Wait for provider
-    await waitForAsync(100);
-
-    // Spy on _connectChannel to verify it returns a cleanup function
-    let cleanupFunctionReturned = false;
-    const originalConnect = stores!.sessionContextStore._connectChannel;
-    stores!.sessionContextStore._connectChannel = (provider: any) => {
-      const cleanup = originalConnect.call(
-        stores!.sessionContextStore,
-        provider
-      );
-      cleanupFunctionReturned = typeof cleanup === "function";
-      return cleanup;
-    };
-
-    const cleanup = simulateChannelConnection(stores!, sessionStore!);
+    // Directly test that _connectChannel returns a cleanup function
+    const cleanup = stores!.sessionContextStore._connectChannel(mockProvider);
 
     // Verify cleanup function was returned (indicates listeners were registered)
-    expect(cleanupFunctionReturned).toBe(true);
+    expect(typeof cleanup).toBe("function");
 
-    // Cleanup
-    cleanup();
+    // Verify cleanup can be called without errors
+    expect(() => {
+      cleanup();
+    }).not.toThrow();
   });
 
   test("sessionContextStore does not connect when provider is not ready", async () => {
@@ -218,8 +200,8 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     // Simulate the connection effect (should not connect)
     const cleanup = simulateChannelConnection(stores!, sessionStore!);
 
-    // Wait
-    await waitForAsync(50);
+    // Small delay to ensure effect runs (but connection should not happen)
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Verify no connection was attempted
     expect(pushCalled).toBe(false);
@@ -247,7 +229,10 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     );
 
     // Wait for provider
-    await waitForAsync(100);
+    await waitForCondition(() => {
+      const session = sessionStore!.getSnapshot();
+      return session.provider !== null;
+    });
 
     // Test that requestSessionContext can be called
     const requestResult = stores!.sessionContextStore.requestSessionContext();
@@ -255,8 +240,8 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     // Should return a promise
     expect(requestResult).toBeInstanceOf(Promise);
 
-    // Wait for request to complete (will fail but that's ok for this test)
-    await waitForAsync(50);
+    // Small delay for async request to be initiated
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // The fact that we can call requestSessionContext means the store is properly set up
     expect(stores!.sessionContextStore).toBeDefined();
@@ -282,21 +267,24 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     );
 
     // Wait for provider
-    await waitForAsync(100);
+    await waitForCondition(() => {
+      const session = sessionStore!.getSnapshot();
+      return session.provider !== null;
+    });
 
     // Connect stores
     const cleanup = simulateChannelConnection(stores!, sessionStore!);
 
-    // Wait for connection
-    await waitForAsync(50);
+    // Small delay for connection to be established
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Verify cleanup can be called without errors
     expect(() => {
       cleanup();
     }).not.toThrow();
 
-    // Wait for cleanup
-    await waitForAsync(10);
+    // Small delay for cleanup to complete
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Verify we can still access the store after cleanup
     expect(stores!.sessionContextStore).toBeDefined();
@@ -319,20 +307,23 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     );
 
     // Wait for provider
-    await waitForAsync(100);
+    await waitForCondition(() => {
+      const session = sessionStore!.getSnapshot();
+      return session.provider !== null;
+    });
 
     const cleanup1 = simulateChannelConnection(stores!, sessionStore!);
 
-    // Wait for connection
-    await waitForAsync(50);
+    // Small delay for connection to be established
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Clean up first connection
     expect(() => {
       cleanup1();
     }).not.toThrow();
 
-    // Wait for cleanup
-    await waitForAsync(10);
+    // Small delay for cleanup to complete
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Connect to second session (simulates reconnection)
     sessionStore!.initializeSession(
@@ -347,12 +338,15 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     );
 
     // Wait for new provider
-    await waitForAsync(100);
+    await waitForCondition(() => {
+      const session = sessionStore!.getSnapshot();
+      return session.provider !== null;
+    });
 
     const cleanup2 = simulateChannelConnection(stores!, sessionStore!);
 
-    // Wait for new connection
-    await waitForAsync(50);
+    // Small delay for new connection to be established
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Verify second cleanup works
     expect(() => {
@@ -398,8 +392,8 @@ describe("StoreProvider - SessionContextStore Integration", () => {
 
     const cleanup = simulateChannelConnection(stores!, sessionStore!);
 
-    // Wait for data load
-    await waitForAsync(50);
+    // Small delay for connection to be established
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Manually update sessionContextStore
     stores!.sessionContextStore.setLoading(true);
@@ -458,8 +452,8 @@ describe("StoreProvider - SessionContextStore Integration", () => {
 
     const cleanup = simulateChannelConnection(stores!, sessionStore!);
 
-    // Wait for data
-    await waitForAsync(50);
+    // Small delay for connection to be established
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Get states
     const sessionState = sessionStore!.getSnapshot();

@@ -26,7 +26,7 @@ import {
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-  waitForAsync,
+  waitForCondition,
   type MockPhoenixChannel,
 } from "../mocks/phoenixChannel";
 
@@ -576,7 +576,6 @@ test("channel session_context events are processed correctly", async () => {
 
   // Connect to channel
   const cleanup = store._connectChannel(mockProvider);
-  await waitForAsync(10);
 
   // Verify initial state
   const initialState = store.getSnapshot();
@@ -588,7 +587,8 @@ test("channel session_context events are processed correctly", async () => {
   };
   mockChannelWithTest._test.emit("session_context", mockSessionContextResponse);
 
-  await waitForAsync(10);
+  // Wait for the event to be processed
+  await waitForCondition(() => store.getSnapshot().user !== null);
 
   const state = store.getSnapshot();
   expect(state.user).toEqual(mockUserContext);
@@ -625,7 +625,9 @@ test("channel session_context_updated events are processed correctly", async () 
 
   // Connect to channel
   const cleanup = store._connectChannel(mockProvider);
-  await waitForAsync(10);
+
+  // Wait for initial state to be loaded
+  await waitForCondition(() => store.getSnapshot().user !== null);
 
   // Verify initial state
   const initialState = store.getSnapshot();
@@ -640,7 +642,10 @@ test("channel session_context_updated events are processed correctly", async () 
     mockUpdatedSessionContext
   );
 
-  await waitForAsync(10);
+  // Wait for the updated event to be processed
+  await waitForCondition(
+    () => store.getSnapshot().user?.id === mockUpdatedSessionContext.user?.id
+  );
 
   const state = store.getSnapshot();
   expect(state.user).toEqual(mockUpdatedSessionContext.user);
@@ -677,8 +682,8 @@ test("connectChannel sets up event listeners and requests session context", asyn
   // Connect to channel
   const cleanup = store._connectChannel(mockProvider);
 
-  // Wait for async operations
-  await waitForAsync(50);
+  // Wait for session context to be loaded
+  await waitForCondition(() => store.getSnapshot().user !== null);
 
   // Verify session context was loaded
   const state = store.getSnapshot();
@@ -695,7 +700,10 @@ test("connectChannel sets up event listeners and requests session context", asyn
     mockUpdatedSessionContext
   );
 
-  await waitForAsync(10);
+  // Wait for the updated event to be processed
+  await waitForCondition(
+    () => store.getSnapshot().user?.id === mockUpdatedSessionContext.user?.id
+  );
 
   const updatedState = store.getSnapshot();
   expect(updatedState.user).toEqual(mockUpdatedSessionContext.user);
@@ -763,12 +771,14 @@ test("handleSessionContextUpdated updates lastUpdated timestamp", async () => {
   };
 
   store._connectChannel(mockProvider);
-  await waitForAsync(10);
+
+  // Wait for initial data to be loaded
+  await waitForCondition(() => store.getSnapshot().lastUpdated !== null);
 
   const firstTimestamp = store.getSnapshot().lastUpdated;
 
-  // Wait a bit then trigger update
-  await waitForAsync(10);
+  // Small delay before triggering update
+  await new Promise(resolve => setTimeout(resolve, 10));
 
   const mockChannelWithTest = mockChannel as MockPhoenixChannel & {
     _test: { emit: (event: string, message: unknown) => void };
@@ -778,7 +788,10 @@ test("handleSessionContextUpdated updates lastUpdated timestamp", async () => {
     mockUpdatedSessionContext
   );
 
-  await waitForAsync(10);
+  // Wait for the updated event to be processed
+  await waitForCondition(
+    () => store.getSnapshot().lastUpdated !== firstTimestamp
+  );
 
   const secondTimestamp = store.getSnapshot().lastUpdated;
   expect(secondTimestamp).not.toBe(null);
@@ -907,7 +920,9 @@ test("channel cleanup removes event listeners", async () => {
 
   // Connect to channel
   const cleanup = store._connectChannel(mockProvider);
-  await waitForAsync(10);
+
+  // Wait for initial connection to be established
+  await waitForCondition(() => store.getSnapshot().user !== null);
 
   // Verify handlers are registered
   const mockChannelWithTest = mockChannel as MockPhoenixChannel & {

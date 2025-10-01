@@ -173,3 +173,31 @@ export function createMockPhoenixChannelProvider(
 export function waitForAsync(ms: number = 0): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+/**
+ * Waits for a condition to become true by polling at regular intervals
+ * This is a testing-library/react waitFor alternative for non-React contexts
+ *
+ * @param condition - Function that returns true when the wait condition is met
+ * @param options - Configuration options
+ * @param options.timeout - Maximum time to wait in milliseconds (default: 1000)
+ * @param options.interval - Time between condition checks in milliseconds (default: 50)
+ * @throws Error if timeout is reached before condition becomes true
+ *
+ * @example
+ * await waitForCondition(() => store.getSnapshot().isLoading === false);
+ */
+export async function waitForCondition(
+  condition: () => boolean,
+  options: { timeout?: number; interval?: number } = {}
+): Promise<void> {
+  const { timeout = 1000, interval = 50 } = options;
+  const startTime = Date.now();
+
+  while (!condition()) {
+    if (Date.now() - startTime > timeout) {
+      throw new Error(`waitForCondition timeout after ${timeout}ms`);
+    }
+    await waitForAsync(interval);
+  }
+}

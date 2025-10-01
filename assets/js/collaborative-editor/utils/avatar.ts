@@ -30,8 +30,8 @@ export function getAvatarInitials(user: UserContext | null): string {
   }
 
   // Extract first and last name, trimming whitespace
-  const firstName = user.first_name.trim() || "";
-  const lastName = user.last_name.trim() || "";
+  const firstName = user.first_name.trim();
+  const lastName = user.last_name.trim();
 
   // If either name is empty, return fallback
   if (!firstName || !lastName) {
