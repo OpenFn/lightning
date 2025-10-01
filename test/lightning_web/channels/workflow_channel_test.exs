@@ -3,8 +3,16 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   import Lightning.CollaborationHelpers
   import Lightning.Factories
+  import Mox
+
+  setup :verify_on_exit!
 
   setup do
+    Mox.stub(Lightning.MockConfig, :check_flag?, fn
+      :require_email_verification -> true
+      _flag -> nil
+    end)
+
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     workflow = insert(:workflow, project: project)
@@ -24,15 +32,41 @@ defmodule LightningWeb.WorkflowChannelTest do
     %{socket: socket, user: user, project: project, workflow: workflow}
   end
 
-  describe "getting credentials and adaptors" do
-    test "multiple concurrent requests are handled independently", %{
+  describe "join authorization" do
+    test "rejects unauthorized users", %{workflow: workflow} do
+      unauthorized_user = insert(:user)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{unauthorized_user.id}", %{
+                 current_user: unauthorized_user
+               })
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}"
+               )
+    end
+
+    test "accepts authorized users with proper assigns", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      assert %{workflow: socket_workflow} = socket.assigns
+      assert socket_workflow.id == workflow.id
+      assert %{workflow_id: workflow_id} = socket.assigns
+      assert workflow_id == workflow.id
+      assert %{session_pid: session_pid} = socket.assigns
+      assert is_pid(session_pid)
+    end
+  end
+
+  describe "request_adaptors and request_credentials" do
+    test "handles multiple concurrent requests independently", %{
       socket: socket
     } do
-      # Send both requests
       ref_adaptors = push(socket, "request_adaptors", %{})
       ref_credentials = push(socket, "request_credentials", %{})
 
-      # Should get both responses (order may vary)
       assert_reply ref_adaptors, :ok, %{adaptors: _}
       assert_reply ref_credentials, :ok, %{credentials: credentials}
 
@@ -41,33 +75,48 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert is_list(credentials.project_credentials)
       assert is_list(credentials.keychain_credentials)
     end
-
-    test "error handling works correctly for async responses", %{socket: socket} do
-      # Mock a failing AdaptorRegistry.all/0 call
-      # Note: This would require test mocking setup in a real implementation
-      # For now, we'll just verify that the error response format is handled
-
-      # Send the request
-      ref = push(socket, "request_adaptors", %{})
-
-      # Should get a successful response (since we can't easily mock the failure)
-      assert_reply ref, :ok, %{adaptors: adaptors}
-      assert is_list(adaptors)
-    end
   end
 
-  describe "channel lifecycle" do
-    test "channel properly assigns workflow and session data on join", %{
+  describe "get_context" do
+    test "returns complete context with all required fields", %{
       socket: socket,
-      workflow: workflow
+      user: user,
+      project: project
     } do
-      # The socket should have been assigned the workflow and session data
-      assert %{workflow: socket_workflow} = socket.assigns
-      assert socket_workflow.id == workflow.id
-      assert %{workflow_id: workflow_id} = socket.assigns
-      assert workflow_id == workflow.id
-      assert %{session_pid: session_pid} = socket.assigns
-      assert is_pid(session_pid)
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      # User data
+      assert %{user: user_data} = response
+      assert user_data.id == user.id
+      assert user_data.first_name == user.first_name
+      assert user_data.last_name == user.last_name
+      assert user_data.email == user.email
+      assert is_boolean(user_data.email_confirmed)
+
+      # Project data
+      assert %{project: project_data} = response
+      assert project_data.id == project.id
+      assert project_data.name == project.name
+
+      # Config data
+      assert %{config: config_data} = response
+      assert config_data.require_email_verification == true
+    end
+
+    test "returns config with require_email_verification false when flag disabled",
+         %{socket: socket} do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> false
+        _flag -> nil
+      end)
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+      assert %{config: config_data} = response
+      assert config_data.require_email_verification == false
     end
   end
 end
