@@ -53,16 +53,7 @@ case dataclip_info do
 
         "NEW: Query as text from PostgreSQL" => fn ->
           # This is the new approach - gets JSONB as text directly
-          result =
-            from(d in Lightning.Invocation.Dataclip,
-              where: d.id == ^dataclip_id,
-              select: %{
-                body_json: fragment("?::text", d.body),
-                type: d.type,
-                id: d.id
-              }
-            )
-            |> Repo.one!()
+          result = Invocation.get_dataclip_with_body!(dataclip_id)
 
           # Return the body_json (already a string, no encoding needed)
           _body = result.body_json
