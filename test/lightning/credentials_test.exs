@@ -849,18 +849,11 @@ defmodule Lightning.CredentialsTest do
 
     test "doesn't refresh oauth credentials when they're oauth client is nil" do
       rotten_token = %{
-        "access_token" =>
-          "00DWS000000fDCb!AQEAQHRBgVJ4Bbb4XTr218Sn672cpnALW9FMkaATpdh8EwLhEJiNUrHg0eHiCBqHOh06F3pIyJym5gx4YD1vFv2fomMOOdzF",
+        "access_token" => "test_access_token",
         "apiVersion" => "",
         "expires_at" => 1000,
-        "id" =>
-          "https://login.salesforce.com/id/00DWS000000fDCb2AM/005WS000000OYRxYAO",
-        "instance_url" => "https://ciddiqia-dev-ed.develop.my.salesforce.com",
-        "issued_at" => "1715970504545",
-        "refresh_token" =>
-          "5Aep861z1aTCxS7eDOBJfa.2w9vR3Zh1uBh.2j6mBITbTXHOFonbXeWCjVyVMQsWJY9wekHK4diVJzLmt8avLvC",
+        "refresh_token" => "test_refresh_token",
         "scope" => "refresh_token",
-        "signature" => "H6q34zM7qKZcX8NF05WtGGhn6/Lian9p4PgN/OVdvtk=",
         "token_type" => "Bearer"
       }
 
@@ -1815,6 +1808,198 @@ defmodule Lightning.CredentialsTest do
 
       credentials = Credentials.list_user_credentials_in_project(user, project)
       assert Enum.empty?(credentials)
+    end
+  end
+
+  describe "credential_bodies synchronization on create" do
+    test "creates credential_body for non-OAuth credentials" do
+      attrs = %{
+        body: %{"api_key" => "secret"},
+        name: "Test Credential",
+        user_id: insert(:user).id,
+        schema: "raw"
+      }
+
+      assert {:ok, credential} = Credentials.create_credential(attrs)
+
+      credential_body =
+        Repo.get_by(Lightning.Credentials.CredentialBody,
+          credential_id: credential.id,
+          name: "main"
+        )
+
+      assert credential_body != nil
+      assert credential_body.body == %{"api_key" => "secret"}
+    end
+
+    test "creates credential_body for OAuth credentials with proper linking" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      attrs = %{
+        "user_id" => user.id,
+        "name" => "OAuth Credential",
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client.id,
+        "body" => %{"client_id" => "test"},
+        "oauth_token" => %{
+          "access_token" => "test_access_token",
+          "refresh_token" => "test_refresh_token",
+          "expires_in" => 3600,
+          "scope" => "read write",
+          "token_type" => "Bearer"
+        }
+      }
+
+      assert {:ok, credential} = Credentials.create_credential(attrs)
+
+      credential_body =
+        Repo.get_by(Lightning.Credentials.CredentialBody,
+          credential_id: credential.id,
+          name: "main"
+        )
+
+      assert credential_body != nil
+      assert credential_body.body == %{"client_id" => "test"}
+      assert credential.oauth_token.credential_body_id == credential_body.id
+    end
+
+    test "handles JSON string body data correctly" do
+      user = insert(:user)
+
+      attrs = %{
+        "body" => "{\"api_key\":\"secret\",\"host\":\"example.com\"}",
+        "name" => "JSON Test Credential",
+        "user_id" => user.id,
+        "schema" => "raw"
+      }
+
+      assert {:ok, credential} = Credentials.create_credential(attrs)
+
+      credential_body =
+        Repo.get_by(Lightning.Credentials.CredentialBody,
+          credential_id: credential.id,
+          name: "main"
+        )
+
+      assert credential_body.body == %{
+               "api_key" => "secret",
+               "host" => "example.com"
+             }
+    end
+  end
+
+  describe "credential_bodies synchronization on update" do
+    test "updates existing credential_body when credential is updated" do
+      user = insert(:user)
+      credential = insert(:credential, user: user, body: %{"old" => "value"})
+
+      credential_body =
+        insert(:credential_body,
+          credential: credential,
+          body: %{"old" => "value"}
+        )
+
+      update_attrs = %{body: %{"new" => "value"}}
+
+      assert {:ok, updated_credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      updated_body =
+        Repo.get!(Lightning.Credentials.CredentialBody, credential_body.id)
+
+      assert updated_body.body == %{"new" => "value"}
+      assert updated_credential.body == %{"new" => "value"}
+    end
+
+    test "creates credential_body for credentials that don't have one" do
+      user = insert(:user)
+      credential = insert(:credential, user: user, body: %{"existing" => "data"})
+
+      update_attrs = %{body: %{"updated" => "data"}}
+
+      assert {:ok, _updated_credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      credential_body =
+        Repo.get_by(Lightning.Credentials.CredentialBody,
+          credential_id: credential.id,
+          name: "main"
+        )
+
+      assert credential_body != nil
+      assert credential_body.body == %{"updated" => "data"}
+    end
+
+    test "skips credential_body sync when body is not updated" do
+      user = insert(:user)
+      credential = insert(:credential, user: user, name: "Old Name")
+
+      update_attrs = %{name: "New Name"}
+
+      assert {:ok, updated_credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      credential_body =
+        Repo.get_by(Lightning.Credentials.CredentialBody,
+          credential_id: credential.id,
+          name: "main"
+        )
+
+      assert credential_body == nil
+      assert updated_credential.name == "New Name"
+    end
+
+    test "updates credential_body for OAuth credentials during token refresh" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          user: user,
+          oauth_client: oauth_client,
+          oauth_token:
+            build(:oauth_token, user: user, oauth_client: oauth_client)
+        )
+
+      credential_body = insert(:credential_body, credential: credential)
+
+      update_attrs = %{
+        "body" => %{"updated" => "oauth_config"},
+        "oauth_token" => %{
+          "access_token" => "new_token",
+          "refresh_token" => "new_refresh",
+          "expires_in" => 3600,
+          "scope" => "read write",
+          "token_type" => "Bearer"
+        }
+      }
+
+      assert {:ok, _updated_credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      updated_body =
+        Repo.get!(Lightning.Credentials.CredentialBody, credential_body.id)
+
+      assert updated_body.body == %{"updated" => "oauth_config"}
+    end
+
+    test "handles JSON string updates correctly" do
+      user = insert(:user)
+      credential = insert(:credential, user: user, body: %{"old" => "data"})
+      credential_body = insert(:credential_body, credential: credential)
+
+      update_attrs = %{"body" => "{\"new\":\"json_data\",\"count\":42}"}
+
+      assert {:ok, updated_credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      updated_body =
+        Repo.get!(Lightning.Credentials.CredentialBody, credential_body.id)
+
+      assert updated_body.body == %{"new" => "json_data", "count" => 42}
+      assert updated_credential.body == %{"new" => "json_data", "count" => 42}
     end
   end
 end

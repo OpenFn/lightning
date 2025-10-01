@@ -86,6 +86,7 @@ defmodule Lightning.Invocation.Query do
     )
   end
 
+  # TODO - Remove this (and test) when we are happy with #3651 on prod
   @doc """
   Returns a dataclip formatted for use as an input state.
 
@@ -102,6 +103,31 @@ defmodule Lightning.Invocation.Query do
               CASE WHEN type IN ('http_request', 'kafka')
               THEN jsonb_build_object('data', ?, 'request', ?)
               ELSE ? END
+              """,
+              d.body,
+              d.request,
+              d.body
+            )
+      }
+    )
+  end
+
+  # ----------------------------------------------------------------------------
+
+  @doc """
+  Like `select_as_input/1`, but returns body as JSON text string to avoid
+  expensive deserialization to Elixir map (saves ~38x memory amplification).
+  """
+  def select_as_input_text(query) do
+    from(d in query,
+      select: %{
+        d
+        | body:
+            fragment(
+              """
+              CASE WHEN type IN ('http_request', 'kafka')
+              THEN jsonb_build_object('data', ?, 'request', ?)::text
+              ELSE ?::text END
               """,
               d.body,
               d.request,

@@ -156,4 +156,84 @@ defmodule Lightning.Invocation.QueryTest do
              } = result
     end
   end
+
+  describe "select_as_input_text/1" do
+    test "with a `http_request` dataclip - nests body and request as JSON text" do
+      _dataclip =
+        insert(
+          :dataclip,
+          type: :http_request,
+          body: %{"key" => "value"},
+          request: %{"url" => "https://example.com"}
+        )
+
+      query = from(d in Dataclip)
+
+      result =
+        query
+        |> Query.select_as_input_text()
+        |> Repo.one()
+
+      assert %Dataclip{body: body_text} = result
+      assert is_binary(body_text)
+
+      body = Jason.decode!(body_text)
+
+      assert %{
+               "data" => %{"key" => "value"},
+               "request" => %{"url" => "https://example.com"}
+             } = body
+    end
+
+    test "with a `kafka` dataclip - nests body and request as JSON text" do
+      _dataclip =
+        insert(
+          :dataclip,
+          type: :kafka,
+          body: %{"key" => "value"},
+          request: %{"partition" => 9}
+        )
+
+      query = from(d in Dataclip)
+
+      result =
+        query
+        |> Query.select_as_input_text()
+        |> Repo.one()
+
+      assert %Dataclip{body: body_text} = result
+      assert is_binary(body_text)
+
+      body = Jason.decode!(body_text)
+
+      assert %{
+               "data" => %{"key" => "value"},
+               "request" => %{"partition" => 9}
+             } = body
+    end
+
+    test "dataclip neither `http_request` nor `kafka` - does not nest body, returns as JSON text" do
+      _dataclip =
+        insert(
+          :dataclip,
+          type: :step_result,
+          body: %{"key" => "value"},
+          request: %{"url" => "https://example.com"}
+        )
+
+      query = from(d in Dataclip)
+
+      result =
+        query
+        |> Query.select_as_input_text()
+        |> Repo.one()
+
+      assert %Dataclip{body: body_text, request: nil} = result
+      assert is_binary(body_text)
+
+      body = Jason.decode!(body_text)
+
+      assert %{"key" => "value"} = body
+    end
+  end
 end

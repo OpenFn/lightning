@@ -6,13 +6,16 @@ defmodule Lightning.DataclipScrubber do
   import Ecto.Query
 
   alias Lightning.Credentials
-  alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.RunStep
   alias Lightning.Scrubber
 
-  @spec scrub_dataclip_body!(Dataclip.t()) :: String.t()
+  @spec scrub_dataclip_body!(%{
+          body: String.t(),
+          type: atom(),
+          id: Ecto.UUID.t()
+        }) :: String.t()
   def scrub_dataclip_body!(%{body: body} = dataclip) when is_binary(body) do
     if dataclip.type == :step_result do
       step_query = from s in Step, where: s.output_dataclip_id == ^dataclip.id
@@ -48,14 +51,16 @@ defmodule Lightning.DataclipScrubber do
       credentials ->
         {:ok, scrubber} = Scrubber.start_link([])
 
-        credentials
-        |> Enum.reduce(scrubber, fn credential, scrubber ->
-          samples = Credentials.sensitive_values_for(credential)
-          basic_auth = Credentials.basic_auth_for(credential)
-          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-          scrubber
-        end)
-        |> Scrubber.scrub(body_str)
+        scrubber =
+          credentials
+          |> Enum.reduce(scrubber, fn credential, scrubber ->
+            samples = Credentials.sensitive_values_for(credential)
+            basic_auth = Credentials.basic_auth_for(credential)
+            :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
+            scrubber
+          end)
+
+        Scrubber.scrub(scrubber, body_str)
     end
   end
 

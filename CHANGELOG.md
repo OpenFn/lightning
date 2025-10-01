@@ -19,6 +19,39 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.14.8-pre] - 2025-10-01
+
+### Fixed
+
+- Reduced
+  [high server memory usage on dataclip body retrieval](https://github.com/OpenFn/lightning/issues/3641)
+  by 97% [PR#3651](https://github.com/OpenFn/lightning/pull/3651)
+
+## [v2.14.7] - 2025-09-30
+
+### Changed
+
+- Optimized map and join with `Enum.map_join/3`
+  [`c112f3d`](https://github.com/OpenFn/lightning/commit/c112f3df29f8ab83b187f3695fdaf32c0837a016)
+
+### Fixed
+
+- Fixed tests for dataclip live viewer
+  [#3648](https://github.com/OpenFn/lightning/issues/3648)
+
+## [v2.14.7-pre] - 2025-09-30
+
+### Added
+
+- Add database changes for credentials environments support
+  [#3597](https://github.com/OpenFn/lightning/issues/3597)
+- REST API for Credential creation, deletion, list
+  [#3583](https://github.com/OpenFn/lightning/issues/3583)
+
+### Changed
+
 - Bumped devDeps `ws-worker` version to `1.15.0` to better handle job
   compilation memory issues
   [#3613](https://github.com/OpenFn/lightning/pull/3613)
@@ -27,12 +60,20 @@ and this project adheres to
 
 - Fix canvas "lockup" after AI chat errors, prevent sending empty message to AI
   [3605](https://github.com/OpenFn/lightning/issues/3605)
+- Fix memory bloat on dataclip viewer in dataclip detail page
+  [#3641](https://github.com/OpenFn/lightning/issues/3641)
+- Ameliorate memory usage when scrubbing dataclips for security
+  [#3641](https://github.com/OpenFn/lightning/issues/3641)
+- Fixed bootstrap script compatibility for Intel Macs and older Bash versions
+  (3.1+) [#3623](https://github.com/OpenFn/lightning/pull/3623)
 - Fixed GDPR Compliance component
   [#3611](https://github.com/OpenFn/lightning/issues/3611)
 - Fixed vertical alignment in breadcrumbs
   [#3612](https://github.com/OpenFn/lightning/issues/3612)
 - Updated Project Digest to include count of work orders in an unsuccessful
   state [#3616](https://github.com/OpenFn/lightning/issues/3616)
+
+## [v2.14.6] - 2025-09-30
 
 ## [v2.14.6-pre1] - 2025-09-26
 
@@ -59,6 +100,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix project deletion for projects with webhook auth methods
+  [#3619](https://github.com/OpenFn/lightning/issues/3619),
+  [#3523](https://github.com/OpenFn/lightning/issues/3523)
 - Fix pagination bar rounding to match table corners
   [#3595](https://github.com/OpenFn/lightning/issues/3595)
 - Restore export history button

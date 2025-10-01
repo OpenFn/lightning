@@ -76,6 +76,70 @@ defmodule Lightning.ScrubberTest do
 
       assert scrubbed == "The p***ssword is ***"
     end
+
+    test "scrubs multi-line strings by processing line-by-line" do
+      secrets = ["my-secret-key", "sensitive-value", "12345"]
+      scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
+
+      # Simulate what dataclip_scrubber does: split by newline, scrub, rejoin
+      multi_line_string = """
+      Line 1 contains my-secret-key in the middle
+      Line 2 has sensitive-value and also 12345
+      Line 3 is clean
+      Line 4 has my-secret-key again
+      """
+
+      scrubbed =
+        multi_line_string
+        |> String.split("\n")
+        |> then(&Scrubber.scrub(scrubber, &1))
+        |> Enum.join("\n")
+
+      expected = """
+      Line 1 contains *** in the middle
+      Line 2 has *** and also ***
+      Line 3 is clean
+      Line 4 has *** again
+      """
+
+      assert scrubbed == expected
+    end
+
+    test "handles large multi-line JSON-like strings efficiently" do
+      secrets = ["secret-token-abc123", "api-key-xyz789"]
+      scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
+
+      # Simulate a large JSON dataclip body
+      large_json = """
+      {
+        "data": {
+          "authentication": "secret-token-abc123",
+          "nested": {
+            "apiKey": "api-key-xyz789",
+            "public": "this-is-fine"
+          },
+          "array": [
+            {"token": "secret-token-abc123"},
+            {"value": "safe-value"}
+          ]
+        }
+      }
+      """
+
+      scrubbed =
+        large_json
+        |> String.split("\n")
+        |> then(&Scrubber.scrub(scrubber, &1))
+        |> Enum.join("\n")
+
+      assert scrubbed =~ ~s("authentication": "***")
+      assert scrubbed =~ ~s("apiKey": "***")
+      assert scrubbed =~ ~s("token": "***")
+      assert scrubbed =~ ~s("public": "this-is-fine")
+      assert scrubbed =~ ~s("value": "safe-value")
+      refute scrubbed =~ "secret-token-abc123"
+      refute scrubbed =~ "api-key-xyz789"
+    end
   end
 
   describe "add_samples/3" do
