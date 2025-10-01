@@ -77,7 +77,7 @@ defmodule Lightning.Invocation do
     |> maybe_filter_uuid_prefix(user_filters)
   end
 
-  # TODO - remove this once done with benchmarking -----------------------------
+  # TODO - Remove this (and test) when we are happy with #3651 on prod
   @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
   def get_dataclip_details!(id),
     do: Repo.get!(Query.dataclip_with_body(), id)

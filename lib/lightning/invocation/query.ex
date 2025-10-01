@@ -86,7 +86,7 @@ defmodule Lightning.Invocation.Query do
     )
   end
 
-  # TODO - delete this once happy with memory refactor -------------------------
+  # TODO - Remove this (and test) when we are happy with #3651 on prod
   @doc """
   Returns a dataclip formatted for use as an input state.
 
