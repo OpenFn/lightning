@@ -4,16 +4,12 @@ defmodule LightningWeb.DataclipLive.Show do
   """
   use LightningWeb, :live_view
 
-  import LightningWeb.Live.MemoryDebug
-
   alias Lightning.Invocation
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
-    log_memory("DataclipLive.Show mount start")
-
     {:ok,
      socket
      |> assign(active_menu_item: :dataclip)}
@@ -21,26 +17,11 @@ defmodule LightningWeb.DataclipLive.Show do
 
   @impl true
   def handle_params(%{"id" => id}, _url, socket) do
-    log_memory("DataclipLive.Show handle_params start", socket: socket)
-
-    # Get dataclip (should NOT load body due to load_in_query: false)
-    dataclip =
-      measure("load dataclip metadata", fn ->
-        Invocation.get_dataclip!(id)
-      end)
-
-    socket =
-      socket
-      |> assign(:id, id)
-      |> assign(:page_title, "Dataclip #{String.slice(id, 0..7)}")
-      |> assign(:dataclip, dataclip)
-
-    log_memory("DataclipLive.Show handle_params complete",
-      socket: socket,
-      assigns: [:dataclip]
-    )
-
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> assign(:id, id)
+     |> assign(:page_title, "Dataclip #{String.slice(id, 0..7)}")
+     |> assign(:dataclip, Invocation.get_dataclip!(id))}
   end
 
   @impl true
