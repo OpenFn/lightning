@@ -21,6 +21,7 @@ defmodule Lightning.Extensions.UsageLimiting do
               | :new_collection
               | :new_run
               | :new_user
+              | :new_sandbox
               | :require_mfa,
             amount: pos_integer()
           }
