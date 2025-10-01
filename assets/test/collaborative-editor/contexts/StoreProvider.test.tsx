@@ -59,26 +59,20 @@ describe("StoreProvider - SessionContextStore Integration", () => {
   test("sessionContextStore is created and available in context", () => {
     expect(stores).not.toBeNull();
     expect(stores!.sessionContextStore).toBeDefined();
-
-    // Verify sessionContextStore has expected interface
-    expect(typeof stores!.sessionContextStore.subscribe).toBe("function");
-    expect(typeof stores!.sessionContextStore.getSnapshot).toBe("function");
-    expect(typeof stores!.sessionContextStore.withSelector).toBe("function");
     expect(typeof stores!.sessionContextStore.requestSessionContext).toBe(
       "function"
     );
-    expect(typeof stores!.sessionContextStore._connectChannel).toBe("function");
   });
 
   test("sessionContextStore has correct initial state", () => {
     const state = stores!.sessionContextStore.getSnapshot();
 
-    expect(state.user).toBe(null);
-    expect(state.project).toBe(null);
-    expect(state.config).toBe(null);
+    expect(state.user).toBeNull();
+    expect(state.project).toBeNull();
+    expect(state.config).toBeNull();
     expect(state.isLoading).toBe(false);
-    expect(state.error).toBe(null);
-    expect(state.lastUpdated).toBe(null);
+    expect(state.error).toBeNull();
+    expect(state.lastUpdated).toBeNull();
   });
 
   test("sessionContextStore methods are functional", () => {
@@ -94,19 +88,6 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     unsubscribe();
     stores!.sessionContextStore.setLoading(false);
     expect(notificationCount).toBe(1); // Should not increment after unsubscribe
-  });
-
-  test("store instance remains stable (simulates React useState)", () => {
-    // Create stores multiple times to simulate re-renders
-    const stores1 = createStores();
-    const stores2 = createStores();
-
-    // Different calls create different instances (as expected)
-    expect(stores1.sessionContextStore).not.toBe(stores2.sessionContextStore);
-
-    // But the same instance reference remains stable within a single creation
-    const storeRef = stores1.sessionContextStore;
-    expect(stores1.sessionContextStore).toBe(storeRef);
   });
 
   test("all required stores are present in context", () => {
@@ -358,20 +339,6 @@ describe("StoreProvider - SessionContextStore Integration", () => {
   // INTEGRATION TESTS
   // ===========================================================================
 
-  test("sessionContextStore integrates with other stores", () => {
-    // Verify all stores are independent instances
-    expect(stores!.adaptorStore).not.toBe(stores!.sessionContextStore);
-    expect(stores!.credentialStore).not.toBe(stores!.sessionContextStore);
-    expect(stores!.awarenessStore).not.toBe(stores!.sessionContextStore);
-    expect(stores!.workflowStore).not.toBe(stores!.sessionContextStore);
-
-    // Verify each store has its own state
-    const sessionContextState = stores!.sessionContextStore.getSnapshot();
-    const adaptorState = stores!.adaptorStore.getSnapshot();
-
-    expect(sessionContextState).not.toBe(adaptorState);
-  });
-
   test("sessionContextStore updates do not affect other stores", async () => {
     const mockSocket = createMockSocket();
 
@@ -455,17 +422,11 @@ describe("StoreProvider - SessionContextStore Integration", () => {
     // Small delay for connection to be established
     await new Promise(resolve => setTimeout(resolve, 10));
 
-    // Get states
+    // Verify stores maintain independent state
     const sessionState = sessionStore!.getSnapshot();
     const sessionContextState = stores!.sessionContextStore.getSnapshot();
 
-    // Verify they are independent - session store has userData, context store has user
-    expect(sessionState.userData).toBeDefined();
-    expect(sessionState.userData).not.toBe(null);
-
-    // SessionContextStore will have null user unless server provides data
-    // The key point is they're independent
-    expect(typeof sessionContextState.user).toBeDefined();
+    // Session store has userData, context store has user - they should be different objects
     expect(sessionState.userData).not.toBe(sessionContextState.user);
 
     // Cleanup

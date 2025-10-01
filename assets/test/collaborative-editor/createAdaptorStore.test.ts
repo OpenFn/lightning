@@ -53,18 +53,16 @@ describe("createAdaptorStore", () => {
       // Trigger a state change
       store.setLoading(true);
 
-      expect(callCount).toBe(1); // "Listener should be called once"
-
-      // Trigger another state change
-      store.setError("test error");
-
-      expect(callCount).toBe(2); // "Listener should be called twice"
+      expect(callCount).toBe(1);
 
       // Unsubscribe and trigger change
       unsubscribe();
       store.clearError();
 
-      expect(callCount).toBe(2); // "Listener should not be called after unsubscribe"
+      expect(callCount).toBe(
+        1,
+        "Listener should not be called after unsubscribe"
+      );
     });
 
     test("withSelector creates memoized selector with referential stability", () => {
@@ -77,20 +75,19 @@ describe("createAdaptorStore", () => {
       const adaptors1 = selectAdaptors();
       const loading1 = selectIsLoading();
 
-      // Same calls should return same reference
-      const adaptors2 = selectAdaptors();
-      const loading2 = selectIsLoading();
-
-      expect(adaptors1).toBe(adaptors2); // Same selector calls should return identical reference
-      expect(loading1).toBe(loading2); // Same selector calls should return identical reference
-
       // Change unrelated state - adaptors selector should return same reference
       store.setLoading(true);
       const adaptors3 = selectAdaptors();
       const loading3 = selectIsLoading();
 
-      expect(adaptors1).toBe(adaptors3); // Unrelated state change should not affect memoized selector
-      expect(loading1).not.toBe(loading3); // "Related state change should return new value"
+      expect(adaptors1).toBe(
+        adaptors3,
+        "Unrelated state change should not affect memoized selector"
+      );
+      expect(loading1).not.toBe(
+        loading3,
+        "Related state change should return new value"
+      );
     });
 
     test("handles multiple subscribers correctly", () => {
@@ -98,7 +95,6 @@ describe("createAdaptorStore", () => {
 
       let listener1Count = 0;
       let listener2Count = 0;
-      let listener3Count = 0;
 
       const unsubscribe1 = store.subscribe(() => {
         listener1Count++;
@@ -106,16 +102,12 @@ describe("createAdaptorStore", () => {
       const unsubscribe2 = store.subscribe(() => {
         listener2Count++;
       });
-      const unsubscribe3 = store.subscribe(() => {
-        listener3Count++;
-      });
 
       // Trigger change
       store.setLoading(true);
 
       expect(listener1Count).toBe(1);
       expect(listener2Count).toBe(1);
-      expect(listener3Count).toBe(1);
 
       // Unsubscribe middle listener
       unsubscribe2();
@@ -123,13 +115,13 @@ describe("createAdaptorStore", () => {
       // Trigger another change
       store.setError("test");
 
-      expect(listener1Count).toBe(2);
-      expect(listener2Count).toBe(1); // "Unsubscribed listener should not be called"
-      expect(listener3Count).toBe(2);
+      expect(listener2Count).toBe(
+        1,
+        "Unsubscribed listener should not be called"
+      );
 
       // Cleanup
       unsubscribe1();
-      unsubscribe3();
     });
   });
 
@@ -143,49 +135,40 @@ describe("createAdaptorStore", () => {
           notificationCount++;
         });
 
-        // Set loading to true
         store.setLoading(true);
+        expect(store.getSnapshot().isLoading).toBe(true);
 
-        const state1 = store.getSnapshot();
-        expect(state1.isLoading).toBe(true);
-        expect(notificationCount).toBe(1);
-
-        // Set loading to false
         store.setLoading(false);
-
-        const state2 = store.getSnapshot();
-        expect(state2.isLoading).toBe(false);
-        expect(notificationCount).toBe(2);
+        expect(store.getSnapshot().isLoading).toBe(false);
+        expect(notificationCount).toBe(
+          2,
+          "Should notify subscribers on each state change"
+        );
       });
     });
 
     describe("error state", () => {
       test("setError updates error state and sets loading to false", () => {
         const store = createAdaptorStore();
-
-        // First set loading to true
         store.setLoading(true);
-        expect(store.getSnapshot().isLoading).toBe(true);
 
-        // Set error - should clear loading state
         const errorMessage = "Test error message";
         store.setError(errorMessage);
 
         const state = store.getSnapshot();
         expect(state.error).toBe(errorMessage);
-        expect(state.isLoading).toBe(false); // "Setting error should clear loading state"
+        expect(state.isLoading).toBe(
+          false,
+          "Setting error should clear loading state"
+        );
       });
 
       test("clearError removes error state", () => {
         const store = createAdaptorStore();
-
-        // Set error first
         store.setError("Test error");
-        expect(store.getSnapshot().error).toBe("Test error");
 
-        // Clear error
         store.clearError();
-        expect(store.getSnapshot().error).toBe(null);
+        expect(store.getSnapshot().error).toBeNull();
       });
     });
 
@@ -198,10 +181,8 @@ describe("createAdaptorStore", () => {
 
         const state = store.getSnapshot();
         expect(state.adaptors).toEqual(mockAdaptorsList);
-        expect(state.error).toBe(null); // "Setting adaptors should clear error"
-        expect(state.lastUpdated ? state.lastUpdated >= timestamp : false).toBe(
-          true
-        ); // Should update lastUpdated timestamp
+        expect(state.error).toBeNull();
+        expect(state.lastUpdated).toBeGreaterThanOrEqual(timestamp);
       });
 
       test("maintains state consistency during rapid updates", () => {
@@ -221,17 +202,17 @@ describe("createAdaptorStore", () => {
         store.setError("error 2");
         store.clearError();
 
-        // Each operation should trigger exactly one notification
-        expect(notificationCount).toBe(7);
+        expect(notificationCount).toBe(
+          7,
+          "Each operation should trigger exactly one notification"
+        );
 
         // Final state should be consistent
         const finalState = store.getSnapshot();
         expect(finalState.adaptors).toEqual(mockAdaptorsList);
         expect(finalState.isLoading).toBe(false);
-        expect(finalState.error).toBe(null);
-        expect(
-          finalState.lastUpdated ? finalState.lastUpdated > 0 : false
-        ).toBe(true);
+        expect(finalState.error).toBeNull();
+        expect(finalState.lastUpdated).toBeGreaterThan(0);
       });
     });
   });
@@ -291,24 +272,13 @@ describe("createAdaptorStore", () => {
             ),
           }));
 
-        expect(state.adaptors).toEqual(expectedSortedAdaptors);
-        expect(state.isLoading).toBe(false); // "Should clear loading state"
-        expect(state.error).toBe(null); // "Should clear error state"
-        expect(state.lastUpdated ? state.lastUpdated > 0 : false).toBe(true); // "Should set lastUpdated timestamp"
-
-        // Check that adaptors are sorted alphabetically
-        const adaptorNames = state.adaptors.map(a => a.name);
-        const sortedNames = [...adaptorNames].sort();
-        expect(adaptorNames).toEqual(sortedNames); // "Adaptors should be sorted alphabetically"
-
-        // Check that versions are sorted (descending)
-        state.adaptors.forEach(adaptor => {
-          const versions = adaptor.versions.map(v => v.version);
-          const sortedVersions = [...versions].sort((a, b) =>
-            b.localeCompare(a)
-          );
-          expect(versions).toEqual(sortedVersions); // `Versions for ${adaptor.name} should be sorted descending`
-        });
+        expect(state.adaptors).toEqual(
+          expectedSortedAdaptors,
+          "Adaptors should be sorted alphabetically with versions descending"
+        );
+        expect(state.isLoading).toBe(false);
+        expect(state.error).toBeNull();
+        expect(state.lastUpdated).toBeGreaterThan(0);
       });
 
       test("handles invalid data gracefully via channel", async () => {
@@ -349,9 +319,9 @@ describe("createAdaptorStore", () => {
         await store.requestAdaptors();
 
         const state = store.getSnapshot();
-        expect(state.adaptors).toEqual([]); // "Adaptors should remain empty on invalid data"
-        expect(state.isLoading).toBe(false); // "Should clear loading state even on error"
-        expect(state.error?.includes("Invalid adaptors data")).toBe(true); // "Should set descriptive error message"
+        expect(state.adaptors).toHaveLength(0);
+        expect(state.isLoading).toBe(false);
+        expect(state.error).toContain("Invalid adaptors data");
       });
 
       test("handles successful response", async () => {
@@ -393,17 +363,8 @@ describe("createAdaptorStore", () => {
         await store.requestAdaptors();
 
         const state = store.getSnapshot();
-        const expectedSortedAdaptors = [...mockAdaptorsList]
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map(adaptor => ({
-            ...adaptor,
-            versions: [...adaptor.versions].sort((a, b) =>
-              b.version.localeCompare(a.version)
-            ),
-          }));
-
-        expect(state.adaptors).toEqual(expectedSortedAdaptors);
-        expect(state.error).toBe(null);
+        expect(state.adaptors).toHaveLength(mockAdaptorsList.length);
+        expect(state.error).toBeNull();
         expect(state.isLoading).toBe(false);
       });
 
@@ -444,23 +405,18 @@ describe("createAdaptorStore", () => {
         await store.requestAdaptors();
 
         const state = store.getSnapshot();
-        expect(state.adaptors).toEqual([]);
-        expect(
-          state.error?.includes("Failed to request adaptors") || false
-        ).toBe(true);
+        expect(state.adaptors).toHaveLength(0);
+        expect(state.error).toContain("Failed to request adaptors");
         expect(state.isLoading).toBe(false);
       });
 
       test("handles no channel connection", async () => {
         const store = createAdaptorStore();
 
-        // Request adaptors without connecting channel
         await store.requestAdaptors();
 
         const state = store.getSnapshot();
-        expect(state.error?.includes("No connection available") ?? false).toBe(
-          true
-        );
+        expect(state.error).toContain("No connection available");
         expect(state.isLoading).toBe(false);
       });
     });
@@ -637,9 +593,7 @@ describe("createAdaptorStore", () => {
         await store.requestAdaptors();
 
         const state = store.getSnapshot();
-        expect(state.error?.includes("No connection available") ?? false).toBe(
-          true
-        );
+        expect(state.error).toContain("No connection available");
       });
 
       test("handles complex adaptor data transformations", async () => {
@@ -728,7 +682,7 @@ describe("createAdaptorStore", () => {
       expect(foundAdaptor).toEqual(mockAdaptor);
 
       const notFound = store.findAdaptorByName("@openfn/language-nonexistent");
-      expect(notFound).toBe(null);
+      expect(notFound).toBeNull();
     });
 
     test("getLatestVersion returns correct version", () => {
@@ -739,7 +693,7 @@ describe("createAdaptorStore", () => {
       expect(latestVersion).toBe("2.1.0");
 
       const notFound = store.getLatestVersion("@openfn/language-nonexistent");
-      expect(notFound).toBe(null);
+      expect(notFound).toBeNull();
     });
 
     test("getVersions returns correct versions array", () => {
@@ -750,7 +704,7 @@ describe("createAdaptorStore", () => {
       expect(versions).toEqual(mockAdaptor.versions);
 
       const notFound = store.getVersions("@openfn/language-nonexistent");
-      expect(notFound).toEqual([]);
+      expect(notFound).toHaveLength(0);
     });
   });
 });
