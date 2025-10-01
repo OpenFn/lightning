@@ -21,7 +21,16 @@ export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    void fetchDataclipContent(dataclipId).then(setContent);
+    void fetchDataclipContent(dataclipId).then((rawContent) => {
+      // Format JSON once when it loads
+      try {
+        const parsed = JSON.parse(rawContent);
+        setContent(JSON.stringify(parsed, null, 2));
+      } catch {
+        // If not valid JSON, use as-is
+        setContent(rawContent);
+      }
+    });
   }, [dataclipId]);
 
   const handleCopy = (e: React.MouseEvent<HTMLButtonElement>) => {

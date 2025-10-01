@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Reduced
+  [high server memory usage on dataclip body retrieval](https://github.com/OpenFn/lightning/issues/3641)
+  by 97% [PR#3651](https://github.com/OpenFn/lightning/pull/3651)
+
 ## [v2.14.7] - 2025-09-30
 
 ### Changed
