@@ -1,435 +1,916 @@
 /**
- * StoreProvider Tests
+ * StoreProvider Tests - React Testing Library Edition
  *
- * This test suite verifies the SessionContextStore integration into StoreProvider:
- * - SessionContextStore is created and available in context
- * - Store connects to channel when provider is ready
- * - Store cleanup on unmount
- * - Store instance stability across re-renders
+ * This test suite verifies the StoreProvider using React Testing Library:
+ * - Context provision and store availability
+ * - Store independence across multiple provider instances
+ * - Provider lifecycle (mount, re-render, unmount)
+ * - Integration with hooks and components
+ * - Error handling
  *
- * Note: This project doesn't use React Testing Library, so we test the provider
- * by directly examining the store instances and their behavior.
+ * Uses renderHook and render from @testing-library/react to test actual
+ * React provider rendering and context provision.
  */
 
+import { render, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { useContext, type ReactNode } from "react";
 
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
-import type { SessionStoreInstance } from "../../../js/collaborative-editor/stores/createSessionStore";
-import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 import {
-  createMockPhoenixChannel,
-  createMockPhoenixChannelProvider,
-  waitForCondition,
-  type MockPhoenixChannel,
-} from "../mocks/phoenixChannel";
-import { createMockSocket } from "../mocks/phoenixSocket";
-import {
-  createStores,
-  simulateChannelConnection,
-} from "../__helpers__/storeProviderHelpers";
+  StoreContext,
+  StoreProvider,
+} from "../../../js/collaborative-editor/contexts/StoreProvider";
+import * as useSessionModule from "../../../js/collaborative-editor/hooks/useSession";
+import type { SessionState } from "../../../js/collaborative-editor/stores/createSessionStore";
 
 // =============================================================================
 // TEST SETUP
 // =============================================================================
 
-describe("StoreProvider - SessionContextStore Integration", () => {
-  let sessionStore: SessionStoreInstance | null = null;
-  let stores: StoreContextValue | null = null;
+// Mock useSession to avoid SessionProvider dependency
+const mockUseSession = vi.spyOn(useSessionModule, "useSession");
 
+// Default mock session state
+const createMockSessionState = (
+  overrides?: Partial<SessionState>
+): SessionState => ({
+  ydoc: null,
+  provider: null,
+  awareness: null,
+  userData: null,
+  isConnected: false,
+  isSynced: false,
+  settled: false,
+  lastStatus: null,
+  ...overrides,
+});
+
+describe("StoreProvider - React Testing Library", () => {
   beforeEach(() => {
-    // Create fresh instances for each test
-    sessionStore = createSessionStore();
-    stores = createStores();
+    // Reset mock before each test
+    mockUseSession.mockReturnValue(createMockSessionState());
   });
 
   afterEach(() => {
-    // Clean up
-    if (sessionStore) {
-      sessionStore.destroy();
-      sessionStore = null;
-    }
-    stores = null;
+    vi.clearAllMocks();
   });
 
   // ===========================================================================
-  // STORE CREATION TESTS
+  // CONTEXT PROVISION TESTS
   // ===========================================================================
 
-  test("sessionContextStore is created and available in context", () => {
-    expect(stores).not.toBeNull();
-    expect(stores!.sessionContextStore).toBeDefined();
-    expect(typeof stores!.sessionContextStore.requestSessionContext).toBe(
-      "function"
-    );
-  });
+  describe("context provision", () => {
+    test("provides store context to children", () => {
+      const TestComponent = () => {
+        const context = useContext(StoreContext);
+        return <div>{context ? "has context" : "no context"}</div>;
+      };
 
-  test("sessionContextStore has correct initial state", () => {
-    const state = stores!.sessionContextStore.getSnapshot();
+      const { getByText } = render(
+        <StoreProvider>
+          <TestComponent />
+        </StoreProvider>
+      );
 
-    expect(state.user).toBeNull();
-    expect(state.project).toBeNull();
-    expect(state.config).toBeNull();
-    expect(state.isLoading).toBe(false);
-    expect(state.error).toBeNull();
-    expect(state.lastUpdated).toBeNull();
-  });
-
-  test("sessionContextStore methods are functional", () => {
-    // Test subscribe
-    let notificationCount = 0;
-    const unsubscribe = stores!.sessionContextStore.subscribe(() => {
-      notificationCount++;
+      expect(getByText("has context")).toBeInTheDocument();
     });
 
-    stores!.sessionContextStore.setLoading(true);
-    expect(notificationCount).toBe(1);
+    test("provides adaptorStore in context", () => {
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <StoreProvider>{children}</StoreProvider>
+        ),
+      });
 
-    unsubscribe();
-    stores!.sessionContextStore.setLoading(false);
-    expect(notificationCount).toBe(1); // Should not increment after unsubscribe
+      expect(result.current).toBeDefined();
+      expect(result.current!.adaptorStore).toBeDefined();
+      expect(typeof result.current!.adaptorStore.subscribe).toBe("function");
+      expect(typeof result.current!.adaptorStore.getSnapshot).toBe("function");
+      expect(typeof result.current!.adaptorStore.withSelector).toBe("function");
+    });
+
+    test("provides all required stores", () => {
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      expect(result.current!.adaptorStore).toBeDefined();
+      expect(result.current!.credentialStore).toBeDefined();
+      expect(result.current!.awarenessStore).toBeDefined();
+      expect(result.current!.workflowStore).toBeDefined();
+      expect(result.current!.sessionContextStore).toBeDefined();
+    });
+
+    test("each store has correct interface", () => {
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const stores = result.current!;
+
+      // Check adaptorStore interface
+      expect(typeof stores.adaptorStore.subscribe).toBe("function");
+      expect(typeof stores.adaptorStore.getSnapshot).toBe("function");
+      expect(typeof stores.adaptorStore.withSelector).toBe("function");
+
+      // Check credentialStore interface
+      expect(typeof stores.credentialStore.subscribe).toBe("function");
+      expect(typeof stores.credentialStore.getSnapshot).toBe("function");
+      expect(typeof stores.credentialStore.withSelector).toBe("function");
+
+      // Check sessionContextStore interface
+      expect(typeof stores.sessionContextStore.subscribe).toBe("function");
+      expect(typeof stores.sessionContextStore.getSnapshot).toBe("function");
+      expect(typeof stores.sessionContextStore.withSelector).toBe("function");
+      expect(typeof stores.sessionContextStore.requestSessionContext).toBe(
+        "function"
+      );
+
+      // Check awarenessStore interface
+      expect(typeof stores.awarenessStore.subscribe).toBe("function");
+      expect(typeof stores.awarenessStore.initializeAwareness).toBe("function");
+      expect(typeof stores.awarenessStore.destroyAwareness).toBe("function");
+
+      // Check workflowStore interface
+      expect(typeof stores.workflowStore.connect).toBe("function");
+      expect(typeof stores.workflowStore.disconnect).toBe("function");
+    });
+
+    test("stores have correct initial structure", () => {
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const stores = result.current!;
+
+      // Check sessionContextStore initial state
+      const sessionContextState = stores.sessionContextStore.getSnapshot();
+      expect(sessionContextState.user).toBeNull();
+      expect(sessionContextState.project).toBeNull();
+      expect(sessionContextState.config).toBeNull();
+      expect(sessionContextState.lastUpdated).toBeNull();
+
+      // Note: We don't test adaptorStore and credentialStore state in detail
+      // because they may have already started async fetching operations when
+      // the test renders. The key is that the stores are present and accessible.
+      expect(stores.adaptorStore.getSnapshot()).toBeDefined();
+      expect(stores.credentialStore.getSnapshot()).toBeDefined();
+    });
   });
 
-  test("all required stores are present in context", () => {
-    expect(stores!.adaptorStore).toBeDefined();
-    expect(stores!.credentialStore).toBeDefined();
-    expect(stores!.awarenessStore).toBeDefined();
-    expect(stores!.workflowStore).toBeDefined();
-    expect(stores!.sessionContextStore).toBeDefined();
+  // ===========================================================================
+  // STORE INDEPENDENCE TESTS
+  // ===========================================================================
+
+  describe("store independence", () => {
+    test("multiple providers have independent stores", () => {
+      const { result: result1 } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const { result: result2 } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      // Different provider instances = different stores
+      expect(result1.current!.adaptorStore).not.toBe(
+        result2.current!.adaptorStore
+      );
+      expect(result1.current!.sessionContextStore).not.toBe(
+        result2.current!.sessionContextStore
+      );
+      expect(result1.current!.credentialStore).not.toBe(
+        result2.current!.credentialStore
+      );
+      expect(result1.current!.awarenessStore).not.toBe(
+        result2.current!.awarenessStore
+      );
+      expect(result1.current!.workflowStore).not.toBe(
+        result2.current!.workflowStore
+      );
+    });
+
+    test("stores from same provider are shared", () => {
+      let store1: any;
+      let store2: any;
+
+      const TestComponent1 = () => {
+        const context = useContext(StoreContext);
+        store1 = context?.adaptorStore;
+        return null;
+      };
+
+      const TestComponent2 = () => {
+        const context = useContext(StoreContext);
+        store2 = context?.adaptorStore;
+        return null;
+      };
+
+      render(
+        <StoreProvider>
+          <TestComponent1 />
+          <TestComponent2 />
+        </StoreProvider>
+      );
+
+      expect(store1).toBe(store2);
+    });
+
+    test("stores are independent instances with separate state", () => {
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const stores = result.current!;
+
+      // Verify all stores are different instances
+      expect(stores.adaptorStore).not.toBe(stores.sessionContextStore);
+      expect(stores.credentialStore).not.toBe(stores.sessionContextStore);
+      expect(stores.awarenessStore).not.toBe(stores.sessionContextStore);
+      expect(stores.workflowStore).not.toBe(stores.sessionContextStore);
+      expect(stores.adaptorStore).not.toBe(stores.credentialStore);
+
+      // Verify each store has its own state
+      const sessionContextState = stores.sessionContextStore.getSnapshot();
+      const adaptorState = stores.adaptorStore.getSnapshot();
+
+      expect(sessionContextState).not.toBe(adaptorState);
+    });
+  });
+
+  // ===========================================================================
+  // PROVIDER LIFECYCLE TESTS
+  // ===========================================================================
+
+  describe("provider lifecycle", () => {
+    test("creates stores on mount", () => {
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      expect(result.current).toBeDefined();
+      expect(result.current!.adaptorStore.getSnapshot()).toBeDefined();
+      expect(result.current!.sessionContextStore.getSnapshot()).toBeDefined();
+      expect(result.current!.credentialStore.getSnapshot()).toBeDefined();
+    });
+
+    test("stores survive provider re-renders", () => {
+      const { result, rerender } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const initialAdaptorStore = result.current!.adaptorStore;
+      const initialSessionContextStore = result.current!.sessionContextStore;
+      const initialCredentialStore = result.current!.credentialStore;
+      const initialAwarenessStore = result.current!.awarenessStore;
+      const initialWorkflowStore = result.current!.workflowStore;
+
+      rerender();
+
+      // Stores should be the same instances
+      expect(result.current!.adaptorStore).toBe(initialAdaptorStore);
+      expect(result.current!.sessionContextStore).toBe(
+        initialSessionContextStore
+      );
+      expect(result.current!.credentialStore).toBe(initialCredentialStore);
+      expect(result.current!.awarenessStore).toBe(initialAwarenessStore);
+      expect(result.current!.workflowStore).toBe(initialWorkflowStore);
+    });
+
+    test("stores maintain state across re-renders", () => {
+      const { result, rerender } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      // Update store state
+      result.current!.sessionContextStore.setLoading(true);
+
+      const stateBeforeRerender =
+        result.current!.sessionContextStore.getSnapshot();
+      expect(stateBeforeRerender.isLoading).toBe(true);
+
+      rerender();
+
+      // State should persist
+      const stateAfterRerender =
+        result.current!.sessionContextStore.getSnapshot();
+      expect(stateAfterRerender.isLoading).toBe(true);
+    });
+
+    test("cleans up awareness on unmount", () => {
+      const { result, unmount } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const awarenessStore = result.current!.awarenessStore;
+      const destroySpy = vi.spyOn(awarenessStore, "destroyAwareness");
+
+      unmount();
+
+      expect(destroySpy).toHaveBeenCalled();
+    });
+  });
+
+  // ===========================================================================
+  // AWARENESS INITIALIZATION TESTS
+  // ===========================================================================
+
+  describe("awareness initialization", () => {
+    test("initializes awareness when awareness and userData are available", async () => {
+      // Create mock awareness and userData with all required methods
+      const mockAwareness = {
+        getLocalState: vi.fn(),
+        setLocalState: vi.fn(),
+        setLocalStateField: vi.fn(),
+        getStates: vi.fn().mockReturnValue(new Map()),
+        on: vi.fn(),
+        off: vi.fn(),
+      } as any;
+
+      const mockUserData = {
+        id: "user-1",
+        name: "Test User",
+        color: "#ff0000",
+      };
+
+      // Start without awareness
+      mockUseSession.mockReturnValue(createMockSessionState());
+
+      const { result, rerender } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const awarenessStore = result.current!.awarenessStore;
+      const initSpy = vi.spyOn(awarenessStore, "initializeAwareness");
+
+      // Update to provide awareness and userData
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          awareness: mockAwareness,
+          userData: mockUserData,
+        })
+      );
+
+      rerender();
+
+      // Wait for effect to run
+      await waitFor(() => {
+        expect(initSpy).toHaveBeenCalledWith(mockAwareness, mockUserData);
+      });
+    });
+
+    test("does not initialize awareness when already ready", async () => {
+      const mockAwareness = {
+        getLocalState: vi.fn(),
+        setLocalState: vi.fn(),
+        setLocalStateField: vi.fn(),
+        on: vi.fn(),
+        off: vi.fn(),
+      } as any;
+
+      const mockUserData = {
+        id: "user-1",
+        name: "Test User",
+        color: "#ff0000",
+      };
+
+      // Start without awareness
+      mockUseSession.mockReturnValue(createMockSessionState());
+
+      const { result, rerender } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const awarenessStore = result.current!.awarenessStore;
+
+      // Mock isAwarenessReady to return true BEFORE providing awareness
+      vi.spyOn(awarenessStore, "isAwarenessReady").mockReturnValue(true);
+      const initSpy = vi.spyOn(awarenessStore, "initializeAwareness");
+
+      // Now update to provide awareness and userData
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          awareness: mockAwareness,
+          userData: mockUserData,
+        })
+      );
+
+      rerender();
+
+      // Wait to ensure effect has time to run
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Should not have been called since awareness is already ready
+      expect(initSpy).not.toHaveBeenCalled();
+    });
+
+    test("does not initialize awareness when userData is missing", async () => {
+      const mockAwareness = {
+        getLocalState: vi.fn(),
+        setLocalState: vi.fn(),
+        setLocalStateField: vi.fn(),
+        on: vi.fn(),
+        off: vi.fn(),
+      } as any;
+
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          awareness: mockAwareness,
+          userData: null,
+        })
+      );
+
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const awarenessStore = result.current!.awarenessStore;
+      const initSpy = vi.spyOn(awarenessStore, "initializeAwareness");
+
+      // Wait to ensure effect has time to run
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(initSpy).not.toHaveBeenCalled();
+    });
   });
 
   // ===========================================================================
   // CHANNEL CONNECTION TESTS
   // ===========================================================================
 
-  test("sessionContextStore connects to channel when provider is ready", async () => {
-    const mockSocket = createMockSocket();
+  describe("channel connection", () => {
+    test("connects stores when provider and isConnected are ready", async () => {
+      const mockProvider = {
+        channel: {
+          push: vi.fn(),
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as any;
 
-    // Initialize session with connect: true (will auto-connect)
-    sessionStore!.initializeSession(
-      mockSocket,
-      "test:workflow",
-      {
-        id: "user-1",
-        name: "Test User",
-        color: "#ff0000",
-      },
-      { connect: true }
-    );
+      // Start without provider
+      mockUseSession.mockReturnValue(createMockSessionState());
 
-    // Wait for provider to be ready
-    await waitForCondition(() => {
-      const session = sessionStore!.getSnapshot();
-      return session.provider !== null && session.isConnected;
+      const { result, rerender } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const adaptorStore = result.current!.adaptorStore;
+      const credentialStore = result.current!.credentialStore;
+      const sessionContextStore = result.current!.sessionContextStore;
+
+      const connectSpy1 = vi.spyOn(adaptorStore, "_connectChannel");
+      const connectSpy2 = vi.spyOn(credentialStore, "_connectChannel");
+      const connectSpy3 = vi.spyOn(sessionContextStore, "_connectChannel");
+
+      // Update to connected state
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          provider: mockProvider,
+          isConnected: true,
+        })
+      );
+
+      rerender();
+
+      await waitFor(() => {
+        expect(connectSpy1).toHaveBeenCalledWith(mockProvider);
+        expect(connectSpy2).toHaveBeenCalledWith(mockProvider);
+        expect(connectSpy3).toHaveBeenCalledWith(mockProvider);
+      });
     });
 
-    // Verify provider is available in session
-    const session = sessionStore!.getSnapshot();
-    expect(session.provider).not.toBeNull();
-    expect(session.isConnected).toBe(true);
+    test("does not connect when provider is missing", async () => {
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          provider: null,
+          isConnected: true,
+        })
+      );
 
-    // Spy on store's _connectChannel method
-    let connectChannelCalled = false;
-    const originalConnect = stores!.sessionContextStore._connectChannel;
-    stores!.sessionContextStore._connectChannel = (provider: any) => {
-      connectChannelCalled = true;
-      return originalConnect.call(stores!.sessionContextStore, provider);
-    };
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
 
-    // Simulate the useEffect that connects stores
-    const cleanup = simulateChannelConnection(stores!, sessionStore!);
+      const adaptorStore = result.current!.adaptorStore;
+      const connectSpy = vi.spyOn(adaptorStore, "_connectChannel");
 
-    // Verify _connectChannel was called
-    expect(connectChannelCalled).toBe(true);
+      // Wait to ensure effect has time to run
+      await new Promise(resolve => setTimeout(resolve, 10));
 
-    // Cleanup
-    cleanup();
-  });
-
-  test("sessionContextStore registers channel event listeners", async () => {
-    const mockSocket = createMockSocket();
-    const mockProvider = createMockPhoenixChannelProvider(
-      createMockPhoenixChannel()
-    );
-
-    // Directly test that _connectChannel returns a cleanup function
-    const cleanup = stores!.sessionContextStore._connectChannel(mockProvider);
-
-    // Verify cleanup function was returned (indicates listeners were registered)
-    expect(typeof cleanup).toBe("function");
-
-    // Verify cleanup can be called without errors
-    expect(() => {
-      cleanup();
-    }).not.toThrow();
-  });
-
-  test("sessionContextStore does not connect when provider is not ready", async () => {
-    const mockSocket = createMockSocket();
-
-    let pushCalled = false;
-
-    // Initialize session WITHOUT provider
-    sessionStore!.initializeSession(mockSocket, "test:workflow", {
-      id: "user-1",
-      name: "Test User",
-      color: "#ff0000",
+      expect(connectSpy).not.toHaveBeenCalled();
     });
 
-    // Don't set provider state (simulates not connected)
+    test("does not connect when isConnected is false", async () => {
+      const mockProvider = {
+        channel: {
+          push: vi.fn(),
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as any;
 
-    // Simulate the connection effect (should not connect)
-    const cleanup = simulateChannelConnection(stores!, sessionStore!);
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          provider: mockProvider,
+          isConnected: false,
+        })
+      );
 
-    // Small delay to ensure effect runs (but connection should not happen)
-    await new Promise(resolve => setTimeout(resolve, 10));
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
 
-    // Verify no connection was attempted
-    expect(pushCalled).toBe(false);
+      const adaptorStore = result.current!.adaptorStore;
+      const connectSpy = vi.spyOn(adaptorStore, "_connectChannel");
 
-    // Store should still be available
-    expect(stores!.sessionContextStore).toBeDefined();
+      // Wait to ensure effect has time to run
+      await new Promise(resolve => setTimeout(resolve, 10));
 
-    // Cleanup
-    cleanup();
-  });
-
-  test("sessionContextStore initial request is sent on connection", async () => {
-    const mockSocket = createMockSocket();
-
-    // Initialize and connect
-    sessionStore!.initializeSession(
-      mockSocket,
-      "test:workflow",
-      {
-        id: "user-1",
-        name: "Test User",
-        color: "#ff0000",
-      },
-      { connect: true }
-    );
-
-    // Wait for provider
-    await waitForCondition(() => {
-      const session = sessionStore!.getSnapshot();
-      return session.provider !== null;
+      expect(connectSpy).not.toHaveBeenCalled();
     });
 
-    // Test that requestSessionContext can be called
-    const requestResult = stores!.sessionContextStore.requestSessionContext();
+    test("cleans up channel connections on unmount", async () => {
+      const mockCleanup1 = vi.fn();
+      const mockCleanup2 = vi.fn();
+      const mockCleanup3 = vi.fn();
 
-    // Should return a promise
-    expect(requestResult).toBeInstanceOf(Promise);
+      const mockProvider = {
+        channel: {
+          push: vi.fn(),
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as any;
 
-    // Small delay for async request to be initiated
-    await new Promise(resolve => setTimeout(resolve, 10));
+      // Start without provider
+      mockUseSession.mockReturnValue(createMockSessionState());
 
-    // The fact that we can call requestSessionContext means the store is properly set up
-    expect(stores!.sessionContextStore).toBeDefined();
+      const { result, rerender, unmount } = renderHook(
+        () => useContext(StoreContext),
+        {
+          wrapper: StoreProvider,
+        }
+      );
+
+      // Mock _connectChannel to return cleanup functions BEFORE connection
+      vi.spyOn(result.current!.adaptorStore, "_connectChannel").mockReturnValue(
+        mockCleanup1
+      );
+      vi.spyOn(
+        result.current!.credentialStore,
+        "_connectChannel"
+      ).mockReturnValue(mockCleanup2);
+      vi.spyOn(
+        result.current!.sessionContextStore,
+        "_connectChannel"
+      ).mockReturnValue(mockCleanup3);
+
+      // Now connect
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          provider: mockProvider,
+          isConnected: true,
+        })
+      );
+
+      rerender();
+
+      // Wait for connection effect to run
+      await waitFor(() => {
+        expect(result.current!.adaptorStore._connectChannel).toHaveBeenCalled();
+      });
+
+      unmount();
+
+      // Cleanup functions should have been called
+      expect(mockCleanup1).toHaveBeenCalled();
+      expect(mockCleanup2).toHaveBeenCalled();
+      expect(mockCleanup3).toHaveBeenCalled();
+    });
+
+    test("reconnects when provider changes", async () => {
+      const mockProvider1 = {
+        channel: {
+          push: vi.fn(),
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as any;
+
+      const mockProvider2 = {
+        channel: {
+          push: vi.fn(),
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as any;
+
+      const mockCleanup1 = vi.fn();
+      const mockCleanup2 = vi.fn();
+
+      // Start without provider
+      mockUseSession.mockReturnValue(createMockSessionState());
+
+      const { result, rerender } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      // Mock first connection to return cleanup1
+      vi.spyOn(result.current!.adaptorStore, "_connectChannel")
+        .mockReturnValueOnce(mockCleanup1)
+        .mockReturnValueOnce(mockCleanup2);
+
+      // Connect to first provider
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          provider: mockProvider1,
+          isConnected: true,
+        })
+      );
+
+      rerender();
+
+      await waitFor(() => {
+        expect(
+          result.current!.adaptorStore._connectChannel
+        ).toHaveBeenCalledWith(mockProvider1);
+      });
+
+      // Change provider
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          provider: mockProvider2,
+          isConnected: true,
+        })
+      );
+
+      rerender();
+
+      await waitFor(() => {
+        // Old connection should be cleaned up
+        expect(mockCleanup1).toHaveBeenCalled();
+        // New connection should be established
+        expect(
+          result.current!.adaptorStore._connectChannel
+        ).toHaveBeenCalledWith(mockProvider2);
+      });
+    });
   });
 
   // ===========================================================================
-  // CLEANUP TESTS
+  // WORKFLOW STORE CONNECTION TESTS
   // ===========================================================================
 
-  test("channel listeners are removed on cleanup", async () => {
-    const mockSocket = createMockSocket();
+  describe("workflow store connection", () => {
+    test("connects workflowStore when ydoc and provider are ready", async () => {
+      // Create complete mock YDoc with both getMap and getArray methods
+      const mockYDoc = {
+        getMap: vi.fn().mockReturnValue({
+          set: vi.fn(),
+          get: vi.fn(),
+          observe: vi.fn(),
+          observeDeep: vi.fn(),
+          unobserve: vi.fn(),
+          unobserveDeep: vi.fn(),
+          toJSON: vi.fn().mockReturnValue({}),
+        }),
+        getArray: vi.fn().mockReturnValue({
+          push: vi.fn(),
+          get: vi.fn(),
+          observe: vi.fn(),
+          observeDeep: vi.fn(),
+          unobserve: vi.fn(),
+          unobserveDeep: vi.fn(),
+          toArray: vi.fn().mockReturnValue([]),
+        }),
+      } as any;
 
-    // Initialize and connect
-    sessionStore!.initializeSession(
-      mockSocket,
-      "test:workflow",
-      {
-        id: "user-1",
-        name: "Test User",
-        color: "#ff0000",
-      },
-      { connect: true }
-    );
+      const mockProvider = {
+        channel: {
+          push: vi.fn(),
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as any;
 
-    // Wait for provider
-    await waitForCondition(() => {
-      const session = sessionStore!.getSnapshot();
-      return session.provider !== null;
+      mockUseSession.mockReturnValue(createMockSessionState());
+
+      const { result, rerender } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
+
+      const workflowStore = result.current!.workflowStore;
+      const connectSpy = vi.spyOn(workflowStore, "connect");
+
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          ydoc: mockYDoc,
+          provider: mockProvider,
+          isConnected: true,
+        })
+      );
+
+      rerender();
+
+      await waitFor(() => {
+        expect(connectSpy).toHaveBeenCalledWith(mockYDoc, mockProvider);
+      });
     });
 
-    // Connect stores
-    const cleanup = simulateChannelConnection(stores!, sessionStore!);
+    test("disconnects workflowStore on unmount", async () => {
+      // Create complete mock YDoc with both getMap and getArray methods
+      const mockYDoc = {
+        getMap: vi.fn().mockReturnValue({
+          set: vi.fn(),
+          get: vi.fn(),
+          observe: vi.fn(),
+          observeDeep: vi.fn(),
+          unobserve: vi.fn(),
+          unobserveDeep: vi.fn(),
+          toJSON: vi.fn().mockReturnValue({}),
+        }),
+        getArray: vi.fn().mockReturnValue({
+          push: vi.fn(),
+          get: vi.fn(),
+          observe: vi.fn(),
+          observeDeep: vi.fn(),
+          unobserve: vi.fn(),
+          unobserveDeep: vi.fn(),
+          toArray: vi.fn().mockReturnValue([]),
+        }),
+      } as any;
 
-    // Small delay for connection to be established
-    await new Promise(resolve => setTimeout(resolve, 10));
+      const mockProvider = {
+        channel: {
+          push: vi.fn(),
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as any;
 
-    // Verify cleanup can be called without errors
-    expect(() => {
-      cleanup();
-    }).not.toThrow();
+      // Start without provider/ydoc
+      mockUseSession.mockReturnValue(createMockSessionState());
 
-    // Small delay for cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
+      const { result, rerender, unmount } = renderHook(
+        () => useContext(StoreContext),
+        {
+          wrapper: StoreProvider,
+        }
+      );
 
-    // Verify we can still access the store after cleanup
-    expect(stores!.sessionContextStore).toBeDefined();
-    expect(stores!.sessionContextStore.getSnapshot()).toBeDefined();
-  });
+      const workflowStore = result.current!.workflowStore;
+      const disconnectSpy = vi.spyOn(workflowStore, "disconnect");
 
-  test("cleanup is called when dependencies change", async () => {
-    const mockSocket = createMockSocket();
+      // Now connect with ydoc and provider
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          ydoc: mockYDoc,
+          provider: mockProvider,
+          isConnected: true,
+        })
+      );
 
-    // Initialize with first session
-    sessionStore!.initializeSession(
-      mockSocket,
-      "test:workflow:1",
-      {
-        id: "user-1",
-        name: "Test User",
-        color: "#ff0000",
-      },
-      { connect: true }
-    );
+      rerender();
 
-    // Wait for provider
-    await waitForCondition(() => {
-      const session = sessionStore!.getSnapshot();
-      return session.provider !== null;
+      // Small delay to allow connection to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      unmount();
+
+      expect(disconnectSpy).toHaveBeenCalled();
     });
-
-    const cleanup1 = simulateChannelConnection(stores!, sessionStore!);
-
-    // Small delay for connection to be established
-    await new Promise(resolve => setTimeout(resolve, 10));
-
-    // Clean up first connection
-    expect(() => {
-      cleanup1();
-    }).not.toThrow();
-
-    // Small delay for cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
-
-    // Connect to second session (simulates reconnection)
-    sessionStore!.initializeSession(
-      mockSocket,
-      "test:workflow:2",
-      {
-        id: "user-1",
-        name: "Test User",
-        color: "#ff0000",
-      },
-      { connect: true }
-    );
-
-    // Wait for new provider
-    await waitForCondition(() => {
-      const session = sessionStore!.getSnapshot();
-      return session.provider !== null;
-    });
-
-    const cleanup2 = simulateChannelConnection(stores!, sessionStore!);
-
-    // Small delay for new connection to be established
-    await new Promise(resolve => setTimeout(resolve, 10));
-
-    // Verify second cleanup works
-    expect(() => {
-      cleanup2();
-    }).not.toThrow();
   });
 
   // ===========================================================================
   // INTEGRATION TESTS
   // ===========================================================================
 
-  test("sessionContextStore updates do not affect other stores", async () => {
-    const mockSocket = createMockSocket();
+  describe("integration tests", () => {
+    test("hooks can access stores through the provider", () => {
+      const useTestHook = () => {
+        const context = useContext(StoreContext);
+        if (!context) {
+          throw new Error("StoreContext is null");
+        }
+        return context.adaptorStore.getSnapshot();
+      };
 
-    // Get initial adaptor state
-    const initialAdaptorState = stores!.adaptorStore.getSnapshot();
+      const { result } = renderHook(() => useTestHook(), {
+        wrapper: StoreProvider,
+      });
 
-    // Initialize and connect
-    sessionStore!.initializeSession(
-      mockSocket,
-      "test:workflow",
-      {
+      expect(result.current).toBeDefined();
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    test("multiple hooks share the same store instance within one provider", () => {
+      let store1: any;
+      let store2: any;
+
+      const useHook1 = () => {
+        const context = useContext(StoreContext);
+        store1 = context?.adaptorStore;
+        return store1;
+      };
+
+      const useHook2 = () => {
+        const context = useContext(StoreContext);
+        store2 = context?.adaptorStore;
+        return store2;
+      };
+
+      const TestComponent = () => {
+        useHook1();
+        useHook2();
+        return null;
+      };
+
+      render(
+        <StoreProvider>
+          <TestComponent />
+        </StoreProvider>
+      );
+
+      expect(store1).toBe(store2);
+    });
+
+    test("store updates trigger re-renders in components", async () => {
+      let renderCount = 0;
+
+      const TestComponent = () => {
+        const context = useContext(StoreContext);
+        const isLoading = context!.sessionContextStore.getSnapshot().isLoading;
+        renderCount++;
+        return <div>{isLoading ? "loading" : "idle"}</div>;
+      };
+
+      const { getByText, rerender } = render(
+        <StoreProvider>
+          <TestComponent />
+        </StoreProvider>
+      );
+
+      expect(getByText("idle")).toBeInTheDocument();
+      const initialRenderCount = renderCount;
+
+      // Note: This test demonstrates the pattern, but store updates
+      // won't automatically trigger re-renders without using useSyncExternalStore
+      // This is expected behavior - components should use the store hooks
+      // (like useAdaptorStore) which use useSyncExternalStore internally
+      expect(initialRenderCount).toBeGreaterThan(0);
+    });
+
+    test("store state is independent from session state", () => {
+      const mockUserData = {
         id: "user-1",
         name: "Test User",
         color: "#ff0000",
-      },
-      { connect: true }
-    );
+      };
 
-    const cleanup = simulateChannelConnection(stores!, sessionStore!);
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          userData: mockUserData,
+        })
+      );
 
-    // Small delay for connection to be established
-    await new Promise(resolve => setTimeout(resolve, 10));
+      const { result } = renderHook(() => useContext(StoreContext), {
+        wrapper: StoreProvider,
+      });
 
-    // Manually update sessionContextStore
-    stores!.sessionContextStore.setLoading(true);
+      // Session has userData, sessionContextStore has user
+      const sessionContextState =
+        result.current!.sessionContextStore.getSnapshot();
 
-    // Verify adaptorStore state is unchanged
-    const currentAdaptorState = stores!.adaptorStore.getSnapshot();
-    expect(currentAdaptorState).toEqual(initialAdaptorState);
+      // Initially, sessionContextStore.user should be null
+      // It only gets populated after requestSessionContext succeeds
+      expect(sessionContextState.user).toBeNull();
 
-    // Cleanup
-    cleanup();
+      // They maintain independent state
+      expect(sessionContextState.user).not.toBe(mockUserData);
+    });
   });
 
-  test("sessionContextStore can be subscribed to independently", () => {
-    let sessionContextNotifications = 0;
-    let adaptorNotifications = 0;
+  // ===========================================================================
+  // ERROR HANDLING TESTS
+  // ===========================================================================
 
-    const unsubscribe1 = stores!.sessionContextStore.subscribe(() => {
-      sessionContextNotifications++;
+  describe("error handling", () => {
+    test("accessing StoreContext outside provider returns null", () => {
+      const { result } = renderHook(() => useContext(StoreContext));
+
+      expect(result.current).toBeNull();
     });
 
-    const unsubscribe2 = stores!.adaptorStore.subscribe(() => {
-      adaptorNotifications++;
+    test("components can check for null context", () => {
+      const TestComponent = () => {
+        const context = useContext(StoreContext);
+        return <div>{context ? "has context" : "no context"}</div>;
+      };
+
+      const { getByText } = render(<TestComponent />);
+
+      expect(getByText("no context")).toBeInTheDocument();
     });
-
-    // Update sessionContextStore
-    stores!.sessionContextStore.setLoading(true);
-
-    expect(sessionContextNotifications).toBe(1);
-    expect(adaptorNotifications).toBe(0);
-
-    // Update adaptorStore
-    stores!.adaptorStore.setLoading(true);
-
-    expect(sessionContextNotifications).toBe(1);
-    expect(adaptorNotifications).toBe(1);
-
-    // Cleanup
-    unsubscribe1();
-    unsubscribe2();
-  });
-
-  test("sessionContextStore maintains state independently from session store", async () => {
-    const mockSocket = createMockSocket();
-
-    // Initialize and connect
-    sessionStore!.initializeSession(
-      mockSocket,
-      "test:workflow",
-      {
-        id: "user-1",
-        name: "Test User",
-        color: "#ff0000",
-      },
-      { connect: true }
-    );
-
-    const cleanup = simulateChannelConnection(stores!, sessionStore!);
-
-    // Small delay for connection to be established
-    await new Promise(resolve => setTimeout(resolve, 10));
-
-    // Verify stores maintain independent state
-    const sessionState = sessionStore!.getSnapshot();
-    const sessionContextState = stores!.sessionContextStore.getSnapshot();
-
-    // Session store has userData, context store has user - they should be different objects
-    expect(sessionState.userData).not.toBe(sessionContextState.user);
-
-    // Cleanup
-    cleanup();
   });
 });

@@ -40,11 +40,20 @@ export function createMockPhoenixChannel(
   const closeCallbacks: (() => void)[] = [];
   const errorCallbacks: ((error: unknown) => void)[] = [];
 
-  const createMockPush = (): MockPush => ({
+  const createMockPush = (event?: string, _payload?: unknown): MockPush => ({
     receive(status: string, callback: (response?: unknown) => void) {
       setTimeout(() => {
         if (status === "ok") {
-          callback({ status: "ok" });
+          // Special handling for get_context request
+          if (event === "get_context") {
+            callback({
+              user: null,
+              project: null,
+              config: { require_email_verification: false },
+            });
+          } else {
+            callback({ status: "ok" });
+          }
         } else if (status === "error") {
           callback({ error: "Mock error" });
         }
@@ -73,8 +82,8 @@ export function createMockPhoenixChannel(
       }
     },
 
-    push(_event: string, _payload: unknown, _timeout?: number): MockPush {
-      return createMockPush();
+    push(event: string, payload: unknown, _timeout?: number): MockPush {
+      return createMockPush(event, payload);
     },
 
     join(_timeout?: number): MockPush {
@@ -128,6 +137,7 @@ export function createMockPhoenixChannel(
             handler(message);
           } catch (error) {
             console.error(`Error in mock channel handler for ${event}:`, error);
+            throw error; // Re-throw so tests can see validation failures
           }
         });
       }

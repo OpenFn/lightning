@@ -10,7 +10,7 @@ import {
 // VALID DATA TESTS
 // =============================================================================
 
-describe("UserContextSchema", () => {
+describe.concurrent("UserContextSchema", () => {
   test("validates correct user data with all required fields", () => {
     const validUser = {
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -185,7 +185,7 @@ describe("UserContextSchema", () => {
 // PROJECT CONTEXT SCHEMA TESTS
 // =============================================================================
 
-describe("ProjectContextSchema", () => {
+describe.concurrent("ProjectContextSchema", () => {
   test("validates correct project data with all required fields", () => {
     const validProject = {
       id: "a50e8400-e29b-41d4-a716-446655440000",
@@ -246,7 +246,7 @@ describe("ProjectContextSchema", () => {
 // APP CONFIG SCHEMA TESTS
 // =============================================================================
 
-describe("AppConfigSchema", () => {
+describe.concurrent("AppConfigSchema", () => {
   test("validates correct config with require_email_verification as true", () => {
     const validConfig = {
       require_email_verification: true,
@@ -316,7 +316,7 @@ describe("AppConfigSchema", () => {
 // SESSION CONTEXT RESPONSE SCHEMA TESTS
 // =============================================================================
 
-describe("SessionContextResponseSchema", () => {
+describe.concurrent("SessionContextResponseSchema", () => {
   test("validates complete valid session context response", () => {
     const validResponse = {
       user: {
@@ -510,7 +510,7 @@ describe("SessionContextResponseSchema", () => {
 // EDGE CASE AND BOUNDARY TESTS
 // =============================================================================
 
-describe("SessionContext edge cases", () => {
+describe.concurrent("SessionContext edge cases", () => {
   test("validates user with special characters in name fields", () => {
     const validUser = {
       id: "550e8400-e29b-41d4-a716-446655440000",

@@ -1,3 +1,21 @@
+/**
+ * Test Fixtures
+ *
+ * This file uses Vitest 3.x fixtures for cleaner test setup and automatic cleanup.
+ *
+ * Available fixtures:
+ * - store: SessionStore instance (auto cleanup with destroy())
+ * - mockSocket: Mock Phoenix socket
+ * - initializedSession: Store with session initialized (depends on store and mockSocket)
+ * - ydoc: YDoc instance initialized in the store
+ *
+ * Usage:
+ * sessionTest("test name", async ({ initializedSession }) => {
+ *   const { store, socket, userData } = initializedSession;
+ *   // test logic - cleanup automatic
+ * });
+ */
+
 import { describe, test, expect } from "vitest";
 import { Doc as YDoc } from "yjs";
 
@@ -15,6 +33,37 @@ import {
   applyProviderUpdate,
   waitForState,
 } from "./__helpers__/sessionStoreHelpers";
+
+// Vitest 3.x fixtures for cleaner test setup and automatic cleanup
+const sessionTest = test.extend({
+  store: async ({}, use) => {
+    const store = createSessionStore();
+    await use(store);
+    store.destroy(); // Automatic cleanup
+  },
+
+  mockSocket: async ({}, use) => {
+    const socket = createMockSocket();
+    await use(socket);
+  },
+
+  initializedSession: async ({ store, mockSocket }, use) => {
+    const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
+    store.initializeSession(mockSocket, "test:room", userData, {
+      connect: false,
+    });
+
+    await use({ store, socket: mockSocket, userData });
+
+    // Cleanup happens via store fixture
+  },
+
+  ydoc: async ({ store }, use) => {
+    const ydoc = store.initializeYDoc();
+    await use(ydoc);
+    // Cleanup happens via store.destroy()
+  },
+});
 
 describe("createSessionStore", () => {
   describe("core store interface", () => {
@@ -146,25 +195,21 @@ describe("createSessionStore", () => {
   });
 
   describe("provider initialization", () => {
-    test("creates provider and attaches event handlers", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const roomname = "test:room:123";
-      const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
+    sessionTest(
+      "creates provider and attaches event handlers",
+      ({ initializedSession }) => {
+        const { store } = initializedSession;
+        const result = store.getSnapshot();
 
-      const result = store.initializeSession(mockSocket, roomname, userData, {
-        connect: false,
-      });
+        expect(result.provider).toBeTruthy(); // "Should return provider instance"
+        expect(store.getProvider()).toBe(result.provider); // "Query should return same provider"
 
-      expect(result.provider).toBeTruthy(); // "Should return provider instance"
-      expect(store.getSnapshot().provider).toBe(result.provider); // "Should store provider in state"
-      expect(store.getProvider()).toBe(result.provider); // "Query should return same provider"
+        // Verify initial sync state is reflected
+        expect(result.isSynced).toBe(result.provider.synced); // "Store should reflect provider sync state"
 
-      // Verify initial sync state is reflected
-      expect(store.getSnapshot().isSynced).toBe(result.provider.synced); // "Store should reflect provider sync state"
-
-      store.destroy();
-    });
+        // Cleanup happens automatically via fixture
+      }
+    );
 
     test("replaces existing provider", () => {
       const store = createSessionStore();
@@ -198,21 +243,22 @@ describe("createSessionStore", () => {
   });
 
   describe("lifecycle", () => {
-    test("destroy cleans up provider and YDoc", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const roomname = "test:room:123";
+    sessionTest(
+      "destroy cleans up provider and YDoc",
+      ({ store, mockSocket }) => {
+        const roomname = "test:room:123";
 
-      store.initializeSession(mockSocket, roomname, null, { connect: false });
+        store.initializeSession(mockSocket, roomname, null, { connect: false });
 
-      store.destroy();
+        store.destroy();
 
-      const finalState = store.getSnapshot();
-      expect(finalState.provider).toBeNull();
-      expect(finalState.ydoc).toBeNull();
-      expect(finalState.isConnected).toBe(false);
-      expect(finalState.isSynced).toBe(false);
-    });
+        const finalState = store.getSnapshot();
+        expect(finalState.provider).toBeNull();
+        expect(finalState.ydoc).toBeNull();
+        expect(finalState.isConnected).toBe(false);
+        expect(finalState.isSynced).toBe(false);
+      }
+    );
 
     test("handles null provider gracefully", () => {
       const store = createSessionStore();
@@ -222,23 +268,13 @@ describe("createSessionStore", () => {
       }).not.toThrow();
     });
 
-    test("performs complete cleanup", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const userData = {
-        id: "user-cleanup",
-        name: "Cleanup User",
-        color: "#ff0000",
+    sessionTest("performs complete cleanup", ({ initializedSession }) => {
+      const { store } = initializedSession;
+      const state = store.getSnapshot();
+      const result = {
+        ydoc: state.ydoc!,
+        awareness: state.awareness!,
       };
-
-      const result = store.initializeSession(
-        mockSocket,
-        "test:room",
-        userData,
-        {
-          connect: false,
-        }
-      );
 
       // Track destruction calls
       let ydocDestroyed = false;
@@ -299,19 +335,8 @@ describe("createSessionStore", () => {
       expect(ydocDestroyed).toBe(true, "YDoc destroy should have been called");
     });
 
-    test("cleans up event handlers", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const userData = {
-        id: "user-handler",
-        name: "Handler User",
-        color: "#00ff00",
-      };
-
-      // Set up state by initializing session
-      store.initializeSession(mockSocket, "test:room", userData, {
-        connect: false,
-      });
+    sessionTest("cleans up event handlers", ({ initializedSession }) => {
+      const { store } = initializedSession;
 
       // Verify initial state
       expect(store.getSnapshot().provider).toBeTruthy(); // "Should have provider"
@@ -324,24 +349,13 @@ describe("createSessionStore", () => {
       expect(finalState.provider).toBe(null); // "Provider should be destroyed"
     });
 
-    test("maintains comprehensive cleanup", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const userData = {
-        id: "user-comprehensive",
-        name: "Comprehensive User",
-        color: "#0000ff",
+    sessionTest("maintains comprehensive cleanup", ({ initializedSession }) => {
+      const { store } = initializedSession;
+      const state = store.getSnapshot();
+      const result = {
+        ydoc: state.ydoc!,
+        awareness: state.awareness!,
       };
-
-      // Initialize session to create all components internally
-      const result = store.initializeSession(
-        mockSocket,
-        "test:room",
-        userData,
-        {
-          connect: false,
-        }
-      );
 
       // Track destruction calls
       let ydocDestroyed = false;
@@ -410,85 +424,84 @@ describe("createSessionStore", () => {
   });
 
   describe("awareness state", () => {
-    test("reuses existing awareness when re-initializing", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const roomname = "test:room:123";
+    sessionTest(
+      "reuses existing awareness when re-initializing",
+      ({ store, mockSocket }) => {
+        const roomname = "test:room:123";
 
-      // First initialize with userData to create internal awareness
-      const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
-      const firstResult = store.initializeSession(
-        mockSocket,
-        roomname,
-        userData,
-        {
-          connect: false,
-        }
-      );
-      const firstAwareness = firstResult.awareness;
+        // First initialize with userData to create internal awareness
+        const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
+        const firstResult = store.initializeSession(
+          mockSocket,
+          roomname,
+          userData,
+          {
+            connect: false,
+          }
+        );
+        const firstAwareness = firstResult.awareness;
 
-      // Re-initialize with different userData - should create new awareness
-      const newUserData = { id: "user-2", name: "New User", color: "#00ff00" };
-      const secondResult = store.initializeSession(
-        mockSocket,
-        roomname + "2",
-        newUserData,
-        {
-          connect: false,
-        }
-      );
+        // Re-initialize with different userData - should create new awareness
+        const newUserData = {
+          id: "user-2",
+          name: "New User",
+          color: "#00ff00",
+        };
+        const secondResult = store.initializeSession(
+          mockSocket,
+          roomname + "2",
+          newUserData,
+          {
+            connect: false,
+          }
+        );
 
-      expect(secondResult.provider).toBeTruthy(); // "Should create provider with awareness"
-      expect(secondResult.awareness).not.toBe(firstAwareness); // "Should create new awareness with new userData"
-      expect(store.getSnapshot().provider).toBe(secondResult.provider); // "Should store new provider in state"
+        expect(secondResult.provider).toBeTruthy(); // "Should create provider with awareness"
+        expect(secondResult.awareness).not.toBe(firstAwareness); // "Should create new awareness with new userData"
+        expect(store.getSnapshot().provider).toBe(secondResult.provider); // "Should store new provider in state"
 
-      // Verify userData is stored in session state instead of awareness
-      const sessionUserData = store.getSnapshot().userData;
-      expect(sessionUserData).toEqual(newUserData); // "Session state should contain user data"
+        // Verify userData is stored in session state instead of awareness
+        const sessionUserData = store.getSnapshot().userData;
+        expect(sessionUserData).toEqual(newUserData); // "Session state should contain user data"
 
-      // Verify awareness does not have user data set (clean awareness)
-      const awarenessUserData = secondResult.awareness?.getLocalState()?.user;
-      expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
+        // Verify awareness does not have user data set (clean awareness)
+        const awarenessUserData = secondResult.awareness?.getLocalState()?.user;
+        expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
 
-      store.destroy();
-    });
+        // Cleanup happens automatically via fixture
+      }
+    );
   });
 
   describe("session initialization", () => {
-    test("creates YDoc, provider, and sets awareness atomically", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
+    sessionTest(
+      "creates YDoc, provider, and sets awareness atomically",
+      ({ initializedSession }) => {
+        const { store, userData } = initializedSession;
+        const finalState = store.getSnapshot();
+
+        expect(finalState.ydoc).toBeTruthy(); // "Should return YDoc instance"
+        expect(finalState.provider).toBeTruthy(); // "Should return provider instance"
+        expect(finalState.awareness).toBeTruthy(); // "Should create and return awareness instance"
+
+        // Verify userData is stored in session state instead of awareness
+        expect(finalState.userData).toEqual(userData); // "Session state should contain provided user data"
+
+        // Verify awareness does not have user data set (clean awareness)
+        const awarenessUserData = finalState.awareness?.getLocalState()?.user;
+        expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
+
+        // Cleanup happens automatically via fixture
+      }
+    );
+
+    sessionTest("reuses existing YDoc if present", ({ store, mockSocket }) => {
       const roomname = "test:room:123";
-      const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
-
-      const result = store.initializeSession(mockSocket, roomname, userData, {
-        connect: false,
-      });
-
-      expect(result.ydoc).toBeTruthy(); // "Should return YDoc instance"
-      expect(result.provider).toBeTruthy(); // "Should return provider instance"
-      expect(result.awareness).toBeTruthy(); // "Should create and return awareness instance"
-
-      const finalState = store.getSnapshot();
-      expect(finalState.ydoc).toBe(result.ydoc); // "Should store YDoc in state"
-      expect(finalState.provider).toBe(result.provider); // "Should store provider in state"
-      expect(finalState.awareness).toBe(result.awareness); // "Should store awareness in state"
-
-      // Verify userData is stored in session state instead of awareness
-      expect(finalState.userData).toEqual(userData); // "Session state should contain provided user data"
-
-      // Verify awareness does not have user data set (clean awareness)
-      const awarenessUserData = result.awareness?.getLocalState()?.user;
-      expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
-
-      store.destroy();
-    });
-
-    test("reuses existing YDoc if present", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const roomname = "test:room:123";
-      const userData = { id: "user-2", name: "Another User", color: "#00ff00" };
+      const userData = {
+        id: "user-2",
+        name: "Another User",
+        color: "#00ff00",
+      };
 
       const existingYDoc = store.initializeYDoc();
 
@@ -508,7 +521,7 @@ describe("createSessionStore", () => {
       const awarenessUserData = result.awareness?.getLocalState()?.user;
       expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
 
-      store.destroy();
+      // Cleanup happens automatically via fixture
     });
 
     test("handles null userData gracefully", () => {

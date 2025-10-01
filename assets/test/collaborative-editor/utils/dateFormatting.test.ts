@@ -16,7 +16,7 @@ import {
 // CALCULATE DEADLINE TESTS
 // =============================================================================
 
-describe("calculateDeadline", () => {
+describe.concurrent("calculateDeadline", () => {
   test("adds exactly 48 hours to the inserted_at timestamp", () => {
     const insertedAt = "2025-01-13T10:30:00Z";
     const deadline = calculateDeadline(insertedAt);
@@ -101,7 +101,7 @@ describe("calculateDeadline", () => {
 // FORMAT DEADLINE TESTS
 // =============================================================================
 
-describe("formatDeadline", () => {
+describe.concurrent("formatDeadline", () => {
   test('formats date in LiveView pattern: "Monday, 15 January @ 14:30 UTC"', () => {
     // Wednesday, January 15th, 2025 at 14:30 UTC
     const deadline = new Date("2025-01-15T14:30:00Z");
@@ -228,7 +228,7 @@ describe("formatDeadline", () => {
 // INTEGRATION TESTS
 // =============================================================================
 
-describe("calculateDeadline + formatDeadline integration", () => {
+describe.concurrent("calculateDeadline + formatDeadline integration", () => {
   test("end-to-end: inserted_at to formatted deadline string", () => {
     // User created on Monday, January 13th at 10:30 UTC
     const insertedAt = "2025-01-13T10:30:00Z";
@@ -324,7 +324,7 @@ describe("calculateDeadline + formatDeadline integration", () => {
 // EDGE CASE TESTS
 // =============================================================================
 
-describe("dateFormatting edge cases", () => {
+describe.concurrent("dateFormatting edge cases", () => {
   test("calculateDeadline handles very old timestamps", () => {
     // User from year 2020
     const insertedAt = "2020-01-13T10:30:00Z";

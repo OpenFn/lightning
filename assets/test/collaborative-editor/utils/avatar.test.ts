@@ -15,7 +15,7 @@ import { createMockUser } from "../fixtures/sessionContextData";
 // NORMAL CASES
 // =============================================================================
 
-describe("getAvatarInitials - Normal Cases", () => {
+describe.concurrent("getAvatarInitials - Normal Cases", () => {
   test("returns correct initials for first and last name", () => {
     const user = createMockUser({
       first_name: "John",
@@ -66,7 +66,7 @@ describe("getAvatarInitials - Normal Cases", () => {
 // WHITESPACE HANDLING
 // =============================================================================
 
-describe("getAvatarInitials - Whitespace Handling", () => {
+describe.concurrent("getAvatarInitials - Whitespace Handling", () => {
   // Test various whitespace scenarios are trimmed correctly
   test.each([
     {
@@ -109,7 +109,7 @@ describe("getAvatarInitials - Whitespace Handling", () => {
 // EDGE CASES - NULL USER
 // =============================================================================
 
-describe("getAvatarInitials - Null User Case", () => {
+describe.concurrent("getAvatarInitials - Null User Case", () => {
   test("returns fallback for null user", () => {
     expect(getAvatarInitials(null)).toBe("??");
   });
@@ -119,7 +119,7 @@ describe("getAvatarInitials - Null User Case", () => {
 // EDGE CASES - EMPTY STRINGS
 // =============================================================================
 
-describe("getAvatarInitials - Empty String Cases", () => {
+describe.concurrent("getAvatarInitials - Empty String Cases", () => {
   // Test various empty/whitespace scenarios return fallback
   test.each([
     {
@@ -162,7 +162,7 @@ describe("getAvatarInitials - Empty String Cases", () => {
 // SPECIAL CHARACTERS
 // =============================================================================
 
-describe("getAvatarInitials - Special Characters", () => {
+describe.concurrent("getAvatarInitials - Special Characters", () => {
   // Test various special character scenarios
   test.each([
     {
@@ -199,7 +199,7 @@ describe("getAvatarInitials - Special Characters", () => {
 // UNICODE AND EMOJI CASES
 // =============================================================================
 
-describe("getAvatarInitials - Unicode Cases", () => {
+describe.concurrent("getAvatarInitials - Unicode Cases", () => {
   test("handles names with emoji", () => {
     const user = createMockUser({
       first_name: "😀John",

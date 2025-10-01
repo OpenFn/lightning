@@ -181,7 +181,7 @@ export function createMockUser(
   overrides: Partial<UserContext> = {}
 ): UserContext {
   return {
-    id: "user-1",
+    id: "990e8400-e29b-41d4-a716-446655440000", // Valid UUIDv4 format
     email: "test@example.com",
     first_name: "Test",
     last_name: "User",
