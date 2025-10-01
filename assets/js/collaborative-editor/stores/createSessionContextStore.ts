@@ -240,13 +240,16 @@ export const createSessionContextStore = (): SessionContextStore => {
 
     try {
       logger.debug("Requesting session context");
-      const response = await channelRequest<{
-        session_context: unknown;
-      }>(_channelProvider.channel, "get_context", {});
+      // Note: Elixir handler returns {user, project, config} directly
+      // NOT wrapped in session_context key
+      // See lib/lightning_web/channels/workflow_channel.ex line 96-102
+      const response = await channelRequest(
+        _channelProvider.channel,
+        "get_context",
+        {}
+      );
 
-      if (response.session_context) {
-        handleSessionContextReceived(response.session_context);
-      }
+      handleSessionContextReceived(response);
     } catch (error) {
       logger.error("Session context request failed", error);
       setError("Failed to request session context");

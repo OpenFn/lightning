@@ -9,6 +9,7 @@ import { Header } from "./components/Header";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { StoreProvider } from "./contexts/StoreProvider";
+import { useProject } from "./hooks/useSessionContext";
 
 export interface CollaborativeEditorDataProps {
   "data-workflow-id": string;
@@ -19,17 +20,41 @@ export interface CollaborativeEditorDataProps {
   "data-project-name"?: string;
 }
 
-export const CollaborativeEditor: WithActionProps<
-  CollaborativeEditorDataProps
-> = props => {
-  // Extract data from props (ReactComponent hook passes data attributes as props)
-  const workflowId = props["data-workflow-id"];
-  const workflowName = props["data-workflow-name"];
-  const userId = props["data-user-id"];
-  const userName = props["data-user-name"];
-  // TODO: use url state to get projectId and get project from server
-  const projectId = props["data-project-id"];
-  const projectName = props["data-project-name"];
+/**
+ * BreadcrumbContent Component
+ *
+ * Internal component that renders breadcrumbs with store-first, props-fallback pattern.
+ * This component must be inside StoreProvider to access sessionContextStore.
+ *
+ * Migration Strategy:
+ * - Tries to get project data from sessionContextStore first
+ * - Falls back to props if store data not yet available
+ * - This ensures breadcrumbs work during migration and server-side rendering
+ * - Eventually props can be removed when all project data flows through store
+ */
+interface BreadcrumbContentProps {
+  workflowId: string;
+  workflowName: string;
+  projectIdFallback?: string;
+  projectNameFallback?: string;
+}
+
+function BreadcrumbContent({
+  workflowId,
+  workflowName,
+  projectIdFallback,
+  projectNameFallback,
+}: BreadcrumbContentProps) {
+  // Get project from store (may be null if not yet loaded)
+  const projectFromStore = useProject();
+
+  // Store-first with props-fallback pattern
+  // This ensures breadcrumbs work during:
+  // 1. Initial server-side render (uses props)
+  // 2. Store hydration period (uses props)
+  // 3. Full collaborative mode (uses store)
+  const projectId = projectFromStore?.id ?? projectIdFallback;
+  const projectName = projectFromStore?.name ?? projectNameFallback;
 
   const breadcrumbElements = useMemo(() => {
     return [
@@ -61,7 +86,29 @@ export const CollaborativeEditor: WithActionProps<
         </div>
       </div>,
     ];
-  }, [projectId, projectName, workflowName]);
+  }, [projectId, projectName, workflowName, projectFromStore]);
+
+  return (
+    <Header
+      {...(projectId !== undefined && { projectId })}
+      workflowId={workflowId}
+    >
+      {breadcrumbElements}
+    </Header>
+  );
+}
+
+export const CollaborativeEditor: WithActionProps<
+  CollaborativeEditorDataProps
+> = props => {
+  // Extract data from props (ReactComponent hook passes data attributes as props)
+  const workflowId = props["data-workflow-id"];
+  const workflowName = props["data-workflow-name"];
+  const userId = props["data-user-id"];
+  const userName = props["data-user-name"];
+  // Migration: Props are now fallbacks, sessionContextStore is primary source
+  const projectId = props["data-project-id"];
+  const projectName = props["data-project-name"];
 
   return (
     <div className="collaborative-editor h-full flex flex-col">
@@ -72,9 +119,14 @@ export const CollaborativeEditor: WithActionProps<
           userName={userName}
         >
           <StoreProvider>
-            <Header projectId={projectId} workflowId={workflowId}>
-              {breadcrumbElements}
-            </Header>
+            <BreadcrumbContent
+              workflowId={workflowId}
+              workflowName={workflowName}
+              {...(projectId !== undefined && { projectIdFallback: projectId })}
+              {...(projectName !== undefined && {
+                projectNameFallback: projectName,
+              })}
+            />
             <div className="flex-1 min-h-0 overflow-hidden">
               <WorkflowEditor />
               <CollaborationWidget />

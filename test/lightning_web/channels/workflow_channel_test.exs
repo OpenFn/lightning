@@ -94,6 +94,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert user_data.last_name == user.last_name
       assert user_data.email == user.email
       assert is_boolean(user_data.email_confirmed)
+      assert user_data.inserted_at == user.inserted_at
 
       # Project data
       assert %{project: project_data} = response

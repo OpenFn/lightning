@@ -256,7 +256,8 @@ defmodule LightningWeb.WorkflowChannel do
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      email_confirmed: !is_nil(user.confirmed_at)
+      email_confirmed: !is_nil(user.confirmed_at),
+      inserted_at: user.inserted_at
     }
   end
 
