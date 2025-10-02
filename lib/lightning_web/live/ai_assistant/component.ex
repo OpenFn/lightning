@@ -1539,8 +1539,8 @@ defmodule LightningWeb.AiAssistant.Component do
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-gray-100 px-4 py-3">
-          <div class="flex items-center gap-1">
+        <div class="bg-white rounded-2xl border border-gray-100 px-4 py-3 min-w-[200px]">
+          <div :if={@streaming_content == ""} class="flex items-center gap-1">
             <div class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
             <div
               class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
@@ -1554,8 +1554,14 @@ defmodule LightningWeb.AiAssistant.Component do
             </div>
           </div>
           <p class="text-xs text-gray-500 mt-2">{@streaming_status || "Processing..."}</p>
-          <div :if={@streaming_content != ""} class="mt-2 text-sm text-gray-800">
-            {@streaming_content}
+          <div
+            :if={@streaming_content != ""}
+            class="mt-2 text-sm text-gray-800 leading-relaxed"
+            phx-hook="StreamingText"
+            id="streaming-text-content"
+            data-streaming-content={@streaming_content}
+          >
+            <span class="inline-block w-1 h-4 bg-gray-400 ml-0.5 animate-pulse"></span>
           </div>
         </div>
       </div>
