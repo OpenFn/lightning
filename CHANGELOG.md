@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- SessionContextStore for collaborative workflow editor to provide user, project,
+  and config data to React components via Phoenix Channel
+  [#3624](https://github.com/OpenFn/lightning/issues/3624)
+
 ### Changed
 
 ### Fixed
