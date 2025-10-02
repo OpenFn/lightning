@@ -61,11 +61,16 @@ defmodule Lightning.Runs.Query do
   @spec lost_steps() :: Ecto.Queryable.t()
   def lost_steps do
     final_states = Run.final_states()
+    grace_period_seconds = Lightning.Config.grace_period()
+
+    grace_cutoff =
+      Lightning.current_time() |> DateTime.add(-grace_period_seconds, :second)
 
     from s in Step,
       join: r in assoc(s, :runs),
       on: r.state in ^final_states,
-      where: is_nil(s.exit_reason) and is_nil(s.finished_at)
+      where: is_nil(s.exit_reason) and is_nil(s.finished_at),
+      where: r.finished_at < ^grace_cutoff
   end
 
   @doc """

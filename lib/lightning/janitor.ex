@@ -64,8 +64,8 @@ defmodule Lightning.Janitor do
       end)
       |> Stream.run()
 
-      # TODO - this appears to be a duplicate of https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L291
-      # but without it, the tests don't pass. @midigofrank, do you have ideas?
+      # Note that this is a safety net which marks individual steps in a finished
+      # run as lost if we have no data on them.
       Runs.Query.lost_steps() |> Runs.mark_steps_lost()
     end)
   end
