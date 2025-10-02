@@ -223,17 +223,43 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp handle_streaming_complete(socket) do
-    # Create AI message with accumulated streaming content
+    require Logger
+    # Save the accumulated streaming content as an AI assistant message
     if socket.assigns.streaming_content != "" do
-      # TODO: Save the streaming content as an AI message
-      # For now, just clear the streaming state and end loading
-      socket
-      |> assign(
-        streaming_content: "",
-        streaming_status: nil,
-        pending_message: AsyncResult.ok(nil)
-      )
+      session = socket.assigns.session
+      content = socket.assigns.streaming_content
+
+      Logger.info("[Component] Saving streamed message to database: #{String.slice(content, 0, 50)}...")
+
+      # Create assistant message
+      case AiAssistant.save_message(session, %{
+        role: :assistant,
+        content: content,
+        status: :success
+      }) do
+        {:ok, updated_session} ->
+          Logger.info("[Component] Successfully saved streamed message")
+          # Update component with new session and clear streaming state
+          socket
+          |> assign(
+            session: updated_session,
+            streaming_content: "",
+            streaming_status: nil,
+            pending_message: AsyncResult.ok(nil)
+          )
+
+        {:error, error} ->
+          Logger.error("[Component] Failed to save streamed message: #{inspect(error)}")
+          # Clear streaming state anyway
+          socket
+          |> assign(
+            streaming_content: "",
+            streaming_status: nil,
+            pending_message: AsyncResult.ok(nil)
+          )
+      end
     else
+      Logger.warning("[Component] streaming_complete received but no content accumulated")
       socket
       |> assign(
         streaming_content: "",
