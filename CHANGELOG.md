@@ -17,8 +17,8 @@ and this project adheres to
 
 ### Added
 
-- SessionContextStore for collaborative workflow editor to provide user, project,
-  and config data to React components via Phoenix Channel
+- SessionContextStore for collaborative workflow editor to provide user,
+  project, and config data to React components via Phoenix Channel
   [#3624](https://github.com/OpenFn/lightning/issues/3624)
 
 ### Changed
@@ -38,6 +38,8 @@ and this project adheres to
 
 - Removed unused functions for getting dataclip bodies from postgres as
   JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
+- Limit sandbox creation
+  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
 
 ### Fixed
 
