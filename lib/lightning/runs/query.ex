@@ -53,7 +53,8 @@ defmodule Lightning.Runs.Query do
                r.started_at,
                r.claimed_at,
                ^fallback_oldest_claim
-             ))
+             )),
+      lock: "FOR UPDATE SKIP LOCKED"
     )
   end
 
