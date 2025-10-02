@@ -40,12 +40,20 @@ defmodule Lightning.Runs.Query do
       where: r.state not in ^final_states,
       where:
         fragment(
-          "? + ((? ->> 'run_timeout_ms')::int + ?) * '1 millisecond'::interval < ?",
+          "COALESCE(?, ?) + ((? ->> 'run_timeout_ms')::int + ?) * '1 millisecond'::interval < ?",
+          r.started_at,
           r.claimed_at,
           r.options,
           ^grace_period_ms,
           ^now
-        ) or (is_nil(r.options) and r.claimed_at < ^fallback_oldest_claim)
+        ) or
+          (is_nil(r.options) and
+             fragment(
+               "COALESCE(?, ?) < ?",
+               r.started_at,
+               r.claimed_at,
+               ^fallback_oldest_claim
+             ))
     )
   end
 
