@@ -128,6 +128,7 @@ defmodule Lightning.JanitorTest do
             starting_trigger: trigger,
             dataclip: dataclip,
             state: state,
+            finished_at: DateTime.utc_now() |> DateTime.add(-3600),
             steps: [
               build(:step,
                 job: job_1,
