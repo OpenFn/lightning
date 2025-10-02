@@ -28,7 +28,10 @@ defmodule Lightning.ApolloClient.WebSocket do
       {"Authorization", "Bearer #{Lightning.Config.apollo(:ai_assistant_api_key)}"}
     ]
 
-    init_state = %{payload: payload}
+    init_state = %{
+      payload: payload,
+      lightning_session_id: payload["lightning_session_id"]
+    }
 
     WebSockex.start_link(url, __MODULE__, init_state,
       extra_headers: headers,
@@ -40,10 +43,11 @@ defmodule Lightning.ApolloClient.WebSocket do
   def handle_connect(_conn, state) do
     Logger.info("[ApolloWebSocket] Connected to Apollo streaming")
 
-    # Send message in Apollo's expected format
+    # Send message in Apollo's expected format (without Lightning-specific fields)
+    apollo_payload = Map.delete(state.payload, "lightning_session_id")
     message = Jason.encode!(%{
       "event" => "start",
-      "data" => state.payload
+      "data" => apollo_payload
     })
 
     # Send the message immediately after connecting
@@ -115,12 +119,32 @@ defmodule Lightning.ApolloClient.WebSocket do
     end
   end
 
-  defp send_to_channel(message, _state) do
-    # Broadcast to all connected ApolloChannel processes
-    Phoenix.PubSub.broadcast(
-      Lightning.PubSub,
-      "apollo:events",
-      message
-    )
+  defp send_to_channel(message, state) do
+    # Broadcast directly to Lightning AI session using the same format as message_status_changed
+    if session_id = state.lightning_session_id do
+      case message do
+        {:apollo_event, "CHUNK", data} ->
+          Lightning.broadcast(
+            "ai_session:#{session_id}",
+            {:ai_assistant, :streaming_chunk, %{content: data, session_id: session_id}}
+          )
+
+        {:apollo_event, "STATUS", data} ->
+          Lightning.broadcast(
+            "ai_session:#{session_id}",
+            {:ai_assistant, :status_update, %{status: data, session_id: session_id}}
+          )
+
+        {:apollo_complete, _data} ->
+          # Mark streaming as complete
+          Lightning.broadcast(
+            "ai_session:#{session_id}",
+            {:ai_assistant, :streaming_complete, %{session_id: session_id}}
+          )
+
+        _ ->
+          Logger.debug("[ApolloWebSocket] Unhandled message type: #{inspect(message)}")
+      end
+    end
   end
 end

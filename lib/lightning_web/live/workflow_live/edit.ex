@@ -2361,11 +2361,43 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :unregister_component ->
         handle_component_unregistration(socket, payload)
+
+      :streaming_chunk ->
+        handle_streaming_update(socket, payload, :streaming_chunk)
+
+      :status_update ->
+        handle_streaming_update(socket, payload, :status_update)
+
+      :streaming_complete ->
+        handle_streaming_update(socket, payload, :streaming_complete)
     end
   end
 
-  def handle_info(%{}, socket) do
-    {:noreply, socket}
+  defp handle_streaming_update(socket, %{session_id: session_id} = payload, update_type) do
+    registry = socket.assigns.ai_assistant_registry
+    require Logger
+
+    Logger.info("[Edit LiveView] Received #{update_type} for session #{session_id}")
+    Logger.info("[Edit LiveView] Registry: #{inspect(Map.keys(registry))}")
+
+    case Map.get(registry, session_id) do
+      nil ->
+        Logger.warning("[Edit LiveView] No component registered for session #{session_id}")
+        {:noreply, socket}
+
+      component_id ->
+        Logger.info("[Edit LiveView] Forwarding #{update_type} to component #{component_id}")
+        # Remove session_id from payload and wrap in update_type key
+        data = Map.delete(payload, :session_id)
+        update_map = Map.put(%{id: component_id}, update_type, data)
+
+        send_update(
+          LightningWeb.AiAssistant.Component,
+          update_map
+        )
+
+        {:noreply, socket}
+    end
   end
 
   defp get_workflow_by_id(workflow_id) do
@@ -3657,12 +3689,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
          session_id: session_id
        }) do
     registry = socket.assigns.ai_assistant_registry
+    require Logger
+
+    Logger.info("[Edit LiveView] Registering component #{component_id} for session #{session_id}")
 
     if connected?(socket) && !Map.has_key?(registry, session_id) do
+      Logger.info("[Edit LiveView] Subscribing to ai_session:#{session_id}")
       Lightning.subscribe("ai_session:#{session_id}")
     end
 
     updated_registry = Map.put(registry, session_id, component_id)
+    Logger.info("[Edit LiveView] Updated registry: #{inspect(Map.keys(updated_registry))}")
 
     {:noreply, assign(socket, :ai_assistant_registry, updated_registry)}
   end

@@ -57,12 +57,31 @@ defmodule LightningWeb.AiAssistant.Component do
     {:ok, handle_message_status(status, socket)}
   end
 
-  def update(%{streaming_chunk: chunk_data}, socket) do
-    {:ok, handle_streaming_chunk(chunk_data, socket)}
+  def update(%{id: _id, streaming_chunk: chunk_data}, socket) do
+    require Logger
+    session_id = get_in(socket.assigns, [:session, Access.key(:id)])
+    Logger.info("[Component] CHUNK | session=#{session_id} | action=#{socket.assigns[:action]} | before='#{socket.assigns.streaming_content}'")
+
+    updated_socket = handle_streaming_chunk(chunk_data, socket)
+
+    Logger.info("[Component] CHUNK | after='#{updated_socket.assigns.streaming_content}'")
+    {:ok, updated_socket}
   end
 
-  def update(%{status_update: status_data}, socket) do
-    {:ok, handle_status_update(status_data, socket)}
+  def update(%{id: _id, status_update: status_data}, socket) do
+    require Logger
+    session_id = get_in(socket.assigns, [:session, Access.key(:id)])
+    Logger.info("[Component] STATUS | session=#{session_id} | action=#{socket.assigns[:action]} | status='#{status_data.status}'")
+
+    updated_socket = handle_status_update(status_data, socket)
+
+    {:ok, updated_socket}
+  end
+
+  def update(%{id: _id, streaming_complete: _}, socket) do
+    require Logger
+    Logger.info("[Component] COMPLETE")
+    {:ok, handle_streaming_complete(socket)}
   end
 
   def update(%{action: :code_error} = assigns, socket) do
@@ -177,7 +196,9 @@ defmodule LightningWeb.AiAssistant.Component do
       session: session,
       pending_message: AsyncResult.ok(nil),
       selected_message: nil,
-      code_error: nil
+      code_error: nil,
+      streaming_content: Map.get(socket.assigns, :streaming_content, ""),
+      streaming_status: Map.get(socket.assigns, :streaming_status, nil)
     )
     |> delegate_to_handler(:on_message_received, [session])
   end
@@ -186,8 +207,8 @@ defmodule LightningWeb.AiAssistant.Component do
     assign(socket,
       session: session,
       pending_message: AsyncResult.ok(nil),
-      streaming_content: "",
-      streaming_status: nil
+      streaming_content: Map.get(socket.assigns, :streaming_content, ""),
+      streaming_status: Map.get(socket.assigns, :streaming_status, nil)
     )
   end
 
@@ -199,6 +220,27 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp handle_status_update(status_data, socket) do
     assign(socket, streaming_status: status_data.status)
+  end
+
+  defp handle_streaming_complete(socket) do
+    # Create AI message with accumulated streaming content
+    if socket.assigns.streaming_content != "" do
+      # TODO: Save the streaming content as an AI message
+      # For now, just clear the streaming state and end loading
+      socket
+      |> assign(
+        streaming_content: "",
+        streaming_status: nil,
+        pending_message: AsyncResult.ok(nil)
+      )
+    else
+      socket
+      |> assign(
+        streaming_content: "",
+        streaming_status: nil,
+        pending_message: AsyncResult.ok(nil)
+      )
+    end
   end
 
   defp handle_code_error(socket, assigns) do
@@ -223,6 +265,8 @@ defmodule LightningWeb.AiAssistant.Component do
     |> assign_new(:changeset, fn _ ->
       handler.validate_form(%{"content" => nil})
     end)
+    |> assign_new(:streaming_content, fn -> "" end)
+    |> assign_new(:streaming_status, fn -> nil end)
   end
 
   defp extract_message_id(%ChatSession{messages: messages}) do
@@ -444,14 +488,20 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp save_message(socket, action, content) do
+    require Logger
+    Logger.info("[AI Component] save_message called with action: #{inspect(action)}")
+
     result =
       case action do
         :new -> create_new_session(socket, content)
         :show -> add_to_existing_session(socket, content)
       end
 
+    Logger.info("[AI Component] save_message result: #{inspect(result)}")
+
     case result do
       {:ok, session} ->
+        Logger.info("[AI Component] Calling handle_successful_save")
         handle_successful_save(socket, session, action)
 
       {:error, error} ->
@@ -468,6 +518,11 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp handle_successful_save(socket, session, :new) do
+    # Parent LiveView handles PubSub subscription via component registration
+    # Component receives updates via send_update from parent
+    require Logger
+    Logger.info("[AI Component] New session created: #{session.id}")
+
     socket
     |> assign(:session, session)
     |> assign(:pending_message, AsyncResult.loading())
@@ -475,6 +530,11 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp handle_successful_save(socket, session, :show) do
+    # Parent LiveView handles PubSub subscription via component registration
+    # Component receives updates via send_update from parent
+    require Logger
+    Logger.info("[AI Component] Message added to session: #{session.id}")
+
     socket
     |> assign(:session, session)
     |> assign(:pending_message, AsyncResult.loading())
@@ -605,6 +665,8 @@ defmodule LightningWeb.AiAssistant.Component do
             handler={@handler}
             code_error={@code_error}
             mode={@mode}
+            streaming_status={@streaming_status}
+            streaming_content={@streaming_content}
           />
       <% end %>
 
@@ -1143,6 +1205,8 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :handler, :any, required: true
   attr :code_error, :any, required: true
   attr :mode, :atom, required: true
+  attr :streaming_status, :string, default: nil
+  attr :streaming_content, :string, default: ""
 
   defp render_individual_session(assigns) do
     assigns = assign(assigns, ai_feedback: ai_feedback())
@@ -1431,7 +1495,13 @@ defmodule LightningWeb.AiAssistant.Component do
     """
   end
 
+  attr :handler, :any, required: true
+  attr :streaming_status, :string, default: nil
+  attr :streaming_content, :string, default: ""
+
   defp assistant_typing_indicator(assigns) do
+    require Logger
+    Logger.info("[TypingIndicator] RENDER | status='#{inspect(assigns.streaming_status)}' | content='#{assigns.streaming_content}'")
     assigns = assign(assigns, animation_delay: @typing_animation_delay_ms)
 
     ~H"""
