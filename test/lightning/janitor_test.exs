@@ -120,6 +120,8 @@ defmodule Lightning.JanitorTest do
           dataclip: dataclip
         )
 
+      grace_period = Application.get_env(:lightning, :run_grace_period_seconds)
+
       finished_runs_with_unfinished_steps =
         Run.final_states()
         |> Enum.map(fn state ->
@@ -128,7 +130,7 @@ defmodule Lightning.JanitorTest do
             starting_trigger: trigger,
             dataclip: dataclip,
             state: state,
-            finished_at: DateTime.utc_now() |> DateTime.add(-3600),
+            finished_at: DateTime.utc_now() |> DateTime.add(-grace_period),
             steps: [
               build(:step,
                 job: job_1,
