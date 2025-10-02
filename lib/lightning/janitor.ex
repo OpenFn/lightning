@@ -19,6 +19,8 @@ defmodule Lightning.Janitor do
   alias Lightning.Repo
   alias Lightning.Runs
 
+  require Logger
+
   @doc """
   The perform function takes an `%Oban.Job`, allowing this module to be invoked
   by the Oban cron plugin.
@@ -39,16 +41,31 @@ defmodule Lightning.Janitor do
     Repo.transaction(fn ->
       stream
       |> Stream.each(fn run ->
-        Runs.mark_run_lost(run)
+        case Runs.mark_run_lost(run) do
+          {:ok, _updated_run} ->
+            run
+            |> Repo.preload([:log_lines, work_order: [:workflow]])
+            |> Lightning.FailureAlerter.alert_on_failure()
 
-        run
-        |> Repo.preload([:log_lines, work_order: [:workflow]])
-        |> Lightning.FailureAlerter.alert_on_failure()
+          {:error, :already_completed} ->
+            Logger.error(
+              "Janitor Unexpected: Run #{run.id} already completed despite row lock"
+            )
+
+            :ok
+
+          {:error, reason} ->
+            Logger.error(
+              "Janitor Unexpected: Run #{run.id} could not be marked as lost for #{inspect(reason)}"
+            )
+
+            :ok
+        end
       end)
       |> Stream.run()
 
-      # TODO - this appears to be a duplicate of https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L291
-      # but without it, the tests don't pass. @midigofrank, do you have ideas?
+      # Note that this is a safety net which marks individual steps in a finished
+      # run as lost if we have no data on them.
       Runs.Query.lost_steps() |> Runs.mark_steps_lost()
     end)
   end

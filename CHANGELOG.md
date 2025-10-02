@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Prevent the janitor trying to mark runs as lost that aren't actually lost
+  [PR#3672](https://github.com/OpenFn/lightning/pull/3672)
 - Fix canvas "lockup" after AI chat errors, prevent sending empty message to AI
   [3605](https://github.com/OpenFn/lightning/issues/3605)
 
