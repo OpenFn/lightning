@@ -95,6 +95,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       end
 
     case result do
+      {:ok, :streaming} ->
+        # Streaming in progress, don't mark as success yet
+        # The streaming_complete event will trigger success later
+        {:ok, session}
+
       {:ok, _} ->
         {:ok, updated_session, _updated_message} =
           update_message_status(message, :success)
@@ -130,13 +135,13 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec stream_job_message(AiAssistant.ChatSession.t(), String.t(), keyword()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, :streaming | AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp stream_job_message(session, content, options) do
     # For now, start streaming and use existing query as fallback
     try do
       start_streaming_request(session, content, options)
-      # Return success immediately - streaming happens async
-      {:ok, session}
+      # Return :streaming indicator - message stays in processing state
+      {:ok, :streaming}
     rescue
       _ ->
         # Fallback to non-streaming if streaming fails
@@ -160,10 +165,13 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       "stream" => true
     }
 
+    # Add session ID for Lightning broadcasts
+    websocket_payload = Map.put(payload, "lightning_session_id", session.id)
+
     # Start Apollo WebSocket stream
     apollo_ws_url = get_apollo_ws_url()
 
-    case Lightning.ApolloClient.WebSocket.start_stream(apollo_ws_url, payload) do
+    case Lightning.ApolloClient.WebSocket.start_stream(apollo_ws_url, websocket_payload) do
       {:ok, _pid} ->
         Logger.info("[MessageProcessor] Started Apollo WebSocket stream for session #{session.id}")
 
