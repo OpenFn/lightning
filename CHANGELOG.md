@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Limit sandbox creation
+  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
+
 ### Fixed
 
 ## [v2.14.9] - 2025-10-03
@@ -31,8 +34,6 @@ and this project adheres to
 
 - Removed unused functions for getting dataclip bodies from postgres as
   JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
-- Limit sandbox creation
-  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
 
 ### Fixed
 
