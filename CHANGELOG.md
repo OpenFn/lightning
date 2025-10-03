@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add project merging functionality
+  [#3432](https://github.com/OpenFn/lightning/issues/3432)
+
 ### Changed
 
 - Limit sandbox creation
