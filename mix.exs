@@ -101,7 +101,7 @@ defmodule Lightning.MixProject do
       {:libcluster, "~> 3.3"},
       {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
-      {:mimic, "~> 1.7.2", only: :test},
+      {:mimic, "~> 1.12.0", only: :test},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
