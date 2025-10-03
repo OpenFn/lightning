@@ -150,12 +150,14 @@ defmodule Lightning.Projects.MergeProjects do
       )
 
     # Step 3: Try to map any remaining unmapped source jobs
-    map_remaining_jobs(
+    # attempt last signature mapping
+    attempt_structural_matching(
       node_mappings,
       source_workflow,
       target_workflow,
       source_adjacency_map,
-      target_adjacency_map
+      target_adjacency_map,
+      true
     )
   end
 
@@ -386,54 +388,13 @@ defmodule Lightning.Projects.MergeProjects do
 
   # Find match among candidates using job body comparison
   defp filter_matching_by_body(source_job, candidates) do
-    source_body = source_job.body || ""
+    source_body = String.downcase(source_job.body || "") |> String.trim()
 
     candidates
     |> Enum.filter(fn candidate ->
-      candidate_body = candidate.body || ""
-      String.trim(source_body) == String.trim(candidate_body)
+      candidate_body = String.downcase(candidate.body || "")
+      source_body == String.trim(candidate_body)
     end)
-  end
-
-  # - if exactly 1 unmapped source and 1 unmapped target, map them together
-  # - otherwise, attempt the signature mapping one last time.
-  defp map_remaining_jobs(
-         node_mappings,
-         source_workflow,
-         target_workflow,
-         source_adjacency_map,
-         target_adjacency_map
-       ) do
-    # Get unmapped source jobs
-    unmapped_source_jobs =
-      Enum.reject(source_workflow.jobs, fn job ->
-        Map.has_key?(node_mappings, job.id)
-      end)
-
-    mapped_target_ids = Map.values(node_mappings)
-
-    unmapped_target_jobs =
-      Enum.reject(target_workflow.jobs, fn job ->
-        job.id in mapped_target_ids
-      end)
-
-    # Special case: exactly 1 unmapped source and 1 unmapped target
-    case {unmapped_source_jobs, unmapped_target_jobs} do
-      {[single_source], [single_target]} ->
-        # Map the single remaining source to single remaining target
-        Map.put(node_mappings, single_source.id, single_target.id)
-
-      _ ->
-        # attempt last signature mapping
-        attempt_structural_matching(
-          node_mappings,
-          source_workflow,
-          target_workflow,
-          source_adjacency_map,
-          target_adjacency_map,
-          true
-        )
-    end
   end
 
   # Get all edges as parent -> [children] map
