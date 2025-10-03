@@ -211,3 +211,93 @@ export async function waitForCondition(
     await waitForAsync(interval);
   }
 }
+
+/**
+ * Helper functions for creating mock push responses in adaptor tests
+ */
+
+/**
+ * Creates a mock push with configurable response for a specific event type
+ */
+export function createMockPushWithResponse(
+  eventType: string,
+  status: "ok" | "error" | "timeout",
+  response?: unknown
+): (event: string, _payload: unknown) => MockPush {
+  return (event: string, _payload: unknown) => {
+    const mockPush = {
+      receive: (
+        receiveStatus: string,
+        callback: (response?: unknown) => void
+      ) => {
+        if (event === eventType && receiveStatus === status) {
+          setTimeout(() => {
+            callback(response);
+          }, 0);
+        } else if (receiveStatus === "error" && status !== "error") {
+          // No-op for error status when not expecting error
+        } else if (receiveStatus === "timeout" && status !== "timeout") {
+          // No-op for timeout status when not expecting timeout
+        }
+        return mockPush;
+      },
+    };
+    return mockPush;
+  };
+}
+
+/**
+ * Creates a successful mock push for adaptors requests
+ */
+export function createSuccessfulMockPush(
+  adaptors: unknown[]
+): (event: string, _payload: unknown) => MockPush {
+  return (event: string, _payload: unknown) => {
+    const mockPush = {
+      receive: (status: string, callback: (response?: unknown) => void) => {
+        if (event === "request_adaptors" && status === "ok") {
+          setTimeout(() => {
+            callback({ adaptors });
+          }, 0);
+        } else if (status === "error") {
+          setTimeout(() => {
+            callback({ reason: "Error" });
+          }, 0);
+        } else if (status === "timeout") {
+          setTimeout(() => {
+            callback();
+          }, 0);
+        }
+        return mockPush;
+      },
+    };
+    return mockPush;
+  };
+}
+
+/**
+ * Creates an error mock push for adaptors requests
+ */
+export function createErrorMockPush(
+  reason: string
+): (event: string, _payload: unknown) => MockPush {
+  return (event: string, _payload: unknown) => {
+    const mockPush = {
+      receive: (status: string, callback: (response?: unknown) => void) => {
+        if (event === "request_adaptors" && status === "error") {
+          setTimeout(() => {
+            callback({ reason });
+          }, 0);
+        } else if (status === "ok") {
+          // No-op for ok status in error scenario
+        } else if (status === "timeout") {
+          setTimeout(() => {
+            callback();
+          }, 0);
+        }
+        return mockPush;
+      },
+    };
+    return mockPush;
+  };
+}
