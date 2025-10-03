@@ -31,6 +31,8 @@ and this project adheres to
 
 - Removed unused functions for getting dataclip bodies from postgres as
   JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
+- Limit sandbox creation
+  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
 
 ### Fixed
 
