@@ -1,6 +1,7 @@
 defmodule Lightning.DownloadAdaptorRegistryCacheTest do
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureIO
   import Mox
   import Tesla.Test
 
@@ -28,7 +29,9 @@ defmodule Lightning.DownloadAdaptorRegistryCacheTest do
       file_path = Path.join([tmp_dir, "cache.json"])
       refute File.exists?(file_path)
 
-      DownloadAdaptorRegistryCache.run(["--path", file_path])
+      capture_io(fn ->
+        DownloadAdaptorRegistryCache.run(["--path", file_path])
+      end)
 
       refute File.exists?(file_path)
     end
@@ -58,7 +61,9 @@ defmodule Lightning.DownloadAdaptorRegistryCacheTest do
       file_path = Path.join([tmp_dir, "cache.json"])
       refute File.exists?(file_path)
 
-      DownloadAdaptorRegistryCache.run(["--path", file_path])
+      capture_io(fn ->
+        DownloadAdaptorRegistryCache.run(["--path", file_path])
+      end)
 
       assert File.exists?(file_path)
     end

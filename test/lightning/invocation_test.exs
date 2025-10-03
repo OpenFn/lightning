@@ -153,6 +153,69 @@ defmodule Lightning.InvocationTest do
       dataclip = insert(:dataclip)
       assert %Ecto.Changeset{} = Invocation.change_dataclip(dataclip)
     end
+
+    test "get_dataclip_with_body!/1 returns dataclip with body as JSON text" do
+      project = insert(:project)
+
+      # Test with http_request type - should wrap body in {"data": ..., "request": ...}
+      http_dataclip =
+        insert(:dataclip,
+          body: %{"foo" => "bar"},
+          request: %{"headers" => "list"},
+          type: :http_request,
+          project: project
+        )
+
+      result = Invocation.get_dataclip_with_body!(http_dataclip.id)
+
+      assert result.id == http_dataclip.id
+      assert result.type == :http_request
+      assert result.updated_at == http_dataclip.updated_at
+      # Body should be JSON text string, not Elixir map
+      assert is_binary(result.body_json)
+      # Should be wrapped structure for http_request
+      parsed = Jason.decode!(result.body_json)
+      assert parsed["data"] == %{"foo" => "bar"}
+      assert parsed["request"] == %{"headers" => "list"}
+
+      # Test with step_result type - should NOT wrap body
+      step_dataclip =
+        insert(:dataclip,
+          body: %{"baz" => "qux"},
+          type: :step_result,
+          project: project
+        )
+
+      result = Invocation.get_dataclip_with_body!(step_dataclip.id)
+
+      assert result.id == step_dataclip.id
+      assert result.type == :step_result
+      assert is_binary(result.body_json)
+      parsed = Jason.decode!(result.body_json)
+      assert parsed == %{"baz" => "qux"}
+
+      # Test with kafka type - should wrap body in {"data": ..., "request": ...}
+      kafka_dataclip =
+        insert(:dataclip,
+          body: %{"kafka" => "data"},
+          request: %{"topic" => "test"},
+          type: :kafka,
+          project: project
+        )
+
+      result = Invocation.get_dataclip_with_body!(kafka_dataclip.id)
+
+      assert result.type == :kafka
+      assert is_binary(result.body_json)
+      parsed = Jason.decode!(result.body_json)
+      assert parsed["data"] == %{"kafka" => "data"}
+      assert parsed["request"] == %{"topic" => "test"}
+
+      # Test that it raises when dataclip doesn't exist
+      assert_raise Ecto.NoResultsError, fn ->
+        Invocation.get_dataclip_with_body!(Ecto.UUID.generate())
+      end
+    end
   end
 
   describe "list_dataclips_for_job/2" do

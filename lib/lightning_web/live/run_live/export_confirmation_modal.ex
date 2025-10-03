@@ -26,7 +26,7 @@ defmodule LightningWeb.RunLive.ExportConfirmationModal do
             </button>
           </div>
         </:title>
-        <div class="container mx-auto px-6 space-y-6 bg-white text-sm text-slate-900">
+        <div class="space-y-6 bg-white text-sm text-slate-900">
           Exporting history will download all {@count_work_orders} work orders and associated runs, steps, and I/O data clips that match your query.<br />
           The export will happen in the background and you'll receive an email when it is complete.
         </div>

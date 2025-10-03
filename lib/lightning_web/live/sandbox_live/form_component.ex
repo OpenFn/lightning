@@ -5,6 +5,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectLimiter
   alias LightningWeb.Live.Helpers.ProjectTheme
   alias LightningWeb.SandboxLive.Components
 
@@ -157,18 +158,24 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       env: params["env"]
     }
 
-    case Projects.provision_sandbox(parent, actor, attrs) do
-      {:ok, sandbox} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Sandbox created")
-         |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
-
+    with :ok <- ProjectLimiter.limit_new_sandbox(parent.id),
+         {:ok, sandbox} <- Projects.provision_sandbox(parent, actor, attrs) do
+      socket
+      |> put_flash(:info, "Sandbox created")
+      |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")
+      |> noreply()
+    else
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply,
-         socket
-         |> assign(:changeset, changeset)
-         |> assign(:name, Changeset.get_field(changeset, :name))}
+        socket
+        |> assign(:changeset, changeset)
+        |> assign(:name, Changeset.get_field(changeset, :name))
+        |> noreply()
+
+      {:error, _reason, %{text: text}} ->
+        socket
+        |> put_flash(:error, text)
+        |> push_navigate(to: return_to || ~p"/projects/#{parent.id}/sandboxes")
+        |> noreply()
     end
   end
 

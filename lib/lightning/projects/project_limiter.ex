@@ -14,6 +14,15 @@ defmodule Lightning.Projects.ProjectLimiter do
     })
   end
 
+  @spec limit_new_sandbox(project_id :: Ecto.UUID.t()) ::
+          :ok | UsageLimiting.error()
+  def limit_new_sandbox(project_id) do
+    UsageLimiter.limit_action(
+      %Action{type: :new_sandbox, amount: 1},
+      %Context{project_id: project_id}
+    )
+  end
+
   @spec request_new_user(
           project_id :: Ecto.UUID.t(),
           user_count :: non_neg_integer()

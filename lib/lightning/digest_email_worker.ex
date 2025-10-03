@@ -116,21 +116,33 @@ defmodule Lightning.DigestEmailWorker do
       })
 
     failed_count =
-      count_workorders(project, %{
-        "crashed" => true,
-        "failed" => true,
-        "pending" => true,
-        "killed" => true,
-        "date_after" => start_date,
-        "date_before" => end_date,
-        "workflow_id" => workflow.id
-      })
+      count_workorders(
+        project,
+        build_failed_status_params(%{
+          "date_after" => start_date,
+          "date_before" => end_date,
+          "workflow_id" => workflow.id
+        })
+      )
 
     %{
       workflow: workflow,
       successful_workorders: successful_count,
       failed_workorders: failed_count
     }
+  end
+
+  # Builds search parameters for failed workorders by including all failure states.
+  # This ensures new failure states added to Run.final_states() are automatically included.
+  defp build_failed_status_params(base_params) do
+    failure_states = Lightning.Run.failure_states()
+
+    failure_params =
+      failure_states
+      |> Enum.map(&{Atom.to_string(&1), true})
+      |> Enum.into(%{})
+
+    Map.merge(base_params, failure_params)
   end
 
   defp count_workorders(project, params) do

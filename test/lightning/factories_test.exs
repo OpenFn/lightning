@@ -76,6 +76,61 @@ defmodule Lightning.FactoriesTest do
     end
   end
 
+  describe "credential_body" do
+    test "builds a credential_body with default values" do
+      credential_body = Factories.build(:credential_body)
+
+      assert credential_body.name == "main"
+      assert credential_body.body == %{"api_key" => "secret_value"}
+      assert %Lightning.Credentials.Credential{} = credential_body.credential
+    end
+
+    test "allows overriding default values" do
+      custom_credential = Factories.build(:credential, name: "Custom Cred")
+
+      credential_body =
+        Factories.build(:credential_body,
+          name: "staging",
+          body: %{"custom" => "data"},
+          credential: custom_credential
+        )
+
+      assert credential_body.name == "staging"
+      assert credential_body.body == %{"custom" => "data"}
+      assert credential_body.credential == custom_credential
+    end
+
+    test "insert creates a credential_body record" do
+      user = Factories.insert(:user)
+      credential = Factories.insert(:credential, user: user)
+
+      credential_body =
+        Factories.insert(:credential_body, credential: credential)
+
+      assert credential_body.id != nil
+      assert credential_body.credential_id == credential.id
+
+      db_record =
+        Repo.get(Lightning.Credentials.CredentialBody, credential_body.id)
+
+      assert db_record.name == "main"
+      assert db_record.body == %{"api_key" => "secret_value"}
+    end
+
+    test "works with credential factory association" do
+      user = Factories.insert(:user)
+
+      credential_body =
+        Factories.insert(:credential_body,
+          credential:
+            Factories.build(:credential, user: user, name: "Test Credential")
+        )
+
+      assert credential_body.credential.name == "Test Credential"
+      assert credential_body.credential.user_id == user.id
+    end
+  end
+
   defp register_user(_context) do
     %{user: Lightning.AccountsFixtures.user_fixture()}
   end

@@ -28,7 +28,8 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   attr :current_project, Project, required: true
-  attr :can_create_sandbox, :boolean, required: true
+  attr :enable_create_button, :boolean, required: true
+  attr :disabled_button_tooltip, :string, default: nil
 
   def header(assigns) do
     ~H"""
@@ -36,7 +37,8 @@ defmodule LightningWeb.SandboxLive.Components do
       <h3 class="text-3xl font-bold">Sandboxes</h3>
       <.create_button
         current_project={@current_project}
-        disabled={not @can_create_sandbox}
+        disabled={!@enable_create_button}
+        tooltip={@disabled_button_tooltip}
       />
     </div>
     """
@@ -44,6 +46,7 @@ defmodule LightningWeb.SandboxLive.Components do
 
   attr :current_project, Project, required: true
   attr :disabled, :boolean, required: true
+  attr :tooltip, :string, default: nil
 
   def create_button(assigns) do
     ~H"""
@@ -53,11 +56,7 @@ defmodule LightningWeb.SandboxLive.Components do
       size="lg"
       type="button"
       disabled={@disabled}
-      tooltip={
-        if @disabled,
-          do: "You are not authorized to create sandboxes in this workspace",
-          else: "Create a sandbox in this workspace"
-      }
+      tooltip={@disabled && @tooltip}
       phx-click={JS.patch(~p"/projects/#{@current_project.id}/sandboxes/new")}
     >
       Create Sandbox
@@ -68,7 +67,8 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :root_project, Project, default: nil
   attr :current_project, Project, required: true
   attr :sandboxes, :list, required: true
-  attr :can_create_sandbox, :boolean, required: true
+  attr :enable_create_button, :boolean, required: true
+  attr :disabled_button_tooltip, :string, default: nil
 
   def workspace_list(assigns) do
     ~H"""
@@ -85,7 +85,7 @@ defmodule LightningWeb.SandboxLive.Components do
             <div class="space-y-3">
               <div class="text-base font-medium">No sandboxes found</div>
               <div class="text-sm">
-                <%= if @can_create_sandbox do %>
+                <%= if @enable_create_button do %>
                   <.link
                     navigate={~p"/projects/#{@current_project.id}/sandboxes/new"}
                     class="text-blue-600 hover:text-blue-800 font-medium"
@@ -94,7 +94,7 @@ defmodule LightningWeb.SandboxLive.Components do
                   </.link>
                   to start experimenting.
                 <% else %>
-                  You are not authorized to create sandboxes in this workspace.
+                  {@disabled_button_tooltip}
                 <% end %>
               </div>
             </div>

@@ -17,13 +17,110 @@ and this project adheres to
 
 ### Added
 
+- Add project merging functionality
+  [#3432](https://github.com/OpenFn/lightning/issues/3432)
+
+### Changed
+
+- Limit sandbox creation
+  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
+
+### Fixed
+
+## [v2.14.9] - 2025-10-03
+
+## [v2.14.9-pre] - 2025-10-02
+
+### Added
+
+### Changed
+
+- Removed unused functions for getting dataclip bodies from postgres as
+  JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
+
+### Fixed
+
+- Prevent the janitor trying to mark runs as lost that aren't actually lost
+  [PR#3672](https://github.com/OpenFn/lightning/pull/3672)
+- Fix canvas "lockup" after AI chat errors, prevent sending empty message to AI
+  [3605](https://github.com/OpenFn/lightning/issues/3605)
+
+## [v2.14.8] - 2025-10-01
+
+## [v2.14.8-pre1] - 2025-10-01
+
+### Fixed
+
+- Send back `null` if a requested dataclip has been wiped
+  [PR#3652](https://github.com/OpenFn/lightning/pull/3652)
+
+## [v2.14.8-pre] - 2025-10-01
+
+### Fixed
+
+- Reduced
+  [high server memory usage on dataclip body retrieval](https://github.com/OpenFn/lightning/issues/3641)
+  by 97% [PR#3651](https://github.com/OpenFn/lightning/pull/3651)
+
+## [v2.14.7] - 2025-09-30
+
+### Changed
+
+- Optimized map and join with `Enum.map_join/3`
+  [`c112f3d`](https://github.com/OpenFn/lightning/commit/c112f3df29f8ab83b187f3695fdaf32c0837a016)
+
+### Fixed
+
+- Fixed tests for dataclip live viewer
+  [#3648](https://github.com/OpenFn/lightning/issues/3648)
+
+## [v2.14.7-pre] - 2025-09-30
+
+### Added
+
+- Add database changes for credentials environments support
+  [#3597](https://github.com/OpenFn/lightning/issues/3597)
+- REST API for Credential creation, deletion, list
+  [#3583](https://github.com/OpenFn/lightning/issues/3583)
+
+### Changed
+
+- Bumped devDeps `ws-worker` version to `1.15.0` to better handle job
+  compilation memory issues
+  [#3613](https://github.com/OpenFn/lightning/pull/3613)
+
+### Fixed
+
+- Fix memory bloat on dataclip viewer in dataclip detail page
+  [#3641](https://github.com/OpenFn/lightning/issues/3641)
+- Ameliorate memory usage when scrubbing dataclips for security
+  [#3641](https://github.com/OpenFn/lightning/issues/3641)
+- Fixed bootstrap script compatibility for Intel Macs and older Bash versions
+  (3.1+) [#3623](https://github.com/OpenFn/lightning/pull/3623)
+- Fixed GDPR Compliance component
+  [#3611](https://github.com/OpenFn/lightning/issues/3611)
+- Fixed vertical alignment in breadcrumbs
+  [#3612](https://github.com/OpenFn/lightning/issues/3612)
+- Updated Project Digest to include count of work orders in an unsuccessful
+  state [#3616](https://github.com/OpenFn/lightning/issues/3616)
+
+## [v2.14.6] - 2025-09-30
+
+## [v2.14.6-pre1] - 2025-09-26
+
+### Changed
+
+- Modify `Common.root_name` to display any map with a `:name` key
+
+## [v2.14.6-pre] - 2025-09-25
+
+### Added
+
 - Sandbox Basic CRUD UI [#3412](https://github.com/OpenFn/lightning/issues/3412)
   [#3431](https://github.com/OpenFn/lightning/issues/3431)
 - Generate workflow version on save
   [#3452](https://github.com/OpenFn/lightning/issues/3452)
 - Add `bin/update-images` script for automated Dockerfile version management
-- Add project merging functionality
-  [#3432](https://github.com/OpenFn/lightning/issues/3432)
 
 ### Changed
 
@@ -34,8 +131,17 @@ and this project adheres to
 
 ### Fixed
 
+- Fix project deletion for projects with webhook auth methods
+  [#3619](https://github.com/OpenFn/lightning/issues/3619),
+  [#3523](https://github.com/OpenFn/lightning/issues/3523)
+- Fix pagination bar rounding to match table corners
+  [#3595](https://github.com/OpenFn/lightning/issues/3595)
+- Restore export history button
+  [#3594](https://github.com/OpenFn/lightning/issues/3594)
 - Wrong timestamp information in mini-history for in-progress runs
   [#3579](https://github.com/OpenFn/lightning/pull/3579)
+
+## [v2.14.5] - 2025-09-24
 
 ## [v2.14.5-pre1] - 2025-09-11
 

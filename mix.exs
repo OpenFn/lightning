@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.14.5-pre1",
+      version: "2.14.9",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -101,7 +101,7 @@ defmodule Lightning.MixProject do
       {:libcluster, "~> 3.3"},
       {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
-      {:mimic, "~> 1.7.2", only: :test},
+      {:mimic, "~> 1.12.0", only: :test},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
@@ -132,7 +132,7 @@ defmodule Lightning.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tesla, "~> 1.13.0"},
-      {:tidewave, "~> 0.2.0", only: :dev},
+      {:tidewave, "~> 0.5.0", only: :dev},
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
