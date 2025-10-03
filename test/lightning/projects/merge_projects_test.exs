@@ -171,38 +171,25 @@ defmodule Lightning.Projects.MergeProjectsTest do
       source_project = insert(:project, name: "Source Project")
 
       # Target project with workflow containing a job
-      target_trigger = build(:trigger, type: :webhook)
-
-      target_job =
-        build(:job,
-          name: "process_data",
-          body: "fn(s => s)",
-          adaptor: "@openfn/language-common@latest"
-        )
-
-      target_workflow =
-        build(:workflow, name: "data_processing", project: target_project)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job)
-        |> with_edge({target_trigger, target_job})
-        |> insert()
+      {target_workflow,
+       %{:webhook => target_trigger, "process_data" => target_job}} =
+        generate_workflow([{:webhook, "process_data"}], %{
+          :workflow => %{name: "data_processing", project: target_project},
+          "process_data" => %{
+            body: "fn(s => s)",
+            adaptor: "@openfn/language-common@latest"
+          }
+        })
 
       # Source project with same workflow name but different job adaptor
-      source_trigger = build(:trigger, type: :webhook)
-
-      source_job =
-        build(:job,
-          name: "process_data",
-          body: "fn(s => s)",
-          adaptor: "@openfn/language-http@latest"
-        )
-
-      source_workflow =
-        build(:workflow, name: "data_processing", project: source_project)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job)
-        |> with_edge({source_trigger, source_job})
-        |> insert()
+      {source_workflow, %{"process_data" => source_job}} =
+        generate_workflow([{:webhook, "process_data"}], %{
+          :workflow => %{name: "data_processing", project: source_project},
+          "process_data" => %{
+            body: "fn(s => s)",
+            adaptor: "@openfn/language-http@latest"
+          }
+        })
 
       result = MergeProjects.merge_project(source_project, target_project)
 
@@ -238,15 +225,9 @@ defmodule Lightning.Projects.MergeProjectsTest do
   describe "merge_workflow/2 - ported from cli" do
     test "no changes: single node workflow" do
       # Both source and target have identical single trigger
-      source =
-        build(:workflow, jobs: [], edges: [])
-        |> with_trigger(build(:trigger, type: :webhook))
-        |> insert()
+      {source, _source_elements} = generate_workflow([:webhook])
 
-      target =
-        build(:workflow, jobs: [], edges: [])
-        |> with_trigger(build(:trigger, type: :webhook))
-        |> insert()
+      {target, _target_elements} = generate_workflow([:webhook])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -261,25 +242,10 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
     test "no changes: multi node workflow" do
       # Both source and target have identical trigger-job structure
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
+      {source, _source_elements} = generate_workflow([{:webhook, "a"}])
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_edge({source_trigger, source_job_a})
-        |> insert()
-
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_edge({target_trigger, target_job_a})
-        |> insert()
+      {target, %{:webhook => target_trigger, "a" => target_job_a}} =
+        generate_workflow([{:webhook, "a"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -310,81 +276,41 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Create a complex workflow structure with multiple triggers and jobs
       # Structure: trigger->a, trigger->b, a->c, a->d, b->d, b->e, c->f, e->g
 
-      # Source workflow
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-      source_job_c = build(:job, name: "c")
-      source_job_d = build(:job, name: "d")
-      source_job_e = build(:job, name: "e")
-      source_job_f = build(:job, name: "f")
-      source_job_g = build(:job, name: "g")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_job(source_job_c)
-        |> with_job(source_job_d)
-        |> with_job(source_job_e)
-        |> with_job(source_job_f)
-        |> with_job(source_job_g)
-        # trigger->a
-        |> with_edge({source_trigger, source_job_a})
-        # trigger->b
-        |> with_edge({source_trigger, source_job_b})
-        # a->c
-        |> with_edge({source_job_a, source_job_c})
-        # a->d
-        |> with_edge({source_job_a, source_job_d})
-        # b->d
-        |> with_edge({source_job_b, source_job_d})
-        # b->e
-        |> with_edge({source_job_b, source_job_e})
-        # c->f
-        |> with_edge({source_job_c, source_job_f})
-        # e->g
-        |> with_edge({source_job_e, source_job_g})
-        |> insert()
+      # Source workflow using generate_workflow helper
+      {source, _source_elements} =
+        generate_workflow([
+          {:webhook, "a"},
+          {:webhook, "b"},
+          {"a", "c"},
+          {"a", "d"},
+          {"b", "d"},
+          {"b", "e"},
+          {"c", "f"},
+          {"e", "g"}
+        ])
 
       # Target workflow with identical structure
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-      target_job_c = build(:job, name: "c")
-      target_job_d = build(:job, name: "d")
-      target_job_e = build(:job, name: "e")
-      target_job_f = build(:job, name: "f")
-      target_job_g = build(:job, name: "g")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_job(target_job_c)
-        |> with_job(target_job_d)
-        |> with_job(target_job_e)
-        |> with_job(target_job_f)
-        |> with_job(target_job_g)
-        # trigger->a
-        |> with_edge({target_trigger, target_job_a})
-        # trigger->b
-        |> with_edge({target_trigger, target_job_b})
-        # a->c
-        |> with_edge({target_job_a, target_job_c})
-        # a->d
-        |> with_edge({target_job_a, target_job_d})
-        # b->d
-        |> with_edge({target_job_b, target_job_d})
-        # b->e
-        |> with_edge({target_job_b, target_job_e})
-        # c->f
-        |> with_edge({target_job_c, target_job_f})
-        # e->g
-        |> with_edge({target_job_e, target_job_g})
-        |> insert()
+      {target,
+       %{
+         :webhook => target_trigger,
+         "a" => target_job_a,
+         "b" => target_job_b,
+         "c" => target_job_c,
+         "d" => target_job_d,
+         "e" => target_job_e,
+         "f" => target_job_f,
+         "g" => target_job_g
+       }} =
+        generate_workflow([
+          {:webhook, "a"},
+          {:webhook, "b"},
+          {"a", "c"},
+          {"a", "d"},
+          {"b", "d"},
+          {"b", "e"},
+          {"c", "f"},
+          {"e", "g"}
+        ])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -434,17 +360,10 @@ defmodule Lightning.Projects.MergeProjectsTest do
     test "id change: single node" do
       # Source has trigger only, target has trigger only but different trigger type
       # This tests the case where triggers are mapped by type
-      source =
-        build(:workflow)
-        |> with_trigger(build(:trigger, type: :webhook))
-        |> insert()
+      {source, _source_elements} = generate_workflow([:webhook])
 
-      target =
-        build(:workflow)
-        |> with_trigger(
-          build(:trigger, type: :cron, cron_expression: "0 * * * *")
-        )
-        |> insert()
+      {target, _target_elements} =
+        generate_workflow([:cron], %{:cron => %{cron_expression: "0 * * * *"}})
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -465,37 +384,13 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Target: trigger->x, trigger->y
       # Should map a->x, b->y based on structural similarity
 
-      # Source workflow
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
+      # Source workflow using generate_workflow helper
+      {source, _source_elements} =
+        generate_workflow([{:webhook, "a"}, {:webhook, "b"}])
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        # trigger->a
-        |> with_edge({source_trigger, source_job_a})
-        # trigger->b
-        |> with_edge({source_trigger, source_job_b})
-        |> insert()
-
-      # Target workflow
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_x = build(:job, name: "x")
-      target_job_y = build(:job, name: "y")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_x)
-        |> with_job(target_job_y)
-        # trigger->x
-        |> with_edge({target_trigger, target_job_x})
-        # trigger->y
-        |> with_edge({target_trigger, target_job_y})
-        |> insert()
+      # Target workflow using generate_workflow helper
+      {target, %{:webhook => target_trigger}} =
+        generate_workflow([{:webhook, "x"}, {:webhook, "y"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -532,37 +427,14 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Target: trigger->x, x->b
       # Should map a->x based on structural similarity (same parent and child)
 
-      # Source workflow
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
+      # Source workflow using generate_workflow helper
+      {source, _source_elements} =
+        generate_workflow([{:webhook, "a"}, {"a", "b"}])
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        # trigger->a
-        |> with_edge({source_trigger, source_job_a})
-        # a->b
-        |> with_edge({source_job_a, source_job_b})
-        |> insert()
-
-      # Target workflow
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_x = build(:job, name: "x")
-      target_job_b = build(:job, name: "b")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_x)
-        |> with_job(target_job_b)
-        # trigger->x
-        |> with_edge({target_trigger, target_job_x})
-        # x->b
-        |> with_edge({target_job_x, target_job_b})
-        |> insert()
+      # Target workflow using generate_workflow helper
+      {target,
+       %{:webhook => target_trigger, "x" => target_job_x, "b" => target_job_b}} =
+        generate_workflow([{:webhook, "x"}, {"x", "b"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -605,49 +477,29 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Target: trigger->x, trigger->y, x->c, y->c
       # Should map a->x, b->y based on structural similarity
 
-      # Source workflow
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-      source_job_c = build(:job, name: "c")
+      # Source workflow using generate_workflow helper
+      {source, _source_elements} =
+        generate_workflow([
+          {:webhook, "a"},
+          {:webhook, "b"},
+          {"a", "c"},
+          {"b", "c"}
+        ])
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_job(source_job_c)
-        # trigger->a
-        |> with_edge({source_trigger, source_job_a})
-        # trigger->b
-        |> with_edge({source_trigger, source_job_b})
-        # a->c
-        |> with_edge({source_job_a, source_job_c})
-        # b->c
-        |> with_edge({source_job_b, source_job_c})
-        |> insert()
-
-      # Target workflow
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_x = build(:job, name: "x")
-      target_job_y = build(:job, name: "y")
-      target_job_c = build(:job, name: "c")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_x)
-        |> with_job(target_job_y)
-        |> with_job(target_job_c)
-        # trigger->x
-        |> with_edge({target_trigger, target_job_x})
-        # trigger->y
-        |> with_edge({target_trigger, target_job_y})
-        # x->c
-        |> with_edge({target_job_x, target_job_c})
-        # y->c
-        |> with_edge({target_job_y, target_job_c})
-        |> insert()
+      # Target workflow using generate_workflow helper
+      {target,
+       %{
+         :webhook => target_trigger,
+         "x" => target_job_x,
+         "y" => target_job_y,
+         "c" => target_job_c
+       }} =
+        generate_workflow([
+          {:webhook, "x"},
+          {:webhook, "y"},
+          {"x", "c"},
+          {"y", "c"}
+        ])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -701,81 +553,41 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Target: trigger->a1, trigger->b1, a1->x, b1->y, x->e, y->f, e->z, f->z
       # Should map: a->a1, b->b1, c->x, d->y, e->e, f->f, g->z
 
-      # Source workflow
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-      source_job_c = build(:job, name: "c")
-      source_job_d = build(:job, name: "d")
-      source_job_e = build(:job, name: "e")
-      source_job_f = build(:job, name: "f")
-      source_job_g = build(:job, name: "g")
+      # Source workflow using generate_workflow helper
+      {source, _source_elements} =
+        generate_workflow([
+          {:webhook, "a"},
+          {:webhook, "b"},
+          {"a", "c"},
+          {"b", "d"},
+          {"c", "e"},
+          {"d", "f"},
+          {"e", "g"},
+          {"f", "g"}
+        ])
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_job(source_job_c)
-        |> with_job(source_job_d)
-        |> with_job(source_job_e)
-        |> with_job(source_job_f)
-        |> with_job(source_job_g)
-        # trigger->a
-        |> with_edge({source_trigger, source_job_a})
-        # trigger->b
-        |> with_edge({source_trigger, source_job_b})
-        # a->c
-        |> with_edge({source_job_a, source_job_c})
-        # b->d
-        |> with_edge({source_job_b, source_job_d})
-        # c->e
-        |> with_edge({source_job_c, source_job_e})
-        # d->f
-        |> with_edge({source_job_d, source_job_f})
-        # e->g
-        |> with_edge({source_job_e, source_job_g})
-        # f->g
-        |> with_edge({source_job_f, source_job_g})
-        |> insert()
-
-      # Target workflow
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a1 = build(:job, name: "a1")
-      target_job_b1 = build(:job, name: "b1")
-      target_job_x = build(:job, name: "x")
-      target_job_y = build(:job, name: "y")
-      target_job_e = build(:job, name: "e")
-      target_job_f = build(:job, name: "f")
-      target_job_z = build(:job, name: "z")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a1)
-        |> with_job(target_job_b1)
-        |> with_job(target_job_x)
-        |> with_job(target_job_y)
-        |> with_job(target_job_e)
-        |> with_job(target_job_f)
-        |> with_job(target_job_z)
-        # trigger->a1
-        |> with_edge({target_trigger, target_job_a1})
-        # trigger->b1
-        |> with_edge({target_trigger, target_job_b1})
-        # a1->x
-        |> with_edge({target_job_a1, target_job_x})
-        # b1->y
-        |> with_edge({target_job_b1, target_job_y})
-        # x->e
-        |> with_edge({target_job_x, target_job_e})
-        # y->f
-        |> with_edge({target_job_y, target_job_f})
-        # e->z
-        |> with_edge({target_job_e, target_job_z})
-        # f->z
-        |> with_edge({target_job_f, target_job_z})
-        |> insert()
+      # Target workflow using generate_workflow helper
+      {target,
+       %{
+         :webhook => target_trigger,
+         "a1" => target_job_a1,
+         "b1" => target_job_b1,
+         "x" => target_job_x,
+         "y" => target_job_y,
+         "e" => target_job_e,
+         "f" => target_job_f,
+         "z" => target_job_z
+       }} =
+        generate_workflow([
+          {:webhook, "a1"},
+          {:webhook, "b1"},
+          {"a1", "x"},
+          {"b1", "y"},
+          {"x", "e"},
+          {"y", "f"},
+          {"e", "z"},
+          {"f", "z"}
+        ])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -846,81 +658,41 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Target: trigger->x, trigger->y, x->c, x->m, y->n, y->f, m->g, n->g
       # Should map: a->x, b->y, c->c, d->m, e->n, f->f, g->g
 
-      # Source workflow
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-      source_job_c = build(:job, name: "c")
-      source_job_d = build(:job, name: "d")
-      source_job_e = build(:job, name: "e")
-      source_job_f = build(:job, name: "f")
-      source_job_g = build(:job, name: "g")
+      # Source workflow using generate_workflow helper
+      {source, _source_elements} =
+        generate_workflow([
+          {:webhook, "a"},
+          {:webhook, "b"},
+          {"a", "c"},
+          {"a", "d"},
+          {"b", "e"},
+          {"b", "f"},
+          {"d", "g"},
+          {"e", "g"}
+        ])
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_job(source_job_c)
-        |> with_job(source_job_d)
-        |> with_job(source_job_e)
-        |> with_job(source_job_f)
-        |> with_job(source_job_g)
-        # trigger->a
-        |> with_edge({source_trigger, source_job_a})
-        # trigger->b
-        |> with_edge({source_trigger, source_job_b})
-        # a->c
-        |> with_edge({source_job_a, source_job_c})
-        # a->d
-        |> with_edge({source_job_a, source_job_d})
-        # b->e
-        |> with_edge({source_job_b, source_job_e})
-        # b->f
-        |> with_edge({source_job_b, source_job_f})
-        # d->g
-        |> with_edge({source_job_d, source_job_g})
-        # e->g
-        |> with_edge({source_job_e, source_job_g})
-        |> insert()
-
-      # Target workflow
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_x = build(:job, name: "x")
-      target_job_y = build(:job, name: "y")
-      target_job_c = build(:job, name: "c")
-      target_job_m = build(:job, name: "m")
-      target_job_n = build(:job, name: "n")
-      target_job_f = build(:job, name: "f")
-      target_job_g = build(:job, name: "g")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_x)
-        |> with_job(target_job_y)
-        |> with_job(target_job_c)
-        |> with_job(target_job_m)
-        |> with_job(target_job_n)
-        |> with_job(target_job_f)
-        |> with_job(target_job_g)
-        # trigger->x
-        |> with_edge({target_trigger, target_job_x})
-        # trigger->y
-        |> with_edge({target_trigger, target_job_y})
-        # x->c
-        |> with_edge({target_job_x, target_job_c})
-        # x->m
-        |> with_edge({target_job_x, target_job_m})
-        # y->n
-        |> with_edge({target_job_y, target_job_n})
-        # y->f
-        |> with_edge({target_job_y, target_job_f})
-        # m->g
-        |> with_edge({target_job_m, target_job_g})
-        # n->g
-        |> with_edge({target_job_n, target_job_g})
-        |> insert()
+      # Target workflow using generate_workflow helper
+      {target,
+       %{
+         :webhook => target_trigger,
+         "c" => target_job_c,
+         "f" => target_job_f,
+         "g" => target_job_g,
+         "x" => target_job_x,
+         "y" => target_job_y,
+         "m" => target_job_m,
+         "n" => target_job_n
+       }} =
+        generate_workflow([
+          {:webhook, "x"},
+          {:webhook, "y"},
+          {"x", "c"},
+          {"x", "m"},
+          {"y", "n"},
+          {"y", "f"},
+          {"m", "g"},
+          {"n", "g"}
+        ])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -998,53 +770,20 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Special case: node 'b' has both parent and children changed
       # Should map: a->x, b->y, c->z, d->q
 
-      # Source workflow
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-      source_job_c = build(:job, name: "c")
-      source_job_d = build(:job, name: "d")
+      # Source workflow using generate_workflow helper
+      {source, _source_elements} =
+        generate_workflow([{:webhook, "a"}, {"a", "b"}, {"b", "c"}, {"b", "d"}])
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_job(source_job_c)
-        |> with_job(source_job_d)
-        # trigger->a
-        |> with_edge({source_trigger, source_job_a})
-        # a->b
-        |> with_edge({source_job_a, source_job_b})
-        # b->c
-        |> with_edge({source_job_b, source_job_c})
-        # b->d
-        |> with_edge({source_job_b, source_job_d})
-        |> insert()
-
-      # Target workflow
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_x = build(:job, name: "x")
-      target_job_y = build(:job, name: "y")
-      target_job_z = build(:job, name: "z")
-      target_job_q = build(:job, name: "q")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_x)
-        |> with_job(target_job_y)
-        |> with_job(target_job_z)
-        |> with_job(target_job_q)
-        # trigger->x
-        |> with_edge({target_trigger, target_job_x})
-        # x->y
-        |> with_edge({target_job_x, target_job_y})
-        # y->z
-        |> with_edge({target_job_y, target_job_z})
-        # y->q
-        |> with_edge({target_job_y, target_job_q})
-        |> insert()
+      # Target workflow using generate_workflow helper
+      {target,
+       %{
+         :webhook => target_trigger,
+         "x" => target_job_x,
+         "y" => target_job_y,
+         "z" => target_job_z,
+         "q" => target_job_q
+       }} =
+        generate_workflow([{:webhook, "x"}, {"x", "y"}, {"y", "z"}, {"y", "q"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1057,6 +796,7 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert length(result["jobs"]) == 4
 
       # Expected mappings based on structural similarity
+      # The merge returns source job names but with target job IDs
       expected_mappings = %{
         "a" => target_job_x.id,
         "b" => target_job_y.id,
@@ -1096,21 +836,11 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Should result in empty mapping, target job should be marked for deletion
 
       # Source workflow - just a trigger
-      source =
-        build(:workflow)
-        |> with_trigger(build(:trigger, type: :webhook))
-        |> insert()
+      {source, _source_elements} = generate_workflow([:webhook])
 
       # Target workflow - trigger with a job
-      target_trigger = build(:trigger, type: :webhook)
-      target_job = build(:job, name: "removed_job")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job)
-        |> with_edge({target_trigger, target_job})
-        |> insert()
+      {target, %{:webhook => target_trigger, "removed_job" => target_job}} =
+        generate_workflow([{:webhook, "removed_job"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1137,21 +867,11 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # The leaf job 'a' should be marked for deletion
 
       # Source workflow - just trigger
-      source =
-        build(:workflow)
-        |> with_trigger(build(:trigger, type: :webhook))
-        |> insert()
+      {source, _source_elements} = generate_workflow([:webhook])
 
       # Target workflow - trigger with leaf job
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_edge({target_trigger, target_job_a})
-        |> insert()
+      {target, %{:webhook => target_trigger, "a" => target_job_a}} =
+        generate_workflow([{:webhook, "a"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1178,24 +898,11 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Both leaf jobs should be marked for deletion
 
       # Source workflow - just trigger
-      source =
-        build(:workflow)
-        |> with_trigger(build(:trigger, type: :webhook))
-        |> insert()
+      {source, _source_elements} = generate_workflow([:webhook])
 
       # Target workflow - trigger with two leaf jobs
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_trigger, target_job_b})
-        |> insert()
+      {target, %{:webhook => target_trigger}} =
+        generate_workflow([{:webhook, "a"}, {:webhook, "b"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1225,38 +932,24 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Leaf jobs 'c' and 'd' should be marked for deletion
 
       # Source workflow - trigger with two jobs
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_edge({source_trigger, source_job_a})
-        |> with_edge({source_trigger, source_job_b})
-        |> insert()
+      {source, _source_elements} =
+        generate_workflow([{:webhook, "a"}, {:webhook, "b"}])
 
       # Target workflow - same structure plus additional leaf jobs
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-      target_job_c = build(:job, name: "c")
-      target_job_d = build(:job, name: "d")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_job(target_job_c)
-        |> with_job(target_job_d)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_trigger, target_job_b})
-        |> with_edge({target_job_a, target_job_c})
-        |> with_edge({target_job_b, target_job_d})
-        |> insert()
+      {target,
+       %{
+         :webhook => target_trigger,
+         "a" => target_job_a,
+         "b" => target_job_b,
+         "c" => target_job_c,
+         "d" => target_job_d
+       }} =
+        generate_workflow([
+          {:webhook, "a"},
+          {:webhook, "b"},
+          {"a", "c"},
+          {"b", "d"}
+        ])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1306,36 +999,23 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Job 'c' should be marked for deletion along with its edges
 
       # Source workflow - trigger with two separate jobs
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_edge({source_trigger, source_job_a})
-        |> with_edge({source_trigger, source_job_b})
-        |> insert()
+      {source, _source_elements} =
+        generate_workflow([{:webhook, "a"}, {:webhook, "b"}])
 
       # Target workflow - same base structure plus job 'c' with edges from both 'a' and 'b'
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-      target_job_c = build(:job, name: "c")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_job(target_job_c)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_trigger, target_job_b})
-        |> with_edge({target_job_a, target_job_c})
-        |> with_edge({target_job_b, target_job_c})
-        |> insert()
+      {target,
+       %{
+         :webhook => target_trigger,
+         "a" => target_job_a,
+         "b" => target_job_b,
+         "c" => target_job_c
+       }} =
+        generate_workflow([
+          {:webhook, "a"},
+          {:webhook, "b"},
+          {"a", "c"},
+          {"b", "c"}
+        ])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1386,29 +1066,12 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # A new edge trigger->b should be added to match the source
 
       # Source workflow - direct trigger to b
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_b = build(:job, name: "b")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_b)
-        |> with_edge({source_trigger, source_job_b})
-        |> insert()
+      {source, _source_elements} = generate_workflow([{:webhook, "b"}])
 
       # Target workflow - trigger to a, a to b (a is internal node)
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_job_a, target_job_b})
-        |> insert()
+      {target,
+       %{:webhook => target_trigger, "a" => target_job_a, "b" => target_job_b}} =
+        generate_workflow([{:webhook, "a"}, {"a", "b"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1452,29 +1115,12 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Leaf node 'b' should be marked for deletion along with edge a->b
 
       # Source workflow - trigger to a only
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_edge({source_trigger, source_job_a})
-        |> insert()
+      {source, _source_elements} = generate_workflow([{:webhook, "a"}])
 
       # Target workflow - trigger to a, a to b (b is additional leaf)
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_job_a, target_job_b})
-        |> insert()
+      {target,
+       %{:webhook => target_trigger, "a" => target_job_a, "b" => target_job_b}} =
+        generate_workflow([{:webhook, "a"}, {"a", "b"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1516,38 +1162,24 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Branch nodes 'c' and 'd' should be marked for deletion along with their edges
 
       # Source workflow - linear trigger->a->b
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_edge({source_trigger, source_job_a})
-        |> with_edge({source_job_a, source_job_b})
-        |> insert()
+      {source, _source_elements} =
+        generate_workflow([{:webhook, "a"}, {"a", "b"}])
 
       # Target workflow - same chain plus branching from a to c to d
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-      target_job_c = build(:job, name: "c")
-      target_job_d = build(:job, name: "d")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_job(target_job_c)
-        |> with_job(target_job_d)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_job_a, target_job_b})
-        |> with_edge({target_job_a, target_job_c})
-        |> with_edge({target_job_c, target_job_d})
-        |> insert()
+      {target,
+       %{
+         :webhook => target_trigger,
+         "a" => target_job_a,
+         "b" => target_job_b,
+         "c" => target_job_c,
+         "d" => target_job_d
+       }} =
+        generate_workflow([
+          {:webhook, "a"},
+          {"a", "b"},
+          {"a", "c"},
+          {"c", "d"}
+        ])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1601,32 +1233,13 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Job b should be rewired from trigger back to a, matching source structure
 
       # Source workflow - a->b chain
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-      source_job_b = build(:job, name: "b")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_job(source_job_b)
-        |> with_edge({source_trigger, source_job_a})
-        |> with_edge({source_job_a, source_job_b})
-        |> insert()
+      {source, _source_elements} =
+        generate_workflow([{:webhook, "a"}, {"a", "b"}])
 
       # Target workflow - both a and b connected to trigger
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_trigger, target_job_b})
-        |> insert()
+      {target,
+       %{:webhook => target_trigger, "a" => target_job_a, "b" => target_job_b}} =
+        generate_workflow([{:webhook, "a"}, {:webhook, "b"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1673,29 +1286,12 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Job 'a' should map to 'x', leaf 'b' should be deleted
 
       # Source workflow - trigger->a
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_a = build(:job, name: "a")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_a)
-        |> with_edge({source_trigger, source_job_a})
-        |> insert()
+      {source, _source_elements} = generate_workflow([{:webhook, "a"}])
 
       # Target workflow - trigger->x, x->b (a renamed to x, plus leaf b)
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_x = build(:job, name: "x")
-      target_job_b = build(:job, name: "b")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_x)
-        |> with_job(target_job_b)
-        |> with_edge({target_trigger, target_job_x})
-        |> with_edge({target_job_x, target_job_b})
-        |> insert()
+      {target,
+       %{:webhook => target_trigger, "x" => target_job_x, "b" => target_job_b}} =
+        generate_workflow([{:webhook, "x"}, {"x", "b"}])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1737,50 +1333,32 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Result preserves source names but uses target UUIDs
 
       # Source workflow - m has children n,o; o has children d,e
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_m = build(:job, name: "m")
-      source_job_n = build(:job, name: "n")
-      source_job_o = build(:job, name: "o")
-      source_job_d = build(:job, name: "d")
-      source_job_e = build(:job, name: "e")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_m)
-        |> with_job(source_job_n)
-        |> with_job(source_job_o)
-        |> with_job(source_job_d)
-        |> with_job(source_job_e)
-        |> with_edge({source_trigger, source_job_m})
-        |> with_edge({source_job_m, source_job_n})
-        |> with_edge({source_job_m, source_job_o})
-        |> with_edge({source_job_o, source_job_d})
-        |> with_edge({source_job_o, source_job_e})
-        |> insert()
+      {source, _source_elements} =
+        generate_workflow([
+          {:webhook, "m"},
+          {"m", "n"},
+          {"m", "o"},
+          {"o", "d"},
+          {"o", "e"}
+        ])
 
       # Target workflow - a has children b,c; b has children d,e
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a")
-      target_job_b = build(:job, name: "b")
-      target_job_c = build(:job, name: "c")
-      target_job_d = build(:job, name: "d")
-      target_job_e = build(:job, name: "e")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_job(target_job_c)
-        |> with_job(target_job_d)
-        |> with_job(target_job_e)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_job_a, target_job_b})
-        |> with_edge({target_job_a, target_job_c})
-        |> with_edge({target_job_b, target_job_d})
-        |> with_edge({target_job_b, target_job_e})
-        |> insert()
+      {target,
+       %{
+         :webhook => target_trigger,
+         "a" => target_job_a,
+         "b" => target_job_b,
+         "c" => target_job_c,
+         "d" => target_job_d,
+         "e" => target_job_e
+       }} =
+        generate_workflow([
+          {:webhook, "a"},
+          {"a", "b"},
+          {"a", "c"},
+          {"b", "d"},
+          {"b", "e"}
+        ])
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1847,32 +1425,19 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Jobs should map based on matching expressions: x('foo')->a('foo'), y('bar')->b('bar')
 
       # Source workflow - two jobs with different expressions
-      source_trigger = build(:trigger, type: :webhook)
-      source_job_x = build(:job, name: "x", body: "foo")
-      source_job_y = build(:job, name: "y", body: "bar")
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job_x)
-        |> with_job(source_job_y)
-        |> with_edge({source_trigger, source_job_x})
-        |> with_edge({source_trigger, source_job_y})
-        |> insert()
+      {source, _source_elements} =
+        generate_workflow(
+          [{:webhook, "x"}, {:webhook, "y"}],
+          %{jobs: %{"x" => %{body: "foo"}, "y" => %{body: "bar"}}}
+        )
 
       # Target workflow - two jobs with matching expressions
-      target_trigger = build(:trigger, type: :webhook)
-      target_job_a = build(:job, name: "a", body: "foo")
-      target_job_b = build(:job, name: "b", body: "bar")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job_a)
-        |> with_job(target_job_b)
-        |> with_edge({target_trigger, target_job_a})
-        |> with_edge({target_trigger, target_job_b})
-        |> insert()
+      {target,
+       %{:webhook => target_trigger, "a" => target_job_a, "b" => target_job_b}} =
+        generate_workflow(
+          [{:webhook, "a"}, {:webhook, "b"}],
+          %{jobs: %{"a" => %{body: "foo"}, "b" => %{body: "bar"}}}
+        )
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1913,33 +1478,29 @@ defmodule Lightning.Projects.MergeProjectsTest do
   describe "merge_workflow/2 - merge attributes" do
     test "maps workflow-level attributes from source" do
       # source workflow attributes (name, concurrency, enable_job_logs) are used
-      source_trigger = build(:trigger, type: :webhook)
-      source_job = build(:job, name: "test_job")
-
-      source =
-        build(:workflow,
-          name: "Source Workflow",
-          concurrency: 5,
-          enable_job_logs: true
+      {source, _source_elements} =
+        generate_workflow(
+          [{:webhook, "test_job"}],
+          %{
+            workflow: %{
+              name: "Source Workflow",
+              concurrency: 5,
+              enable_job_logs: true
+            }
+          }
         )
-        |> with_trigger(source_trigger)
-        |> with_job(source_job)
-        |> with_edge({source_trigger, source_job})
-        |> insert()
 
-      target_trigger = build(:trigger, type: :webhook)
-      target_job = build(:job, name: "test_job")
-
-      target =
-        build(:workflow,
-          name: "Target Workflow",
-          concurrency: 10,
-          enable_job_logs: false
+      {target, _target_elements} =
+        generate_workflow(
+          [{:webhook, "test_job"}],
+          %{
+            workflow: %{
+              name: "Target Workflow",
+              concurrency: 10,
+              enable_job_logs: false
+            }
+          }
         )
-        |> with_trigger(target_trigger)
-        |> with_job(target_job)
-        |> with_edge({target_trigger, target_job})
-        |> insert()
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1952,37 +1513,35 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
     test "maps job attributes from source" do
       #  (name, body, adaptor, credentials) are used from source
-      source_trigger = build(:trigger, type: :webhook)
-
-      source_job =
-        build(:job,
-          name: "process_data",
-          body: "fn(state => ({ ...state, processed: true }))",
-          adaptor: "@openfn/language-http@latest"
+      {source, _source_elements} =
+        generate_workflow(
+          [
+            {:webhook, "process_data"}
+          ],
+          %{
+            jobs: %{
+              "process_data" => %{
+                body: "fn(state => ({ ...state, processed: true }))",
+                adaptor: "@openfn/language-http@latest"
+              }
+            }
+          }
         )
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job)
-        |> with_edge({source_trigger, source_job})
-        |> insert()
-
-      target_trigger = build(:trigger, type: :webhook)
-
-      target_job =
-        build(:job,
-          name: "process_data",
-          body: "fn(state => state)",
-          adaptor: "@openfn/language-common@latest"
+      {target, %{"process_data" => target_job}} =
+        generate_workflow(
+          [
+            {:webhook, "process_data"}
+          ],
+          %{
+            jobs: %{
+              "process_data" => %{
+                body: "fn(state => state)",
+                adaptor: "@openfn/language-common@latest"
+              }
+            }
+          }
         )
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job)
-        |> with_edge({target_trigger, target_job})
-        |> insert()
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -1996,27 +1555,13 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "maps trigger attributes from source" do
-      source_trigger =
-        build(:trigger,
-          type: :cron,
-          cron_expression: "0 */2 * * *",
-          comment: "Every 2 hours"
-        )
+      {source, _source_elements} =
+        generate_workflow([:cron], %{
+          :cron => %{cron_expression: "0 */2 * * *", comment: "Every 2 hours"}
+        })
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> insert()
-
-      target_trigger =
-        build(:trigger,
-          type: :webhook
-        )
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> insert()
+      {target, %{:webhook => target_trigger}} =
+        generate_workflow([:webhook], %{})
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -2031,35 +1576,25 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
     test "maps edge attributes from source" do
       # Test that edge attributes (condition_type, condition_expression, etc.) are used from source
-      source_trigger = build(:trigger, type: :webhook)
-      source_job = build(:job, name: "test_job")
+      {source, _source_elements} =
+        generate_workflow([{:webhook, "test_job"}], %{
+          {:webhook, "test_job"} => %{
+            condition_type: :js_expression,
+            condition_expression: "state.shouldProcess",
+            condition_label: "Process if flag is set",
+            enabled: false
+          }
+        })
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> with_job(source_job)
-        |> with_edge({source_trigger, source_job},
-          condition_type: :js_expression,
-          condition_expression: "state.shouldProcess",
-          condition_label: "Process if flag is set",
-          enabled: false
-        )
-        |> insert()
-
-      target_trigger = build(:trigger, type: :webhook)
-      target_job = build(:job, name: "test_job")
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> with_job(target_job)
-        |> with_edge({target_trigger, target_job},
-          condition_type: :always,
-          condition_expression: nil,
-          condition_label: nil,
-          enabled: true
-        )
-        |> insert()
+      {target, _target_elements} =
+        generate_workflow([{:webhook, "test_job"}], %{
+          {:webhook, "test_job"} => %{
+            condition_type: :always,
+            condition_expression: nil,
+            condition_label: nil,
+            enabled: true
+          }
+        })
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -2197,27 +1732,19 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "preserves webhook trigger custom_path" do
-      source_trigger =
-        build(:trigger,
-          type: :webhook,
-          custom_path: "/custom/webhook/path"
-        )
+      {source, _source_elements} =
+        generate_workflow([:webhook], %{
+          triggers: %{
+            :webhook => %{custom_path: "/custom/webhook/path"}
+          }
+        })
 
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> insert()
-
-      target_trigger =
-        build(:trigger,
-          type: :webhook,
-          custom_path: "/different/path"
-        )
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> insert()
+      {target, _target_elements} =
+        generate_workflow([:webhook], %{
+          triggers: %{
+            :webhook => %{custom_path: "/different/path"}
+          }
+        })
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -2279,56 +1806,55 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
     test "preserves attributes with multiple triggers feeding same job" do
       # Source workflow - cron trigger only
-      source_cron_trigger =
-        build(:trigger,
-          type: :cron,
-          cron_expression: "0 */6 * * *",
-          comment: "Every 6 hours"
+      {source, %{:cron => source_cron_trigger, "process_data" => source_job}} =
+        generate_workflow(
+          [
+            {:cron, "process_data"}
+          ],
+          %{
+            triggers: %{
+              :cron => %{
+                cron_expression: "0 */6 * * *",
+                comment: "Every 6 hours"
+              }
+            },
+            jobs: %{
+              "process_data" => %{
+                body: "fn(state => ({ ...state, processed: true }))",
+                adaptor: "@openfn/language-http@latest"
+              }
+            }
+          }
         )
-
-      source_job =
-        build(:job,
-          name: "process_data",
-          body: "fn(state => ({ ...state, processed: true }))",
-          adaptor: "@openfn/language-http@latest"
-        )
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_cron_trigger)
-        |> with_job(source_job)
-        |> with_edge({source_cron_trigger, source_job})
-        |> insert()
 
       # Target workflow - webhook + cron triggers with different attributes
-      target_webhook_trigger =
-        build(:trigger,
-          type: :webhook,
-          custom_path: "/target/webhook"
+      {target,
+       %{
+         :webhook => target_webhook_trigger,
+         :cron => target_cron_trigger,
+         "process_data" => target_job
+       }} =
+        generate_workflow(
+          [
+            {:webhook, "process_data"},
+            {:cron, "process_data"}
+          ],
+          %{
+            triggers: %{
+              :webhook => %{custom_path: "/target/webhook"},
+              :cron => %{
+                cron_expression: "0 * * * *",
+                comment: "Every hour"
+              }
+            },
+            jobs: %{
+              "process_data" => %{
+                body: "fn(state => state)",
+                adaptor: "@openfn/language-common@latest"
+              }
+            }
+          }
         )
-
-      target_cron_trigger =
-        build(:trigger,
-          type: :cron,
-          cron_expression: "0 * * * *",
-          comment: "Every hour"
-        )
-
-      target_job =
-        build(:job,
-          name: "process_data",
-          body: "fn(state => state)",
-          adaptor: "@openfn/language-common@latest"
-        )
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_webhook_trigger)
-        |> with_trigger(target_cron_trigger)
-        |> with_job(target_job)
-        |> with_edge({target_webhook_trigger, target_job})
-        |> with_edge({target_cron_trigger, target_job})
-        |> insert()
 
       result = MergeProjects.merge_workflow(source, target)
 
@@ -2439,5 +1965,116 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
   def stringify_keys(not_a_map) do
     not_a_map
+  end
+
+  # Helper function to generate a workflow from a sequence specification.
+  # Takes a list of tuples representing the workflow structure and optional attributes.
+  defp generate_workflow(sequence, opts \\ %{}) do
+    # Extract workflow options and build initial workflow
+    workflow_opts = Map.get(opts, :workflow, %{})
+    workflow = build(:workflow, workflow_opts)
+
+    # Parse sequence to extract unique triggers and jobs
+    {triggers, jobs, edges} = parse_sequence(sequence)
+
+    # Create triggers
+    {workflow, trigger_elements} = add_triggers(workflow, triggers, opts)
+
+    # Create jobs
+    {workflow, job_elements} = add_jobs(workflow, jobs, opts)
+
+    # Create edges
+    workflow =
+      add_edges(workflow, edges, Map.merge(trigger_elements, job_elements), opts)
+
+    # Insert the workflow
+    inserted_workflow = insert(workflow)
+
+    {inserted_workflow, Map.merge(trigger_elements, job_elements)}
+  end
+
+  defp parse_sequence(sequence) do
+    triggers = MapSet.new()
+    jobs = MapSet.new()
+    edges = []
+
+    {triggers, jobs, edges} =
+      Enum.reduce(sequence, {triggers, jobs, edges}, fn
+        # Trigger only (no jobs)
+        trigger_type, {triggers, jobs, edges} when is_atom(trigger_type) ->
+          {
+            MapSet.put(triggers, trigger_type),
+            jobs,
+            edges
+          }
+
+        # Trigger -> Job edge
+        {trigger_type, job_name}, {triggers, jobs, edges}
+        when is_atom(trigger_type) ->
+          {
+            MapSet.put(triggers, trigger_type),
+            MapSet.put(jobs, job_name),
+            [{trigger_type, job_name} | edges]
+          }
+
+        # Job -> Job edge
+        {source_job, target_job}, {triggers, jobs, edges}
+        when is_binary(source_job) and is_binary(target_job) ->
+          {
+            triggers,
+            jobs |> MapSet.put(source_job) |> MapSet.put(target_job),
+            [{source_job, target_job} | edges]
+          }
+      end)
+
+    {MapSet.to_list(triggers), MapSet.to_list(jobs), Enum.reverse(edges)}
+  end
+
+  defp add_triggers(workflow, triggers, opts) do
+    {workflow, elements} =
+      Enum.reduce(triggers, {workflow, %{}}, fn trigger_type, {wf, elements} ->
+        trigger_opts = Map.get(opts, trigger_type, %{})
+        trigger = build(:trigger, Map.merge(%{type: trigger_type}, trigger_opts))
+
+        {
+          with_trigger(wf, trigger),
+          Map.put(elements, trigger_type, trigger)
+        }
+      end)
+
+    {workflow, elements}
+  end
+
+  defp add_jobs(workflow, jobs, opts) do
+    {workflow, elements} =
+      Enum.reduce(jobs, {workflow, %{}}, fn job_name, {wf, elements} ->
+        job_opts = Map.get(opts, job_name, %{})
+        job = build(:job, Map.merge(%{name: job_name}, job_opts))
+
+        {
+          with_job(wf, job),
+          Map.put(elements, job_name, job)
+        }
+      end)
+
+    {workflow, elements}
+  end
+
+  defp add_edges(workflow, edges, elements, opts) do
+    Enum.reduce(edges, workflow, fn
+      # Trigger -> Job edge
+      {trigger_type, job_name}, wf when is_atom(trigger_type) ->
+        trigger = elements[trigger_type]
+        job = elements[job_name]
+        edge_opts = Map.get(opts, {trigger_type, job_name}, %{})
+        with_edge(wf, {trigger, job}, edge_opts)
+
+      # Job -> Job edge
+      {source_job_name, target_job_name}, wf ->
+        source_job = elements[source_job_name]
+        target_job = elements[target_job_name]
+        edge_opts = Map.get(opts, {source_job_name, target_job_name}, %{})
+        with_edge(wf, {source_job, target_job}, edge_opts)
+    end)
   end
 end
