@@ -1020,3 +1020,58 @@ export const LocalTimeConverter = {
   convertDateTime: () => void;
   convertToDisplayTime: (isoTimestamp: string, display: string) => void;
 }>;
+
+export const StreamingText = {
+  mounted() {
+    this.displayedText = '';
+    this.targetText = this.el.dataset.streamingContent || '';
+    this.animationFrameId = null;
+  },
+
+  updated() {
+    const newText = this.el.dataset.streamingContent || '';
+
+    if (newText !== this.targetText) {
+      this.targetText = newText;
+
+      if (!this.animationFrameId) {
+        this.animateText();
+      }
+    }
+  },
+
+  animateText() {
+    if (this.displayedText.length < this.targetText.length) {
+      // Find next word boundary
+      const remainingText = this.targetText.slice(this.displayedText.length);
+      const wordMatch = remainingText.match(/^(\s*\S+)/);
+
+      if (wordMatch) {
+        this.displayedText += wordMatch[1];
+        this.el.textContent = this.displayedText;
+      } else {
+        // No more words, just add remaining text
+        this.displayedText = this.targetText;
+        this.el.textContent = this.displayedText;
+      }
+
+      this.animationFrameId = setTimeout(() => {
+        this.animationFrameId = null;
+        this.animateText();
+      }, 50);
+    } else {
+      this.animationFrameId = null;
+    }
+  },
+
+  destroyed() {
+    if (this.animationFrameId) {
+      clearTimeout(this.animationFrameId);
+    }
+  },
+} as PhoenixHook<{
+  displayedText: string;
+  targetText: string;
+  animationFrameId: ReturnType<typeof setTimeout> | null;
+  animateText: () => void;
+}>;

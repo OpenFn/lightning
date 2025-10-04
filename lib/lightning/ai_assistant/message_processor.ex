@@ -57,6 +57,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     end
   end
 
+
   @doc """
   Defines the job timeout based on Apollo configuration.
 
@@ -94,6 +95,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       end
 
     case result do
+      {:ok, :streaming} ->
+        # Streaming in progress, don't mark as success yet
+        # The streaming_complete event will trigger success later
+        {:ok, session}
+
       {:ok, _} ->
         {:ok, updated_session, _updated_message} =
           update_message_status(message, :success)
@@ -123,7 +129,79 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           []
       end
 
-    AiAssistant.query(enriched_session, message.content, options)
+    # Use streaming for job messages
+    stream_job_message(enriched_session, message.content, options)
+  end
+
+  @doc false
+  @spec stream_job_message(AiAssistant.ChatSession.t(), String.t(), keyword()) ::
+          {:ok, :streaming | AiAssistant.ChatSession.t()} | {:error, String.t()}
+  defp stream_job_message(session, content, options) do
+    # For now, start streaming and use existing query as fallback
+    try do
+      start_streaming_request(session, content, options)
+      # Return :streaming indicator - message stays in processing state
+      {:ok, :streaming}
+    rescue
+      _ ->
+        # Fallback to non-streaming if streaming fails
+        AiAssistant.query(session, content, options)
+    end
+  end
+
+  @doc false
+  @spec start_streaming_request(AiAssistant.ChatSession.t(), String.t(), keyword()) :: :ok
+  defp start_streaming_request(session, content, options) do
+    # Build payload for Apollo
+    context = Keyword.get(options, :context, %{})
+    history = get_chat_history(session)
+
+    payload = %{
+      "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
+      "content" => content,
+      "context" => context,
+      "history" => history,
+      "meta" => %{},
+      "stream" => true
+    }
+
+    # Add session ID for Lightning broadcasts
+    websocket_payload = Map.put(payload, "lightning_session_id", session.id)
+
+    # Start Apollo WebSocket stream
+    apollo_ws_url = get_apollo_ws_url()
+
+    case Lightning.ApolloClient.WebSocket.start_stream(apollo_ws_url, websocket_payload) do
+      {:ok, _pid} ->
+        Logger.info("[MessageProcessor] Started Apollo WebSocket stream for session #{session.id}")
+
+      {:error, reason} ->
+        Logger.error("[MessageProcessor] Failed to start Apollo stream: #{inspect(reason)}")
+        Logger.info("[MessageProcessor] Falling back to HTTP client")
+        # Fall back to existing HTTP implementation
+        raise "WebSocket failed, falling back to HTTP (not implemented yet)"
+    end
+
+    :ok
+  end
+
+  defp get_apollo_ws_url do
+    base_url = Lightning.Config.apollo(:endpoint)
+    # Convert HTTP(S) to WS(S) and point to job_chat service
+    base_url
+    |> String.replace("https://", "wss://")
+    |> String.replace("http://", "ws://")
+    |> then(&"#{&1}/services/job_chat")
+  end
+
+  defp get_chat_history(session) do
+    session.messages
+    |> Enum.map(fn message ->
+      %{
+        "role" => to_string(message.role),
+        "content" => message.content
+      }
+    end)
   end
 
   @doc false
@@ -149,6 +227,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
        }}
     )
   end
+
 
   @doc """
   Updates a message's status and broadcasts the change.
