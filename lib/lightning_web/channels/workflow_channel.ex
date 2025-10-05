@@ -89,6 +89,20 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("get_context", _payload, socket) do
+    user = socket.assigns[:current_user]
+    project = socket.assigns.workflow.project
+
+    async_task(socket, "get_context", fn ->
+      %{
+        user: render_user_context(user),
+        project: render_project_context(project),
+        config: render_config_context()
+      }
+    end)
+  end
+
+  @impl true
   def handle_in("yjs_sync", {:binary, chunk}, socket) do
     Logger.debug("""
     WorkflowChannel: handle_in, yjs_sync
@@ -129,6 +143,10 @@ defmodule LightningWeb.WorkflowChannel do
         {:noreply, socket}
 
       "request_current_user" ->
+        reply(socket_ref, reply)
+        {:noreply, socket}
+
+      "get_context" ->
         reply(socket_ref, reply)
         {:noreply, socket}
 
@@ -227,6 +245,35 @@ defmodule LightningWeb.WorkflowChannel do
       last_name: user.last_name,
       inserted_at: user.inserted_at,
       updated_at: user.updated_at
+    }
+  end
+
+  defp render_user_context(nil), do: nil
+
+  defp render_user_context(user) do
+    %{
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email_confirmed: !is_nil(user.confirmed_at),
+      inserted_at: user.inserted_at
+    }
+  end
+
+  defp render_project_context(nil), do: nil
+
+  defp render_project_context(project) do
+    %{
+      id: project.id,
+      name: project.name
+    }
+  end
+
+  defp render_config_context do
+    %{
+      require_email_verification:
+        Lightning.Config.check_flag?(:require_email_verification)
     }
   end
 end
