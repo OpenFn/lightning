@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkerChannelTest do
   alias Lightning.Repo
   alias Lightning.WorkOrders
   alias Lightning.Workers
+  alias LightningWeb.WorkerPresence
 
   import Lightning.Factories
 
@@ -21,6 +22,49 @@ defmodule LightningWeb.WorkerChannelTest do
              |> socket("socket_id", %{token: "foo"})
              |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue") ==
                {:error, %{reason: "unauthorized"}}
+    end
+
+    test "tracks worker presence with default capacity" do
+      {:ok, bearer, claims} =
+        Workers.WorkerToken.generate_and_sign(
+          %{},
+          Lightning.Config.worker_token_signer()
+        )
+
+      socket =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer, claims: claims})
+
+      {:ok, _, _socket} =
+        socket |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
+
+      # Give presence a moment to sync
+      Process.sleep(50)
+
+      assert WorkerPresence.total_worker_capacity() == 2
+    end
+
+    test "tracks worker presence with custom capacity" do
+      {:ok, bearer, claims} =
+        Workers.WorkerToken.generate_and_sign(
+          %{},
+          Lightning.Config.worker_token_signer()
+        )
+
+      socket =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer, claims: claims})
+
+      {:ok, _, _socket} =
+        socket
+        |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue", %{
+          "capacity" => 10
+        })
+
+      # Give presence a moment to sync
+      Process.sleep(50)
+
+      assert WorkerPresence.total_worker_capacity() == 10
     end
   end
 
