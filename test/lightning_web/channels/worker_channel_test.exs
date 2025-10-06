@@ -41,7 +41,7 @@ defmodule LightningWeb.WorkerChannelTest do
       # Give presence a moment to sync
       Process.sleep(50)
 
-      assert WorkerPresence.total_worker_capacity() == 2
+      assert WorkerPresence.total_worker_capacity() == 1
     end
 
     test "tracks worker presence with custom capacity" do
