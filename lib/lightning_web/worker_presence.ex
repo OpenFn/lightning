@@ -49,7 +49,9 @@ defmodule LightningWeb.WorkerPresence do
     |> list()
     |> Enum.reduce(0, fn {_worker_id, %{metas: metas}}, acc ->
       # Sum up capacity from all metas for this worker
-      worker_capacity = Enum.reduce(metas, 0, fn meta, sum -> sum + meta.capacity end)
+      worker_capacity =
+        Enum.reduce(metas, 0, fn meta, sum -> sum + meta.capacity end)
+
       acc + worker_capacity
     end)
   end
