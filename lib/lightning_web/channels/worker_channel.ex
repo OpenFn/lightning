@@ -9,6 +9,8 @@ defmodule LightningWeb.WorkerChannel do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
 
+  alias LightningWeb.WorkerPresence
+
   require Logger
 
   @impl true
