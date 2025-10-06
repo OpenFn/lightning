@@ -67,8 +67,8 @@ defmodule Lightning.Projects.MergeProjects do
   4. Edge Mapping - maps edges based on node mappings
 
   ## Parameters
-    * `source_workflow` - The sandbox workflow with modifications
-    * `target_workflow` - The parent workflow to merge changes onto
+    * `source_workflow` - The sandbox workflow with modifications (i.e staging)
+    * `target_workflow` - The parent workflow to merge changes onto (i.e main)
 
   ## Returns
     A map with the merged workflow structure ready for import, containing
