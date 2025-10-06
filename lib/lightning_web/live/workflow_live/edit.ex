@@ -111,10 +111,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <!-- Add collaborative editor toggle (beaker icon only) -->
               <.link
                 :if={
-                  show_collaborative_editor_toggle?(
-                    @current_user,
-                    @snapshot_version_tag
-                  )
+                  !@show_new_workflow_panel &&
+                    show_collaborative_editor_toggle?(
+                      @current_user,
+                      @snapshot_version_tag
+                    )
                 }
                 navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}/collaborate"}
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
