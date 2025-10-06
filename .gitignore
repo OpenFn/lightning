@@ -85,3 +85,5 @@ assets/playwright-report
 assets/test-results
 .tsbuildinfo
 .tsimp
+
+.claude/settings.local.json
