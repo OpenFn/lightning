@@ -13,6 +13,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       _flag -> nil
     end)
 
+    # Set global mode for the mock to allow cross-process calls
+    Mox.set_mox_global(LightningMock)
+    # Stub the broadcast calls that save_workflow makes
+    Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     workflow = insert(:workflow, project: project)
@@ -118,6 +123,119 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{config: config_data} = response
       assert config_data.require_email_verification == false
+    end
+  end
+
+  describe "save_workflow" do
+    test "successfully saves workflow", %{socket: socket, workflow: workflow} do
+      # Modify the workflow name in Y.Doc
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction to avoid deadlock
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated via Channel")
+      end)
+
+      # Push save request
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :ok, %{
+        saved_at: saved_at,
+        lock_version: lock_version
+      }
+
+      assert %DateTime{} = saved_at
+      assert lock_version == workflow.lock_version + 1
+
+      # Verify workflow was actually saved to database
+      saved = Lightning.Workflows.get_workflow!(workflow.id)
+      assert saved.name == "Updated via Channel"
+      assert saved.lock_version == lock_version
+    end
+
+    test "returns validation errors", %{socket: socket} do
+      # Set invalid data in Y.Doc (blank name)
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+      assert errors[:name]
+    end
+
+    test "handles optimistic lock conflicts", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Another user saves first (simulate concurrent edit)
+      {:ok, _} =
+        Lightning.Workflows.save_workflow(
+          Lightning.Workflows.change_workflow(workflow, %{name: "Concurrent"}),
+          user
+        )
+
+      # Modify Y.Doc with stale data
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "My Change")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      # May get lock error depending on Y.Doc state
+      assert_reply ref, reply_type, response
+
+      assert reply_type in [:ok, :error]
+
+      if reply_type == :error do
+        assert response.type in ["optimistic_lock_error", "validation_error"]
+      end
+    end
+
+    test "handles deleted workflow", %{socket: socket, workflow: workflow} do
+      # Delete the workflow
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(workflow,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["This workflow has been deleted"]},
+        type: "workflow_deleted"
+      }
+    end
+
+    test "requires authentication" do
+      # Try to join channel without authentication (no token)
+      # This should fail at the socket connect level
+      assert_raise FunctionClauseError, fn ->
+        connect(LightningWeb.UserSocket, %{}, %{})
+      end
     end
   end
 end

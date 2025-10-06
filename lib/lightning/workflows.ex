@@ -129,11 +129,23 @@ defmodule Lightning.Workflows do
     |> preload(^include)
   end
 
-  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map(), struct()) ::
+  @spec save_workflow(
+          Ecto.Changeset.t(Workflow.t()) | map(),
+          struct(),
+          keyword()
+        ) ::
           {:ok, Workflow.t()}
           | {:error, Ecto.Changeset.t(Workflow.t())}
           | {:error, :workflow_deleted}
-  def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset, actor) do
+  def save_workflow(changeset_or_attrs, actor, opts \\ [])
+
+  def save_workflow(
+        %Ecto.Changeset{data: %Workflow{}} = changeset,
+        actor,
+        opts
+      ) do
+    skip_reconcile = Keyword.get(opts, :skip_reconcile, false)
+
     Multi.new()
     |> Multi.put(:actor, actor)
     |> Multi.run(:validate, fn _repo, _changes ->
@@ -164,10 +176,14 @@ defmodule Lightning.Workflows do
         Events.workflow_updated(workflow)
 
         # Reconcile changes with active collaborative editing sessions
-        Lightning.Collaboration.WorkflowReconciler.reconcile_workflow_changes(
-          changeset,
-          workflow
-        )
+        # Skip reconciliation when changes originate from collaborative session
+        # to prevent circular updates (Session → DB → Session)
+        unless skip_reconcile do
+          Lightning.Collaboration.WorkflowReconciler.reconcile_workflow_changes(
+            changeset,
+            workflow
+          )
+        end
 
         {:ok, workflow}
 
@@ -189,9 +205,9 @@ defmodule Lightning.Workflows do
     end
   end
 
-  def save_workflow(%{} = attrs, actor) do
+  def save_workflow(%{} = attrs, actor, opts) do
     Workflow.changeset(%Workflow{}, attrs)
-    |> save_workflow(actor)
+    |> save_workflow(actor, opts)
   end
 
   @spec publish_kafka_trigger_events(Ecto.Changeset.t(Workflow.t())) :: :ok

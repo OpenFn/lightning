@@ -125,6 +125,68 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  @doc """
+  Handles explicit workflow save requests from the collaborative editor.
+
+  The save operation:
+  1. Asks Session to extract and save the current Y.Doc state
+  2. Session handles all Y.Doc interaction internally
+  3. Returns success/error to the client
+
+  Note: By the time this message is processed, all prior Y.js sync messages
+  have been processed due to Phoenix Channel's synchronous per-socket handling.
+
+  Success response: {:ok, %{saved_at: DateTime, lock_version: integer}}
+  Error response: {:error, %{errors: map, type: string}}
+  """
+  @impl true
+  def handle_in("save_workflow", _params, socket) do
+    session_pid = socket.assigns.session_pid
+    user = socket.assigns.current_user
+
+    case Session.save_workflow(session_pid, user) do
+      {:ok, workflow} ->
+        {:reply,
+         {:ok,
+          %{
+            saved_at: DateTime.utc_now(),
+            lock_version: workflow.lock_version
+          }}, socket}
+
+      {:error, :workflow_deleted} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["This workflow has been deleted"]},
+            type: "workflow_deleted"
+          }}, socket}
+
+      {:error, :deserialization_failed} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["Failed to extract workflow data from editor"]},
+            type: "deserialization_error"
+          }}, socket}
+
+      {:error, :internal_error} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["An internal error occurred"]},
+            type: "internal_error"
+          }}, socket}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:reply,
+         {:error,
+          %{
+            errors: format_changeset_errors(changeset),
+            type: determine_error_type(changeset)
+          }}, socket}
+    end
+  end
+
   @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
@@ -275,5 +337,23 @@ defmodule LightningWeb.WorkflowChannel do
       require_email_verification:
         Lightning.Config.check_flag?(:require_email_verification)
     }
+  end
+
+  # Private helper functions for save_workflow
+
+  defp format_changeset_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+  end
+
+  defp determine_error_type(changeset) do
+    if changeset.errors[:lock_version] do
+      "optimistic_lock_error"
+    else
+      "validation_error"
+    end
   end
 end

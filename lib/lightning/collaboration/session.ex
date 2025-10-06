@@ -174,6 +174,46 @@ defmodule Lightning.Collaboration.Session do
     GenServer.call(session_pid, {:send_yjs_message, chunk})
   end
 
+  @doc """
+  Saves the current workflow state from the Y.Doc to the database.
+
+  This function:
+  1. Extracts the current workflow data from the SharedDoc's Y.Doc
+  2. Converts Y.js types to Elixir maps suitable for Ecto
+  3. Calls Lightning.Workflows.save_workflow/3 for validation and persistence
+  4. Returns the saved workflow
+
+  Note: This assumes all Y.js updates have been processed before this call,
+  which is guaranteed by Phoenix Channel's synchronous message handling.
+
+  ## Parameters
+  - `session_pid`: The Session process PID
+  - `user`: The user performing the save (for authorization and auditing)
+
+  ## Returns
+  - `{:ok, workflow}` - Successfully saved
+  - `{:error, :workflow_deleted}` - Workflow has been deleted
+  - `{:error, changeset}` - Validation or persistence error
+
+  ## Examples
+
+      iex> Session.save_workflow(session_pid, user)
+      {:ok, %Workflow{}}
+
+      iex> Session.save_workflow(session_pid, user)
+      {:error, %Ecto.Changeset{}}
+  """
+  @spec save_workflow(pid(), Lightning.Accounts.User.t()) ::
+          {:ok, Lightning.Workflows.Workflow.t()}
+          | {:error,
+             :workflow_deleted
+             | :deserialization_failed
+             | :internal_error
+             | Ecto.Changeset.t()}
+  def save_workflow(session_pid, user) do
+    GenServer.call(session_pid, {:save_workflow, user}, 10_000)
+  end
+
   # ----------------------------------------------------------------------------
 
   @impl true
@@ -222,6 +262,49 @@ defmodule Lightning.Collaboration.Session do
     Logger.debug({:start_sync, from} |> inspect)
     SharedDoc.start_sync(shared_doc_pid, chunk)
     {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:save_workflow, user}, _from, state) do
+    Logger.info("Saving workflow #{state.workflow_id} for user #{user.id}")
+
+    with {:ok, doc} <- get_document(state),
+         {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow_id),
+         {:ok, workflow} <- fetch_workflow(state.workflow_id),
+         changeset <-
+           Lightning.Workflows.change_workflow(workflow, workflow_data),
+         {:ok, saved_workflow} <-
+           Lightning.Workflows.save_workflow(changeset, user,
+             skip_reconcile: true
+           ) do
+      Logger.info("Successfully saved workflow #{state.workflow_id}")
+      {:reply, {:ok, saved_workflow}, state}
+    else
+      {:error, :no_shared_doc} ->
+        Logger.error("Cannot save workflow #{state.workflow_id}: no shared doc")
+        {:reply, {:error, :internal_error}, state}
+
+      {:error, :deserialization_failed, reason} ->
+        Logger.error(
+          "Failed to deserialize workflow #{state.workflow_id}: #{inspect(reason)}"
+        )
+
+        {:reply, {:error, :deserialization_failed}, state}
+
+      {:error, :workflow_deleted} ->
+        Logger.warning(
+          "Cannot save workflow #{state.workflow_id}: workflow deleted"
+        )
+
+        {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        Logger.warning(
+          "Failed to save workflow #{state.workflow_id}: #{inspect(changeset.errors)}"
+        )
+
+        {:reply, {:error, changeset}, state}
+    end
   end
 
   # Comes from the SharedDoc, for changes coming from the SharedDoc
@@ -294,5 +377,32 @@ defmodule Lightning.Collaboration.Session do
   @doc false
   defp initialize_workflow_data(doc, workflow) do
     WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+  end
+
+  # Private helper functions
+
+  defp get_document(%{shared_doc_pid: nil}), do: {:error, :no_shared_doc}
+
+  defp get_document(%{shared_doc_pid: pid}) do
+    {:ok, SharedDoc.get_doc(pid)}
+  end
+
+  defp deserialize_workflow(doc, workflow_id) do
+    try do
+      data = WorkflowSerializer.deserialize_from_ydoc(doc, workflow_id)
+      {:ok, data}
+    rescue
+      e ->
+        {:error, :deserialization_failed, Exception.message(e)}
+    end
+  end
+
+  defp fetch_workflow(workflow_id) do
+    case Lightning.Workflows.get_workflow(workflow_id,
+           include: [:jobs, :edges, :triggers]
+         ) do
+      nil -> {:error, :workflow_deleted}
+      workflow -> {:ok, workflow}
+    end
   end
 end
