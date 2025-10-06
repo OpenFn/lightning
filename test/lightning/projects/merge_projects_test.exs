@@ -905,6 +905,7 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Target: trigger->x, x->y, y->z, y->q
       # Special case: node 'b' has both parent and children changed
       # Should map: a->x, b->y, c->z, d->q
+      # because we dont know which node is on the left or right, c and d can map to either z or q
 
       # Source workflow using generate_workflow helper
       {source, _source_elements} =
@@ -928,27 +929,26 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert result_trigger["id"] == target_trigger.id
       refute result_trigger["delete"]
 
-      # Check job mappings
       assert length(result["jobs"]) == 4
 
-      # Expected mappings based on structural similarity
-      # The merge returns source job names but with target job IDs
-      expected_mappings = %{
-        "a" => target_job_x.id,
-        "b" => target_job_y.id,
-        "c" => target_job_z.id,
-        "d" => target_job_q.id
-      }
+      result_job_a = Enum.find(result["jobs"], &(&1["name"] == "a"))
+      assert result_job_a["id"] == target_job_x.id
+      refute result_job_a["delete"]
 
-      for {job_name, expected_target_id} <- expected_mappings do
-        result_job = Enum.find(result["jobs"], &(&1["name"] == job_name))
-        assert result_job, "Job #{job_name} should exist in result"
+      result_job_b = Enum.find(result["jobs"], &(&1["name"] == "b"))
+      assert result_job_b["id"] == target_job_y.id
+      refute result_job_b["delete"]
 
-        assert result_job["id"] == expected_target_id,
-               "Job #{job_name} should map to correct target"
+      # Check variable mappings for c and d
+      result_job_c = Enum.find(result["jobs"], &(&1["name"] == "c"))
+      result_job_d = Enum.find(result["jobs"], &(&1["name"] == "d"))
 
-        refute result_job["delete"]
-      end
+      refute result_job_c["id"] == result_job_d["id"]
+      assert result_job_c["id"] in [target_job_z.id, target_job_q.id]
+      assert result_job_d["id"] in [target_job_z.id, target_job_q.id]
+
+      refute result_job_c["delete"]
+      refute result_job_d["delete"]
 
       # Check edge mappings - should have 4 edges
       assert length(result["edges"]) == 4
@@ -966,17 +966,34 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert result_a_b
       assert result_a_b["id"] == target_x_y["id"]
 
-      # b->c (maps to y->z)
+      # b->c and b->d edges
+      # The edge IDs depend on which job c and d map to
       result_b_c = find_edge_by_names(result, "b", "c")
-      target_y_z = find_edge_by_names(target, "y", "z")
-      assert result_b_c
-      assert result_b_c["id"] == target_y_z["id"]
-
-      # b->d (maps to y->q)
       result_b_d = find_edge_by_names(result, "b", "d")
+      target_y_z = find_edge_by_names(target, "y", "z")
       target_y_q = find_edge_by_names(target, "y", "q")
+
+      assert result_b_c
       assert result_b_d
-      assert result_b_d["id"] == target_y_q["id"]
+
+      # If c maps to z, then b->c should map to y->z
+      # If c maps to q, then b->c should map to y->q
+      if result_job_c["id"] == target_job_z.id do
+        assert result_b_c["id"] == target_y_z["id"],
+               "Edge b->c should map to y->z when c maps to z"
+
+        assert result_b_d["id"] == target_y_q["id"],
+               "Edge b->d should map to y->q when c maps to z"
+      else
+        assert result_job_c["id"] == target_job_q.id,
+               "c should map to q if not z"
+
+        assert result_b_c["id"] == target_y_q["id"],
+               "Edge b->c should map to y->q when c maps to q"
+
+        assert result_b_d["id"] == target_y_z["id"],
+               "Edge b->d should map to y->z when c maps to q"
+      end
 
       for result_edge <- result["edges"] do
         refute result_edge["delete"]
