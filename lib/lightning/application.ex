@@ -134,6 +134,7 @@ defmodule Lightning.Application do
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
+        LightningWeb.WorkerPresence,
         adaptor_registry_childspec,
         adaptor_service_childspec,
         {Lightning.TaskWorker, name: :cli_task_worker},
