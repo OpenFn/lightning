@@ -346,15 +346,46 @@ defmodule Lightning.Projects.MergeProjectsTest do
         refute result_edge["delete"]
       end
 
-      # Verify specific edge mappings exist
-      assert find_edge_by_names(result, "webhook", "a")
-      assert find_edge_by_names(result, "webhook", "b")
-      assert find_edge_by_names(result, "a", "c")
-      assert find_edge_by_names(result, "a", "d")
-      assert find_edge_by_names(result, "b", "d")
-      assert find_edge_by_names(result, "b", "e")
-      assert find_edge_by_names(result, "c", "f")
-      assert find_edge_by_names(result, "e", "g")
+      # Verify specific edge mappings exist and IDs haven't changed
+      result_webhook_a = find_edge_by_names(result, "webhook", "a")
+      target_webhook_a = find_edge_by_names(target, "webhook", "a")
+      assert result_webhook_a
+      assert result_webhook_a["id"] == target_webhook_a["id"]
+
+      result_webhook_b = find_edge_by_names(result, "webhook", "b")
+      target_webhook_b = find_edge_by_names(target, "webhook", "b")
+      assert result_webhook_b
+      assert result_webhook_b["id"] == target_webhook_b["id"]
+
+      result_a_c = find_edge_by_names(result, "a", "c")
+      target_a_c = find_edge_by_names(target, "a", "c")
+      assert result_a_c
+      assert result_a_c["id"] == target_a_c["id"]
+
+      result_a_d = find_edge_by_names(result, "a", "d")
+      target_a_d = find_edge_by_names(target, "a", "d")
+      assert result_a_d
+      assert result_a_d["id"] == target_a_d["id"]
+
+      result_b_d = find_edge_by_names(result, "b", "d")
+      target_b_d = find_edge_by_names(target, "b", "d")
+      assert result_b_d
+      assert result_b_d["id"] == target_b_d["id"]
+
+      result_b_e = find_edge_by_names(result, "b", "e")
+      target_b_e = find_edge_by_names(target, "b", "e")
+      assert result_b_e
+      assert result_b_e["id"] == target_b_e["id"]
+
+      result_c_f = find_edge_by_names(result, "c", "f")
+      target_c_f = find_edge_by_names(target, "c", "f")
+      assert result_c_f
+      assert result_c_f["id"] == target_c_f["id"]
+
+      result_e_g = find_edge_by_names(result, "e", "g")
+      target_e_g = find_edge_by_names(target, "e", "g")
+      assert result_e_g
+      assert result_e_g["id"] == target_e_g["id"]
     end
 
     test "id change: single node" do
@@ -414,8 +445,20 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       # Check edge mappings - should have 2 edges from trigger to jobs
       assert length(result["edges"]) == 2
-      assert find_edge_by_names(result, "webhook", "a")
-      assert find_edge_by_names(result, "webhook", "b")
+
+      # Verify edges exist and IDs are preserved from target
+      result_webhook_a = find_edge_by_names(result, "webhook", "a")
+      result_webhook_b = find_edge_by_names(result, "webhook", "b")
+      assert result_webhook_a
+      assert result_webhook_b
+
+      # Since source has same structure, edges should map to target edges
+      target_webhook_x = find_edge_by_names(target, "webhook", "x")
+      target_webhook_y = find_edge_by_names(target, "webhook", "y")
+
+      # Edges should preserve target IDs (mapped in structural order)
+      assert result_webhook_a["id"] == target_webhook_x["id"]
+      assert result_webhook_b["id"] == target_webhook_y["id"]
 
       for result_edge <- result["edges"] do
         refute result_edge["delete"]
@@ -463,9 +506,16 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Check edge mappings - should have 2 edges
       assert length(result["edges"]) == 2
       # trigger->a
-      assert find_edge_by_names(result, "webhook", "a")
+      result_webhook_a = find_edge_by_names(result, "webhook", "a")
+      target_webhook_x = find_edge_by_names(target, "webhook", "x")
+      assert result_webhook_a
+      assert result_webhook_a["id"] == target_webhook_x["id"]
+
       # a->b
-      assert find_edge_by_names(result, "a", "b")
+      result_a_b = find_edge_by_names(result, "a", "b")
+      target_x_b = find_edge_by_names(target, "x", "b")
+      assert result_a_b
+      assert result_a_b["id"] == target_x_b["id"]
 
       for result_edge <- result["edges"] do
         refute result_edge["delete"]
@@ -534,14 +584,32 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       # Check edge mappings - should have 4 edges
       assert length(result["edges"]) == 4
-      # trigger->a
-      assert find_edge_by_names(result, "webhook", "a")
-      # trigger->b
-      assert find_edge_by_names(result, "webhook", "b")
-      # a->c
-      assert find_edge_by_names(result, "a", "c")
-      # b->c
-      assert find_edge_by_names(result, "b", "c")
+
+      # Get target edges for comparison
+      target_webhook_x = find_edge_by_names(target, "webhook", "x")
+      target_webhook_y = find_edge_by_names(target, "webhook", "y")
+      target_x_c = find_edge_by_names(target, "x", "c")
+      target_y_c = find_edge_by_names(target, "y", "c")
+
+      # trigger->a (maps to webhook->x)
+      result_webhook_a = find_edge_by_names(result, "webhook", "a")
+      assert result_webhook_a
+      assert result_webhook_a["id"] == target_webhook_x["id"]
+
+      # trigger->b (maps to webhook->y)
+      result_webhook_b = find_edge_by_names(result, "webhook", "b")
+      assert result_webhook_b
+      assert result_webhook_b["id"] == target_webhook_y["id"]
+
+      # a->c (maps to x->c)
+      result_a_c = find_edge_by_names(result, "a", "c")
+      assert result_a_c
+      assert result_a_c["id"] == target_x_c["id"]
+
+      # b->c (maps to y->c)
+      result_b_c = find_edge_by_names(result, "b", "c")
+      assert result_b_c
+      assert result_b_c["id"] == target_y_c["id"]
 
       for result_edge <- result["edges"] do
         refute result_edge["delete"]
@@ -631,22 +699,56 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       # Check edge mappings - should have 8 edges
       assert length(result["edges"]) == 8
-      # trigger->a
-      assert find_edge_by_names(result, "webhook", "a")
-      # trigger->b
-      assert find_edge_by_names(result, "webhook", "b")
-      # a->c
-      assert find_edge_by_names(result, "a", "c")
-      # b->d
-      assert find_edge_by_names(result, "b", "d")
-      # c->e
-      assert find_edge_by_names(result, "c", "e")
-      # d->f
-      assert find_edge_by_names(result, "d", "f")
-      # e->g
-      assert find_edge_by_names(result, "e", "g")
-      # f->g
-      assert find_edge_by_names(result, "f", "g")
+
+      # Verify edges exist and IDs are preserved from target
+      # Mapping: a->a1, b->b1, c->x, d->y, e->e, f->f, g->z
+      # trigger->a (source) maps to webhook->a1 (target)
+      result_webhook_a = find_edge_by_names(result, "webhook", "a")
+      target_webhook_a1 = find_edge_by_names(target, "webhook", "a1")
+      assert result_webhook_a
+      assert result_webhook_a["id"] == target_webhook_a1["id"]
+
+      # trigger->b (source) maps to webhook->b1 (target)
+      result_webhook_b = find_edge_by_names(result, "webhook", "b")
+      target_webhook_b1 = find_edge_by_names(target, "webhook", "b1")
+      assert result_webhook_b
+      assert result_webhook_b["id"] == target_webhook_b1["id"]
+
+      # a->c (source) maps to a1->x (target)
+      result_a_c = find_edge_by_names(result, "a", "c")
+      target_a1_x = find_edge_by_names(target, "a1", "x")
+      assert result_a_c
+      assert result_a_c["id"] == target_a1_x["id"]
+
+      # b->d (source) maps to b1->y (target)
+      result_b_d = find_edge_by_names(result, "b", "d")
+      target_b1_y = find_edge_by_names(target, "b1", "y")
+      assert result_b_d
+      assert result_b_d["id"] == target_b1_y["id"]
+
+      # c->e (source) maps to x->e (target)
+      result_c_e = find_edge_by_names(result, "c", "e")
+      target_x_e = find_edge_by_names(target, "x", "e")
+      assert result_c_e
+      assert result_c_e["id"] == target_x_e["id"]
+
+      # d->f (source) maps to y->f (target)
+      result_d_f = find_edge_by_names(result, "d", "f")
+      target_y_f = find_edge_by_names(target, "y", "f")
+      assert result_d_f
+      assert result_d_f["id"] == target_y_f["id"]
+
+      # e->g (source) maps to e->z (target)
+      result_e_g = find_edge_by_names(result, "e", "g")
+      target_e_z = find_edge_by_names(target, "e", "z")
+      assert result_e_g
+      assert result_e_g["id"] == target_e_z["id"]
+
+      # f->g (source) maps to f->z (target)
+      result_f_g = find_edge_by_names(result, "f", "g")
+      target_f_z = find_edge_by_names(target, "f", "z")
+      assert result_f_g
+      assert result_f_g["id"] == target_f_z["id"]
 
       for result_edge <- result["edges"] do
         refute result_edge["delete"]
@@ -742,22 +844,56 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       # Check edge mappings - should have 8 edges
       assert length(result["edges"]) == 8
-      # trigger->a
-      assert find_edge_by_names(result, "webhook", "a")
-      # trigger->b
-      assert find_edge_by_names(result, "webhook", "b")
-      # a->c
-      assert find_edge_by_names(result, "a", "c")
-      # a->d
-      assert find_edge_by_names(result, "a", "d")
-      # b->e
-      assert find_edge_by_names(result, "b", "e")
-      # b->f
-      assert find_edge_by_names(result, "b", "f")
-      # d->g
-      assert find_edge_by_names(result, "d", "g")
-      # e->g
-      assert find_edge_by_names(result, "e", "g")
+
+      # Verify edges exist and IDs are preserved from target
+      # Mapping: a->x, b->y, c->c, d->m, e->n, f->f, g->g
+      # trigger->a (source) maps to webhook->x (target)
+      result_webhook_a = find_edge_by_names(result, "webhook", "a")
+      target_webhook_x = find_edge_by_names(target, "webhook", "x")
+      assert result_webhook_a
+      assert result_webhook_a["id"] == target_webhook_x["id"]
+
+      # trigger->b (source) maps to webhook->y (target)
+      result_webhook_b = find_edge_by_names(result, "webhook", "b")
+      target_webhook_y = find_edge_by_names(target, "webhook", "y")
+      assert result_webhook_b
+      assert result_webhook_b["id"] == target_webhook_y["id"]
+
+      # a->c (source) maps to x->c (target)
+      result_a_c = find_edge_by_names(result, "a", "c")
+      target_x_c = find_edge_by_names(target, "x", "c")
+      assert result_a_c
+      assert result_a_c["id"] == target_x_c["id"]
+
+      # a->d (source) maps to x->m (target)
+      result_a_d = find_edge_by_names(result, "a", "d")
+      target_x_m = find_edge_by_names(target, "x", "m")
+      assert result_a_d
+      assert result_a_d["id"] == target_x_m["id"]
+
+      # b->e (source) maps to y->n (target)
+      result_b_e = find_edge_by_names(result, "b", "e")
+      target_y_n = find_edge_by_names(target, "y", "n")
+      assert result_b_e
+      assert result_b_e["id"] == target_y_n["id"]
+
+      # b->f (source) maps to y->f (target)
+      result_b_f = find_edge_by_names(result, "b", "f")
+      target_y_f = find_edge_by_names(target, "y", "f")
+      assert result_b_f
+      assert result_b_f["id"] == target_y_f["id"]
+
+      # d->g (source) maps to m->g (target)
+      result_d_g = find_edge_by_names(result, "d", "g")
+      target_m_g = find_edge_by_names(target, "m", "g")
+      assert result_d_g
+      assert result_d_g["id"] == target_m_g["id"]
+
+      # e->g (source) maps to n->g (target)
+      result_e_g = find_edge_by_names(result, "e", "g")
+      target_n_g = find_edge_by_names(target, "n", "g")
+      assert result_e_g
+      assert result_e_g["id"] == target_n_g["id"]
 
       for result_edge <- result["edges"] do
         refute result_edge["delete"]
@@ -816,14 +952,31 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       # Check edge mappings - should have 4 edges
       assert length(result["edges"]) == 4
-      # trigger->a
-      assert find_edge_by_names(result, "webhook", "a")
-      # a->b
-      assert find_edge_by_names(result, "a", "b")
-      # b->c
-      assert find_edge_by_names(result, "b", "c")
-      # b->d
-      assert find_edge_by_names(result, "b", "d")
+
+      # Verify edges exist and IDs are preserved from target
+      # trigger->a (maps to webhook->x)
+      result_webhook_a = find_edge_by_names(result, "webhook", "a")
+      target_webhook_x = find_edge_by_names(target, "webhook", "x")
+      assert result_webhook_a
+      assert result_webhook_a["id"] == target_webhook_x["id"]
+
+      # a->b (maps to x->y)
+      result_a_b = find_edge_by_names(result, "a", "b")
+      target_x_y = find_edge_by_names(target, "x", "y")
+      assert result_a_b
+      assert result_a_b["id"] == target_x_y["id"]
+
+      # b->c (maps to y->z)
+      result_b_c = find_edge_by_names(result, "b", "c")
+      target_y_z = find_edge_by_names(target, "y", "z")
+      assert result_b_c
+      assert result_b_c["id"] == target_y_z["id"]
+
+      # b->d (maps to y->q)
+      result_b_d = find_edge_by_names(result, "b", "d")
+      target_y_q = find_edge_by_names(target, "y", "q")
+      assert result_b_d
+      assert result_b_d["id"] == target_y_q["id"]
 
       for result_edge <- result["edges"] do
         refute result_edge["delete"]
@@ -984,9 +1137,17 @@ defmodule Lightning.Projects.MergeProjectsTest do
       # Should have four edges: two preserved, two deleted
       assert length(result["edges"]) == 4
 
-      # Edges trigger->a and trigger->b should be preserved
-      assert find_edge_by_names(result, "webhook", "a")
-      assert find_edge_by_names(result, "webhook", "b")
+      # Edges trigger->a and trigger->b should be preserved with their IDs
+      result_webhook_a = find_edge_by_names(result, "webhook", "a")
+      result_webhook_b = find_edge_by_names(result, "webhook", "b")
+      assert result_webhook_a
+      assert result_webhook_b
+
+      # Verify edge IDs are preserved from target
+      target_webhook_a = find_edge_by_names(target, "webhook", "a")
+      target_webhook_b = find_edge_by_names(target, "webhook", "b")
+      assert result_webhook_a["id"] == target_webhook_a["id"]
+      assert result_webhook_b["id"] == target_webhook_b["id"]
 
       # Edges a->c and b->d should be marked for deletion
       deleted_edges = Enum.filter(result["edges"], & &1["delete"])
