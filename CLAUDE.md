@@ -25,7 +25,7 @@ env $(cat .env | grep -v "#" | xargs) iex -S mix phx.server
 
 # Testing
 MIX_ENV=test mix ecto.create  # first time setup
-MIX_ENV=test mix test
+mix test
 # Don't use -v flag with mix test
 
 # Code quality checks
@@ -34,7 +34,7 @@ mix format --check-formatted
 mix dialyzer
 mix credo --strict --all
 mix sobelow
-MIX_ENV=test mix coveralls.html
+mix coveralls.html
 
 # Database operations
 mix ecto.create
@@ -182,6 +182,8 @@ components:
 - E2E: Use Playwright tests (`npm run test:e2e` in assets/)
 - E2E environment managed by `bin/e2e` script
 - Test database: `lightning_test` (automatically created/migrated by mix test)
+- **See `.claude/guidelines/testing-essentials.md`** for comprehensive testing
+  guidelines and best practices
 
 ### Code Quality Standards
 
@@ -275,7 +277,8 @@ Lightning includes several custom Mix tasks:
 - **Cloak**: Encryption for sensitive data
 - **Timex**: Date/time utilities
 - **Broadway + Kafka**: Event streaming
-- **Y_ex**: Yjs bindings for collaborative editing
+- **Y_ex**: Yjs bindings for collaborative editing (see
+  `.claude/guidelines/yex-guidelines.md`)
 - **Rambo**: External command execution (needs Rust)
 
 ### Frontend (JavaScript/TypeScript)
@@ -323,3 +326,4 @@ Key supervised processes:
 - Follow "strong opinions, weakly held" principle
 - Ask for clarification when uncertain
 - When running npm or npx commands, always cd into the assets directory first
+- We don't need to use MIX_ENV=test for most test related commands, ecto.create is the only one that explicitly needs the env set

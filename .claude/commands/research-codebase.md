@@ -54,10 +54,6 @@ Then wait for the user's research query.
    - Use the **web-search-researcher** agent for external documentation and resources
    - IF you use web-research agents, instruct them to return LINKS with their findings, and please INCLUDE those links in your final report
 
-   **For Linear tickets (if relevant):**
-   - Use the **linear-ticket-reader** agent to get full details of a specific ticket
-   - Use the **linear-searcher** agent to find related tickets or historical context
-
    The key is to use these agents intelligently:
    - Start with locator agents to find what exists
    - Then use analyzer agents on the most promising findings to document how they work
@@ -71,30 +67,20 @@ Then wait for the user's research query.
    - Compile all sub-agent results (both codebase and context findings)
    - Prioritize live codebase findings as primary source of truth
    - Use .context/ findings as supplementary historical context
+   - ask the user for their first name if `$USER` or `dscl/finger` fails or doesn't map to a persons folder in .context.
    - Connect findings across different components
    - Include specific file paths and line numbers for reference
    - Verify all .context/ paths are correct (e.g., .context/stuart/ or .context/shared/)
    - Highlight patterns, connections, and architectural decisions
    - Answer the user's specific questions with concrete evidence
 
-5. **Gather metadata for the research document:**
-   - Run the `hack/spec_metadata.sh` script to generate all relevant metadata (if it exists)
-   - Filename: `.context/shared/research/YYYY-MM-DD-XXXX-description.md`
-     - Format: `YYYY-MM-DD-XXXX-description.md` where:
-       - YYYY-MM-DD is today's date
-       - XXXX is the GitHub issue number (omit if no issue)
-       - description is a brief kebab-case description of the research topic
-     - Examples:
-       - With issue: `2025-10-06-3635-save-workflow.md`
-       - Without issue: `2025-10-06-authentication-flow.md`
-
-6. **Generate research document:**
+5. **Generate research document:**
    - Use the metadata gathered in step 4
    - Structure the document with YAML frontmatter followed by content:
      ```markdown
      ---
      date: [Current date and time with timezone in ISO format]
-     researcher: [Researcher name from thoughts status]
+     researcher: [Researcher name from step 4 status]
      git_commit: [Current commit hash]
      branch: [Current branch name]
      repository: [Repository name]
@@ -108,7 +94,7 @@ Then wait for the user's research query.
      # Research: [User's Question/Topic]
 
      **Date**: [Current date and time with timezone from step 4]
-     **Researcher**: [Researcher name from thoughts status]
+     **Researcher**: [Researcher name from step 4 status]
      **Git Commit**: [Current commit hash from step 4]
      **Branch**: [Current branch name from step 4]
      **Repository**: [Repository name]
@@ -130,7 +116,7 @@ Then wait for the user's research query.
      ...
 
      ## Code References
-     - `path/to/file.py:123` - Description of what's there
+     - `path/to/file.ex:123` - Description of what's there
      - `another/file.ts:45-67` - Description of the code block
 
      ## Architecture Documentation
@@ -148,19 +134,19 @@ Then wait for the user's research query.
      [Any areas that need further investigation]
      ```
 
-7. **Add GitHub permalinks (if applicable):**
+6. **Add GitHub permalinks (if applicable):**
    - Check if on main branch or if commit is pushed: `git branch --show-current` and `git status`
    - If on main/master or pushed, generate GitHub permalinks:
      - Get repo info: `gh repo view --json owner,name`
      - Create permalinks: `https://github.com/{owner}/{repo}/blob/{commit}/{file}#L{line}`
    - Replace local file references with permalinks in the document
 
-8. **Present findings:**
+7. **Present findings:**
    - Present a concise summary of findings to the user
    - Include key file references for easy navigation
    - Ask if they have follow-up questions or need clarification
 
-9. **Handle follow-up questions:**
+8. **Handle follow-up questions:**
    - If the user has follow-up questions, append to the same research document
    - Update the frontmatter fields `last_updated` and `last_updated_by` to reflect the update
    - Add `last_updated_note: "Added follow-up research for [brief description]"` to frontmatter

@@ -61,7 +61,7 @@ When investigating existing functionality, you systematically:
 - Test files > 400 lines signal over-testing - consolidate
 - Use pattern matching to assert multiple fields: `assert %{field1: expected1, field2: expected2} = result`
 - Focus on critical paths, edge cases, and integration points
-- See `.claude/testing-essentials.md` for core testing principles that apply to both Elixir and TypeScript
+- See `.claude/guidelines/testing-essentials.md` for core testing principles that apply to both Elixir and TypeScript
 
 **Testing Philosophy:**
 - **Group related assertions** - test complete behaviors, not individual fields

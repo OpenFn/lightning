@@ -695,9 +695,9 @@ Before submitting tests, verify:
 ## Additional Resources
 
 For specific patterns, see:
-- **React patterns**: `.claude/testing/react-patterns.md` - act(), hooks, RTL
-- **Vitest advanced**: `.claude/testing/vitest-advanced.md` - fixtures, performance
-- **Lightning-specific**: `.claude/testing/collaborative-editor.md` - Yjs, Phoenix channels
+- **React patterns**: `.claude/guidelines/testing/react-patterns.md` - act(), hooks, RTL
+- **Vitest advanced**: `.claude/guidelines/testing/vitest-advanced.md` - fixtures, performance
+- **Lightning-specific**: `.claude/guidelines/testing/collaborative-editor.md` - Yjs, Phoenix channels
 
 ---
 
