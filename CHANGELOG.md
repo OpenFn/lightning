@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Released
+
+## [2.14.10-pre] - 2025-10-07
+
+### Added
+
 - Worker "presence" module to track connected workers (and their capacity)
   across the app. [#3725](https://github.com/OpenFn/lightning/pull/3725)
 - SessionContextStore for collaborative workflow editor to provide user,
@@ -27,8 +35,6 @@ and this project adheres to
 
 - Limit sandbox creation
   [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
-
-### Fixed
 
 ## [v2.14.9] - 2025-10-03
 

@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.14.9",
+      version: "2.14.10-pre",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
