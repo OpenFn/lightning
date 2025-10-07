@@ -87,6 +87,59 @@ end
 
 ## Core Concepts
 
+### Critical: You Cannot Create Map/Array/Text Directly
+
+**⚠️ FUNDAMENTAL API CONSTRAINT ⚠️**
+
+Yex.Map, Yex.Array, and Yex.Text **cannot be created directly**. They can ONLY be obtained through `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, and `Yex.Doc.get_text/2`.
+
+```elixir
+# ❌ WRONG - These functions DO NOT EXIST
+map = Yex.Map.new()          # NO! This function doesn't exist
+array = Yex.Array.new()      # NO! This function doesn't exist
+text = Yex.Text.new()        # NO! This function doesn't exist
+
+# ✅ CORRECT - Only way to create these types
+doc = Yex.Doc.new()
+map = Yex.Doc.get_map(doc, "my_map")       # This is the ONLY way
+array = Yex.Doc.get_array(doc, "my_array") # This is the ONLY way
+text = Yex.Doc.get_text(doc, "my_text")    # This is the ONLY way
+```
+
+**To insert nested structures (a map inside an array, etc), use Prelim types:**
+
+```elixir
+# ❌ WRONG - You cannot insert a Yex.Map/Array/Text that doesn't exist
+jobs_array = Yex.Doc.get_array(doc, "jobs")
+job_map = Yex.Map.new()  # ERROR! This function doesn't exist
+Yex.Array.push(jobs_array, job_map)
+
+# ✅ CORRECT - Use Prelim types for nested structures
+jobs_array = Yex.Doc.get_array(doc, "jobs")
+job_map = Yex.MapPrelim.from(%{
+  "id" => "abc123",
+  "name" => "My Job",
+  "body" => Yex.TextPrelim.from("console.log('hello');")
+})
+Yex.Array.push(jobs_array, job_map)
+
+# After insertion, prelim becomes real Yex type
+{:ok, real_job_map} = Yex.Array.fetch(jobs_array, 0)
+# real_job_map is now a %Yex.Map{} struct
+{:ok, body_text} = Yex.Map.fetch(real_job_map, "body")
+# body_text is now a %Yex.Text{} struct
+```
+
+**Why this matters:**
+- Yex types are bound to a document and worker process
+- They require a transaction context to operate
+- Prelim types are "plans" that become real Yex types when inserted
+- This is different from typical Elixir APIs where you can create structs directly
+
+**Reference:** `deps/y_ex/lib/doc.ex:113-135`, `lib/lightning/collaboration/workflow_serializer.ex:114-127`
+
+---
+
 ### Worker Process Model
 
 Every `Yex.Doc` has a `worker_pid` field that identifies which process owns the document.
@@ -398,6 +451,33 @@ Yex.Doc.demonitor_update(sub_ref)
 ---
 
 ## Common Gotchas
+
+### 0. Cannot Create Map/Array/Text Directly (MOST COMMON ERROR)
+
+**Problem:** Attempting to call `Yex.Map.new()`, `Yex.Array.new()`, or `Yex.Text.new()` will fail because these functions don't exist.
+
+**Solution:** Use `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, or `Yex.Doc.get_text/2`. For nested structures, use Prelim types.
+
+```elixir
+# ❌ Wrong - These functions don't exist
+map = Yex.Map.new()
+array = Yex.Array.new()
+
+# ✅ Correct - Get from document
+doc = Yex.Doc.new()
+map = Yex.Doc.get_map(doc, "my_map")
+array = Yex.Doc.get_array(doc, "my_array")
+
+# ✅ Correct - For nested structures, use Prelim types
+jobs = Yex.Doc.get_array(doc, "jobs")
+job = Yex.MapPrelim.from(%{
+  "id" => "123",
+  "body" => Yex.TextPrelim.from("code here")
+})
+Yex.Array.push(jobs, job)
+```
+
+**Reference:** `deps/y_ex/lib/doc.ex:113-135`
 
 ### 1. VM Deadlock from Getting Objects in Transactions
 
@@ -756,14 +836,15 @@ end
 
 ## Summary of Critical Rules
 
-1. ⚠️ **ALWAYS get Yex objects BEFORE transactions** - This is the #1 rule to avoid VM deadlocks
-2. ✅ Use `fetch/2` or `fetch!/2` - Not deprecated `get/2`
-3. ✅ Convert atoms to strings - Except booleans
-4. ✅ Handle nil text fields - Use `|| ""`
-5. ✅ Extract Text with `to_string/1` - Y.Text doesn't auto-convert
-6. ✅ Unsubscribe in terminate - Prevent memory leaks
-7. ✅ No nested transactions - Single transaction only
-8. ✅ Use MapPrelim/ArrayPrelim - For nested structures in arrays
+1. ⚠️ **NEVER try to create Map/Array/Text directly** - Use `Yex.Doc.get_map/get_array/get_text` or Prelim types
+2. ⚠️ **ALWAYS get Yex objects BEFORE transactions** - This is critical to avoid VM deadlocks
+3. ✅ Use `fetch/2` or `fetch!/2` - Not deprecated `get/2`
+4. ✅ Convert atoms to strings - Except booleans
+5. ✅ Handle nil text fields - Use `|| ""`
+6. ✅ Extract Text with `to_string/1` - Y.Text doesn't auto-convert
+7. ✅ Unsubscribe in terminate - Prevent memory leaks
+8. ✅ No nested transactions - Single transaction only
+9. ✅ Use MapPrelim/ArrayPrelim - For nested structures in arrays
 
 ---
 
