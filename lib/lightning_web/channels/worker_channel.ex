@@ -9,11 +9,20 @@ defmodule LightningWeb.WorkerChannel do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
 
+  alias LightningWeb.WorkerPresence
+
   require Logger
 
   @impl true
-  def join("worker:queue", _payload, %{assigns: %{claims: claims}} = socket)
+  def join("worker:queue", payload, %{assigns: %{claims: claims}} = socket)
       when not is_nil(claims) do
+    # Extract capacity from payload, default to 1 if not provided
+    capacity = Map.get(payload, "capacity", 1)
+
+    # Track this worker's presence with its capacity
+    worker_id = "worker-#{inspect(self())}"
+    {:ok, _ref} = WorkerPresence.track_worker(self(), worker_id, capacity)
+
     # the work_listener_debounce_time assign is meant to be overidden in test mode.
     # a default value is set incase it's nil or not provided
     {:ok, pid} =

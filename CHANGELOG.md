@@ -17,8 +17,10 @@ and this project adheres to
 
 ### Added
 
-- SessionContextStore for collaborative workflow editor to provide user, project,
-  and config data to React components via Phoenix Channel
+- Worker "presence" module to track connected workers (and their capacity)
+  across the app. [#3725](https://github.com/OpenFn/lightning/pull/3725)
+- SessionContextStore for collaborative workflow editor to provide user,
+  project, and config data to React components via Phoenix Channel
   [#3624](https://github.com/OpenFn/lightning/issues/3624)
 
 ### Changed
