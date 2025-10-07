@@ -62,6 +62,8 @@ defmodule Lightning.ApolloClient.WebSocket do
 
   @impl WebSockex
   def handle_frame({:text, msg}, state) do
+    Logger.debug("[ApolloWebSocket] Raw message: #{msg}")
+
     case Jason.decode(msg) do
       {:ok, %{"event" => "log", "data" => data}} ->
         Logger.debug("[ApolloWebSocket] Log: #{data}")
@@ -79,8 +81,8 @@ defmodule Lightning.ApolloClient.WebSocket do
       {:error, decode_error} ->
         Logger.error("[ApolloWebSocket] JSON decode error: #{inspect(decode_error)}")
 
-      _ ->
-        Logger.warning("[ApolloWebSocket] Unknown message format: #{msg}")
+      other ->
+        Logger.warning("[ApolloWebSocket] Unknown message format: #{inspect(other)}")
     end
 
     {:ok, state}
@@ -98,23 +100,25 @@ defmodule Lightning.ApolloClient.WebSocket do
   end
 
   defp handle_apollo_event(event_type, data, state) do
-    Logger.debug("[ApolloWebSocket] Received #{event_type}: #{inspect(data)}")
-
     case event_type do
       "CHUNK" ->
+        Logger.debug("[ApolloWebSocket] Received CHUNK: #{inspect(data)}")
         send_to_channel({:apollo_event, "CHUNK", data}, state)
 
       "STATUS" ->
+        Logger.debug("[ApolloWebSocket] Received STATUS: #{inspect(data)}")
         send_to_channel({:apollo_event, "STATUS", data}, state)
 
       "COMPLETE" ->
+        Logger.debug("[ApolloWebSocket] Received COMPLETE: #{inspect(data)}")
         send_to_channel({:apollo_complete, data}, state)
 
       "ERROR" ->
+        Logger.debug("[ApolloWebSocket] Received ERROR: #{inspect(data)}")
         send_to_channel({:apollo_error, data}, state)
 
       _ ->
-        Logger.debug("[ApolloWebSocket] Unknown event type: #{event_type}")
+        Logger.warning("[ApolloWebSocket] Unknown event type '#{event_type}': #{inspect(data)}")
         send_to_channel({:apollo_event, event_type, data}, state)
     end
   end
