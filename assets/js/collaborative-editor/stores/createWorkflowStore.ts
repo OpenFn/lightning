@@ -632,6 +632,41 @@ export const createWorkflowStore = () => {
     }
   };
 
+  /**
+   * Import workflow from YAML WorkflowState
+   *
+   * Uses Pattern 1 (Y.Doc → Observer → Immer):
+   * - Single transact() for atomic bulk updates
+   * - Observers automatically sync Immer state
+   * - No manual notify() calls needed
+   *
+   * @param workflowState - Parsed YAML workflow state
+   */
+  const importWorkflow = (workflowState: import('../../yaml/types').WorkflowState) => {
+    if (!ydoc) {
+      logger.error('Cannot import workflow: Y.Doc not connected');
+      throw new Error('Y.Doc not connected');
+    }
+
+    try {
+      // Use adapter to apply transformations and update Y.Doc
+      const { WorkflowStateAdapter } = require('../adapters/WorkflowStateAdapter');
+      WorkflowStateAdapter.applyToYDoc(ydoc, workflowState);
+
+      logger.info('Workflow imported successfully', {
+        workflowId: workflowState.id,
+        jobs: workflowState.jobs.length,
+        triggers: workflowState.triggers.length,
+        edges: workflowState.edges.length,
+      });
+
+      // Note: Observers will automatically trigger Immer updates and notify React
+    } catch (error) {
+      logger.error('Failed to import workflow', error);
+      throw error;
+    }
+  };
+
   // =============================================================================
   // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations)
   // =============================================================================
@@ -681,6 +716,7 @@ export const createWorkflowStore = () => {
     getJobBodyYText,
     updatePositions,
     updatePosition,
+    importWorkflow,
 
     // =============================================================================
     // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations - Use Sparingly)

@@ -8,17 +8,23 @@ import {
   useCurrentJob,
   useNodeSelection,
   useWorkflowState,
+  useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
 
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { Inspector } from "./inspector";
+import { YAMLImportPanel } from "./yaml-import";
 
 export function WorkflowEditor() {
   const { hash } = useURLState();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { currentNode, selectNode } = useNodeSelection();
   const { awareness } = useSession();
+  const { searchParams, updateSearchParams } = useURLState();
+  const workflowStore = useWorkflowStoreContext();
+
+  const isImportOpen = searchParams.get('method') === 'import';
 
   // Construct full workflow object from state
   const workflow = useWorkflowState(state =>
@@ -40,8 +46,23 @@ export function WorkflowEditor() {
   // Show inspector panel if settings is open OR a node is selected
   const showInspector = hash === "settings" || currentNode.node;
 
+  const handleCloseImport = () => {
+    updateSearchParams({ method: null });
+  };
+
+  const handleImport = (workflowState: import('../../yaml/types').WorkflowState) => {
+    workflowStore.importWorkflow(workflowState);
+  };
+
   return (
     <div className="relative h-full w-full">
+      {/* Left Panel - YAML Import */}
+      <YAMLImportPanel
+        isOpen={isImportOpen}
+        onClose={handleCloseImport}
+        onImport={handleImport}
+      />
+
       <CollaborativeWorkflowDiagram inspectorId="inspector" />
       {/* Inspector slides in from the right and appears on top
           This div is also the wrapper which is used to calculate the overlap

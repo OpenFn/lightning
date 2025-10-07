@@ -402,6 +402,7 @@ export const useWorkflowActions = () => {
         }
       },
       resetWorkflow: store.resetWorkflow,
+      importWorkflow: store.importWorkflow,
     }),
     [store, sessionContextStore]
   );

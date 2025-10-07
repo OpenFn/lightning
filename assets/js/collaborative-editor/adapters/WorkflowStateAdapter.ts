@@ -1,0 +1,134 @@
+import * as Y from 'yjs';
+import type { WorkflowState, StateJob, StateTrigger, StateEdge } from '../../yaml/types';
+import type { Session } from '../types/session';
+
+/**
+ * WorkflowStateAdapter
+ *
+ * Transforms YAML WorkflowState into Y.Doc collaborative data structures.
+ *
+ * Key transformations:
+ * 1. Jobs: string body → Y.Text, add default enabled=true
+ * 2. Triggers: union types → always include cron_expression (default "")
+ * 3. Edges: optional fields → required strings (default "")
+ * 4. Workflow metadata: flat structure → separate workflow Map
+ * 5. Positions: Record → Y.Map individual entries
+ */
+
+export class WorkflowStateAdapter {
+  /**
+   * Transform StateJob to Y.Doc Job Map
+   */
+  static transformJob(job: StateJob): Y.Map<unknown> {
+    const jobMap = new Y.Map();
+
+    // Generate ID if missing
+    jobMap.set('id', job.id || crypto.randomUUID());
+    jobMap.set('name', job.name);
+    jobMap.set('adaptor', job.adaptor);
+
+    // Transform string body to Y.Text
+    const bodyText = new Y.Text(job.body);
+    jobMap.set('body', bodyText);
+
+    // Add default enabled field (required by Session.Job but not in YAML)
+    jobMap.set('enabled', true);
+
+    return jobMap;
+  }
+
+  /**
+   * Transform StateTrigger to Y.Doc Trigger Map
+   *
+   * Handles union type transformation:
+   * - CronTrigger: has cron_expression
+   * - WebhookTrigger/KafkaTrigger: must default cron_expression to ""
+   */
+  static transformTrigger(trigger: StateTrigger): Y.Map<unknown> {
+    const triggerMap = new Y.Map();
+
+    // Generate ID if missing
+    triggerMap.set('id', trigger.id || crypto.randomUUID());
+    triggerMap.set('enabled', trigger.enabled);
+
+    // Session.Trigger always requires cron_expression
+    // Default to "" for non-cron triggers
+    const cronExpression =
+      trigger.type === 'cron' ? trigger.cron_expression : '';
+    triggerMap.set('cron_expression', cronExpression);
+
+    // Note: 'type' field is NOT stored in Session.Trigger
+
+    return triggerMap;
+  }
+
+  /**
+   * Transform StateEdge to Y.Doc Edge Map
+   *
+   * All optional fields in YAML become required strings in Y.Doc
+   */
+  static transformEdge(edge: StateEdge): Y.Map<unknown> {
+    const edgeMap = new Y.Map();
+
+    // Generate ID if missing
+    edgeMap.set('id', edge.id || crypto.randomUUID());
+
+    // Transform optional fields to required strings
+    edgeMap.set('source_job_id', edge.source_job_id || '');
+    edgeMap.set('source_trigger_id', edge.source_trigger_id || '');
+    edgeMap.set('target_job_id', edge.target_job_id);
+    edgeMap.set('condition_type', edge.condition_type);
+    edgeMap.set('condition_label', edge.condition_label || '');
+    edgeMap.set('condition_expression', edge.condition_expression || '');
+    edgeMap.set('enabled', edge.enabled);
+
+    return edgeMap;
+  }
+
+  /**
+   * Apply WorkflowState to Y.Doc in a single transaction
+   *
+   * This uses Pattern 1 (Y.Doc → Observer → Immer):
+   * - Single ydoc.transact() for atomic bulk updates
+   * - Observers automatically sync Immer state
+   * - No manual notify() calls needed
+   */
+  static applyToYDoc(ydoc: Session.WorkflowDoc, workflowState: WorkflowState): void {
+    ydoc.transact(() => {
+      // 1. Set workflow metadata (separate Map)
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('id', workflowState.id || crypto.randomUUID());
+      workflowMap.set('name', workflowState.name);
+
+      // 2. Clear and populate jobs array
+      const jobsArray = ydoc.getArray('jobs');
+      jobsArray.delete(0, jobsArray.length);
+      workflowState.jobs.forEach(job => {
+        jobsArray.push([this.transformJob(job)]);
+      });
+
+      // 3. Clear and populate triggers array
+      const triggersArray = ydoc.getArray('triggers');
+      triggersArray.delete(0, triggersArray.length);
+      workflowState.triggers.forEach(trigger => {
+        triggersArray.push([this.transformTrigger(trigger)]);
+      });
+
+      // 4. Clear and populate edges array
+      const edgesArray = ydoc.getArray('edges');
+      edgesArray.delete(0, edgesArray.length);
+      workflowState.edges.forEach(edge => {
+        edgesArray.push([this.transformEdge(edge)]);
+      });
+
+      // 5. Set positions (individual entries)
+      const positionsMap = ydoc.getMap('positions');
+      positionsMap.clear();
+      if (workflowState.positions) {
+        Object.entries(workflowState.positions).forEach(([id, pos]) => {
+          positionsMap.set(id, pos);
+        });
+      }
+    });
+  }
+}
