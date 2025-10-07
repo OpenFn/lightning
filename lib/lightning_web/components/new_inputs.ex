@@ -314,7 +314,7 @@ defmodule LightningWeb.Components.NewInputs do
   attr :icon_class, :string, default: "w-4 h-4 text-primary-600 opacity-50"
 
   defp tooltip_for_label(assigns) do
-    classes = ~w"relative cursor-pointer"
+    classes = ~w"relative cursor-pointer inline-block align-super"
 
     assigns = assign(assigns, class: classes ++ List.wrap(assigns.class))
 
@@ -634,6 +634,7 @@ defmodule LightningWeb.Components.NewInputs do
         class={["rounded-md w-full font-mono bg-slate-800 text-slate-100", @class]}
         value={@value}
         placeholder={@placeholder}
+        errors={@errors}
         {@rest}
       />
       <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
@@ -962,13 +963,13 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
-  # All other inputs text, datetime-local, url etc. are handled here...
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} for={@id} class="mb-2">
         {@label}
         <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+        <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
       </.label>
       <small :if={@sublabel} class="mb-2 block text-xs text-gray-600">
         {@sublabel}

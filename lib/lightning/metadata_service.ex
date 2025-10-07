@@ -4,7 +4,7 @@ defmodule Lightning.MetadataService do
   """
   alias Lightning.AdaptorService
   alias Lightning.CLI
-  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.CredentialBody
 
   require Logger
 
@@ -77,7 +77,7 @@ defmodule Lightning.MetadataService do
       {_, nil} ->
         {:error, Error.new("no_credential")}
 
-      {adaptor_path, %Credential{body: credential_body}} ->
+      {adaptor_path, %CredentialBody{body: credential_body}} ->
         {:ok,
          {adaptor_path,
           %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
