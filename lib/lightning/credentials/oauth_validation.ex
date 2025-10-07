@@ -3,14 +3,12 @@ defmodule Lightning.Credentials.OauthValidation do
   Centralized OAuth token validation with structured error handling.
 
   This module provides comprehensive OAuth token validation used across
-  OauthToken and Credential modules to ensure consistent validation logic.
+  credential modules to ensure consistent validation logic.
 
   Validates OAuth 2.0 tokens according to RFC 6749 specifications with
   additional robustness for real-world OAuth provider variations.
   """
   import Lightning.Helpers, only: [normalize_keys: 1]
-
-  alias Lightning.Credentials.OauthToken
 
   defmodule Error do
     @moduledoc """
@@ -198,7 +196,7 @@ defmodule Lightning.Credentials.OauthValidation do
 
   Handles multiple input formats:
   - nil -> []
-  - OauthToken struct with body containing "scope" or "scopes"
+  - Map with "scope" or "scopes" field (credential body)
   - String with delimited scopes
   - List of scopes (strings or atoms)
   - Single atom scope
@@ -221,7 +219,7 @@ defmodule Lightning.Credentials.OauthValidation do
       iex> normalize_scopes([:read, "WRITE", " admin "])
       ["read", "write", "admin"]
 
-      iex> normalize_scopes(%OauthToken{body: %{"scope" => "read write"}})
+      iex> normalize_scopes(%{"scope" => "read write"})
       ["read", "write"]
   """
   @spec normalize_scopes(any(), String.t()) :: [String.t()]
@@ -229,13 +227,7 @@ defmodule Lightning.Credentials.OauthValidation do
 
   def normalize_scopes(nil, _delimiter), do: []
 
-  def normalize_scopes(%OauthToken{body: nil}, _delimiter), do: []
-
-  def normalize_scopes(%OauthToken{body: body}, _delimiter)
-      when not is_map(body),
-      do: []
-
-  def normalize_scopes(%OauthToken{body: body}, delimiter) when is_map(body) do
+  def normalize_scopes(body, delimiter) when is_map(body) do
     cond do
       Map.has_key?(body, "scope") ->
         body |> Map.get("scope") |> normalize_scopes(delimiter)

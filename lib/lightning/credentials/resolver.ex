@@ -18,15 +18,15 @@ defmodule Lightning.Credentials.ResolvedCredential do
   Creates a ResolvedCredential from a Credential, handling OAuth merging and empty value removal.
   """
   def from(%Credential{schema: "oauth"} = credential) do
-    merged_body = Map.merge(credential.body, credential.oauth_token.body)
+    # merged_body = Map.merge(%{}, credential.oauth_token.body)
 
     %__MODULE__{
-      body: remove_empty_values(merged_body),
+      body: remove_empty_values(%{}),
       credential: credential
     }
   end
 
-  def from(%Credential{} = credential) do
+  def from(credential) do
     %__MODULE__{
       body: remove_empty_values(credential.body),
       credential: credential
