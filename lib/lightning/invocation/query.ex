@@ -73,7 +73,7 @@ defmodule Lightning.Invocation.Query do
   By default, the dataclip body is not returned via a query. This query selects
   the body specifically.
   """
-  def dataclip_with_body, do: from(d in Dataclip) |> select_as_input()
+  def dataclip_with_body, do: from(d in Dataclip) |> select_as_input_text()
 
   def last_n_for_job(job_id, limit) do
     from(d in Dataclip,
@@ -87,12 +87,15 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
-  Returns a dataclip formatted for use as an input state.
+    Returns a dataclip formatted for use as an input state.
 
   Only `http_request` dataclips are changed, their `body` is nested inside a
   `"data"` key and `request` data is added as a `"request"` key.
+
+  Like `select_as_input/1`, but returns body as JSON text string to avoid
+  expensive deserialization to Elixir map (saves ~38x memory amplification).
   """
-  def select_as_input(query) do
+  def select_as_input_text(query) do
     from(d in query,
       select: %{
         d
@@ -100,8 +103,8 @@ defmodule Lightning.Invocation.Query do
             fragment(
               """
               CASE WHEN type IN ('http_request', 'kafka')
-              THEN jsonb_build_object('data', ?, 'request', ?)
-              ELSE ? END
+              THEN jsonb_build_object('data', ?, 'request', ?)::text
+              ELSE ?::text END
               """,
               d.body,
               d.request,

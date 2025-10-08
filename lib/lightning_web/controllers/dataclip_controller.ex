@@ -40,19 +40,31 @@ defmodule LightningWeb.DataclipController do
   end
 
   defp respond_with_body(conn, dataclip_id) do
-    dataclip = Invocation.get_dataclip_details!(dataclip_id)
+    dataclip = Invocation.get_dataclip_with_body!(dataclip_id)
 
+    # Only scrub step_result dataclips (most don't need scrubbing)
     body =
-      dataclip
-      |> Map.put(:body, Jason.encode!(dataclip.body, pretty: true))
-      |> DataclipScrubber.scrub_dataclip_body!()
+      if dataclip.type == :step_result do
+        # For step_result, we need to scrub credentials
+        # Pass a minimal struct with just what scrubber needs
+        dataclip_for_scrubbing = %{
+          body: dataclip.body_json,
+          type: dataclip.type,
+          id: dataclip.id
+        }
+
+        DataclipScrubber.scrub_dataclip_body!(dataclip_for_scrubbing)
+      else
+        # No scrubbing needed - return pretty-printed JSON text directly
+        dataclip.body_json
+      end
 
     conn
     |> put_resp_content_type("application/json")
     |> put_resp_header("vary", "Accept-Encoding, Cookie")
     |> put_resp_header("cache-control", "private, max-age=#{@max_age}")
     |> put_resp_header("last-modified", to_rfc1123!(dataclip.updated_at))
-    |> send_resp(200, body)
+    |> send_resp(200, body || "null")
   end
 
   defp dataclip_is_modified?(dataclip, last_modified) do

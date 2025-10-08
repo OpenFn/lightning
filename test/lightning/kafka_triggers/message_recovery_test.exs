@@ -241,7 +241,7 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
       query
       |> Repo.all()
       |> Repo.preload(dataclip: Invocation.Query.dataclip_with_body())
-      |> Enum.map(& &1.dataclip.body["data"])
+      |> Enum.map(&Jason.decode!(&1.dataclip.body)["data"])
       |> Enum.sort()
 
     assert actual_bodies == expected_bodies

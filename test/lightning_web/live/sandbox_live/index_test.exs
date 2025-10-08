@@ -149,6 +149,63 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert render(active_badge) =~ "active"
     end
 
+    test "create sandbox button is disabled when the limiter returns error", %{
+      conn: conn,
+      parent: %{id: parent_id} = parent,
+      test: test
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert has_element?(view, "button#create-sandbox-button")
+      refute has_element?(view, "button#create-sandbox-button:disabled")
+
+      error_message = "error-#{test}"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_sandbox, amount: 1}, %{project_id: ^parent_id} ->
+            {:error, :exceeded_limit, %{text: error_message}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert has_element?(view, "button#create-sandbox-button:disabled")
+
+      assert view |> render() =~ error_message
+    end
+
+    test "visiting /new redirects back to index incase the limiter returns error",
+         %{
+           conn: conn,
+           parent: %{id: parent_id} = parent,
+           test: test
+         } do
+      error_message = "error-#{test}"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_sandbox, amount: 1}, %{project_id: ^parent_id} ->
+            {:error, :exceeded_limit, %{text: error_message}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      assert {:error, {:live_redirect, redirect}} =
+               live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      assert redirect[:to] == ~p"/projects/#{parent.id}/sandboxes"
+      assert redirect[:flash]["error"] == error_message
+    end
+
     test "delete modal shows redirect warning when deleting current project", %{
       conn: conn,
       parent: parent,

@@ -3,6 +3,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   alias Ecto.Changeset
   alias Lightning.Projects
+  alias Lightning.Projects.ProjectLimiter
   alias LightningWeb.SandboxLive.Components
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -120,11 +121,28 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:confirm_delete_open?, false)
   end
 
+  defp create_sandbox_tooltip_message(can_create_sandbox, limiter_result) do
+    case {can_create_sandbox, limiter_result} do
+      {false, _} ->
+        "You are not authorized to create sandboxes in this workspace"
+
+      {_, {:error, _, %{text: text}}} ->
+        text
+
+      _other ->
+        nil
+    end
+  end
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:active_menu_item, :sandboxes)
+     |> assign(
+       :limit_new_sandbox,
+       ProjectLimiter.limit_new_sandbox(socket.assigns.project.id)
+     )
      |> reset_delete_modal_state()
      |> load_workspace_projects()}
   end
@@ -163,6 +181,7 @@ defmodule LightningWeb.SandboxLive.Index do
         _uri,
         %{
           assigns: %{
+            limit_new_sandbox: limit_new_sandbox,
             can_create_sandbox: can_create_sandbox,
             project: project,
             live_action: live_action
@@ -170,17 +189,24 @@ defmodule LightningWeb.SandboxLive.Index do
         } = socket
       )
       when live_action == :new do
-    if can_create_sandbox do
-      {:noreply, load_workspace_projects(socket)}
-    else
-      {:noreply,
-       socket
-       |> put_flash(
-         :error,
-         "You are not authorized to create sandboxes in this workspace"
-       )
-       |> push_navigate(to: ~p"/projects/#{project.id}/sandboxes")}
+    case {can_create_sandbox, limit_new_sandbox} do
+      {true, :ok} ->
+        load_workspace_projects(socket)
+
+      {false, _} ->
+        socket
+        |> put_flash(
+          :error,
+          "You are not authorized to create sandboxes in this workspace"
+        )
+        |> push_navigate(to: ~p"/projects/#{project.id}/sandboxes")
+
+      {_, {:error, _, %{text: text}}} ->
+        socket
+        |> put_flash(:error, text)
+        |> push_navigate(to: ~p"/projects/#{project.id}/sandboxes")
     end
+    |> noreply()
   end
 
   def handle_params(_params, _uri, socket) do
@@ -288,14 +314,23 @@ defmodule LightningWeb.SandboxLive.Index do
       <LayoutComponents.centered>
         <Components.header
           current_project={@project}
-          can_create_sandbox={@can_create_sandbox}
+          enable_create_button={@can_create_sandbox and @limit_new_sandbox == :ok}
+          disabled_button_tooltip={
+            create_sandbox_tooltip_message(
+              @can_create_sandbox,
+              @limit_new_sandbox
+            )
+          }
         />
 
         <Components.workspace_list
           root_project={@root_project}
           current_project={@project}
           sandboxes={@sandboxes}
-          can_create_sandbox={@can_create_sandbox}
+          enable_create_button={@can_create_sandbox and @limit_new_sandbox == :ok}
+          disabled_button_tooltip={
+            create_sandbox_tooltip_message(@can_create_sandbox, @limit_new_sandbox)
+          }
         />
 
         <Components.confirm_delete_modal

@@ -102,7 +102,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       try do
         GenServer.stop(state.shared_doc_pid, :normal, 5000)
       catch
-        :exit, {:noproc, _} -> :ok
+        :exit, _ -> :ok
       end
     end
 
@@ -115,7 +115,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       try do
         GenServer.stop(state.persistence_writer_pid, :normal, 5000)
       catch
-        :exit, {:noproc, _} -> :ok
+        :exit, _ -> :ok
       end
     end
 

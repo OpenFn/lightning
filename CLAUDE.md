@@ -60,6 +60,7 @@ npx tsc --noEmit --project ./tsconfig.browser.json
 # E2E testing
 npm run test:e2e
 npm run test:e2e:ui
+npm run test:e2e:debug
 
 # Linting
 npm run lint
@@ -67,6 +68,10 @@ npm run lint
 # Check types across project (only when explicitly asked)
 npm run check
 ```
+
+**Important**: Phoenix auto-builds assets. To check for build failures/warnings,
+use Tidewave MCP to check logs or run `mix esbuild default`. For JS/TS issues,
+prefer `mcp__ide__getDiagnostics` over `tsc`.
 
 ### Docker Development
 
@@ -126,8 +131,21 @@ components:
 
 - PostgreSQL with Ecto ORM
 - Development URL: `postgres://postgres:postgres@localhost:5432/lightning_dev`
+- Test URL: Same host/port but `lightning_test` database
 - Migrations: `priv/repo/migrations/`
 - Schemas alongside contexts in `lib/lightning/`
+- Use `psql` with dev URL for direct database queries
+
+### Additional Contexts
+
+- **WorkOrders** (lib/lightning/work_orders.ex): Manages workflow execution
+  requests
+- **Invocations** (lib/lightning/invocation): Individual job execution records
+- **Pipeline** (lib/lightning/pipeline): Job execution pipeline management
+- **Runtime** (lib/lightning/runtime): JavaScript execution environment
+- **Config** (lib/lightning/config.ex): Application configuration management
+- **Collections** (lib/lightning/collections.ex): Key-value data store for
+  workflow data
 
 ## Development Guidelines
 
@@ -141,26 +159,37 @@ components:
 - Implement "let it crash" philosophy with supervisor trees
 - Use Ecto changesets for validation
 - Avoid string table references in queries: use schema modules
+- **Always run `mix format` before committing** - this is critical
+- When generating migrations: `mix ecto.gen.migration short_descriptive_name`
+  (underscored spaced style)
 
 ### React Development
 
 - Props from LiveView React mounting are **underscore_cased**, not camelCased
 - Components receive underscore_cased props when mounted via LiveView
-- Phoenix auto-builds assets; use `mix esbuild default` to check build issues
+- Lightning uses React 18+ with modern patterns
+- Key dependencies: @xyflow/react (workflow visualization), Yjs (collaborative
+  editing), Monaco Editor (code editing)
+- React components integrated into Phoenix app via LiveView mounting
 
 ### Testing Requirements
 
-- Write comprehensive ExUnit tests
+- Write comprehensive ExUnit tests for backend code
 - Use ExMachina for test data generation
 - Follow TDD practices
 - Don't use `-v` flag with mix test
+- Frontend: Use Vitest for unit/integration tests
+- E2E: Use Playwright tests (`npm run test:e2e` in assets/)
+- E2E environment managed by `bin/e2e` script
+- Test database: `lightning_test` (automatically created/migrated by mix test)
 
 ### Code Quality Standards
 
 - Line width under 80 characters
-- Run `mix verify` before committing (format, dialyzer, credo, sobelow,
+- Run `mix verify` before committing (runs format, dialyzer, credo, sobelow,
   coveralls)
-- Use TypeScript strictly in frontend
+- Use TypeScript strictly in frontend with strict type checking
+- Elixir code compiled with `warnings_as_errors: true`
 - Follow security best practices (authentication, authorization, input
   validation)
 
@@ -172,14 +201,26 @@ components:
 
 ## Worker System
 
-Lightning uses external Node.js workers for job execution:
+Lightning uses external Node.js workers (@openfn/ws-worker) for job execution:
 
 - WebSocket communication with JWT authentication
 - Two-layer security: Worker Token (shared secret) + Run Token
   (Lightning-signed)
+- Workers execute JavaScript jobs with NPM adaptors in isolated environments
 - Generate keys with: `mix lightning.gen_worker_keys`
-- Environment variables: `WORKER_RUNS_PRIVATE_KEY`, `WORKER_SECRET`,
+- Required environment variables: `WORKER_RUNS_PRIVATE_KEY`, `WORKER_SECRET`,
   `WORKER_LIGHTNING_PUBLIC_KEY`
+- Worker package: `@openfn/ws-worker` (npm, used in dev dependencies)
+
+## Custom Mix Tasks
+
+Lightning includes several custom Mix tasks:
+
+- `mix lightning.install_runtime`: Install JavaScript runtime dependencies
+- `mix lightning.install_schemas`: Install JSON schemas for validation
+- `mix lightning.install_adaptor_icons`: Install adaptor icons
+- `mix lightning.gen_worker_keys`: Generate worker authentication keys
+- `mix lightning.gen_encryption_key`: Generate encryption key for credentials
 
 ## Deployment Considerations
 
@@ -187,23 +228,31 @@ Lightning uses external Node.js workers for job execution:
 
 - `PRIMARY_ENCRYPTION_KEY`: For credentials/TOTP encryption (generate with
   `mix lightning.gen_encryption_key`)
-- Worker authentication keys (see above)
+- Worker authentication keys (see Worker System section)
 - Database URL and connection settings
+- See `.env.example` for comprehensive list of configuration options
 
 ### Security
 
-- Encryption at rest for credentials and sensitive data
-- JWT-based worker authentication
-- OAuth2 integration support
-- Strong parameter validation
+- Encryption at rest for credentials and sensitive data (Cloak + libsodium)
+- JWT-based worker authentication (Joken)
+- OAuth2 integration support for external services
+- Multi-factor authentication (TOTP via nimble_totp)
+- Strong parameter validation via Ecto changesets
+- Rate limiting via Hammer + Mnesia backend
+- CORS support via cors_plug
 
 ## Performance Optimization
 
 - Database indexing for query performance
 - Ecto preloading to avoid N+1 queries
-- Caching strategies (ETS, Redis via Cachex)
-- Background job processing with Oban
+- Caching strategies (ETS via Cachex, no Redis)
+- Background job processing with Oban (multiple queues: scheduler, background,
+  workflow_runs)
 - Prometheus metrics via PromEx
+- Connection pooling with Ecto
+- Asset optimization with esbuild and tailwind minification
+- Multi-node clustering for horizontal scaling via libcluster
 
 ## File Organization Patterns
 
@@ -212,6 +261,60 @@ Lightning uses external Node.js workers for job execution:
 - API: `lib/lightning_web/controllers/api/`
 - React components: `assets/js/`
 - Tests mirror source structure in `test/`
+- Migrations: `priv/repo/migrations/`
+- Static assets: `priv/static/`
+
+## Key Dependencies and Libraries
+
+### Backend (Elixir)
+
+- **Phoenix 1.7**: Web framework with LiveView
+- **Ecto 3.13+**: Database ORM and query builder
+- **Oban**: Background job processing
+- **Bodyguard**: Authorization framework
+- **Cloak**: Encryption for sensitive data
+- **Timex**: Date/time utilities
+- **Broadway + Kafka**: Event streaming
+- **Y_ex**: Yjs bindings for collaborative editing
+- **Rambo**: External command execution (needs Rust)
+
+### Frontend (JavaScript/TypeScript)
+
+- **React 18**: UI library
+- **@xyflow/react**: Workflow DAG visualization
+- **Monaco Editor**: Code editor (VS Code editor)
+- **Yjs**: CRDT for real-time collaboration
+- **y-phoenix-channel**: Yjs + Phoenix Channels integration
+- **Zustand**: State management
+- **Immer**: Immutable state updates
+- **Tailwind CSS**: Utility-first CSS framework
+- **Vitest**: Testing framework
+- **Playwright**: E2E testing
+
+## Application Supervision and Runtime
+
+### Main Supervision Tree (lib/lightning/application.ex)
+
+Key supervised processes:
+
+- **Repo**: Ecto database connection pool
+- **Oban**: Background job processing with queues for `scheduler`, `background`,
+  `workflow_runs`
+- **PromEx**: Prometheus metrics collection
+- **Phoenix.PubSub**: Real-time message broadcasting
+- **Presence**: User presence tracking for collaborative editing
+- **Endpoint**: Web server and request handling
+- **libcluster**: Multi-node clustering via PostgreSQL
+
+### Key Runtime Components
+
+- **Runtime Manager** (lib/lightning/runtime): Executes JavaScript jobs in
+  isolated environments
+- **Kafka Integration** (lib/lightning/workflows/triggers): Event-driven
+  workflow triggers
+- **Workflows.Presence** (lib/lightning/workflows/presence.ex): Collaborative
+  editing with edit priority system
+- **Cachex**: ETS-based caching for performance
 
 ## Documentation and Communication
 

@@ -96,6 +96,38 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ ~s(<button disabled="disabled" type="submit")
       assert html =~ "my-sandbox"
     end
+
+    test "creating sandbox fails when limiter returns error", %{
+      conn: conn,
+      parent: %{id: parent_id} = parent,
+      test: test
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      error_message = "error-#{test}"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_sandbox, amount: 1}, %{project_id: ^parent_id} ->
+            {:error, :exceeded_limit, %{text: error_message}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      view
+      |> element("#sandbox-form-new")
+      |> render_submit(%{
+        "project" => %{"raw_name" => "sb-1", "color" => "#abcdef"}
+      })
+
+      flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert flash["error"] == error_message
+    end
   end
 
   describe "new modal (cancel)" do

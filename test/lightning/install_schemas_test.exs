@@ -2,6 +2,7 @@ defmodule Lightning.InstallSchemasTest do
   use ExUnit.Case, async: false
   use Mimic
 
+  import ExUnit.CaptureIO
   import ExUnit.CaptureLog
   require Logger
 
@@ -76,7 +77,9 @@ defmodule Lightning.InstallSchemasTest do
 
       # |> expect(:binwrite, fn _, ~s({"name": "language-common"}) -> nil end)
 
-      InstallSchemas.run([])
+      capture_io(fn ->
+        InstallSchemas.run([])
+      end)
     end
 
     test "run fail" do
