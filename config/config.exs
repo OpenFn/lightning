@@ -122,8 +122,11 @@ config :esbuild,
         )
       |> then(fn args ->
         case config_env() do
-          :prod -> args
-          _ -> args ++ ["--jsx-dev"]
+          :prod ->
+            args ++ ["--define:ENABLE_DEVTOOLS=false"]
+
+          _ ->
+            args ++ ["--jsx-dev", "--define:ENABLE_DEVTOOLS=true"]
         end
       end),
     cd: Path.expand("../assets", __DIR__),

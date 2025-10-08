@@ -73,6 +73,35 @@ npm run check
 use Tidewave MCP to check logs or run `mix esbuild default`. For JS/TS issues,
 prefer `mcp__ide__getDiagnostics` over `tsc`.
 
+### Debugging Collaborative Editor Stores
+
+The collaborative editor stores integrate with Redux DevTools in development:
+
+```bash
+# Start development server
+iex -S mix phx.server
+
+# Open browser and navigate to workflow editor
+# Open Redux DevTools extension (Chrome/Firefox)
+# Select store instance from dropdown (e.g., "WorkflowStore")
+```
+
+**Available stores:**
+- WorkflowStore - Workflow data, jobs, triggers, edges
+- SessionContextStore - User, project, config, permissions
+- SessionStore - Connection and sync state
+- AwarenessStore - Collaborative user presence
+- AdaptorStore - Available adaptors
+- CredentialStore - Project and keychain credentials
+
+**Features:**
+- View current state of any store
+- See action history with timestamps
+- Time-travel debug (jump to previous states)
+- Export/import state for bug reproduction
+
+**Note:** DevTools is disabled in production builds.
+
 ### Docker Development
 
 ```bash

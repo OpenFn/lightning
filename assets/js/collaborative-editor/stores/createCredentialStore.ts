@@ -54,6 +54,29 @@
  * - withSelector utility provides memoized selectors for performance
  */
 
+/**
+ * ## Redux DevTools Integration
+ *
+ * This store integrates with Redux DevTools for debugging in
+ * development and test environments.
+ *
+ * **Features:**
+ * - Real-time state inspection
+ * - Action history with timestamps
+ * - Time-travel debugging (jump to previous states)
+ * - State export/import for reproducing bugs
+ *
+ * **Usage:**
+ * 1. Install Redux DevTools browser extension
+ * 2. Open DevTools and select the "CredentialStore" instance
+ * 3. Perform actions in the app and watch them appear in DevTools
+ *
+ * **Note:** DevTools is automatically disabled in production builds.
+ *
+ * **Excluded from DevTools:**
+ * None (all state is serializable)
+ */
+
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
@@ -67,6 +90,7 @@ import {
 } from "../types/credential";
 
 import { createWithSelector } from "./common";
+import { wrapStoreWithDevTools } from "./devtools";
 
 const logger = _logger.ns("CredentialStore").seal();
 
@@ -89,7 +113,15 @@ export const createCredentialStore = (): CredentialStore => {
 
   const listeners = new Set<() => void>();
 
-  const notify = () => {
+  // Redux DevTools integration
+  const devtools = wrapStoreWithDevTools({
+    name: "CredentialStore",
+    excludeKeys: [], // All state is serializable
+    maxAge: 100,
+  });
+
+  const notify = (actionName: string = "stateChange") => {
+    devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
     });
@@ -137,7 +169,7 @@ export const createCredentialStore = (): CredentialStore => {
         draft.error = null;
         draft.lastUpdated = Date.now();
       });
-      notify();
+      notify("handleCredentialsReceived");
     } else {
       const errorMessage = `Invalid credentials data: ${result.error.message}`;
       logger.error("Failed to parse credentials data", {
@@ -149,7 +181,7 @@ export const createCredentialStore = (): CredentialStore => {
         draft.isLoading = false;
         draft.error = errorMessage;
       });
-      notify();
+      notify("credentialsError");
     }
   };
 
@@ -169,7 +201,7 @@ export const createCredentialStore = (): CredentialStore => {
     state = produce(state, draft => {
       draft.isLoading = loading;
     });
-    notify();
+    notify("setLoading");
   };
 
   const setError = (error: string | null) => {
@@ -177,14 +209,14 @@ export const createCredentialStore = (): CredentialStore => {
       draft.error = error;
       draft.isLoading = false;
     });
-    notify();
+    notify("setError");
   };
 
   const clearError = () => {
     state = produce(state, draft => {
       draft.error = null;
     });
-    notify();
+    notify("clearError");
   };
 
   // =============================================================================
@@ -217,9 +249,12 @@ export const createCredentialStore = (): CredentialStore => {
       channel.on("credentials_updated", credentialsUpdatedHandler);
     }
 
+    devtools.connect();
+
     void requestCredentials();
 
     return () => {
+      devtools.disconnect();
       if (channel) {
         channel.off("credentials_list", credentialsListHandler);
         channel.off("credentials_updated", credentialsUpdatedHandler);

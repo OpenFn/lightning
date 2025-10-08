@@ -54,6 +54,29 @@
  * - withSelector utility provides memoized selectors for performance
  */
 
+/**
+ * ## Redux DevTools Integration
+ *
+ * This store integrates with Redux DevTools for debugging in
+ * development and test environments.
+ *
+ * **Features:**
+ * - Real-time state inspection
+ * - Action history with timestamps
+ * - Time-travel debugging (jump to previous states)
+ * - State export/import for reproducing bugs
+ *
+ * **Usage:**
+ * 1. Install Redux DevTools browser extension
+ * 2. Open DevTools and select the "AdaptorStore" instance
+ * 3. Perform actions in the app and watch them appear in DevTools
+ *
+ * **Note:** DevTools is automatically disabled in production builds.
+ *
+ * **Excluded from DevTools:**
+ * None (all state is serializable)
+ */
+
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
@@ -68,6 +91,7 @@ import {
 } from "../types/adaptor";
 
 import { createWithSelector } from "./common";
+import { wrapStoreWithDevTools } from "./devtools";
 
 const logger = _logger.ns("AdaptorStore").seal();
 
@@ -89,7 +113,15 @@ export const createAdaptorStore = (): AdaptorStore => {
 
   const listeners = new Set<() => void>();
 
-  const notify = () => {
+  // Redux DevTools integration
+  const devtools = wrapStoreWithDevTools({
+    name: "AdaptorStore",
+    excludeKeys: [], // All state is serializable
+    maxAge: 100,
+  });
+
+  const notify = (actionName: string = "stateChange") => {
+    devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
     });
@@ -133,7 +165,7 @@ export const createAdaptorStore = (): AdaptorStore => {
         draft.error = null;
         draft.lastUpdated = Date.now();
       });
-      notify();
+      notify("handleAdaptorsReceived");
     } else {
       const errorMessage = `Invalid adaptors data: ${result.error.message}`;
       logger.error("Failed to parse adaptors data", {
@@ -145,7 +177,7 @@ export const createAdaptorStore = (): AdaptorStore => {
         draft.isLoading = false;
         draft.error = errorMessage;
       });
-      notify();
+      notify("adaptorsError");
     }
   };
 
@@ -165,7 +197,7 @@ export const createAdaptorStore = (): AdaptorStore => {
     state = produce(state, draft => {
       draft.isLoading = loading;
     });
-    notify();
+    notify("setLoading");
   };
 
   const setError = (error: string | null) => {
@@ -173,14 +205,14 @@ export const createAdaptorStore = (): AdaptorStore => {
       draft.error = error;
       draft.isLoading = false;
     });
-    notify();
+    notify("setError");
   };
 
   const clearError = () => {
     state = produce(state, draft => {
       draft.error = null;
     });
-    notify();
+    notify("clearError");
   };
 
   const setAdaptors = (adaptors: Adaptor[]) => {
@@ -189,7 +221,7 @@ export const createAdaptorStore = (): AdaptorStore => {
       draft.lastUpdated = Date.now();
       draft.error = null;
     });
-    notify();
+    notify("setAdaptors");
   };
 
   // =============================================================================
@@ -219,9 +251,12 @@ export const createAdaptorStore = (): AdaptorStore => {
       provider.channel.on("adaptors_updated", adaptorsUpdatedHandler);
     }
 
+    devtools.connect();
+
     void requestAdaptors();
 
     return () => {
+      devtools.disconnect();
       if (provider.channel) {
         provider.channel.off("adaptors_list", adaptorsListHandler);
         provider.channel.off("adaptors_updated", adaptorsUpdatedHandler);

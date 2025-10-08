@@ -105,6 +105,29 @@
  * @see ../contexts/StoreProvider.tsx for provider setup
  */
 
+/**
+ * ## Redux DevTools Integration
+ *
+ * This store integrates with Redux DevTools for debugging in
+ * development and test environments.
+ *
+ * **Features:**
+ * - Real-time state inspection
+ * - Action history with timestamps
+ * - Time-travel debugging (jump to previous states)
+ * - State export/import for reproducing bugs
+ *
+ * **Usage:**
+ * 1. Install Redux DevTools browser extension
+ * 2. Open DevTools and select the "WorkflowStore" instance
+ * 3. Perform actions in the app and watch them appear in DevTools
+ *
+ * **Note:** DevTools is automatically disabled in production builds.
+ *
+ * **Excluded from DevTools:**
+ * Y.Doc, Provider (too large/circular)
+ */
+
 import { produce } from "immer";
 import type { Channel } from "phoenix";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
@@ -118,6 +141,7 @@ import type { Session } from "../types/session";
 import type { Workflow } from "../types/workflow";
 
 import { createWithSelector } from "./common";
+import { wrapStoreWithDevTools } from "./devtools";
 
 const logger = _logger.ns("WorkflowStore").seal();
 
@@ -182,14 +206,28 @@ export const createWorkflowStore = () => {
 
   const listeners = new Set<() => void>();
 
-  const notify = () => {
+  // Redux DevTools integration (development/test only)
+  const devtools = wrapStoreWithDevTools<Workflow.State>({
+    name: "WorkflowStore",
+    excludeKeys: ["ydoc", "provider"], // Exclude Y.Doc and provider (too large/circular)
+    maxAge: 200, // Higher limit to prevent history loss from frequent updates
+    trace: false,
+  });
+
+  const notify = (actionName: string = "stateChange") => {
     logger.debug("notify", {
+      action: actionName,
       workflow: state.workflow,
       jobs: state.jobs.length,
       triggers: state.triggers.length,
       edges: state.edges.length,
       positions: Object.keys(state.positions).length,
     });
+
+    // Send to Redux DevTools
+    devtools.notifyWithAction(actionName, () => state);
+
+    // Notify React subscribers
     listeners.forEach(listener => {
       listener();
     });
@@ -201,7 +239,10 @@ export const createWorkflowStore = () => {
   };
 
   let lastState: Workflow.State = state;
-  const updateState = (updater: (draft: Workflow.State) => void) => {
+  const updateState = (
+    updater: (draft: Workflow.State) => void,
+    actionName: string = "updateState"
+  ) => {
     const nextState = produce(state, draft => {
       updater(draft);
       updateDerivedState(draft);
@@ -209,7 +250,7 @@ export const createWorkflowStore = () => {
     if (nextState !== lastState) {
       lastState = nextState;
       state = nextState;
-      notify();
+      notify(actionName);
     }
   };
 
@@ -241,7 +282,7 @@ export const createWorkflowStore = () => {
     const workflowObserver = () => {
       updateState(draft => {
         draft.workflow = workflowMap.toJSON() as Session.Workflow;
-      });
+      }, "workflow/observerUpdate");
     };
 
     const jobsObserver = (
@@ -258,7 +299,7 @@ export const createWorkflowStore = () => {
       updateState(draft => {
         const yjsJobs = jobsArray.toArray() as Y.Map<unknown>[];
         draft.jobs = yjsJobs.map(yjsJob => yjsJob.toJSON() as Workflow.Job);
-      });
+      }, "jobs/observerUpdate");
     };
 
     const triggersObserver = () => {
@@ -267,7 +308,7 @@ export const createWorkflowStore = () => {
         draft.triggers = yjsTriggers.map(
           yjsTrigger => yjsTrigger.toJSON() as Workflow.Trigger
         );
-      });
+      }, "triggers/observerUpdate");
     };
 
     const edgesObserver = () => {
@@ -276,13 +317,13 @@ export const createWorkflowStore = () => {
         draft.edges = yjsEdges.map(
           yjsEdge => yjsEdge.toJSON() as Workflow.Edge
         );
-      });
+      }, "edges/observerUpdate");
     };
 
     const positionsObserver = () => {
       updateState(draft => {
         draft.positions = positionsMap.toJSON() as Workflow.Positions;
-      });
+      }, "positions/observerUpdate");
     };
 
     // Attach observers with deep observation for nested changes
@@ -312,6 +353,12 @@ export const createWorkflowStore = () => {
     triggersObserver();
     edgesObserver();
     positionsObserver();
+
+    // Initialize DevTools connection
+    devtools.connect();
+
+    // Send initial state
+    notify("connected");
   };
 
   // Disconnect Y.Doc and clean up observers
@@ -324,8 +371,11 @@ export const createWorkflowStore = () => {
     ydoc = null;
     provider = null;
 
+    // Disconnect DevTools
+    devtools.disconnect();
+
     // Update collaboration status
-    updateState(_draft => {});
+    updateState(_draft => {}, "disconnected");
   };
 
   // =============================================================================
@@ -493,7 +543,7 @@ export const createWorkflowStore = () => {
       draft.selectedJobId = id;
       draft.selectedTriggerId = null;
       draft.selectedEdgeId = null;
-    });
+    }, "selectJob");
   };
 
   const selectTrigger = (id: string | null) => {
@@ -501,7 +551,7 @@ export const createWorkflowStore = () => {
       draft.selectedTriggerId = id;
       draft.selectedJobId = null;
       draft.selectedEdgeId = null;
-    });
+    }, "selectTrigger");
   };
 
   const selectEdge = (id: string | null) => {
@@ -509,7 +559,7 @@ export const createWorkflowStore = () => {
       draft.selectedEdgeId = id;
       draft.selectedJobId = null;
       draft.selectedTriggerId = null;
-    });
+    }, "selectEdge");
   };
 
   const clearSelection = () => {
@@ -517,7 +567,7 @@ export const createWorkflowStore = () => {
       draft.selectedJobId = null;
       draft.selectedTriggerId = null;
       draft.selectedEdgeId = null;
-    });
+    }, "clearSelection");
   };
 
   const saveWorkflow = async (): Promise<{
@@ -560,6 +610,28 @@ export const createWorkflowStore = () => {
     }
   };
 
+  const resetWorkflow = async (): Promise<void> => {
+    if (!ydoc || !provider) {
+      logger.warn("Cannot reset - Y.Doc or provider not connected");
+      throw new Error("Y.Doc or provider not connected");
+    }
+
+    logger.debug("Resetting workflow");
+
+    try {
+      const response = await channelRequest<{
+        lock_version: number;
+        workflow_id: string;
+      }>(provider.channel, "reset_workflow", {});
+
+      // Y.Doc will automatically update from server broadcast
+      logger.debug("Reset workflow successfully", response);
+    } catch (error) {
+      logger.error("Failed to reset workflow", error);
+      throw error;
+    }
+  };
+
   // =============================================================================
   // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations)
   // =============================================================================
@@ -575,7 +647,7 @@ export const createWorkflowStore = () => {
       if (draft.selectedJobId === id) {
         draft.selectedJobId = null;
       }
-    });
+    }, "removeJobAndClearSelection");
 
     // Note: Y.Doc observer will also fire and update the jobs array
   };
@@ -623,6 +695,7 @@ export const createWorkflowStore = () => {
     selectEdge,
     clearSelection,
     saveWorkflow,
+    resetWorkflow,
   };
 };
 
