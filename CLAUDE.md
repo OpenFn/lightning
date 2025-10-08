@@ -366,9 +366,13 @@ Key supervised processes:
 
 ## Documentation and Communication
 
-- Don't prefix items with \*\* unless entire item should be bold
+- Don't prefix items with \*\* unless the entire item should be bold
 - Use issue numbers for branch names with dash separation
 - Follow "strong opinions, weakly held" principle
 - Ask for clarification when uncertain
 - When running npm or npx commands, always cd into the assets directory first
 - We don't need to use MIX_ENV=test for most test related commands, ecto.create is the only one that explicitly needs the env set
+- You don't need to build using `npm run ...`, phoenix automatically builds as
+  we go, if you want to check for build failures or warnings etc you can either
+  use Tidewave MCP to check the logs, or run `mix esbuild default`
+- When checking for JS/TS issues, prefer mcp__ide__getDiagnostics over tsc

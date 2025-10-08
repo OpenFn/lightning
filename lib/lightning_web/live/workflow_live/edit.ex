@@ -538,6 +538,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   end)
                 }
                 id={"job-pane-#{@selected_job.id}"}
+                data-testid={"job-pane-#{jf.index}"}
                 cancel_url={close_url(assigns, :selected_job, :unselect)}
                 class="hidden"
                 phx-mounted={fade_in()}
