@@ -198,6 +198,38 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("reset_workflow", _params, socket) do
+    session_pid = socket.assigns.session_pid
+    user = socket.assigns.current_user
+
+    case Session.reset_workflow(session_pid, user) do
+      {:ok, workflow} ->
+        {:reply,
+         {:ok,
+          %{
+            lock_version: workflow.lock_version,
+            workflow_id: workflow.id
+          }}, socket}
+
+      {:error, :workflow_deleted} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["This workflow has been deleted"]},
+            type: "workflow_deleted"
+          }}, socket}
+
+      {:error, :internal_error} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["An internal error occurred"]},
+            type: "internal_error"
+          }}, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
     {:noreply, socket}

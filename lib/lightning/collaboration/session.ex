@@ -214,6 +214,42 @@ defmodule Lightning.Collaboration.Session do
     GenServer.call(session_pid, {:save_workflow, user}, 10_000)
   end
 
+  @doc """
+  Resets the workflow document to the latest snapshot from the database.
+
+  This operation:
+  1. Fetches the latest workflow from the database
+  2. Clears all Y.Doc collections (jobs, edges, triggers arrays)
+  3. Re-serializes the workflow to the Y.Doc
+  4. Broadcasts updates to all connected clients via SharedDoc
+
+  All collaborative editing history in the Y.Doc is preserved (operation log),
+  but the document content is replaced with the database state.
+
+  ## Parameters
+  - `session_pid`: The Session process PID
+  - `user`: The user performing the reset (for authorization logging)
+
+  ## Returns
+  - `{:ok, workflow}` - Successfully reset with updated workflow
+  - `{:error, :workflow_deleted}` - Workflow has been deleted from database
+  - `{:error, :internal_error}` - SharedDoc not available
+
+  ## Examples
+
+      iex> Session.reset_workflow(session_pid, user)
+      {:ok, %Workflow{lock_version: 5}}
+
+      iex> Session.reset_workflow(session_pid, user)
+      {:error, :workflow_deleted}
+  """
+  @spec reset_workflow(pid(), Lightning.Accounts.User.t()) ::
+          {:ok, Lightning.Workflows.Workflow.t()}
+          | {:error, :workflow_deleted | :internal_error}
+  def reset_workflow(session_pid, user) do
+    GenServer.call(session_pid, {:reset_workflow, user}, 10_000)
+  end
+
   # ----------------------------------------------------------------------------
 
   @impl true
@@ -304,6 +340,28 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, changeset}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:reset_workflow, user}, _from, state) do
+    Logger.info("Resetting workflow #{state.workflow_id} for user #{user.id}")
+
+    with {:ok, workflow} <- fetch_workflow(state.workflow_id),
+         :ok <- clear_and_reset_doc(state, workflow) do
+      Logger.info("Successfully reset workflow #{state.workflow_id}")
+      {:reply, {:ok, workflow}, state}
+    else
+      {:error, :workflow_deleted} ->
+        Logger.warning(
+          "Cannot reset workflow #{state.workflow_id}: workflow deleted"
+        )
+
+        {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, :no_shared_doc} ->
+        Logger.error("Cannot reset workflow #{state.workflow_id}: no shared doc")
+        {:reply, {:error, :internal_error}, state}
     end
   end
 
@@ -398,6 +456,44 @@ defmodule Lightning.Collaboration.Session do
          ) do
       nil -> {:error, :workflow_deleted}
       workflow -> {:ok, workflow}
+    end
+  end
+
+  defp clear_and_reset_doc(%{shared_doc_pid: nil}, _workflow),
+    do: {:error, :no_shared_doc}
+
+  defp clear_and_reset_doc(%{shared_doc_pid: shared_doc_pid}, workflow) do
+    SharedDoc.update_doc(shared_doc_pid, fn doc ->
+      # Get all Yex collections BEFORE transaction (critical for avoiding VM
+      # deadlock)
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+      edges_array = Yex.Doc.get_array(doc, "edges")
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      # Transaction 1: Clear all arrays
+      Yex.Doc.transaction(doc, "clear_workflow", fn ->
+        clear_array(jobs_array)
+        clear_array(edges_array)
+        clear_array(triggers_array)
+      end)
+
+      # Transaction 2: Re-serialize workflow (WorkflowSerializer does its own
+      # transaction)
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+    end)
+
+    :ok
+  rescue
+    error ->
+      Logger.error("Error in clear_and_reset_doc: #{inspect(error)}")
+      {:error, :internal_error}
+  end
+
+  defp clear_array(array) do
+    length = Yex.Array.length(array)
+
+    if length > 0 do
+      Yex.Array.delete_range(array, 0, length)
     end
   end
 end
