@@ -315,7 +315,9 @@ defmodule Lightning.SessionTest do
 
       expected_workflow = %{
         "id" => workflow_id,
-        "name" => workflow.name
+        "name" => workflow.name,
+        "lock_version" => workflow.lock_version,
+        "deleted_at" => nil
       }
 
       assert Session.get_doc(session_pid)

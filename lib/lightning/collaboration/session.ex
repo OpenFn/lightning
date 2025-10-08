@@ -370,13 +370,8 @@ defmodule Lightning.Collaboration.Session do
         doc
 
       workflow ->
-        initialize_workflow_data(doc, workflow)
+        WorkflowSerializer.serialize_to_ydoc(doc, workflow)
     end
-  end
-
-  @doc false
-  defp initialize_workflow_data(doc, workflow) do
-    WorkflowSerializer.serialize_to_ydoc(doc, workflow)
   end
 
   # Private helper functions

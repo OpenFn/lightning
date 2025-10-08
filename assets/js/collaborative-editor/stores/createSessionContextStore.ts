@@ -82,6 +82,8 @@ export const createSessionContextStore = (): SessionContextStore => {
       user: null,
       project: null,
       config: null,
+      permissions: null,
+      latestSnapshotLockVersion: null,
       isLoading: false,
       error: null,
       lastUpdated: null,
@@ -130,6 +132,9 @@ export const createSessionContextStore = (): SessionContextStore => {
         draft.user = sessionContext.user;
         draft.project = sessionContext.project;
         draft.config = sessionContext.config;
+        draft.permissions = sessionContext.permissions;
+        draft.latestSnapshotLockVersion =
+          sessionContext.latest_snapshot_lock_version;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();
@@ -184,6 +189,18 @@ export const createSessionContextStore = (): SessionContextStore => {
     notify();
   };
 
+  /**
+   * Update latest snapshot lock version
+   * Called when workflow is saved and backend returns new lock version
+   */
+  const setLatestSnapshotLockVersion = (lockVersion: number) => {
+    state = produce(state, draft => {
+      draft.latestSnapshotLockVersion = lockVersion;
+      draft.lastUpdated = Date.now();
+    });
+    notify();
+  };
+
   // =============================================================================
   // CHANNEL INTEGRATION
   // =============================================================================
@@ -208,10 +225,29 @@ export const createSessionContextStore = (): SessionContextStore => {
       handleSessionContextUpdated(message);
     };
 
+    const workflowSavedHandler = (message: unknown) => {
+      logger.debug("Received workflow_saved message", message);
+      // Type guard for workflow saved message
+      if (
+        typeof message === "object" &&
+        message !== null &&
+        "latest_snapshot_lock_version" in message &&
+        typeof (message as { latest_snapshot_lock_version: unknown })
+          .latest_snapshot_lock_version === "number"
+      ) {
+        const lockVersion = (
+          message as { latest_snapshot_lock_version: number }
+        ).latest_snapshot_lock_version;
+        logger.debug("Workflow saved - updating lock version", lockVersion);
+        setLatestSnapshotLockVersion(lockVersion);
+      }
+    };
+
     // Set up channel listeners
     if (channel) {
       channel.on("session_context", sessionContextHandler);
       channel.on("session_context_updated", sessionContextUpdatedHandler);
+      channel.on("workflow_saved", workflowSavedHandler);
     }
 
     void requestSessionContext();
@@ -220,6 +256,7 @@ export const createSessionContextStore = (): SessionContextStore => {
       if (channel) {
         channel.off("session_context", sessionContextHandler);
         channel.off("session_context_updated", sessionContextUpdatedHandler);
+        channel.off("workflow_saved", workflowSavedHandler);
       }
       _channelProvider = null;
     };
@@ -271,6 +308,7 @@ export const createSessionContextStore = (): SessionContextStore => {
     setLoading,
     setError,
     clearError,
+    setLatestSnapshotLockVersion,
 
     // Internal methods (not part of public SessionContextStore interface)
     _connectChannel,

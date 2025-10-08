@@ -39,12 +39,19 @@ defmodule LightningWeb.WorkflowChannel do
                 {:ok, session_pid} =
                   Collaborate.start(user: user, workflow_id: workflow_id)
 
+                project_user =
+                  Lightning.Projects.get_project_user(
+                    workflow.project,
+                    user
+                  )
+
                 {:ok,
                  assign(socket,
                    workflow_id: workflow_id,
                    collaboration_topic: topic,
                    workflow: workflow,
-                   session_pid: session_pid
+                   session_pid: session_pid,
+                   project_user: project_user
                  )}
 
               {:error, :unauthorized} ->
@@ -91,13 +98,16 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("get_context", _payload, socket) do
     user = socket.assigns[:current_user]
-    project = socket.assigns.workflow.project
+    workflow = socket.assigns.workflow
+    project_user = socket.assigns.project_user
 
     async_task(socket, "get_context", fn ->
       %{
         user: render_user_context(user),
-        project: render_project_context(project),
-        config: render_config_context()
+        project: render_project_context(workflow.project),
+        config: render_config_context(),
+        permissions: render_permissions(user, project_user),
+        latest_snapshot_lock_version: workflow.lock_version
       }
     end)
   end
@@ -336,6 +346,20 @@ defmodule LightningWeb.WorkflowChannel do
     %{
       require_email_verification:
         Lightning.Config.check_flag?(:require_email_verification)
+    }
+  end
+
+  defp render_permissions(user, project_user) do
+    can_edit =
+      Lightning.Policies.Permissions.can?(
+        :project_users,
+        :edit_workflow,
+        user,
+        project_user
+      )
+
+    %{
+      can_edit_workflow: can_edit
     }
   end
 

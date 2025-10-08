@@ -86,7 +86,8 @@ defmodule LightningWeb.WorkflowChannelTest do
     test "returns complete context with all required fields", %{
       socket: socket,
       user: user,
-      project: project
+      project: project,
+      workflow: workflow
     } do
       ref = push(socket, "get_context", %{})
 
@@ -109,6 +110,14 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Config data
       assert %{config: config_data} = response
       assert config_data.require_email_verification == true
+
+      # Permissions data
+      assert %{permissions: permissions_data} = response
+      assert permissions_data.can_edit_workflow == true
+
+      # Latest snapshot lock version
+      assert %{latest_snapshot_lock_version: lock_version} = response
+      assert lock_version == workflow.lock_version
     end
 
     test "returns config with require_email_verification false when flag disabled",
@@ -123,6 +132,28 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{config: config_data} = response
       assert config_data.require_email_verification == false
+    end
+
+    test "returns can_edit_workflow false for viewer role", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}"
+        )
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+      assert %{permissions: permissions_data} = response
+      assert permissions_data.can_edit_workflow == false
     end
   end
 

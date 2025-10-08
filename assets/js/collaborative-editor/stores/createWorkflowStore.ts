@@ -520,8 +520,14 @@ export const createWorkflowStore = () => {
     });
   };
 
-  const saveWorkflow = async () => {
-    if (!ydoc || !provider) return;
+  const saveWorkflow = async (): Promise<{
+    saved_at?: string;
+    lock_version?: number;
+  } | null> => {
+    if (!ydoc || !provider) {
+      logger.warn("Cannot save - Y.Doc or provider not connected");
+      return null;
+    }
 
     const workflow = ydoc.getMap("workflow").toJSON();
 
@@ -541,13 +547,13 @@ export const createWorkflowStore = () => {
     logger.debug("Saving workflow", payload);
 
     try {
-      const response = await channelRequest<{ workflow: unknown }>(
-        provider.channel,
-        "save_workflow",
-        payload
-      );
+      const response = await channelRequest<{
+        saved_at: string;
+        lock_version: number;
+      }>(provider.channel, "save_workflow", payload);
 
       logger.debug("Saved workflow", response);
+      return response;
     } catch (error) {
       logger.error("Failed to save workflow", error);
       throw error;

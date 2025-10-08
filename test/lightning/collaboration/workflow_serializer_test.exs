@@ -454,6 +454,56 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
     end
   end
 
+  describe "lock_version and deleted_at fields" do
+    test "serializes lock_version and deleted_at to Y.Doc" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", lock_version: 3)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      assert Yex.Map.fetch!(workflow_map, "lock_version") == 3
+      assert is_nil(Yex.Map.fetch!(workflow_map, "deleted_at"))
+    end
+
+    test "serializes deleted_at when workflow is soft-deleted" do
+      deleted_at = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      workflow =
+        insert(:workflow, name: "Deleted Workflow", deleted_at: deleted_at)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      # deleted_at is stored as ISO8601 string in Y.Doc
+      assert Yex.Map.fetch!(workflow_map, "deleted_at") ==
+               DateTime.to_iso8601(deleted_at)
+    end
+
+    test "lock_version and deleted_at not included in deserialization" do
+      workflow =
+        insert(:workflow, name: "Test", lock_version: 5)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # These fields should NOT be in the deserialized data
+      refute Map.has_key?(extracted, "lock_version")
+      refute Map.has_key?(extracted, "deleted_at")
+    end
+  end
+
   describe "deserialize_from_ydoc/2" do
     test "extracts workflow data from Y.Doc" do
       # Create a workflow with all components

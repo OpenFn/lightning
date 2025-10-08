@@ -39,6 +39,7 @@ import type {
   UserContext,
   ProjectContext,
   AppConfig,
+  Permissions,
 } from "../types/sessionContext";
 
 /**
@@ -117,4 +118,32 @@ export const useSessionContextError = (): string | null => {
   const selectError = sessionContextStore.withSelector(state => state.error);
 
   return useSyncExternalStore(sessionContextStore.subscribe, selectError);
+};
+
+/**
+ * Hook to get user permissions from session context
+ * Returns null if not loaded yet
+ */
+export const usePermissions = (): Permissions | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectPermissions = sessionContextStore.withSelector(
+    state => state.permissions
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectPermissions);
+};
+
+/**
+ * Hook to get latest snapshot lock version from session context
+ * Returns null if not loaded yet
+ */
+export const useLatestSnapshotLockVersion = (): number | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLockVersion = sessionContextStore.withSelector(
+    state => state.latestSnapshotLockVersion
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLockVersion);
 };

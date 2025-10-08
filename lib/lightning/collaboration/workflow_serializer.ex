@@ -12,7 +12,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   The Y.Doc contains five top-level collections:
 
-  - `workflow` (Map): Core workflow metadata (id, name)
+  - `workflow` (Map): Core workflow metadata (id, name, lock_version,
+    deleted_at)
   - `jobs` (Array): Array of job objects with Y.Text body field
   - `edges` (Array): Array of edge objects connecting jobs/triggers
   - `triggers` (Array): Array of trigger objects (webhook, cron, kafka)
@@ -33,7 +34,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   Writes a workflow's data into a Y.Doc.
 
   This initializes the Y.Doc structure with:
-  - `workflow` map: Core workflow metadata (id, name, etc.)
+  - `workflow` map: Core workflow metadata (id, name, lock_version, deleted_at)
   - `jobs` array: Array of job objects
   - `edges` array: Array of edge objects
   - `triggers` array: Array of trigger objects
@@ -62,6 +63,13 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
       # Set workflow properties
       Yex.Map.set(workflow_map, "id", workflow.id)
       Yex.Map.set(workflow_map, "name", workflow.name || "")
+      Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
+
+      Yex.Map.set(
+        workflow_map,
+        "deleted_at",
+        datetime_to_string(workflow.deleted_at)
+      )
 
       initialize_jobs(jobs_array, workflow.jobs)
       initialize_edges(edges_array, workflow.edges)
@@ -215,4 +223,9 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   defp extract_text_field(string) when is_binary(string), do: string
   defp extract_text_field(nil), do: ""
+
+  # Convert DateTime to ISO8601 string for Y.Doc storage
+  # Y.Doc can't store DateTime structs directly
+  defp datetime_to_string(nil), do: nil
+  defp datetime_to_string(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
 end
