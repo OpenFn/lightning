@@ -71,13 +71,15 @@ defmodule LightningWeb.OidcController do
   end
 
   defp broadcast_message(state, data) do
-    [subscription_id, mod, component_id] =
+    [subscription_id, mod, component_id, current_tab] =
       OauthCredentialHelper.decode_state(state)
 
     OauthCredentialHelper.broadcast_forward(
       subscription_id,
       mod,
-      Map.put(data, :id, component_id)
+      data
+      |> Map.put(:id, component_id)
+      |> Map.put(:current_tab, current_tab)
     )
   end
 

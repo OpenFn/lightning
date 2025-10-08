@@ -44,15 +44,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   @impl true
-  def update(%{body: body}, socket) do
-    updated_bodies =
-      Map.put(socket.assigns.credential_bodies, socket.assigns.current_tab, body)
+  def update(%{current_tab: tab}, socket) do
+    {:ok, assign(socket, current_tab: tab)}
+  end
 
-    {:ok,
-     socket
-     |> assign(credential_bodies: updated_bodies)
-     |> assign(scopes_changed: false)
-     |> assign(sandbox_changed: false)}
+  def update(%{credential_bodies: bodies}, socket) do
+    {:ok, assign(socket, credential_bodies: bodies)}
   end
 
   def update(assigns, socket) do
@@ -277,15 +274,59 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
      )}
   end
 
-  def handle_event(
-        "save",
-        %{"credential" => credential_params},
-        socket
-      ) do
+  def handle_event("save", %{"credential" => credential_params}, socket) do
     if socket.assigns.can_create_project_credential do
+      updated_bodies =
+        case Map.get(credential_params, "body") do
+          nil ->
+            socket.assigns.credential_bodies
+
+          body_string when is_binary(body_string) ->
+            parsed_body =
+              case Jason.decode(body_string) do
+                {:ok, decoded} ->
+                  decoded
+
+                {:error, _} ->
+                  body_string
+              end
+
+            Map.put(
+              socket.assigns.credential_bodies,
+              socket.assigns.current_tab,
+              parsed_body
+            )
+
+          body_map when is_map(body_map) ->
+            case Map.get(body_map, socket.assigns.current_tab) do
+              nil ->
+                socket.assigns.credential_bodies
+
+              env_body_string when is_binary(env_body_string) ->
+                parsed_body =
+                  case Jason.decode(env_body_string) do
+                    {:ok, decoded} -> decoded
+                    {:error, _} -> %{}
+                  end
+
+                Map.put(
+                  socket.assigns.credential_bodies,
+                  socket.assigns.current_tab,
+                  parsed_body
+                )
+
+              env_body_map when is_map(env_body_map) ->
+                Map.put(
+                  socket.assigns.credential_bodies,
+                  socket.assigns.current_tab,
+                  env_body_map
+                )
+            end
+        end
+
       credential_bodies_list =
         Enum.map(socket.assigns.credential_environments, fn env ->
-          body = Map.get(socket.assigns.credential_bodies, env.name, %{})
+          body = Map.get(updated_bodies, env.name, %{})
           %{"name" => env.name, "body" => body}
         end)
 
@@ -311,12 +352,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         |> Map.put("project_credentials", project_credentials)
         |> Map.put("credential_bodies", credential_bodies_list)
         |> Map.put("delete_environments", environments_to_delete)
+        |> maybe_put_oauth_client_id(socket.assigns.selected_oauth_client)
 
-      save_credential(
-        socket,
-        socket.assigns.action,
-        credential_params
-      )
+      save_credential(socket, socket.assigns.action, credential_params)
     else
       {:noreply,
        socket
@@ -400,47 +438,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     """
   end
 
-  def render(%{page: :second, schema: "oauth"} = assigns) do
-    ~H"""
-    <div class="text-left mt-10 sm:mt-0">
-      <Components.Credentials.credential_modal
-        id={@id}
-        width="xl:min-w-1/3 min-w-1/2 w-[300px]"
-        {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
-      >
-        <:title>
-          <%= if @action in [:edit] do %>
-            Edit a credential
-          <% else %>
-            Add a credential
-          <% end %>
-        </:title>
-        <LightningWeb.Components.Oauth.missing_client_warning :if={
-          !@selected_oauth_client
-        } />
-        <.live_component
-          module={GenericOauthComponent}
-          id={"generic-oauth-component-#{@credential.id || "new"}"}
-          action={@action}
-          selected_client={@selected_oauth_client}
-          changeset={@changeset}
-          credential={@credential}
-          projects={@projects}
-          users={@users}
-          on_save={@on_save}
-          allow_credential_transfer={@allow_credential_transfer}
-          return_to={@return_to}
-          modal_id={@id}
-          on_modal_close={@on_modal_close}
-          credential_environments={@credential_environments}
-          credential_bodies={@credential_bodies}
-          current_tab={@current_tab}
-        />
-      </Components.Credentials.credential_modal>
-    </div>
-    """
-  end
-
   def render(%{page: :second} = assigns) do
     current_body = Map.get(assigns.credential_bodies, assigns.current_tab, %{})
     assigns = assign(assigns, :current_body, current_body)
@@ -453,12 +450,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
-          <%= if @action in [:edit] do %>
-            Edit a credential
-          <% else %>
-            Add a credential
-          <% end %>
+          {if @action in [:edit], do: "Edit a credential", else: "Add a credential"}
         </:title>
+
+        <LightningWeb.Components.Oauth.missing_client_warning :if={
+          @schema == "oauth" and !@selected_oauth_client
+        } />
 
         <.form
           :let={f}
@@ -467,9 +464,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           phx-target={@myself}
           phx-change="validate"
           phx-submit="save"
-          class="space-y-6"
+          class="space-y-4"
         >
-          <div class="space-y-3 border border-gray-200 rounded-md p-4">
+          <div class="space-y-2 border border-gray-200 rounded-md p-4">
             <div>
               <h3 class="text-normal font-semibold text-gray-900">
                 Credential identity
@@ -499,7 +496,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </div>
           </div>
 
-          <div class="space-y-3 border border-gray-200 rounded-md p-4">
+          <div class="space-y-2 border border-gray-200 rounded-md p-4">
             <div>
               <h3 class="text-normal font-semibold text-gray-900">
                 Credential environments
@@ -563,7 +560,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               :for={env <- @credential_environments}
               :if={@current_tab == env.name}
             >
-              <div class="space-y-4">
+              <div class="mb-6">
                 <NewInputs.input
                   id={"environment-name-input-#{env.name}"}
                   type="text"
@@ -575,29 +572,51 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                   phx-target={@myself}
                   phx-debounce="300"
                   placeholder="e.g., production, staging, development, test, qa"
-                  tooltip="Environment names organize credential configurations by deployment stage. When workflows run in sandbox projects (e.g., env: 'staging'), they automatically use the matching credential environment. Choose names that align with your project environments: 'production' for live systems, 'staging' for testing, 'development' for local work. Consistent naming ensures the right secrets are used in each environment."
+                  tooltip={get_environment_tooltip(@schema)}
                   errors={
                     if @environment_name_error,
                       do: [@environment_name_error],
                       else: []
                   }
                 />
-
-                <Components.Credentials.form_component
-                  :let={{fieldset, _valid?}}
-                  id={@credential.id || "new"}
-                  form={f}
-                  type={@schema}
-                  current_body={@current_body}
-                >
-                  <div class="space-y-4">
+              </div>
+              <div>
+                <%= if @schema == "oauth" do %>
+                  <.live_component
+                    module={GenericOauthComponent}
+                    id={"generic-oauth-component-#{@credential.id || "new"}-#{env.name}"}
+                    parent_id={@id}
+                    action={@action}
+                    selected_client={@selected_oauth_client}
+                    changeset={@changeset}
+                    credential={@credential}
+                    projects={@projects}
+                    users={@users}
+                    on_save={@on_save}
+                    allow_credential_transfer={@allow_credential_transfer}
+                    return_to={@return_to}
+                    modal_id={@id}
+                    on_modal_close={@on_modal_close}
+                    credential_environments={@credential_environments}
+                    credential_bodies={@credential_bodies}
+                    current_tab={@current_tab}
+                  />
+                <% else %>
+                  <Components.Credentials.form_component
+                    :let={{fieldset, _valid?}}
+                    id={@credential.id || "new"}
+                    form={f}
+                    type={@schema}
+                    current_body={@current_body}
+                  >
                     {fieldset}
-                  </div>
-                </Components.Credentials.form_component>
+                  </Components.Credentials.form_component>
+                <% end %>
+              </div>
 
+              <div :if={length(@credential_environments) > 1} class="space-y-4">
                 <div class="border-t border-gray-200"></div>
                 <button
-                  :if={length(@credential_environments) > 1}
                   type="button"
                   phx-click="delete_environment"
                   phx-value-environment={@current_tab}
@@ -612,7 +631,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             </div>
           </div>
 
-          <div class="space-y-3 border border-gray-200 rounded-md p-4">
+          <div class="space-y-2 border border-gray-200 rounded-md p-4">
             <div>
               <h3 class="text-normal font-semibold text-gray-900">
                 Projects access
@@ -635,7 +654,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
           <div
             :if={@action == :edit and @allow_credential_transfer}
-            class="space-y-3 border border-gray-200 rounded-md p-4"
+            class="space-y-2 border border-gray-200 rounded-md p-4"
           >
             <div>
               <h3 class="text-normal font-semibold text-gray-900">
@@ -666,6 +685,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       </Components.Credentials.credential_modal>
     </div>
     """
+  end
+
+  defp get_environment_tooltip("oauth") do
+    "Environment names organize OAuth authorizations by deployment stage. Each environment can have separate OAuth tokens for different accounts or apps."
+  end
+
+  defp get_environment_tooltip(_) do
+    "Environment names organize credential configurations by deployment stage. When workflows run in sandbox projects (e.g., env: 'staging'), they automatically use the matching credential environment. Choose names that align with your project environments: 'production' for live systems, 'staging' for testing, 'development' for local work. Consistent naming ensures the right secrets are used in each environment."
   end
 
   defp get_type_options(schemas_path) do
@@ -891,8 +918,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     )
   end
 
-  # Helper to find the "primary" environment from a list
-  # Prioritizes common primary environment names, falls back to first available
   defp find_primary_environment(environments) do
     primary_names = [
       "main",
@@ -945,11 +970,15 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     Enum.sort_by(environments, fn env ->
       case Enum.find_index(primary_names, &(&1 == env.name)) do
-        # Not primary: sort alphabetically after primaries
         nil -> {1, env.name}
-        # Primary: sort by primary order
         index -> {0, index}
       end
     end)
+  end
+
+  defp maybe_put_oauth_client_id(params, nil), do: params
+
+  defp maybe_put_oauth_client_id(params, oauth_client) do
+    Map.put(params, "oauth_client_id", oauth_client.id)
   end
 end

@@ -23,7 +23,32 @@ defmodule LightningWeb.ErrorFormatter do
     })
   end
 
+  def format(:environment_not_configured, %{project: project}) do
+    dgettext("errors", "environment_not_configured", %{
+      settings_url: project_settings_url(project)
+    })
+  end
+
+  def format(:project_not_found, _context) do
+    dgettext("errors", "project_not_found")
+  end
+
+  def format({:environment_mismatch, credential}, %{
+        project: project,
+        project_env: project_env
+      }) do
+    dgettext("errors", "environment_mismatch", %{
+      credentials_url: credentials_url(project),
+      credential_name: credential.name,
+      project_env: project_env
+    })
+  end
+
   defp credentials_url(project) do
     url(~p"/projects/#{project}/settings#credentials")
+  end
+
+  defp project_settings_url(project) do
+    url(~p"/projects/#{project}/settings")
   end
 end

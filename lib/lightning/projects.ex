@@ -223,6 +223,26 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Gets the project associated with a run.
+  Traverses Run → WorkOrder → Workflow → Project.
+
+  Returns nil if the run is not associated with a project.
+
+  ## Examples
+
+      iex> get_project_for_run(run)
+      %Project{id: "...", env: "production", ...}
+
+      iex> get_project_for_run(orphaned_run)
+      nil
+  """
+  @spec get_project_for_run(Run.t()) :: Project.t() | nil
+  def get_project_for_run(%Run{} = run) do
+    from(p in Ecto.assoc(run, [:work_order, :workflow, :project]))
+    |> Repo.one()
+  end
+
+  @doc """
   Returns the **root ancestor** of a project by walking up `parent_id` links.
 
   Supports arbitrarily deep nesting. (Assumes the parent chain is well-formed.)

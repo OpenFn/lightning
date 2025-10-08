@@ -159,6 +159,27 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  Gets a credential body for a specific environment.
+
+  Returns nil if no body exists for the given credential and environment combination.
+
+  ## Examples
+
+      iex> get_credential_body(credential_id, "production")
+      %CredentialBody{name: "production", body: %{...}}
+
+      iex> get_credential_body(credential_id, "nonexistent")
+      nil
+  """
+  @spec get_credential_body(String.t(), String.t()) :: CredentialBody.t() | nil
+  def get_credential_body(credential_id, env_name) do
+    from(cb in CredentialBody,
+      where: cb.credential_id == ^credential_id and cb.name == ^env_name
+    )
+    |> Repo.one()
+  end
+
+  @doc """
   Creates a new credential with its credential bodies.
 
   ## Parameters
@@ -778,6 +799,60 @@ defmodule Lightning.Credentials do
     Credential.changeset(credential, attrs |> normalize_keys())
   end
 
+  # New public functions - work directly on body (for RunChannel)
+  @doc """
+  Extracts sensitive values from a credential body map.
+
+  ## Examples
+
+      iex> sensitive_values_from_body(%{"password" => "secret123"})
+      ["secret123"]
+  """
+  @spec sensitive_values_from_body(map() | nil) :: [any()]
+  def sensitive_values_from_body(body) when is_map(body) do
+    SensitiveValues.secret_values(body)
+  end
+
+  def sensitive_values_from_body(_), do: []
+
+  @doc """
+  Extracts basic auth strings from a credential body map.
+
+  ## Examples
+
+      iex> basic_auth_from_body(%{"username" => "user", "password" => "pass"})
+      ["dXNlcjpwYXNz"]
+  """
+  @spec basic_auth_from_body(map() | nil) :: [String.t()]
+  def basic_auth_from_body(body) when is_map(body) do
+    usernames = body |> Map.take(["username", "email"]) |> Map.values()
+    password = Map.get(body, "password", "")
+
+    usernames
+    |> Enum.zip(List.duplicate(password, length(usernames)))
+    |> Enum.map(fn {username, password} ->
+      Base.encode64("#{username}:#{password}")
+    end)
+  end
+
+  def basic_auth_from_body(_), do: []
+
+  # Existing functions refactored to use the body-based functions
+  @doc """
+  Retrieves sensitive values for a credential in a specific environment.
+
+  Used primarily for scrubbing historical dataclips where we need to look up
+  the credential body by environment.
+
+  ## Parameters
+    - `id_or_credential`: Credential ID, Credential struct, or nil
+    - `environment`: Environment name (defaults to "main")
+
+  ## Examples
+
+      iex> sensitive_values_for(credential, "production")
+      ["secret123", "api_key_xyz"]
+  """
   @spec sensitive_values_for(Ecto.UUID.t() | Credential.t() | nil, String.t()) ::
           [any()]
   def sensitive_values_for(id_or_credential, environment \\ "main")
@@ -798,14 +873,25 @@ defmodule Lightning.Credentials do
         []
 
       credential_body ->
-        if is_nil(credential_body.body) do
-          []
-        else
-          SensitiveValues.secret_values(credential_body.body)
-        end
+        sensitive_values_from_body(credential_body.body)
     end
   end
 
+  @doc """
+  Retrieves basic auth strings for a credential in a specific environment.
+
+  Used primarily for scrubbing historical dataclips where we need to look up
+  the credential body by environment.
+
+  ## Parameters
+    - `credential`: Credential struct or nil
+    - `environment`: Environment name (defaults to "main")
+
+  ## Examples
+
+      iex> basic_auth_for(credential, "staging")
+      ["dXNlcjpwYXNz"]
+  """
   @spec basic_auth_for(Credential.t() | nil, String.t()) :: [String.t()]
   def basic_auth_for(credential, environment \\ "main")
 
@@ -822,105 +908,45 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp basic_auth_from_body(body) when is_map(body) do
-    usernames = body |> Map.take(["username", "email"]) |> Map.values()
-    password = Map.get(body, "password", "")
-
-    usernames
-    |> Enum.zip(List.duplicate(password, length(usernames)))
-    |> Enum.map(fn {username, password} ->
-      Base.encode64("#{username}:#{password}")
-    end)
-  end
-
-  defp basic_auth_from_body(_), do: []
-
   @doc """
-  Refreshes OAuth tokens in credential bodies if they have expired.
+  Gets a credential body for an environment and refreshes OAuth tokens if expired.
 
-  For OAuth credentials, this checks all credential bodies and refreshes any expired tokens.
-  For non-OAuth credentials, returns unchanged.
+  This is the primary function for credential resolution during workflow execution.
+  It handles the full flow: fetch body → check expiration → refresh if needed → return final body.
 
   ## Parameters
-   - `credential`: The `Credential` struct to check and potentially refresh
-   - `environment`: Optional environment name to refresh. If nil, refreshes all expired tokens.
+    - `credential`: The credential struct
+    - `environment`: Environment name (e.g., "production", "staging")
 
   ## Returns
-   - `{:ok, credential}`: If tokens were fresh or successfully refreshed
-   - `{:error, error}`: If refreshing any token failed
+    - `{:ok, body}` - The credential body (with fresh tokens if OAuth was refreshed)
+    - `{:error, :environment_not_found}` - No body exists for this environment
+    - `{:error, oauth_refresh_error()}` - OAuth refresh failed
   """
-  @spec maybe_refresh_token(Credential.t(), String.t() | nil) ::
-          {:ok, Credential.t()} | {:error, oauth_refresh_error() | any()}
-  def maybe_refresh_token(credential, environment \\ nil)
+  @spec resolve_credential_body(Credential.t(), String.t()) ::
+          {:ok, map()} | {:error, :environment_not_found | oauth_refresh_error()}
+  def resolve_credential_body(%Credential{} = credential, environment) do
+    case get_credential_body(credential.id, environment) do
+      nil ->
+        {:error, :environment_not_found}
 
-  def maybe_refresh_token(%Credential{schema: "oauth"} = credential, environment) do
-    credential = Repo.preload(credential, [:credential_bodies, :oauth_client])
+      %CredentialBody{body: body} = credential_body ->
+        if credential.schema == "oauth" && oauth_token_expired?(body) do
+          credential
+          |> Repo.preload(:oauth_client)
+          |> refresh_credential_body_token(credential_body)
+          |> case do
+            {:ok, %CredentialBody{body: fresh_body}} ->
+              {:ok, fresh_body}
 
-    if credential.oauth_client_id do
-      refresh_oauth_credential_bodies(credential, environment)
-    else
-      {:ok, credential}
-    end
-  end
-
-  def maybe_refresh_token(%Credential{} = credential, _environment) do
-    {:ok, credential}
-  end
-
-  defp refresh_oauth_credential_bodies(credential, nil) do
-    # Refresh all expired tokens
-    results =
-      credential.credential_bodies
-      |> Enum.map(fn credential_body ->
-        if oauth_token_expired?(credential_body.body) do
-          refresh_credential_body_token(credential, credential_body)
+            {:error, reason} ->
+              {:error, reason}
+          end
         else
-          {:ok, credential_body}
+          {:ok, body}
         end
-      end)
-
-    # If any failed, return error
-    case Enum.find(results, fn result -> match?({:error, _}, result) end) do
-      nil -> {:ok, Repo.reload!(credential) |> Repo.preload(:credential_bodies)}
-      error -> error
     end
   end
-
-  defp refresh_oauth_credential_bodies(credential, environment) do
-    # Refresh specific environment
-    credential_body =
-      Enum.find(credential.credential_bodies, &(&1.name == environment))
-
-    if credential_body && oauth_token_expired?(credential_body.body) do
-      case refresh_credential_body_token(credential, credential_body) do
-        {:ok, _} ->
-          {:ok, Repo.reload!(credential) |> Repo.preload(:credential_bodies)}
-
-        error ->
-          error
-      end
-    else
-      {:ok, credential}
-    end
-  end
-
-  defp oauth_token_expired?(body) when is_map(body) do
-    case body do
-      %{"expires_at" => expires_at} when is_integer(expires_at) ->
-        current_time = DateTime.utc_now() |> DateTime.to_unix()
-        # Refresh if expiring in next 5 minutes
-        expires_at - current_time < 300
-
-      %{"expires_in" => _} ->
-        # If we only have expires_in without expires_at, assume it needs refresh
-        true
-
-      _ ->
-        false
-    end
-  end
-
-  defp oauth_token_expired?(_), do: false
 
   defp refresh_credential_body_token(credential, credential_body) do
     case OauthHTTPClient.refresh_token(
@@ -928,7 +954,6 @@ defmodule Lightning.Credentials do
            credential_body.body
          ) do
       {:ok, fresh_token} ->
-        # Extract scopes from fresh token
         {:ok, scopes} = OauthValidation.extract_scopes(fresh_token)
 
         refresh_metadata = %{
@@ -942,12 +967,15 @@ defmodule Lightning.Credentials do
         audit_changeset =
           Audit.oauth_token_refreshed_event(credential, refresh_metadata)
 
-        # Preserve refresh_token if not in new response
         updated_token =
-          ensure_refresh_token_preserved(credential_body.body, fresh_token)
+          fresh_token
+          |> ensure_refresh_token_preserved(credential_body.body)
+          |> normalize_token_expiry()
 
-        case CredentialBody.changeset(credential_body, %{body: updated_token})
-             |> Repo.update() do
+        credential_body
+        |> CredentialBody.changeset(%{body: updated_token})
+        |> Repo.update()
+        |> case do
           {:ok, updated_cb} ->
             save_audit_event(audit_changeset)
             {:ok, updated_cb}
@@ -988,6 +1016,85 @@ defmodule Lightning.Credentials do
         {:error, error}
     end
   end
+
+  @doc """
+  Normalizes OAuth token expiry time to always use expires_at.
+
+  Converts relative expires_in to absolute expires_at timestamp based on current time.
+  If the token already has expires_at, returns it unchanged.
+
+  ## Examples
+
+      iex> normalize_token_expiry(%{"expires_in" => 3600})
+      %{"expires_in" => 3600, "expires_at" => 1234567890}
+
+      iex> normalize_token_expiry(%{"expires_at" => 1234567890})
+      %{"expires_at" => 1234567890}
+  """
+  @spec normalize_token_expiry(map()) :: map()
+  def normalize_token_expiry(token) when is_map(token) do
+    cond do
+      Map.has_key?(token, "expires_at") ->
+        token
+
+      Map.has_key?(token, "expires_in") ->
+        expires_in =
+          case token["expires_in"] do
+            n when is_integer(n) -> n
+            s when is_binary(s) -> String.to_integer(s)
+          end
+
+        expires_at =
+          DateTime.utc_now()
+          |> DateTime.add(expires_in, :second)
+          |> DateTime.to_unix()
+
+        Map.put(token, "expires_at", expires_at)
+
+      true ->
+        token
+    end
+  end
+
+  def normalize_token_expiry(token), do: token
+
+  @doc """
+  Checks if an OAuth token body is expired or expires soon.
+
+  Returns true if the token expires within the next 5 minutes (300 seconds buffer).
+  If expiry cannot be determined, conservatively returns true to trigger refresh.
+
+  ## Examples
+
+      iex> oauth_token_expired?(%{"expires_at" => future_timestamp})
+      false
+
+      iex> oauth_token_expired?(%{"expires_at" => soon_timestamp})
+      true
+  """
+  @spec oauth_token_expired?(map()) :: boolean()
+  def oauth_token_expired?(body) when is_map(body) do
+    case Map.get(body, "expires_at") do
+      expires_at when is_integer(expires_at) ->
+        current_time = DateTime.utc_now() |> DateTime.to_unix()
+        expires_at - current_time < 300
+
+      expires_at when is_binary(expires_at) ->
+        case Integer.parse(expires_at) do
+          {timestamp, ""} ->
+            current_time = DateTime.utc_now() |> DateTime.to_unix()
+            timestamp - current_time < 300
+
+          _ ->
+            true
+        end
+
+      nil ->
+        true
+    end
+  end
+
+  def oauth_token_expired?(_), do: true
 
   defp ensure_refresh_token_preserved(existing_body, new_body)
        when is_map(existing_body) and is_map(new_body) do

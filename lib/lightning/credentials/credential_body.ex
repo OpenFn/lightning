@@ -21,7 +21,7 @@ defmodule Lightning.Credentials.CredentialBody do
         }
 
   schema "credential_bodies" do
-    field :name, :string
+    field :name, :string, default: "main"
     field :body, Lightning.Encrypted.Map, redact: true
 
     belongs_to :credential, Credential

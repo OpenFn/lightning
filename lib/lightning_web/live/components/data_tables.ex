@@ -276,9 +276,7 @@ defmodule LightningWeb.Components.DataTables do
   end
 
   defp missing_oauth_client?(credential) do
-    credential.schema == "oauth" &&
-      (credential.oauth_token == nil ||
-         credential.oauth_token.oauth_client_id == nil)
+    credential.schema == "oauth" && credential.oauth_client_id == nil
   end
 
   attr :id, :string, required: true
