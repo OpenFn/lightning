@@ -163,7 +163,18 @@ Once aligned on approach:
 
 After structure approval:
 
-1. **Write the plan** to `thoughts/shared/plans/YYYY-MM-DD-XXXX-description.md`
+1. **Identify agent assignments for each phase**:
+   - For each implementation phase, determine which specialized agent should handle it
+   - Available agent types (see `implement-plan.md` for full descriptions):
+     - **phoenix-elixir-expert**: Elixir/Phoenix backend work
+     - **react-collaborative-architect**: React/TypeScript frontend with YJS
+     - **react-collab-editor**: Collaborative editor components
+     - **react-test-specialist**: React testing with Vitest
+     - **general-purpose**: Mixed or coordination work
+   - **CRITICAL**: Each phase will use a FRESH agent instance to avoid context window issues
+   - The agent assignment tells the implementation coordinator which agent to spawn for that phase
+
+2. **Write the plan** to `thoughts/shared/plans/YYYY-MM-DD-XXXX-description.md`
    - Format: `YYYY-MM-DD-XXXX-description.md` where:
      - YYYY-MM-DD is today's date
      - XXXX is the ticket number (omit if no ticket)
@@ -171,7 +182,7 @@ After structure approval:
    - Examples:
      - With ticket: `2025-01-08-1478-parent-child-tracking.md`
      - Without ticket: `2025-01-08-improve-error-handling.md`
-2. **Use this template structure**:
+3. **Use this template structure**:
 
 ````markdown
 # [Feature/Task Name] Implementation Plan
@@ -202,6 +213,9 @@ After structure approval:
 [High-level strategy and reasoning]
 
 ## Phase 1: [Descriptive Name]
+
+**Implementation Agent**: `[agent-type]`
+<!-- See implement-plan.md for available agents and their capabilities -->
 
 ### Overview
 [What this phase accomplishes]
