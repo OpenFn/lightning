@@ -205,7 +205,8 @@ export const createSessionStore = (): SessionStore => {
     // Step 4: Update state
     updateState(draft => {
       draft.ydoc = ydoc;
-      draft.awareness = awarenessToUse;
+      // Always use provider.awareness since PhoenixChannelProvider creates one if not provided
+      draft.awareness = provider.awareness;
       draft.provider = provider;
       draft.userData = userData;
       draft.isSynced = provider.synced;

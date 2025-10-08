@@ -97,7 +97,6 @@ iex -S mix phx.server
 **Features:**
 - View current state of any store
 - See action history with timestamps
-- Time-travel debug (jump to previous states)
 - Export/import state for bug reproduction
 
 **Note:** DevTools is disabled in production builds.

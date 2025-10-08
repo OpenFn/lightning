@@ -195,6 +195,12 @@ export function wrapStoreWithDevTools<TState extends Record<string, any>>(
   const originalNotify: (() => void) | null = null;
 
   const connect = () => {
+    // Disconnect existing connection if any (handles hot reload)
+    if (devTools) {
+      devTools.unsubscribe();
+      devTools = null;
+    }
+
     devTools = devToolsExtension.connect({
       name: config.name,
       maxAge: config.maxAge ?? 50,
@@ -217,6 +223,9 @@ export function wrapStoreWithDevTools<TState extends Record<string, any>>(
       console.warn(`[${config.name}] Failed to connect to Redux DevTools`);
       return;
     }
+
+    // Initialize with empty state to register store in DevTools dropdown
+    devTools.send({ type: `@@INIT` }, {});
 
     // Subscribe to DevTools actions (time-travel, reset, etc.)
     devTools.subscribe((message: any) => {
