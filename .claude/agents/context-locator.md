@@ -1,11 +1,6 @@
 ---
 name: context-locator
-description:
-  Discovers relevant documents in .context/ directory (We use this for all sorts
-  of project context and documentation!). This is really only relevant/needed
-  when you're in a researching mood and need to figure out if we have context
-  written down that's relevant to your current research task. This is the
-  context equivalent of codebase-locator.
+description: Discovers relevant documents in .context/ directory - the context equivalent of codebase-locator for finding project documentation, notes, and historical context
 tools: Grep, Glob, LS
 model: sonnet
 ---
