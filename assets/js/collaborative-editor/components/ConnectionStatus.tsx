@@ -3,7 +3,7 @@
  */
 
 import { useSocket } from "../../react/contexts/SocketProvider";
-import { useSession } from "../contexts/SessionProvider";
+import { useSession } from "../hooks/useSession";
 
 export function ConnectionStatus() {
   const { isConnected: socketConnected, connectionError } = useSocket();

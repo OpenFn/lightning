@@ -11,7 +11,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   @impl true
   def mount(%{"id" => workflow_id}, _session, socket) do
     workflow = Workflows.get_workflow!(workflow_id)
-    user_id = socket.assigns.current_user.id
 
     {:ok,
      socket
@@ -19,8 +18,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        active_menu_item: :overview,
        page_title: "Collaborate on #{workflow.name}",
        workflow: workflow,
-       workflow_id: workflow_id,
-       user_id: user_id
+       workflow_id: workflow_id
      )}
   end
 
@@ -40,8 +38,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-react-file={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
       data-workflow-id={@workflow_id}
       data-workflow-name={@workflow.name}
-      data-user-id={@user_id}
-      data-user-name={@current_user.first_name <> " " <> @current_user.last_name}
     />
     """
   end
