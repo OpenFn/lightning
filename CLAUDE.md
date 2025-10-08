@@ -99,7 +99,7 @@ iex -S mix phx.server
 - See action history with timestamps
 - Export/import state for bug reproduction
 
-**Note:** DevTools is disabled in production builds.
+**Note:** DevTools is disabled in production builds. For detailed store architecture and usage guidelines, see `.claude/guidelines/store-structure.md`.
 
 ### Docker Development
 
@@ -207,6 +207,15 @@ For toast notifications in the collaborative editor, see `.claude/guidelines/toa
 - Integration with workflow operations
 - Styling conventions matching Lightning's design system
 - Testing strategies
+
+#### Collaborative Editor Store Architecture
+
+When working with the collaborative editor stores (creating, modifying, or debugging), see `.claude/guidelines/store-structure.md`:
+- Store hierarchy and responsibilities (SessionStore, WorkflowStore, AwarenessStore, etc.)
+- Decision tree for "where should this state go?"
+- Store update patterns (Y.Doc, Phoenix Channel, local state)
+- When to create new stores vs extending existing ones
+- Redux DevTools integration for debugging
 
 ### Testing Requirements
 
