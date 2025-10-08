@@ -166,32 +166,28 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     }
 
     # Add session ID for Lightning broadcasts
-    websocket_payload = Map.put(payload, "lightning_session_id", session.id)
+    sse_payload = Map.put(payload, "lightning_session_id", session.id)
 
-    # Start Apollo WebSocket stream
-    apollo_ws_url = get_apollo_ws_url()
+    # Start Apollo SSE stream
+    apollo_url = get_apollo_url("job_chat")
 
-    case Lightning.ApolloClient.WebSocket.start_stream(apollo_ws_url, websocket_payload) do
+    case Lightning.ApolloClient.SSEStream.start_stream(apollo_url, sse_payload) do
       {:ok, _pid} ->
-        Logger.info("[MessageProcessor] Started Apollo WebSocket stream for session #{session.id}")
+        Logger.info("[MessageProcessor] Started Apollo SSE stream for session #{session.id}")
 
       {:error, reason} ->
         Logger.error("[MessageProcessor] Failed to start Apollo stream: #{inspect(reason)}")
         Logger.info("[MessageProcessor] Falling back to HTTP client")
         # Fall back to existing HTTP implementation
-        raise "WebSocket failed, falling back to HTTP (not implemented yet)"
+        raise "SSE stream failed, falling back to HTTP (not implemented yet)"
     end
 
     :ok
   end
 
-  defp get_apollo_ws_url(service \\ "job_chat") do
+  defp get_apollo_url(service) do
     base_url = Lightning.Config.apollo(:endpoint)
-    # Convert HTTP(S) to WS(S) and point to specified service
-    base_url
-    |> String.replace("https://", "wss://")
-    |> String.replace("http://", "ws://")
-    |> then(&"#{&1}/services/#{service}")
+    "#{base_url}/services/#{service}"
   end
 
   defp get_chat_history(session) do
@@ -239,19 +235,19 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     |> Enum.into(%{})
 
     # Add session ID for Lightning broadcasts
-    websocket_payload = Map.put(payload, "lightning_session_id", session.id)
+    sse_payload = Map.put(payload, "lightning_session_id", session.id)
 
-    # Start Apollo WebSocket stream for workflow_chat
-    apollo_ws_url = get_apollo_ws_url("workflow_chat")
+    # Start Apollo SSE stream for workflow_chat
+    apollo_url = get_apollo_url("workflow_chat")
 
-    case Lightning.ApolloClient.WebSocket.start_stream(apollo_ws_url, websocket_payload) do
+    case Lightning.ApolloClient.SSEStream.start_stream(apollo_url, sse_payload) do
       {:ok, _pid} ->
-        Logger.info("[MessageProcessor] Started Apollo WebSocket stream for workflow session #{session.id}")
+        Logger.info("[MessageProcessor] Started Apollo SSE stream for workflow session #{session.id}")
 
       {:error, reason} ->
         Logger.error("[MessageProcessor] Failed to start Apollo workflow stream: #{inspect(reason)}")
         Logger.info("[MessageProcessor] Falling back to HTTP client")
-        raise "WebSocket failed, triggering fallback to HTTP"
+        raise "SSE stream failed, triggering fallback to HTTP"
     end
 
     :ok
