@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Released
 
+## [2.14.10] - 2025-10-07
+
 ## [2.14.10-pre] - 2025-10-07
 
 ### Added
