@@ -19,6 +19,7 @@ import { YAMLCodeEditor } from './YAMLCodeEditor';
 import { YAMLFileDropzone } from './YAMLFileDropzone';
 import { ValidationErrorDisplay } from './ValidationErrorDisplay';
 import { ImportConfirmationDialog } from './ImportConfirmationDialog';
+import { SuccessNotification } from './SuccessNotification';
 import { useRemoteUsers } from '../../hooks/useAwareness';
 
 /**
@@ -43,6 +44,7 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
   const [importState, setImportState] = useState<ImportState>('initial');
   const [validatedState, setValidatedState] = useState<WorkflowState | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
   const remoteUsers = useRemoteUsers();
 
@@ -102,11 +104,18 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
     setImportState('importing');
     try {
       onImport(validatedState);
-      onClose();
-      // Reset state after successful import
-      setYamlContent('');
-      setValidatedState(null);
-      setImportState('initial');
+
+      // Show success notification
+      setShowSuccessNotification(true);
+
+      // Close panel after a brief delay to show success
+      setTimeout(() => {
+        onClose();
+        // Reset state after successful import
+        setYamlContent('');
+        setValidatedState(null);
+        setImportState('initial');
+      }, 500);
     } catch (error) {
       if (error instanceof WorkflowError) {
         setErrors([error]);
@@ -123,6 +132,7 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
       setImportState('initial');
       setValidatedState(null);
       setShowConfirmDialog(false);
+      setShowSuccessNotification(false);
     }
   }, [isOpen]);
 
@@ -139,6 +149,14 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
 
   return (
     <>
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <SuccessNotification
+          message="Workflow imported successfully"
+          onDismiss={() => setShowSuccessNotification(false)}
+        />
+      )}
+
       <div
         className={`absolute inset-y-0 left-0 w-1/3 transition-transform duration-300 ease-in-out z-10 ${
           isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
