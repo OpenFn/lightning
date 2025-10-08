@@ -218,6 +218,9 @@ main() {
   echo "📦 Installing Node.js dependencies..."
   npm install --prefix assets
 
+  echo "🎭 Installing Playwright browsers..."
+  npx --prefix playwright install
+
   echo "🔧 Setting up assets..."
   mix assets.setup
 

@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- E2E test infrastructure with Page Object Models for workflow editor testing
+- E2E test for workflow step creation and configuration
+- Force restart and AdaptorRegistry warming on E2E manager script
+
 ### Changed
 
 ### Released
