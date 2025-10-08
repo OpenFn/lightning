@@ -90,7 +90,7 @@ msgstr "Project not found. The run may be associated with a deleted project."
 
 msgid "environment_mismatch"
 msgstr ""
-"Credential environment mismatch.\nYour project is set to '%{project_env}' but credential '%{credential_name}' does not have a matching environment:\n"
+"Credential environment mismatch.\nThis project is using '%{project_env}' but credential '%{credential_name}' does not have a matching environment. To fix:\n"
 "  1. Go to %{credentials_url}\n"
 "  2. Find '%{credential_name}'\n"
 "  3. Click 'Edit' and add an environment named '%{project_env}'\n"
