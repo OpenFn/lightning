@@ -248,7 +248,17 @@ defmodule Lightning.Credentials do
           {:ok, Credential.t()} | {:error, any()}
   def update_credential(%Credential{} = credential, attrs) do
     attrs = normalize_keys(attrs)
-    credential_bodies = get_credential_bodies(attrs)
+
+    credential_bodies =
+      attrs
+      |> get_credential_bodies()
+      |> then(fn bodies ->
+        if credential.schema == "oauth" do
+          preserve_refresh_tokens(credential, bodies)
+        else
+          bodies
+        end
+      end)
 
     with :ok <-
            validate_credential_bodies(
@@ -352,7 +362,6 @@ defmodule Lightning.Credentials do
     |> coerce_json_field("body")
   end
 
-  # Validation logic for OAuth credentials
   defp validate_credential_bodies(credential_bodies, attrs, schema \\ nil) do
     credential_schema = schema || Map.get(attrs, "schema")
 
@@ -419,8 +428,6 @@ defmodule Lightning.Credentials do
   Creates a credential schema from credential json schema.
   """
   @spec get_schema(String.t()) :: Credentials.Schema.t()
-  # false positive, it's safe file path (path from config)
-  # sobelow_skip ["Traversal.FileModule"]
   def get_schema(schema_name) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
@@ -467,6 +474,23 @@ defmodule Lightning.Credentials do
     end
   end
 
+  defp extract_environment_bodies(changes) do
+    Enum.reduce(changes, [], fn
+      {key, credential_body}, acc when is_atom(key) ->
+        case Atom.to_string(key) do
+          "credential_body_" <> _ ->
+            [{credential_body.name, credential_body.body} | acc]
+
+          _ ->
+            acc
+        end
+
+      _, acc ->
+        acc
+    end)
+    |> Enum.reverse()
+  end
+
   defp derive_events(
          multi,
          %Ecto.Changeset{data: %Credential{__meta__: %{state: state}}} =
@@ -484,13 +508,17 @@ defmodule Lightning.Credentials do
           end)
 
         multi
+        |> Multi.run(:collect_env_bodies, fn _repo, changes ->
+          {:ok, extract_environment_bodies(changes)}
+        end)
         |> Multi.insert(
           :audit,
-          fn %{credential: credential} ->
+          fn %{credential: credential, collect_env_bodies: env_bodies} ->
             Audit.user_initiated_event(
               if(state == :built, do: "created", else: "updated"),
               credential,
-              changeset
+              changeset,
+              env_bodies
             )
           end
         )
@@ -668,7 +696,6 @@ defmodule Lightning.Credentials do
   defp revoke_oauth_token(credential, client, credential_body) do
     case OauthHTTPClient.revoke_token(client, credential_body.body) do
       :ok ->
-        # Audit successful revocation
         revocation_metadata = %{
           client_id: client.id,
           revocation_endpoint: client.revocation_endpoint,
@@ -690,7 +717,6 @@ defmodule Lightning.Credentials do
         :ok
 
       {:error, error} ->
-        # Audit failed revocation but don't fail the deletion process
         revocation_metadata = %{
           client_id: client.id,
           revocation_endpoint: client.revocation_endpoint,
@@ -714,7 +740,6 @@ defmodule Lightning.Credentials do
     end
   end
 
-  # Helper function to save audit events independently
   defp save_audit_event(audit_changeset) do
     case Repo.insert(audit_changeset) do
       {:ok, _audit} ->
@@ -722,7 +747,6 @@ defmodule Lightning.Credentials do
 
       {:error, changeset} ->
         Logger.error("Failed to save audit event: #{inspect(changeset.errors)}")
-        # Don't fail the main operation
         :ok
     end
   end
@@ -799,7 +823,6 @@ defmodule Lightning.Credentials do
     Credential.changeset(credential, attrs |> normalize_keys())
   end
 
-  # New public functions - work directly on body (for RunChannel)
   @doc """
   Extracts sensitive values from a credential body map.
 
@@ -949,41 +972,38 @@ defmodule Lightning.Credentials do
   end
 
   defp refresh_credential_body_token(credential, credential_body) do
-    case OauthHTTPClient.refresh_token(
-           credential.oauth_client,
-           credential_body.body
-         ) do
-      {:ok, fresh_token} ->
-        {:ok, scopes} = OauthValidation.extract_scopes(fresh_token)
+    with {:ok, fresh_token} <-
+           OauthHTTPClient.refresh_token(
+             credential.oauth_client,
+             credential_body.body
+           ),
+         scopes <- extract_scopes_or_default(fresh_token) do
+      refresh_metadata = %{
+        client_id: credential.oauth_client_id,
+        environment: credential_body.name,
+        scopes: scopes,
+        expires_in: Map.get(fresh_token, "expires_in"),
+        token_type: Map.get(fresh_token, "token_type", "Bearer")
+      }
 
-        refresh_metadata = %{
-          client_id: credential.oauth_client_id,
-          environment: credential_body.name,
-          scopes: scopes,
-          expires_in: Map.get(fresh_token, "expires_in"),
-          token_type: Map.get(fresh_token, "token_type", "Bearer")
-        }
+      audit_changeset =
+        Audit.oauth_token_refreshed_event(credential, refresh_metadata)
 
-        audit_changeset =
-          Audit.oauth_token_refreshed_event(credential, refresh_metadata)
+      updated_token =
+        Map.merge(credential_body.body, fresh_token)
+        |> ensure_refresh_token(credential_body.body)
+        |> normalize_token_expiry()
 
-        updated_token =
-          fresh_token
-          |> ensure_refresh_token_preserved(credential_body.body)
-          |> normalize_token_expiry()
+      case CredentialBody.changeset(credential_body, %{body: updated_token})
+           |> Repo.update() do
+        {:ok, updated_cb} ->
+          save_audit_event(audit_changeset)
+          {:ok, updated_cb}
 
-        credential_body
-        |> CredentialBody.changeset(%{body: updated_token})
-        |> Repo.update()
-        |> case do
-          {:ok, updated_cb} ->
-            save_audit_event(audit_changeset)
-            {:ok, updated_cb}
-
-          error ->
-            error
-        end
-
+        error ->
+          error
+      end
+    else
       {:error, %{error: "invalid_grant"} = error_response} ->
         handle_oauth_refresh_failed(credential, credential_body, error_response)
 
@@ -1001,7 +1021,6 @@ defmodule Lightning.Credentials do
           Audit.oauth_token_refresh_failed_event(credential, error_details)
 
         save_audit_event(audit_changeset)
-
         {:error, :temporary_failure}
 
       {:error, error} ->
@@ -1012,8 +1031,14 @@ defmodule Lightning.Credentials do
           )
 
         save_audit_event(audit_changeset)
-
         {:error, error}
+    end
+  end
+
+  defp extract_scopes_or_default(token) do
+    case OauthValidation.extract_scopes(token) do
+      {:ok, scopes} -> scopes
+      :error -> []
     end
   end
 
@@ -1096,7 +1121,7 @@ defmodule Lightning.Credentials do
 
   def oauth_token_expired?(_), do: true
 
-  defp ensure_refresh_token_preserved(existing_body, new_body)
+  defp ensure_refresh_token(new_body, existing_body)
        when is_map(existing_body) and is_map(new_body) do
     case {existing_body["refresh_token"], new_body["refresh_token"]} do
       {existing, nil} when existing != nil ->
@@ -1105,6 +1130,24 @@ defmodule Lightning.Credentials do
       _ ->
         new_body
     end
+  end
+
+  defp preserve_refresh_tokens(credential, credential_bodies) do
+    Enum.map(credential_bodies, fn body_attrs ->
+      env_name = body_attrs["name"]
+      new_body = body_attrs["body"]
+
+      case get_credential_body(credential.id, env_name) do
+        nil ->
+          body_attrs
+
+        %{body: existing_body} ->
+          preserved_body =
+            ensure_refresh_token(new_body, existing_body)
+
+          Map.put(body_attrs, "body", preserved_body)
+      end
+    end)
   end
 
   defp handle_oauth_refresh_failed(credential, credential_body, error_response) do

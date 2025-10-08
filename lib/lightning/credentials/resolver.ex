@@ -59,11 +59,18 @@ defmodule Lightning.Credentials.Resolver do
   @type resolve_error :: {error_reason(), Credential.t() | nil}
 
   @doc """
-  Resolves a credential for a run by matching the project's environment.
+  Resolves a credential for a run by matching the project's environment,
+  or resolves a credential directly for a specific environment.
   """
   @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
           {:ok, ResolvedCredential.t() | nil}
           | {:error, :not_found | resolve_error()}
+  @spec resolve_credential(Credential.t(), environment :: String.t()) ::
+          {:ok, ResolvedCredential.t()}
+          | {:error, resolve_error()}
+
+  def resolve_credential(a, b \\ "main")
+
   def resolve_credential(%Run{} = run, id) do
     Logger.info("Resolving credential #{id} for run #{run.id}")
 
@@ -76,6 +83,16 @@ defmodule Lightning.Credentials.Resolver do
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  def resolve_credential(%Credential{} = credential, environment) do
+    case Credentials.resolve_credential_body(credential, environment) do
+      {:ok, body} ->
+        {:ok, ResolvedCredential.from(credential, body)}
+
+      {:error, reason} ->
+        {:error, {reason, credential}}
     end
   end
 

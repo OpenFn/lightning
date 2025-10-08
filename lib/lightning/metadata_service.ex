@@ -4,7 +4,8 @@ defmodule Lightning.MetadataService do
   """
   alias Lightning.AdaptorService
   alias Lightning.CLI
-  alias Lightning.Credentials.CredentialBody
+  alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
 
   require Logger
 
@@ -31,16 +32,25 @@ defmodule Lightning.MetadataService do
   Retrieve metadata for a given adaptor and credential.
 
   The adaptor must be an npm specification.
+
+  ## Parameters
+    - `adaptor`: The adaptor npm specification (e.g., "@openfn/language-http")
+    - `credential`: The credential struct
+    - `environment`: The environment name (defaults to "main")
+
+  ## Returns
+    - `{:ok, metadata}` - The metadata as a map
+    - `{:error, Error.t()}` - An error if metadata cannot be fetched
   """
-  @spec fetch(adaptor :: String.t(), Credential.t()) ::
+  @spec fetch(adaptor :: String.t(), Credential.t(), environment :: String.t()) ::
           {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
-  def fetch(adaptor, credential) do
+  def fetch(adaptor, credential, environment \\ "main") do
     Lightning.TaskWorker.start_task(@cli_task_worker, fn ->
       LightningWeb.Telemetry.with_span(
         [:lightning, :fetch_metadata],
-        %{adaptor: adaptor},
+        %{adaptor: adaptor, environment: environment},
         fn ->
-          do_fetch(adaptor, credential)
+          do_fetch(adaptor, credential, environment)
         end
       )
     end)
@@ -52,8 +62,9 @@ defmodule Lightning.MetadataService do
 
   # false positive, adaptor is resolved by a regex and given by a install function
   # sobelow_skip ["Traversal.FileModule"]
-  defp do_fetch(adaptor, credential) do
-    with {:ok, {adaptor, state}} <- assemble_args(adaptor, credential),
+  defp do_fetch(adaptor, credential, environment) do
+    with {:ok, {adaptor, state}} <-
+           assemble_args(adaptor, credential, environment),
          {:ok, adaptor_path} <- get_adaptor_path(adaptor),
          res <- CLI.metadata(state, adaptor_path),
          {:ok, path} <- get_output_path(res) do
@@ -66,7 +77,7 @@ defmodule Lightning.MetadataService do
     end
   end
 
-  defp assemble_args(adaptor, credential) do
+  defp assemble_args(adaptor, credential, environment) do
     case {adaptor, credential} do
       {nil, _} ->
         {:error, Error.new("no_adaptor")}
@@ -77,10 +88,25 @@ defmodule Lightning.MetadataService do
       {_, nil} ->
         {:error, Error.new("no_credential")}
 
-      {adaptor_path, %CredentialBody{body: credential_body}} ->
-        {:ok,
-         {adaptor_path,
-          %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
+      {adaptor_path, %Credential{} = cred} ->
+        case Credentials.resolve_credential_body(cred, environment) do
+          {:ok, credential_body} ->
+            {:ok,
+             {adaptor_path,
+              %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
+
+          {:error, :environment_not_found} ->
+            {:error, Error.new("environment_not_found")}
+
+          {:error, :reauthorization_required} ->
+            {:error, Error.new("reauthorization_required")}
+
+          {:error, :temporary_failure} ->
+            {:error, Error.new("temporary_oauth_failure")}
+
+          {:error, _} ->
+            {:error, Error.new("credential_resolution_failed")}
+        end
 
       {_adaptor_path, %{}} ->
         {:error, Error.new("unsupported_credential")}

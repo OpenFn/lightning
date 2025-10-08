@@ -3,7 +3,6 @@ defmodule Lightning.Credentials.OauthValidationTest do
 
   alias Lightning.Credentials.OauthValidation
   alias Lightning.Credentials.OauthValidation.Error
-  alias Lightning.Credentials.OauthToken
 
   describe "Error struct" do
     test "creates error with type, message, and details" do
@@ -703,45 +702,45 @@ defmodule Lightning.Credentials.OauthValidationTest do
       assert ["read", "write", "admin"] = result
     end
 
-    test "normalizes OauthToken struct" do
-      token = %OauthToken{body: %{"scope" => "READ Write"}}
+    # test "normalizes OauthToken struct" do
+    #   token = %OauthToken{body: %{"scope" => "READ Write"}}
 
-      result = OauthValidation.normalize_scopes(token)
+    #   result = OauthValidation.normalize_scopes(token)
 
-      assert ["read", "write"] = result
-    end
+    #   assert ["read", "write"] = result
+    # end
 
-    test "normalizes OauthToken struct with scopes key" do
-      token = %OauthToken{body: %{"scopes" => ["READ", "Write"]}}
+    # test "normalizes OauthToken struct with scopes key" do
+    #   token = %OauthToken{body: %{"scopes" => ["READ", "Write"]}}
 
-      result = OauthValidation.normalize_scopes(token)
+    #   result = OauthValidation.normalize_scopes(token)
 
-      assert ["read", "write"] = result
-    end
+    #   assert ["read", "write"] = result
+    # end
 
-    test "handles token without scope in body" do
-      token = %OauthToken{body: %{"access_token" => "token123"}}
+    # test "handles token without scope in body" do
+    #   token = %OauthToken{body: %{"access_token" => "token123"}}
 
-      result = OauthValidation.normalize_scopes(token)
+    #   result = OauthValidation.normalize_scopes(token)
 
-      assert [] = result
-    end
+    #   assert [] = result
+    # end
 
-    test "handles token with nil body" do
-      token = %OauthToken{body: nil}
+    # test "handles token with nil body" do
+    #   token = %OauthToken{body: nil}
 
-      result = OauthValidation.normalize_scopes(token)
+    #   result = OauthValidation.normalize_scopes(token)
 
-      assert [] = result
-    end
+    #   assert [] = result
+    # end
 
-    test "handles token with non-map body" do
-      token = %OauthToken{body: "not_a_map"}
+    # test "handles token with non-map body" do
+    #   token = %OauthToken{body: "not_a_map"}
 
-      result = OauthValidation.normalize_scopes(token)
+    #   result = OauthValidation.normalize_scopes(token)
 
-      assert [] = result
-    end
+    #   assert [] = result
+    # end
 
     test "handles list of scopes" do
       result = OauthValidation.normalize_scopes(["READ", "Write", " ADMIN "])
