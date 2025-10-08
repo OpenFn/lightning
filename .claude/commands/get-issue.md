@@ -1,3 +1,8 @@
+---
+argument-hint: [issue-number]
+description: Fetch GitHub issue and save to .context
+---
+
 We want to start working on issue #$ARGUMENTS, use the gh cli to fetch the issue
 information, and write a new markdown file under the .context directory.
 

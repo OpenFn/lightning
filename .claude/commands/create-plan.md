@@ -1,29 +1,38 @@
+---
+argument-hint: [issue-file-path]
+description: Create detailed implementation plan
+---
+
 # Implementation Plan
 
 You are tasked with creating detailed implementation plans through an interactive, iterative process. You should be skeptical, thorough, and work collaboratively with the user to produce high-quality technical specifications.
+
+**Usage**: `/create-plan $ARGUMENTS`
+
+If `$ARGUMENTS` is provided with an issue file path, read it fully and begin research immediately.
+If no argument provided, present the initial prompt and ask the user for context.
 
 ## Initial Response
 
 When this command is invoked:
 
-1. **Check if parameters were provided**:
-   - If a file path or ticket reference was provided as a parameter, skip the default message
-   - Immediately read any provided files FULLY
-   - Begin the research process
+1. **If `$ARGUMENTS` is provided**:
+   - Immediately read the file at `$ARGUMENTS` FULLY
+   - Begin the research process without waiting for user input
+   - Proceed directly to Step 1: Context Gathering & Initial Analysis
 
-2. **If no parameters provided**, respond with:
+2. **If `$ARGUMENTS` is empty**, respond with:
 ```
 I'll help you create a detailed implementation plan. Let me start by understanding what we're building.
 
 Please provide:
-1. The task/ticket description (or reference to a ticket file)
+1. The task/ticket description (or reference to a ticket/issue file)
 2. Any relevant context, constraints, or specific requirements
 3. Links to related research or previous implementations
 
 I'll analyze this information and work with you to create a comprehensive plan.
 
-Tip: You can also invoke this command with a ticket file directly: `/create_plan thoughts/allison/tickets/eng_1234.md`
-For deeper analysis, try: `/create_plan think deeply about thoughts/allison/tickets/eng_1234.md`
+Tip: You can also invoke this command with an issue file directly: `/create-plan .context/shared/issues/issue-1234.md`
 ```
 
 Then wait for the user's input.
@@ -33,7 +42,7 @@ Then wait for the user's input.
 ### Step 1: Context Gathering & Initial Analysis
 
 1. **Read all mentioned files immediately and FULLY**:
-   - Ticket files (e.g., `thoughts/allison/tickets/eng_1234.md`)
+   - Issue/ticket files (e.g., `.context/shared/issues/issue-1234.md`)
    - Research documents
    - Related implementation plans
    - Any JSON/data files mentioned
@@ -46,11 +55,11 @@ Then wait for the user's input.
 
    - Use the **codebase-locator** agent to find all files related to the ticket/task
    - Use the **codebase-analyzer** agent to understand how the current implementation works
-   - If relevant, use the **context-locator** agent to find any existing thoughts documents about this feature
+   - If relevant, use the **context-locator** agent to find any existing context documents about this feature
 
    These agents will:
    - Find relevant source files, configs, and tests
-   - Identify the specific directories to focus on (e.g., if WUI is mentioned, they'll focus on humanlayer-wui/)
+   - Identify the specific directories to focus on (e.g., frontend work in assets/, backend work in lib/)
    - Trace data flow and key functions
    - Return detailed explanations with file:line references
 
@@ -104,11 +113,8 @@ After getting initial clarifications:
    - **codebase-pattern-finder** - To find similar features we can model after
 
    **For historical context:**
-   - **thoughts-locator** - To find any research, plans, or decisions about this area
-   - **thoughts-analyzer** - To extract key insights from the most relevant documents
-
-   **For related tickets:**
-   - **linear-searcher** - To find similar issues or past implementations
+   - **context-locator** - To find any research, plans, or decisions about this area
+   - **context-analyzer** - To extract key insights from the most relevant documents
 
    Each agent knows how to:
    - Find the right files and code patterns
@@ -174,7 +180,7 @@ After structure approval:
    - **CRITICAL**: Each phase will use a FRESH agent instance to avoid context window issues
    - The agent assignment tells the implementation coordinator which agent to spawn for that phase
 
-2. **Write the plan** to `thoughts/shared/plans/YYYY-MM-DD-XXXX-description.md`
+2. **Write the plan** to `.context/shared/plans/YYYY-MM-DD-XXXX-description.md`
    - Format: `YYYY-MM-DD-XXXX-description.md` where:
      - YYYY-MM-DD is today's date
      - XXXX is the ticket number (omit if no ticket)
@@ -277,21 +283,17 @@ After structure approval:
 
 ## References
 
-- Original ticket: `thoughts/allison/tickets/eng_XXXX.md`
-- Related research: `thoughts/shared/research/[relevant].md`
+- Original issue: `.context/shared/issues/issue-XXXX.md`
+- Related research: `.context/shared/research/[relevant].md`
 - Similar implementation: `[file:line]`
 ````
 
-### Step 5: Sync and Review
+### Step 5: Review and Iterate
 
-1. **Sync the thoughts directory**:
-   - Run `humanlayer thoughts sync` to sync the newly created plan
-   - This ensures the plan is properly indexed and available
-
-2. **Present the draft plan location**:
+1. **Present the draft plan location**:
    ```
    I've created the initial implementation plan at:
-   `thoughts/shared/plans/YYYY-MM-DD-XXXX-description.md`
+   `.context/shared/plans/YYYY-MM-DD-XXXX-description.md`
 
    Please review it and let me know:
    - Are the phases properly scoped?
@@ -300,14 +302,13 @@ After structure approval:
    - Missing edge cases or considerations?
    ```
 
-3. **Iterate based on feedback** - be ready to:
+2. **Iterate based on feedback** - be ready to:
    - Add missing phases
    - Adjust technical approach
    - Clarify success criteria (both automated and manual)
    - Add/remove scope items
-   - After making changes, run `humanlayer thoughts sync` again
 
-4. **Continue refining** until the user is satisfied
+3. **Continue refining** until the user is satisfied
 
 ## Important Guidelines
 
@@ -328,7 +329,7 @@ After structure approval:
    - Research actual code patterns using parallel sub-tasks
    - Include specific file paths and line numbers
    - Write measurable success criteria with clear automated vs manual distinction
-   - automated steps should use `make` whenever possible - for example `make -C humanlayer-wui check` instead of `cd humanlayer-wui && bun run fmt`
+   - Automated steps should use project-specific commands when available (e.g., `mix verify`, `npm test`)
 
 4. **Be Practical**:
    - Focus on incremental, testable changes
@@ -415,9 +416,9 @@ When spawning research sub-tasks:
    - What information to extract
    - Expected output format
 4. **Be EXTREMELY specific about directories**:
-   - If the ticket mentions "WUI", specify `humanlayer-wui/` directory
-   - If it mentions "daemon", specify `hld/` directory
-   - Never use generic terms like "UI" when you mean "WUI"
+   - If the issue mentions frontend work, specify the relevant frontend directory (e.g., `assets/`)
+   - If it mentions backend work, specify the relevant backend directory (e.g., `lib/`)
+   - Never use generic terms without specifying the exact path
    - Include the full path context in your prompts
 5. **Specify read-only tools** to use
 6. **Request specific file:line references** in responses
@@ -441,15 +442,15 @@ tasks = [
 ## Example Interaction Flow
 
 ```
-User: /implementation_plan
+User: /create_plan
 Assistant: I'll help you create a detailed implementation plan...
 
-User: We need to add parent-child tracking for Claude sub-tasks. See thoughts/allison/tickets/eng_1478.md
-Assistant: Let me read that ticket file completely first...
+User: We need to add workflow save functionality. See .context/shared/issues/issue-3635.md
+Assistant: Let me read that issue file completely first...
 
 [Reads file fully]
 
-Based on the ticket, I understand we need to track parent-child relationships for Claude sub-task events in the hld daemon. Before I start planning, I have some questions...
+Based on the issue, I understand we need to implement save functionality for the collaborative workflow editor. Before I start planning, I have some questions...
 
 [Interactive process continues...]
 ```

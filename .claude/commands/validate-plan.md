@@ -1,17 +1,26 @@
+---
+argument-hint: [plan-file-path]
+description: Validate implementation against plan
+---
+
 # Validate Plan
 
 You are tasked with validating that an implementation plan was correctly executed, verifying all success criteria and identifying any deviations or issues.
 
+**Usage**:
+- `/validate-plan` - Auto-discover plan from context/commits
+- `/validate-plan <plan-path>` - Validate specific plan file
+
 ## Initial Setup
 
 When invoked:
-1. **Determine context** - Are you in an existing conversation or starting fresh?
+1. **Determine plan location**:
+   - If `$ARGUMENTS` is provided, use that plan path
+   - Otherwise, search recent commits for plan references or ask user
+
+2. **Determine context** - Are you in an existing conversation or starting fresh?
    - If existing: Review what was implemented in this session
    - If fresh: Need to discover what was done through git and codebase analysis
-
-2. **Locate the plan**:
-   - If plan path provided, use it
-   - Otherwise, search recent commits for plan references or ask user
 
 3. **Gather implementation evidence**:
    ```bash

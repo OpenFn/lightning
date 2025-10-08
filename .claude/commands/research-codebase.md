@@ -1,6 +1,15 @@
+---
+argument-hint: [research-query]
+description: Research codebase with parallel agents
+---
+
 # Research Codebase
 
 You are tasked with conducting comprehensive research across the codebase to answer user questions by spawning parallel sub-agents and synthesizing their findings.
+
+**Usage**:
+- `/research-codebase` - Interactive mode, asks for research question
+- `/research-codebase <query>` - Direct mode, starts research immediately with provided query
 
 ## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY
 - DO NOT suggest improvements or changes unless the user explicitly asks for them
@@ -13,7 +22,14 @@ You are tasked with conducting comprehensive research across the codebase to ans
 
 ## Initial Setup:
 
-When this command is invoked, respond with:
+When this command is invoked:
+
+**If `$ARGUMENTS` is provided**:
+- Begin research immediately with the query: `$ARGUMENTS`
+- Skip the initial prompt
+- Proceed directly to step 1 (reading any mentioned files) and then step 2 (analyzing and decomposing the research question)
+
+**If `$ARGUMENTS` is empty**, respond with:
 ```
 I'm ready to research the codebase. Please provide your research question or area of interest, and I'll analyze it thoroughly by exploring relevant components and connections.
 ```

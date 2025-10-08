@@ -1,11 +1,20 @@
+---
+argument-hint: [plan-file-path]
+description: Implement approved technical plan
+---
+
 # Implement Plan
 
-You are tasked with implementing an approved technical plan from `thoughts/shared/plans/`. These plans contain phases with specific changes and success criteria.
+You are tasked with implementing an approved technical plan from `.context/shared/plans/`. These plans contain phases with specific changes and success criteria.
+
+**Usage**: `/implement-plan $ARGUMENTS`
+
+If `$ARGUMENTS` is empty, ask user for plan path. Otherwise, read the plan at `$ARGUMENTS` and begin implementation.
 
 ## Getting Started
 
-When given a plan path:
-- Read the plan completely and check for any existing checkmarks (- [x])
+When `$ARGUMENTS` contains a plan path:
+- Read the plan at `$ARGUMENTS` completely and check for any existing checkmarks (- [x])
 - **Identify the agent assignment** for each phase (marked as `**Implementation Agent**: ...`)
 - Read the original ticket and all files mentioned in the plan
 - **Read files fully** - never use limit/offset parameters, you need complete context
@@ -13,7 +22,7 @@ When given a plan path:
 - Create a todo list to track your progress across all phases
 - **CRITICAL**: You will coordinate implementation, spawning a FRESH specialized agent for each phase
 
-If no plan path provided, ask for one.
+If `$ARGUMENTS` is empty, ask for one.
 
 ## Available Agent Types
 
