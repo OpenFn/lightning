@@ -2,7 +2,7 @@ defmodule Lightning.Credentials.ResolvedCredential do
   @moduledoc """
   Represents a credential that has been resolved and is ready for worker consumption.
 
-  Contains the final merged body (for OAuth credentials) and maintains reference
+  Contains the final body for the specific environment and maintains reference
   to the original credential for scrubbing setup.
   """
   alias Lightning.Credentials.Credential
@@ -15,20 +15,11 @@ defmodule Lightning.Credentials.ResolvedCredential do
         }
 
   @doc """
-  Creates a ResolvedCredential from a Credential, handling OAuth merging and empty value removal.
+  Creates a ResolvedCredential from a Credential with a specific body.
   """
-  def from(%Credential{schema: "oauth"} = credential) do
-    # merged_body = Map.merge(%{}, credential.oauth_token.body)
-
+  def from(credential, body) when is_map(body) do
     %__MODULE__{
-      body: remove_empty_values(%{}),
-      credential: credential
-    }
-  end
-
-  def from(credential) do
-    %__MODULE__{
-      body: remove_empty_values(credential.body),
+      body: remove_empty_values(body),
       credential: credential
     }
   end
@@ -42,12 +33,9 @@ defmodule Lightning.Credentials.Resolver do
   @moduledoc """
   Provides credential resolution abstraction for workflow execution.
 
-  Handles the complexities of preparing credentials for worker consumption,
-  including OAuth token refresh, credential body merging, and empty value cleanup.
-  Supports regular credentials, OAuth credentials, and future keychain credentials.
-
-  Returns a ResolvedCredential containing the final worker-ready body and original
-  credential reference for scrubbing setup.
+  Resolves credentials by matching the project's environment to the credential's
+  environment body. For OAuth credentials, passes the environment body during
+  token refresh.
   """
   import Ecto.Query
 
@@ -55,75 +43,100 @@ defmodule Lightning.Credentials.Resolver do
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.ResolvedCredential
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
 
   require Logger
 
-  @type error_reason :: :not_found | Credentials.oauth_refresh_error()
-  @type resolve_error :: {error_reason(), Credential.t()}
+  @type error_reason ::
+          :not_found
+          | :environment_not_configured
+          | :project_not_found
+          | :environment_mismatch
+          | Credentials.oauth_refresh_error()
+
+  @type resolve_error :: {error_reason(), Credential.t() | nil}
 
   @doc """
-  Resolves a credential into a ResolvedCredential ready for worker consumption.
-
-  Can be called with either:
-  - `resolve_credential(credential)` for direct credential resolution
-  - `resolve_credential(run, id)` for credential lookup and resolution
-
-  For regular credentials, returns the body as-is.
-  For OAuth credentials, refreshes tokens if needed and merges into body.
+  Resolves a credential for a run by matching the project's environment.
   """
-  @spec resolve_credential(Credential.t()) ::
-          {:ok, ResolvedCredential.t()} | {:error, resolve_error()}
-  def resolve_credential(%Credential{schema: "oauth"} = credential) do
-    case Credentials.maybe_refresh_token(credential) do
-      {:ok, credential} ->
-        {:ok, ResolvedCredential.from(credential)}
-
-      {:error, reason} ->
-        {:error, {reason, credential}}
-    end
-  end
-
-  @spec resolve_credential(Credential.t()) :: {:ok, ResolvedCredential.t()}
-  def resolve_credential(%Credential{} = credential) do
-    resolved_credential = ResolvedCredential.from(credential)
-    {:ok, resolved_credential}
-  end
-
   @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
           {:ok, ResolvedCredential.t() | nil}
           | {:error, :not_found | resolve_error()}
   def resolve_credential(%Run{} = run, id) do
     Logger.info("Resolving credential #{id} for run #{run.id}")
 
-    case get_run_credential(run, id) do
-      %Credential{} = credential ->
-        resolve_credential(credential)
-
-      %KeychainCredential{} = keychain ->
-        resolve_keychain_credential(keychain, run)
-
+    with {:ok, project_env} <- get_project_env(run),
+         credential when not is_nil(credential) <- get_run_credential(run, id) do
+      resolve_credential_with_env(credential, run, project_env)
+    else
       nil ->
         {:error, :not_found}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  @spec resolve_keychain_credential(KeychainCredential.t(), Run.t()) ::
-          {:ok, ResolvedCredential.t() | nil} | {:error, resolve_error()}
-  defp resolve_keychain_credential(
+  defp resolve_credential_with_env(%Credential{} = credential, run, project_env) do
+    case Credentials.resolve_credential_body(credential, project_env) do
+      {:ok, body} ->
+        {:ok, ResolvedCredential.from(credential, body)}
+
+      {:error, :environment_not_found} ->
+        Logger.error(
+          "Credential environment does not match project environment",
+          credential_id: credential.id,
+          credential_name: credential.name,
+          project_env: project_env,
+          run_id: run.id
+        )
+
+        {:error, {:environment_mismatch, credential}}
+
+      {:error, reason} ->
+        {:error, {reason, credential}}
+    end
+  end
+
+  defp resolve_credential_with_env(
          %KeychainCredential{} = keychain,
-         %Run{} = run
+         run,
+         project_env
        ) do
     credential =
       find_credential_by_jsonpath(run, keychain.path) ||
         keychain.default_credential
 
-    # Find credential by external_id within the same project using JSONPath extraction
     if credential do
-      resolve_credential(credential)
+      resolve_credential_with_env(credential, run, project_env)
     else
       {:ok, nil}
+    end
+  end
+
+  @spec get_project_env(Run.t()) :: {:ok, String.t()} | {:error, term()}
+  defp get_project_env(%Run{} = run) do
+    case Lightning.Projects.get_project_for_run(run) do
+      %Project{env: nil, parent_id: nil} ->
+        Logger.warning(
+          "Root project has no environment set, defaulting to 'main'",
+          run_id: run.id
+        )
+
+        {:ok, "main"}
+
+      %Project{env: env} when is_binary(env) ->
+        {:ok, env}
+
+      %Project{env: nil} ->
+        Logger.error("Project has no environment configured", run_id: run.id)
+        {:error, :environment_not_configured}
+
+      nil ->
+        Logger.error("Project not found for run", run_id: run.id)
+        {:error, :project_not_found}
     end
   end
 
@@ -146,6 +159,7 @@ defmodule Lightning.Credentials.Resolver do
 
     from(
       c in Ecto.assoc(run, [
+        :work_order,
         :workflow,
         :project,
         :project_credentials,
@@ -159,7 +173,7 @@ defmodule Lightning.Credentials.Resolver do
   @spec get_run_credential(Run.t(), String.t()) ::
           Credential.t() | KeychainCredential.t() | nil
   defp get_run_credential(%Run{} = run, id) do
-    from(j in Ecto.assoc(run, [:workflow, :jobs]),
+    from(j in Ecto.assoc(run, [:work_order, :workflow, :jobs]),
       left_join: c in assoc(j, :credential),
       left_join: k in assoc(j, :keychain_credential),
       left_join: default_cred in assoc(k, :default_credential),
