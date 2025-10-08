@@ -3,8 +3,8 @@
  *
  * Features:
  * - Monospace font for YAML editing
- * - Auto-growing textarea
- * - Syntax highlighting via CSS (basic)
+ * - Matches LiveView styling exactly
+ * - Dark theme (slate-700 background, slate-200 text)
  */
 
 interface YAMLCodeEditorProps {
@@ -23,7 +23,7 @@ export function YAMLCodeEditor({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col space-y-2">
       <div className="flex items-center justify-between">
         <label
           htmlFor="yaml-editor"
@@ -39,27 +39,9 @@ export function YAMLCodeEditor({
         id="yaml-editor"
         value={value}
         onChange={handleChange}
-        placeholder={`name: My Workflow
-jobs:
-  fetch-data:
-    name: Fetch Data
-    adaptor: '@openfn/language-http@latest'
-    body: |
-      get('/api/data')
-
-triggers:
-  webhook:
-    type: webhook
-    enabled: true
-
-edges:
-  webhook->fetch-data:
-    source_trigger: webhook
-    target_job: fetch-data
-    condition_type: always
-    enabled: true`}
-        className="w-full h-96 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm resize-vertical"
-        style={{ minHeight: '384px' }}
+        placeholder="Paste your YAML content here"
+        className="focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-xs text-sm block w-full focus:ring-0 sm:text-sm sm:leading-6 phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto border-slate-300 focus:border-slate-400 focus:outline-primary-600 font-mono proportional-nums text-slate-200 bg-slate-700 resize-none text-nowrap overflow-x-auto"
+        style={{ minHeight: '384px', height: '384px' }}
       />
       <p className="text-xs text-gray-500">
         Enter or paste your workflow YAML here. The content will be validated in

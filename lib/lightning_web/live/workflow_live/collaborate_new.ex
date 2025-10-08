@@ -21,7 +21,11 @@ defmodule LightningWeb.WorkflowLive.CollaborateNew do
     workflow_id = Ecto.UUID.generate()
     user_id = socket.assigns.current_user.id
 
-    workflow = %Workflow{id: workflow_id, name: "Untitled Workflow"}
+    workflow = %Workflow{
+      id: workflow_id,
+      name: "Untitled Workflow",
+      project_id: socket.assigns.project.id
+    }
 
     {:ok,
      socket

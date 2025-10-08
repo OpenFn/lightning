@@ -38,14 +38,15 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
     );
 
     if (!hasValidExtension) {
-      setError('Please upload a .yaml or .yml file');
+      setError('File must be .yml or .yaml format');
       return false;
     }
 
-    // Check file size (max 1MB)
-    const maxSize = 1024 * 1024; // 1MB
+    // Check file size (max 8MB as per Phase 3.5 requirements)
+    const maxSize = 8 * 1024 * 1024; // 8MB
     if (file.size > maxSize) {
-      setError('File size must be less than 1MB');
+      const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+      setError(`File size ${fileSizeMB}MB exceeds maximum of 8MB`);
       return false;
     }
 
@@ -127,15 +128,13 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
               strokeLinejoin="round"
             />
           </svg>
-          <p className="mt-2 text-sm text-gray-600">
-            <span className="font-semibold text-indigo-600 hover:text-indigo-500">
-              Click to upload
-            </span>{' '}
-            or drag and drop
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            YAML files only (.yaml, .yml)
-          </p>
+          <div className="mt-4 flex text-sm/6 text-gray-600">
+            <label className="relative cursor-pointer rounded-md font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
+              <span>Upload a file</span>
+            </label>
+            <p className="pl-1">or drag and drop</p>
+          </div>
+          <p className="text-xs/5 text-gray-600">YML or YAML, up to 8MB</p>
         </div>
       </div>
       {error && (

@@ -55,34 +55,36 @@ export function WorkflowEditor() {
   };
 
   return (
-    <div className="relative h-full w-full">
-      {/* Left Panel - YAML Import */}
+    <div className="relative flex h-full w-full">
+      {/* Main content area - flex grows to fill remaining space */}
+      <div
+        className={`flex-1 relative transition-all duration-300 ease-in-out ${
+          isImportOpen ? 'ml-[33.333333%]' : 'ml-0'
+        }`}
+      >
+        <CollaborativeWorkflowDiagram inspectorId="inspector" />
+
+        {/* Inspector slides in from the right and appears on top
+            This div is also the wrapper which is used to calculate the overlap
+            between the inspector and the diagram.  */}
+        <div
+          id="inspector"
+          className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
+            currentNode.node
+              ? "translate-x-0"
+              : "translate-x-full pointer-events-none"
+          }`}
+        >
+          <Inspector currentNode={currentNode} onClose={handleCloseInspector} />
+        </div>
+      </div>
+
+      {/* Left Panel - YAML Import (absolute positioned, slides over) */}
       <YAMLImportPanel
         isOpen={isImportOpen}
         onClose={handleCloseImport}
         onImport={handleImport}
       />
-
-      <CollaborativeWorkflowDiagram inspectorId="inspector" />
-      {/* Inspector slides in from the right and appears on top
-          This div is also the wrapper which is used to calculate the overlap
-          between the inspector and the diagram.  */}
-      {workflow && (
-        <div
-          id="inspector"
-          className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
-            showInspector
-              ? "translate-x-0"
-              : "translate-x-full pointer-events-none"
-          }`}
-        >
-          <Inspector
-            workflow={workflow}
-            currentNode={currentNode}
-            onClose={handleCloseInspector}
-          />
-        </div>
-      )}
       {false && ( // Leaving this here for now, but we'll remove/replace it in the future
         <div className="flex flex-col h-full">
           {/* Main Content */}

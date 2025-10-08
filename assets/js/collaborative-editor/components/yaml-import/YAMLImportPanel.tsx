@@ -6,9 +6,11 @@
  * - URL-controlled via ?method=import
  * - Width: 33% of viewport
  * - Supports drag-drop and manual YAML editing
+ * - State machine: initial -> parsing -> valid/invalid -> importing
  */
 
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import pDebounce from 'p-debounce';
 import type { WorkflowState } from '../../../yaml/types';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../../yaml/util';
 import { WorkflowError } from '../../../yaml/workflow-errors';
@@ -16,6 +18,18 @@ import { WorkflowError } from '../../../yaml/workflow-errors';
 import { YAMLCodeEditor } from './YAMLCodeEditor';
 import { YAMLFileDropzone } from './YAMLFileDropzone';
 import { ValidationErrorDisplay } from './ValidationErrorDisplay';
+import { ImportConfirmationDialog } from './ImportConfirmationDialog';
+import { useRemoteUsers } from '../../hooks/useAwareness';
+
+/**
+ * Import state machine:
+ * - initial: No content, button disabled
+ * - parsing: Validating YAML, button shows spinner
+ * - valid: Valid YAML, button enabled
+ * - invalid: Invalid YAML, button disabled
+ * - importing: Import in progress, button shows spinner
+ */
+type ImportState = 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing';
 
 interface YAMLImportPanelProps {
   isOpen: boolean;
@@ -26,35 +40,42 @@ interface YAMLImportPanelProps {
 export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelProps) {
   const [yamlContent, setYamlContent] = useState('');
   const [errors, setErrors] = useState<WorkflowError[]>([]);
-  const [isValidating, setIsValidating] = useState(false);
-  const [isValid, setIsValid] = useState(false);
+  const [importState, setImportState] = useState<ImportState>('initial');
+  const [validatedState, setValidatedState] = useState<WorkflowState | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  // Validate YAML whenever content changes
-  const validateYAML = (content: string) => {
-    if (!content.trim()) {
-      setErrors([]);
-      setIsValid(false);
-      return;
-    }
+  const remoteUsers = useRemoteUsers();
 
-    setIsValidating(true);
-    try {
-      const spec = parseWorkflowYAML(content);
-      convertWorkflowSpecToState(spec); // Validate transformation
-      setErrors([]);
-      setIsValid(true);
-    } catch (error) {
-      if (error instanceof WorkflowError) {
-        setErrors([error]);
-      } else {
-        console.error('Unexpected validation error:', error);
+  // Debounced validation (300ms)
+  const validateYAML = useCallback(
+    pDebounce((content: string) => {
+      if (!content.trim()) {
+        setImportState('initial');
         setErrors([]);
+        setValidatedState(null);
+        return;
       }
-      setIsValid(false);
-    } finally {
-      setIsValidating(false);
-    }
-  };
+
+      setImportState('parsing');
+      try {
+        const spec = parseWorkflowYAML(content);
+        const state = convertWorkflowSpecToState(spec);
+        setValidatedState(state);
+        setImportState('valid');
+        setErrors([]);
+      } catch (error) {
+        if (error instanceof WorkflowError) {
+          setErrors([error]);
+        } else {
+          console.error('Unexpected validation error:', error);
+          setErrors([]);
+        }
+        setImportState('invalid');
+        setValidatedState(null);
+      }
+    }, 300),
+    []
+  );
 
   const handleYAMLChange = (content: string) => {
     setYamlContent(content);
@@ -66,92 +87,146 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
     validateYAML(content);
   };
 
-  const handleImport = () => {
-    if (!isValid || !yamlContent) return;
+  const handleImportClick = () => {
+    // Check if other users are editing
+    if (remoteUsers.length > 0) {
+      setShowConfirmDialog(true);
+    } else {
+      performImport();
+    }
+  };
 
+  const performImport = () => {
+    if (!validatedState) return;
+
+    setImportState('importing');
     try {
-      const spec = parseWorkflowYAML(yamlContent);
-      const workflowState = convertWorkflowSpecToState(spec);
-      onImport(workflowState);
+      onImport(validatedState);
       onClose();
+      // Reset state after successful import
+      setYamlContent('');
+      setValidatedState(null);
+      setImportState('initial');
     } catch (error) {
       if (error instanceof WorkflowError) {
         setErrors([error]);
       }
+      setImportState('invalid');
     }
   };
 
+  // Reset state when panel closes
+  useEffect(() => {
+    if (!isOpen) {
+      setYamlContent('');
+      setErrors([]);
+      setImportState('initial');
+      setValidatedState(null);
+      setShowConfirmDialog(false);
+    }
+  }, [isOpen]);
+
+  const isButtonDisabled =
+    importState === 'initial' ||
+    importState === 'parsing' ||
+    importState === 'invalid' ||
+    importState === 'importing';
+
+  const buttonText =
+    importState === 'parsing' ? 'Validating...' :
+    importState === 'importing' ? 'Importing...' :
+    'Create';
+
   return (
-    <div
-      className={`absolute top-0 left-0 h-full w-1/3 transition-transform duration-300 ease-in-out z-10 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
-      }`}
-    >
-      <div className="pointer-events-auto w-full h-full flex flex-col bg-white border-r border-gray-200 shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-          <h2 className="text-base font-semibold text-gray-900">
-            Import Workflow from YAML
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          >
-            <span className="sr-only">Close panel</span>
-            <div className="hero-x-mark size-6" />
-          </button>
-        </div>
-
-        {/* Error Banner */}
-        {errors.length > 0 && (
-          <div className="shrink-0">
-            <ValidationErrorDisplay errors={errors} />
-          </div>
-        )}
-
-        {/* Content Area - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {/* File Dropzone */}
-          <YAMLFileDropzone onUpload={handleFileUpload} />
-
-          {/* OR Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-white px-2 text-gray-500">OR</span>
-            </div>
+    <>
+      <div
+        className={`absolute inset-y-0 left-0 w-1/3 transition-transform duration-300 ease-in-out z-10 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+        }`}
+      >
+        <div className="pointer-events-auto w-full h-full flex flex-col bg-white border-r border-gray-200 shadow-xl">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+            <h2 className="text-base font-semibold text-gray-900">
+              Import Workflow from YAML
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              <span className="sr-only">Close panel</span>
+              <div className="hero-x-mark size-6" />
+            </button>
           </div>
 
-          {/* YAML Editor */}
-          <YAMLCodeEditor
-            value={yamlContent}
-            onChange={handleYAMLChange}
-            isValidating={isValidating}
-          />
-        </div>
+          {/* Error Banner */}
+          {errors.length > 0 && (
+            <div className="shrink-0">
+              <ValidationErrorDisplay errors={errors} />
+            </div>
+          )}
 
-        {/* Footer - Fixed */}
-        <div className="shrink-0 border-t border-gray-200 px-4 py-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleImport}
-            disabled={!isValid || isValidating}
-            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isValidating ? 'Validating...' : 'Import Workflow'}
-          </button>
+          {/* Content Area - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            {/* File Dropzone */}
+            <YAMLFileDropzone onUpload={handleFileUpload} />
+
+            {/* OR Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white px-2 text-gray-500">OR</span>
+              </div>
+            </div>
+
+            {/* YAML Editor */}
+            <YAMLCodeEditor
+              value={yamlContent}
+              onChange={handleYAMLChange}
+              isValidating={importState === 'parsing'}
+            />
+          </div>
+
+          {/* Footer - Fixed */}
+          <div className="shrink-0 border-t border-gray-200 px-4 py-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={handleImportClick}
+              disabled={isButtonDisabled}
+              className="rounded-md bg-primary-300 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-x-1.5"
+            >
+              {(importState === 'parsing' || importState === 'importing') && (
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {buttonText}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Confirmation Dialog */}
+      <ImportConfirmationDialog
+        isOpen={showConfirmDialog}
+        activeUsers={remoteUsers}
+        onConfirm={() => {
+          setShowConfirmDialog(false);
+          performImport();
+        }}
+        onCancel={() => setShowConfirmDialog(false)}
+      />
+    </>
   );
 }
