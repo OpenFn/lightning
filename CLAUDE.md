@@ -200,6 +200,14 @@ components:
   editing), Monaco Editor (code editing)
 - React components integrated into Phoenix app via LiveView mounting
 
+#### Toast Notifications
+
+For toast notifications in the collaborative editor, see `.claude/guidelines/toast-notifications.md`:
+- Usage patterns for info, alert, success, and warning toasts
+- Integration with workflow operations
+- Styling conventions matching Lightning's design system
+- Testing strategies
+
 ### Testing Requirements
 
 - Write comprehensive ExUnit tests for backend code

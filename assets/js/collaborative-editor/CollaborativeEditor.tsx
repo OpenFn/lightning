@@ -6,6 +6,7 @@ import type { WithActionProps } from "../react/lib/with-props";
 import { BreadcrumbLink, BreadcrumbText } from "./components/Breadcrumbs";
 import { CollaborationWidget } from "./components/CollaborationWidget";
 import { Header } from "./components/Header";
+import { Toaster } from "./components/ui/Toaster";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { StoreProvider } from "./contexts/StoreProvider";
@@ -111,6 +112,7 @@ export const CollaborativeEditor: WithActionProps<
       <SocketProvider>
         <SessionProvider workflowId={workflowId}>
           <StoreProvider>
+            <Toaster />
             <BreadcrumbContent
               workflowId={workflowId}
               workflowName={workflowName}
