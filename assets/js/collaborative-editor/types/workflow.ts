@@ -90,6 +90,9 @@ export namespace Workflow {
       saved_at?: string;
       lock_version?: number;
     } | null>;
+
+    // Workflow reset operation
+    resetWorkflow: () => Promise<void>;
   }
 }
 

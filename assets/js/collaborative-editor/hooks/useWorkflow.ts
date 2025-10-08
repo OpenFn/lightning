@@ -358,6 +358,7 @@ export const useWorkflowActions = () => {
 
         return response;
       },
+      resetWorkflow: store.resetWorkflow,
     }),
     [store, sessionContextStore]
   );

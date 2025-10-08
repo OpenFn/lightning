@@ -1,10 +1,35 @@
+import { useState } from "react";
+
+import { usePermissions } from "../../hooks/useSessionContext";
+import { useWorkflowActions } from "../../hooks/useWorkflow";
 import type { Workflow } from "../../types/workflow";
+import { AlertDialog } from "../AlertDialog";
 
 interface WorkflowSettingsProps {
   workflow: Workflow;
 }
 
 export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const { resetWorkflow } = useWorkflowActions();
+  const permissions = usePermissions();
+
+  const handleReset = async () => {
+    setIsResetting(true);
+    try {
+      await resetWorkflow();
+      // Success - dialog will close, user sees changes via Y.Doc sync
+    } catch (error) {
+      // Error - just log for now (no notification system exists)
+      console.error("Reset failed:", error);
+    } finally {
+      setIsResetting(false);
+      setIsResetDialogOpen(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -72,6 +97,42 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
           </p>
         </div>
       </div>
+
+      {/* Reset Section - Only show if user has edit permission */}
+      {permissions?.can_edit_workflow && (
+        <div className="border-t border-gray-200 pt-6">
+          <h3 className="text-sm font-medium text-gray-900 mb-2">
+            Reset Workflow
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Discard all uncommitted changes and restore the workflow to its
+            latest saved snapshot. This action cannot be undone.
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsResetDialogOpen(true)}
+            disabled={isResetting}
+            className="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold
+            text-white shadow-xs hover:bg-red-500
+            focus-visible:outline-2 focus-visible:outline-offset-2
+            focus-visible:outline-red-600
+            disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isResetting ? "Resetting..." : "Reset to Latest Snapshot"}
+          </button>
+        </div>
+      )}
+
+      <AlertDialog
+        isOpen={isResetDialogOpen}
+        onClose={() => !isResetting && setIsResetDialogOpen(false)}
+        onConfirm={handleReset}
+        title="Reset Workflow?"
+        description="This will undo all uncommitted changes and restore the workflow to its latest snapshot. This action cannot be undone."
+        confirmLabel={isResetting ? "Resetting..." : "Reset Workflow"}
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }
