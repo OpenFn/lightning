@@ -379,3 +379,4 @@ Key supervised processes:
   we go, if you want to check for build failures or warnings etc you can either
   use Tidewave MCP to check the logs, or run `mix esbuild default`
 - When checking for JS/TS issues, prefer mcp__ide__getDiagnostics over tsc
+- never commit the .context directory, this is a symlink to another folder shared across branches and worktrees
