@@ -254,7 +254,7 @@ defmodule Lightning.Credentials do
       |> get_credential_bodies()
       |> then(fn bodies ->
         if credential.schema == "oauth" do
-          preserve_refresh_tokens(credential, bodies)
+          preserve_refresh_tokens(bodies, credential)
         else
           bodies
         end
@@ -275,46 +275,55 @@ defmodule Lightning.Credentials do
   end
 
   defp build_update_multi(credential, changeset, credential_bodies) do
-    multi = Multi.new() |> Multi.update(:credential, changeset)
-
     schema_name = Ecto.Changeset.get_field(changeset, :schema)
-
     delete_environments = Map.get(changeset.params, "delete_environments", [])
 
-    multi =
-      if Enum.empty?(delete_environments) do
-        multi
-      else
-        Enum.reduce(delete_environments, multi, fn env_name, acc ->
-          acc
-          |> Multi.run(:"delete_env_#{env_name}", fn _repo, _changes ->
-            case Repo.get_by(CredentialBody,
-                   credential_id: credential.id,
-                   name: env_name
-                 ) do
-              nil ->
-                {:ok, :not_found}
+    Multi.new()
+    |> Multi.update(:credential, changeset)
+    |> add_environment_deletions(credential.id, delete_environments)
+    |> add_credential_body_upserts(credential.id, credential_bodies, schema_name)
+  end
 
-              credential_body ->
-                Repo.delete(credential_body)
-                {:ok, :deleted}
-            end
-          end)
-        end)
-      end
+  defp add_environment_deletions(multi, _credential_id, []), do: multi
 
-    if Enum.empty?(credential_bodies) do
-      multi
-    else
-      credential_bodies
-      |> Enum.with_index()
-      |> Enum.reduce(multi, fn {body_attrs, index}, acc ->
-        acc
-        |> Multi.run(:"credential_body_#{index}", fn _repo, _changes ->
-          upsert_credential_body(credential.id, body_attrs, schema_name)
-        end)
+  defp add_environment_deletions(multi, credential_id, delete_environments) do
+    Enum.reduce(delete_environments, multi, fn env_name, acc ->
+      Multi.run(acc, :"delete_env_#{env_name}", fn _repo, _changes ->
+        delete_credential_body_if_exists(credential_id, env_name)
       end)
+    end)
+  end
+
+  defp delete_credential_body_if_exists(credential_id, env_name) do
+    case Repo.get_by(CredentialBody,
+           credential_id: credential_id,
+           name: env_name
+         ) do
+      nil ->
+        {:ok, :not_found}
+
+      credential_body ->
+        Repo.delete(credential_body)
+        {:ok, :deleted}
     end
+  end
+
+  defp add_credential_body_upserts(multi, _credential_id, [], _schema_name),
+    do: multi
+
+  defp add_credential_body_upserts(
+         multi,
+         credential_id,
+         credential_bodies,
+         schema_name
+       ) do
+    credential_bodies
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {body_attrs, index}, acc ->
+      Multi.run(acc, :"credential_body_#{index}", fn _repo, _changes ->
+        upsert_credential_body(credential_id, body_attrs, schema_name)
+      end)
+    end)
   end
 
   defp upsert_credential_body(credential_id, body_attrs, schema_name) do
@@ -359,8 +368,35 @@ defmodule Lightning.Credentials do
   defp normalize_body_attrs(body_attrs) when is_map(body_attrs) do
     body_attrs
     |> Map.new(fn {k, v} -> {to_string(k), v} end)
+    |> then(fn attrs ->
+      env_name = attrs["name"]
+      body_data = attrs["body"]
+      actual_body = extract_actual_body(body_data, env_name)
+
+      %{"name" => env_name, "body" => actual_body}
+    end)
     |> coerce_json_field("body")
   end
+
+  defp extract_actual_body(%{} = body_data, env_name)
+       when is_map_key(body_data, env_name) do
+    parse_nested_value(Map.get(body_data, env_name))
+  end
+
+  defp extract_actual_body(map, _env_name) when is_map(map), do: map
+
+  defp extract_actual_body(_, _env_name), do: %{}
+
+  defp parse_nested_value(json_string) when is_binary(json_string) do
+    case Jason.decode(json_string) do
+      {:ok, decoded} -> decoded
+      {:error, _} -> %{}
+    end
+  end
+
+  defp parse_nested_value(map) when is_map(map), do: map
+
+  defp parse_nested_value(_), do: %{}
 
   defp validate_credential_bodies(credential_bodies, attrs, schema \\ nil) do
     credential_schema = schema || Map.get(attrs, "schema")
@@ -379,9 +415,8 @@ defmodule Lightning.Credentials do
   end
 
   defp validate_oauth_body(body_data, attrs) do
-    with {:ok, _} <- OauthValidation.validate_token_data(body_data),
-         :ok <- validate_expected_scopes(body_data, attrs) do
-      :ok
+    with {:ok, _} <- OauthValidation.validate_token_data(body_data) do
+      validate_expected_scopes(body_data, attrs)
     end
   end
 
@@ -991,7 +1026,7 @@ defmodule Lightning.Credentials do
 
       updated_token =
         Map.merge(credential_body.body, fresh_token)
-        |> ensure_refresh_token(credential_body.body)
+        |> ensure_refresh_token_preserved(credential_body.body)
         |> normalize_token_expiry()
 
       case CredentialBody.changeset(credential_body, %{body: updated_token})
@@ -1033,6 +1068,43 @@ defmodule Lightning.Credentials do
         save_audit_event(audit_changeset)
         {:error, error}
     end
+  end
+
+  defp ensure_refresh_token_preserved(merged_body, original_body) do
+    if is_nil(merged_body["refresh_token"]) && original_body["refresh_token"] do
+      Map.put(merged_body, "refresh_token", original_body["refresh_token"])
+    else
+      merged_body
+    end
+  end
+
+  defp preserve_refresh_tokens(credential_bodies, credential) do
+    existing_bodies =
+      credential
+      |> Repo.preload(:credential_bodies)
+      |> Map.get(:credential_bodies)
+      |> Enum.into(%{}, fn body -> {body.name, body} end)
+
+    Enum.map(credential_bodies, fn body_attrs ->
+      env_name = body_attrs["name"]
+      new_body = body_attrs["body"]
+
+      case Map.get(existing_bodies, env_name) do
+        nil ->
+          body_attrs
+
+        existing ->
+          updated_body =
+            if is_nil(new_body["refresh_token"]) &&
+                 existing.body["refresh_token"] do
+              Map.put(new_body, "refresh_token", existing.body["refresh_token"])
+            else
+              new_body
+            end
+
+          Map.put(body_attrs, "body", updated_body)
+      end
+    end)
   end
 
   defp extract_scopes_or_default(token) do
@@ -1120,35 +1192,6 @@ defmodule Lightning.Credentials do
   end
 
   def oauth_token_expired?(_), do: true
-
-  defp ensure_refresh_token(new_body, existing_body)
-       when is_map(existing_body) and is_map(new_body) do
-    case {existing_body["refresh_token"], new_body["refresh_token"]} do
-      {existing, nil} when existing != nil ->
-        Map.put(new_body, "refresh_token", existing)
-
-      _ ->
-        new_body
-    end
-  end
-
-  defp preserve_refresh_tokens(credential, credential_bodies) do
-    Enum.map(credential_bodies, fn body_attrs ->
-      env_name = body_attrs["name"]
-      new_body = body_attrs["body"]
-
-      case get_credential_body(credential.id, env_name) do
-        nil ->
-          body_attrs
-
-        %{body: existing_body} ->
-          preserved_body =
-            ensure_refresh_token(new_body, existing_body)
-
-          Map.put(body_attrs, "body", preserved_body)
-      end
-    end)
-  end
 
   defp handle_oauth_refresh_failed(credential, credential_body, error_response) do
     error_details =

@@ -4,12 +4,12 @@ defmodule Lightning.Credentials.CredentialTest do
   import Lightning.Factories
 
   alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.CredentialBody
 
   describe "changeset/2" do
-    test "name, body, and user_id can't be blank" do
+    test "name and user_id can't be blank" do
       errors = Credential.changeset(%Credential{}, %{}) |> errors_on()
       assert errors[:name] == ["can't be blank"]
-      assert errors[:body] == ["can't be blank"]
       assert errors[:user_id] == ["can't be blank"]
     end
 
@@ -19,8 +19,8 @@ defmodule Lightning.Credentials.CredentialTest do
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Test Credential",
-          body: %{"key" => "value"},
-          user_id: user.id
+          user_id: user.id,
+          schema: "raw"
         })
 
       assert changeset.valid?
@@ -29,16 +29,16 @@ defmodule Lightning.Credentials.CredentialTest do
     test "validates unique constraint on name and user_id" do
       user = insert(:user)
 
-      insert(:credential, %{
+      insert(:credential,
         name: "Unique Name",
         user: user
-      })
+      )
 
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Unique Name",
-          body: %{"key" => "value"},
-          user_id: user.id
+          user_id: user.id,
+          schema: "raw"
         })
 
       assert {:error, changeset} = Repo.insert(changeset)
@@ -52,16 +52,16 @@ defmodule Lightning.Credentials.CredentialTest do
       user1 = insert(:user)
       user2 = insert(:user)
 
-      insert(:credential, %{
+      insert(:credential,
         name: "Same Name",
         user: user1
-      })
+      )
 
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Same Name",
-          body: %{"key" => "value"},
-          user_id: user2.id
+          user_id: user2.id,
+          schema: "raw"
         })
 
       assert changeset.valid?
@@ -73,8 +73,8 @@ defmodule Lightning.Credentials.CredentialTest do
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Invalid@Name#",
-          body: %{"key" => "value"},
-          user_id: user.id
+          user_id: user.id,
+          schema: "raw"
         })
 
       refute changeset.valid?
@@ -100,8 +100,8 @@ defmodule Lightning.Credentials.CredentialTest do
         changeset =
           Credential.changeset(%Credential{}, %{
             name: name,
-            body: %{"key" => "value"},
-            user_id: user.id
+            user_id: user.id,
+            schema: "raw"
           })
 
         assert changeset.valid?, "Name '#{name}' should be valid"
@@ -112,26 +112,12 @@ defmodule Lightning.Credentials.CredentialTest do
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Test",
-          body: %{"key" => "value"},
-          user_id: Ecto.UUID.generate()
+          user_id: Ecto.UUID.generate(),
+          schema: "raw"
         })
 
       assert {:error, changeset} = Repo.insert(changeset)
       assert errors_on(changeset)[:user] == ["does not exist"]
-    end
-
-    test "casts production field" do
-      user = insert(:user)
-
-      changeset =
-        Credential.changeset(%Credential{}, %{
-          name: "Test",
-          body: %{"key" => "value"},
-          user_id: user.id,
-          production: true
-        })
-
-      assert get_change(changeset, :production) == true
     end
 
     test "casts schema field" do
@@ -140,7 +126,6 @@ defmodule Lightning.Credentials.CredentialTest do
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Test",
-          body: %{"key" => "value"},
           user_id: user.id,
           schema: "oauth"
         })
@@ -148,19 +133,19 @@ defmodule Lightning.Credentials.CredentialTest do
       assert get_change(changeset, :schema) == "oauth"
     end
 
-    test "casts oauth_token_id field" do
+    test "casts oauth_client_id field" do
       user = insert(:user)
-      oauth_token = insert(:oauth_token, user: user)
+      oauth_client = insert(:oauth_client)
 
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Test",
-          body: %{"key" => "value"},
           user_id: user.id,
-          oauth_token_id: oauth_token.id
+          schema: "oauth",
+          oauth_client_id: oauth_client.id
         })
 
-      assert get_change(changeset, :oauth_token_id) == oauth_token.id
+      assert get_change(changeset, :oauth_client_id) == oauth_client.id
     end
 
     test "casts scheduled_deletion field" do
@@ -170,8 +155,8 @@ defmodule Lightning.Credentials.CredentialTest do
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Test",
-          body: %{"key" => "value"},
           user_id: user.id,
+          schema: "raw",
           scheduled_deletion: deletion_time
         })
 
@@ -184,8 +169,8 @@ defmodule Lightning.Credentials.CredentialTest do
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Test",
-          body: %{"key" => "value"},
           user_id: user.id,
+          schema: "raw",
           transfer_status: :pending
         })
 
@@ -199,8 +184,8 @@ defmodule Lightning.Credentials.CredentialTest do
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Test",
-          body: %{"key" => "value"},
           user_id: user.id,
+          schema: "raw",
           project_credentials: [%{project_id: project.id}]
         })
 
@@ -209,29 +194,282 @@ defmodule Lightning.Credentials.CredentialTest do
     end
   end
 
-  describe "encryption" do
-    test "encrypts a credential at rest" do
-      body = %{"foo" => [1]}
+  describe "credential_body changeset" do
+    setup do
+      user = insert(:user)
+      credential = insert(:credential, user: user, schema: "raw")
+      %{user: user, credential: credential}
+    end
 
-      %{id: credential_id, body: decoded_body} =
-        Credential.changeset(%Credential{}, %{
-          name: "Test Credential",
-          body: body,
-          user_id: insert(:user).id,
-          schema: "raw"
+    test "credential_id and body can't be blank" do
+      # Name has default "main", so only credential_id and body are truly required
+      errors = CredentialBody.changeset(%CredentialBody{}, %{}) |> errors_on()
+      assert errors[:credential_id] == ["can't be blank"]
+      assert errors[:body] == ["can't be blank"]
+    end
+
+    test "validates credential body with valid data", %{credential: credential} do
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: %{"key" => "value"}
         })
-        |> Lightning.Repo.insert!()
 
-      assert decoded_body == body
+      assert changeset.valid?
+    end
+
+    test "validates unique constraint on credential_id and name", %{
+      credential: credential
+    } do
+      # Insert first body
+      credential
+      |> with_body(%{
+        name: "production",
+        body: %{"key" => "value"}
+      })
+
+      # Try to insert duplicate environment for same credential
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: %{"key" => "other_value"}
+        })
+
+      assert {:error, changeset} = Repo.insert(changeset)
+
+      # Unique constraint error will be on the composite index
+      errors = errors_on(changeset)
+
+      assert errors[:credential_id] == ["has already been taken"] or
+               errors[:name] == ["has already been taken"]
+    end
+
+    test "allows same environment name for different credentials", %{user: user} do
+      _credential1 =
+        insert(:credential, user: user, schema: "raw")
+        |> with_body(%{name: "production", body: %{"key" => "value1"}})
+
+      credential2 = insert(:credential, user: user, schema: "raw")
+
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential2.id,
+          name: "production",
+          body: %{"key" => "value2"}
+        })
+
+      assert changeset.valid?
+      assert {:ok, _} = Repo.insert(changeset)
+    end
+
+    test "validates environment name format", %{credential: credential} do
+      # Based on regex: ~r/^[a-z0-9][a-z0-9_-]{0,31}$/
+      invalid_names = [
+        # uppercase
+        "Prod",
+        # uppercase
+        "STAGING",
+        # starts with underscore
+        "_dev",
+        # starts with dash
+        "-test",
+        # has slash
+        "prod/staging",
+        # has backslash
+        "prod\\staging",
+        # has @
+        "prod@staging",
+        # has dot
+        "prod.staging",
+        # has space
+        "prod staging",
+        # too long (33 chars)
+        String.duplicate("a", 33)
+      ]
+
+      for name <- invalid_names do
+        changeset =
+          CredentialBody.changeset(%CredentialBody{}, %{
+            credential_id: credential.id,
+            name: name,
+            body: %{"key" => "value"}
+          })
+
+        refute changeset.valid?,
+               "Environment name '#{name}' should be invalid"
+
+        assert errors_on(changeset)[:name] == ["must be a short slug"]
+      end
+    end
+
+    test "allows valid environment name formats", %{credential: credential} do
+      valid_names = [
+        "production",
+        "staging",
+        "dev",
+        "test",
+        "prod-eu",
+        "staging_us",
+        "env123",
+        "main",
+        "prod-v2",
+        "staging-2024",
+        "env_test_1",
+        # single char
+        "a",
+        # max length (32 chars)
+        String.duplicate("a", 32)
+      ]
+
+      for name <- valid_names do
+        changeset =
+          CredentialBody.changeset(%CredentialBody{}, %{
+            credential_id: credential.id,
+            name: name,
+            body: %{"key" => "value"}
+          })
+
+        assert changeset.valid?,
+               "Environment name '#{name}' should be valid"
+      end
+    end
+
+    test "validates foreign key constraint for credential_id" do
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: Ecto.UUID.generate(),
+          name: "production",
+          body: %{"key" => "value"}
+        })
+
+      assert {:error, changeset} = Repo.insert(changeset)
+      assert errors_on(changeset)[:credential] == ["does not exist"]
+    end
+
+    test "body must be a map", %{credential: credential} do
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: "not a map"
+        })
+
+      refute changeset.valid?
+      assert errors_on(changeset)[:body] == ["is invalid"]
+    end
+
+    test "accepts empty map as body", %{credential: credential} do
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: %{}
+        })
+
+      assert changeset.valid?
+    end
+
+    test "name defaults to 'main' when not provided", %{credential: credential} do
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          body: %{"key" => "value"}
+        })
+
+      assert changeset.valid?
+
+      {:ok, credential_body} = Repo.insert(changeset)
+      assert credential_body.name == "main"
+    end
+
+    test "body is encrypted at rest", %{credential: credential} do
+      body = %{"secret" => "sensitive_data"}
+
+      {:ok, credential_body} =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: body
+        })
+        |> Repo.insert()
 
       persisted_body =
-        from(c in Credential,
-          select: type(c.body, :string),
-          where: c.id == ^credential_id
+        from(cb in CredentialBody,
+          select: type(cb.body, :string),
+          where: cb.id == ^credential_body.id
+        )
+        |> Repo.one!()
+
+      refute persisted_body == Jason.encode!(body)
+
+      loaded = Repo.get!(CredentialBody, credential_body.id)
+      assert loaded.body == body
+    end
+
+    test "updates to body are encrypted", %{credential: credential} do
+      original_body = %{"key" => "original"}
+      updated_body = %{"key" => "updated"}
+
+      {:ok, credential_body} =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: original_body
+        })
+        |> Repo.insert()
+
+      {:ok, updated} =
+        credential_body
+        |> CredentialBody.changeset(%{body: updated_body})
+        |> Repo.update()
+
+      reloaded = Repo.get!(CredentialBody, updated.id)
+      assert reloaded.body == updated_body
+    end
+
+    test "body is required and cannot be nil", %{credential: credential} do
+      {:ok, credential_body} =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: %{"key" => "value"}
+        })
+        |> Repo.insert()
+
+      changeset = CredentialBody.changeset(credential_body, %{body: nil})
+
+      refute changeset.valid?
+      assert errors_on(changeset)[:body] == ["can't be blank"]
+    end
+  end
+
+  describe "encryption" do
+    test "encrypts a credential body at rest" do
+      body = %{"foo" => [1]}
+      user = insert(:user)
+
+      credential =
+        insert(:credential, user: user, schema: "raw")
+        |> with_body(%{
+          name: "main",
+          body: body
+        })
+
+      credential_body =
+        Lightning.Credentials.get_credential_body(credential.id, "main")
+
+      assert credential_body.body == body
+
+      persisted_body =
+        from(cb in Lightning.Credentials.CredentialBody,
+          select: type(cb.body, :string),
+          where: cb.credential_id == ^credential.id and cb.name == "main"
         )
         |> Lightning.Repo.one!()
 
-      refute persisted_body == body
+      refute persisted_body == Jason.encode!(body)
     end
 
     test "decrypts credential body when loaded" do
@@ -239,17 +477,47 @@ defmodule Lightning.Credentials.CredentialTest do
       user = insert(:user)
 
       credential =
-        Credential.changeset(%Credential{}, %{
-          name: "Encrypted Credential",
-          body: body,
-          user_id: user.id,
-          schema: "raw"
+        insert(:credential, user: user, schema: "raw")
+        |> with_body(%{
+          name: "production",
+          body: body
         })
-        |> Lightning.Repo.insert!()
 
-      reloaded_credential = Repo.get!(Credential, credential.id)
+      reloaded_credential_body =
+        Lightning.Credentials.get_credential_body(credential.id, "production")
 
-      assert reloaded_credential.body == body
+      assert reloaded_credential_body.body == body
+    end
+
+    test "encrypts multiple environment bodies independently" do
+      prod_body = %{"env" => "production", "secret" => "prod_secret"}
+      staging_body = %{"env" => "staging", "secret" => "staging_secret"}
+      user = insert(:user)
+
+      credential =
+        insert(:credential, user: user, schema: "raw")
+        |> with_body(%{name: "production", body: prod_body})
+        |> with_body(%{name: "staging", body: staging_body})
+
+      persisted_bodies =
+        from(cb in Lightning.Credentials.CredentialBody,
+          select: {cb.name, type(cb.body, :string)},
+          where: cb.credential_id == ^credential.id
+        )
+        |> Lightning.Repo.all()
+        |> Map.new()
+
+      refute persisted_bodies["production"] == Jason.encode!(prod_body)
+      refute persisted_bodies["staging"] == Jason.encode!(staging_body)
+
+      prod_loaded =
+        Lightning.Credentials.get_credential_body(credential.id, "production")
+
+      staging_loaded =
+        Lightning.Credentials.get_credential_body(credential.id, "staging")
+
+      assert prod_loaded.body == prod_body
+      assert staging_loaded.body == staging_body
     end
   end
 
@@ -266,22 +534,49 @@ defmodule Lightning.Credentials.CredentialTest do
       assert loaded_credential.user.id == user.id
     end
 
-    test "belongs_to oauth_token association" do
+    test "belongs_to oauth_client association" do
       user = insert(:user)
-      oauth_token = insert(:oauth_token, user: user)
+      oauth_client = insert(:oauth_client)
 
       credential =
-        insert(:credential, %{
+        insert(:credential,
           user: user,
-          oauth_token: oauth_token
+          schema: "oauth",
+          oauth_client: oauth_client
+        )
+
+      loaded_credential =
+        Credential
+        |> preload(:oauth_client)
+        |> Repo.get!(credential.id)
+
+      assert loaded_credential.oauth_client.id == oauth_client.id
+    end
+
+    test "has_many credential_bodies association" do
+      user = insert(:user)
+
+      credential =
+        insert(:credential, user: user)
+        |> with_body(%{
+          name: "production",
+          body: %{"api_key" => "prod_key"}
+        })
+        |> with_body(%{
+          name: "staging",
+          body: %{"api_key" => "staging_key"}
         })
 
       loaded_credential =
         Credential
-        |> preload(:oauth_token)
+        |> preload(:credential_bodies)
         |> Repo.get!(credential.id)
 
-      assert loaded_credential.oauth_token.id == oauth_token.id
+      assert length(loaded_credential.credential_bodies) == 2
+
+      env_names = Enum.map(loaded_credential.credential_bodies, & &1.name)
+      assert "production" in env_names
+      assert "staging" in env_names
     end
 
     test "has_many project_credentials association" do
@@ -290,10 +585,10 @@ defmodule Lightning.Credentials.CredentialTest do
       project = insert(:project)
 
       project_credential =
-        insert(:project_credential, %{
+        insert(:project_credential,
           credential: credential,
           project: project
-        })
+        )
 
       loaded_credential =
         Credential
@@ -311,10 +606,10 @@ defmodule Lightning.Credentials.CredentialTest do
       credential = insert(:credential, user: user)
       project = insert(:project)
 
-      insert(:project_credential, %{
+      insert(:project_credential,
         credential: credential,
         project: project
-      })
+      )
 
       loaded_credential =
         Credential
@@ -323,33 +618,6 @@ defmodule Lightning.Credentials.CredentialTest do
 
       assert length(loaded_credential.projects) == 1
       assert hd(loaded_credential.projects).id == project.id
-    end
-  end
-
-  describe "default values" do
-    test "production defaults to false" do
-      changeset =
-        Credential.changeset(%Credential{}, %{
-          name: "Test",
-          body: %{},
-          user_id: insert(:user).id
-        })
-
-      credential = apply_changes(changeset)
-      assert credential.production == false
-    end
-
-    test "can override production default" do
-      changeset =
-        Credential.changeset(%Credential{}, %{
-          name: "Test",
-          body: %{},
-          user_id: insert(:user).id,
-          production: true
-        })
-
-      credential = apply_changes(changeset)
-      assert credential.production == true
     end
   end
 end

@@ -174,14 +174,18 @@ defmodule Lightning.JobsTest do
     test "with a credential associated creates a Job with a credential", %{
       actor: actor
     } do
-      project_credential =
-        insert(:project_credential,
-          credential:
-            insert(:credential,
-              name: "new credential",
-              body: %{"foo" => "manchu"}
-            )
+      credential =
+        insert(:credential,
+          name: "new credential",
+          schema: "raw"
         )
+        |> with_body(%{
+          name: "main",
+          body: %{"foo" => "manchu"}
+        })
+
+      project_credential =
+        insert(:project_credential, credential: credential)
 
       assert {:ok, %Job{} = job} =
                Jobs.create_job(
@@ -196,11 +200,15 @@ defmodule Lightning.JobsTest do
                  actor
                )
 
-      job = Repo.preload(job, :credential)
+      job = Repo.preload(job, credential: :credential_bodies)
 
       assert job.project_credential_id == project_credential.id
       assert job.credential.name == "new credential"
-      assert job.credential.body == %{"foo" => "manchu"}
+
+      main_body =
+        Enum.find(job.credential.credential_bodies, &(&1.name == "main"))
+
+      assert main_body.body == %{"foo" => "manchu"}
     end
 
     test "with invalid data returns error changeset", %{actor: actor} do

@@ -276,85 +276,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   def handle_event("save", %{"credential" => credential_params}, socket) do
     if socket.assigns.can_create_project_credential do
-      updated_bodies =
-        case Map.get(credential_params, "body") do
-          nil ->
-            socket.assigns.credential_bodies
-
-          body_string when is_binary(body_string) ->
-            parsed_body =
-              case Jason.decode(body_string) do
-                {:ok, decoded} ->
-                  decoded
-
-                {:error, _} ->
-                  body_string
-              end
-
-            Map.put(
-              socket.assigns.credential_bodies,
-              socket.assigns.current_tab,
-              parsed_body
-            )
-
-          body_map when is_map(body_map) ->
-            case Map.get(body_map, socket.assigns.current_tab) do
-              nil ->
-                socket.assigns.credential_bodies
-
-              env_body_string when is_binary(env_body_string) ->
-                parsed_body =
-                  case Jason.decode(env_body_string) do
-                    {:ok, decoded} -> decoded
-                    {:error, _} -> %{}
-                  end
-
-                Map.put(
-                  socket.assigns.credential_bodies,
-                  socket.assigns.current_tab,
-                  parsed_body
-                )
-
-              env_body_map when is_map(env_body_map) ->
-                Map.put(
-                  socket.assigns.credential_bodies,
-                  socket.assigns.current_tab,
-                  env_body_map
-                )
-            end
-        end
-
-      credential_bodies_list =
-        Enum.map(socket.assigns.credential_environments, fn env ->
-          body = Map.get(updated_bodies, env.name, %{})
-          %{"name" => env.name, "body" => body}
-        end)
-
-      environments_to_delete =
-        if socket.assigns.action == :edit do
-          current_names =
-            Enum.map(socket.assigns.credential_environments, & &1.name)
-
-          socket.assigns.original_environment_names -- current_names
-        else
-          []
-        end
-
-      project_credentials =
-        Helpers.prepare_projects_associations(
-          socket.assigns.changeset,
-          socket.assigns.selected_projects,
-          :project_credentials
-        )
-
-      credential_params =
-        credential_params
-        |> Map.put("project_credentials", project_credentials)
-        |> Map.put("credential_bodies", credential_bodies_list)
-        |> Map.put("delete_environments", environments_to_delete)
-        |> maybe_put_oauth_client_id(socket.assigns.selected_oauth_client)
-
-      save_credential(socket, socket.assigns.action, credential_params)
+      save_with_authorization(socket, credential_params)
     else
       {:noreply,
        socket
@@ -362,6 +284,97 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        |> push_navigate(to: socket.assigns.return_to)}
     end
   end
+
+  defp save_with_authorization(socket, credential_params) do
+    updated_bodies = parse_credential_body(credential_params, socket)
+
+    credential_bodies_list = build_credential_bodies_list(socket, updated_bodies)
+
+    environments_to_delete = get_environments_to_delete(socket)
+
+    project_credentials =
+      Helpers.prepare_projects_associations(
+        socket.assigns.changeset,
+        socket.assigns.selected_projects,
+        :project_credentials
+      )
+
+    final_params =
+      credential_params
+      |> Map.put("project_credentials", project_credentials)
+      |> Map.put("credential_bodies", credential_bodies_list)
+      |> Map.put("delete_environments", environments_to_delete)
+      |> maybe_put_oauth_client_id(socket.assigns.selected_oauth_client)
+
+    save_credential(socket, socket.assigns.action, final_params)
+  end
+
+  defp parse_credential_body(%{"body" => body_string}, socket)
+       when is_binary(body_string) do
+    parsed_body = parse_json_or_original(body_string)
+
+    Map.put(
+      socket.assigns.credential_bodies,
+      socket.assigns.current_tab,
+      parsed_body
+    )
+  end
+
+  defp parse_credential_body(%{"body" => body_map}, socket)
+       when is_map(body_map) do
+    case Map.get(body_map, socket.assigns.current_tab) do
+      nil ->
+        socket.assigns.credential_bodies
+
+      env_body_string when is_binary(env_body_string) ->
+        parsed_body = parse_json_or_empty(env_body_string)
+
+        Map.put(
+          socket.assigns.credential_bodies,
+          socket.assigns.current_tab,
+          parsed_body
+        )
+
+      env_body_map when is_map(env_body_map) ->
+        Map.put(
+          socket.assigns.credential_bodies,
+          socket.assigns.current_tab,
+          env_body_map
+        )
+    end
+  end
+
+  defp parse_credential_body(_params, socket) do
+    socket.assigns.credential_bodies
+  end
+
+  defp parse_json_or_original(string) do
+    case Jason.decode(string) do
+      {:ok, decoded} -> decoded
+      {:error, _} -> string
+    end
+  end
+
+  defp parse_json_or_empty(string) do
+    case Jason.decode(string) do
+      {:ok, decoded} -> decoded
+      {:error, _} -> %{}
+    end
+  end
+
+  defp build_credential_bodies_list(socket, updated_bodies) do
+    Enum.map(socket.assigns.credential_environments, fn env ->
+      body = Map.get(updated_bodies, env.name, %{})
+      %{"name" => env.name, "body" => body}
+    end)
+  end
+
+  defp get_environments_to_delete(%{assigns: %{action: :edit}} = socket) do
+    current_names = Enum.map(socket.assigns.credential_environments, & &1.name)
+    socket.assigns.original_environment_names -- current_names
+  end
+
+  defp get_environments_to_delete(_socket), do: []
 
   @impl true
   def render(%{page: :first} = assigns) do
@@ -940,10 +953,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp generate_untitled_name(existing_names) do
-    if "untitled" not in existing_names do
-      "untitled"
-    else
+    if "untitled" in existing_names do
       find_next_untitled(existing_names)
+    else
+      "untitled"
     end
   end
 

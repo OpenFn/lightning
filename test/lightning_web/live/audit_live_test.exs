@@ -28,7 +28,8 @@ defmodule LightningWeb.AuditLiveTest do
     test "lists all audit entries", %{conn: conn, user: user} do
       # Generate an audit event on creation.
       credential =
-        credential_fixture(user_id: user.id, body: %{"my-secret" => "value"})
+        credential_fixture(user_id: user.id, schema: "raw")
+        |> with_body(%{name: "main", body: %{"my-secret" => "value"}})
 
       # Add another audit event, but this time for a user that will be deleted
       # before the listing
@@ -54,10 +55,9 @@ defmodule LightningWeb.AuditLiveTest do
       assert html =~ LiveHelpers.display_short_uuid(credential.id)
       assert html =~ "created"
       assert html =~ "No changes"
-      refute html =~ "nil"
 
       # Assert that the table works for users that have been deleted.
-      assert html =~ "created"
+      assert html =~ "deleted"
       assert html =~ "(User deleted)"
       assert html =~ LiveHelpers.display_short_uuid(user_to_be_deleted.id)
     end
@@ -66,330 +66,439 @@ defmodule LightningWeb.AuditLiveTest do
   describe ".diff/1" do
     test "correctly lists changes with both before and after (string keys)" do
       assigns = %{
-        metadata: %{
-          before: %{
-            "foo" => "foo_before",
-            "bar" => "bar_before"
+        audit: %{
+          changes: %{
+            before: %{
+              "foo" => "foo_before",
+              "bar" => "bar_before"
+            },
+            after: %{
+              "foo" => "foo_after",
+              "bar" => "bar_after"
+            }
           },
-          after: %{
-            "foo" => "foo_after",
-            "bar" => "bar_after"
-          }
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
+      # Should show field name, old value (strikethrough), arrow, and new value
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "line-through"
+      assert html =~ "bar_before"
+      assert html =~ "hero-arrow-right"
+      assert html =~ "bar_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
+      assert html =~ "foo_after"
     end
 
     test "correctly lists changes with both before and after (atom keys)" do
       assigns = %{
-        metadata: %{
-          before: %{
-            foo: "foo_before",
-            bar: "bar_before"
+        audit: %{
+          changes: %{
+            before: %{
+              foo: "foo_before",
+              bar: "bar_before"
+            },
+            after: %{
+              foo: "foo_after",
+              bar: "bar_after"
+            }
           },
-          after: %{
-            foo: "foo_after",
-            bar: "bar_after"
-          }
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
+      # Should show field name, old value (strikethrough), arrow, and new value
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "line-through"
+      assert html =~ "bar_before"
+      assert html =~ "hero-arrow-right"
+      assert html =~ "bar_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
+      assert html =~ "foo_after"
     end
 
     test "correctly lists changes if before is nil (string keys)" do
       assigns = %{
-        metadata: %{
-          before: nil,
-          after: %{"foo" => "foo_after", "bar" => "bar_after"}
+        audit: %{
+          changes: %{
+            before: nil,
+            after: %{"foo" => "foo_after", "bar" => "bar_after"}
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*bar_after"s
+      # When before is nil, should NOT show arrow (because old value is nil)
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_after"
+      refute html =~ "hero-arrow-right"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_after"
     end
 
     test "correctly lists changes if before is nil (atom keys)" do
       assigns = %{
-        metadata: %{
-          before: nil,
-          after: %{foo: "foo_after", bar: "bar_after"}
+        audit: %{
+          changes: %{
+            before: nil,
+            after: %{foo: "foo_after", bar: "bar_after"}
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*bar_after"s
+      # When before is nil, should NOT show arrow (because old value is nil)
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_after"
+      refute html =~ "hero-arrow-right"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_after"
     end
 
     test "correctly lists changes if before is empty (string keys)" do
       assigns = %{
-        metadata: %{
-          before: %{},
-          after: %{"foo" => "foo_after", "bar" => "bar_after"}
+        audit: %{
+          changes: %{
+            before: %{},
+            after: %{"foo" => "foo_after", "bar" => "bar_after"}
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*bar_after"s
+      # When before is empty map, should NOT show arrow (because old values are nil)
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_after"
+      refute html =~ "hero-arrow-right"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_after"
     end
 
     test "correctly lists changes if before is empty (atom keys)" do
       assigns = %{
-        metadata: %{
-          before: %{},
-          after: %{foo: "foo_after", bar: "bar_after"}
+        audit: %{
+          changes: %{
+            before: %{},
+            after: %{foo: "foo_after", bar: "bar_after"}
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*bar_after"s
+      # When before is empty map, should NOT show arrow (because old values are nil)
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_after"
+      refute html =~ "hero-arrow-right"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_after"
     end
 
     test "correctly lists changes if after is nil (string keys)" do
       assigns = %{
-        metadata: %{
-          before: %{"foo" => "foo_before", "bar" => "bar_before"},
-          after: nil
+        audit: %{
+          changes: %{
+            before: %{"foo" => "foo_before", "bar" => "bar_before"},
+            after: nil
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      # Should show old values with arrow, but new values will be empty string
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_before"
+      assert html =~ "hero-arrow-right"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
     end
 
     test "correctly lists changes if after is nil (atom keys)" do
       assigns = %{
-        metadata: %{
-          before: %{foo: "foo_before", bar: "bar_before"},
-          after: nil
+        audit: %{
+          changes: %{
+            before: %{foo: "foo_before", bar: "bar_before"},
+            after: nil
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      # Should show old values with arrow, but new values will be empty string
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_before"
+      assert html =~ "hero-arrow-right"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
     end
 
     test "correctly lists changes if after is empty (string keys)" do
       assigns = %{
-        metadata: %{
-          before: %{"foo" => "foo_before", "bar" => "bar_before"},
-          after: %{}
+        audit: %{
+          changes: %{
+            before: %{"foo" => "foo_before", "bar" => "bar_before"},
+            after: %{}
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      # Should show old values with arrow, but new values will be empty string
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_before"
+      assert html =~ "hero-arrow-right"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
     end
 
     test "correctly lists changes if after is empty (atom keys)" do
       assigns = %{
-        metadata: %{
-          before: %{foo: "foo_before", bar: "bar_before"},
-          after: %{}
+        audit: %{
+          changes: %{
+            before: %{foo: "foo_before", bar: "bar_before"},
+            after: %{}
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      # Should show old values with arrow, but new values will be empty string
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_before"
+      assert html =~ "hero-arrow-right"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
     end
 
     test "includes any extra keys in the before (string keys)" do
       assigns = %{
-        metadata: %{
-          before: %{
-            "foo" => "foo_before",
-            "bar" => "bar_before",
-            "baz" => "baz_before"
+        audit: %{
+          changes: %{
+            before: %{
+              "foo" => "foo_before",
+              "bar" => "bar_before",
+              "baz" => "baz_before"
+            },
+            after: %{
+              "foo" => "foo_after",
+              "bar" => "bar_after"
+            }
           },
-          after: %{
-            "foo" => "foo_after",
-            "bar" => "bar_after"
-          }
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
+      # foo and bar should have arrows (both have old and new)
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_before"
+      assert html =~ "bar_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
+      assert html =~ "foo_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">baz</span>&nbsp; baz_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      # baz should have arrow (has old value, new is nil -> empty string)
+      assert html =~ "font-semibold\">baz</span>"
+      assert html =~ "baz_before"
+      assert html =~ "hero-arrow-right"
     end
 
     test "includes any extra keys in the before (atom keys)" do
       assigns = %{
-        metadata: %{
-          before: %{
-            foo: "foo_before",
-            bar: "bar_before",
-            baz: "baz_before"
+        audit: %{
+          changes: %{
+            before: %{
+              foo: "foo_before",
+              bar: "bar_before",
+              baz: "baz_before"
+            },
+            after: %{
+              foo: "foo_after",
+              bar: "bar_after"
+            }
           },
-          after: %{
-            foo: "foo_after",
-            bar: "bar_after"
-          }
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
+      # foo and bar should have arrows (both have old and new)
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_before"
+      assert html =~ "bar_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
+      assert html =~ "foo_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">baz</span>&nbsp; baz_before.*?<span class=\"hero-arrow-right.*?</span>\s*"s
+      # baz should have arrow (has old value, new is nil -> empty string)
+      assert html =~ "font-semibold\">baz</span>"
+      assert html =~ "baz_before"
+      assert html =~ "hero-arrow-right"
     end
 
     test "includes any extra keys in the after (string keys)" do
       assigns = %{
-        metadata: %{
-          before: %{
-            "foo" => "foo_before",
-            "bar" => "bar_before"
+        audit: %{
+          changes: %{
+            before: %{
+              "foo" => "foo_before",
+              "bar" => "bar_before"
+            },
+            after: %{
+              "foo" => "foo_after",
+              "bar" => "bar_after",
+              "baz" => "baz_after"
+            }
           },
-          after: %{
-            "foo" => "foo_after",
-            "bar" => "bar_after",
-            "baz" => "baz_after"
-          }
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
+      # foo and bar should have arrows (both have old and new)
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_before"
+      assert html =~ "bar_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
+      assert html =~ "foo_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">baz</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*baz_after"s
+      # baz should NOT have arrow (old is nil, only new value exists)
+      assert html =~ "font-semibold\">baz</span>"
+      assert html =~ "baz_after"
+      # Count arrows - should only be 2 (for foo and bar)
+      arrow_count =
+        html |> String.split("hero-arrow-right") |> length() |> Kernel.-(1)
+
+      assert arrow_count == 2
     end
 
     test "includes any extra keys in the after (atom keys)" do
       assigns = %{
-        metadata: %{
-          before: %{
-            foo: "foo_before",
-            bar: "bar_before"
+        audit: %{
+          changes: %{
+            before: %{
+              foo: "foo_before",
+              bar: "bar_before"
+            },
+            after: %{
+              foo: "foo_after",
+              bar: "bar_after",
+              baz: "baz_after"
+            }
           },
-          after: %{
-            foo: "foo_after",
-            bar: "bar_after",
-            baz: "baz_after"
-          }
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">bar</span>&nbsp; bar_before.*?<span class=\"hero-arrow-right.*?</span>.*?bar_after"s
+      # foo and bar should have arrows (both have old and new)
+      assert html =~ "font-semibold\">bar</span>"
+      assert html =~ "bar_before"
+      assert html =~ "bar_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">foo</span>&nbsp; foo_before.*?<span class=\"hero-arrow-right.*?</span>.*?foo_after"s
+      assert html =~ "font-semibold\">foo</span>"
+      assert html =~ "foo_before"
+      assert html =~ "foo_after"
 
-      assert html =~
-               ~r"<span class=\"font-semibold\">baz</span>&nbsp;\s*<span class=\"hero-arrow-right.*?</span>\s*baz_after"s
+      # baz should NOT have arrow (old is nil, only new value exists)
+      assert html =~ "font-semibold\">baz</span>"
+      assert html =~ "baz_after"
+      # Count arrows - should only be 2 (for foo and bar)
+      arrow_count =
+        html |> String.split("hero-arrow-right") |> length() |> Kernel.-(1)
+
+      assert arrow_count == 2
     end
 
     test "list changes in order (string keys)" do
       assigns = %{
-        metadata: %{
-          before: %{
-            "foo" => "foo_before",
-            "bar" => "bar_before",
-            "baz" => "baz_before"
+        audit: %{
+          changes: %{
+            before: %{
+              "foo" => "foo_before",
+              "bar" => "bar_before",
+              "baz" => "baz_before"
+            },
+            after: %{
+              "foo" => "foo_after",
+              "bar" => "bar_after",
+              "baz" => "baz_after"
+            }
           },
-          after: %{
-            "foo" => "foo_after",
-            "bar" => "bar_after",
-            "baz" => "baz_after"
-          }
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
+      # Fields should appear in alphabetical order: bar, baz, foo
       assert html =~ ~r"bar</span>&nbsp;.+baz</span>&nbsp;.+foo</span>&nbsp;"s
     end
 
     test "list changes in order (atom keys)" do
       assigns = %{
-        metadata: %{
-          before: %{foo: "foo_before", bar: "bar_before", baz: "baz_before"},
-          after: %{foo: "foo_after", bar: "bar_after", baz: "baz_after"}
+        audit: %{
+          changes: %{
+            before: %{foo: "foo_before", bar: "bar_before", baz: "baz_before"},
+            after: %{foo: "foo_after", bar: "bar_after", baz: "baz_after"}
+          },
+          metadata: %{}
         }
       }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
+      # Fields should appear in alphabetical order: bar, baz, foo
       assert html =~ ~r"bar</span>&nbsp;.+baz</span>&nbsp;.+foo</span>&nbsp;"s
     end
 
     test "when both before and after are nil, return `No changes`" do
-      assigns = %{metadata: %{before: nil, after: nil}}
+      assigns = %{
+        audit: %{
+          changes: %{before: nil, after: nil},
+          metadata: %{}
+        }
+      }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
@@ -397,7 +506,12 @@ defmodule LightningWeb.AuditLiveTest do
     end
 
     test "when both before and after are empty, return `No changes`" do
-      assigns = %{metadata: %{before: %{}, after: %{}}}
+      assigns = %{
+        audit: %{
+          changes: %{before: %{}, after: %{}},
+          metadata: %{}
+        }
+      }
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 

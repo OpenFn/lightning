@@ -89,27 +89,28 @@ defmodule Lightning.MetadataService do
         {:error, Error.new("no_credential")}
 
       {adaptor_path, %Credential{} = cred} ->
-        case Credentials.resolve_credential_body(cred, environment) do
-          {:ok, credential_body} ->
-            {:ok,
-             {adaptor_path,
-              %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
-
-          {:error, :environment_not_found} ->
-            {:error, Error.new("environment_not_found")}
-
-          {:error, :reauthorization_required} ->
-            {:error, Error.new("reauthorization_required")}
-
-          {:error, :temporary_failure} ->
-            {:error, Error.new("temporary_oauth_failure")}
-
-          {:error, _} ->
-            {:error, Error.new("credential_resolution_failed")}
-        end
+        resolve_and_assemble(adaptor_path, cred, environment)
 
       {_adaptor_path, %{}} ->
         {:error, Error.new("unsupported_credential")}
+    end
+  end
+
+  defp resolve_and_assemble(adaptor_path, credential, environment) do
+    case Credentials.resolve_credential_body(credential, environment) do
+      {:ok, credential_body} ->
+        {:ok,
+         {adaptor_path,
+          %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
+
+      {:error, :environment_not_found} ->
+        {:error, Error.new("environment_not_found")}
+
+      {:error, :reauthorization_required} ->
+        {:error, Error.new("reauthorization_required")}
+
+      {:error, :temporary_failure} ->
+        {:error, Error.new("temporary_oauth_failure")}
     end
   end
 

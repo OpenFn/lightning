@@ -4,11 +4,11 @@ defmodule LightningWeb.AuditLive.Index do
   """
   use LightningWeb, :live_view
 
+  import PetalComponents.Badge
+
   alias Lightning.Auditing
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
-
-  import PetalComponents.Badge
 
   @impl true
   def mount(_params, _session, socket) do
@@ -118,9 +118,14 @@ defmodule LightningWeb.AuditLive.Index do
           <%= for {field, old, new} <- @changes do %>
             <li class="mb-2 last:mb-0">
               <span class="font-semibold">{field}</span>&nbsp;
-              <span class="text-gray-600">{inspect(old)}</span>
-              <.icon name="hero-arrow-right" class="h-4 w-4 inline-block mx-2" />
-              <span class="text-gray-900">{inspect(new)}</span>
+              <%= if old != nil do %>
+                <span class="text-gray-500 line-through">{format_value(old)}</span>
+                <.icon
+                  name="hero-arrow-right"
+                  class="h-4 w-4 inline-block mx-2 text-gray-400"
+                />
+              <% end %>
+              <span class="text-gray-900">{format_value(new)}</span>
             </li>
           <% end %>
         </ul>
@@ -130,8 +135,7 @@ defmodule LightningWeb.AuditLive.Index do
         <ul class="p-2 bg-gray-50 rounded-md ring ring-gray-100">
           <%= for {env_name, encrypted_body} <- @env_bodies do %>
             <li class="mb-2 last:mb-0">
-              <span class="font-semibold">body:{env_name}</span>
-              <.icon name="hero-arrow-right" class="h-4 w-4 inline-block mx-2" />
+              <span class="font-semibold">body:{env_name}</span>&nbsp;
               <span class="text-gray-700 break-all">{encrypted_body}</span>
             </li>
           <% end %>
@@ -140,6 +144,9 @@ defmodule LightningWeb.AuditLive.Index do
     </.td>
     """
   end
+
+  defp format_value(nil), do: ""
+  defp format_value(value), do: value
 
   defp no_changes(assigns) do
     ~H"""

@@ -81,8 +81,11 @@ defmodule Lightning.Credentials.Resolver do
       nil ->
         {:error, :not_found}
 
-      {:error, reason} ->
-        {:error, reason}
+      {:error, :environment_not_configured} ->
+        {:error, {:environment_not_configured, nil}}
+
+      {:error, :project_not_found} ->
+        {:error, {:project_not_found, nil}}
     end
   end
 
