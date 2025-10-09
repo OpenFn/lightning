@@ -441,13 +441,11 @@ defmodule Lightning.Collaboration.Session do
   end
 
   defp deserialize_workflow(doc, workflow_id) do
-    try do
-      data = WorkflowSerializer.deserialize_from_ydoc(doc, workflow_id)
-      {:ok, data}
-    rescue
-      e ->
-        {:error, :deserialization_failed, Exception.message(e)}
-    end
+    data = WorkflowSerializer.deserialize_from_ydoc(doc, workflow_id)
+    {:ok, data}
+  rescue
+    e ->
+      {:error, :deserialization_failed, Exception.message(e)}
   end
 
   defp fetch_workflow(workflow_id) do
