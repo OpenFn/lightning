@@ -87,3 +87,4 @@ assets/test-results
 .tsimp
 
 .claude/settings.local.json
+test-results
