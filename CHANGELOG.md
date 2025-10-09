@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Add project merging functionality
+  [#3432](https://github.com/OpenFn/lightning/issues/3432)
+- SessionContextStore for collaborative workflow editor to provide user,
+  project, and config data to React components via Phoenix Channel
 - E2E test infrastructure with Page Object Models for workflow editor testing
 - E2E test for workflow step creation and configuration
 - Force restart and AdaptorRegistry warming on E2E manager script
