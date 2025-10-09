@@ -302,41 +302,41 @@ defmodule Lightning.Collaboration.Session do
 
   @impl true
   def handle_call({:save_workflow, user}, _from, state) do
-    Logger.info("Saving workflow #{state.workflow_id} for user #{user.id}")
+    Logger.info("Saving workflow #{state.workflow.id} for user #{user.id}")
 
     with {:ok, doc} <- get_document(state),
-         {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow_id),
-         {:ok, workflow} <- fetch_workflow(state.workflow_id),
+         {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow.id),
+         {:ok, workflow} <- fetch_workflow(state.workflow),
          changeset <-
            Lightning.Workflows.change_workflow(workflow, workflow_data),
          {:ok, saved_workflow} <-
            Lightning.Workflows.save_workflow(changeset, user,
              skip_reconcile: true
            ) do
-      Logger.info("Successfully saved workflow #{state.workflow_id}")
+      Logger.info("Successfully saved workflow #{state.workflow.id}")
       {:reply, {:ok, saved_workflow}, state}
     else
       {:error, :no_shared_doc} ->
-        Logger.error("Cannot save workflow #{state.workflow_id}: no shared doc")
+        Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
         {:reply, {:error, :internal_error}, state}
 
       {:error, :deserialization_failed, reason} ->
         Logger.error(
-          "Failed to deserialize workflow #{state.workflow_id}: #{inspect(reason)}"
+          "Failed to deserialize workflow #{state.workflow.id}: #{inspect(reason)}"
         )
 
         {:reply, {:error, :deserialization_failed}, state}
 
       {:error, :workflow_deleted} ->
         Logger.warning(
-          "Cannot save workflow #{state.workflow_id}: workflow deleted"
+          "Cannot save workflow #{state.workflow.id}: workflow deleted"
         )
 
         {:reply, {:error, :workflow_deleted}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         Logger.warning(
-          "Failed to save workflow #{state.workflow_id}: #{inspect(changeset.errors)}"
+          "Failed to save workflow #{state.workflow.id}: #{inspect(changeset.errors)}"
         )
 
         {:reply, {:error, changeset}, state}
@@ -345,22 +345,22 @@ defmodule Lightning.Collaboration.Session do
 
   @impl true
   def handle_call({:reset_workflow, user}, _from, state) do
-    Logger.info("Resetting workflow #{state.workflow_id} for user #{user.id}")
+    Logger.info("Resetting workflow #{state.workflow.id} for user #{user.id}")
 
-    with {:ok, workflow} <- fetch_workflow(state.workflow_id),
+    with {:ok, workflow} <- fetch_workflow(state.workflow),
          :ok <- clear_and_reset_doc(state, workflow) do
-      Logger.info("Successfully reset workflow #{state.workflow_id}")
+      Logger.info("Successfully reset workflow #{state.workflow.id}")
       {:reply, {:ok, workflow}, state}
     else
       {:error, :workflow_deleted} ->
         Logger.warning(
-          "Cannot reset workflow #{state.workflow_id}: workflow deleted"
+          "Cannot reset workflow #{state.workflow.id}: workflow deleted"
         )
 
         {:reply, {:error, :workflow_deleted}, state}
 
       {:error, :no_shared_doc} ->
-        Logger.error("Cannot reset workflow #{state.workflow_id}: no shared doc")
+        Logger.error("Cannot reset workflow #{state.workflow.id}: no shared doc")
         {:reply, {:error, :internal_error}, state}
     end
   end
@@ -438,8 +438,12 @@ defmodule Lightning.Collaboration.Session do
     end
   end
 
-  defp fetch_workflow(workflow_id) do
-    case Lightning.Workflows.get_workflow(workflow_id,
+  defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
+    {:ok, workflow}
+  end
+
+  defp fetch_workflow(workflow) do
+    case Lightning.Workflows.get_workflow(workflow.id,
            include: [:jobs, :edges, :triggers]
          ) do
       nil -> {:error, :workflow_deleted}
