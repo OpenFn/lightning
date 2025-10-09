@@ -18,9 +18,6 @@ import { WorkflowError } from '../../../yaml/workflow-errors';
 import { YAMLCodeEditor } from './YAMLCodeEditor';
 import { YAMLFileDropzone } from './YAMLFileDropzone';
 import { ValidationErrorDisplay } from './ValidationErrorDisplay';
-import { ImportConfirmationDialog } from './ImportConfirmationDialog';
-import { SuccessNotification } from './SuccessNotification';
-import { useRemoteUsers } from '../../hooks/useAwareness';
 
 /**
  * Import state machine:
@@ -43,12 +40,8 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
   const [errors, setErrors] = useState<WorkflowError[]>([]);
   const [importState, setImportState] = useState<ImportState>('initial');
   const [validatedState, setValidatedState] = useState<WorkflowState | null>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
-  const remoteUsers = useRemoteUsers();
-
-  // Debounced validation (300ms)
+  // Debounced validation and preview (300ms)
   const validateYAML = useCallback(
     pDebounce((content: string) => {
       if (!content.trim()) {
@@ -65,6 +58,9 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
         setValidatedState(state);
         setImportState('valid');
         setErrors([]);
+
+        // Automatically preview the workflow in the diagram
+        onImport(state);
       } catch (error) {
         if (error instanceof WorkflowError) {
           setErrors([error]);
@@ -76,7 +72,7 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
         setValidatedState(null);
       }
     }, 300),
-    []
+    [onImport]
   );
 
   const handleYAMLChange = (content: string) => {
@@ -90,38 +86,17 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
   };
 
   const handleImportClick = () => {
-    // Check if other users are editing
-    if (remoteUsers.length > 0) {
-      setShowConfirmDialog(true);
-    } else {
-      performImport();
+    if (!validatedState) {
+      return;
     }
-  };
 
-  const performImport = () => {
-    if (!validatedState) return;
+    // Close panel immediately
+    onClose();
 
-    setImportState('importing');
-    try {
-      onImport(validatedState);
-
-      // Show success notification
-      setShowSuccessNotification(true);
-
-      // Close panel after a brief delay to show success
-      setTimeout(() => {
-        onClose();
-        // Reset state after successful import
-        setYamlContent('');
-        setValidatedState(null);
-        setImportState('initial');
-      }, 500);
-    } catch (error) {
-      if (error instanceof WorkflowError) {
-        setErrors([error]);
-      }
-      setImportState('invalid');
-    }
+    // Reset state after closing
+    setYamlContent('');
+    setValidatedState(null);
+    setImportState('initial');
   };
 
   // Reset state when panel closes
@@ -131,8 +106,6 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
       setErrors([]);
       setImportState('initial');
       setValidatedState(null);
-      setShowConfirmDialog(false);
-      setShowSuccessNotification(false);
     }
   }, [isOpen]);
 
@@ -148,34 +121,17 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
     'Create';
 
   return (
-    <>
-      {/* Success Notification */}
-      {showSuccessNotification && (
-        <SuccessNotification
-          message="Workflow imported successfully"
-          onDismiss={() => setShowSuccessNotification(false)}
-        />
-      )}
-
-      <div
-        className={`absolute inset-y-0 left-0 w-1/3 transition-transform duration-300 ease-in-out z-10 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
-        }`}
-      >
+    <div
+      className={`absolute inset-y-0 left-0 w-1/3 transition-transform duration-300 ease-in-out z-10 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+      }`}
+    >
         <div className="pointer-events-auto w-full h-full flex flex-col bg-white border-r border-gray-200 shadow-xl">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+          <div className="flex items-center px-4 py-4 border-b border-gray-200">
             <h2 className="text-base font-semibold text-gray-900">
               Import Workflow from YAML
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              <span className="sr-only">Close panel</span>
-              <div className="hero-x-mark size-6" />
-            </button>
           </div>
 
           {/* Error Banner */}
@@ -221,7 +177,11 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
               type="button"
               onClick={handleImportClick}
               disabled={isButtonDisabled}
-              className="rounded-md bg-primary-300 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-x-1.5"
+              className={`rounded-md px-4 py-2 text-sm font-semibold shadow-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 inline-flex items-center gap-x-1.5 transition-colors ${
+                isButtonDisabled
+                  ? 'bg-primary-300 text-white opacity-50 cursor-not-allowed'
+                  : 'bg-primary-600 text-white hover:bg-primary-700 focus-visible:outline-primary-600'
+              }`}
             >
               {(importState === 'parsing' || importState === 'importing') && (
                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -234,17 +194,5 @@ export function YAMLImportPanel({ isOpen, onClose, onImport }: YAMLImportPanelPr
           </div>
         </div>
       </div>
-
-      {/* Confirmation Dialog */}
-      <ImportConfirmationDialog
-        isOpen={showConfirmDialog}
-        activeUsers={remoteUsers}
-        onConfirm={() => {
-          setShowConfirmDialog(false);
-          performImport();
-        }}
-        onCancel={() => setShowConfirmDialog(false)}
-      />
-    </>
   );
 }
