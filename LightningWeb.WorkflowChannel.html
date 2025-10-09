@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-C4E5BD0B.js"></script>
+    <script defer src="dist/sidebar_items-A4206761.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -121,6 +121,16 @@ transmission without JSON serialization.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#handle_in/3" data-no-tooltip="" translate="no">handle_in(binary, arg2, socket)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Handles explicit workflow save requests from the collaborative editor.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(triplet)</a>
 
       </div>
@@ -161,6 +171,30 @@ transmission without JSON serialization.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="handle_in/3">
+
+  <div class="detail-header">
+    <a href="#handle_in/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">handle_in(binary, arg2, socket)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/workflow_channel.ex#L66" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Handles explicit workflow save requests from the collaborative editor.</p><p>The save operation:</p><ol><li>Asks Session to extract and save the current Y.Doc state</li><li>Session handles all Y.Doc interaction internally</li><li>Returns success/error to the client</li></ol><p>Note: By the time this message is processed, all prior Y.js sync messages
+have been processed due to Phoenix Channel's synchronous per-socket handling.</p><p>Success response: {:ok, %{saved_at: DateTime, lock_version: integer}}
+Error response: {:error, %{errors: map, type: string}}</p>
   </section>
 </section>
 <section class="detail" id="start_link/1">
