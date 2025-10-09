@@ -15,8 +15,11 @@ import { useProject } from "./hooks/useSessionContext";
 export interface CollaborativeEditorDataProps {
   "data-workflow-id": string;
   "data-workflow-name": string;
-  "data-project-id"?: string;
+  "data-user-id": string;
+  "data-user-name": string;
+  "data-project-id": string;
   "data-project-name"?: string;
+  "data-is-new-workflow"?: string;
 }
 
 /**
@@ -103,14 +106,22 @@ export const CollaborativeEditor: WithActionProps<
   // Extract data from props (ReactComponent hook passes data attributes as props)
   const workflowId = props["data-workflow-id"];
   const workflowName = props["data-workflow-name"];
-  // Migration: Props are now fallbacks, sessionContextStore is primary source
+  const userId = props["data-user-id"];
+  const userName = props["data-user-name"];
   const projectId = props["data-project-id"];
   const projectName = props["data-project-name"];
+  const isNewWorkflow = props["data-is-new-workflow"] === "true";
 
   return (
     <div className="collaborative-editor h-full flex flex-col">
       <SocketProvider>
-        <SessionProvider workflowId={workflowId}>
+        <SessionProvider
+          workflowId={workflowId}
+          userId={userId}
+          userName={userName}
+          projectId={projectId}
+          isNewWorkflow={isNewWorkflow}
+        >
           <StoreProvider>
             <Toaster />
             <BreadcrumbContent
