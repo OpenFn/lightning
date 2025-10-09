@@ -26,12 +26,12 @@ defmodule Lightning.Collaboration.Session do
 
   require Logger
 
-  defstruct [:parent_pid, :parent_ref, :shared_doc_pid, :user, :workflow_id]
+  defstruct [:parent_pid, :parent_ref, :shared_doc_pid, :user, :workflow]
 
   @pg_scope :workflow_collaboration
 
   @type start_opts :: [
-          workflow_id: String.t(),
+          workflow: Lightning.Workflows.Workflow.t(),
           user: User.t(),
           parent_pid: pid()
         ]
@@ -43,7 +43,7 @@ defmodule Lightning.Collaboration.Session do
 
   ## Options
 
-  - `workflow_id` - The id of the workflow to start the session for.
+  - `workflow` - The workflow struct to start the session for.
   - `user` - The user to start the session for.
   - `parent_pid` - The pid of the parent process.
      Defaults to the current process.
@@ -83,11 +83,11 @@ defmodule Lightning.Collaboration.Session do
   @impl true
   def init(opts) do
     opts = Keyword.put_new_lazy(opts, :parent_pid, fn -> self() end)
-    workflow_id = Keyword.fetch!(opts, :workflow_id)
+    workflow = Keyword.fetch!(opts, :workflow)
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
 
-    Logger.info("Starting session for workflow #{workflow_id}")
+    Logger.info("Starting session for workflow #{workflow.id}")
 
     parent_ref = Process.monitor(parent_pid)
 
@@ -97,23 +97,23 @@ defmodule Lightning.Collaboration.Session do
       parent_ref: parent_ref,
       shared_doc_pid: nil,
       user: user,
-      workflow_id: workflow_id
+      workflow: workflow
     }
 
-    Registry.whereis({:shared_doc, "workflow:#{workflow_id}"})
+    Registry.whereis({:shared_doc, "workflow:#{workflow.id}"})
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}
 
       shared_doc_pid ->
         SharedDoc.observe(shared_doc_pid)
-        Logger.info("Joined SharedDoc for workflow #{workflow_id}")
+        Logger.info("Joined SharedDoc for workflow #{workflow.id}")
 
         # We track the user presence here so the the original WorkflowLive.Edit
         # can be stopped from editing the workflow when someone else is editing it.
         Presence.track_user_presence(
           user,
-          workflow_id,
+          workflow.id,
           self()
         )
 
@@ -133,7 +133,7 @@ defmodule Lightning.Collaboration.Session do
 
     Presence.untrack_user_presence(
       state.user,
-      state.workflow_id,
+      state.workflow.id,
       self()
     )
 
@@ -411,25 +411,13 @@ defmodule Lightning.Collaboration.Session do
 
   # ----------------------------------------------------------------------------
 
-  def initialize_workflow_document(doc, workflow_id) do
-    Logger.debug("Initializing SharedDoc with workflow data for #{workflow_id}")
-
-    # Fetch workflow from database
-    case Lightning.Workflows.get_workflow(workflow_id,
-           include: [:jobs, :edges, :triggers]
-         ) do
-      nil ->
-        # TODO: this should be an error, but we need to handle it gracefully
-        # in the frontend.
-        Logger.warning(
-          "Workflow #{workflow_id} not found, initializing empty document"
-        )
-
-        doc
-
-      workflow ->
-        WorkflowSerializer.serialize_to_ydoc(doc, workflow)
-    end
+  def initialize_workflow_document(
+        doc,
+        %Lightning.Workflows.Workflow{} = workflow
+      ) do
+    Logger.debug("Initializing SharedDoc with workflow data for #{workflow.id}")
+    workflow = Lightning.Repo.preload(workflow, [:jobs, :edges, :triggers])
+    WorkflowSerializer.serialize_to_ydoc(doc, workflow)
   end
 
   # Private helper functions

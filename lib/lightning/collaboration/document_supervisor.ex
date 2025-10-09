@@ -29,13 +29,13 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
 
   @impl true
   def init(opts) do
-    workflow_id = Keyword.fetch!(opts, :workflow_id)
-    document_name = "workflow:#{opts[:workflow_id]}"
+    workflow = Keyword.fetch!(opts, :workflow)
+    document_name = "workflow:#{workflow.id}"
 
     {:ok, persistence_writer_pid} =
       PersistenceWriter.start_link(
         document_name: document_name,
-        workflow_id: workflow_id,
+        workflow_id: workflow.id,
         name: via({:persistence_writer, document_name})
       )
 
@@ -49,20 +49,20 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
           persistence:
             {Persistence,
              %{
-               workflow_id: workflow_id,
+               workflow: workflow,
                persistence_writer: persistence_writer_pid
              }}
         ],
         name: via({:shared_doc, document_name})
       )
 
-    :ok = register_shared_doc_with_pg(workflow_id, shared_doc_pid)
+    :ok = register_shared_doc_with_pg(workflow.id, shared_doc_pid)
 
     shared_doc_ref = Process.monitor(shared_doc_pid)
 
     {:ok,
      %{
-       workflow_id: workflow_id,
+       workflow: workflow,
        persistence_writer_pid: persistence_writer_pid,
        persistence_writer_ref: persistence_writer_ref,
        shared_doc_pid: shared_doc_pid,
