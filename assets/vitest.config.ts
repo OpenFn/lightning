@@ -5,6 +5,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  define: {
+    // Match esbuild define from config/config.exs
+    // Disable DevTools in tests to avoid overhead
+    ENABLE_DEVTOOLS: false,
+  },
   test: {
     globals: true,
     environment: "jsdom",
