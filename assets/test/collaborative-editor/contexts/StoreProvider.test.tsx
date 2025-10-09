@@ -8,7 +8,7 @@
  * - Error handling
  */
 
-import { render, renderHook, waitFor } from "@testing-library/react";
+import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { useContext, type ReactNode } from "react";
 
@@ -18,6 +18,15 @@ import {
 } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import * as useSessionModule from "../../../js/collaborative-editor/hooks/useSession";
 import type { SessionState } from "../../../js/collaborative-editor/stores/createSessionStore";
+import {
+  createMockPhoenixChannel,
+  createMockPhoenixChannelProvider,
+} from "../mocks/phoenixChannel";
+import {
+  createMockUser,
+  mockPermissions,
+  createMockConfig,
+} from "../fixtures/sessionContextData";
 
 // =============================================================================
 // TEST SETUP & FIXTURES
@@ -205,7 +214,7 @@ describe("StoreProvider", () => {
   // ===========================================================================
 
   describe("awareness initialization", () => {
-    test("initializes awareness when ready, skips if already initialized or userData missing", async () => {
+    test("initializes awareness when ready, skips if already initialized or user missing", async () => {
       // Start without awareness
       mockUseSession.mockReturnValue(createMockSessionState());
 
@@ -213,24 +222,50 @@ describe("StoreProvider", () => {
         wrapper: StoreProvider,
       });
 
-      const awarenessStore = result.current!.awarenessStore;
+      const stores = result.current!;
+      const awarenessStore = stores.awarenessStore;
+      const sessionContextStore = stores.sessionContextStore;
       const initSpy = vi.spyOn(awarenessStore, "initializeAwareness");
 
-      // Provide awareness and userData - should initialize
-      const mockAwareness = createMockAwareness() as any;
-      const mockUserData = createMockUserData();
+      // Set up Phoenix Channel to populate sessionContextStore
+      const mockChannel = createMockPhoenixChannel();
+      const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+      sessionContextStore._connectChannel(mockProvider as any);
 
+      // Emit user data through channel
+      const mockUser = createMockUser({
+        id: "00000000-0000-4000-8000-000000000001",
+        first_name: "Test",
+        last_name: "User",
+      });
+
+      act(() => {
+        (mockChannel as any)._test.emit("session_context", {
+          user: mockUser,
+          project: null,
+          config: createMockConfig(),
+          permissions: mockPermissions,
+          latest_snapshot_lock_version: 1,
+        });
+      });
+
+      // Provide awareness - should initialize with user from sessionContextStore
+      const mockAwareness = createMockAwareness() as any;
       mockUseSession.mockReturnValue(
         createMockSessionState({
           awareness: mockAwareness,
-          userData: mockUserData,
         })
       );
 
       rerender();
 
+      // Verify awareness initialized with transformed user data
       await waitFor(() => {
-        expect(initSpy).toHaveBeenCalledWith(mockAwareness, mockUserData);
+        expect(initSpy).toHaveBeenCalledWith(mockAwareness, {
+          id: "00000000-0000-4000-8000-000000000001",
+          name: "Test User",
+          color: expect.any(String),
+        });
       });
 
       // Test skip when already ready
@@ -240,7 +275,6 @@ describe("StoreProvider", () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           awareness: createMockAwareness() as any,
-          userData: createMockUserData(),
         })
       );
 
