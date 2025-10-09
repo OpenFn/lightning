@@ -21,6 +21,7 @@ Before proposing changes, you:
 3. Identify minimal changes needed for requirements
 4. Consider impact on other collaborative editor components
 5. Use Grep/Glob to find similar implementations in the codebase
+6. When working on E2E tests, you MUST read `.claude/guidelines/e2e-testing.md`
 
 **Surgical Precision:**
 You make targeted improvements without expanding APIs beyond requirements. Every change serves a specific, well-defined purpose.

@@ -20,8 +20,6 @@ export const SessionContext = createContext<SessionStoreInstance | null>(null);
 
 interface SessionProviderProps {
   workflowId: string;
-  userId: string;
-  userName: string;
   projectId: string;
   isNewWorkflow: boolean;
   children: React.ReactNode;
@@ -29,8 +27,6 @@ interface SessionProviderProps {
 
 export const SessionProvider = ({
   workflowId,
-  userId,
-  userName,
   projectId,
   isNewWorkflow,
   children,
@@ -58,8 +54,8 @@ export const SessionProvider = ({
       connect: true,
       joinParams: {
         project_id: projectId,
-        action: isNewWorkflow ? "new" : "edit"
-      }
+        action: isNewWorkflow ? "new" : "edit",
+      },
     });
 
     // Testing helper to simulate a reconnect

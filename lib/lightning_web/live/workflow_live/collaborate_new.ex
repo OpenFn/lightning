@@ -54,8 +54,6 @@ defmodule LightningWeb.WorkflowLive.CollaborateNew do
       data-react-file={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
       data-workflow-id={@workflow_id}
       data-workflow-name={@workflow.name}
-      data-user-id={@user_id}
-      data-user-name={@current_user.first_name <> " " <> @current_user.last_name}
       data-project-id={@workflow.project_id}
       data-is-new-workflow="true"
     />

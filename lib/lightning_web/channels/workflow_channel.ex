@@ -42,7 +42,7 @@ defmodule LightningWeb.WorkflowChannel do
 
                 project_user =
                   Lightning.Projects.get_project_user(
-                    workflow.project,
+                    project,
                     user
                   )
 
@@ -106,12 +106,13 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in("get_context", _payload, socket) do
     user = socket.assigns[:current_user]
     workflow = socket.assigns.workflow
+    project = socket.assigns.project
     project_user = socket.assigns.project_user
 
     async_task(socket, "get_context", fn ->
       %{
         user: render_user_context(user),
-        project: render_project_context(workflow.project),
+        project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
         latest_snapshot_lock_version: workflow.lock_version

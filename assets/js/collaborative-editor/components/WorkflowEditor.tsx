@@ -17,14 +17,13 @@ import { Inspector } from "./inspector";
 import { YAMLImportPanel } from "./yaml-import";
 
 export function WorkflowEditor() {
-  const { hash } = useURLState();
+  const { hash, searchParams, updateSearchParams } = useURLState();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { currentNode, selectNode } = useNodeSelection();
   const { awareness } = useSession();
-  const { searchParams, updateSearchParams } = useURLState();
   const workflowStore = useWorkflowStoreContext();
 
-  const isImportOpen = searchParams.get('method') === 'import';
+  const isImportOpen = searchParams.get("method") === "import";
 
   // Construct full workflow object from state
   const workflow = useWorkflowState(state =>
@@ -50,7 +49,9 @@ export function WorkflowEditor() {
     updateSearchParams({ method: null });
   };
 
-  const handleImport = (workflowState: import('../../yaml/types').WorkflowState) => {
+  const handleImport = (
+    workflowState: import("../../yaml/types").WorkflowState
+  ) => {
     workflowStore.importWorkflow(workflowState);
   };
 
@@ -59,7 +60,7 @@ export function WorkflowEditor() {
       {/* Main content area - flex grows to fill remaining space */}
       <div
         className={`flex-1 relative transition-all duration-300 ease-in-out ${
-          isImportOpen ? 'ml-[33.333333%]' : 'ml-0'
+          isImportOpen ? "ml-[33.333333%]" : "ml-0"
         }`}
       >
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
@@ -67,16 +68,22 @@ export function WorkflowEditor() {
         {/* Inspector slides in from the right and appears on top
             This div is also the wrapper which is used to calculate the overlap
             between the inspector and the diagram.  */}
-        <div
-          id="inspector"
-          className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
-            currentNode.node
-              ? "translate-x-0"
-              : "translate-x-full pointer-events-none"
-          }`}
-        >
-          <Inspector currentNode={currentNode} onClose={handleCloseInspector} />
-        </div>
+        {workflow && (
+          <div
+            id="inspector"
+            className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
+              showInspector
+                ? "translate-x-0"
+                : "translate-x-full pointer-events-none"
+            }`}
+          >
+            <Inspector
+              workflow={workflow}
+              currentNode={currentNode}
+              onClose={handleCloseInspector}
+            />
+          </div>
+        )}
       </div>
 
       {/* Left Panel - YAML Import (absolute positioned, slides over) */}

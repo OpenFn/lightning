@@ -15,10 +15,10 @@ The format of the file should be:
 ```markdown
 # #<issue number>: <issue title>
 
-**Status:** <status>  
-**Created:** <created>  
-**Updated:** <updated>  
-**Assignee:** <assignee>  
+**Status:** <status>
+**Created:** <created>
+**Updated:** <updated>
+**Assignee:** <assignee>
 **Labels:** <label>,<label>
 
 <issue description>
