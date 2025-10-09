@@ -124,6 +124,7 @@ Lightning.Policies.Workflows.html
 Lightning.Projects.Audit.html
 Lightning.Projects.Events.html
 Lightning.Projects.File.html
+Lightning.Projects.MergeProjects.html
 Lightning.Projects.Project.html
 Lightning.Projects.ProjectCredential.html
 Lightning.Projects.ProjectOauthClient.html
@@ -416,8 +417,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-4D85FCDC.js
-dist/sidebar_items-7B34BF2A.js
+dist/search_data-6C4159F6.js
+dist/sidebar_items-C4E5BD0B.js
 index.html
 provisioning.html
 readme.html
