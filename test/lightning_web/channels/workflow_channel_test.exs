@@ -27,7 +27,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       |> socket("user_#{user.id}", %{current_user: user})
       |> subscribe_and_join(
         LightningWeb.WorkflowChannel,
-        "workflow:collaborate:#{workflow.id}"
+        "workflow:collaborate:#{workflow.id}",
+        %{"project_id" => project.id, "action" => "edit"}
       )
 
     on_exit(fn ->
@@ -38,7 +39,7 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "join authorization" do
-    test "rejects unauthorized users", %{workflow: workflow} do
+    test "rejects unauthorized users", %{workflow: workflow, project: project} do
       unauthorized_user = insert(:user)
 
       assert {:error, %{reason: "unauthorized"}} =
@@ -48,18 +49,22 @@ defmodule LightningWeb.WorkflowChannelTest do
                })
                |> subscribe_and_join(
                  LightningWeb.WorkflowChannel,
-                 "workflow:collaborate:#{workflow.id}"
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "edit"}
                )
     end
 
     test "accepts authorized users with proper assigns", %{
       socket: socket,
-      workflow: workflow
+      workflow: workflow,
+      project: project
     } do
       assert %{workflow: socket_workflow} = socket.assigns
       assert socket_workflow.id == workflow.id
       assert %{workflow_id: workflow_id} = socket.assigns
       assert workflow_id == workflow.id
+      assert %{project: socket_project} = socket.assigns
+      assert socket_project.id == project.id
       assert %{session_pid: session_pid} = socket.assigns
       assert is_pid(session_pid)
     end
