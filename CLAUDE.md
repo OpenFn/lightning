@@ -227,8 +227,11 @@ When working with the collaborative editor stores (creating, modifying, or debug
 - E2E: Use Playwright tests (`npm run test:e2e` in assets/)
 - E2E environment managed by `bin/e2e` script
 - Test database: `lightning_test` (automatically created/migrated by mix test)
-- **See `.claude/guidelines/testing-essentials.md`** for comprehensive testing
-  guidelines and best practices
+- **See `.claude/guidelines/testing-essentials.md`** for comprehensive unit
+  testing guidelines and best practices
+- **See `.claude/guidelines/e2e-testing.md`** for comprehensive E2E testing
+  guidelines with Playwright, Phoenix LiveView patterns, and collaborative
+  feature testing
 
 ### Code Quality Standards
 
