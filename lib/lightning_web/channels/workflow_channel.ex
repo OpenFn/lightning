@@ -11,6 +11,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects.ProjectCredential
 
   require Logger
@@ -29,7 +30,7 @@ defmodule LightningWeb.WorkflowChannel do
             {:error, %{reason: "workflow not found"}}
 
           workflow ->
-            case Lightning.Policies.Permissions.can(
+            case Permissions.can(
                    :workflows,
                    :access_read,
                    user,
@@ -383,7 +384,7 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp render_permissions(user, project_user) do
     can_edit =
-      Lightning.Policies.Permissions.can?(
+      Permissions.can?(
         :project_users,
         :edit_workflow,
         user,
