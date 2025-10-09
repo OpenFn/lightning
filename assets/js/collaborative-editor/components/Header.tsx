@@ -119,15 +119,23 @@ export function Header({
           <Breadcrumbs>{children}</Breadcrumbs>
 
           {projectId && workflowId && (
-            <a
-              href={`/projects/${projectId}/w/${workflowId}`}
-              className="inline-flex items-center justify-center
+            <>
+              <a
+                href={`/projects/${projectId}/w/${workflowId}`}
+                className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-4"
-              title="Switch to standard editor"
-            >
-              <span className="hero-beaker h-4 w-4" />
-            </a>
+              >
+                <Tooltip
+                  content={
+                    "You're using the new editor — click to switch back."
+                  }
+                  side="bottom"
+                >
+                  <span className="hero-beaker-solid h-4 w-4" />
+                </Tooltip>
+              </a>
+            </>
           )}
 
           <div className="grow"></div>
