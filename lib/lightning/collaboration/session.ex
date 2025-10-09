@@ -20,6 +20,7 @@ defmodule Lightning.Collaboration.Session do
 
   alias Lightning.Accounts.User
   alias Lightning.Collaboration.Registry
+  alias Lightning.Collaboration.WorkflowSerializer
   alias Lightning.Workflows.Presence
   alias Yex.Sync.SharedDoc
 
@@ -173,6 +174,82 @@ defmodule Lightning.Collaboration.Session do
     GenServer.call(session_pid, {:send_yjs_message, chunk})
   end
 
+  @doc """
+  Saves the current workflow state from the Y.Doc to the database.
+
+  This function:
+  1. Extracts the current workflow data from the SharedDoc's Y.Doc
+  2. Converts Y.js types to Elixir maps suitable for Ecto
+  3. Calls Lightning.Workflows.save_workflow/3 for validation and persistence
+  4. Returns the saved workflow
+
+  Note: This assumes all Y.js updates have been processed before this call,
+  which is guaranteed by Phoenix Channel's synchronous message handling.
+
+  ## Parameters
+  - `session_pid`: The Session process PID
+  - `user`: The user performing the save (for authorization and auditing)
+
+  ## Returns
+  - `{:ok, workflow}` - Successfully saved
+  - `{:error, :workflow_deleted}` - Workflow has been deleted
+  - `{:error, changeset}` - Validation or persistence error
+
+  ## Examples
+
+      iex> Session.save_workflow(session_pid, user)
+      {:ok, %Workflow{}}
+
+      iex> Session.save_workflow(session_pid, user)
+      {:error, %Ecto.Changeset{}}
+  """
+  @spec save_workflow(pid(), Lightning.Accounts.User.t()) ::
+          {:ok, Lightning.Workflows.Workflow.t()}
+          | {:error,
+             :workflow_deleted
+             | :deserialization_failed
+             | :internal_error
+             | Ecto.Changeset.t()}
+  def save_workflow(session_pid, user) do
+    GenServer.call(session_pid, {:save_workflow, user}, 10_000)
+  end
+
+  @doc """
+  Resets the workflow document to the latest snapshot from the database.
+
+  This operation:
+  1. Fetches the latest workflow from the database
+  2. Clears all Y.Doc collections (jobs, edges, triggers arrays)
+  3. Re-serializes the workflow to the Y.Doc
+  4. Broadcasts updates to all connected clients via SharedDoc
+
+  All collaborative editing history in the Y.Doc is preserved (operation log),
+  but the document content is replaced with the database state.
+
+  ## Parameters
+  - `session_pid`: The Session process PID
+  - `user`: The user performing the reset (for authorization logging)
+
+  ## Returns
+  - `{:ok, workflow}` - Successfully reset with updated workflow
+  - `{:error, :workflow_deleted}` - Workflow has been deleted from database
+  - `{:error, :internal_error}` - SharedDoc not available
+
+  ## Examples
+
+      iex> Session.reset_workflow(session_pid, user)
+      {:ok, %Workflow{lock_version: 5}}
+
+      iex> Session.reset_workflow(session_pid, user)
+      {:error, :workflow_deleted}
+  """
+  @spec reset_workflow(pid(), Lightning.Accounts.User.t()) ::
+          {:ok, Lightning.Workflows.Workflow.t()}
+          | {:error, :workflow_deleted | :internal_error}
+  def reset_workflow(session_pid, user) do
+    GenServer.call(session_pid, {:reset_workflow, user}, 10_000)
+  end
+
   # ----------------------------------------------------------------------------
 
   @impl true
@@ -221,6 +298,71 @@ defmodule Lightning.Collaboration.Session do
     Logger.debug({:start_sync, from} |> inspect)
     SharedDoc.start_sync(shared_doc_pid, chunk)
     {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:save_workflow, user}, _from, state) do
+    Logger.info("Saving workflow #{state.workflow_id} for user #{user.id}")
+
+    with {:ok, doc} <- get_document(state),
+         {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow_id),
+         {:ok, workflow} <- fetch_workflow(state.workflow_id),
+         changeset <-
+           Lightning.Workflows.change_workflow(workflow, workflow_data),
+         {:ok, saved_workflow} <-
+           Lightning.Workflows.save_workflow(changeset, user,
+             skip_reconcile: true
+           ) do
+      Logger.info("Successfully saved workflow #{state.workflow_id}")
+      {:reply, {:ok, saved_workflow}, state}
+    else
+      {:error, :no_shared_doc} ->
+        Logger.error("Cannot save workflow #{state.workflow_id}: no shared doc")
+        {:reply, {:error, :internal_error}, state}
+
+      {:error, :deserialization_failed, reason} ->
+        Logger.error(
+          "Failed to deserialize workflow #{state.workflow_id}: #{inspect(reason)}"
+        )
+
+        {:reply, {:error, :deserialization_failed}, state}
+
+      {:error, :workflow_deleted} ->
+        Logger.warning(
+          "Cannot save workflow #{state.workflow_id}: workflow deleted"
+        )
+
+        {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        Logger.warning(
+          "Failed to save workflow #{state.workflow_id}: #{inspect(changeset.errors)}"
+        )
+
+        {:reply, {:error, changeset}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:reset_workflow, user}, _from, state) do
+    Logger.info("Resetting workflow #{state.workflow_id} for user #{user.id}")
+
+    with {:ok, workflow} <- fetch_workflow(state.workflow_id),
+         :ok <- clear_and_reset_doc(state, workflow) do
+      Logger.info("Successfully reset workflow #{state.workflow_id}")
+      {:reply, {:ok, workflow}, state}
+    else
+      {:error, :workflow_deleted} ->
+        Logger.warning(
+          "Cannot reset workflow #{state.workflow_id}: workflow deleted"
+        )
+
+        {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, :no_shared_doc} ->
+        Logger.error("Cannot reset workflow #{state.workflow_id}: no shared doc")
+        {:reply, {:error, :internal_error}, state}
+    end
   end
 
   # Comes from the SharedDoc, for changes coming from the SharedDoc
@@ -286,85 +428,70 @@ defmodule Lightning.Collaboration.Session do
         doc
 
       workflow ->
-        initialize_workflow_data(doc, workflow)
+        WorkflowSerializer.serialize_to_ydoc(doc, workflow)
     end
   end
 
-  defp initialize_workflow_data(doc, workflow) do
-    # Get Yex objects BEFORE transaction to avoid hanging the VM
-    workflow_map = Yex.Doc.get_map(doc, "workflow")
-    jobs_array = Yex.Doc.get_array(doc, "jobs")
-    edges_array = Yex.Doc.get_array(doc, "edges")
-    triggers_array = Yex.Doc.get_array(doc, "triggers")
-    positions = Yex.Doc.get_map(doc, "positions")
+  # Private helper functions
 
-    Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
-      # Set workflow properties
-      Yex.Map.set(workflow_map, "id", workflow.id)
-      Yex.Map.set(workflow_map, "name", workflow.name || "")
+  defp get_document(%{shared_doc_pid: nil}), do: {:error, :no_shared_doc}
 
-      initialize_jobs(jobs_array, workflow.jobs)
-      initialize_edges(edges_array, workflow.edges)
-      initialize_triggers(triggers_array, workflow.triggers)
-      initialize_positions(positions, workflow.positions)
-    end)
-
-    doc
+  defp get_document(%{shared_doc_pid: pid}) do
+    {:ok, SharedDoc.get_doc(pid)}
   end
 
-  defp initialize_jobs(jobs_array, jobs) do
-    Enum.each(jobs || [], fn job ->
-      job_map =
-        Yex.MapPrelim.from(%{
-          "id" => job.id,
-          "name" => job.name || "",
-          "body" => Yex.TextPrelim.from(job.body || ""),
-          "adaptor" => job.adaptor,
-          "project_credential_id" => job.project_credential_id,
-          "keychain_credential_id" => job.keychain_credential_id
-        })
-
-      Yex.Array.push(jobs_array, job_map)
-    end)
+  defp deserialize_workflow(doc, workflow_id) do
+    data = WorkflowSerializer.deserialize_from_ydoc(doc, workflow_id)
+    {:ok, data}
+  rescue
+    e ->
+      {:error, :deserialization_failed, Exception.message(e)}
   end
 
-  defp initialize_edges(edges_array, edges) do
-    Enum.each(edges || [], fn edge ->
-      edge_map =
-        Yex.MapPrelim.from(%{
-          "condition_expression" => edge.condition_expression,
-          "condition_label" => edge.condition_label,
-          "condition_type" => edge.condition_type |> to_string(),
-          "enabled" => edge.enabled,
-          # "errors" => edge.errors,
-          "id" => edge.id,
-          "source_job_id" => edge.source_job_id,
-          "source_trigger_id" => edge.source_trigger_id,
-          "target_job_id" => edge.target_job_id
-        })
-
-      Yex.Array.push(edges_array, edge_map)
-    end)
+  defp fetch_workflow(workflow_id) do
+    case Lightning.Workflows.get_workflow(workflow_id,
+           include: [:jobs, :edges, :triggers]
+         ) do
+      nil -> {:error, :workflow_deleted}
+      workflow -> {:ok, workflow}
+    end
   end
 
-  defp initialize_triggers(triggers_array, triggers) do
-    Enum.each(triggers || [], fn trigger ->
-      trigger_map =
-        Yex.MapPrelim.from(%{
-          "cron_expression" => trigger.cron_expression,
-          "enabled" => trigger.enabled,
-          "has_auth_method" => trigger.has_auth_method,
-          "id" => trigger.id,
-          "type" => trigger.type |> to_string()
-        })
+  defp clear_and_reset_doc(%{shared_doc_pid: nil}, _workflow),
+    do: {:error, :no_shared_doc}
 
-      Yex.Array.push(triggers_array, trigger_map)
+  defp clear_and_reset_doc(%{shared_doc_pid: shared_doc_pid}, workflow) do
+    SharedDoc.update_doc(shared_doc_pid, fn doc ->
+      # Get all Yex collections BEFORE transaction (critical for avoiding VM
+      # deadlock)
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+      edges_array = Yex.Doc.get_array(doc, "edges")
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      # Transaction 1: Clear all arrays
+      Yex.Doc.transaction(doc, "clear_workflow", fn ->
+        clear_array(jobs_array)
+        clear_array(edges_array)
+        clear_array(triggers_array)
+      end)
+
+      # Transaction 2: Re-serialize workflow (WorkflowSerializer does its own
+      # transaction)
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
     end)
+
+    :ok
+  rescue
+    error ->
+      Logger.error("Error in clear_and_reset_doc: #{inspect(error)}")
+      {:error, :internal_error}
   end
 
-  defp initialize_positions(positions, workflow_positions) do
-    Enum.each(workflow_positions || [], fn {id, position} ->
-      Yex.Map.set(positions, id, position)
-    end)
+  defp clear_array(array) do
+    length = Yex.Array.length(array)
+
+    if length > 0 do
+      Yex.Array.delete_range(array, 0, length)
+    end
   end
 end

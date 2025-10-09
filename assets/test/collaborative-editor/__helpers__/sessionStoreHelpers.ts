@@ -15,6 +15,7 @@
 
 import { Doc as YDoc, applyUpdate, encodeStateAsUpdate } from "yjs";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { expect } from "vitest";
 
 import type { SessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
 import type { SessionState } from "../../../js/collaborative-editor/stores/createSessionStore";
@@ -323,4 +324,29 @@ export function simulateRemoteUserLeave(
     { added: [], updated: [], removed: [clientId] },
     "local",
   ]);
+}
+
+/**
+ * Asserts that awareness is "clean" (userData in state, not in awareness)
+ *
+ * This helper verifies the key invariant: userData is stored in session state
+ * instead of awareness local state. This prevents userData from being broadcast
+ * to other clients.
+ *
+ * @param state - The session state to check
+ * @param expectedUserData - Expected userData value (or null)
+ *
+ * @example
+ * const state = store.getSnapshot();
+ * assertCleanAwareness(state, { id: "user-1", name: "Test", color: "#ff0000" });
+ */
+export function assertCleanAwareness(
+  state: SessionState,
+  expectedUserData: { id: string; name: string; color: string } | null
+): void {
+  expect(state.userData).toEqual(expectedUserData);
+  if (expectedUserData) {
+    const awarenessUserData = state.awareness?.getLocalState()?.user;
+    expect(awarenessUserData).toBe(undefined);
+  }
 }

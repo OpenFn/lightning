@@ -42,6 +42,8 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
   waitForCondition,
+  createSuccessfulMockPush,
+  createErrorMockPush,
 } from "./mocks/phoenixChannel.js";
 import type {
   MockPhoenixChannel,
@@ -89,6 +91,18 @@ const adaptorTest = test.extend<AdaptorTestFixtures>({
     cleanup();
   },
 });
+
+// Helper to create expected sorted adaptors (alphabetically by name, versions descending)
+function getSortedAdaptors(adaptors: any[]) {
+  return [...adaptors]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(adaptor => ({
+      ...adaptor,
+      versions: [...adaptor.versions].sort((a, b) =>
+        b.version.localeCompare(a.version)
+      ),
+    }));
+}
 
 describe("createAdaptorStore", () => {
   describe("initialization", () => {
@@ -183,189 +197,89 @@ describe("createAdaptorStore", () => {
   });
 
   describe("state management", () => {
-    describe("loading state", () => {
-      test("setLoading updates loading state and notifies subscribers", () => {
-        const store = createAdaptorStore();
-        let notificationCount = 0;
+    test("handles state transitions for loading, error, and data correctly", () => {
+      const store = createAdaptorStore();
+      let notificationCount = 0;
 
-        store.subscribe(() => {
-          notificationCount++;
-        });
-
-        store.setLoading(true);
-        expect(store.getSnapshot().isLoading).toBe(true);
-
-        store.setLoading(false);
-        expect(store.getSnapshot().isLoading).toBe(false);
-        // Should notify subscribers on each state change
-        expect(notificationCount).toBe(2);
-      });
-    });
-
-    describe("error state", () => {
-      test("setError updates error state and sets loading to false", () => {
-        const store = createAdaptorStore();
-        store.setLoading(true);
-
-        const errorMessage = "Test error message";
-        store.setError(errorMessage);
-
-        const state = store.getSnapshot();
-        expect(state.error).toBe(errorMessage);
-        // Setting error should clear loading state
-        expect(state.isLoading).toBe(false);
+      store.subscribe(() => {
+        notificationCount++;
       });
 
-      test("clearError removes error state", () => {
-        const store = createAdaptorStore();
-        store.setError("Test error");
+      // Test loading state transitions
+      store.setLoading(true);
+      expect(store.getSnapshot().isLoading).toBe(true);
+      expect(notificationCount).toBe(1);
 
-        store.clearError();
-        expect(store.getSnapshot().error).toBeNull();
-      });
-    });
+      store.setLoading(false);
+      expect(store.getSnapshot().isLoading).toBe(false);
+      expect(notificationCount).toBe(2);
 
-    describe("adaptors state", () => {
-      test("setAdaptors updates adaptors list and metadata", () => {
-        const store = createAdaptorStore();
-        const timestamp = Date.now();
+      // Test error state transitions
+      store.setLoading(true);
+      const errorMessage = "Test error message";
+      store.setError(errorMessage);
+      let state = store.getSnapshot();
+      expect(state.error).toBe(errorMessage);
+      expect(state.isLoading).toBe(false); // Setting error clears loading
 
-        store.setAdaptors(mockAdaptorsList);
+      store.clearError();
+      expect(store.getSnapshot().error).toBeNull();
 
-        const state = store.getSnapshot();
-        expect(state.adaptors).toEqual(mockAdaptorsList);
-        expect(state.error).toBeNull();
-        expect(state.lastUpdated).toBeGreaterThanOrEqual(timestamp);
-      });
+      // Test adaptors state updates
+      const timestamp = Date.now();
+      store.setAdaptors(mockAdaptorsList);
+      state = store.getSnapshot();
+      expect(state.adaptors).toEqual(mockAdaptorsList);
+      expect(state.error).toBeNull();
+      expect(state.lastUpdated).toBeGreaterThanOrEqual(timestamp);
 
-      test("maintains state consistency during rapid updates", () => {
-        const store = createAdaptorStore();
-        let notificationCount = 0;
+      // Test rapid state updates maintain consistency
+      store.setLoading(true);
+      store.setError("error 1");
+      store.clearError();
+      store.setAdaptors(mockAdaptorsList);
+      store.setLoading(false);
+      store.setError("error 2");
+      store.clearError();
 
-        store.subscribe(() => {
-          notificationCount++;
-        });
-
-        // Perform rapid state updates
-        store.setLoading(true);
-        store.setError("error 1");
-        store.clearError();
-        store.setAdaptors(mockAdaptorsList);
-        store.setLoading(false);
-        store.setError("error 2");
-        store.clearError();
-
-        // Each operation should trigger exactly one notification
-        expect(notificationCount).toBe(7);
-
-        // Final state should be consistent
-        const finalState = store.getSnapshot();
-        expect(finalState.adaptors).toEqual(mockAdaptorsList);
-        expect(finalState.isLoading).toBe(false);
-        expect(finalState.error).toBeNull();
-        expect(finalState.lastUpdated).toBeGreaterThan(0);
-      });
+      // Final state should be consistent
+      const finalState = store.getSnapshot();
+      expect(finalState.adaptors).toEqual(mockAdaptorsList);
+      expect(finalState.isLoading).toBe(false);
+      expect(finalState.error).toBeNull();
+      expect(finalState.lastUpdated).toBeGreaterThan(0);
     });
   });
 
   describe("Phoenix channel integration", () => {
     describe("requestAdaptors", () => {
       adaptorTest(
-        "processes valid data correctly via channel",
-        async ({ store, mockChannel, mockProvider }) => {
-          let _notificationCount = 0;
+        "processes valid and invalid data via channel",
+        async ({ mockChannel, mockProvider }) => {
+          // Test successful response with valid data
+          const store1 = createAdaptorStore();
+          mockChannel.push = createSuccessfulMockPush(mockAdaptorsList);
+          store1._connectChannel(mockProvider as any);
+          await store1.requestAdaptors();
 
-          store.subscribe(() => {
-            _notificationCount++;
-          });
+          let state = store1.getSnapshot();
+          const expectedSortedAdaptors = getSortedAdaptors(mockAdaptorsList);
 
-          // Set up the channel with successful response containing mockAdaptorsList
-          mockChannel.push = (event: string, _payload: unknown) => {
-            const mockPush = {
-              receive: (
-                status: string,
-                callback: (response?: unknown) => void
-              ) => {
-                if (event === "request_adaptors" && status === "ok") {
-                  setTimeout(() => {
-                    callback({ adaptors: mockAdaptorsList });
-                  }, 0);
-                } else if (status === "error") {
-                  setTimeout(() => {
-                    callback({ reason: "Error" });
-                  }, 0);
-                } else if (status === "timeout") {
-                  setTimeout(() => {
-                    callback();
-                  }, 0);
-                }
-                return mockPush;
-              },
-            };
-
-            return mockPush;
-          };
-
-          // Connect channel and request adaptors
-          store._connectChannel(mockProvider as any);
-          await store.requestAdaptors();
-
-          const state = store.getSnapshot();
-
-          // The adaptors should be sorted alphabetically by name
-          const expectedSortedAdaptors = [...mockAdaptorsList]
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(adaptor => ({
-              ...adaptor,
-              versions: [...adaptor.versions].sort((a, b) =>
-                b.version.localeCompare(a.version)
-              ),
-            }));
-
-          // Adaptors should be sorted alphabetically with versions descending
           expect(state.adaptors).toEqual(expectedSortedAdaptors);
           expect(state.isLoading).toBe(false);
           expect(state.error).toBeNull();
           expect(state.lastUpdated).toBeGreaterThan(0);
-        }
-      );
+          expect(state.adaptors).toHaveLength(mockAdaptorsList.length);
 
-      adaptorTest(
-        "handles invalid data gracefully via channel",
-        async ({ store, mockChannel, mockProvider }) => {
-          // Set up the channel with response containing invalid data
-          mockChannel.push = (event: string, _payload: unknown) => {
-            const mockPush = {
-              receive: (
-                status: string,
-                callback: (response?: unknown) => void
-              ) => {
-                if (event === "request_adaptors" && status === "ok") {
-                  setTimeout(() => {
-                    // Return invalid adaptors data (missing required name field)
-                    callback({ adaptors: [invalidAdaptorData.missingName] });
-                  }, 0);
-                } else if (status === "error") {
-                  setTimeout(() => {
-                    callback({ reason: "Error" });
-                  }, 0);
-                } else if (status === "timeout") {
-                  setTimeout(() => {
-                    callback();
-                  }, 0);
-                }
-                return mockPush;
-              },
-            };
+          // Test invalid data handling with fresh store
+          const store2 = createAdaptorStore();
+          mockChannel.push = createSuccessfulMockPush([
+            invalidAdaptorData.missingName,
+          ]);
+          store2._connectChannel(mockProvider as any);
+          await store2.requestAdaptors();
 
-            return mockPush;
-          };
-
-          // Connect channel and request adaptors
-          store._connectChannel(mockProvider as any);
-          await store.requestAdaptors();
-
-          const state = store.getSnapshot();
+          state = store2.getSnapshot();
           expect(state.adaptors).toHaveLength(0);
           expect(state.isLoading).toBe(false);
           expect(state.error).toContain("Invalid adaptors data");
@@ -373,216 +287,49 @@ describe("createAdaptorStore", () => {
       );
 
       adaptorTest(
-        "handles successful response",
+        "handles error response and no connection",
         async ({ store, mockChannel, mockProvider }) => {
-          // Set up the channel with successful response
-          mockChannel.push = (event: string, _payload: unknown) => {
-            const mockPush = {
-              receive: (
-                status: string,
-                callback: (response?: unknown) => void
-              ) => {
-                if (event === "request_adaptors" && status === "ok") {
-                  setTimeout(() => {
-                    callback({ adaptors: mockAdaptorsList });
-                  }, 0);
-                } else if (status === "error") {
-                  setTimeout(() => {
-                    callback({ reason: "Error" });
-                  }, 0);
-                } else if (status === "timeout") {
-                  setTimeout(() => {
-                    callback();
-                  }, 0);
-                }
-                return mockPush;
-              },
-            };
-
-            return mockPush;
-          };
-
-          // Connect channel
+          // Test error response
+          mockChannel.push = createErrorMockPush("Server error");
           store._connectChannel(mockProvider as any);
-
-          // Request adaptors
           await store.requestAdaptors();
 
-          const state = store.getSnapshot();
-          expect(state.adaptors).toHaveLength(mockAdaptorsList.length);
-          expect(state.error).toBeNull();
-          expect(state.isLoading).toBe(false);
-        }
-      );
-
-      adaptorTest(
-        "handles error response",
-        async ({ store, mockChannel, mockProvider }) => {
-          // Set up the channel with error response
-          mockChannel.push = (event: string, _payload: unknown) => {
-            const mockPush = {
-              receive: (
-                status: string,
-                callback: (response?: unknown) => void
-              ) => {
-                if (event === "request_adaptors" && status === "error") {
-                  setTimeout(() => {
-                    callback({ reason: "Server error" });
-                  }, 0);
-                } else if (status === "ok") {
-                  // Do nothing for ok status in error test
-                } else if (status === "timeout") {
-                  setTimeout(() => {
-                    callback();
-                  }, 0);
-                }
-                return mockPush;
-              },
-            };
-
-            return mockPush;
-          };
-
-          // Connect channel
-          store._connectChannel(mockProvider as any);
-
-          // Request adaptors (should fail)
-          await store.requestAdaptors();
-
-          const state = store.getSnapshot();
+          let state = store.getSnapshot();
           expect(state.adaptors).toHaveLength(0);
           expect(state.error).toContain("Failed to request adaptors");
           expect(state.isLoading).toBe(false);
-        }
-      );
 
-      test("handles no channel connection", async () => {
-        const store = createAdaptorStore();
+          // Test no channel connection
+          const storeWithoutChannel = createAdaptorStore();
+          await storeWithoutChannel.requestAdaptors();
 
-        await store.requestAdaptors();
-
-        const state = store.getSnapshot();
-        expect(state.error).toContain("No connection available");
-        expect(state.isLoading).toBe(false);
-      });
-    });
-
-    describe("channel events", () => {
-      adaptorTest(
-        "processes adaptors_updated events correctly",
-        async ({ store, mockChannel, mockProvider }) => {
-          // Set up the initial channel response for request_adaptors
-          mockChannel.push = (event: string, _payload: unknown) => {
-            const mockPush = {
-              receive: (
-                status: string,
-                callback: (response?: unknown) => void
-              ) => {
-                if (event === "request_adaptors" && status === "ok") {
-                  setTimeout(() => {
-                    callback({ adaptors: [] }); // Start with empty adaptors
-                  }, 0);
-                } else if (status === "error") {
-                  setTimeout(() => {
-                    callback({ reason: "Error" });
-                  }, 0);
-                } else if (status === "timeout") {
-                  setTimeout(() => {
-                    callback();
-                  }, 0);
-                }
-                return mockPush;
-              },
-            };
-
-            return mockPush;
-          };
-
-          // Connect to channel
-          const cleanup = store._connectChannel(mockProvider as any);
-
-          // Simulate adaptors_updated event from server
-          const mockChannelWithTest = mockChannel as typeof mockChannel & {
-            _test: { emit: (event: string, message: unknown) => void };
-          };
-          mockChannelWithTest._test.emit("adaptors_updated", mockAdaptorsList);
-
-          // Wait for the store to process the update
-          await waitForCondition(() => store.getSnapshot().adaptors.length > 0);
-
-          const state = store.getSnapshot();
-
-          // Should be sorted same as requestAdaptors
-          const expectedSortedAdaptors = [...mockAdaptorsList]
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(adaptor => ({
-              ...adaptor,
-              versions: [...adaptor.versions].sort((a, b) =>
-                b.version.localeCompare(a.version)
-              ),
-            }));
-
-          expect(state.adaptors).toEqual(expectedSortedAdaptors); // "Should process update same as received"
-
-          // Cleanup
-          cleanup();
+          state = storeWithoutChannel.getSnapshot();
+          expect(state.error).toContain("No connection available");
+          expect(state.isLoading).toBe(false);
         }
       );
     });
 
-    describe("connectChannel", () => {
+    describe("channel connection and events", () => {
       adaptorTest(
-        "sets up event listeners and requests adaptors",
+        "connects channel, loads adaptors, and processes real-time updates",
         async ({ store, mockChannel, mockProvider }) => {
-          // Mock the channel push method to simulate successful response
-          mockChannel.push = (event: string, _payload: unknown) => {
-            const mockPush = {
-              receive: (
-                status: string,
-                callback: (response?: unknown) => void
-              ) => {
-                if (event === "request_adaptors" && status === "ok") {
-                  setTimeout(() => {
-                    callback({ adaptors: mockAdaptorsList });
-                  }, 0);
-                } else if (status === "error") {
-                  setTimeout(() => {
-                    callback({ reason: "Error" });
-                  }, 0);
-                } else if (status === "timeout") {
-                  setTimeout(() => {
-                    callback();
-                  }, 0);
-                }
-                return mockPush;
-              },
-            };
-
-            return mockPush;
-          };
+          // Setup mock to return adaptors on initial request
+          mockChannel.push = createSuccessfulMockPush(mockAdaptorsList);
 
           // Connect to channel
           const cleanup = store._connectChannel(mockProvider as any);
 
-          // Wait for adaptors to be loaded
+          // Wait for initial adaptors to be loaded
           await waitForCondition(() => store.getSnapshot().adaptors.length > 0);
 
-          // Verify adaptors were loaded (they should be sorted)
-          const state = store.getSnapshot();
-          const expectedSortedAdaptors = [...mockAdaptorsList]
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(adaptor => ({
-              ...adaptor,
-              versions: [...adaptor.versions].sort((a, b) =>
-                b.version.localeCompare(a.version)
-              ),
-            }));
-
+          // Verify initial load with sorting
+          let state = store.getSnapshot();
+          const expectedSortedAdaptors = getSortedAdaptors(mockAdaptorsList);
           expect(state.adaptors).toEqual(expectedSortedAdaptors);
 
-          // Test real-time updates
+          // Test real-time updates via adaptors_updated event
           const updatedAdaptors = [mockAdaptor];
-          // Emit adaptors_updated event to test real-time updates
           const mockChannelWithTest = mockChannel as typeof mockChannel & {
             _test: { emit: (event: string, message: unknown) => void };
           };
@@ -593,17 +340,9 @@ describe("createAdaptorStore", () => {
             () => store.getSnapshot().adaptors.length === 1
           );
 
-          const updatedState = store.getSnapshot();
-          const expectedUpdatedAdaptors = [...updatedAdaptors]
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(adaptor => ({
-              ...adaptor,
-              versions: [...adaptor.versions].sort((a, b) =>
-                b.version.localeCompare(a.version)
-              ),
-            }));
-
-          expect(updatedState.adaptors).toEqual(expectedUpdatedAdaptors);
+          state = store.getSnapshot();
+          const expectedUpdatedAdaptors = getSortedAdaptors(updatedAdaptors);
+          expect(state.adaptors).toEqual(expectedUpdatedAdaptors);
 
           // Cleanup
           cleanup();
@@ -612,108 +351,17 @@ describe("createAdaptorStore", () => {
     });
 
     describe("error handling", () => {
-      test("handles null and undefined channel provider gracefully", async () => {
+      test("handles invalid channel provider", async () => {
         const store = createAdaptorStore();
 
-        // Test with null provider - this should handle the null case gracefully
-        try {
-          store._connectChannel(null as any);
-          throw new Error("Should have thrown error for null provider");
-        } catch (error) {
-          expect(error instanceof TypeError).toBe(true);
-          expect(
-            (error as Error).message.includes("Cannot read properties of null")
-          ).toBe(true);
-        }
+        // Test with null provider
+        expect(() => store._connectChannel(null as any)).toThrow(TypeError);
 
         // Test with undefined provider
-        try {
-          store._connectChannel(undefined as any);
-          throw new Error("Should have thrown error for undefined provider");
-        } catch (error) {
-          expect(error instanceof TypeError).toBe(true);
-        }
-
-        // Test requestAdaptors without any channel connection
-        await store.requestAdaptors();
-
-        const state = store.getSnapshot();
-        expect(state.error).toContain("No connection available");
+        expect(() => store._connectChannel(undefined as any)).toThrow(
+          TypeError
+        );
       });
-
-      adaptorTest(
-        "handles complex adaptor data transformations",
-        async ({ store, mockChannel, mockProvider }) => {
-          // Create adaptors with unsorted versions
-          const unsortedAdaptors = [
-            createMockAdaptor({
-              name: "z-last-adaptor",
-              versions: [
-                { version: "1.0.0" },
-                { version: "2.0.0" },
-                { version: "1.5.0" },
-              ],
-            }),
-            createMockAdaptor({
-              name: "a-first-adaptor",
-              versions: [
-                { version: "3.0.0" },
-                { version: "3.1.0" },
-                { version: "2.9.0" },
-              ],
-            }),
-          ];
-
-          // Set up the channel with unsorted adaptors data
-          mockChannel.push = (event: string, _payload: unknown) => {
-            const mockPush = {
-              receive: (
-                status: string,
-                callback: (response?: unknown) => void
-              ) => {
-                if (event === "request_adaptors" && status === "ok") {
-                  setTimeout(() => {
-                    callback({ adaptors: unsortedAdaptors });
-                  }, 0);
-                } else if (status === "error") {
-                  setTimeout(() => {
-                    callback({ reason: "Error" });
-                  }, 0);
-                } else if (status === "timeout") {
-                  setTimeout(() => {
-                    callback();
-                  }, 0);
-                }
-                return mockPush;
-              },
-            };
-
-            return mockPush;
-          };
-
-          // Connect channel and request adaptors
-          store._connectChannel(mockProvider as any);
-          await store.requestAdaptors();
-
-          const state = store.getSnapshot();
-
-          // Check alphabetical sorting of adaptors
-          expect(state.adaptors[0].name).toBe("a-first-adaptor");
-          expect(state.adaptors[1].name).toBe("z-last-adaptor");
-
-          // Check version sorting (descending)
-          expect(
-            state.adaptors[0].versions.map(
-              (v: { version: string }) => v.version
-            )
-          ).toEqual(["3.1.0", "3.0.0", "2.9.0"]);
-          expect(
-            state.adaptors[1].versions.map(
-              (v: { version: string }) => v.version
-            )
-          ).toEqual(["2.0.0", "1.5.0", "1.0.0"]);
-        }
-      );
     });
   });
 

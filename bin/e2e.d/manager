@@ -38,6 +38,7 @@ Commands:
   reset --quiet   Fast reset with minimal output
   setup           Initialize or refresh database and create snapshot
   describe        Output current database state as JSON
+  enable-experimental-features  Enable experimental features for a user (default: editor@openfn.org)
   help            Show this help message (default)
 
 Getting Started:
@@ -476,6 +477,12 @@ cmd_describe() {
   describe_test_data "${DATABASE_URL}"
 }
 
+cmd_enable_experimental_features() {
+  local user_email="${1:-editor@openfn.org}"
+  source "$(dirname "$0")/enable_experimental_features.sh"
+  enable_experimental_features "${DATABASE_URL}" "$user_email"
+}
+
 # Parse command
 COMMAND="${1:-help}"
 shift || true
@@ -498,6 +505,9 @@ setup)
   ;;
 describe)
   cmd_describe "$@"
+  ;;
+enable-experimental-features)
+  cmd_enable_experimental_features "$@"
   ;;
 help | --help | -h)
   show_help

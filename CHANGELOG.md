@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+- Save button with validation and permissions in collaborative workflow editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Workflow reset functionality in collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Toast notifications and Redux DevTools integration for collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- E2E test infrastructure with Page Object Models for workflow testing
+- E2E testing guidelines for Playwright
 - Add project merging functionality
   [#3432](https://github.com/OpenFn/lightning/issues/3432)
 - SessionContextStore for collaborative workflow editor to provide user,
@@ -26,6 +34,10 @@ and this project adheres to
 - Force restart and AdaptorRegistry warming on E2E manager script
 
 ### Changed
+
+- Improved state management and store architecture in collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Upgraded Tailwind CSS from 4.0.13 to 4.1.14
 
 ### Released
 
@@ -56,6 +68,8 @@ and this project adheres to
 
 - Removed unused functions for getting dataclip bodies from postgres as
   JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
+- Limit sandbox creation
+  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
 
 ### Fixed
 

@@ -334,6 +334,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: {
         require_email_verification: true,
       },
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -354,6 +358,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: {
         require_email_verification: false,
       },
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -378,6 +386,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: {
         require_email_verification: true,
       },
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -395,6 +407,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: {
         require_email_verification: false,
       },
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -411,6 +427,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
     const invalidResponse = {
       user: null,
       project: null,
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -435,6 +455,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: {
         require_email_verification: true,
       },
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -455,6 +479,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: {
         require_email_verification: true,
       },
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -472,6 +500,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: {
         require_email_verification: "not-a-boolean",
       },
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -484,6 +516,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       user: null,
       project: null,
       config: null,
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -498,6 +534,10 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: {
         require_email_verification: true,
       },
+      permissions: {
+        can_edit_workflow: true,
+      },
+      latest_snapshot_lock_version: 1,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);

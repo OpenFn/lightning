@@ -11,6 +11,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects.ProjectCredential
 
   require Logger
@@ -29,7 +30,7 @@ defmodule LightningWeb.WorkflowChannel do
             {:error, %{reason: "workflow not found"}}
 
           workflow ->
-            case Lightning.Policies.Permissions.can(
+            case Permissions.can(
                    :workflows,
                    :access_read,
                    user,
@@ -39,12 +40,19 @@ defmodule LightningWeb.WorkflowChannel do
                 {:ok, session_pid} =
                   Collaborate.start(user: user, workflow_id: workflow_id)
 
+                project_user =
+                  Lightning.Projects.get_project_user(
+                    workflow.project,
+                    user
+                  )
+
                 {:ok,
                  assign(socket,
                    workflow_id: workflow_id,
                    collaboration_topic: topic,
                    workflow: workflow,
-                   session_pid: session_pid
+                   session_pid: session_pid,
+                   project_user: project_user
                  )}
 
               {:error, :unauthorized} ->
@@ -91,13 +99,16 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("get_context", _payload, socket) do
     user = socket.assigns[:current_user]
-    project = socket.assigns.workflow.project
+    workflow = socket.assigns.workflow
+    project_user = socket.assigns.project_user
 
     async_task(socket, "get_context", fn ->
       %{
         user: render_user_context(user),
-        project: render_project_context(project),
-        config: render_config_context()
+        project: render_project_context(workflow.project),
+        config: render_config_context(),
+        permissions: render_permissions(user, project_user),
+        latest_snapshot_lock_version: workflow.lock_version
       }
     end)
   end
@@ -123,6 +134,100 @@ defmodule LightningWeb.WorkflowChannel do
 
     Session.send_yjs_message(socket.assigns.session_pid, chunk)
     {:noreply, socket}
+  end
+
+  @doc """
+  Handles explicit workflow save requests from the collaborative editor.
+
+  The save operation:
+  1. Asks Session to extract and save the current Y.Doc state
+  2. Session handles all Y.Doc interaction internally
+  3. Returns success/error to the client
+
+  Note: By the time this message is processed, all prior Y.js sync messages
+  have been processed due to Phoenix Channel's synchronous per-socket handling.
+
+  Success response: {:ok, %{saved_at: DateTime, lock_version: integer}}
+  Error response: {:error, %{errors: map, type: string}}
+  """
+  @impl true
+  def handle_in("save_workflow", _params, socket) do
+    session_pid = socket.assigns.session_pid
+    user = socket.assigns.current_user
+
+    case Session.save_workflow(session_pid, user) do
+      {:ok, workflow} ->
+        {:reply,
+         {:ok,
+          %{
+            saved_at: DateTime.utc_now(),
+            lock_version: workflow.lock_version
+          }}, socket}
+
+      {:error, :workflow_deleted} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["This workflow has been deleted"]},
+            type: "workflow_deleted"
+          }}, socket}
+
+      {:error, :deserialization_failed} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["Failed to extract workflow data from editor"]},
+            type: "deserialization_error"
+          }}, socket}
+
+      {:error, :internal_error} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["An internal error occurred"]},
+            type: "internal_error"
+          }}, socket}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:reply,
+         {:error,
+          %{
+            errors: format_changeset_errors(changeset),
+            type: determine_error_type(changeset)
+          }}, socket}
+    end
+  end
+
+  @impl true
+  def handle_in("reset_workflow", _params, socket) do
+    session_pid = socket.assigns.session_pid
+    user = socket.assigns.current_user
+
+    case Session.reset_workflow(session_pid, user) do
+      {:ok, workflow} ->
+        {:reply,
+         {:ok,
+          %{
+            lock_version: workflow.lock_version,
+            workflow_id: workflow.id
+          }}, socket}
+
+      {:error, :workflow_deleted} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["This workflow has been deleted"]},
+            type: "workflow_deleted"
+          }}, socket}
+
+      {:error, :internal_error} ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["An internal error occurred"]},
+            type: "internal_error"
+          }}, socket}
+    end
   end
 
   @impl true
@@ -275,5 +380,37 @@ defmodule LightningWeb.WorkflowChannel do
       require_email_verification:
         Lightning.Config.check_flag?(:require_email_verification)
     }
+  end
+
+  defp render_permissions(user, project_user) do
+    can_edit =
+      Permissions.can?(
+        :project_users,
+        :edit_workflow,
+        user,
+        project_user
+      )
+
+    %{
+      can_edit_workflow: can_edit
+    }
+  end
+
+  # Private helper functions for save_workflow
+
+  defp format_changeset_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+  end
+
+  defp determine_error_type(changeset) do
+    if changeset.errors[:lock_version] do
+      "optimistic_lock_error"
+    else
+      "validation_error"
+    end
   end
 end

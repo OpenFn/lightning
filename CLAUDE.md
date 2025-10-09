@@ -25,7 +25,7 @@ env $(cat .env | grep -v "#" | xargs) iex -S mix phx.server
 
 # Testing
 MIX_ENV=test mix ecto.create  # first time setup
-MIX_ENV=test mix test
+mix test
 # Don't use -v flag with mix test
 
 # Code quality checks
@@ -34,7 +34,7 @@ mix format --check-formatted
 mix dialyzer
 mix credo --strict --all
 mix sobelow
-MIX_ENV=test mix coveralls.html
+mix coveralls.html
 
 # Database operations
 mix ecto.create
@@ -72,6 +72,34 @@ npm run check
 **Important**: Phoenix auto-builds assets. To check for build failures/warnings,
 use Tidewave MCP to check logs or run `mix esbuild default`. For JS/TS issues,
 prefer `mcp__ide__getDiagnostics` over `tsc`.
+
+### Debugging Collaborative Editor Stores
+
+The collaborative editor stores integrate with Redux DevTools in development:
+
+```bash
+# Start development server
+iex -S mix phx.server
+
+# Open browser and navigate to workflow editor
+# Open Redux DevTools extension (Chrome/Firefox)
+# Select store instance from dropdown (e.g., "WorkflowStore")
+```
+
+**Available stores:**
+- WorkflowStore - Workflow data, jobs, triggers, edges
+- SessionContextStore - User, project, config, permissions
+- SessionStore - Connection and sync state
+- AwarenessStore - Collaborative user presence
+- AdaptorStore - Available adaptors
+- CredentialStore - Project and keychain credentials
+
+**Features:**
+- View current state of any store
+- See action history with timestamps
+- Export/import state for bug reproduction
+
+**Note:** DevTools is disabled in production builds. For detailed store architecture and usage guidelines, see `.claude/guidelines/store-structure.md`.
 
 ### Docker Development
 
@@ -172,6 +200,23 @@ components:
   editing), Monaco Editor (code editing)
 - React components integrated into Phoenix app via LiveView mounting
 
+#### Toast Notifications
+
+For toast notifications in the collaborative editor, see `.claude/guidelines/toast-notifications.md`:
+- Usage patterns for info, alert, success, and warning toasts
+- Integration with workflow operations
+- Styling conventions matching Lightning's design system
+- Testing strategies
+
+#### Collaborative Editor Store Architecture
+
+When working with the collaborative editor stores (creating, modifying, or debugging), see `.claude/guidelines/store-structure.md`:
+- Store hierarchy and responsibilities (SessionStore, WorkflowStore, AwarenessStore, etc.)
+- Decision tree for "where should this state go?"
+- Store update patterns (Y.Doc, Phoenix Channel, local state)
+- When to create new stores vs extending existing ones
+- Redux DevTools integration for debugging
+
 ### Testing Requirements
 
 - Write comprehensive ExUnit tests for backend code
@@ -182,6 +227,11 @@ components:
 - E2E: Use Playwright tests (`npm run test:e2e` in assets/)
 - E2E environment managed by `bin/e2e` script
 - Test database: `lightning_test` (automatically created/migrated by mix test)
+- **See `.claude/guidelines/testing-essentials.md`** for comprehensive unit
+  testing guidelines and best practices
+- **See `.claude/guidelines/e2e-testing.md`** for comprehensive E2E testing
+  guidelines with Playwright, Phoenix LiveView patterns, and collaborative
+  feature testing
 
 ### Code Quality Standards
 
@@ -275,7 +325,8 @@ Lightning includes several custom Mix tasks:
 - **Cloak**: Encryption for sensitive data
 - **Timex**: Date/time utilities
 - **Broadway + Kafka**: Event streaming
-- **Y_ex**: Yjs bindings for collaborative editing
+- **Y_ex**: Yjs bindings for collaborative editing (see
+  `.claude/guidelines/yex-guidelines.md`)
 - **Rambo**: External command execution (needs Rust)
 
 ### Frontend (JavaScript/TypeScript)
@@ -318,13 +369,14 @@ Key supervised processes:
 
 ## Documentation and Communication
 
-- Don't prefix items with \*\* unless entire item should be bold
+- Don't prefix items with \*\* unless the entire item should be bold
 - Use issue numbers for branch names with dash separation
 - Follow "strong opinions, weakly held" principle
 - Ask for clarification when uncertain
+- When running npm or npx commands, always cd into the assets directory first
+- We don't need to use MIX_ENV=test for most test related commands, ecto.create is the only one that explicitly needs the env set
 - You don't need to build using `npm run ...`, phoenix automatically builds as
   we go, if you want to check for build failures or warnings etc you can either
   use Tidewave MCP to check the logs, or run `mix esbuild default`
-- When running npm or npx commands, always cd into the assets directory
-  beforehand.
 - When checking for JS/TS issues, prefer mcp__ide__getDiagnostics over tsc
+- never commit the .context directory, this is a symlink to another folder shared across branches and worktrees

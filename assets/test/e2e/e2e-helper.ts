@@ -117,6 +117,48 @@ export async function reset(options: { quiet?: boolean } = {}): Promise<void> {
 }
 
 /**
+ * Enable experimental features for a user (defaults to editor@openfn.org)
+ *
+ * This allows the user to access experimental features like the collaborative
+ * editor. The setting is persisted in the database and will remain enabled
+ * until reset or explicitly disabled.
+ *
+ * @param userEmail - Optional email of the user to enable features for
+ * @returns Promise that resolves when features are enabled
+ * @throws Error if the command fails
+ *
+ * @example
+ * ```typescript
+ * // Enable for default user (editor@openfn.org)
+ * await enableExperimentalFeatures();
+ *
+ * // Enable for specific user
+ * await enableExperimentalFeatures("admin@openfn.org");
+ * ```
+ */
+export async function enableExperimentalFeatures(
+  userEmail: string = "editor@openfn.org"
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const command =
+        userEmail === "editor@openfn.org"
+          ? "enable-experimental-features"
+          : `enable-experimental-features ${userEmail}`;
+
+      executeCommand(command);
+      resolve();
+    } catch (error) {
+      reject(
+        new Error(
+          `Failed to enable experimental features for ${userEmail}: ${error}`
+        )
+      );
+    }
+  });
+}
+
+/**
  * Start the e2e server (for manual testing or debugging)
  * Note: This will not return until the server is stopped
  */
