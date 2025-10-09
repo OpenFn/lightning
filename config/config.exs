@@ -135,7 +135,7 @@ config :esbuild,
 
 # https://fly.io/phoenix-files/tailwind-standalone/
 config :tailwind,
-  version: "4.0.13",
+  version: "4.1.14",
   default: [
     args: ~w(
       --input=assets/css/app.css
