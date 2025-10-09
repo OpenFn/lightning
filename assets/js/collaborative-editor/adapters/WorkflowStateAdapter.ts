@@ -49,6 +49,7 @@ export class WorkflowStateAdapter {
 
     // Generate ID if missing
     triggerMap.set('id', trigger.id || crypto.randomUUID());
+    triggerMap.set('type', trigger.type); // Required for diagram icon rendering
     triggerMap.set('enabled', trigger.enabled);
 
     // Session.Trigger always requires cron_expression
@@ -56,8 +57,6 @@ export class WorkflowStateAdapter {
     const cronExpression =
       trigger.type === 'cron' ? trigger.cron_expression : '';
     triggerMap.set('cron_expression', cronExpression);
-
-    // Note: 'type' field is NOT stored in Session.Trigger
 
     return triggerMap;
   }
@@ -97,6 +96,8 @@ export class WorkflowStateAdapter {
     ydoc.transact(() => {
       // 1. Set workflow metadata (separate Map)
       const workflowMap = ydoc.getMap('workflow');
+      // Clear existing workflow metadata first
+      workflowMap.clear();
       workflowMap.set('id', workflowState.id || crypto.randomUUID());
       workflowMap.set('name', workflowState.name);
 
