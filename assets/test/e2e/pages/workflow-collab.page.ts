@@ -14,13 +14,13 @@ export class WorkflowCollaborativePage extends LiveViewPage {
     collaborativeEditor: '[data-testid="collaborative-editor"]',
 
     // Connection status (via CollaborationWidget)
-    syncStatus: 'text=Synced',
-    connectedStatus: 'text=Connected',
+    syncStatus: "text=Synced",
+    connectedStatus: "text=Connected",
 
     // Error indicators - use specific error UI components, not generic text
     // Note: We look for actual error/alert components, not workflow content
     errorAlert: '[role="alert"] >> text=/error/i',
-    socketError: 'text=/socket (error|disconnected)/i',
+    socketError: "text=/socket (error|disconnected)/i",
   };
 
   constructor(page: Page) {
@@ -38,13 +38,11 @@ export class WorkflowCollaborativePage extends LiveViewPage {
    */
   async waitForReactComponentLoaded(): Promise<void> {
     // Wait for main container
-    const container = this.page.locator(
-      this.selectors.collaborativeEditor
-    );
+    const container = this.page.locator(this.selectors.collaborativeEditor);
     await expect(container).toBeVisible({ timeout: 10000 });
 
     // Wait for React hydration to complete
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState("networkidle");
   }
 
   /**

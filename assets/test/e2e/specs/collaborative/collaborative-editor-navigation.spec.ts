@@ -44,7 +44,6 @@ test.describe("Collaborative Editor Navigation", () => {
   test("navigate to collaborative editor via beaker icon @collaborative @smoke", async ({
     page,
   }) => {
-
     await test.step("Navigate to project", async () => {
       const projectsPage = new ProjectsPage(page);
       await projectsPage.navigateToProject(testData.projects.openhie.name);
@@ -81,7 +80,7 @@ test.describe("Collaborative Editor Navigation", () => {
       await collabEditor.verifyUrl({
         projectId: testData.projects.openhie.id,
         workflowId: testData.workflows.openhie.id,
-        path: '/collaborate'
+        path: "/collaborate",
       });
 
       // Wait for React component to mount

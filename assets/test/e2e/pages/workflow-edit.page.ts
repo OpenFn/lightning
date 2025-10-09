@@ -100,7 +100,7 @@ export class WorkflowEditPage extends LiveViewPage {
     await beakerIcon.click();
 
     // Wait for navigation to complete
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState("networkidle");
   }
 
   /**

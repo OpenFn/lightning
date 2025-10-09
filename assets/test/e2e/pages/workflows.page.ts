@@ -45,8 +45,8 @@ export class WorkflowsPage extends LiveViewPage {
 
     // Find the <tr> element that contains the workflow label
     // The <tr> has phx-click and contains an element with aria-label matching the workflow name
-    const workflowRow = this.page.locator('tr').filter({
-      has: this.page.getByLabel(workflowName)
+    const workflowRow = this.page.locator("tr").filter({
+      has: this.page.getByLabel(workflowName),
     });
 
     await expect(workflowRow).toBeVisible();
@@ -58,6 +58,6 @@ export class WorkflowsPage extends LiveViewPage {
     await workflowRow.click();
 
     // Wait for navigation to complete
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState("networkidle");
   }
 }
