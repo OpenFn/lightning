@@ -19,16 +19,32 @@ and this project adheres to
 
 - Add project merging functionality
   [#3432](https://github.com/OpenFn/lightning/issues/3432)
-- SessionContextStore for collaborative workflow editor to provide user, project,
-  and config data to React components via Phoenix Channel
+- SessionContextStore for collaborative workflow editor to provide user,
+  project, and config data to React components via Phoenix Channel
+- E2E test infrastructure with Page Object Models for workflow editor testing
+- E2E test for workflow step creation and configuration
+- Force restart and AdaptorRegistry warming on E2E manager script
+
+### Changed
+
+### Released
+
+## [2.14.10] - 2025-10-07
+
+## [2.14.10-pre] - 2025-10-07
+
+### Added
+
+- Worker "presence" module to track connected workers (and their capacity)
+  across the app. [#3725](https://github.com/OpenFn/lightning/pull/3725)
+- SessionContextStore for collaborative workflow editor to provide user,
+  project, and config data to React components via Phoenix Channel
   [#3624](https://github.com/OpenFn/lightning/issues/3624)
 
 ### Changed
 
 - Limit sandbox creation
   [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
-
-### Fixed
 
 ## [v2.14.9] - 2025-10-03
 

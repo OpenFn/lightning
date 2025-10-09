@@ -30,5 +30,6 @@
       "fileMatch": ["*tsconfig*.json"],
       "url": "http://json.schemastore.org/tsconfig"
     }
-  ]
+  ],
+  "bun.test.enable": false
 }
