@@ -29,6 +29,7 @@ import type {
   ProjectContext,
   AppConfig,
 } from "../../../js/collaborative-editor/types/sessionContext";
+import { mockPermissions } from "../fixtures/sessionContextData";
 
 function createWrapper(
   sessionContextStore: SessionContextStoreInstance
@@ -116,6 +117,8 @@ describe("useUser()", () => {
         user: mockUser,
         project: null,
         config: createMockAppConfig(),
+        permissions: mockPermissions,
+        latest_snapshot_lock_version: 1,
       });
     });
 
@@ -127,6 +130,8 @@ describe("useUser()", () => {
         user: updatedUser,
         project: null,
         config: createMockAppConfig(),
+        permissions: mockPermissions,
+        latest_snapshot_lock_version: 1,
       });
     });
 
@@ -156,6 +161,8 @@ describe("useProject()", () => {
         user: null,
         project: mockProject,
         config: createMockAppConfig(),
+        permissions: mockPermissions,
+        latest_snapshot_lock_version: 1,
       });
     });
 
@@ -167,6 +174,8 @@ describe("useProject()", () => {
         user: null,
         project: updatedProject,
         config: createMockAppConfig(),
+        permissions: mockPermissions,
+        latest_snapshot_lock_version: 1,
       });
     });
 
@@ -196,6 +205,8 @@ describe("useAppConfig()", () => {
         user: null,
         project: null,
         config: mockConfig,
+        permissions: mockPermissions,
+        latest_snapshot_lock_version: 1,
       });
     });
 
@@ -207,6 +218,8 @@ describe("useAppConfig()", () => {
         user: null,
         project: null,
         config: updatedConfig,
+        permissions: mockPermissions,
+        latest_snapshot_lock_version: 1,
       });
     });
 
@@ -288,6 +301,8 @@ describe("Hook Integration", () => {
         user: mockUser,
         project: mockProject,
         config: mockConfig,
+        permissions: mockPermissions,
+        latest_snapshot_lock_version: 1,
       });
     });
 

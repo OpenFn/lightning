@@ -30,6 +30,7 @@ import {
 import {
   createMockUser,
   createMockConfig,
+  mockPermissions,
 } from "../fixtures/sessionContextData";
 
 // =============================================================================
@@ -58,6 +59,8 @@ function createWrapper(
       user,
       project: null,
       config,
+      permissions: mockPermissions,
+      latest_snapshot_lock_version: 1,
     });
   };
 

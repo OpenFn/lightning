@@ -318,27 +318,29 @@ describe("createSessionStore", () => {
       assertCleanAwareness(store.getSnapshot(), userData);
     });
 
-    test("creates awareness only when userData is provided", () => {
+    test("creates awareness via provider even without userData", () => {
       const store = createSessionStore();
       const mockSocket = createMockSocket();
 
-      // Without userData
+      // Without userData - PhoenixChannelProvider still creates awareness
       store.initializeSession(mockSocket, "test:room:123", null, {
         connect: false,
       });
       const state1 = store.getSnapshot();
       expect(state1.ydoc).toBeTruthy();
       expect(state1.provider).toBeTruthy();
-      expect(state1.awareness).toBe(null);
-      assertCleanAwareness(state1, null);
+      // PhoenixChannelProvider creates awareness even when not explicitly provided
+      expect(state1.awareness).toBeTruthy();
+      expect(state1.userData).toBe(null);
 
-      // With userData
+      // With userData - creates new awareness and sets userData
       const userData = { id: "user-4", name: "Test User 4", color: "#ff00ff" };
       store.initializeSession(mockSocket, "test:room:456", userData, {
         connect: false,
       });
       const state2 = store.getSnapshot();
       expect(state2.awareness).toBeTruthy();
+      expect(state2.userData).toEqual(userData);
       assertCleanAwareness(state2, userData);
 
       store.destroy();
