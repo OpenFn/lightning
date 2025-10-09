@@ -45,6 +45,87 @@ Component POMs
   └── JobFormPage (components/job-form.page.ts)
 ```
 
+## Before Creating or Modifying POMs
+
+### The Read-First Rule
+
+**CRITICAL**: Before adding any new method to a POM, you MUST:
+
+1. **Read the entire existing POM file**
+   ```typescript
+   // ✅ ALWAYS DO THIS FIRST
+   // Read: assets/test/e2e/pages/login.page.ts
+   ```
+
+2. **Check for existing similar functionality**
+   - Does a method already do what you need?
+   - Can an existing method be used with different parameters?
+   - Is there a pattern you should follow from existing methods?
+
+3. **Only add new methods if**:
+   - No existing method provides the functionality
+   - Existing methods cannot be easily composed
+   - The new method adds genuine value
+
+### Example: Avoiding Duplication
+
+**❌ BAD: Creating redundant method without checking**
+```typescript
+// Task: "Add login functionality to LoginPage"
+// Agent creates this WITHOUT reading existing file:
+
+async navigateAndLogin(email: string, password: string): Promise<void> {
+  await this.page.goto("/");
+
+  const loginForm = this.page.locator("#login form");
+  if (await loginForm.isVisible()) {
+    await this.page.locator('input[name="user[email]"]').fill(email);
+    await this.page.locator('input[name="user[password]"]').fill(password);
+    await this.page.getByRole("button", { name: "Log in" }).click();
+  }
+
+  await this.page.waitForLoadState("networkidle");
+}
+
+// Problem: This duplicates functionality that already exists!
+```
+
+**✅ GOOD: Using existing methods**
+```typescript
+// After reading login.page.ts, agent discovers:
+// - login() - performs login when on login page
+// - loginIfNeeded() - performs login only if form visible
+
+// In test code:
+await page.goto("/");
+const loginPage = new LoginPage(page);
+await loginPage.loginIfNeeded(email, password);
+
+// Reuses existing, tested functionality!
+```
+
+### When to Add vs. When to Reuse
+
+**Add a new method when**:
+- Functionality doesn't exist at all
+- Existing methods cannot achieve the goal
+- New method provides a significantly different workflow
+
+**Reuse existing methods when**:
+- Similar functionality exists
+- Can compose existing methods (e.g., `goto()` + `loginIfNeeded()`)
+- Existing method does what you need with minor adjustments
+
+### Research Checklist
+
+Before creating any POM method:
+- [ ] Read entire POM file top to bottom
+- [ ] List all existing methods and their purposes
+- [ ] Check if any existing method achieves the goal
+- [ ] Check if composing existing methods works
+- [ ] Verify the new method adds unique value
+- [ ] Follow existing patterns and naming conventions
+
 ## Base Classes
 
 ### LiveViewPage Base Class

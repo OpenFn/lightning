@@ -386,6 +386,37 @@ test('edit workflow', async ({ page }) => {
 
 See `.claude/guidelines/e2e/page-objects.md` for comprehensive POM patterns.
 
+### Before Modifying POMs: Read First!
+
+**Critical Rule**: Before adding or modifying any POM method, ALWAYS read the entire POM file first to understand what already exists.
+
+```typescript
+// ❌ BAD: Adding method without checking what exists
+test('refactor login', async ({ page }) => {
+  // Task: "Use LoginPage POM for login"
+  // Agent creates navigateAndLogin() without reading file first
+  // Duplicates existing loginIfNeeded() functionality
+});
+
+// ✅ GOOD: Check existing methods first
+test('refactor login', async ({ page }) => {
+  // 1. Read assets/test/e2e/pages/login.page.ts
+  // 2. Discover loginIfNeeded() already exists
+  // 3. Use existing method:
+  await page.goto("/");
+  const loginPage = new LoginPage(page);
+  await loginPage.loginIfNeeded(email, password);
+});
+```
+
+**Before adding POM methods, verify**:
+- [ ] Read the entire POM file
+- [ ] Understand all existing methods
+- [ ] Check if functionality already exists
+- [ ] Confirm new method is genuinely needed
+
+See "Before Creating or Modifying POMs" in `.claude/guidelines/e2e/page-objects.md` for detailed guidance.
+
 ## Debugging E2E Tests
 
 ### Interactive UI Mode
@@ -565,7 +596,7 @@ DEBUG=pw:api           # Verbose API logs
 
 ## Related Guidelines
 
-For deeper dives into specific topics:
+Depending on what task you are performing, you MUST read at least one of the following guideline documents:
 
 - **Modern Playwright patterns**: `.claude/guidelines/e2e/playwright-patterns.md`
   - Auto-waiting and web-first assertions
