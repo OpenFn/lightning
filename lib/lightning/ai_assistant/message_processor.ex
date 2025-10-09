@@ -187,7 +187,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   defp get_apollo_url(service) do
     base_url = Lightning.Config.apollo(:endpoint)
-    "#{base_url}/services/#{service}"
+    "#{base_url}/services/#{service}/stream"
   end
 
   defp get_chat_history(session) do

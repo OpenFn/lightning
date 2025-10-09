@@ -132,12 +132,14 @@ defmodule Lightning.ApolloClient.SSEStream do
 
     case event_type do
       "content_block_delta" ->
-        # Parse the JSON data to extract text chunks or status updates
+        # Parse the Anthropic streaming event
         case Jason.decode(data) do
           {:ok, %{"delta" => %{"type" => "text_delta", "text" => text}}} ->
+            Logger.info("[SSEStream] Broadcasting chunk: #{inspect(text)}")
             broadcast_chunk(session_id, text)
 
           {:ok, %{"delta" => %{"type" => "thinking_delta", "thinking" => thinking}}} ->
+            Logger.info("[SSEStream] Broadcasting status: #{inspect(thinking)}")
             broadcast_status(session_id, thinking)
 
           _ ->
@@ -145,10 +147,23 @@ defmodule Lightning.ApolloClient.SSEStream do
         end
 
       "message_stop" ->
+        Logger.info("[SSEStream] Received message_stop, broadcasting complete")
         broadcast_complete(session_id)
 
+      "complete" ->
+        Logger.info("[SSEStream] Received complete event")
+        # Don't broadcast here - message_stop already did it
+        :ok
+
+      "error" ->
+        Logger.error("[SSEStream] Received error event: #{inspect(data)}")
+
+      "log" ->
+        # Just log messages from Apollo, don't broadcast
+        Logger.debug("[SSEStream] Apollo log: #{inspect(data)}")
+
       _ ->
-        # Ignore all other Anthropic events (message_start, content_block_start, etc.)
+        Logger.debug("[SSEStream] Unhandled event type: #{event_type}")
         :ok
     end
   end
