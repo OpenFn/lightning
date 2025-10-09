@@ -108,7 +108,10 @@ export const CollaborativeEditor: WithActionProps<
   const projectName = props["data-project-name"];
 
   return (
-    <div className="collaborative-editor h-full flex flex-col">
+    <div
+      className="collaborative-editor h-full flex flex-col"
+      data-testid="collaborative-editor"
+    >
       <SocketProvider>
         <SessionProvider workflowId={workflowId}>
           <StoreProvider>

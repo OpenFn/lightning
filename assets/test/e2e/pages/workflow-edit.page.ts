@@ -75,6 +75,35 @@ export class WorkflowEditPage extends LiveViewPage {
   }
 
   /**
+   * Click the beaker icon to navigate to the collaborative editor.
+   *
+   * This icon is only visible when:
+   * - User has experimental features enabled
+   * - Workflow is on the latest snapshot version
+   * - New workflow panel is not open
+   *
+   * @throws Error if the beaker icon is not visible
+   */
+  async clickCollaborativeEditorToggle(): Promise<void> {
+    // Wait for LiveView connection first
+    await this.waitForConnected();
+
+    // Locate beaker icon by aria-label (most stable selector)
+    const beakerIcon = this.page.locator(
+      'a[aria-label="Switch to collaborative editor (experimental)"]'
+    );
+
+    // Verify visibility before clicking
+    await expect(beakerIcon).toBeVisible({ timeout: 5000 });
+
+    // Click the icon
+    await beakerIcon.click();
+
+    // Wait for navigation to complete
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
    * Select workflow type from the new workflow panel
    * @param typeText - The display text of the workflow type (e.g., "Event-based Workflow")
    */
