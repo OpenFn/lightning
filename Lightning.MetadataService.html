@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-A4206761.js"></script>
+    <script defer src="dist/sidebar_items-6FA63600.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -112,7 +112,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch/2" data-no-tooltip="" translate="no">fetch(adaptor, credential)</a>
+        <a href="#fetch/3" data-no-tooltip="" translate="no">fetch(adaptor, credential, environment \\ &quot;main&quot;)</a>
 
       </div>
 
@@ -134,17 +134,19 @@ Lightning
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="fetch/2">
+<section class="detail" id="fetch/3">
+
+    <span id="fetch/2"></span>
 
   <div class="detail-header">
-    <a href="#fetch/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#fetch/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">fetch(adaptor, credential)</h1>
+      <h1 class="signature" translate="no">fetch(adaptor, credential, environment \\ &quot;main&quot;)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/metadata_service.ex#L37" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/metadata_service.ex#L47" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -155,13 +157,17 @@ Lightning
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> fetch(adaptor :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="Lightning.Credentials.Credential.html#t:t/0">Lightning.Credentials.Credential.t</a>()) ::
+          <pre translate="no"><span class="attribute">@spec</span> fetch(
+  adaptor :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  <a href="Lightning.Credentials.Credential.html#t:t/0">Lightning.Credentials.Credential.t</a>(),
+  environment :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) ::
   {:ok, %{optional(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}}
   | {:error, <a href="Lightning.MetadataService.Error.html#t:t/0">Lightning.MetadataService.Error.t</a>()}</pre>
 
       </div>
 
-<p>Retrieve metadata for a given adaptor and credential.</p><p>The adaptor must be an npm specification.</p>
+<p>Retrieve metadata for a given adaptor and credential.</p><p>The adaptor must be an npm specification.</p><h2 id="fetch/3-parameters" class="section-heading"><a href="#fetch/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">adaptor</code>: The adaptor npm specification (e.g., &quot;@openfn/language-http&quot;)</li><li><code class="inline">credential</code>: The credential struct</li><li><code class="inline">environment</code>: The environment name (defaults to &quot;main&quot;)</li></ul><h2 id="fetch/3-returns" class="section-heading"><a href="#fetch/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, metadata}</code> - The metadata as a map</li><li><code class="inline">{:error, Error.t()}</code> - An error if metadata cannot be fetched</li></ul>
   </section>
 </section>
 
