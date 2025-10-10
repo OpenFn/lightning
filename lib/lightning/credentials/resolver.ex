@@ -99,7 +99,7 @@ defmodule Lightning.Credentials.Resolver do
     end
   end
 
-  defp resolve_credential_with_env(%Credential{} = credential, run, project_env) do
+  defp resolve_credential_with_env(%Credential{} = credential, _run, project_env) do
     case Credentials.resolve_credential_body(credential, project_env) do
       {:ok, body} ->
         {:ok, ResolvedCredential.from(credential, body)}
