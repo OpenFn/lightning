@@ -575,12 +575,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             >
               <div class="mb-6">
                 <NewInputs.input
-                  id={"environment-name-input-#{env.name}"}
+                  id="environment-name-input"
                   type="text"
                   name="value"
                   required={true}
                   value={env.name}
-                  label="Configuration name"
+                  label="Environment name"
                   phx-change="update_environment_name"
                   phx-target={@myself}
                   phx-debounce="300"
@@ -638,7 +638,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                   class="inline-flex items-center text-sm text-gray-500 hover:text-red-600 transition-colors"
                 >
                   <.icon name="hero-trash" class="h-4 w-4 mr-1.5" />
-                  Delete configuration
+                  Delete environment
                 </button>
               </div>
             </div>
