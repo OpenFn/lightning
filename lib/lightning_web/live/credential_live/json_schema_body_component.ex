@@ -4,18 +4,34 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
   alias Lightning.Credentials
 
   attr :form, :map, required: true
+  attr :current_body, :map, default: %{}
   slot :inner_block
 
-  def fieldset(%{form: form} = assigns) do
-    changeset = form.source
+  def fieldset(assigns) do
+    changeset = assigns.form.source
 
     schema =
       changeset |> Ecto.Changeset.get_field(:schema) |> Credentials.get_schema()
 
+    normalized_body =
+      case assigns.current_body do
+        body when is_map(body) ->
+          body
+
+        body when is_binary(body) ->
+          case Jason.decode(body) do
+            {:ok, decoded} when is_map(decoded) -> decoded
+            _ -> %{}
+          end
+
+        _ ->
+          %{}
+      end
+
     schema_changeset =
       create_schema_changeset(
         schema,
-        changeset |> Ecto.Changeset.get_field(:body) || %{}
+        normalized_body
       )
 
     assigns =
@@ -23,7 +39,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
       |> assign(
         changeset: changeset,
         schema: schema,
-        form: form,
+        form: assigns.form,
         schema_changeset: schema_changeset,
         valid?: changeset.valid? and schema_changeset.valid?
       )
@@ -42,28 +58,16 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
 
   defp inner(assigns) do
     ~H"""
-    <fieldset>
-      <legend class="contents text-base font-medium text-gray-900">
-        Details
-      </legend>
-      <p class="text-sm text-gray-500">
-        Configuration for this credential.
-      </p>
-
-      <div
-        :for={
-          body_form <-
-            Phoenix.HTML.FormData.to_form(:credential, @form, :body,
-              default: @schema_changeset
-            )
-        }
-        class="mt-4 space-y-4"
-      >
-        <div :for={field <- @schema.fields} class="grid grid-cols-2">
-          <.schema_input form={body_form} schema={@schema} field={field} />
-        </div>
+    <div :for={
+      body_form <-
+        Phoenix.HTML.FormData.to_form(:credential, @form, :body,
+          default: @schema_changeset
+        )
+    }>
+      <div :for={field <- @schema.fields} class="grid grid-cols-2">
+        <.schema_input form={body_form} schema={@schema} field={field} />
       </div>
-    </fieldset>
+    </div>
     """
   end
 

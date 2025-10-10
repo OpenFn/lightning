@@ -17,19 +17,28 @@ defmodule LightningWeb.OauthCredentialHelper do
     The LiveView component that is going to receive update
   - The component id
     The ID of the component
+  - The current tab (environment name)
+    Which environment/tab is being authorized
   """
-  def build_state(subscription_id, mod, component_id) do
+  def build_state(subscription_id, mod, component_id, current_tab) do
     SafetyString.encode([
       subscription_id,
       mod |> to_string(),
-      component_id
+      component_id,
+      current_tab
     ])
   end
 
   def decode_state(state) do
-    [subscription_id, mod, component_id] = SafetyString.decode(state)
+    [subscription_id, mod, component_id, current_tab] =
+      SafetyString.decode(state)
 
-    [subscription_id, mod |> String.to_existing_atom(), component_id]
+    [
+      subscription_id,
+      mod |> String.to_existing_atom(),
+      component_id,
+      current_tab
+    ]
   end
 
   # NOTE: the subscription id is currently the socket id of the liveview

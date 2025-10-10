@@ -25,7 +25,6 @@ defmodule LightningWeb.API.CredentialJSON do
       id: credential.id,
       name: credential.name,
       schema: credential.schema,
-      production: credential.production,
       external_id: credential.external_id,
       user_id: credential.user_id,
       project_credentials:

@@ -41,7 +41,7 @@ defmodule LightningWeb.Components.DataTables do
                 Projects with access
               </.th>
               <.th>External ID</.th>
-              <.th>Environment</.th>
+              <.th>Environments</.th>
               <.th>
                 <span class="sr-only">Actions</span>
               </.th>
@@ -93,15 +93,17 @@ defmodule LightningWeb.Components.DataTables do
                     <span class="text-gray-400 text-sm">-</span>
                   <% end %>
                 </.td>
-                <.td class="wrap-break-word max-w-[5rem]">
-                  <%= if credential.production do %>
-                    <div class="flex items-center gap-1">
-                      <.icon
-                        name="hero-exclamation-triangle-mini"
-                        class="w-5 h-5 text-yellow-500 shrink-0"
-                      />Production
-                    </div>
-                  <% end %>
+                <.td class="text-left">
+                  <span
+                    id={"#{credential.id}-environments-tooltip"}
+                    class="text-base cursor-default text-gray-700"
+                    phx-hook="Tooltip"
+                    aria-label={
+                      Enum.join(credential.environment_names || ["main"], ", ")
+                    }
+                  >
+                    {length(credential.environment_names || [1])}
+                  </span>
                 </.td>
                 <.td>
                   <div class="flex justify-end items-center">
@@ -261,10 +263,9 @@ defmodule LightningWeb.Components.DataTables do
     """
   end
 
-  defp credential_type(%Credential{schema: "oauth", oauth_token: token})
-       when not is_nil(token) do
-    if token.oauth_client_id && token.oauth_client do
-      String.downcase(token.oauth_client.name)
+  defp credential_type(%Credential{schema: "oauth", oauth_client: client}) do
+    if client do
+      String.downcase(client.name)
     else
       "oauth"
     end
@@ -275,9 +276,7 @@ defmodule LightningWeb.Components.DataTables do
   end
 
   defp missing_oauth_client?(credential) do
-    credential.schema == "oauth" &&
-      (credential.oauth_token == nil ||
-         credential.oauth_token.oauth_client_id == nil)
+    credential.schema == "oauth" && credential.oauth_client_id == nil
   end
 
   attr :id, :string, required: true
