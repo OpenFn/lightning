@@ -58,7 +58,7 @@ describe("YAMLStateToYDoc", () => {
       expect(jobMap.get('enabled')).toBe(true);
     });
 
-    test('generates ID when missing', () => {
+    test('preserves empty ID when provided', () => {
       const workflowState: YAMLWorkflowState = {
         id: 'workflow-test',
         name: 'Test',
@@ -81,8 +81,7 @@ describe("YAMLStateToYDoc", () => {
       const jobMap = jobsArray.get(0) as Y.Map<unknown>;
       const id = jobMap.get('id') as string;
 
-      expect(id).toBeTruthy();
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(id).toBe('');
     });
 
     test('handles empty body', () => {
@@ -166,7 +165,7 @@ describe("YAMLStateToYDoc", () => {
       expect(triggerMap.get('cron_expression')).toBe('0 0 * * *');
     });
 
-    test('transforms webhook trigger with empty cron_expression', () => {
+    test('transforms webhook trigger with null cron_expression', () => {
       const workflowState: YAMLWorkflowState = {
         id: 'workflow-test',
         name: 'Test',
@@ -189,11 +188,11 @@ describe("YAMLStateToYDoc", () => {
 
       expect(triggerMap.get('id')).toBe('trigger-webhook');
       expect(triggerMap.get('enabled')).toBe(true);
-      // Webhook triggers should default cron_expression to ""
-      expect(triggerMap.get('cron_expression')).toBe('');
+      // Webhook triggers should default cron_expression to null
+      expect(triggerMap.get('cron_expression')).toBeNull();
     });
 
-    test('transforms kafka trigger with empty cron_expression', () => {
+    test('transforms kafka trigger with null cron_expression', () => {
       const workflowState: YAMLWorkflowState = {
         id: 'workflow-test',
         name: 'Test',
@@ -216,10 +215,10 @@ describe("YAMLStateToYDoc", () => {
 
       expect(triggerMap.get('id')).toBe('trigger-kafka');
       expect(triggerMap.get('enabled')).toBe(false);
-      expect(triggerMap.get('cron_expression')).toBe('');
+      expect(triggerMap.get('cron_expression')).toBeNull();
     });
 
-    test('generates ID when missing', () => {
+    test('preserves empty ID when provided', () => {
       const workflowState: YAMLWorkflowState = {
         id: 'workflow-test',
         name: 'Test',
@@ -241,8 +240,7 @@ describe("YAMLStateToYDoc", () => {
       const triggerMap = triggersArray.get(0) as Y.Map<unknown>;
       const id = triggerMap.get('id') as string;
 
-      expect(id).toBeTruthy();
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(id).toBe('');
     });
   });
 
@@ -275,15 +273,15 @@ describe("YAMLStateToYDoc", () => {
 
       expect(edgeMap.get('id')).toBe('edge-123');
       expect(edgeMap.get('source_trigger_id')).toBe('trigger-1');
-      expect(edgeMap.get('source_job_id')).toBe('');
+      expect(edgeMap.get('source_job_id')).toBeNull();
       expect(edgeMap.get('target_job_id')).toBe('job-2');
       expect(edgeMap.get('condition_type')).toBe('always');
       expect(edgeMap.get('condition_label')).toBe('Always run');
-      expect(edgeMap.get('condition_expression')).toBe('');
+      expect(edgeMap.get('condition_expression')).toBeNull();
       expect(edgeMap.get('enabled')).toBe(true);
     });
 
-    test('defaults optional fields to empty strings', () => {
+    test('defaults optional fields to null', () => {
       const workflowState: YAMLWorkflowState = {
         id: 'workflow-test',
         name: 'Test',
@@ -305,10 +303,10 @@ describe("YAMLStateToYDoc", () => {
       const edgesArray = ydoc.getArray('edges');
       const edgeMap = edgesArray.get(0) as Y.Map<unknown>;
 
-      expect(edgeMap.get('source_trigger_id')).toBe('');
-      expect(edgeMap.get('source_job_id')).toBe('');
-      expect(edgeMap.get('condition_label')).toBe('');
-      expect(edgeMap.get('condition_expression')).toBe('');
+      expect(edgeMap.get('source_trigger_id')).toBeNull();
+      expect(edgeMap.get('source_job_id')).toBeNull();
+      expect(edgeMap.get('condition_label')).toBeNull();
+      expect(edgeMap.get('condition_expression')).toBeNull();
     });
 
     test('handles null condition_expression', () => {
@@ -334,10 +332,10 @@ describe("YAMLStateToYDoc", () => {
       const edgesArray = ydoc.getArray('edges');
       const edgeMap = edgesArray.get(0) as Y.Map<unknown>;
 
-      expect(edgeMap.get('condition_expression')).toBe('');
+      expect(edgeMap.get('condition_expression')).toBeNull();
     });
 
-    test('generates ID when missing', () => {
+    test('preserves empty ID when provided', () => {
       const workflowState: YAMLWorkflowState = {
         id: 'workflow-test',
         name: 'Test',
@@ -360,8 +358,7 @@ describe("YAMLStateToYDoc", () => {
       const edgeMap = edgesArray.get(0) as Y.Map<unknown>;
       const id = edgeMap.get('id') as string;
 
-      expect(id).toBeTruthy();
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(id).toBe('');
     });
   });
 
@@ -402,9 +399,8 @@ describe("YAMLStateToYDoc", () => {
 
       YAMLStateToYDoc.applyToYDoc(ydoc, workflowState);
 
-      // Check workflow metadata
+      // Check workflow metadata (note: id is not set by applyToYDoc)
       const workflowMap = ydoc.getMap('workflow');
-      expect(workflowMap.get('id')).toBe('workflow-123');
       expect(workflowMap.get('name')).toBe('Test Workflow');
 
       // Check jobs
@@ -445,7 +441,6 @@ describe("YAMLStateToYDoc", () => {
       YAMLStateToYDoc.applyToYDoc(ydoc, workflowState);
 
       const workflowMap = ydoc.getMap('workflow');
-      expect(workflowMap.get('id')).toBe('empty-workflow');
       expect(workflowMap.get('name')).toBe('Empty Workflow');
 
       expect(ydoc.getArray('jobs').length).toBe(0);
@@ -489,9 +484,9 @@ describe("YAMLStateToYDoc", () => {
       expect(job.get('id')).toBe('new-job');
     });
 
-    test('generates workflow ID if missing', () => {
+    test('does not set workflow ID', () => {
       const workflowState: YAMLWorkflowState = {
-        id: '',
+        id: 'some-id',
         name: 'No ID Workflow',
         jobs: [],
         triggers: [],
@@ -502,10 +497,9 @@ describe("YAMLStateToYDoc", () => {
       YAMLStateToYDoc.applyToYDoc(ydoc, workflowState);
 
       const workflowMap = ydoc.getMap('workflow');
-      const id = workflowMap.get('id') as string;
+      const id = workflowMap.get('id');
 
-      expect(id).toBeTruthy();
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(id).toBeUndefined();
     });
 
     test('applies all transformations in single transaction', () => {

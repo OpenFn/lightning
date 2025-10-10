@@ -28,7 +28,6 @@ export class YAMLStateToYDoc {
   static transformJob(job: YAMLStateJob): Y.Map<unknown> {
     const jobMap = new Y.Map();
 
-    // Generate ID if missing
     jobMap.set("id", job.id);
     jobMap.set("name", job.name);
     jobMap.set("adaptor", job.adaptor);
@@ -53,7 +52,6 @@ export class YAMLStateToYDoc {
   static transformTrigger(trigger: YAMLStateTrigger): Y.Map<unknown> {
     const triggerMap = new Y.Map();
 
-    // Generate ID if missing
     triggerMap.set("id", trigger.id);
     triggerMap.set("type", trigger.type); // Required for diagram icon rendering
     triggerMap.set("enabled", trigger.enabled);
@@ -75,7 +73,6 @@ export class YAMLStateToYDoc {
   static transformEdge(edge: YAMLStateEdge): Y.Map<unknown> {
     const edgeMap = new Y.Map();
 
-    // Generate ID if missing
     edgeMap.set("id", edge.id);
 
     edgeMap.set("source_job_id", edge.source_job_id || null);

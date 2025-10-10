@@ -4,7 +4,7 @@
  */
 
 import type React from "react";
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useMemo, useState } from "react";
 
 import _logger from "#/utils/logger";
 
@@ -86,8 +86,12 @@ export const SessionProvider = ({
     };
   }, [isConnected, socket, workflowId, projectId, isNewWorkflow, sessionStore]);
 
-  // Pass store instance and isNewWorkflow - never changes reference
-  const contextValue = useState(() => ({ sessionStore, isNewWorkflow }))[0];
+  // Memoize context value to prevent unnecessary re-renders
+  // isNewWorkflow can change from true to false after user saves
+  const contextValue = useMemo(
+    () => ({ sessionStore, isNewWorkflow }),
+    [sessionStore, isNewWorkflow]
+  );
 
   return (
     <SessionContext.Provider value={contextValue}>

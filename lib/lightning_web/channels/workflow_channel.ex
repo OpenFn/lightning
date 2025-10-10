@@ -434,7 +434,7 @@ defmodule LightningWeb.WorkflowChannel do
           {:error, "workflow does not belong to specified project"}
         else
           # Verify permissions
-          case Lightning.Policies.Permissions.can(
+          case Permissions.can(
                  :workflows,
                  :access_read,
                  user,
@@ -453,7 +453,7 @@ defmodule LightningWeb.WorkflowChannel do
   # Load workflow for "new" action - build workflow struct
   defp load_workflow("new", workflow_id, project, user) do
     # Verify permissions on project
-    case Lightning.Policies.Permissions.can(
+    case Permissions.can(
            :project_users,
            :create_workflow,
            user,

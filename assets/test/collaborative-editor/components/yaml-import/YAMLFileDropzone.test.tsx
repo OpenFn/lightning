@@ -168,8 +168,8 @@ describe('YAMLFileDropzone', () => {
       const onUpload = vi.fn();
       const { container } = render(<YAMLFileDropzone onUpload={onUpload} />);
 
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+      const icon = container.querySelector('span.hero-cloud-arrow-up');
+      expect(icon).toBeInTheDocument();
     });
 
     test('has accessible file input', () => {
