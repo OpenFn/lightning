@@ -364,6 +364,24 @@ export const useWorkflowActions = () => {
             );
           }
 
+          // Check if this is a new workflow and update URL
+          const currentState = sessionContextStore.getSnapshot();
+          if (currentState.isNewWorkflow) {
+            const workflowState = store.getSnapshot();
+            const workflowId = workflowState.workflow?.id;
+            const projectId = currentState.project?.id;
+
+            if (workflowId && projectId) {
+              // Update URL to include project_id
+              const newUrl =
+                `/projects/${projectId}/w/${workflowId}/collaborate`;
+              window.history.replaceState(null, "", newUrl);
+
+              // Clear isNewWorkflow flag after successful save
+              sessionContextStore.clearIsNewWorkflow();
+            }
+          }
+
           // Show success notification
           notifications.info({
             title: "Workflow saved",
@@ -402,6 +420,7 @@ export const useWorkflowActions = () => {
         }
       },
       resetWorkflow: store.resetWorkflow,
+      importWorkflow: store.importWorkflow,
     }),
     [store, sessionContextStore]
   );
