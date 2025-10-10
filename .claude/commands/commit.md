@@ -17,6 +17,7 @@ You are tasked with creating git commits for the changes made during this sessio
 2. **Plan your commit(s):**
    - Identify which files belong together
    - Draft clear, descriptive commit messages
+   - Use .claude/deaiify.md to inform your language
    - Use imperative mood in commit messages
    - Focus on why the changes were made, not just what
 
