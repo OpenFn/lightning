@@ -30,16 +30,17 @@ defmodule Lightning.SessionTest do
       user: user
     } do
       workflow_id = Ecto.UUID.generate()
+      workflow = %Lightning.Workflows.Workflow{id: workflow_id, project_id: Ecto.UUID.generate(), name: "", positions: %{}}
 
       assert {:error, {{:error, :shared_doc_not_found}, _}} =
-               start_supervised({Session, user: user, workflow_id: workflow_id})
+               start_supervised({Session, user: user, workflow: workflow})
     end
 
     test "start/1 can join an existing shared doc", %{user: user1} do
       user2 = insert(:user)
       workflow = insert(:simple_workflow)
 
-      Lightning.Collaborate.start_document(workflow.id)
+      Lightning.Collaborate.start_document(workflow)
 
       [parent1, parent2] = build_parents(2)
 
@@ -48,7 +49,7 @@ defmodule Lightning.SessionTest do
           {:ok, client} =
             Session.start_link(
               user: user,
-              workflow_id: workflow.id,
+              workflow: workflow,
               parent_pid: parent
             )
 
@@ -121,11 +122,11 @@ defmodule Lightning.SessionTest do
         build(:complex_workflow, name: "Test Workflow")
         |> insert()
 
-      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+      start_supervised!({DocumentSupervisor, workflow: workflow})
 
       # Start a session - this should initialize the SharedDoc with workflow data
       session_pid =
-        start_supervised!({Session, user: user, workflow_id: workflow.id})
+        start_supervised!({Session, user: user, workflow: workflow})
 
       # Send a message to allow :handle_continue to finish
       shared_doc = Session.get_doc(session_pid)
@@ -210,11 +211,11 @@ defmodule Lightning.SessionTest do
 
       insert(:job, workflow: workflow, name: "Original Job", body: "original")
 
-      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+      start_supervised!({DocumentSupervisor, workflow: workflow})
 
       # Start first session
       session_1 =
-        start_supervised!({Session, workflow_id: workflow.id, user: user})
+        start_supervised!({Session, workflow: workflow, user: user})
 
       shared_doc_1 = Session.get_doc(session_1)
 
@@ -225,7 +226,7 @@ defmodule Lightning.SessionTest do
 
       # Start second session - should connect to existing SharedDoc
       session_2 =
-        start_supervised!({Session, workflow_id: workflow.id, user: user})
+        start_supervised!({Session, workflow: workflow, user: user})
 
       shared_doc_2 = Session.get_doc(session_2)
 
@@ -255,11 +256,11 @@ defmodule Lightning.SessionTest do
           body: "console.log('sync')"
         )
 
-      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+      start_supervised!({DocumentSupervisor, workflow: workflow})
 
       # Start session to initialize SharedDoc
       session_pid =
-        start_supervised!({Session, user: user, workflow_id: workflow.id})
+        start_supervised!({Session, user: user, workflow: workflow})
 
       %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
 
@@ -301,10 +302,10 @@ defmodule Lightning.SessionTest do
       workflow = insert(:simple_workflow)
 
       _document_supervisor =
-        start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+        start_supervised!({DocumentSupervisor, workflow: workflow})
 
       session_pid =
-        start_supervised!({Session, user: user, workflow_id: workflow.id})
+        start_supervised!({Session, user: user, workflow: workflow})
 
       # This is an existing workflow, so when the session starts, it should
       # both initialize the workflow document and save the initial state
@@ -412,13 +413,13 @@ defmodule Lightning.SessionTest do
       workflow = insert(:simple_workflow)
 
       document_supervisor =
-        start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+        start_supervised!({DocumentSupervisor, workflow: workflow})
 
       %{shared_doc: shared_doc, persistence_writer: persistence_writer} =
         Registry.get_group("workflow:#{workflow.id}")
 
       session_pid =
-        start_supervised!({Session, user: user, workflow_id: workflow.id})
+        start_supervised!({Session, user: user, workflow: workflow})
 
       {:ok, client_pid} =
         GenServer.start(TestClient, shared_doc_pid: shared_doc)
@@ -457,11 +458,11 @@ defmodule Lightning.SessionTest do
       # Starting a new document supervisor, like when the frontend reconnects
       # At this point, client is still running, and the SharedDoc should
       # pick up the existing document from the database.
-      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+      start_supervised!({DocumentSupervisor, workflow: workflow})
 
       # Starting a new session
       _session_pid =
-        start_supervised!({Session, user: user, workflow_id: workflow.id})
+        start_supervised!({Session, user: user, workflow: workflow})
 
       shared_doc_pid = Registry.get_group("workflow:#{workflow.id}").shared_doc
 
@@ -512,10 +513,11 @@ defmodule Lightning.SessionTest do
     @tag :capture_log
     test "when a session is stopped", %{user: user1} do
       workflow_id = Ecto.UUID.generate()
+      workflow = %Lightning.Workflows.Workflow{id: workflow_id, project_id: Ecto.UUID.generate(), name: "", positions: %{}}
       user2 = insert(:user)
       user3 = insert(:user)
 
-      start_supervised!({DocumentSupervisor, workflow_id: workflow_id})
+      start_supervised!({DocumentSupervisor, workflow: workflow})
 
       [{client1, parent1}, {client2, parent2}, {client3, _parent3}] =
         Enum.map([user1, user2, user3], fn user ->
@@ -523,7 +525,7 @@ defmodule Lightning.SessionTest do
 
           client =
             start_supervised!(
-              {Session, user: user, workflow_id: workflow_id, parent_pid: parent}
+              {Session, user: user, workflow: workflow, parent_pid: parent}
             )
 
           {client, parent}

@@ -17,32 +17,33 @@ defmodule LightningWeb.WorkflowChannel do
   require Logger
 
   @impl true
-  def join("workflow:collaborate:" <> workflow_id = topic, _params, socket) do
+  def join(
+        "workflow:collaborate:" <> workflow_id = topic,
+        %{"project_id" => project_id, "action" => action},
+        socket
+      ) do
     # Check if user is authenticated
     case socket.assigns[:current_user] do
       nil ->
         {:error, %{reason: "unauthorized"}}
 
       user ->
-        # Get workflow and verify user has access to its project
-        case Lightning.Workflows.get_workflow(workflow_id, include: [:project]) do
+        # Fetch project first
+        case Lightning.Projects.get_project(project_id) do
           nil ->
-            {:error, %{reason: "workflow not found"}}
+            {:error, %{reason: "project not found"}}
 
-          workflow ->
-            case Permissions.can(
-                   :workflows,
-                   :access_read,
-                   user,
-                   workflow.project
-                 ) do
-              :ok ->
+          project ->
+            # Load or build workflow based on action
+            case load_workflow(action, workflow_id, project, user) do
+              {:ok, workflow} ->
+                # Start collaboration with workflow struct
                 {:ok, session_pid} =
-                  Collaborate.start(user: user, workflow_id: workflow_id)
+                  Collaborate.start(user: user, workflow: workflow)
 
                 project_user =
                   Lightning.Projects.get_project_user(
-                    workflow.project,
+                    project,
                     user
                   )
 
@@ -51,15 +52,21 @@ defmodule LightningWeb.WorkflowChannel do
                    workflow_id: workflow_id,
                    collaboration_topic: topic,
                    workflow: workflow,
+                   project: project,
                    session_pid: session_pid,
                    project_user: project_user
                  )}
 
-              {:error, :unauthorized} ->
-                {:error, %{reason: "unauthorized"}}
+              {:error, reason} ->
+                {:error, %{reason: reason}}
             end
         end
     end
+  end
+
+  # Handle missing params
+  def join("workflow:collaborate:" <> _workflow_id, _params, _socket) do
+    {:error, %{reason: "invalid parameters. project_id and action are required"}}
   end
 
   @impl true
@@ -72,7 +79,7 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("request_credentials", _payload, socket) do
-    project = socket.assigns.workflow.project
+    project = socket.assigns.project
 
     async_task(socket, "request_credentials", fn ->
       credentials =
@@ -100,12 +107,13 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in("get_context", _payload, socket) do
     user = socket.assigns[:current_user]
     workflow = socket.assigns.workflow
+    project = socket.assigns.project
     project_user = socket.assigns.project_user
 
     async_task(socket, "get_context", fn ->
       %{
         user: render_user_context(user),
-        project: render_project_context(workflow.project),
+        project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
         latest_snapshot_lock_version: workflow.lock_version
@@ -412,5 +420,65 @@ defmodule LightningWeb.WorkflowChannel do
     else
       "validation_error"
     end
+  end
+
+  # Load workflow for "edit" action - fetch from database
+  defp load_workflow("edit", workflow_id, project, user) do
+    case Lightning.Workflows.get_workflow(workflow_id) do
+      nil ->
+        {:error, "workflow not found"}
+
+      workflow ->
+        # Verify project matches
+        if workflow.project_id != project.id do
+          {:error, "workflow does not belong to specified project"}
+        else
+          # Verify permissions
+          case Lightning.Policies.Permissions.can(
+                 :workflows,
+                 :access_read,
+                 user,
+                 project
+               ) do
+            :ok ->
+              {:ok, workflow}
+
+            {:error, :unauthorized} ->
+              {:error, "unauthorized"}
+          end
+        end
+    end
+  end
+
+  # Load workflow for "new" action - build workflow struct
+  defp load_workflow("new", workflow_id, project, user) do
+    # Verify permissions on project
+    case Lightning.Policies.Permissions.can(
+           :project_users,
+           :create_workflow,
+           user,
+           project
+         ) do
+      :ok ->
+        # Build minimal workflow struct for new workflow
+        workflow = %Lightning.Workflows.Workflow{
+          id: workflow_id,
+          project_id: project.id,
+          name: "Untitled workflow",
+          jobs: [],
+          edges: [],
+          triggers: []
+        }
+
+        {:ok, workflow}
+
+      {:error, :unauthorized} ->
+        {:error, "unauthorized"}
+    end
+  end
+
+  # Handle invalid action
+  defp load_workflow(action, _workflow_id, _project, _user) do
+    {:error, "invalid action '#{action}', must be 'new' or 'edit'"}
   end
 end

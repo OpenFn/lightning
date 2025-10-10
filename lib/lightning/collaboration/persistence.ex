@@ -17,11 +17,11 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def bind(state, doc_name, doc) do
-    workflow_id = Map.get(state, :workflow_id)
+    workflow = Map.fetch!(state, :workflow)
 
-    if !workflow_id do
+    if !workflow do
       raise KeyError, """
-      workflow_id is required in state: #{inspect(state)}
+      workflow is required in state: #{inspect(state)}
 
       Ensure you are starting the SharedDoc with the correct persistence opts.
       """
@@ -47,7 +47,7 @@ defmodule Lightning.Collaboration.Persistence do
           "No persisted state found, starting fresh. document=#{doc_name}"
         )
 
-        Session.initialize_workflow_document(doc, workflow_id)
+        Session.initialize_workflow_document(doc, workflow)
 
         :ok
     end

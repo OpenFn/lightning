@@ -42,7 +42,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Create a new job changeset
       new_job =
@@ -100,7 +100,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Get the SharedDoc and verify initial state
       shared_doc = Session.get_doc(session_pid)
@@ -167,7 +167,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Get the first job to delete
       job_to_delete = Enum.at(workflow.jobs, 0)
@@ -212,7 +212,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Create a new edge between existing jobs
       %{id: source_job_id} = source_job = Enum.at(workflow.jobs, 1)
@@ -270,7 +270,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Get the first edge to update
       edge_to_update = Enum.at(workflow.edges, 0)
@@ -312,7 +312,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Get the first edge to delete
       edge_to_delete = Enum.at(workflow.edges, 0)
@@ -357,7 +357,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Get the first trigger to update
       trigger_to_update = Enum.at(workflow.triggers, 0)
@@ -405,7 +405,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Get the trigger to delete
       trigger_to_delete = Enum.at(workflow.triggers, 0)
@@ -444,7 +444,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Create changeset for updating workflow properties
       workflow_changeset =
@@ -472,7 +472,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Get some job IDs to create positions for
       job1_id = Enum.at(workflow.jobs, 0).id
@@ -514,7 +514,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Get existing entities to modify
       job_to_update = Enum.at(workflow.jobs, 0)
@@ -627,7 +627,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start a session to create the SharedDoc
       {:ok, session_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Create many new jobs at once (stress test)
       new_jobs =
@@ -681,13 +681,13 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     } do
       # Start multiple sessions to create multiple references to SharedDoc
       {:ok, session1_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       {:ok, session2_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       {:ok, session3_pid} =
-        Collaborate.start(workflow_id: workflow.id, user: user)
+        Collaborate.start(workflow: workflow, user: user)
 
       # Verify all sessions share the same SharedDoc
       shared_doc1 = Session.get_doc(session1_pid)

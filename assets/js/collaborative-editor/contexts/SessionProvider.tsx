@@ -16,15 +16,25 @@ import {
 
 const logger = _logger.ns("SessionProvider").seal();
 
-export const SessionContext = createContext<SessionStoreInstance | null>(null);
+interface SessionContextValue {
+  sessionStore: SessionStoreInstance;
+  isNewWorkflow: boolean;
+}
+
+export const SessionContext =
+  createContext<SessionContextValue | null>(null);
 
 interface SessionProviderProps {
   workflowId: string;
+  projectId: string;
+  isNewWorkflow: boolean;
   children: React.ReactNode;
 }
 
 export const SessionProvider = ({
   workflowId,
+  projectId,
+  isNewWorkflow,
   children,
 }: SessionProviderProps) => {
   const { socket, isConnected } = useSocket();
@@ -46,7 +56,13 @@ export const SessionProvider = ({
 
     // Initialize session - createSessionStore handles everything
     // Pass null for userData - StoreProvider will initialize it from SessionContextStore
-    sessionStore.initializeSession(socket, roomname, null, { connect: true });
+    sessionStore.initializeSession(socket, roomname, null, {
+      connect: true,
+      joinParams: {
+        project_id: projectId,
+        action: isNewWorkflow ? "new" : "edit",
+      },
+    });
 
     // Testing helper to simulate a reconnect
     window.triggerSessionReconnect = (timeout = 1000) => {
@@ -68,11 +84,13 @@ export const SessionProvider = ({
       logger.debug("PhoenixChannelProvider: cleaning up");
       sessionStore.destroy();
     };
-  }, [isConnected, socket, workflowId, sessionStore]);
+  }, [isConnected, socket, workflowId, projectId, isNewWorkflow, sessionStore]);
 
-  // Pass store instance directly - never changes reference
+  // Pass store instance and isNewWorkflow - never changes reference
+  const contextValue = useState(() => ({ sessionStore, isNewWorkflow }))[0];
+
   return (
-    <SessionContext.Provider value={sessionStore}>
+    <SessionContext.Provider value={contextValue}>
       {children}
     </SessionContext.Provider>
   );
