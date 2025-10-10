@@ -29,6 +29,7 @@ defmodule LightningWeb.RunChannel do
          run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
+      Logger.metadata(run_id: id, project_id: project_id)
       Sentry.Context.set_extra_context(%{run_id: id})
 
       {:ok,
@@ -88,6 +89,8 @@ defmodule LightningWeb.RunChannel do
 
   def handle_in("fetch:credential", %{"id" => id}, socket) do
     %{run: run, project_id: project_id} = socket.assigns
+
+    Logger.metadata(credential_id: id)
 
     case Resolver.resolve_credential(run, id) do
       {:ok, nil} ->
@@ -204,20 +207,15 @@ defmodule LightningWeb.RunChannel do
   defp handle_credential_error(
          socket,
          {:environment_not_configured, _credential},
-         id,
-         project_id,
-         run_id
+         _id,
+         _project_id,
+         _run_id
        ) do
-    Logger.error(
-      "Project has no environment configured",
-      credential_id: id,
-      project_id: project_id,
-      run_id: run_id
-    )
+    Logger.error("Project has no environment configured")
 
     error =
       LightningWeb.ErrorFormatter.format(:environment_not_configured, %{
-        project: project_id
+        project: socket.assigns.project_id
       })
 
     {:reply, {:error, error}, socket}
@@ -226,15 +224,11 @@ defmodule LightningWeb.RunChannel do
   defp handle_credential_error(
          socket,
          {:project_not_found, _credential},
-         id,
+         _id,
          _project_id,
-         run_id
+         _run_id
        ) do
-    Logger.error(
-      "Project not found for run",
-      credential_id: id,
-      run_id: run_id
-    )
+    Logger.error("Project not found for run")
 
     error = LightningWeb.ErrorFormatter.format(:project_not_found, %{})
     {:reply, {:error, error}, socket}
@@ -243,25 +237,22 @@ defmodule LightningWeb.RunChannel do
   defp handle_credential_error(
          socket,
          {:environment_mismatch, credential},
-         id,
-         project_id,
-         run_id
+         _id,
+         _project_id,
+         _run_id
        ) do
-    project_env = Lightning.Projects.get_project!(project_id).env || "unknown"
+    project_env =
+      Lightning.Projects.get_project!(socket.assigns.project_id).env || "unknown"
 
     Logger.error(
       "Credential environment does not match project environment",
-      credential_id: id,
-      credential_name: credential.name,
-      project_id: project_id,
-      project_env: project_env,
-      run_id: run_id
+      project_env: project_env
     )
 
     error =
       LightningWeb.ErrorFormatter.format(
         {:environment_mismatch, credential},
-        %{project: project_id, project_env: project_env}
+        %{project: socket.assigns.project_id, project_env: project_env}
       )
 
     {:reply, {:error, error}, socket}
@@ -270,23 +261,28 @@ defmodule LightningWeb.RunChannel do
   defp handle_credential_error(
          socket,
          {:reauthorization_required, _credential} = reason,
-         id,
-         project_id,
+         _id,
+         _project_id,
          _run_id
        ) do
-    Logger.error("OAuth refresh token has expired", credential_id: id)
-    error = LightningWeb.ErrorFormatter.format(reason, %{project: project_id})
+    Logger.error("OAuth refresh token has expired")
+
+    error =
+      LightningWeb.ErrorFormatter.format(reason, %{
+        project: socket.assigns.project_id
+      })
+
     {:reply, {:error, error}, socket}
   end
 
   defp handle_credential_error(
          socket,
          {:temporary_failure, _credential},
-         id,
+         _id,
          _project_id,
          _run_id
        ) do
-    Logger.error("Could not reach the oauth provider", credential_id: id)
+    Logger.error("Could not reach the oauth provider")
 
     {:reply, {:error, "Could not reach the oauth provider. Try again later"},
      socket}

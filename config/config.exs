@@ -159,12 +159,9 @@ config :logger, :console,
     :session_id,
     :prompt_size,
     :credential_id,
-    :credential_name,
-    :project_id,
-    :project_env,
     :run_id,
-    :environment,
-    :client_id
+    :project_id,
+    :project_env
   ]
 
 # Use Jason for JSON parsing in Phoenix

@@ -72,7 +72,7 @@ defmodule Lightning.Credentials.Resolver do
   def resolve_credential(a, b \\ "main")
 
   def resolve_credential(%Run{} = run, id) do
-    Logger.info("Resolving credential #{id} for run #{run.id}")
+    Logger.metadata(run_id: run.id, credential_id: id)
 
     with {:ok, project_env} <- get_project_env(run),
          credential when not is_nil(credential) <- get_run_credential(run, id) do
@@ -107,10 +107,7 @@ defmodule Lightning.Credentials.Resolver do
       {:error, :environment_not_found} ->
         Logger.error(
           "Credential environment does not match project environment",
-          credential_id: credential.id,
-          credential_name: credential.name,
-          project_env: project_env,
-          run_id: run.id
+          project_env: project_env
         )
 
         {:error, {:environment_mismatch, credential}}
@@ -141,8 +138,7 @@ defmodule Lightning.Credentials.Resolver do
     case Lightning.Projects.get_project_for_run(run) do
       %Project{env: nil, parent_id: nil} ->
         Logger.warning(
-          "Root project has no environment set, defaulting to 'main'",
-          run_id: run.id
+          "Root project has no environment set, defaulting to 'main'"
         )
 
         {:ok, "main"}
@@ -151,11 +147,11 @@ defmodule Lightning.Credentials.Resolver do
         {:ok, env}
 
       %Project{env: nil} ->
-        Logger.error("Project has no environment configured", run_id: run.id)
+        Logger.error("Project has no environment configured")
         {:error, :environment_not_configured}
 
       nil ->
-        Logger.error("Project not found for run", run_id: run.id)
+        Logger.error("Project not found for run")
         {:error, :project_not_found}
     end
   end
