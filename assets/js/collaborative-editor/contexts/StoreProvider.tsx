@@ -24,6 +24,7 @@
 import type React from "react";
 import {
   createContext,
+  useContext,
   useEffect,
   useState,
   useSyncExternalStore,
@@ -31,6 +32,7 @@ import {
 
 import _logger from "#/utils/logger";
 
+import { SessionContext } from "../contexts/SessionProvider";
 import { useSession } from "../hooks/useSession";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
 import { createAdaptorStore } from "../stores/createAdaptorStore";
@@ -72,13 +74,17 @@ const logger = _logger.ns("StoreProvider").seal();
 export const StoreProvider = ({ children }: StoreProviderProps) => {
   const session = useSession();
 
+  // Get isNewWorkflow from SessionContext
+  const sessionContext = useContext(SessionContext);
+  const isNewWorkflow = sessionContext?.isNewWorkflow ?? false;
+
   // Create store instances once and reuse them
   const [stores] = useState(() => ({
     adaptorStore: createAdaptorStore(),
     credentialStore: createCredentialStore(),
     awarenessStore: createAwarenessStore(),
     workflowStore: createWorkflowStore(),
-    sessionContextStore: createSessionContextStore(),
+    sessionContextStore: createSessionContextStore(isNewWorkflow),
   }));
 
   // Subscribe to sessionContextStore user changes

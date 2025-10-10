@@ -28,7 +28,7 @@ export class WorkflowStateAdapter {
     const jobMap = new Y.Map();
 
     // Generate ID if missing
-    jobMap.set("id", job.id || crypto.randomUUID());
+    jobMap.set("id", job.id);
     jobMap.set("name", job.name);
     jobMap.set("adaptor", job.adaptor);
 
@@ -53,14 +53,14 @@ export class WorkflowStateAdapter {
     const triggerMap = new Y.Map();
 
     // Generate ID if missing
-    triggerMap.set("id", trigger.id || crypto.randomUUID());
+    triggerMap.set("id", trigger.id);
     triggerMap.set("type", trigger.type); // Required for diagram icon rendering
     triggerMap.set("enabled", trigger.enabled);
 
     // Session.Trigger always requires cron_expression
-    // Default to "" for non-cron triggers
+    // Default to null for non-cron triggers
     const cronExpression =
-      trigger.type === "cron" ? trigger.cron_expression : "";
+      trigger.type === "cron" ? trigger.cron_expression : null;
     triggerMap.set("cron_expression", cronExpression);
 
     return triggerMap;
@@ -75,15 +75,14 @@ export class WorkflowStateAdapter {
     const edgeMap = new Y.Map();
 
     // Generate ID if missing
-    edgeMap.set("id", edge.id || crypto.randomUUID());
+    edgeMap.set("id", edge.id);
 
-    // Transform optional fields to required strings
-    edgeMap.set("source_job_id", edge.source_job_id || "");
-    edgeMap.set("source_trigger_id", edge.source_trigger_id || "");
+    edgeMap.set("source_job_id", edge.source_job_id || null);
+    edgeMap.set("source_trigger_id", edge.source_trigger_id || null);
     edgeMap.set("target_job_id", edge.target_job_id);
     edgeMap.set("condition_type", edge.condition_type);
-    edgeMap.set("condition_label", edge.condition_label || "");
-    edgeMap.set("condition_expression", edge.condition_expression || "");
+    edgeMap.set("condition_label", edge.condition_label || null);
+    edgeMap.set("condition_expression", edge.condition_expression || null);
     edgeMap.set("enabled", edge.enabled);
 
     return edgeMap;

@@ -464,7 +464,6 @@ defmodule LightningWeb.WorkflowChannel do
           id: workflow_id,
           project_id: project.id,
           name: "Untitled workflow",
-          positions: %{},
           jobs: [],
           edges: [],
           triggers: []

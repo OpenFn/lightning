@@ -16,7 +16,13 @@ import {
 
 const logger = _logger.ns("SessionProvider").seal();
 
-export const SessionContext = createContext<SessionStoreInstance | null>(null);
+interface SessionContextValue {
+  sessionStore: SessionStoreInstance;
+  isNewWorkflow: boolean;
+}
+
+export const SessionContext =
+  createContext<SessionContextValue | null>(null);
 
 interface SessionProviderProps {
   workflowId: string;
@@ -80,9 +86,11 @@ export const SessionProvider = ({
     };
   }, [isConnected, socket, workflowId, projectId, isNewWorkflow, sessionStore]);
 
-  // Pass store instance directly - never changes reference
+  // Pass store instance and isNewWorkflow - never changes reference
+  const contextValue = useState(() => ({ sessionStore, isNewWorkflow }))[0];
+
   return (
-    <SessionContext.Provider value={sessionStore}>
+    <SessionContext.Provider value={contextValue}>
       {children}
     </SessionContext.Provider>
   );

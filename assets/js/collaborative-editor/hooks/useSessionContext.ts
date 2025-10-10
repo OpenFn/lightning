@@ -147,3 +147,20 @@ export const useLatestSnapshotLockVersion = (): number | null => {
 
   return useSyncExternalStore(sessionContextStore.subscribe, selectLockVersion);
 };
+
+/**
+ * Hook to check if this is a new workflow being created
+ * Returns true during initial workflow creation, false after first save
+ */
+export const useIsNewWorkflow = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectIsNewWorkflow = sessionContextStore.withSelector(
+    state => state.isNewWorkflow
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectIsNewWorkflow
+  );
+};

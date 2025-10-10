@@ -99,7 +99,9 @@ const logger = _logger.ns("SessionContextStore").seal();
 /**
  * Creates a session context store instance with useSyncExternalStore + Immer pattern
  */
-export const createSessionContextStore = (): SessionContextStore => {
+export const createSessionContextStore = (
+  isNewWorkflow: boolean = false
+): SessionContextStore => {
   // Single Immer-managed state object (referentially stable)
   let state: SessionContextState = produce(
     {
@@ -108,6 +110,7 @@ export const createSessionContextStore = (): SessionContextStore => {
       config: null,
       permissions: null,
       latestSnapshotLockVersion: null,
+      isNewWorkflow,
       isLoading: false,
       error: null,
       lastUpdated: null,
@@ -233,6 +236,17 @@ export const createSessionContextStore = (): SessionContextStore => {
     notify("setLatestSnapshotLockVersion");
   };
 
+  /**
+   * Clear isNewWorkflow flag
+   * Called after first successful save of a new workflow
+   */
+  const clearIsNewWorkflow = () => {
+    state = produce(state, draft => {
+      draft.isNewWorkflow = false;
+    });
+    notify("clearIsNewWorkflow");
+  };
+
   // =============================================================================
   // CHANNEL INTEGRATION
   // =============================================================================
@@ -344,6 +358,7 @@ export const createSessionContextStore = (): SessionContextStore => {
     setError,
     clearError,
     setLatestSnapshotLockVersion,
+    clearIsNewWorkflow,
 
     // Internal methods (not part of public SessionContextStore interface)
     _connectChannel,

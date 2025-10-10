@@ -45,6 +45,7 @@ export interface SessionContextState {
   config: AppConfig | null;
   permissions: Permissions | null;
   latestSnapshotLockVersion: number | null;
+  isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;
   lastUpdated: number | null;
@@ -56,6 +57,7 @@ interface SessionContextCommands {
   setError: (error: string | null) => void;
   clearError: () => void;
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
+  clearIsNewWorkflow: () => void;
 }
 
 interface SessionContextQueries {
