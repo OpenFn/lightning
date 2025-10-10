@@ -151,7 +151,8 @@ defmodule LightningWeb.WorkflowChannelTest do
         |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
         |> subscribe_and_join(
           LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow.id}"
+          "workflow:collaborate:#{workflow.id}",
+          %{project_id: project.id, action: "edit"}
         )
 
       ref = push(socket, "get_context", %{})

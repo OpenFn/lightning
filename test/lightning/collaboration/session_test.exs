@@ -30,7 +30,13 @@ defmodule Lightning.SessionTest do
       user: user
     } do
       workflow_id = Ecto.UUID.generate()
-      workflow = %Lightning.Workflows.Workflow{id: workflow_id, project_id: Ecto.UUID.generate(), name: "", positions: %{}}
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: workflow_id,
+        project_id: Ecto.UUID.generate(),
+        name: "",
+        positions: %{}
+      }
 
       assert {:error, {{:error, :shared_doc_not_found}, _}} =
                start_supervised({Session, user: user, workflow: workflow})
@@ -513,7 +519,14 @@ defmodule Lightning.SessionTest do
     @tag :capture_log
     test "when a session is stopped", %{user: user1} do
       workflow_id = Ecto.UUID.generate()
-      workflow = %Lightning.Workflows.Workflow{id: workflow_id, project_id: Ecto.UUID.generate(), name: "", positions: %{}}
+
+      workflow = %Lightning.Workflows.Workflow{
+        id: workflow_id,
+        project_id: Ecto.UUID.generate(),
+        name: "",
+        positions: %{}
+      }
+
       user2 = insert(:user)
       user3 = insert(:user)
 
@@ -648,10 +661,10 @@ defmodule Lightning.SessionTest do
       # Add a job so we have something to modify
       job = insert(:job, workflow: workflow, name: "Original Job")
 
-      start_supervised!({DocumentSupervisor, workflow_id: workflow.id})
+      start_supervised!({DocumentSupervisor, workflow: workflow})
 
       session_pid =
-        start_supervised!({Session, workflow_id: workflow.id, user: user})
+        start_supervised!({Session, workflow: workflow, user: user})
 
       %{
         session: session_pid,
