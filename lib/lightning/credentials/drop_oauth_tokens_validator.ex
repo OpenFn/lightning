@@ -39,10 +39,11 @@ defmodule Lightning.Credentials.DropOauthTokensValidator do
   """
 
   import Ecto.Query
-  alias Lightning.Repo
+
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.CredentialBody
   alias Lightning.Projects.Project
+  alias Lightning.Repo
 
   def validate_before do
     IO.puts("\n=== BEFORE MIGRATION ===")
@@ -66,19 +67,33 @@ defmodule Lightning.Credentials.DropOauthTokensValidator do
   def validate_after do
     IO.puts("\n=== AFTER MIGRATION ===")
 
-    # Check old stuff is gone
-    oauth_tokens_exists = table_exists?("oauth_tokens")
-    body_exists = column_exists?("credentials", "body")
-    oauth_token_id_exists = column_exists?("credentials", "oauth_token_id")
-    production_exists = column_exists?("credentials", "production")
+    schema_checks = check_schema_changes()
+    data_checks = check_data_integrity()
 
-    IO.puts("\nSchema Changes:")
-    IO.puts("oauth_tokens table exists: #{oauth_tokens_exists}")
-    IO.puts("credentials.body exists: #{body_exists}")
-    IO.puts("credentials.oauth_token_id exists: #{oauth_token_id_exists}")
-    IO.puts("credentials.production exists: #{production_exists}")
+    print_schema_changes(schema_checks)
+    print_data_integrity(data_checks)
+    print_oauth_validation(data_checks.oauth_body_issues)
+    print_project_environment(data_checks)
 
-    # Check data integrity using Ecto
+    if all_checks_pass?(schema_checks, data_checks) do
+      IO.puts("\n✅ MIGRATION SUCCESSFUL - All checks passed")
+      :ok
+    else
+      IO.puts("\n❌ MIGRATION FAILED - Check values above")
+      :error
+    end
+  end
+
+  defp check_schema_changes do
+    %{
+      oauth_tokens_exists: table_exists?("oauth_tokens"),
+      body_exists: column_exists?("credentials", "body"),
+      oauth_token_id_exists: column_exists?("credentials", "oauth_token_id"),
+      production_exists: column_exists?("credentials", "production")
+    }
+  end
+
+  defp check_data_integrity do
     total = Repo.aggregate(Credential, :count)
 
     creds_without_bodies =
@@ -103,7 +118,6 @@ defmodule Lightning.Credentials.DropOauthTokensValidator do
     oauth_without_client_id =
       Enum.count(oauth_creds, &is_nil(&1.oauth_client_id))
 
-    # Check OAuth token bodies have all required fields
     oauth_body_issues = check_oauth_token_bodies(oauth_creds)
 
     root_projects =
@@ -115,95 +129,108 @@ defmodule Lightning.Credentials.DropOauthTokensValidator do
         :count
       )
 
+    %{
+      total: total,
+      creds_without_bodies: creds_without_bodies,
+      oauth_total: oauth_total,
+      oauth_without_client_id: oauth_without_client_id,
+      oauth_body_issues: oauth_body_issues,
+      root_projects: root_projects,
+      root_without_env: root_without_env
+    }
+  end
+
+  defp print_schema_changes(checks) do
+    IO.puts("\nSchema Changes:")
+    IO.puts("oauth_tokens table exists: #{checks.oauth_tokens_exists}")
+    IO.puts("credentials.body exists: #{checks.body_exists}")
+    IO.puts("credentials.oauth_token_id exists: #{checks.oauth_token_id_exists}")
+    IO.puts("credentials.production exists: #{checks.production_exists}")
+  end
+
+  defp print_data_integrity(checks) do
     IO.puts("\nData Integrity:")
-    IO.puts("Total credentials: #{total}")
-    IO.puts("Credentials WITHOUT bodies: #{length(creds_without_bodies)}")
-    IO.puts("OAuth credentials: #{oauth_total}")
-    IO.puts("OAuth WITHOUT oauth_client_id: #{oauth_without_client_id}")
+    IO.puts("Total credentials: #{checks.total}")
+    IO.puts("Credentials WITHOUT bodies: #{length(checks.creds_without_bodies)}")
+    IO.puts("OAuth credentials: #{checks.oauth_total}")
+    IO.puts("OAuth WITHOUT oauth_client_id: #{checks.oauth_without_client_id}")
+  end
 
+  defp print_oauth_validation(oauth_issues) do
     IO.puts("\nOAuth Token Body Validation:")
+    IO.puts("OAuth WITHOUT access_token: #{oauth_issues.missing_access_token}")
+    IO.puts("OAuth WITHOUT refresh_token: #{oauth_issues.missing_refresh_token}")
+    IO.puts("OAuth WITHOUT token_type: #{oauth_issues.missing_token_type}")
+    IO.puts("OAuth WITHOUT scope/scopes: #{oauth_issues.missing_scopes}")
 
     IO.puts(
-      "OAuth WITHOUT access_token: #{oauth_body_issues.missing_access_token}"
+      "OAuth WITHOUT expires_in/expires_at: #{oauth_issues.missing_expiry}"
     )
 
-    IO.puts(
-      "OAuth WITHOUT refresh_token: #{oauth_body_issues.missing_refresh_token}"
-    )
+    IO.puts("OAuth with invalid/empty body: #{oauth_issues.invalid_body}")
+  end
 
-    IO.puts("OAuth WITHOUT token_type: #{oauth_body_issues.missing_token_type}")
-    IO.puts("OAuth WITHOUT scope/scopes: #{oauth_body_issues.missing_scopes}")
-
-    IO.puts(
-      "OAuth WITHOUT expires_in/expires_at: #{oauth_body_issues.missing_expiry}"
-    )
-
-    IO.puts("OAuth with invalid/empty body: #{oauth_body_issues.invalid_body}")
-
+  defp print_project_environment(checks) do
     IO.puts("\nProject Environment:")
-    IO.puts("Root projects: #{root_projects}")
-    IO.puts("Root projects WITHOUT env: #{root_without_env}")
+    IO.puts("Root projects: #{checks.root_projects}")
+    IO.puts("Root projects WITHOUT env: #{checks.root_without_env}")
+  end
 
-    # Pass/Fail
-    all_checks_pass =
-      length(creds_without_bodies) == 0 and
-        oauth_without_client_id == 0 and
-        oauth_body_issues.missing_access_token == 0 and
-        oauth_body_issues.missing_refresh_token == 0 and
-        oauth_body_issues.missing_token_type == 0 and
-        oauth_body_issues.missing_scopes == 0 and
-        oauth_body_issues.missing_expiry == 0 and
-        oauth_body_issues.invalid_body == 0 and
-        root_without_env == 0 and
-        not oauth_tokens_exists and
-        not body_exists and
-        not oauth_token_id_exists and
-        not production_exists
+  defp all_checks_pass?(schema_checks, data_checks) do
+    data_checks_pass?(data_checks) and schema_checks_pass?(schema_checks)
+  end
 
-    if all_checks_pass do
-      IO.puts("\n✅ MIGRATION SUCCESSFUL - All checks passed")
-      :ok
-    else
-      IO.puts("\n❌ MIGRATION FAILED - Check values above")
-      :error
-    end
+  defp data_checks_pass?(data_checks) do
+    Enum.empty?(data_checks.creds_without_bodies) and
+      data_checks.oauth_without_client_id == 0 and
+      oauth_body_checks_pass?(data_checks.oauth_body_issues) and
+      data_checks.root_without_env == 0
+  end
+
+  defp oauth_body_checks_pass?(oauth_issues) do
+    oauth_issues.missing_access_token == 0 and
+      oauth_issues.missing_refresh_token == 0 and
+      oauth_issues.missing_token_type == 0 and
+      oauth_issues.missing_scopes == 0 and
+      oauth_issues.missing_expiry == 0 and
+      oauth_issues.invalid_body == 0
+  end
+
+  defp schema_checks_pass?(schema_checks) do
+    not schema_checks.oauth_tokens_exists and
+      not schema_checks.body_exists and
+      not schema_checks.oauth_token_id_exists and
+      not schema_checks.production_exists
   end
 
   defp check_oauth_token_bodies(oauth_creds) do
-    results =
-      Enum.reduce(
-        oauth_creds,
-        %{
-          missing_access_token: 0,
-          missing_refresh_token: 0,
-          missing_token_type: 0,
-          missing_scopes: 0,
-          missing_expiry: 0,
-          invalid_body: 0
-        },
-        fn cred, acc ->
-          main_body = Enum.find(cred.credential_bodies, &(&1.name == "main"))
+    Enum.reduce(
+      oauth_creds,
+      %{
+        missing_access_token: 0,
+        missing_refresh_token: 0,
+        missing_token_type: 0,
+        missing_scopes: 0,
+        missing_expiry: 0,
+        invalid_body: 0
+      },
+      fn cred, acc ->
+        main_body = Enum.find(cred.credential_bodies, &(&1.name == "main"))
 
-          cond do
-            # No main body or body is not a map
-            not main_body || not is_map(main_body.body) ->
-              %{acc | invalid_body: acc.invalid_body + 1}
+        if not main_body || not is_map(main_body.body) do
+          %{acc | invalid_body: acc.invalid_body + 1}
+        else
+          body = main_body.body
 
-            # Body exists, check required fields
-            true ->
-              body = main_body.body
-
-              acc
-              |> update_if_missing(body, "access_token", :missing_access_token)
-              |> update_if_missing(body, "refresh_token", :missing_refresh_token)
-              |> update_if_missing(body, "token_type", :missing_token_type)
-              |> update_if_missing_scopes(body)
-              |> update_if_missing_expiry(body)
-          end
+          acc
+          |> update_if_missing(body, "access_token", :missing_access_token)
+          |> update_if_missing(body, "refresh_token", :missing_refresh_token)
+          |> update_if_missing(body, "token_type", :missing_token_type)
+          |> update_if_missing_scopes(body)
+          |> update_if_missing_expiry(body)
         end
-      )
-
-    results
+      end
+    )
   end
 
   defp update_if_missing(acc, body, field, counter) do
