@@ -179,7 +179,8 @@ defmodule LightningWeb.OidcControllerTest do
         LightningWeb.OauthCredentialHelper.build_state(
           subscription_id,
           __MODULE__,
-          component_id
+          component_id,
+          "main"
         )
 
       LightningWeb.OauthCredentialHelper.subscribe(subscription_id)

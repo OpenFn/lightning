@@ -1704,18 +1704,21 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: cli_stdout, err: ""}})
 
+      credential =
+        insert(:credential, schema: "http")
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "baseUrl" => "http://localhost:4002",
+            "username" => "test",
+            "password" => "test"
+          }
+        })
+
       project_credential =
         insert(:project_credential,
           project: project,
-          credential:
-            build(:credential,
-              schema: "http",
-              body: %{
-                baseUrl: "http://localhost:4002",
-                username: "test",
-                password: "test"
-              }
-            )
+          credential: credential
         )
 
       job = workflow.jobs |> hd()

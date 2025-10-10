@@ -2,7 +2,6 @@ defmodule Lightning.ScrubberTest do
   use ExUnit.Case, async: true
 
   alias Lightning.Credentials
-  alias Lightning.Credentials.Credential
   alias Lightning.Scrubber
 
   describe "scrub/2" do
@@ -204,20 +203,26 @@ defmodule Lightning.ScrubberTest do
     test "adds basic auth base64 composed with usernames" do
       secrets = ["a", "secretpassword", 5432, false]
 
-      basic_auth =
-        Credentials.basic_auth_for(%Credential{
-          body: %{
-            "username" => "someuser",
-            "email" => "user@email.com",
-            "password" => "secretpassword"
+      credential = %Lightning.Credentials.Credential{
+        schema: "raw",
+        credential_bodies: [
+          %Lightning.Credentials.CredentialBody{
+            name: "main",
+            body: %{
+              "username" => "someuser",
+              "email" => "user@email.com",
+              "password" => "secretpassword"
+            }
           }
-        })
+        ]
+      }
 
-      assert samples =
-               Scrubber.encode_samples(
-                 secrets,
-                 basic_auth
-               )
+      basic_auth = Credentials.basic_auth_for(credential, "main")
+
+      assert samples = Scrubber.encode_samples(secrets, basic_auth)
+
+      assert Base.encode64("someuser:secretpassword") in samples
+      assert Base.encode64("user@email.com:secretpassword") in samples
 
       assert MapSet.difference(
                MapSet.new([
@@ -236,9 +241,6 @@ defmodule Lightning.ScrubberTest do
                ]),
                MapSet.new(samples)
              ) == MapSet.new()
-
-      assert Base.encode64("someuser:secretpassword") in samples
-      assert Base.encode64("user@email.com:secretpassword") in samples
     end
   end
 end

@@ -176,32 +176,8 @@ defmodule Lightning.Factories do
     }
   end
 
-  def oauth_token_factory(attrs \\ %{}) do
-    scopes = Map.get(attrs, :scope, ["read", "write"])
-    unique_id = System.unique_integer([:positive])
-
-    default_token_body = %{
-      "access_token" => "access_token_#{unique_id}",
-      "refresh_token" => "refresh_token_#{unique_id}",
-      "token_type" => "bearer",
-      "expires_in" => 3600
-    }
-
-    %Lightning.Credentials.OauthToken{
-      body:
-        attrs
-        |> Map.get(:body, default_token_body)
-        |> Lightning.Helpers.normalize_keys(),
-      user: Map.get(attrs, :user, build(:user)),
-      oauth_client: Map.get(attrs, :oauth_client),
-      scopes: Enum.sort(scopes),
-      updated_at: DateTime.utc_now()
-    }
-  end
-
   def credential_factory(attrs \\ %{}) do
     %Lightning.Credentials.Credential{
-      body: %{},
       schema: "raw",
       name: sequence(:credential_name, &"credential#{&1}")
     }
@@ -238,6 +214,32 @@ defmodule Lightning.Factories do
       name: sequence(:environment_name, ["main", "staging", "prod"]),
       body: %{"api_key" => "secret_value"},
       credential: build(:credential)
+    }
+  end
+
+  @doc """
+  Associates credential bodies with a credential.
+
+  ## Example
+
+      credential =
+        insert(:credential)
+        |> with_body(%{name: "main", body: %{"key" => "value"}})
+        |> with_body(%{name: "staging", body: %{"key" => "staging_value"}})
+  """
+  def with_body(credential, body_attrs \\ %{}) do
+    if credential.__meta__.state == :built do
+      raise "Cannot associate a body with a credential that has not been inserted"
+    end
+
+    body =
+      build(:credential_body, body_attrs)
+      |> merge_attributes(%{credential: credential})
+      |> insert()
+
+    %{
+      credential
+      | credential_bodies: merge_assoc(credential.credential_bodies, body)
     }
   end
 

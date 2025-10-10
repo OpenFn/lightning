@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Credential environments user interface and runtime
+  [#3598](https://github.com/OpenFn/lightning/issues/3598)
 - Save button with validation and permissions in collaborative workflow editor
   [#3635](https://github.com/OpenFn/lightning/issues/3635)
 - Workflow reset functionality in collaborative editor
@@ -35,6 +37,8 @@ and this project adheres to
 
 ### Changed
 
+- Delete oauth_tokens tables
+  [#3608](https://github.com/OpenFn/lightning/issues/3608)
 - Improved state management and store architecture in collaborative editor
   [#3635](https://github.com/OpenFn/lightning/issues/3635)
 - Upgraded Tailwind CSS from 4.0.13 to 4.1.14

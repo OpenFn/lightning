@@ -92,6 +92,16 @@
               <div class="grid grid-cols gap-6">
                 <div class="md:col-span-2">
                   <.input
+                    type="text"
+                    field={f[:env]}
+                    disabled={!@can_edit_project}
+                    label="Project environment"
+                  />
+                </div>
+              </div>
+              <div class="grid grid-cols gap-6">
+                <div class="md:col-span-2">
+                  <.input
                     type="textarea"
                     field={f[:description]}
                     disabled={!@can_edit_project}

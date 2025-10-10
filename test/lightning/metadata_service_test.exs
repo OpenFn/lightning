@@ -2,7 +2,6 @@ defmodule Lightning.MetadataServiceTest do
   use Lightning.DataCase, async: false
 
   alias Lightning.MetadataService
-  import Lightning.CredentialsFixtures
 
   describe "fetch/2" do
     test "returns the metadata when it exists" do
@@ -21,13 +20,20 @@ defmodule Lightning.MetadataServiceTest do
       """
 
       FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
-      credential = credential_fixture()
+
+      credential =
+        insert(:credential)
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "username" => "user",
+            "password" => "pass",
+            "host" => "https://example.com"
+          }
+        })
 
       assert MetadataService.fetch("@openfn/language-common", credential) ==
-               {:ok,
-                %{
-                  "foo" => "bar"
-                }}
+               {:ok, %{"foo" => "bar"}}
     end
 
     test "returns an error when the cli failed" do
@@ -36,7 +42,17 @@ defmodule Lightning.MetadataServiceTest do
       """
 
       FakeRambo.Helpers.stub_run({:error, %{status: 1, out: stdout, err: ""}})
-      credential = credential_fixture()
+
+      credential =
+        insert(:credential)
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "username" => "user",
+            "password" => "pass",
+            "host" => "https://example.com"
+          }
+        })
 
       assert MetadataService.fetch("@openfn/language-common", credential) == {
                :error,
@@ -48,7 +64,16 @@ defmodule Lightning.MetadataServiceTest do
     end
 
     test "returns an error when the adaptor doesn't exist" do
-      credential = credential_fixture()
+      credential =
+        insert(:credential)
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "username" => "user",
+            "password" => "pass",
+            "host" => "https://example.com"
+          }
+        })
 
       assert MetadataService.fetch("@openfn/language-foo", credential) == {
                :error,
@@ -67,7 +92,17 @@ defmodule Lightning.MetadataServiceTest do
       """
 
       FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
-      credential = credential_fixture()
+
+      credential =
+        insert(:credential)
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "username" => "user",
+            "password" => "pass",
+            "host" => "https://example.com"
+          }
+        })
 
       assert MetadataService.fetch("@openfn/language-common", credential) == {
                :error,
@@ -85,7 +120,17 @@ defmodule Lightning.MetadataServiceTest do
       """
 
       FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
-      credential = credential_fixture()
+
+      credential =
+        insert(:credential)
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "username" => "user",
+            "password" => "pass",
+            "host" => "https://example.com"
+          }
+        })
 
       assert MetadataService.fetch("@openfn/language-common", credential) == {
                :error,
@@ -103,7 +148,17 @@ defmodule Lightning.MetadataServiceTest do
       """
 
       FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
-      credential = credential_fixture()
+
+      credential =
+        insert(:credential)
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "username" => "user",
+            "password" => "pass",
+            "host" => "https://example.com"
+          }
+        })
 
       assert MetadataService.fetch("@openfn/language-common", credential) == {
                :error,

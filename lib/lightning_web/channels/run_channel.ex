@@ -29,6 +29,7 @@ defmodule LightningWeb.RunChannel do
          run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
+      Logger.metadata(run_id: id, project_id: project_id)
       Sentry.Context.set_extra_context(%{run_id: id})
 
       {:ok,
@@ -87,59 +88,22 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("fetch:credential", %{"id" => id}, socket) do
-    %{run: run, scrubber: scrubber, project_id: project_id} = socket.assigns
+    %{run: run, project_id: project_id} = socket.assigns
 
-    Resolver.resolve_credential(run, id)
-    |> case do
+    Logger.metadata(credential_id: id)
+
+    case Resolver.resolve_credential(run, id) do
       {:ok, nil} ->
         reply_with(socket, {:ok, nil})
 
       {:ok, resolved_credential} ->
-        samples =
-          Credentials.sensitive_values_for(resolved_credential.credential)
-
-        basic_auth =
-          Credentials.basic_auth_for(resolved_credential.credential)
-
-        {:ok, scrubber} = update_scrubber(scrubber, samples, basic_auth)
-
-        socket
-        |> assign(scrubber: scrubber)
-        |> reply_with({:ok, resolved_credential.body})
+        handle_resolved_credential(socket, resolved_credential)
 
       {:error, :not_found} ->
         reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
 
-      {:error, {:reauthorization_required, _credential} = reason} ->
-        Logger.error("OAuth refresh token has expired", credential_id: id)
-
-        error =
-          LightningWeb.ErrorFormatter.format(reason, %{project: project_id})
-
-        {:reply, {:error, error}, socket}
-
-      {:error, {:temporary_failure, _credential}} ->
-        Logger.error("Could not reach the oauth provider", credential_id: id)
-
-        {:reply, {:error, "Could not reach the oauth provider. Try again later"},
-         socket}
-
-      {:error, error} ->
-        Logger.error(fn ->
-          {"""
-           Something went wrong when fetching or refreshing a credential.
-           #{inspect(error)}
-           """, [credential_id: id]}
-        end)
-
-        reply_with(
-          socket,
-          {:error,
-           %{
-             error: error,
-             message: "An error occured when fetching your credential"
-           }}
-        )
+      {:error, error_tuple} ->
+        handle_credential_error(socket, error_tuple, id, project_id, run.id)
     end
   end
 
@@ -226,5 +190,101 @@ defmodule LightningWeb.RunChannel do
   defp update_scrubber(scrubber, samples, basic_auth) do
     :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
     {:ok, scrubber}
+  end
+
+  defp handle_resolved_credential(socket, resolved_credential) do
+    samples = Credentials.sensitive_values_from_body(resolved_credential.body)
+    basic_auth = Credentials.basic_auth_from_body(resolved_credential.body)
+
+    {:ok, scrubber} =
+      update_scrubber(socket.assigns.scrubber, samples, basic_auth)
+
+    socket
+    |> assign(scrubber: scrubber)
+    |> reply_with({:ok, resolved_credential.body})
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:environment_not_configured, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    Logger.error("Project has no environment configured")
+
+    error =
+      LightningWeb.ErrorFormatter.format(:environment_not_configured, %{
+        project: socket.assigns.project_id
+      })
+
+    {:reply, {:error, error}, socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:project_not_found, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    Logger.error("Project not found for run")
+
+    error = LightningWeb.ErrorFormatter.format(:project_not_found, %{})
+    {:reply, {:error, error}, socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:environment_mismatch, credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    project_env =
+      Lightning.Projects.get_project!(socket.assigns.project_id).env || "unknown"
+
+    Logger.error(
+      "Credential environment does not match project environment",
+      project_env: project_env
+    )
+
+    error =
+      LightningWeb.ErrorFormatter.format(
+        {:environment_mismatch, credential},
+        %{project: socket.assigns.project_id, project_env: project_env}
+      )
+
+    {:reply, {:error, error}, socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:reauthorization_required, _credential} = reason,
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    Logger.error("OAuth refresh token has expired")
+
+    error =
+      LightningWeb.ErrorFormatter.format(reason, %{
+        project: socket.assigns.project_id
+      })
+
+    {:reply, {:error, error}, socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:temporary_failure, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    Logger.error("Could not reach the oauth provider")
+
+    {:reply, {:error, "Could not reach the oauth provider. Try again later"},
+     socket}
   end
 end

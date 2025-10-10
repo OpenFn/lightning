@@ -18,24 +18,45 @@ defmodule Lightning.Credentials.Audit do
     ]
 
   def update_changes(changes) when is_map(changes) do
-    if Map.has_key?(changes, :body) do
-      changes
-      |> Map.update(:body, nil, fn val ->
-        {:ok, val} = Lightning.Encrypted.Map.dump(val)
-        Base.encode64(val)
-      end)
-    else
-      changes
-    end
+    changes
   end
 
   @doc """
   Creates a user-initiated audit event for credential operations.
+
+  For multi-environment credentials, environment body data is stored
+  in metadata rather than in the changes map.
   """
-  def user_initiated_event(event, credential, changes \\ %{}) do
+  def user_initiated_event(event, credential, changes \\ %{}, env_bodies \\ []) do
     %{id: id, user: user} = Lightning.Repo.preload(credential, :user)
-    event(event, id, user, changes)
+
+    metadata = build_metadata_with_bodies(env_bodies)
+
+    event(event, id, user, changes, metadata)
   end
+
+  defp build_metadata_with_bodies([]), do: %{}
+
+  defp build_metadata_with_bodies(env_bodies) do
+    encrypted_bodies =
+      Enum.reduce(env_bodies, %{}, fn {env_name, body_data}, acc ->
+        encrypted_key = "body:#{env_name}"
+        encrypted_value = encrypt_body_for_audit(body_data)
+        Map.put(acc, encrypted_key, encrypted_value)
+      end)
+
+    %{
+      credential_bodies: encrypted_bodies,
+      environments: Enum.map(env_bodies, fn {name, _} -> name end)
+    }
+  end
+
+  defp encrypt_body_for_audit(body) when is_map(body) do
+    {:ok, encrypted} = Lightning.Encrypted.Map.dump(body)
+    Base.encode64(encrypted)
+  end
+
+  defp encrypt_body_for_audit(_), do: nil
 
   @doc """
   Creates an audit event for OAuth token refresh success.
@@ -44,10 +65,9 @@ defmodule Lightning.Credentials.Audit do
   def oauth_token_refreshed_event(credential, metadata \\ %{}) do
     %{id: id, user: user} = Lightning.Repo.preload(credential, :user)
 
-    # Don't include sensitive token data in audit
     safe_metadata =
       metadata
-      |> Map.take([:client_id, :scopes, :expires_in, :token_type])
+      |> Map.take([:client_id, :scopes, :expires_in, :token_type, :environment])
       |> Map.put(:refreshed_at, DateTime.utc_now())
 
     event("token_refreshed", id, user, %{}, safe_metadata)
@@ -64,7 +84,7 @@ defmodule Lightning.Credentials.Audit do
       case error_details do
         %{status: _status} = details ->
           details
-          |> Map.take([:status, :error_type, :client_id])
+          |> Map.take([:status, :error_type, :client_id, :environment])
           |> Map.put(:failed_at, DateTime.utc_now())
 
         error when is_binary(error) ->
@@ -86,7 +106,7 @@ defmodule Lightning.Credentials.Audit do
 
     safe_metadata =
       metadata
-      |> Map.take([:client_id, :revocation_endpoint, :success])
+      |> Map.take([:client_id, :revocation_endpoint, :success, :environment])
       |> Map.put(:revoked_at, DateTime.utc_now())
 
     event("token_revoked", id, user, %{}, safe_metadata)

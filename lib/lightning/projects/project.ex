@@ -82,7 +82,19 @@ defmodule Lightning.Projects.Project do
       :color,
       :env
     ])
+    |> set_default_env_for_root_projects()
     |> validate()
+  end
+
+  defp set_default_env_for_root_projects(changeset) do
+    parent_id = get_field(changeset, :parent_id)
+    env = get_field(changeset, :env)
+
+    if is_nil(parent_id) && is_nil(env) do
+      put_change(changeset, :env, "main")
+    else
+      changeset
+    end
   end
 
   def validate(changeset) do

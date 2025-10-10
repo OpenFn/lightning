@@ -64,14 +64,21 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
     test "lists all credentials owned by the user", %{conn: conn, user: user} do
       # Create some credentials for the user
-      _credential1 = insert(:credential, user: user, name: "First Credential")
-      _credential2 = insert(:credential, user: user, name: "Second Credential")
+      _credential1 =
+        insert(:credential, user: user, name: "First Credential", schema: "raw")
+
+      _credential2 =
+        insert(:credential, user: user, name: "Second Credential", schema: "raw")
 
       # Create a credential for another user (should not appear)
       other_user = insert(:user)
 
       _other_credential =
-        insert(:credential, user: other_user, name: "Other User Credential")
+        insert(:credential,
+          user: other_user,
+          name: "Other User Credential",
+          schema: "raw"
+        )
 
       conn = get(conn, ~p"/api/credentials")
       response = json_response(conn, 200)
@@ -101,7 +108,6 @@ defmodule LightningWeb.API.CredentialControllerTest do
                "id" => _,
                "name" => "First Credential",
                "schema" => _,
-               "production" => _,
                "external_id" => _,
                "user_id" => user_id,
                "project_credentials" => _,
@@ -111,6 +117,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
              } = first_credential
 
       assert user_id == user.id
+      # production field no longer exists
+      refute Map.has_key?(first_credential, "production")
     end
 
     test "returns empty list when user has no credentials", %{
@@ -137,6 +145,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
         insert(:credential,
           user: user,
           name: "Project Credential",
+          schema: "raw",
           project_credentials: [%{project_id: project.id}]
         )
 
@@ -169,6 +178,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
         insert(:credential,
           user: user,
           name: "User Credential",
+          schema: "raw",
           project_credentials: [%{project_id: project.id}]
         )
 
@@ -178,12 +188,17 @@ defmodule LightningWeb.API.CredentialControllerTest do
         insert(:credential,
           user: other_user,
           name: "Other User Credential",
+          schema: "raw",
           project_credentials: [%{project_id: project.id}]
         )
 
       # Create a credential not in this project (should not appear)
       _unrelated_credential =
-        insert(:credential, user: user, name: "Unrelated Credential")
+        insert(:credential,
+          user: user,
+          name: "Unrelated Credential",
+          schema: "raw"
+        )
 
       conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
       response = json_response(conn, 200)
@@ -251,6 +266,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
         insert(:credential,
           user: support_user,
           name: "Support Credential",
+          schema: "raw",
           project_credentials: [%{project_id: project.id}]
         )
 
@@ -275,6 +291,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
         insert(:credential,
           user: user,
           name: "Project Credential",
+          schema: "raw",
           project_credentials: [%{project_id: project.id}]
         )
 
@@ -300,8 +317,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
     } do
       credential_attrs = %{
         "name" => "Test Credential",
-        "body" => %{"username" => "test", "password" => "secret"},
-        "schema" => "raw"
+        "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"username" => "test", "password" => "secret"}
+          }
+        ]
       }
 
       conn = post(conn, ~p"/api/credentials", credential_attrs)
@@ -312,7 +334,6 @@ defmodule LightningWeb.API.CredentialControllerTest do
                  "id" => id,
                  "name" => "Test Credential",
                  "schema" => "raw",
-                 "production" => false,
                  "external_id" => nil,
                  "user_id" => user_id,
                  "project_credentials" => [],
@@ -325,6 +346,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert user_id == user.id
       # body should be excluded
       refute Map.has_key?(response["credential"], "body")
+      # production field no longer exists
+      refute Map.has_key?(response["credential"], "production")
     end
 
     test "creates a credential with project associations when user has access",
@@ -334,8 +357,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Project Credential",
-        "body" => %{"api_key" => "secret"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"api_key" => "secret"}
+          }
+        ],
         "project_credentials" => [
           %{"project_id" => project.id}
         ]
@@ -373,8 +401,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Multi-Project Credential",
-        "body" => %{"token" => "abc123"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"token" => "abc123"}
+          }
+        ],
         "project_credentials" => [
           %{"project_id" => project1.id},
           %{"project_id" => project2.id}
@@ -399,6 +432,54 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert project2.id in project_ids
     end
 
+    test "creates a credential with multiple environment bodies", %{
+      conn: conn,
+      user: user
+    } do
+      credential_attrs = %{
+        "name" => "Multi-Environment Credential",
+        "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"api_key" => "main_key"}
+          },
+          %{
+            "name" => "production",
+            "body" => %{"api_key" => "prod_key"}
+          },
+          %{
+            "name" => "staging",
+            "body" => %{"api_key" => "staging_key"}
+          }
+        ]
+      }
+
+      conn = post(conn, ~p"/api/credentials", credential_attrs)
+      response = json_response(conn, 201)
+
+      assert %{
+               "credential" => %{
+                 "id" => id,
+                 "name" => "Multi-Environment Credential",
+                 "user_id" => user_id
+               }
+             } = response
+
+      assert is_binary(id)
+      assert user_id == user.id
+
+      # Verify bodies were created
+      credential = Lightning.Credentials.get_credential(id)
+      credential = Lightning.Repo.preload(credential, :credential_bodies)
+      assert length(credential.credential_bodies) == 3
+
+      env_names =
+        Enum.map(credential.credential_bodies, & &1.name) |> Enum.sort()
+
+      assert env_names == ["main", "production", "staging"]
+    end
+
     test "fails when user lacks access to project", %{conn: conn, user: _user} do
       other_user = insert(:user)
 
@@ -409,8 +490,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Unauthorized Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         "project_credentials" => [
           %{"project_id" => project.id}
         ]
@@ -429,8 +515,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Viewer Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         "project_credentials" => [
           %{"project_id" => project.id}
         ]
@@ -443,8 +534,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
     test "fails when project does not exist", %{conn: conn, user: _user} do
       credential_attrs = %{
         "name" => "Nonexistent Project Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         "project_credentials" => [
           %{"project_id" => Ecto.UUID.generate()}
         ]
@@ -465,8 +561,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Support User Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         "project_credentials" => [
           %{"project_id" => project.id}
         ]
@@ -489,8 +590,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
       credential_attrs = %{
         # Invalid: empty name
         "name" => "",
-        "body" => %{"secret" => "value"},
-        "schema" => "raw"
+        "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ]
       }
 
       conn = post(conn, ~p"/api/credentials", credential_attrs)
@@ -502,15 +608,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
     test "fails when missing required fields", %{conn: conn, user: _user} do
       credential_attrs = %{
-        "name" => "Test"
-        # Missing body and schema
+        "name" => ""
       }
 
       conn = post(conn, ~p"/api/credentials", credential_attrs)
       response = json_response(conn, 422)
 
-      assert %{"errors" => errors} = response
-      assert Map.has_key?(errors, "body")
+      assert %{"errors" => _errors} = response
     end
 
     test "cannot override user_id in request", %{conn: conn, user: user} do
@@ -518,8 +622,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Test Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         # This should be ignored
         "user_id" => other_user.id
       }
@@ -535,8 +644,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
     test "returns 201 created status", %{conn: conn, user: _user} do
       credential_attrs = %{
         "name" => "Status Test",
-        "body" => %{"secret" => "value"},
-        "schema" => "raw"
+        "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ]
       }
 
       conn = post(conn, ~p"/api/credentials", credential_attrs)
@@ -553,8 +667,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Mixed Access Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         "project_credentials" => [
           %{"project_id" => accessible_project.id},
           %{"project_id" => inaccessible_project.id}
@@ -575,8 +694,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Editor Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         "project_credentials" => [%{"project_id" => project.id}]
       }
 
@@ -594,8 +718,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Admin Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         "project_credentials" => [%{"project_id" => project.id}]
       }
 
@@ -613,8 +742,13 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       credential_attrs = %{
         "name" => "Owner Credential",
-        "body" => %{"secret" => "value"},
         "schema" => "raw",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => %{"secret" => "value"}
+          }
+        ],
         "project_credentials" => [%{"project_id" => project.id}]
       }
 
@@ -627,7 +761,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
     setup [:assign_bearer_for_api]
 
     test "deletes a credential owned by the user", %{conn: conn, user: user} do
-      credential = insert(:credential, user: user, name: "To Be Deleted")
+      credential =
+        insert(:credential, user: user, name: "To Be Deleted", schema: "raw")
 
       conn = delete(conn, ~p"/api/credentials/#{credential.id}")
       assert response(conn, 204) == ""
@@ -650,7 +785,11 @@ defmodule LightningWeb.API.CredentialControllerTest do
       other_user = insert(:user)
 
       other_credential =
-        insert(:credential, user: other_user, name: "Other User Credential")
+        insert(:credential,
+          user: other_user,
+          name: "Other User Credential",
+          schema: "raw"
+        )
 
       conn = delete(conn, ~p"/api/credentials/#{other_credential.id}")
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
@@ -670,6 +809,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
         insert(:credential,
           user: user,
           name: "Credential with Projects",
+          schema: "raw",
           project_credentials: [%{project_id: project.id}]
         )
 

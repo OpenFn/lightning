@@ -15,6 +15,8 @@ The format of the file should be:
 ```markdown
 # #<issue number>: <issue title>
 
+[Github](<url to github issue>)
+
 **Status:** <status>
 **Created:** <created>
 **Updated:** <updated>

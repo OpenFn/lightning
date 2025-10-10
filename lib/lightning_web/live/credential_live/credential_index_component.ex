@@ -224,8 +224,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
        assign(socket,
          active_modal: :edit_credential,
          credential: credential,
-         oauth_client:
-           credential.oauth_token && credential.oauth_token.oauth_client
+         oauth_client: credential.oauth_client
        )}
     else
       not_authorized(socket)
@@ -407,11 +406,18 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   defp list_credentials(user_or_project) do
     user_or_project
     |> Credentials.list_credentials()
-    |> Enum.map(fn c ->
+    |> Enum.map(fn credential ->
       project_names =
-        Map.get(c, :projects, []) |> Enum.map(fn p -> p.name end)
+        Map.get(credential, :projects, []) |> Enum.map(fn p -> p.name end)
 
-      Map.put(c, :project_names, project_names)
+      environment_names =
+        credential
+        |> Map.get(:credential_bodies, [])
+        |> Enum.map(& &1.name)
+
+      credential
+      |> Map.put(:project_names, project_names)
+      |> Map.put(:environment_names, environment_names)
     end)
   end
 
