@@ -44,45 +44,57 @@ defmodule Lightning.Projects.MergeProjectsTest do
       refute workflow["delete"]
     end
 
-    test "merge project with new workflow in source" do
-      # Create projects
+    test "merge project with new workflow containing jobs, triggers, and edges" do
       target_project = insert(:project, name: "Target Project")
       source_project = insert(:project, name: "Source Project")
 
-      # Target project with one workflow
-      target_workflow =
-        insert(:workflow, name: "existing_workflow", project: target_project)
+      insert(:workflow, name: "existing_workflow", project: target_project)
 
-      # Source project with existing workflow + new one
-      _source_workflow1 =
-        insert(:workflow, name: "existing_workflow", project: source_project)
-
-      source_workflow2 =
-        insert(:workflow, name: "new_workflow", project: source_project)
+      {source_new_workflow,
+       %{:webhook => source_trigger, "process" => source_job}} =
+        generate_workflow([{:webhook, "process"}], %{
+          :workflow => %{name: "new_feature", project: source_project},
+          "process" => %{
+            body: "fn(state => state)",
+            adaptor: "@openfn/language-common@latest"
+          }
+        })
 
       result = MergeProjects.merge_project(source_project, target_project)
 
-      # Should have two workflows
-      assert length(result["workflows"]) == 2
-
-      workflow_names =
-        result["workflows"] |> Enum.map(& &1["name"]) |> Enum.sort()
-
-      assert workflow_names == ["existing_workflow", "new_workflow"]
-
-      # Existing workflow should preserve target ID
-      existing_workflow =
-        Enum.find(result["workflows"], &(&1["name"] == "existing_workflow"))
-
-      assert existing_workflow["id"] == target_workflow.id
-      refute existing_workflow["delete"]
-
-      # New workflow should get a new UUID (not source ID)
       new_workflow =
-        Enum.find(result["workflows"], &(&1["name"] == "new_workflow"))
+        Enum.find(result["workflows"], &(&1["name"] == "new_feature"))
 
-      assert new_workflow["id"] != source_workflow2.id
-      refute new_workflow["delete"]
+      assert new_workflow, "New workflow should exist"
+      assert new_workflow["id"] != source_new_workflow.id, "Should have new UUID"
+      refute new_workflow["delete"], "Should not be marked for deletion"
+
+      assert length(new_workflow["jobs"]) == 1, "New workflow should have 1 job"
+      new_job = hd(new_workflow["jobs"])
+      assert new_job["name"] == source_job.name
+      assert new_job["body"] == source_job.body
+      assert new_job["adaptor"] == source_job.adaptor
+      assert new_job["id"] != source_job.id, "Job should have new UUID"
+      refute new_job["delete"]
+
+      assert length(new_workflow["triggers"]) == 1,
+             "New workflow should have 1 trigger"
+
+      new_trigger = hd(new_workflow["triggers"])
+      assert new_trigger["type"] == source_trigger.type
+
+      assert new_trigger["id"] != source_trigger.id,
+             "Trigger should have new UUID"
+
+      refute new_trigger["delete"]
+
+      assert length(new_workflow["edges"]) == 1,
+             "New workflow should have 1 edge"
+
+      new_edge = hd(new_workflow["edges"])
+      assert new_edge["source_trigger_id"] == new_trigger["id"]
+      assert new_edge["target_job_id"] == new_job["id"]
+      refute new_edge["delete"]
     end
 
     test "merge project with removed workflow in source" do
