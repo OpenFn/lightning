@@ -177,34 +177,24 @@ defmodule LightningWeb.SandboxLive.Index do
         if sandbox.can_merge do
           target_options = get_merge_target_options(socket, sandbox)
 
-          if Enum.empty?(target_options) do
-            {:noreply,
-             socket
-             |> put_flash(
-               :error,
-               "Cannot merge this sandbox: no valid merge targets available. You can only merge into parent or sibling projects, not into descendants."
-             )}
-          else
-            default_target =
-              Enum.find(target_options, &(&1.value == sandbox.parent_id)) ||
-                List.first(target_options)
+          default_target =
+            Enum.find(target_options, &(&1.value == sandbox.parent_id))
 
-            descendants =
-              get_all_descendants(sandbox, socket.assigns.workspace_projects)
+          descendants =
+            get_all_descendants(sandbox, socket.assigns.workspace_projects)
 
-            merge_changeset =
-              merge_changeset(%{
-                target_id: default_target && default_target.value
-              })
+          merge_changeset =
+            merge_changeset(%{
+              target_id: default_target && default_target.value
+            })
 
-            {:noreply,
-             socket
-             |> assign(:merge_modal_open?, true)
-             |> assign(:merge_source_sandbox, sandbox)
-             |> assign(:merge_target_options, target_options)
-             |> assign(:merge_changeset, merge_changeset)
-             |> assign(:merge_descendants, descendants)}
-          end
+          {:noreply,
+           socket
+           |> assign(:merge_modal_open?, true)
+           |> assign(:merge_source_sandbox, sandbox)
+           |> assign(:merge_target_options, target_options)
+           |> assign(:merge_changeset, merge_changeset)
+           |> assign(:merge_descendants, descendants)}
         else
           {:noreply,
            socket

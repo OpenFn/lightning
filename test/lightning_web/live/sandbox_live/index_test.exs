@@ -1259,6 +1259,217 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       refute dropdown_html =~ grandchild1.name
     end
+
+    test "select-merge-target updates changeset", %{
+      conn: conn,
+      root: root,
+      child1: child1,
+      child2: child2
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      # Change target selection
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => child2.id}
+      })
+
+      # Verify changeset updated
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.merge_changeset.changes.target_id == child2.id
+    end
+
+    test "shows error when target project not found during merge", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      # Submit with non-existent target_id
+      fake_target_id = Ecto.UUID.generate()
+
+      html =
+        render_click(view, "confirm-merge", %{
+          "merge" => %{"target_id" => fake_target_id}
+        })
+
+      assert html =~ "Target project not found"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "shows partial success when merge succeeds but delete fails", %{
+      conn: conn,
+      root: root,
+      child1: child1,
+      user: _user
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
+                                                                        _target ->
+        "merged_yaml"
+      end)
+
+      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
+                                                                        _actor,
+                                                                        _yaml ->
+        {:ok, root}
+      end)
+
+      Mimic.expect(Lightning.Projects, :delete_sandbox, fn _source, _actor ->
+        {:error, :unauthorized}
+      end)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      {:ok, _view, html} =
+        view
+        |> form("#merge-sandbox-modal form")
+        |> render_submit()
+        |> follow_redirect(conn)
+
+      assert html =~
+               "Successfully merged child1 into root, but could not delete the sandbox"
+    end
+
+    test "formats changeset error correctly", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
+                                                                        _target ->
+        "merged_yaml"
+      end)
+
+      # Return changeset error
+      changeset = %Ecto.Changeset{
+        errors: [name: {"is invalid", []}],
+        valid?: false
+      }
+
+      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
+                                                                        _actor,
+                                                                        _yaml ->
+        {:error, changeset}
+      end)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ "name: is invalid"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "formats text error correctly", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
+                                                                        _target ->
+        "merged_yaml"
+      end)
+
+      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
+                                                                        _actor,
+                                                                        _yaml ->
+        {:error, %{text: "Custom import error message"}}
+      end)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ "Custom import error message"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "formats generic error with inspect", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
+                                                                        _target ->
+        "merged_yaml"
+      end)
+
+      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
+                                                                        _actor,
+                                                                        _yaml ->
+        {:error, {:unexpected, "something went wrong"}}
+      end)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ "Failed to merge:"
+      assert html =~ "unexpected"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "descendant_of? handles nil parent correctly", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      descendant_ids = Enum.map(assigns.merge_descendants, & &1.id)
+      refute root.id in descendant_ids
+    end
   end
 
   describe "Merge modal authorization" do
