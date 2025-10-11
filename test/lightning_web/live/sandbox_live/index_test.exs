@@ -13,9 +13,22 @@ defmodule LightningWeb.SandboxLive.IndexTest do
   setup_all do
     Mimic.copy(Lightning.Projects)
     Mimic.copy(Lightning.Projects.Sandboxes)
+    Mimic.copy(Lightning.Projects.MergeProjects)
+    Mimic.copy(Lightning.Projects.Provisioner)
 
     Mimic.stub_with(Lightning.Projects, Lightning.Projects)
     Mimic.stub_with(Lightning.Projects.Sandboxes, Lightning.Projects.Sandboxes)
+
+    Mimic.stub_with(
+      Lightning.Projects.MergeProjects,
+      Lightning.Projects.MergeProjects
+    )
+
+    Mimic.stub_with(
+      Lightning.Projects.Provisioner,
+      Lightning.Projects.Provisioner
+    )
+
     :ok
   end
 
@@ -779,6 +792,673 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ "Sandboxes"
       assert html =~ parent.name
       assert render(view) =~ "Sandboxes"
+    end
+  end
+
+  describe "Merge modal functionality" do
+    setup :register_and_log_in_user
+
+    setup %{user: user} do
+      # Create a hierarchy:
+      # root
+      # ├── child1
+      # │   ├── grandchild1
+      # │   └── grandchild2
+      # ├── child2
+      # └── child3
+
+      root =
+        insert(:project,
+          name: "root",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      child1 =
+        insert(:project,
+          name: "child1",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      child2 =
+        insert(:project,
+          name: "child2",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      child3 =
+        insert(:project,
+          name: "child3",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      grandchild1 =
+        insert(:project,
+          name: "grandchild1",
+          parent: child1,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      grandchild2 =
+        insert(:project,
+          name: "grandchild2",
+          parent: child1,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok,
+       root: root,
+       child1: child1,
+       child2: child2,
+       child3: child3,
+       grandchild1: grandchild1,
+       grandchild2: grandchild2}
+    end
+
+    test "merge button opens modal", %{conn: conn, root: root, child1: child1} do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      assert has_element?(view, "#merge-sandbox-modal")
+      assert render(view) =~ "Merge"
+      assert render(view) =~ child1.name
+    end
+
+    test "merge modal shows all valid targets excluding descendants", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      dropdown_html =
+        view
+        |> element("#merge-target-select")
+        |> render()
+
+      assert dropdown_html =~ root.name
+      assert dropdown_html =~ "child2"
+      assert dropdown_html =~ "child3"
+
+      refute dropdown_html =~ "child1"
+      refute dropdown_html =~ "grandchild1"
+      refute dropdown_html =~ "grandchild2"
+    end
+
+    test "merge modal defaults to parent as target", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      hidden_input =
+        view
+        |> element("input[type=hidden][name='merge[target_id]']")
+        |> render()
+
+      assert hidden_input =~ root.id
+    end
+
+    test "merge modal shows no descendants warning for leaf sandbox", %{
+      conn: conn,
+      root: root,
+      child2: child2
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child2.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      refute html =~ "Child sandboxes will be closed"
+      refute html =~ "will also be closed"
+    end
+
+    test "merge modal shows single descendant warning", %{
+      conn: conn,
+      root: root,
+      grandchild1: grandchild1,
+      user: user
+    } do
+      great_grandchild =
+        insert(:project,
+          name: "great-grandchild",
+          parent: grandchild1,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{grandchild1.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ great_grandchild.name
+      assert html =~ "will also be closed"
+      assert html =~ "Consider merging it into"
+    end
+
+    test "merge modal shows multiple descendants warning with full list", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ "Child sandboxes will be closed"
+      assert html =~ "2 sandboxes will be permanently closed"
+
+      assert html =~ "grandchild1"
+      assert html =~ "grandchild2"
+
+      assert html =~ "Consider merging child sandboxes into"
+      assert html =~ child1.name
+    end
+
+    test "merge modal shows correct dropdown options", %{
+      conn: conn,
+      root: root,
+      child1: child1,
+      child2: child2,
+      child3: child3
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      assert view
+             |> element("input[type=hidden][name='merge[target_id]']")
+             |> render() =~ root.id
+
+      dropdown = view |> element("#merge-target-select") |> render()
+
+      assert dropdown =~ root.name
+      assert dropdown =~ child2.name
+      assert dropdown =~ child3.name
+      refute dropdown =~ child1.name
+      refute dropdown =~ "grandchild"
+    end
+
+    test "close merge modal resets state", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      assert has_element?(view, "#merge-sandbox-modal")
+
+      view
+      |> element("#merge-sandbox-modal [aria-label='Close']")
+      |> render_click()
+
+      refute has_element?(view, "#merge-sandbox-modal")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      hidden_input =
+        view
+        |> element("input[type=hidden][name='merge[target_id]']")
+        |> render()
+
+      assert hidden_input =~ root.id
+    end
+
+    test "merge modal shows error for non-existent sandbox", %{
+      conn: conn,
+      root: root
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      fake_id = Ecto.UUID.generate()
+      html = render_click(view, "open-merge-modal", %{"id" => fake_id})
+
+      assert html =~ "Sandbox not found"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "merge button works for sandbox with no siblings", %{
+      conn: conn,
+      root: root,
+      grandchild1: grandchild1,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{grandchild1.id} button")
+      |> render_click()
+
+      assert has_element?(view, "#merge-sandbox-modal")
+
+      hidden_input =
+        view
+        |> element("input[type=hidden][name='merge[target_id]']")
+        |> render()
+
+      assert hidden_input =~ child1.id
+    end
+
+    test "confirm merge executes successfully", %{
+      conn: conn,
+      root: root,
+      child1: child1,
+      user: user
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(
+        Lightning.Projects.MergeProjects,
+        :merge_project,
+        fn source, target ->
+          assert source.id == child1.id
+          assert target.id == root.id
+          "merged_yaml"
+        end
+      )
+
+      Mimic.expect(
+        Lightning.Projects.Provisioner,
+        :import_document,
+        fn target, actor, yaml ->
+          assert target.id == root.id
+          assert actor.id == user.id
+          assert yaml == "merged_yaml"
+          {:ok, target}
+        end
+      )
+
+      Mimic.expect(Lightning.Projects, :delete_sandbox, fn source, actor ->
+        assert source.id == child1.id
+        assert actor.id == user.id
+        {:ok, source}
+      end)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{root.id}/w")
+    end
+
+    test "merge shows error on merge failure", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      Mimic.expect(
+        Lightning.Projects.MergeProjects,
+        :merge_project,
+        fn _source, _target ->
+          "merged_yaml"
+        end
+      )
+
+      Mimic.expect(
+        Lightning.Projects.Provisioner,
+        :import_document,
+        fn _target, _actor, _yaml ->
+          {:error, :import_failed}
+        end
+      )
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      html = render(view)
+
+      assert html =~ "Failed to merge"
+
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "merge modal shows beta warning", %{
+      conn: conn,
+      root: root,
+      child1: child1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ "Beta"
+      assert html =~ "use the CLI to merge locally"
+    end
+
+    test "descendants are calculated correctly for deep nesting", %{
+      conn: conn,
+      root: root,
+      child1: child1,
+      grandchild1: grandchild1,
+      user: user
+    } do
+      _great_grandchild1 =
+        insert(:project,
+          name: "great-grandchild1",
+          parent: grandchild1,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ "sandboxes will be permanently closed"
+      assert html =~ "grandchild1"
+      assert html =~ "grandchild2"
+      assert html =~ "3 sandboxes will be permanently closed"
+    end
+
+    test "sibling can be selected as merge target", %{
+      conn: conn,
+      root: root,
+      child1: child1,
+      child3: child3
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ child3.name
+    end
+
+    test "grandparent can be selected as merge target", %{
+      conn: conn,
+      root: root,
+      grandchild1: grandchild1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{grandchild1.id} button")
+      |> render_click()
+
+      html = render(view)
+
+      assert html =~ root.name
+    end
+
+    test "cannot merge into own child", %{
+      conn: conn,
+      root: root,
+      child1: child1,
+      grandchild1: grandchild1
+    } do
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      dropdown_html =
+        view
+        |> element("#merge-target-select")
+        |> render()
+
+      refute dropdown_html =~ grandchild1.name
+    end
+  end
+
+  describe "Merge modal authorization" do
+    setup :register_and_log_in_user
+
+    setup %{user: owner_user} do
+      viewer_user = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "parent",
+          project_users: [
+            %{user: owner_user, role: :owner},
+            %{user: viewer_user, role: :viewer}
+          ]
+        )
+
+      sandbox =
+        insert(:project,
+          name: "test-sandbox",
+          parent: parent,
+          project_users: [
+            %{user: owner_user, role: :owner},
+            %{user: viewer_user, role: :viewer}
+          ]
+        )
+
+      {:ok,
+       owner_user: owner_user,
+       viewer_user: viewer_user,
+       parent: parent,
+       sandbox: sandbox}
+    end
+
+    test "owner can see and use merge button", %{
+      conn: conn,
+      owner_user: owner_user,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      conn = log_in_user(conn, owner_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      button_html =
+        view
+        |> element("#branch-rewire-sandbox-#{sandbox.id}")
+        |> render()
+
+      refute button_html =~ "cursor-not-allowed"
+      refute button_html =~ "text-slate-300"
+      assert button_html =~ "Merge this sandbox"
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assert has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "viewer sees disabled merge button", %{
+      conn: conn,
+      viewer_user: viewer_user,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      conn = log_in_user(conn, viewer_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      button_html =
+        view
+        |> element("#branch-rewire-sandbox-#{sandbox.id}")
+        |> render()
+
+      assert button_html =~ "cursor-not-allowed"
+      assert button_html =~ "text-slate-300"
+      assert button_html =~ "You are not authorized to merge this sandbox"
+    end
+
+    test "viewer cannot open merge modal", %{
+      conn: conn,
+      viewer_user: viewer_user,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      conn = log_in_user(conn, viewer_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html = render_click(view, "open-merge-modal", %{"id" => sandbox.id})
+
+      assert html =~ "You are not authorized to merge this sandbox"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "viewer cannot confirm merge without opening modal", %{
+      conn: conn,
+      viewer_user: viewer_user,
+      parent: parent,
+      sandbox: _sandbox
+    } do
+      conn = log_in_user(conn, viewer_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html =
+        render_click(view, "confirm-merge", %{
+          "merge" => %{"target_id" => parent.id}
+        })
+
+      assert html =~ "Invalid merge request"
+      refute has_element?(view, "#merge-sandbox-modal")
+    end
+
+    test "can_merge permission is set correctly based on user role", %{
+      conn: conn,
+      owner_user: owner_user,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      conn = log_in_user(conn, owner_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
+      test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
+
+      assert test_sandbox.can_merge == true
+    end
+
+    test "merge authorization follows update permissions from Sandboxes policy",
+         %{
+           conn: conn,
+           viewer_user: viewer_user,
+           parent: parent,
+           sandbox: sandbox
+         } do
+      conn = log_in_user(conn, viewer_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
+      test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
+
+      assert test_sandbox.can_merge == false
+      assert test_sandbox.can_edit == false
+    end
+
+    test "merge succeeds for owner", %{
+      conn: conn,
+      owner_user: owner_user,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      conn = log_in_user(conn, owner_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      Mimic.expect(
+        Lightning.Projects.MergeProjects,
+        :merge_project,
+        fn _source, _target -> "merged_yaml" end
+      )
+
+      Mimic.expect(
+        Lightning.Projects.Provisioner,
+        :import_document,
+        fn _target, _actor, _yaml -> {:ok, parent} end
+      )
+
+      Mimic.expect(
+        Lightning.Projects,
+        :delete_sandbox,
+        fn _source, _actor -> {:ok, sandbox} end
+      )
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_submit()
+
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+    end
+
+    test "viewer cannot bypass authorization", %{
+      conn: conn,
+      viewer_user: viewer_user,
+      parent: parent,
+      sandbox: _sandbox
+    } do
+      conn = log_in_user(conn, viewer_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html =
+        render_click(view, "confirm-merge", %{
+          "merge" => %{"target_id" => parent.id}
+        })
+
+      assert html =~ "Invalid merge request"
     end
   end
 end

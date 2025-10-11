@@ -489,11 +489,27 @@ defmodule LightningWeb.SandboxLive.Components do
         id={"branch-rewire-sandbox-#{@sandbox.id}"}
         icon_type="custom"
         icon_name="branches"
-        label="Merge this sandbox"
-        action={JS.push("open-merge-modal", value: %{id: @sandbox.id})}
-        disabled={false}
-        icon_class="text-slate-700"
-        button_class="hover:bg-slate-100"
+        label={
+          if not @sandbox.can_merge do
+            "You are not authorized to merge this sandbox"
+          else
+            "Merge this sandbox"
+          end
+        }
+        action={
+          if @sandbox.can_merge,
+            do: JS.push("open-merge-modal", value: %{id: @sandbox.id}),
+            else: %JS{}
+        }
+        disabled={not @sandbox.can_merge}
+        icon_class={
+          if @sandbox.can_merge, do: "text-slate-700", else: "text-slate-300"
+        }
+        button_class={
+          if @sandbox.can_merge,
+            do: "hover:bg-slate-100",
+            else: "cursor-not-allowed"
+        }
       />
 
       <.action_button

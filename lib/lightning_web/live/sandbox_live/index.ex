@@ -174,33 +174,41 @@ defmodule LightningWeb.SandboxLive.Index do
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
       sandbox ->
-        target_options = get_merge_target_options(socket, sandbox)
+        if sandbox.can_merge do
+          target_options = get_merge_target_options(socket, sandbox)
 
-        if Enum.empty?(target_options) do
-          {:noreply,
-           socket
-           |> put_flash(
-             :error,
-             "Cannot merge this sandbox: no valid merge targets available. You can only merge into parent or sibling projects, not into descendants."
-           )}
+          if Enum.empty?(target_options) do
+            {:noreply,
+             socket
+             |> put_flash(
+               :error,
+               "Cannot merge this sandbox: no valid merge targets available. You can only merge into parent or sibling projects, not into descendants."
+             )}
+          else
+            default_target =
+              Enum.find(target_options, &(&1.value == sandbox.parent_id)) ||
+                List.first(target_options)
+
+            descendants =
+              get_all_descendants(sandbox, socket.assigns.workspace_projects)
+
+            merge_changeset =
+              merge_changeset(%{
+                target_id: default_target && default_target.value
+              })
+
+            {:noreply,
+             socket
+             |> assign(:merge_modal_open?, true)
+             |> assign(:merge_source_sandbox, sandbox)
+             |> assign(:merge_target_options, target_options)
+             |> assign(:merge_changeset, merge_changeset)
+             |> assign(:merge_descendants, descendants)}
+          end
         else
-          default_target =
-            Enum.find(target_options, &(&1.value == sandbox.parent_id)) ||
-              List.first(target_options)
-
-          descendants =
-            get_all_descendants(sandbox, socket.assigns.workspace_projects)
-
-          merge_changeset =
-            merge_changeset(%{target_id: default_target && default_target.value})
-
           {:noreply,
            socket
-           |> assign(:merge_modal_open?, true)
-           |> assign(:merge_source_sandbox, sandbox)
-           |> assign(:merge_target_options, target_options)
-           |> assign(:merge_changeset, merge_changeset)
-           |> assign(:merge_descendants, descendants)}
+           |> put_flash(:error, "You are not authorized to merge this sandbox")}
         end
     end
   end
@@ -233,19 +241,34 @@ defmodule LightningWeb.SandboxLive.Index do
           }
         } = socket
       ) do
-    socket.assigns.workspace_projects
-    |> find_target_project(target_id)
-    |> case do
-      nil ->
+    cond do
+      is_nil(source) ->
         socket
-        |> put_flash(:error, "Target project not found")
+        |> put_flash(:error, "Invalid merge request")
         |> reset_merge_modal_state()
         |> noreply()
 
-      target ->
-        source
-        |> perform_merge(target, actor)
-        |> handle_merge_result(socket, source, target, root_project, actor)
+      not source.can_merge ->
+        socket
+        |> put_flash(:error, "You are not authorized to merge this sandbox")
+        |> reset_merge_modal_state()
+        |> noreply()
+
+      true ->
+        socket.assigns.workspace_projects
+        |> find_target_project(target_id)
+        |> case do
+          nil ->
+            socket
+            |> put_flash(:error, "Target project not found")
+            |> reset_merge_modal_state()
+            |> noreply()
+
+          target ->
+            source
+            |> perform_merge(target, actor)
+            |> handle_merge_result(socket, source, target, root_project, actor)
+        end
     end
   end
 
@@ -358,11 +381,16 @@ defmodule LightningWeb.SandboxLive.Index do
     sandboxes =
       Enum.map(descendants, fn sandbox ->
         perms =
-          Map.get(manage_permissions, sandbox.id, %{update: false, delete: false})
+          Map.get(manage_permissions, sandbox.id, %{
+            update: false,
+            delete: false,
+            merge: false
+          })
 
         sandbox
         |> Map.put(:can_edit, perms.update)
         |> Map.put(:can_delete, perms.delete)
+        |> Map.put(:can_merge, perms.merge)
         |> Map.put(:is_current, project.id == sandbox.id)
       end)
 
