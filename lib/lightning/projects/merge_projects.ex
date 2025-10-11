@@ -629,8 +629,8 @@ defmodule Lightning.Projects.MergeProjects do
         workflow_mappings
       )
 
-    source_project
-    |> Map.take([:name, :description])
+    target_project
+    |> Map.take([:name, :description, :env, :color])
     |> stringify_keys()
     |> Map.merge(%{
       "id" => target_project.id,
