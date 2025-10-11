@@ -23,7 +23,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
   defp setup_document_supervisor(context) do
     {:ok, doc_supervisor} =
       DocumentSupervisor.start_link(
-        [workflow_id: context.workflow_id],
+        [workflow: context.workflow],
         name: Registry.via({:doc_supervisor, context.document_name})
       )
 
@@ -49,7 +49,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
     child_spec =
       DocumentSupervisor.child_spec(
-        workflow_id: context.workflow_id,
+        workflow: context.workflow,
         name: Registry.via({:doc_supervisor, context.document_name})
       )
 
@@ -177,7 +177,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     assert is_reference(state.shared_doc_ref)
     assert state.persistence_writer_pid == persistence_writer
     assert state.shared_doc_pid == shared_doc
-    assert state.workflow_id == workflow_id
+    assert state.workflow.id == workflow_id
 
     # Verify all processes are grouped correctly in Registry
     group = Registry.get_group(document_name)
@@ -225,14 +225,14 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     end
 
     test "1.2 - Missing Required Parameters" do
-      # Test starting without workflow_id - should crash with KeyError
+      # Test starting without workflow - should crash with KeyError
       assert_startup_fails([])
 
       # Test starting with empty args and empty GenServer options
       assert_startup_fails({[], []})
 
-      # Test with nil workflow_id - should fail when building document name
-      assert_startup_fails(workflow_id: nil)
+      # Test with nil workflow - should fail when building document name
+      assert_startup_fails(workflow: nil)
     end
   end
 
@@ -357,10 +357,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
   describe "4. Child Spec Configuration" do
     test "4.1 - Child Spec Generation", context do
-      workflow_id = context.workflow_id
+      workflow = context.workflow
 
       # Test with various options
-      basic_opts = [workflow_id: workflow_id]
+      basic_opts = [workflow: workflow]
       spec1 = DocumentSupervisor.child_spec(basic_opts)
 
       assert %{
@@ -376,29 +376,28 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
       # Test with provided id
       custom_id = "custom_supervisor_id"
-      opts_with_id = [workflow_id: workflow_id, id: custom_id]
+      opts_with_id = [workflow: workflow, id: custom_id]
       spec2 = DocumentSupervisor.child_spec(opts_with_id)
 
       assert spec2.id == custom_id
 
       assert spec2.start ==
-               {DocumentSupervisor, :start_link,
-                [[workflow_id: workflow_id], []]}
+               {DocumentSupervisor, :start_link, [[workflow: workflow], []]}
 
       # Test with name option (should be separated into GenServer opts)
-      name_opts = [workflow_id: workflow_id, name: {:via, Registry, "test_name"}]
+      name_opts = [workflow: workflow, name: {:via, Registry, "test_name"}]
       spec3 = DocumentSupervisor.child_spec(name_opts)
 
       assert spec3.start ==
                {DocumentSupervisor, :start_link,
                 [
-                  [workflow_id: workflow_id],
+                  [workflow: workflow],
                   [name: {:via, Registry, "test_name"}]
                 ]}
 
       # Test id generation - each call should produce unique id
-      spec4 = DocumentSupervisor.child_spec(workflow_id: workflow_id)
-      spec5 = DocumentSupervisor.child_spec(workflow_id: workflow_id)
+      spec4 = DocumentSupervisor.child_spec(workflow: workflow)
+      spec5 = DocumentSupervisor.child_spec(workflow: workflow)
 
       assert spec4.id != spec5.id
     end
@@ -660,7 +659,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
       # Test that Lightning.Collaborate.start/1 creates DocumentSupervisor through session
       {:ok, session} =
-        Lightning.Collaborate.start(workflow_id: workflow_id, user: user)
+        Lightning.Collaborate.start(workflow: workflow, user: user)
 
       # Verify DocumentSupervisor is created and registered
       doc_supervisor = Registry.whereis({:doc_supervisor, document_name})
@@ -737,7 +736,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
         # Start DocumentSupervisor
         {:ok, doc_supervisor} =
           DocumentSupervisor.start_link(
-            [workflow_id: workflow_id],
+            [workflow: workflow],
             name: Registry.via({:doc_supervisor, document_name})
           )
 
@@ -767,7 +766,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       # Start DocumentSupervisor
       {:ok, doc_supervisor} =
         DocumentSupervisor.start_link(
-          [workflow_id: workflow_id],
+          [workflow: workflow],
           name: Registry.via({:doc_supervisor, document_name})
         )
 

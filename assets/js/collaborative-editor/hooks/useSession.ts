@@ -52,9 +52,11 @@ export function useSession<T = SessionState>(
     throw new Error("useSession must be used within a SessionProvider");
   }
 
-  const getSnapshot = useMemo(() => {
-    return context.withSelector(selector);
-  }, [context, selector]);
+  const sessionStore = context.sessionStore;
 
-  return useSyncExternalStore(context.subscribe, getSnapshot);
+  const getSnapshot = useMemo(() => {
+    return sessionStore.withSelector(selector);
+  }, [sessionStore, selector]);
+
+  return useSyncExternalStore(sessionStore.subscribe, getSnapshot);
 }

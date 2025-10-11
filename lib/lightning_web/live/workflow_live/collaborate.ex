@@ -38,6 +38,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-react-file={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
       data-workflow-id={@workflow_id}
       data-workflow-name={@workflow.name}
+      data-project-id={@workflow.project_id}
     />
     """
   end

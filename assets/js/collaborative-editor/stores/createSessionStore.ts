@@ -180,6 +180,7 @@ export const createSessionStore = (): SessionStore => {
     userData: LocalUserData | null = null,
     options: {
       connect?: boolean;
+      joinParams?: Record<string, unknown>;
     } = {}
   ) => {
     // Atomic initialization to prevent partial states
@@ -200,6 +201,7 @@ export const createSessionStore = (): SessionStore => {
     const provider = new PhoenixChannelProvider(socket, roomname, ydoc, {
       awareness: awarenessToUse || undefined,
       connect: options.connect ?? true,
+      params: options.joinParams || {},
     });
 
     // Step 4: Update state

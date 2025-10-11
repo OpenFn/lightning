@@ -439,7 +439,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       result =
         Lightning.Collaboration.Session.initialize_workflow_document(
           doc,
-          workflow.id
+          workflow
         )
 
       # Should return the doc
