@@ -11,79 +11,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
   @type mode :: :new | :edit
 
-  defp get_random_color do
-    Components.color_palette_hex_colors() |> Enum.random()
-  end
-
-  defp generate_theme_preview(%Project{id: parent_id}, color)
-       when is_binary(parent_id) and is_binary(color) and color != "" do
-    temp_project = %Project{
-      id: Ecto.UUID.generate(),
-      color: String.trim(color),
-      parent_id: parent_id
-    }
-
-    case ProjectTheme.inline_primary_scale(temp_project) do
-      nil ->
-        nil
-
-      scale ->
-        [scale, ProjectTheme.inline_sidebar_vars()]
-        |> Enum.reject(&is_nil/1)
-        |> Enum.join(" ")
-    end
-  end
-
-  defp generate_theme_preview(_parent, _color), do: nil
-
-  defp should_preview_theme?(new_color, last_color) do
-    is_binary(new_color) and new_color != last_color
-  end
-
-  defp send_theme_preview(parent, color) do
-    theme = generate_theme_preview(parent, color)
-    send(self(), {:preview_theme, theme})
-  end
-
-  defp reset_theme_preview do
-    send(self(), {:preview_theme, nil})
-  end
-
-  defp return_path(socket) do
-    socket.assigns.return_to ||
-      ~p"/projects/#{socket.assigns.parent.id}/sandboxes"
-  end
-
-  defp coerce_raw_name_to_safe_name(%{"raw_name" => raw} = params) do
-    Map.put(params, "name", Helpers.url_safe_name(raw))
-  end
-
-  defp coerce_raw_name_to_safe_name(params), do: params
-
-  defp form_changeset(%Project{} = base, params) do
-    params
-    |> coerce_raw_name_to_safe_name()
-    |> then(&Project.changeset(base, &1))
-  end
-
-  defp base_struct(%{sandbox: %Project{} = sandbox}), do: sandbox
-  defp base_struct(_assigns), do: %Project{}
-
-  defp initial_params(%{sandbox: %Project{} = sandbox}) do
-    %{
-      "name" => sandbox.name,
-      "raw_name" => sandbox.name,
-      "env" => sandbox.env,
-      "color" => sandbox.color
-    }
-  end
-
-  defp initial_params(%{mode: :new}) do
-    %{"color" => get_random_color()}
-  end
-
-  defp initial_params(_assigns), do: %{}
-
   @impl true
   def update(%{mode: mode} = assigns, socket) when mode in [:new, :edit] do
     base = base_struct(assigns)
@@ -152,11 +79,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           }
         } = socket
       ) do
-    attrs = %{
-      name: params["name"],
-      color: params["color"],
-      env: params["env"]
-    }
+    attrs = build_sandbox_attrs(params)
 
     with :ok <- ProjectLimiter.limit_new_sandbox(parent.id),
          {:ok, sandbox} <- Projects.provision_sandbox(parent, actor, attrs) do
@@ -192,11 +115,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           }
         } = socket
       ) do
-    attrs = %{
-      name: params["name"],
-      color: params["color"],
-      env: params["env"]
-    }
+    attrs = build_sandbox_attrs(params)
 
     case Projects.update_sandbox(sandbox, actor, attrs) do
       {:ok, sandbox} ->
@@ -341,5 +260,86 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       </.modal>
     </div>
     """
+  end
+
+  defp base_struct(%{sandbox: %Project{} = sandbox}), do: sandbox
+  defp base_struct(_assigns), do: %Project{}
+
+  defp initial_params(%{sandbox: %Project{} = sandbox}) do
+    %{
+      "name" => sandbox.name,
+      "raw_name" => sandbox.name,
+      "env" => sandbox.env,
+      "color" => sandbox.color
+    }
+  end
+
+  defp initial_params(%{mode: :new}) do
+    %{"color" => get_random_color()}
+  end
+
+  defp initial_params(_assigns), do: %{}
+
+  defp form_changeset(%Project{} = base, params) do
+    params
+    |> coerce_raw_name_to_safe_name()
+    |> then(&Project.changeset(base, &1))
+  end
+
+  defp coerce_raw_name_to_safe_name(%{"raw_name" => raw} = params) do
+    Map.put(params, "name", Helpers.url_safe_name(raw))
+  end
+
+  defp coerce_raw_name_to_safe_name(params), do: params
+
+  defp build_sandbox_attrs(params) do
+    %{
+      name: params["name"],
+      color: params["color"],
+      env: params["env"]
+    }
+  end
+
+  defp generate_theme_preview(%Project{id: parent_id}, color)
+       when is_binary(parent_id) and is_binary(color) and color != "" do
+    temp_project = %Project{
+      id: Ecto.UUID.generate(),
+      color: String.trim(color),
+      parent_id: parent_id
+    }
+
+    case ProjectTheme.inline_primary_scale(temp_project) do
+      nil ->
+        nil
+
+      scale ->
+        [scale, ProjectTheme.inline_sidebar_vars()]
+        |> Enum.reject(&is_nil/1)
+        |> Enum.join(" ")
+    end
+  end
+
+  defp generate_theme_preview(_parent, _color), do: nil
+
+  defp should_preview_theme?(new_color, last_color) do
+    is_binary(new_color) and new_color != last_color
+  end
+
+  defp send_theme_preview(parent, color) do
+    theme = generate_theme_preview(parent, color)
+    send(self(), {:preview_theme, theme})
+  end
+
+  defp reset_theme_preview do
+    send(self(), {:preview_theme, nil})
+  end
+
+  defp get_random_color do
+    Components.color_palette_hex_colors() |> Enum.random()
+  end
+
+  defp return_path(socket) do
+    socket.assigns.return_to ||
+      ~p"/projects/#{socket.assigns.parent.id}/sandboxes"
   end
 end
