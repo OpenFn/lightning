@@ -537,7 +537,7 @@ defmodule LightningWeb.SandboxLive.Index do
          socket,
          source,
          target,
-         root_project,
+         _root_project,
          actor
        ) do
     flash_message = build_merge_success_message(source, target, actor)
@@ -545,7 +545,7 @@ defmodule LightningWeb.SandboxLive.Index do
     socket
     |> put_flash(:info, flash_message)
     |> reset_merge_modal_state()
-    |> push_navigate(to: ~p"/projects/#{root_project.id}/w")
+    |> push_navigate(to: ~p"/projects/#{target.id}/w")
     |> noreply()
   end
 
