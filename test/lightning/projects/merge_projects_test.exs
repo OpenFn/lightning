@@ -4,6 +4,45 @@ defmodule Lightning.Projects.MergeProjectsTest do
   alias Lightning.Projects.MergeProjects
 
   describe "merge_project/2" do
+    test "merge preserves target project identity (name, description, env, color)" do
+      target_project =
+        insert(:project,
+          name: "Production",
+          description: "Main production environment",
+          env: "production",
+          color: "#FF0000"
+        )
+
+      source_project =
+        insert(:project,
+          name: "feature-branch",
+          description: "Development sandbox",
+          env: "development",
+          color: "#00FF00"
+        )
+
+      insert(:workflow, name: "shared_workflow", project: target_project)
+      insert(:workflow, name: "shared_workflow", project: source_project)
+
+      result = MergeProjects.merge_project(source_project, target_project)
+
+      assert result["id"] == target_project.id
+
+      assert result["name"] == "Production",
+             "Target project name should be preserved"
+
+      assert result["description"] == "Main production environment",
+             "Target project description should be preserved"
+
+      assert result["env"] == "production",
+             "Target project env should be preserved"
+
+      assert result["color"] == "#FF0000",
+             "Target project color should be preserved"
+
+      assert length(result["workflows"]) == 1
+    end
+
     test "merge project with matching workflow names" do
       # Create projects using factory
       target_project =
@@ -27,10 +66,12 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       result = MergeProjects.merge_project(source_project, target_project)
 
-      # Should preserve target project ID but use source metadata
+      # Should preserve target project identity
       assert result["id"] == target_project.id
-      assert result["name"] == source_project.name
-      assert result["description"] == source_project.description
+      assert result["name"] == target_project.name
+      assert result["description"] == target_project.description
+      assert result["env"] == target_project.env
+      assert result["color"] == target_project.color
 
       # Should have one workflow (merged)
       assert length(result["workflows"]) == 1
@@ -169,9 +210,12 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       result = MergeProjects.merge_project(source_project, target_project)
 
-      # Should preserve target ID but use source name
+      # Should preserve target identity
       assert result["id"] == target_project.id
-      assert result["name"] == source_project.name
+      assert result["name"] == target_project.name
+      assert result["description"] == target_project.description
+      assert result["env"] == target_project.env
+      assert result["color"] == target_project.color
       assert result["workflows"] == []
     end
 
