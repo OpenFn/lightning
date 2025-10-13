@@ -219,7 +219,7 @@ main() {
   npm install --prefix assets
 
   echo "🎭 Installing Playwright browsers..."
-  npx --prefix playwright install
+  npx --prefix assets playwright install
 
   echo "🔧 Setting up assets..."
   mix assets.setup
