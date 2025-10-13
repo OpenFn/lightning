@@ -684,6 +684,14 @@ export const BlurDataclipEditor = {
 
 export const ScrollToMessage = {
   mounted() {
+    this.shouldAutoScroll = true;
+
+    // Track if user manually scrolls away from bottom
+    this.el.addEventListener('scroll', () => {
+      const isAtBottom = this.isAtBottom();
+      this.shouldAutoScroll = isAtBottom;
+    });
+
     this.handleScroll();
   },
 
@@ -696,7 +704,8 @@ export const ScrollToMessage = {
 
     if (targetMessageId) {
       this.scrollToSpecificMessage(targetMessageId);
-    } else {
+    } else if (this.shouldAutoScroll) {
+      // Only auto-scroll if user hasn't manually scrolled up
       this.scrollToBottom();
     }
   },
@@ -717,18 +726,23 @@ export const ScrollToMessage = {
     }
   },
 
+  isAtBottom() {
+    const threshold = 50; // pixels from bottom
+    const position = this.el.scrollTop + this.el.clientHeight;
+    const height = this.el.scrollHeight;
+    return height - position <= threshold;
+  },
+
   scrollToBottom() {
-    setTimeout(() => {
-      this.el.scrollTo({
-        top: this.el.scrollHeight,
-        behavior: 'smooth',
-      });
-    }, 600);
+    // Use instant scroll during updates to prevent jank
+    this.el.scrollTop = this.el.scrollHeight;
   },
 } as PhoenixHook<{
+  shouldAutoScroll: boolean;
   handleScroll: () => void;
   scrollToSpecificMessage: (messageId: string) => void;
   scrollToBottom: () => void;
+  isAtBottom: () => boolean;
 }>;
 
 export const Copy = {
@@ -1023,55 +1037,30 @@ export const LocalTimeConverter = {
 
 export const StreamingText = {
   mounted() {
-    this.displayedText = '';
-    this.targetText = this.el.dataset.streamingContent || '';
-    this.animationFrameId = null;
+    this.lastContent = '';
+    this.updateContent();
   },
 
   updated() {
-    const newText = this.el.dataset.streamingContent || '';
-
-    if (newText !== this.targetText) {
-      this.targetText = newText;
-
-      if (!this.animationFrameId) {
-        this.animateText();
-      }
-    }
+    this.updateContent();
   },
 
-  animateText() {
-    if (this.displayedText.length < this.targetText.length) {
-      // Find next word boundary
-      const remainingText = this.targetText.slice(this.displayedText.length);
-      const wordMatch = remainingText.match(/^(\s*\S+)/);
+  updateContent() {
+    const newContent = this.el.dataset.streamingContent || '';
 
-      if (wordMatch) {
-        this.displayedText += wordMatch[1];
-        this.el.textContent = this.displayedText;
-      } else {
-        // No more words, just add remaining text
-        this.displayedText = this.targetText;
-        this.el.textContent = this.displayedText;
+    if (newContent !== this.lastContent) {
+      // Only append the new part to avoid flickering
+      const newPart = newContent.slice(this.lastContent.length);
+
+      if (newPart) {
+        const textNode = document.createTextNode(newPart);
+        this.el.appendChild(textNode);
       }
 
-      this.animationFrameId = setTimeout(() => {
-        this.animationFrameId = null;
-        this.animateText();
-      }, 50);
-    } else {
-      this.animationFrameId = null;
-    }
-  },
-
-  destroyed() {
-    if (this.animationFrameId) {
-      clearTimeout(this.animationFrameId);
+      this.lastContent = newContent;
     }
   },
 } as PhoenixHook<{
-  displayedText: string;
-  targetText: string;
-  animationFrameId: ReturnType<typeof setTimeout> | null;
-  animateText: () => void;
+  lastContent: string;
+  updateContent: () => void;
 }>;

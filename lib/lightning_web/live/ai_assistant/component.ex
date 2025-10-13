@@ -1555,13 +1555,12 @@ defmodule LightningWeb.AiAssistant.Component do
           </div>
           <p class="text-xs text-gray-500 mt-2">{@streaming_status || "Processing..."}</p>
           <div
-            :if={@streaming_content != ""}
             class="mt-2 text-sm text-gray-800 leading-relaxed"
+            phx-update="ignore"
             phx-hook="StreamingText"
             id="streaming-text-content"
             data-streaming-content={@streaming_content}
           >
-            <span class="inline-block w-1 h-4 bg-gray-400 ml-0.5 animate-pulse"></span>
           </div>
         </div>
       </div>
