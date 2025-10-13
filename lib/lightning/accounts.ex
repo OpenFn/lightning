@@ -246,6 +246,7 @@ defmodule Lightning.Accounts do
     Multi.new()
     |> Multi.update(:user, fn _changes ->
       totp = Repo.preload(totp, [:user])
+
       Ecto.Changeset.change(
         totp.user,
         %{mfa_enabled: false, last_totp_at: nil}

@@ -219,6 +219,7 @@ defmodule Lightning.AccountsTest do
       current_time =
         DateTime.utc_now()
         |> DateTime.add(-60, :second)
+
       Lightning.Stub.freeze_time(current_time)
 
       user_totp = %UserTOTP{secret: NimbleTOTP.secret(), user_id: user.id}
@@ -325,12 +326,12 @@ defmodule Lightning.AccountsTest do
           mfa_enabled: true,
           last_totp_at: last_totp_at,
           user_totp: build(:user_totp)
-      )
+        )
 
       %{
+        last_totp_at: last_totp_at,
         totp: Accounts.get_user_totp(user),
-        user: user,
-        last_totp_at: last_totp_at
+        user: user
       }
     end
 
@@ -339,19 +340,24 @@ defmodule Lightning.AccountsTest do
     end
 
     test "returns true for valid totp", %{user: user, totp: totp} do
-      code = NimbleTOTP.verification_code(totp.secret)
+      code =
+        NimbleTOTP.verification_code(totp.secret)
+
       assert Accounts.valid_user_totp?(user, code) == true
     end
 
     test "updates `last_totp_at` when the totp code is valid", %{
-      user: user, totp: totp
+      user: user,
+      totp: totp
     } do
       current_time =
         DateTime.utc_now()
         |> DateTime.add(-60, :second)
+
       Lightning.Stub.freeze_time(current_time)
 
-      code = NimbleTOTP.verification_code(totp.secret)
+      code =
+        NimbleTOTP.verification_code(totp.secret)
 
       Accounts.valid_user_totp?(user, code)
 
@@ -361,11 +367,13 @@ defmodule Lightning.AccountsTest do
     end
 
     test "does not update `last_totp_at` when the totp code is invalid", %{
-      user: user, last_totp_at: last_totp_at
+      user: user,
+      last_totp_at: last_totp_at
     } do
       current_time =
         DateTime.utc_now()
         |> DateTime.add(-60, :second)
+
       Lightning.Stub.freeze_time(current_time)
 
       Accounts.valid_user_totp?(user, "invalid")

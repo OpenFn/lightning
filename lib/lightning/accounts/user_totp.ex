@@ -4,6 +4,9 @@ defmodule Lightning.Accounts.UserTOTP do
   """
   use Lightning.Schema
 
+  alias Lightning.Accounts.User
+  alias Lightning.Repo
+
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
           secret: String.t() | nil,
@@ -38,8 +41,13 @@ defmodule Lightning.Accounts.UserTOTP do
     end
   end
 
-  def valid_totp?(totp, code) do
-    is_struct(totp, __MODULE__) and is_binary(code) and byte_size(code) == 6 and
-      NimbleTOTP.valid?(totp.secret, code)
+  def valid_totp?(totp, code, options \\ []) do
+    with true <- is_struct(totp, __MODULE__),
+         true <- is_binary(code),
+         true <- byte_size(code) == 6,
+         time <- Keyword.get(options, :time, System.os_time(:second)),
+         %{last_totp_at: since} <- Repo.get(User, totp.user_id) do
+      NimbleTOTP.valid?(totp.secret, code, time: time, since: since)
+    end
   end
 end
