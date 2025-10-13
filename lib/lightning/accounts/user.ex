@@ -31,6 +31,7 @@ defmodule Lightning.Accounts.User do
     field :mfa_enabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
     field :github_oauth_token, Lightning.Encrypted.Map, redact: true
+    field :last_totp_at, :utc_datetime_usec, default: nil
 
     field :contact_preference, Ecto.Enum,
       values: [:critical, :any],

@@ -216,7 +216,10 @@ defmodule Lightning.Accounts do
     |> Multi.update(:user, fn %{totp: totp} ->
       totp = Repo.preload(totp, [:user])
 
-      Ecto.Changeset.change(totp.user, %{mfa_enabled: true})
+      Ecto.Changeset.change(
+        totp.user,
+        %{mfa_enabled: true, last_totp_at: Lightning.current_time()}
+      )
     end)
     |> Multi.run(:backup_codes, fn _repo, %{user: user} ->
       user = Repo.preload(user, [:backup_codes])
@@ -243,7 +246,10 @@ defmodule Lightning.Accounts do
     Multi.new()
     |> Multi.update(:user, fn _changes ->
       totp = Repo.preload(totp, [:user])
-      Ecto.Changeset.change(totp.user, %{mfa_enabled: false})
+      Ecto.Changeset.change(
+        totp.user,
+        %{mfa_enabled: false, last_totp_at: nil}
+      )
     end)
     |> Multi.delete(:totp, totp)
     |> Repo.transaction()
@@ -258,9 +264,19 @@ defmodule Lightning.Accounts do
   """
   @spec valid_user_totp?(User.t(), String.t()) :: true | false
   def valid_user_totp?(user, code) do
-    totp = Repo.get_by(UserTOTP, user_id: user.id)
+    totp = Repo.get_by(UserTOTP, user_id: user.id) |> Repo.preload(:user)
 
     UserTOTP.valid_totp?(totp, code)
+    |> tap(fn valid ->
+      if valid do
+        Repo.update!(
+          Ecto.Changeset.change(
+            totp.user,
+            %{last_totp_at: Lightning.current_time()}
+          )
+        )
+      end
+    end)
   end
 
   @doc """
