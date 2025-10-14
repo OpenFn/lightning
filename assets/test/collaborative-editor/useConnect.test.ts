@@ -24,7 +24,7 @@ import {
   createWorkflowYDoc,
   createLinearWorkflowYDoc,
   createDiamondWorkflowYDoc,
-} from "./__helpers__/workflowTestHelpers";
+} from "./__helpers__/workflowFactory";
 
 describe("isUpstream", () => {
   test("returns false for empty graph", () => {
@@ -273,42 +273,57 @@ describe("getDropTargetError", () => {
     // Valid connection from different source to existing target
     expect(getDropTargetError(model, "node-c", "node-b")).toBeUndefined();
   });
-
-  test("validates all rules in priority order", () => {
-    // Create a model where multiple rules could apply
-    const model: Flow.Model = {
-      nodes: [
-        { id: "node-a", type: "job", data: {}, position: { x: 0, y: 0 } },
-        {
-          id: "trigger-1",
-          type: "trigger",
-          data: {},
-          position: { x: 0, y: 0 },
-        },
-      ],
-      edges: [
-        { id: "e1", source: "trigger-1", target: "node-a" },
-        { id: "e2", source: "node-a", target: "node-a" }, // This won't exist but we test the logic
-      ],
-    };
-
-    // Self-connection is checked first (returns true)
-    expect(getDropTargetError(model, "node-a", "node-a")).toBeTruthy();
-
-    // Trigger connection is checked second
-    expect(getDropTargetError(model, "node-a", "trigger-1")).toBe(
-      "Cannot connect to a trigger"
-    );
-  });
 });
 
 // =============================================================================
 // INTEGRATION TESTS - Y.js Collaborative State
 // =============================================================================
 
+/**
+ * Helper function to convert Y.Doc to Flow.Model for validation tests.
+ * Extracts jobs, triggers, and edges from Y.js arrays and converts them
+ * to the Flow.Model format that validation functions expect.
+ */
+function yDocToFlowModel(ydoc: Y.Doc): Flow.Model {
+  const edgesArray = ydoc.getArray("edges");
+  const edges: Flow.Edge[] = edgesArray
+    .toArray()
+    .map((yEdge: any) => yEdge.toJSON())
+    .map((edge: any) => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      data: {},
+    }));
+
+  const jobsArray = ydoc.getArray("jobs");
+  const jobNodes: Flow.Node[] = jobsArray
+    .toArray()
+    .map((yJob: any) => yJob.toJSON())
+    .map((job: any) => ({
+      id: job.id,
+      type: "job",
+      data: {},
+      position: { x: 0, y: 0 },
+    }));
+
+  const triggersArray = ydoc.getArray("triggers");
+  const triggerNodes: Flow.Node[] = triggersArray
+    .toArray()
+    .map((yTrigger: any) => yTrigger.toJSON())
+    .map((trigger: any) => ({
+      id: trigger.id,
+      type: "trigger", // Use "trigger" not the actual trigger.type
+      data: {},
+      position: { x: 0, y: 0 },
+    }));
+
+  const nodes: Flow.Node[] = [...jobNodes, ...triggerNodes];
+  return { nodes, edges };
+}
+
 describe("useConnect - Integration Tests with Y.js", () => {
   test("validates against current Y.js workflow state", () => {
-    // Create Y.js document with workflow containing A→B edge
     const ydoc = createWorkflowYDoc({
       jobs: {
         "job-a": {
@@ -325,30 +340,7 @@ describe("useConnect - Integration Tests with Y.js", () => {
       edges: [{ id: "edge-1", source: "job-a", target: "job-b" }],
     });
 
-    // Convert Y.Doc to Flow.Model (nodes and edges for validation)
-    const edgesArray = ydoc.getArray("edges");
-    const edges: Flow.Edge[] = edgesArray
-      .toArray()
-      .map((yEdge: any) => yEdge.toJSON())
-      .map((edge: any) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        data: {},
-      }));
-
-    const jobsArray = ydoc.getArray("jobs");
-    const nodes: Flow.Node[] = jobsArray
-      .toArray()
-      .map((yJob: any) => yJob.toJSON())
-      .map((job: any) => ({
-        id: job.id,
-        type: "job",
-        data: {},
-        position: { x: 0, y: 0 },
-      }));
-
-    const model: Flow.Model = { nodes, edges };
+    const model = yDocToFlowModel(ydoc);
 
     // Test validation functions with Y.js state
     expect(getDropTargetError(model, "job-a", "job-b")).toBe(
@@ -373,35 +365,8 @@ describe("useConnect - Integration Tests with Y.js", () => {
       edges: [],
     });
 
-    // Helper to convert Y.Doc to Flow.Model
-    const getModel = (): Flow.Model => {
-      const edgesArray = ydoc.getArray("edges");
-      const edges: Flow.Edge[] = edgesArray
-        .toArray()
-        .map((yEdge: any) => yEdge.toJSON())
-        .map((edge: any) => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          data: {},
-        }));
-
-      const jobsArray = ydoc.getArray("jobs");
-      const nodes: Flow.Node[] = jobsArray
-        .toArray()
-        .map((yJob: any) => yJob.toJSON())
-        .map((job: any) => ({
-          id: job.id,
-          type: "job",
-          data: {},
-          position: { x: 0, y: 0 },
-        }));
-
-      return { nodes, edges };
-    };
-
     // Initially, A→B should be valid
-    let model = getModel();
+    let model = yDocToFlowModel(ydoc);
     expect(getDropTargetError(model, "job-a", "job-b")).toBeUndefined();
 
     // Simulate remote user adding edge A→B
@@ -414,7 +379,7 @@ describe("useConnect - Integration Tests with Y.js", () => {
     edgesArray.push([edgeMap]);
 
     // Now A→B should be invalid (duplicate)
-    model = getModel();
+    model = yDocToFlowModel(ydoc);
     expect(getDropTargetError(model, "job-a", "job-b")).toBe(
       "Already connected to this step"
     );
@@ -442,33 +407,6 @@ describe("useConnect - Integration Tests with Y.js", () => {
       edges: [],
     });
 
-    // Helper to convert Y.Doc to Flow.Model
-    const getModel = (): Flow.Model => {
-      const edgesArray = ydoc.getArray("edges");
-      const edges: Flow.Edge[] = edgesArray
-        .toArray()
-        .map((yEdge: any) => yEdge.toJSON())
-        .map((edge: any) => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          data: {},
-        }));
-
-      const jobsArray = ydoc.getArray("jobs");
-      const nodes: Flow.Node[] = jobsArray
-        .toArray()
-        .map((yJob: any) => yJob.toJSON())
-        .map((job: any) => ({
-          id: job.id,
-          type: "job",
-          data: {},
-          position: { x: 0, y: 0 },
-        }));
-
-      return { nodes, edges };
-    };
-
     const edgesArray = ydoc.getArray("edges");
 
     // User 1 creates A→B
@@ -488,7 +426,7 @@ describe("useConnect - Integration Tests with Y.js", () => {
     edgesArray.push([edge2Map]);
 
     // Now C→A should be prevented (circular)
-    const model = getModel();
+    const model = yDocToFlowModel(ydoc);
     expect(getDropTargetError(model, "job-c", "job-a")).toBe(
       "Cannot create circular workflow"
     );
@@ -496,56 +434,14 @@ describe("useConnect - Integration Tests with Y.js", () => {
 
   test("validates linear workflow from Y.js helper", () => {
     const ydoc = createLinearWorkflowYDoc();
+    const model = yDocToFlowModel(ydoc);
 
-    // Convert to Flow.Model
-    const edgesArray = ydoc.getArray("edges");
-    const edges: Flow.Edge[] = edgesArray
-      .toArray()
-      .map((yEdge: any) => yEdge.toJSON())
-      .map((edge: any) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        data: {},
-      }));
-
-    const jobsArray = ydoc.getArray("jobs");
-    const triggersArray = ydoc.getArray("triggers");
-
-    // Map jobs to Flow.Node with type "job"
-    const jobNodes: Flow.Node[] = jobsArray
-      .toArray()
-      .map((yJob: any) => yJob.toJSON())
-      .map((job: any) => ({
-        id: job.id,
-        type: "job",
-        data: {},
-        position: { x: 0, y: 0 },
-      }));
-
-    // Map triggers to Flow.Node with type "trigger" (not webhook)
-    const triggerNodes: Flow.Node[] = triggersArray
-      .toArray()
-      .map((yTrigger: any) => yTrigger.toJSON())
-      .map((trigger: any) => ({
-        id: trigger.id,
-        type: "trigger", // Important: use "trigger" not the actual trigger.type
-        data: {},
-        position: { x: 0, y: 0 },
-      }));
-
-    const nodes: Flow.Node[] = [...jobNodes, ...triggerNodes];
-    const model: Flow.Model = { nodes, edges };
-
-    // Test validation rules on linear workflow
     // Prevent reverse connection (would create cycle)
     expect(getDropTargetError(model, "job-c", "job-a")).toBe(
       "Cannot create circular workflow"
     );
 
-    // Cannot connect job to trigger (job-c → trigger-1)
-    // Note: job-a → trigger-1 would also be circular since trigger-1 → job-a exists
-    // But "Cannot connect to a trigger" check happens first
+    // Cannot connect job to trigger
     expect(getDropTargetError(model, "job-c", "trigger-1")).toBe(
       "Cannot connect to a trigger"
     );
@@ -553,54 +449,14 @@ describe("useConnect - Integration Tests with Y.js", () => {
 
   test("validates diamond workflow from Y.js helper", () => {
     const ydoc = createDiamondWorkflowYDoc();
+    const model = yDocToFlowModel(ydoc);
 
-    // Convert to Flow.Model
-    const edgesArray = ydoc.getArray("edges");
-    const edges: Flow.Edge[] = edgesArray
-      .toArray()
-      .map((yEdge: any) => yEdge.toJSON())
-      .map((edge: any) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        data: {},
-      }));
-
-    const jobsArray = ydoc.getArray("jobs");
-    const triggersArray = ydoc.getArray("triggers");
-
-    // Map jobs to Flow.Node with type "job"
-    const jobNodes: Flow.Node[] = jobsArray
-      .toArray()
-      .map((yJob: any) => yJob.toJSON())
-      .map((job: any) => ({
-        id: job.id,
-        type: "job",
-        data: {},
-        position: { x: 0, y: 0 },
-      }));
-
-    // Map triggers to Flow.Node with type "trigger"
-    const triggerNodes: Flow.Node[] = triggersArray
-      .toArray()
-      .map((yTrigger: any) => yTrigger.toJSON())
-      .map((trigger: any) => ({
-        id: trigger.id,
-        type: "trigger",
-        data: {},
-        position: { x: 0, y: 0 },
-      }));
-
-    const nodes: Flow.Node[] = [...jobNodes, ...triggerNodes];
-    const model: Flow.Model = { nodes, edges };
-
-    // Diamond pattern should be valid (no cycle)
     // D→A would create cycle
     expect(getDropTargetError(model, "job-d", "job-a")).toBe(
       "Cannot create circular workflow"
     );
 
-    // B→C is allowed (no cycle - both feed into D)
+    // B→C is allowed (no cycle - both branches feed into D independently)
     expect(getDropTargetError(model, "job-b", "job-c")).toBeUndefined();
   });
 });

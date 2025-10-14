@@ -1,8 +1,8 @@
 /**
- * Workflow Test Helpers
+ * Workflow Test Factory
  *
- * Utility functions for creating Y.Doc instances with workflow data for testing.
- * These helpers simplify the setup of workflow test scenarios with jobs, triggers,
+ * Factory functions for creating Y.Doc instances with workflow data for testing.
+ * These factories simplify the setup of workflow test scenarios with jobs, triggers,
  * and edges in Y.js collaborative documents.
  *
  * Usage:
@@ -15,9 +15,10 @@
 import * as Y from "yjs";
 
 /**
- * Configuration for creating a workflow Y.Doc
+ * Input for creating a workflow Y.Doc with factory functions.
+ * All fields are optional and can be partially specified.
  */
-export interface WorkflowConfig {
+export interface CreateWorkflowInput {
   jobs?: Record<
     string,
     {
@@ -64,13 +65,13 @@ export interface WorkflowConfig {
  *   ],
  * });
  */
-export function createWorkflowYDoc(config: WorkflowConfig): Y.Doc {
+export function createWorkflowYDoc(config: CreateWorkflowInput): Y.Doc {
   const ydoc = new Y.Doc();
 
   // Set up jobs
   const jobsArray = ydoc.getArray("jobs");
   if (config.jobs) {
-    Object.entries(config.jobs).forEach(([id, job]) => {
+    Object.entries(config.jobs).forEach(([_id, job]) => {
       const jobMap = new Y.Map();
       jobMap.set("id", job.id);
       jobMap.set("name", job.name);
@@ -87,7 +88,7 @@ export function createWorkflowYDoc(config: WorkflowConfig): Y.Doc {
   // Set up triggers
   const triggersArray = ydoc.getArray("triggers");
   if (config.triggers) {
-    Object.entries(config.triggers).forEach(([id, trigger]) => {
+    Object.entries(config.triggers).forEach(([_id, trigger]) => {
       const triggerMap = new Y.Map();
       triggerMap.set("id", trigger.id);
       triggerMap.set("type", trigger.type);
