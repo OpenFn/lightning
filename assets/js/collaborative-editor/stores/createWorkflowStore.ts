@@ -605,11 +605,39 @@ export const createWorkflowStore = () => {
       }>(provider.channel, "save_workflow", payload);
 
       logger.debug("Saved workflow", response);
+
+      // Update lock_version in Y.Doc to match database
+      if (response.lock_version !== undefined) {
+        updateWorkflowLockVersion(response.lock_version);
+      }
+
       return response;
     } catch (error) {
       logger.error("Failed to save workflow", error);
       throw error;
     }
+  };
+
+  /**
+   * Updates the workflow lock_version in Y.Doc after a successful save.
+   * This ensures the Y.Doc state stays in sync with the database.
+   *
+   * Uses Pattern 1: Y.Doc → Observer → Immer
+   * The observer will automatically update the Immer state.
+   */
+  const updateWorkflowLockVersion = (lockVersion: number) => {
+    if (!ydoc) {
+      logger.warn("Cannot update lock version - Y.Doc not connected");
+      return;
+    }
+
+    const workflowMap = ydoc.getMap("workflow");
+
+    ydoc.transact(() => {
+      workflowMap.set("lock_version", lockVersion);
+    });
+
+    logger.debug("Updated workflow lock_version in Y.Doc", { lockVersion });
   };
 
   const resetWorkflow = async (): Promise<void> => {
@@ -718,6 +746,7 @@ export const createWorkflowStore = () => {
     updatePositions,
     updatePosition,
     importWorkflow,
+    updateWorkflowLockVersion,
 
     // =============================================================================
     // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations - Use Sparingly)

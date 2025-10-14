@@ -314,7 +314,7 @@ defmodule Lightning.Collaboration.Session do
              skip_reconcile: true
            ) do
       Logger.info("Successfully saved workflow #{state.workflow.id}")
-      {:reply, {:ok, saved_workflow}, state}
+      {:reply, {:ok, saved_workflow}, %{state | workflow: saved_workflow}}
     else
       {:error, :no_shared_doc} ->
         Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
