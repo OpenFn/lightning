@@ -24,6 +24,11 @@ and this project adheres to
 
 ### Fixed
 
+- Credentials added to parent projects now automatically propagate to all
+  descendant sandbox projects, ensuring sandboxes have access to parent
+  credentials. Includes migration to backfill existing missing associations.
+  [#3756](https://github.com/OpenFn/lightning/issues/3756)
+
 ## [2.14.11-pre] - 2025-10-14
 
 ### Added
