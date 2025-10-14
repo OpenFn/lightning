@@ -66,7 +66,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -79,7 +83,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -91,7 +99,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -111,7 +123,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -134,7 +150,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -157,7 +177,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -190,7 +214,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -214,7 +242,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -239,7 +271,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 
@@ -255,7 +291,11 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
+          <YAMLImportPanel
+            onBack={mockOnBack}
+            onImport={mockOnImport}
+            onSave={mockOnSave}
+          />
         </StoreContext.Provider>
       );
 

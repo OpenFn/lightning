@@ -66,8 +66,18 @@ export function WorkflowEditor() {
     updateSearchParams({ method });
   };
 
-  const handleImport = (workflowState: YAMLWorkflowState) => {
-    workflowStore.importWorkflow(workflowState);
+  const handleImport = async (workflowState: YAMLWorkflowState) => {
+    // Validate workflow name with server before importing
+    try {
+      const validatedState =
+        await workflowStore.validateWorkflowName(workflowState);
+
+      workflowStore.importWorkflow(validatedState);
+    } catch (error) {
+      console.error("Failed to validate workflow name:", error);
+      // Fall back to original state if validation fails
+      workflowStore.importWorkflow(workflowState);
+    }
   };
 
   const handleCloseLeftPanel = () => {
