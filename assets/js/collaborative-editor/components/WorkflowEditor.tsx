@@ -70,6 +70,7 @@ export function WorkflowEditor() {
 
   const handleCloseLeftPanel = () => {
     setShowLeftPanel(false);
+    updateSearchParams({ method: null });
   };
 
   return (
