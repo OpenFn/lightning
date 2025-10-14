@@ -21,8 +21,6 @@ and this project adheres to
 
 ### Fixed
 
-### Security
-
 - Runtime permission checks in WorkflowChannel save/reset operations to prevent
   unauthorized edits when user roles change during active collaboration sessions
   [#3749](https://github.com/OpenFn/lightning/issues/3749)
