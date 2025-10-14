@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.14.11-pre] - 2025-10-14
+
+### Added
+
 - User interface for merging sandboxes
   [#3436](https://github.com/OpenFn/lightning/issues/3436)
 - Credential environments user interface and runtime
