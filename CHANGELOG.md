@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- User interface for merging sandboxes
+  [#3436](https://github.com/OpenFn/lightning/issues/3436)
 - Credential environments user interface and runtime
   [#3598](https://github.com/OpenFn/lightning/issues/3598)
 - Save button with validation and permissions in collaborative workflow editor
@@ -42,6 +44,16 @@ and this project adheres to
 - Improved state management and store architecture in collaborative editor
   [#3635](https://github.com/OpenFn/lightning/issues/3635)
 - Upgraded Tailwind CSS from 4.0.13 to 4.1.14
+
+### Fixed
+
+- Project merge now correctly preserves target project identity (name,
+  description, env, color) instead of overwriting with source metadata
+  [#3742](https://github.com/OpenFn/lightning/issues/3742)
+- New workflows created in sandboxes now properly retain all jobs, triggers, and
+  edges when merged into target projects (previously only workflow metadata was
+  copied, resulting in empty workflows)
+  [#3744](https://github.com/OpenFn/lightning/issues/3744)
 
 ### Released
 

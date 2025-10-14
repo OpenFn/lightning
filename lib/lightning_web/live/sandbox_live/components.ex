@@ -109,88 +109,6 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
-  attr :root_project, Project, required: true
-  attr :is_current, :boolean, required: true
-
-  defp root_project_card(assigns) do
-    ~H"""
-    <div
-      class="group block cursor-pointer rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
-      phx-click={JS.navigate(~p"/projects/#{@root_project.id}/w")}
-      role="button"
-      tabindex="0"
-    >
-      <div class="flex items-stretch">
-        <div class="w-3 flex-shrink-0 bg-indigo-600"></div>
-
-        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-3 mb-1">
-              <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
-                {@root_project.name}
-              </h3>
-              <.badge
-                id={"env-badge-#{@root_project.id}"}
-                env={
-                  if has_environment?(@root_project),
-                    do: @root_project.env,
-                    else: "main"
-                }
-              />
-              <.badge
-                :if={@is_current}
-                id={"active-badge-#{@root_project.id}"}
-                env="active"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  attr :sandbox, :map, required: true
-
-  defp sandbox_card(assigns) do
-    ~H"""
-    <div
-      class="group block cursor-pointer rounded-xl bg-white border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
-      phx-click={JS.navigate(~p"/projects/#{@sandbox.id}/w")}
-      role="button"
-      tabindex="0"
-    >
-      <div class="flex items-stretch">
-        <div
-          class="w-3 flex-shrink-0"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
-        >
-        </div>
-        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-3 mb-1">
-              <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
-                {@sandbox.name}
-              </h3>
-              <.badge
-                :if={has_environment?(@sandbox)}
-                id={"env-badge-#{@sandbox.id}"}
-                env={@sandbox.env}
-              />
-              <.badge
-                :if={@sandbox.is_current}
-                id={"active-badge-#{@sandbox.id}"}
-                env="active"
-              />
-            </div>
-          </div>
-          <.sandbox_actions sandbox={@sandbox} />
-        </div>
-      </div>
-    </div>
-    """
-  end
-
   attr :open?, :boolean, required: true
   attr :sandbox, Project, required: true
   attr :changeset, :any, required: true
@@ -277,6 +195,277 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
+  attr :open?, :boolean, required: true
+  attr :sandbox, Project, required: true
+  attr :target_options, :list, required: true
+  attr :changeset, :any, required: true
+  attr :descendants, :list, default: []
+
+  def merge_modal(assigns) do
+    assigns =
+      assigns
+      |> assign(:merge_form, to_form(assigns.changeset, as: :merge))
+      |> assign(:descendant_count, length(assigns.descendants))
+
+    ~H"""
+    <.modal
+      :if={@open?}
+      id="merge-sandbox-modal"
+      show
+      width="max-w-xl"
+      close_on_click_away
+      close_on_keydown
+      on_close={JS.push("close-merge-modal")}
+    >
+      <:title>
+        <div class="flex items-start justify-between">
+          <span class="font-bold">Merge</span>
+          <button
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            phx-click={JS.push("close-merge-modal")}
+            aria-label="Close"
+          >
+            <.icon name="hero-x-mark" class="h-5 w-5" />
+          </button>
+        </div>
+      </:title>
+
+      <.form
+        for={@merge_form}
+        phx-change="select-merge-target"
+        phx-submit="confirm-merge"
+      >
+        <section class="space-y-4">
+          <div class="flex items-center gap-2 text-gray-700">
+            <span>Merge</span>
+            <span class="p-1 bg-gray-50 text-gray-800 rounded-md border border-slate-200 font-medium">
+              {@sandbox.name}
+            </span>
+            <span>into</span>
+            <div class="inline-block min-w-[200px]">
+              <.input
+                type="custom-select"
+                id="merge-target-select"
+                field={@merge_form[:target_id]}
+                options={
+                  Enum.map(@target_options, fn opt -> {opt.label, opt.value} end)
+                }
+                class="text-base"
+              />
+            </div>
+          </div>
+
+          <p class="text-gray-700">
+            This will merge all workflows from <strong>{@sandbox.name}</strong>
+            into <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>,
+            then close <strong>{@sandbox.name}</strong>
+            <%= if @descendant_count == 1 do %>
+              and its child sandbox <strong>{List.first(@descendants).name}</strong>
+            <% end %>
+            <%= if @descendant_count > 1 do %>
+              and its {@descendant_count} child sandboxes
+            <% end %>. This action cannot be undone.
+          </p>
+
+          <%= if @descendant_count > 1 do %>
+            <Common.alert
+              id="merge-descendants-alert"
+              type="warning"
+              header="Child sandboxes will be closed"
+            >
+              <:message>
+                <p class="mb-2">
+                  The following {@descendant_count} sandboxes will be permanently closed:
+                </p>
+                <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
+                  <li :for={descendant <- @descendants}>
+                    {descendant.name}
+                  </li>
+                </ul>
+                <p>
+                  Consider merging child sandboxes into
+                  <strong>{@sandbox.name}</strong>
+                  first to preserve their work before merging up.
+                </p>
+              </:message>
+            </Common.alert>
+          <% end %>
+
+          <%= if @descendant_count == 1 do %>
+            <Common.alert id="merge-single-descendant-alert" type="warning">
+              <:message>
+                <strong>{List.first(@descendants).name}</strong>
+                will also be closed. Consider merging it into
+                <strong>{@sandbox.name}</strong>
+                first to preserve its work.
+              </:message>
+            </Common.alert>
+          <% end %>
+
+          <Common.alert
+            id="merge-beta-warning"
+            type="warning"
+            header="Beta feature warning"
+          >
+            <:message>
+              Sandbox merging is in beta. For production projects, use the CLI to merge locally and preview changes first.
+            </:message>
+          </Common.alert>
+
+          <.modal_footer>
+            <.button theme="primary" type="submit">
+              Merge
+            </.button>
+            <.button
+              theme="secondary"
+              type="button"
+              phx-click={JS.push("close-merge-modal")}
+            >
+              Cancel
+            </.button>
+          </.modal_footer>
+        </section>
+      </.form>
+    </.modal>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :palette, :list, default: @color_palette
+  attr :label, :string, default: "Color"
+  attr :class, :string, default: ""
+  attr :disabled, :boolean, default: false
+
+  def color_palette(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:hex_colors, fn %{palette: palette} ->
+        Enum.map(palette, fn {hex, _name} -> hex end)
+      end)
+      |> assign_new(:names_map, fn %{palette: palette} ->
+        Map.new(palette)
+      end)
+      |> assign_new(:current, fn %{field: f, hex_colors: colors} ->
+        f.value || List.first(colors)
+      end)
+      |> assign_new(:current_name, fn %{current: hex, names_map: names} ->
+        Map.get(names, hex, hex)
+      end)
+
+    ~H"""
+    <fieldset class={[@class]} disabled={@disabled}>
+      <label class="block text-sm font-medium text-slate-800 mb-2">{@label}</label>
+
+      <div class="space-y-3">
+        <div
+          role="radiogroup"
+          class="grid grid-cols-4 sm:grid-cols-8 gap-0.5 select-none w-fit"
+          aria-label="Choose a color for your sandbox"
+        >
+          <.color_option
+            :for={{hex, index} <- Enum.with_index(@hex_colors)}
+            field={@field}
+            hex={hex}
+            name={Map.get(@names_map, hex, hex)}
+            selected={hex == @current}
+            index={index}
+          />
+        </div>
+
+        <.color_display current={@current} current_name={@current_name} />
+      </div>
+
+      <p class="sr-only" aria-live="polite">
+        Selected: {@current_name} ({@current})
+      </p>
+    </fieldset>
+    """
+  end
+
+  attr :root_project, Project, required: true
+  attr :is_current, :boolean, required: true
+
+  defp root_project_card(assigns) do
+    ~H"""
+    <div
+      class="group block cursor-pointer rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
+      phx-click={JS.navigate(~p"/projects/#{@root_project.id}/w")}
+      role="button"
+      tabindex="0"
+    >
+      <div class="flex items-stretch">
+        <div class="w-3 flex-shrink-0 bg-indigo-600"></div>
+
+        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-1">
+              <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
+                {@root_project.name}
+              </h3>
+              <.badge
+                id={"env-badge-#{@root_project.id}"}
+                env={
+                  if has_environment?(@root_project),
+                    do: @root_project.env,
+                    else: "main"
+                }
+              />
+              <.badge
+                :if={@is_current}
+                id={"active-badge-#{@root_project.id}"}
+                env="active"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :sandbox, :map, required: true
+
+  defp sandbox_card(assigns) do
+    ~H"""
+    <div
+      class="group block cursor-pointer rounded-xl bg-white border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
+      phx-click={JS.navigate(~p"/projects/#{@sandbox.id}/w")}
+      role="button"
+      tabindex="0"
+    >
+      <div class="flex items-stretch">
+        <div
+          class="w-3 flex-shrink-0"
+          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+        >
+        </div>
+        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-1">
+              <h3 class="font-semibold text-slate-900 text-lg group-hover:text-slate-800 truncate">
+                {@sandbox.name}
+              </h3>
+              <.badge
+                :if={has_environment?(@sandbox)}
+                id={"env-badge-#{@sandbox.id}"}
+                env={@sandbox.env}
+              />
+              <.badge
+                :if={@sandbox.is_current}
+                id={"active-badge-#{@sandbox.id}"}
+                env="active"
+              />
+            </div>
+          </div>
+          <.sandbox_actions sandbox={@sandbox} />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :id, :string, required: true
   attr :env, :string, required: true
 
@@ -300,10 +489,27 @@ defmodule LightningWeb.SandboxLive.Components do
         id={"branch-rewire-sandbox-#{@sandbox.id}"}
         icon_type="custom"
         icon_name="branches"
-        label="Branch/Rewire (coming soon)"
-        disabled={true}
-        icon_class="text-slate-300"
-        button_class="cursor-not-allowed"
+        label={
+          if not @sandbox.can_merge do
+            "You are not authorized to merge this sandbox"
+          else
+            "Merge this sandbox"
+          end
+        }
+        action={
+          if @sandbox.can_merge,
+            do: JS.push("open-merge-modal", value: %{id: @sandbox.id}),
+            else: %JS{}
+        }
+        disabled={not @sandbox.can_merge}
+        icon_class={
+          if @sandbox.can_merge, do: "text-slate-700", else: "text-slate-300"
+        }
+        button_class={
+          if @sandbox.can_merge,
+            do: "hover:bg-slate-100",
+            else: "cursor-not-allowed"
+        }
       />
 
       <.action_button
@@ -409,65 +615,6 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
-  defp has_environment?(%{env: env}) when is_binary(env) do
-    String.trim(env) != ""
-  end
-
-  defp has_environment?(_), do: false
-
-  attr :id, :string, required: true
-  attr :field, Phoenix.HTML.FormField, required: true
-  attr :palette, :list, default: @color_palette
-  attr :label, :string, default: "Color"
-  attr :class, :string, default: ""
-  attr :disabled, :boolean, default: false
-
-  def color_palette(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:hex_colors, fn %{palette: palette} ->
-        Enum.map(palette, fn {hex, _name} -> hex end)
-      end)
-      |> assign_new(:names_map, fn %{palette: palette} ->
-        Map.new(palette)
-      end)
-      |> assign_new(:current, fn %{field: f, hex_colors: colors} ->
-        f.value || List.first(colors)
-      end)
-      |> assign_new(:current_name, fn %{current: hex, names_map: names} ->
-        Map.get(names, hex, hex)
-      end)
-
-    ~H"""
-    <fieldset class={[@class]} disabled={@disabled}>
-      <label class="block text-sm font-medium text-slate-800 mb-2">{@label}</label>
-
-      <div class="space-y-3">
-        <div
-          role="radiogroup"
-          class="grid grid-cols-4 sm:grid-cols-8 gap-0.5 select-none w-fit"
-          aria-label="Choose a color for your sandbox"
-        >
-          <.color_option
-            :for={{hex, index} <- Enum.with_index(@hex_colors)}
-            field={@field}
-            hex={hex}
-            name={Map.get(@names_map, hex, hex)}
-            selected={hex == @current}
-            index={index}
-          />
-        </div>
-
-        <.color_display current={@current} current_name={@current_name} />
-      </div>
-
-      <p class="sr-only" aria-live="polite">
-        Selected: {@current_name} ({@current})
-      </p>
-    </fieldset>
-    """
-  end
-
   attr :field, Phoenix.HTML.FormField, required: true
   attr :hex, :string, required: true
   attr :name, :string, required: true
@@ -526,5 +673,18 @@ defmodule LightningWeb.SandboxLive.Components do
       <span class="font-mono text-slate-400 text-xs">{@current}</span>
     </div>
     """
+  end
+
+  defp has_environment?(%{env: env}) when is_binary(env) do
+    String.trim(env) != ""
+  end
+
+  defp has_environment?(_), do: false
+
+  defp get_selected_target_label(target_options, selected_target_id) do
+    case Enum.find(target_options, &(&1.value == selected_target_id)) do
+      nil -> "MAIN"
+      target -> target.label
+    end
   end
 end

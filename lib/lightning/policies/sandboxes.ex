@@ -69,13 +69,15 @@ defmodule Lightning.Policies.Sandboxes do
   @doc """
   Bulk permission check for multiple sandboxes to avoid N+1 queries.
 
-  Returns a map: sandbox_id => %{update: boolean, delete: boolean}
+  Returns a map: sandbox_id => %{update: boolean, delete: boolean, merge: boolean}
 
   Assumes `root_project.project_users` and each `sandbox.project_users`
   are preloaded (as ensured by `Projects.list_workspace_projects/2`).
   """
   @spec check_manage_permissions([Project.t()], User.t(), Project.t()) ::
-          %{binary() => %{update: boolean(), delete: boolean()}}
+          %{
+            binary() => %{update: boolean(), delete: boolean(), merge: boolean()}
+          }
   def check_manage_permissions(sandboxes, %User{} = user, root_project) do
     has_root_privileges =
       user.role == :superuser or
@@ -85,7 +87,7 @@ defmodule Lightning.Policies.Sandboxes do
         )
 
     if has_root_privileges do
-      Map.new(sandboxes, &{&1.id, %{update: true, delete: true}})
+      Map.new(sandboxes, &{&1.id, %{update: true, delete: true, merge: true}})
     else
       Map.new(sandboxes, fn sandbox ->
         is_owner_or_admin_here? =
@@ -94,10 +96,15 @@ defmodule Lightning.Policies.Sandboxes do
             &(&1.user_id == user.id and &1.role in [:owner, :admin])
           )
 
-        # Today update/delete share the same rule.
-        # If they ever diverge, split here (e.g., compute two booleans).
+        # Merge follows the same rule as update
+        # Today update/delete/merge share the same rule.
+        # If they ever diverge, split here (e.g., compute separate booleans).
         {sandbox.id,
-         %{update: is_owner_or_admin_here?, delete: is_owner_or_admin_here?}}
+         %{
+           update: is_owner_or_admin_here?,
+           delete: is_owner_or_admin_here?,
+           merge: is_owner_or_admin_here?
+         }}
       end)
     end
   end

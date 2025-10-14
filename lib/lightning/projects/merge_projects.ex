@@ -629,8 +629,8 @@ defmodule Lightning.Projects.MergeProjects do
         workflow_mappings
       )
 
-    source_project
-    |> Map.take([:name, :description])
+    target_project
+    |> Map.take([:name, :description, :env, :color])
     |> stringify_keys()
     |> Map.merge(%{
       "id" => target_project.id,
@@ -648,11 +648,7 @@ defmodule Lightning.Projects.MergeProjects do
       Enum.map(source_workflows, fn source_workflow ->
         case Map.get(workflow_mappings, source_workflow.id) do
           nil ->
-            # New workflow - generate new UUID
-            source_workflow
-            |> Map.take([:name, :concurrency, :enable_job_logs])
-            |> Map.put(:id, Ecto.UUID.generate())
-            |> stringify_keys()
+            build_new_workflow(source_workflow)
 
           target_id ->
             # Matched workflow - merge using existing merge_workflow logic
@@ -672,5 +668,79 @@ defmodule Lightning.Projects.MergeProjects do
       end)
 
     merged_from_source ++ deleted_targets
+  end
+
+  defp build_new_workflow(source_workflow) do
+    job_id_map =
+      Map.new(source_workflow.jobs, fn job ->
+        {job.id, Ecto.UUID.generate()}
+      end)
+
+    trigger_id_map =
+      Map.new(source_workflow.triggers, fn trigger ->
+        {trigger.id, Ecto.UUID.generate()}
+      end)
+
+    node_mappings = Map.merge(job_id_map, trigger_id_map)
+
+    jobs =
+      Enum.map(source_workflow.jobs, fn job ->
+        job
+        |> Map.take([
+          :name,
+          :body,
+          :adaptor,
+          :project_credential_id,
+          :keychain_credential_id
+        ])
+        |> Map.put(:id, Map.fetch!(node_mappings, job.id))
+        |> stringify_keys()
+      end)
+
+    triggers =
+      Enum.map(source_workflow.triggers, fn trigger ->
+        trigger
+        |> Map.take([
+          :comment,
+          :custom_path,
+          :cron_expression,
+          :type,
+          :kafka_configuration
+        ])
+        |> Map.put(:id, Map.fetch!(node_mappings, trigger.id))
+        |> stringify_keys()
+      end)
+
+    edges =
+      Enum.map(source_workflow.edges, fn edge ->
+        from_id = edge.source_trigger_id || edge.source_job_id
+        mapped_from_id = Map.fetch!(node_mappings, from_id)
+        mapped_to_id = Map.fetch!(node_mappings, edge.target_job_id)
+
+        edge
+        |> Map.take([
+          :condition_type,
+          :condition_expression,
+          :condition_label,
+          :enabled
+        ])
+        |> Map.merge(%{
+          id: Ecto.UUID.generate(),
+          source_job_id: edge.source_job_id && mapped_from_id,
+          source_trigger_id: edge.source_trigger_id && mapped_from_id,
+          target_job_id: mapped_to_id
+        })
+        |> stringify_keys()
+      end)
+
+    source_workflow
+    |> Map.take([:name, :concurrency, :enable_job_logs])
+    |> Map.merge(%{
+      "id" => Ecto.UUID.generate(),
+      "jobs" => jobs,
+      "triggers" => triggers,
+      "edges" => edges
+    })
+    |> stringify_keys()
   end
 end
