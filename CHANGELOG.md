@@ -16,6 +16,8 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Create new workflow via YAML in the collaborative editor
+  [#3700](https://github.com/OpenFn/lightning/issues/3700)
 
 ### Changed
 
