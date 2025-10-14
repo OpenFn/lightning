@@ -593,16 +593,22 @@ defmodule Lightning.Credentials do
            data: %Lightning.Projects.ProjectCredential{}
          } = changeset
        ) do
-    Multi.insert(
-      multi,
-      {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
+    project_id = Ecto.Changeset.get_field(changeset, :project_id)
+
+    multi
+    |> Multi.insert(
+      {:audit, project_id},
       fn %{credential: credential} ->
         Audit.user_initiated_event("added_to_project", credential, %{
           before: %{project_id: nil},
-          after: %{
-            project_id: Ecto.Changeset.get_field(changeset, :project_id)
-          }
+          after: %{project_id: project_id}
         })
+      end
+    )
+    |> Multi.run(
+      {:propagate_to_descendants, project_id},
+      fn _repo, %{credential: credential} ->
+        propagate_credential_to_descendants(credential.id, project_id)
       end
     )
   end
@@ -612,6 +618,43 @@ defmodule Lightning.Credentials do
          data: %Lightning.Projects.ProjectCredential{}
        }) do
     multi
+  end
+
+  # Propagates a credential to all descendant sandboxes of a project.
+  #
+  # When a credential is added to a parent project, this function ensures
+  # that all descendant sandboxes in the workspace also receive access to
+  # the credential.
+  @spec propagate_credential_to_descendants(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  defp propagate_credential_to_descendants(credential_id, project_id) do
+    # Get all descendant sandboxes
+    workspace = Lightning.Projects.list_workspace_projects(project_id)
+    descendants = workspace.descendants
+
+    current_time = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    # Build rows for bulk insert
+    credential_rows =
+      Enum.map(descendants, fn descendant ->
+        %{
+          project_id: descendant.id,
+          credential_id: credential_id,
+          inserted_at: current_time,
+          updated_at: current_time
+        }
+      end)
+
+    # Bulk insert, ignoring conflicts (in case already exists)
+    {count, _} =
+      Repo.insert_all(
+        Lightning.Projects.ProjectCredential,
+        credential_rows,
+        on_conflict: :nothing,
+        conflict_target: [:project_id, :credential_id]
+      )
+
+    {:ok, count}
   end
 
   @doc """
