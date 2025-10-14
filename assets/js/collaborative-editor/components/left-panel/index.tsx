@@ -14,14 +14,20 @@ interface LeftPanelProps {
   method: CreationMethod;
   onMethodChange: (method: CreationMethod) => void;
   onImport: (workflowState: YAMLWorkflowState) => void;
+  onClosePanel: () => void;
 }
 
-export function LeftPanel({ method, onMethodChange, onImport }: LeftPanelProps) {
+export function LeftPanel({
+  method,
+  onMethodChange,
+  onImport,
+  onClosePanel,
+}: LeftPanelProps) {
   // Default to template method when panel is shown without explicit method
   const currentMethod = method || "template";
 
   const handleClose = () => {
-    onMethodChange(null);
+    onClosePanel();
   };
 
   const handleSwitchToImport = () => {

@@ -6,7 +6,7 @@
  * - State machine: initial -> parsing -> valid/invalid -> importing
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import pDebounce from "p-debounce";
 import type { WorkflowState as YAMLWorkflowState } from "../../../yaml/types";
 import {

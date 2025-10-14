@@ -2,6 +2,7 @@
  * WorkflowEditor - Main workflow editing component
  */
 
+import { useState } from "react";
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { useSession } from "../hooks/useSession";
@@ -24,7 +25,9 @@ export function WorkflowEditor() {
   const { currentNode, selectNode } = useNodeSelection();
   const { awareness } = useSession();
   const workflowStore = useWorkflowStoreContext();
-  const isCreatingNew = useIsNewWorkflow();
+  const isNewWorkflow = useIsNewWorkflow();
+
+  const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
   // Construct full workflow object from state
   const workflow = useWorkflowState(state =>
@@ -46,12 +49,8 @@ export function WorkflowEditor() {
     | "ai"
     | null;
 
-  // Show left panel only when creating new workflow
-  const showLeftPanel = isCreatingNew;
-  // Default to template method if no method specified
-  const leftPanelMethod = showLeftPanel
-    ? currentMethod || "template"
-    : null;
+  // Default to template method if no method specified and panel is open
+  const leftPanelMethod = showLeftPanel ? currentMethod || "template" : null;
 
   const handleCloseInspector = () => {
     selectNode(null);
@@ -60,14 +59,16 @@ export function WorkflowEditor() {
   // Show inspector panel if settings is open OR a node is selected
   const showInspector = hash === "settings" || currentNode.node;
 
-  const handleMethodChange = (
-    method: "template" | "import" | "ai" | null
-  ) => {
+  const handleMethodChange = (method: "template" | "import" | "ai" | null) => {
     updateSearchParams({ method });
   };
 
   const handleImport = (workflowState: YAMLWorkflowState) => {
     workflowStore.importWorkflow(workflowState);
+  };
+
+  const handleCloseLeftPanel = () => {
+    setShowLeftPanel(false);
   };
 
   return (
@@ -106,6 +107,7 @@ export function WorkflowEditor() {
         method={leftPanelMethod}
         onMethodChange={handleMethodChange}
         onImport={handleImport}
+        onClosePanel={handleCloseLeftPanel}
       />
 
       {false && ( // Leaving this here for now, but we'll remove/replace it in the future
