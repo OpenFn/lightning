@@ -163,13 +163,21 @@ defmodule LightningWeb.WorkflowChannel do
     session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
 
-    case Session.save_workflow(session_pid, user) do
-      {:ok, workflow} ->
+    with :ok <- authorize_edit_workflow(socket),
+         {:ok, workflow} <- Session.save_workflow(session_pid, user) do
+      {:reply,
+       {:ok,
+        %{
+          saved_at: DateTime.utc_now(),
+          lock_version: workflow.lock_version
+        }}, socket}
+    else
+      {:error, %{type: type, message: message}} ->
         {:reply,
-         {:ok,
+         {:error,
           %{
-            saved_at: DateTime.utc_now(),
-            lock_version: workflow.lock_version
+            errors: %{base: [message]},
+            type: type
           }}, socket}
 
       {:error, :workflow_deleted} ->
@@ -211,13 +219,21 @@ defmodule LightningWeb.WorkflowChannel do
     session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
 
-    case Session.reset_workflow(session_pid, user) do
-      {:ok, workflow} ->
+    with :ok <- authorize_edit_workflow(socket),
+         {:ok, workflow} <- Session.reset_workflow(session_pid, user) do
+      {:reply,
+       {:ok,
+        %{
+          lock_version: workflow.lock_version,
+          workflow_id: workflow.id
+        }}, socket}
+    else
+      {:error, %{type: type, message: message}} ->
         {:reply,
-         {:ok,
+         {:error,
           %{
-            lock_version: workflow.lock_version,
-            workflow_id: workflow.id
+            errors: %{base: [message]},
+            type: type
           }}, socket}
 
       {:error, :workflow_deleted} ->
@@ -419,6 +435,37 @@ defmodule LightningWeb.WorkflowChannel do
       "optimistic_lock_error"
     else
       "validation_error"
+    end
+  end
+
+  # Authorizes edit operations on the workflow by checking current user permissions.
+  #
+  # This function refetches the project_user to get the latest role, ensuring
+  # that permission changes made during an active session are enforced.
+  #
+  # Returns :ok if authorized, {:error, %{type: string, message: string}} if not.
+  defp authorize_edit_workflow(socket) do
+    user = socket.assigns.current_user
+    project = socket.assigns.project
+
+    # Refetch project_user to get latest role
+    project_user = Lightning.Projects.get_project_user(project, user)
+
+    case Permissions.can(
+           :project_users,
+           :edit_workflow,
+           user,
+           project_user
+         ) do
+      :ok ->
+        :ok
+
+      {:error, :unauthorized} ->
+        {:error,
+         %{
+           type: "unauthorized",
+           message: "You don't have permission to edit this workflow"
+         }}
     end
   end
 

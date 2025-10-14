@@ -274,5 +274,194 @@ defmodule LightningWeb.WorkflowChannelTest do
         connect(LightningWeb.UserSocket, %{}, %{})
       end
     end
+
+    test "blocks viewers from saving", %{project: project, workflow: workflow} do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Viewers can join (only requires :access_read) but cannot save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+
+    test "allows editors to save", %{project: project, workflow: workflow} do
+      editor_user = insert(:user)
+      insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Editor's Change")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :ok, %{
+        saved_at: _,
+        lock_version: _
+      }
+    end
+
+    test "blocks save after user demoted to viewer mid-session", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor_user = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Verify editor can save initially
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Before Demotion")
+      end)
+
+      ref1 = push(socket, "save_workflow", %{})
+      assert_reply ref1, :ok, %{saved_at: _, lock_version: _}
+
+      # Demote user to viewer
+      {:ok, _updated_project_user} =
+        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+
+      # Attempt to save after demotion should fail
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "After Demotion")
+      end)
+
+      ref2 = push(socket, "save_workflow", %{})
+
+      assert_reply ref2, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+  end
+
+  describe "reset_workflow" do
+    test "blocks viewers from resetting", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      ref = push(socket, "reset_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+
+    test "allows editors to reset", %{project: project, workflow: workflow} do
+      editor_user = insert(:user)
+      insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      ref = push(socket, "reset_workflow", %{})
+
+      assert_reply ref, :ok, %{
+        lock_version: _,
+        workflow_id: _
+      }
+    end
+
+    test "blocks reset after user demoted mid-session", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor_user = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Verify editor can reset initially
+      ref1 = push(socket, "reset_workflow", %{})
+      assert_reply ref1, :ok, %{lock_version: _, workflow_id: _}
+
+      # Demote user to viewer
+      {:ok, _} =
+        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+
+      # Attempt to reset after demotion should fail
+      ref2 = push(socket, "reset_workflow", %{})
+
+      assert_reply ref2, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
   end
 end
