@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-7A56A0C6.js"></script>
+    <script defer src="dist/sidebar_items-11216A86.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -241,7 +241,7 @@ Lightning
       <h1 class="signature" translate="no">check_manage_permissions(sandboxes, user, root_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L79" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L81" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -256,11 +256,17 @@ Lightning
   [<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()],
   <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
   <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
-) :: %{required(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) =&gt; %{update: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(), delete: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()}}</pre>
+) :: %{
+  required(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) =&gt; %{
+    update: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+    delete: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+    merge: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()
+  }
+}</pre>
 
       </div>
 
-<p>Bulk permission check for multiple sandboxes to avoid N+1 queries.</p><p>Returns a map: sandbox_id =&gt; %{update: boolean, delete: boolean}</p><p>Assumes <code class="inline">root_project.project_users</code> and each <code class="inline">sandbox.project_users</code>
+<p>Bulk permission check for multiple sandboxes to avoid N+1 queries.</p><p>Returns a map: sandbox_id =&gt; %{update: boolean, delete: boolean, merge: boolean}</p><p>Assumes <code class="inline">root_project.project_users</code> and each <code class="inline">sandbox.project_users</code>
 are preloaded (as ensured by <code class="inline">Projects.list_workspace_projects/2</code>).</p>
   </section>
 </section>
