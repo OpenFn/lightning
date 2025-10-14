@@ -37,7 +37,7 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     await workflowEdit.clickCreateWorkflow();
 
     // 2. Configure the first job
-    await workflowEdit.diagram.clickJobNodeByIndex(0);
+    await workflowEdit.diagram.nodes.clickJobByIndex(0);
 
     // Verify job form is displayed in sidebar
     await expect(workflowEdit.jobForm(0).workflowForm).toBeAttached();
@@ -55,8 +55,8 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     // 3. Add second job: Common adaptor
     await workflowEdit.diagram.clickFitView();
 
-    await workflowEdit.diagram.clickNodePlusButtonOn("Fetch User Data");
-    await workflowEdit.diagram.fillPlaceholderNodeName("Transform Data");
+    await workflowEdit.diagram.nodes.clickPlusButtonOn("Fetch User Data");
+    await workflowEdit.diagram.nodes.fillPlaceholderName("Transform Data");
 
     await expect(workflowEdit.jobForm(1).header).toHaveText("Transform Data");
 
@@ -71,8 +71,8 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     await workflowEdit.expectFlashMessage("Workflow saved successfully.");
 
     // 5. Add third job: PostgreSQL adaptor
-    await workflowEdit.diagram.clickNodePlusButtonOn("Transform Data");
-    await workflowEdit.diagram.fillPlaceholderNodeName("Save to Database");
+    await workflowEdit.diagram.nodes.clickPlusButtonOn("Transform Data");
+    await workflowEdit.diagram.nodes.fillPlaceholderName("Save to Database");
 
     await expect(workflowEdit.jobForm(2).header).toHaveText("Save to Database");
 
@@ -86,20 +86,20 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
 
     // 6. Verify workflow structure
     // Check that all jobs appear visually connected with arrows
-    await workflowEdit.diagram.verifyNodeExists("Fetch User Data");
-    await workflowEdit.diagram.verifyNodeExists("Transform Data");
-    await workflowEdit.diagram.verifyNodeExists("Save to Database");
+    await workflowEdit.diagram.nodes.verifyExists("Fetch User Data");
+    await workflowEdit.diagram.nodes.verifyExists("Transform Data");
+    await workflowEdit.diagram.nodes.verifyExists("Save to Database");
 
     // 7. Test job selection
     // Click on each job and verify job form opens in sidebar
-    await workflowEdit.diagram.clickNode("Fetch User Data");
+    await workflowEdit.diagram.nodes.click("Fetch User Data");
     await expect(workflowEdit.jobForm(0).header).toHaveText(/Fetch User Data/);
 
-    await workflowEdit.diagram.clickNode(" Transform Data ");
+    await workflowEdit.diagram.nodes.click(" Transform Data ");
     console.log(workflowEdit.jobForm(1).header);
     await expect(workflowEdit.jobForm(1).header).toHaveText(/Transform Data/);
 
-    await workflowEdit.diagram.clickNode("Save to Database");
+    await workflowEdit.diagram.nodes.click("Save to Database");
     await expect(workflowEdit.jobForm(2).header).toHaveText("Save to Database");
 
     await workflowEdit.waitForSocketSettled();
@@ -112,22 +112,22 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     await workflowsPage.navigateToWorkflow("Event-based Workflow");
 
     // Verify all jobs still exist and structure persists
-    await workflowEdit.diagram.verifyNodeExists("Fetch User Data");
-    await workflowEdit.diagram.verifyNodeExists("Transform Data");
-    await workflowEdit.diagram.verifyNodeExists("Save to Database");
+    await workflowEdit.diagram.nodes.verifyExists("Fetch User Data");
+    await workflowEdit.diagram.nodes.verifyExists("Transform Data");
+    await workflowEdit.diagram.nodes.verifyExists("Save to Database");
 
     // Verify job configurations persist
-    await workflowEdit.diagram.clickNode("Fetch User Data");
+    await workflowEdit.diagram.nodes.click("Fetch User Data");
     await expect(workflowEdit.jobForm(0).versionSelect).toHaveValue(
       "@openfn/language-http@7.2.2"
     );
 
-    await workflowEdit.diagram.clickNode("Transform Data");
+    await workflowEdit.diagram.nodes.click("Transform Data");
     await expect(workflowEdit.jobForm(1).versionSelect).toHaveValue(
       "@openfn/language-common@latest"
     );
 
-    await workflowEdit.diagram.clickNode("Save to Database");
+    await workflowEdit.diagram.nodes.click("Save to Database");
     await expect(workflowEdit.jobForm(2).versionSelect).toHaveValue(
       /@openfn\/language-postgresql@\d\.\d\.\d/
     );
