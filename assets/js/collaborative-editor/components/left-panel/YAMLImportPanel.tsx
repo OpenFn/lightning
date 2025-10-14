@@ -6,18 +6,18 @@
  * - State machine: initial -> parsing -> valid/invalid -> importing
  */
 
-import { useState, useCallback } from "react";
 import pDebounce from "p-debounce";
+import { useState, useCallback } from "react";
+
 import type { WorkflowState as YAMLWorkflowState } from "../../../yaml/types";
 import {
   parseWorkflowYAML,
   convertWorkflowSpecToState,
 } from "../../../yaml/util";
 import { WorkflowError } from "../../../yaml/workflow-errors";
-
+import { ValidationErrorDisplay } from "../yaml-import/ValidationErrorDisplay";
 import { YAMLCodeEditor } from "../yaml-import/YAMLCodeEditor";
 import { YAMLFileDropzone } from "../yaml-import/YAMLFileDropzone";
-import { ValidationErrorDisplay } from "../yaml-import/ValidationErrorDisplay";
 
 /**
  * Import state machine:

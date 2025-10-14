@@ -3,16 +3,17 @@
  */
 
 import { useState } from "react";
+
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { useSession } from "../hooks/useSession";
+import { useIsNewWorkflow } from "../hooks/useSessionContext";
 import {
   useCurrentJob,
   useNodeSelection,
   useWorkflowState,
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
-import { useIsNewWorkflow } from "../hooks/useSessionContext";
 
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
