@@ -391,28 +391,42 @@ export const useWorkflowActions = () => {
 
           return response;
         } catch (error) {
-          // Show error notification with retry action
-          notifications.alert({
-            title: "Failed to save workflow",
-            description:
-              error instanceof Error
-                ? error.message
-                : "Please check your connection and try again",
-            action: {
-              label: "Retry",
-              onClick: () => {
-                // Retry save operation
-                // Using void to explicitly ignore the promise
-                void (async () => {
-                  try {
-                    await store.saveWorkflow();
-                  } catch {
-                    // Error already handled by outer try-catch
-                  }
-                })();
+          // Check if this is an unauthorized error
+          const errorType = (error as Error & { type?: string }).type;
+
+          if (errorType === "unauthorized") {
+            // Show permission-specific error without retry
+            notifications.alert({
+              title: "Permission Denied",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "You no longer have permission to edit this workflow. Your role may have changed.",
+            });
+          } else {
+            // Show generic error with retry action for other errors
+            notifications.alert({
+              title: "Failed to save workflow",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Please check your connection and try again",
+              action: {
+                label: "Retry",
+                onClick: () => {
+                  // Retry save operation
+                  // Using void to explicitly ignore the promise
+                  void (async () => {
+                    try {
+                      await store.saveWorkflow();
+                    } catch {
+                      // Error already handled by outer try-catch
+                    }
+                  })();
+                },
               },
-            },
-          });
+            });
+          }
 
           // Re-throw error for any upstream error handling
           throw error;
