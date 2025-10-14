@@ -15,23 +15,24 @@ interface LeftPanelProps {
   onMethodChange: (method: CreationMethod) => void;
   onImport: (workflowState: YAMLWorkflowState) => void;
   onClosePanel: () => void;
+  onSave: () => Promise<unknown>;
 }
 
 export function LeftPanel({
   method,
   onMethodChange,
   onImport,
-  onClosePanel,
+  onSave,
 }: LeftPanelProps) {
   // Default to template method when panel is shown without explicit method
   const currentMethod = method || "template";
 
-  const handleClose = () => {
-    onClosePanel();
-  };
-
   const handleSwitchToImport = () => {
     onMethodChange("import");
+  };
+
+  const handleSwicthToTemplate = () => {
+    onMethodChange("template");
   };
 
   // Don't render if no method selected
@@ -48,7 +49,11 @@ export function LeftPanel({
           <TemplatePanel onImportClick={handleSwitchToImport} />
         )}
         {currentMethod === "import" && (
-          <YAMLImportPanel onClose={handleClose} onImport={onImport} />
+          <YAMLImportPanel
+            onImport={onImport}
+            onSave={onSave}
+            onBack={handleSwicthToTemplate}
+          />
         )}
         {currentMethod === "ai" && (
           <div className="w-full h-full flex items-center justify-center bg-white border-r border-gray-200">

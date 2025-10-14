@@ -11,6 +11,7 @@ import { useIsNewWorkflow } from "../hooks/useSessionContext";
 import {
   useCurrentJob,
   useNodeSelection,
+  useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
@@ -27,6 +28,7 @@ export function WorkflowEditor() {
   const { awareness } = useSession();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
+  const { saveWorkflow } = useWorkflowActions();
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
@@ -73,6 +75,11 @@ export function WorkflowEditor() {
     updateSearchParams({ method: null });
   };
 
+  const handleSaveAndClose = async () => {
+    await saveWorkflow();
+    handleCloseLeftPanel();
+  };
+
   return (
     <div className="relative flex h-full w-full">
       {/* Main content area - flex grows to fill remaining space */}
@@ -110,6 +117,7 @@ export function WorkflowEditor() {
         onMethodChange={handleMethodChange}
         onImport={handleImport}
         onClosePanel={handleCloseLeftPanel}
+        onSave={handleSaveAndClose}
       />
 
       {false && ( // Leaving this here for now, but we'll remove/replace it in the future

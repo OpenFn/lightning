@@ -50,12 +50,14 @@ function createMockStoreContext(): StoreContextValue {
 }
 
 describe("YAMLImportPanel", () => {
-  let mockOnClose: ReturnType<typeof vi.fn>;
+  let mockOnBack: ReturnType<typeof vi.fn>;
   let mockOnImport: ReturnType<typeof vi.fn>;
+  let mockOnSave: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    mockOnClose = vi.fn();
+    mockOnBack = vi.fn();
     mockOnImport = vi.fn();
+    mockOnSave = vi.fn().mockResolvedValue(undefined);
     vi.clearAllMocks();
   });
 
@@ -64,7 +66,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
@@ -77,7 +79,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
@@ -89,7 +91,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
@@ -109,7 +111,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
@@ -132,7 +134,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
@@ -155,7 +157,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
@@ -176,8 +178,10 @@ describe("YAMLImportPanel", () => {
       const createButton = screen.getByRole("button", { name: /Create/i });
       fireEvent.click(createButton);
 
-      expect(mockOnImport).toHaveBeenCalled();
-      expect(mockOnClose).toHaveBeenCalled();
+      // Wait for async save to complete
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalled();
+      });
     });
   });
 
@@ -186,7 +190,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
@@ -210,7 +214,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
@@ -231,18 +235,18 @@ describe("YAMLImportPanel", () => {
   });
 
   describe("User actions", () => {
-    test("closes panel when Back button clicked", () => {
+    test("navigates back when Back button clicked", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 
       const backButton = screen.getByRole("button", { name: /Back/i });
       fireEvent.click(backButton);
 
-      expect(mockOnClose).toHaveBeenCalled();
+      expect(mockOnBack).toHaveBeenCalled();
     });
   });
 
@@ -251,7 +255,7 @@ describe("YAMLImportPanel", () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
-          <YAMLImportPanel onClose={mockOnClose} onImport={mockOnImport} />
+          <YAMLImportPanel onBack={mockOnBack} onImport={mockOnImport} onSave={mockOnSave} />
         </StoreContext.Provider>
       );
 

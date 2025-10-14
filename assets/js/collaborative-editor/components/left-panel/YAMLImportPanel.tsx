@@ -30,11 +30,16 @@ import { YAMLFileDropzone } from "../yaml-import/YAMLFileDropzone";
 type ImportState = "initial" | "parsing" | "valid" | "invalid" | "importing";
 
 interface YAMLImportPanelProps {
-  onClose: () => void;
   onImport: (workflowState: YAMLWorkflowState) => void;
+  onSave: () => Promise<unknown>;
+  onBack: () => void;
 }
 
-export function YAMLImportPanel({ onClose, onImport }: YAMLImportPanelProps) {
+export function YAMLImportPanel({
+  onImport,
+  onSave,
+  onBack,
+}: YAMLImportPanelProps) {
   const [yamlContent, setYamlContent] = useState("");
   const [errors, setErrors] = useState<WorkflowError[]>([]);
   const [importState, setImportState] = useState<ImportState>("initial");
@@ -85,18 +90,27 @@ export function YAMLImportPanel({ onClose, onImport }: YAMLImportPanelProps) {
     validateYAML(content);
   };
 
-  const handleImportClick = () => {
+  const handleSave = async () => {
     if (!validatedState) {
       return;
     }
 
-    // Close panel immediately
-    onClose();
+    // Set importing state to show spinner
+    setImportState("importing");
 
-    // Reset state after closing
-    setYamlContent("");
-    setValidatedState(null);
-    setImportState("initial");
+    try {
+      // Save the workflow (this also closes the panel)
+      await onSave();
+
+      // Reset state after successful save
+      setYamlContent("");
+      setValidatedState(null);
+      setImportState("initial");
+    } catch (error) {
+      // On error, reset to valid state so user can retry
+      setImportState("valid");
+      console.error("Failed to save workflow:", error);
+    }
   };
 
   const isButtonDisabled =
@@ -148,14 +162,14 @@ export function YAMLImportPanel({ onClose, onImport }: YAMLImportPanelProps) {
       <div className="shrink-0 border-t border-gray-200 px-4 py-4 flex justify-end gap-2">
         <button
           type="button"
-          onClick={onClose}
+          onClick={onBack}
           className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Back
         </button>
         <button
           type="button"
-          onClick={handleImportClick}
+          onClick={handleSave}
           disabled={isButtonDisabled}
           className={`rounded-md px-4 py-2 text-sm font-semibold shadow-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 inline-flex items-center gap-x-1.5 transition-colors ${
             isButtonDisabled
