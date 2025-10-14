@@ -11,11 +11,12 @@ import {
   useWorkflowState,
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
+import { useIsNewWorkflow } from "../hooks/useSessionContext";
 
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { Inspector } from "./inspector";
-import { YAMLImportPanel } from "./yaml-import";
+import { LeftPanel } from "./left-panel";
 
 export function WorkflowEditor() {
   const { hash, searchParams, updateSearchParams } = useURLState();
@@ -23,8 +24,7 @@ export function WorkflowEditor() {
   const { currentNode, selectNode } = useNodeSelection();
   const { awareness } = useSession();
   const workflowStore = useWorkflowStoreContext();
-
-  const isImportOpen = searchParams.get("method") === "import";
+  const isCreatingNew = useIsNewWorkflow();
 
   // Construct full workflow object from state
   const workflow = useWorkflowState(state =>
@@ -39,6 +39,20 @@ export function WorkflowEditor() {
       : null
   );
 
+  // Get current creation method from URL
+  const currentMethod = searchParams.get("method") as
+    | "template"
+    | "import"
+    | "ai"
+    | null;
+
+  // Show left panel only when creating new workflow
+  const showLeftPanel = isCreatingNew;
+  // Default to template method if no method specified
+  const leftPanelMethod = showLeftPanel
+    ? currentMethod || "template"
+    : null;
+
   const handleCloseInspector = () => {
     selectNode(null);
   };
@@ -46,8 +60,10 @@ export function WorkflowEditor() {
   // Show inspector panel if settings is open OR a node is selected
   const showInspector = hash === "settings" || currentNode.node;
 
-  const handleCloseImport = () => {
-    updateSearchParams({ method: null });
+  const handleMethodChange = (
+    method: "template" | "import" | "ai" | null
+  ) => {
+    updateSearchParams({ method });
   };
 
   const handleImport = (workflowState: YAMLWorkflowState) => {
@@ -59,7 +75,7 @@ export function WorkflowEditor() {
       {/* Main content area - flex grows to fill remaining space */}
       <div
         className={`flex-1 relative transition-all duration-300 ease-in-out ${
-          isImportOpen ? "ml-[33.333333%]" : "ml-0"
+          showLeftPanel ? "ml-[33.333333%]" : "ml-0"
         }`}
       >
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
@@ -85,12 +101,13 @@ export function WorkflowEditor() {
         )}
       </div>
 
-      {/* Left Panel - YAML Import (absolute positioned, slides over) */}
-      <YAMLImportPanel
-        isOpen={isImportOpen}
-        onClose={handleCloseImport}
+      {/* Left Panel - Workflow creation methods (absolute positioned, slides over) */}
+      <LeftPanel
+        method={leftPanelMethod}
+        onMethodChange={handleMethodChange}
         onImport={handleImport}
       />
+
       {false && ( // Leaving this here for now, but we'll remove/replace it in the future
         <div className="flex flex-col h-full">
           {/* Main Content */}
