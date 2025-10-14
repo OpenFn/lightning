@@ -153,7 +153,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec start_streaming_request(AiAssistant.ChatSession.t(), String.t(), keyword()) :: :ok
   defp start_streaming_request(session, content, options) do
     # Build payload for Apollo
-    context = Keyword.get(options, :context, %{})
+    context = build_context(session, options)
     history = get_chat_history(session)
 
     payload = %{
@@ -161,7 +161,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       "content" => content,
       "context" => context,
       "history" => history,
-      "meta" => %{},
+      "meta" => session.meta || %{},
       "stream" => true
     }
 
@@ -197,6 +197,27 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         "role" => to_string(message.role),
         "content" => message.content
       }
+    end)
+  end
+
+  defp build_context(session, options) do
+    # Start with session context (expression, adaptor, logs)
+    base_context = %{
+      expression: session.expression,
+      adaptor: session.adaptor,
+      log: session.logs
+    }
+
+    # Apply options to filter context (e.g., code: false removes expression)
+    Enum.reduce(options, base_context, fn
+      {:code, false}, acc ->
+        Map.drop(acc, [:expression])
+
+      {:logs, false}, acc ->
+        Map.drop(acc, [:log])
+
+      _opt, acc ->
+        acc
     end)
   end
 

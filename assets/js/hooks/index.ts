@@ -4,6 +4,7 @@ import tippy, {
 } from 'tippy.js';
 import { format, formatRelative } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { marked } from 'marked';
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
@@ -1038,6 +1039,7 @@ export const LocalTimeConverter = {
 export const StreamingText = {
   mounted() {
     this.lastContent = '';
+    this.renderer = this.createCustomRenderer();
     this.updateContent();
   },
 
@@ -1045,22 +1047,60 @@ export const StreamingText = {
     this.updateContent();
   },
 
+  createCustomRenderer() {
+    const renderer = new marked.Renderer();
+
+    // Apply custom CSS classes to match backend Earmark styles
+    renderer.code = (code, language) => {
+      const lang = language ? ` class="${language}"` : '';
+      return `<pre class="rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-auto"><code${lang}>${code}</code></pre>`;
+    };
+
+    renderer.link = (href, title, text) => {
+      return `<a href="${href}" class="text-primary-400 hover:text-primary-600" target="_blank">${text}</a>`;
+    };
+
+    renderer.heading = (text, level) => {
+      const classes = level === 1 ? 'text-2xl font-bold mb-6' : 'text-xl font-semibold mb-4 mt-8';
+      return `<h${level} class="${classes}">${text}</h${level}>`;
+    };
+
+    renderer.list = (body, ordered) => {
+      const tag = ordered ? 'ol' : 'ul';
+      const classes = ordered ? 'list-decimal pl-8 space-y-1' : 'list-disc pl-8 space-y-1';
+      return `<${tag} class="${classes}">${body}</${tag}>`;
+    };
+
+    renderer.listitem = (text) => {
+      return `<li class="text-gray-800">${text}</li>`;
+    };
+
+    renderer.paragraph = (text) => {
+      return `<p class="mt-1 mb-2 text-gray-800">${text}</p>`;
+    };
+
+    return renderer;
+  },
+
   updateContent() {
     const newContent = this.el.dataset.streamingContent || '';
 
     if (newContent !== this.lastContent) {
-      // Only append the new part to avoid flickering
-      const newPart = newContent.slice(this.lastContent.length);
+      // Re-parse entire content as markdown
+      // This handles split ticks because we always parse the full accumulated string
+      const htmlContent = marked.parse(newContent, {
+        renderer: this.renderer,
+        breaks: true,
+        gfm: true,
+      });
 
-      if (newPart) {
-        const textNode = document.createTextNode(newPart);
-        this.el.appendChild(textNode);
-      }
-
+      this.el.innerHTML = htmlContent;
       this.lastContent = newContent;
     }
   },
 } as PhoenixHook<{
   lastContent: string;
+  renderer: marked.Renderer;
+  createCustomRenderer: () => marked.Renderer;
   updateContent: () => void;
 }>;
