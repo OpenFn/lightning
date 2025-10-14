@@ -391,11 +391,9 @@ export const useWorkflowActions = () => {
 
           return response;
         } catch (error) {
-          // Check if this is an unauthorized error
           const errorType = (error as Error & { type?: string }).type;
 
           if (errorType === "unauthorized") {
-            // Show permission-specific error without retry
             notifications.alert({
               title: "Permission Denied",
               description:
@@ -404,7 +402,6 @@ export const useWorkflowActions = () => {
                   : "You no longer have permission to edit this workflow. Your role may have changed.",
             });
           } else {
-            // Show generic error with retry action for other errors
             notifications.alert({
               title: "Failed to save workflow",
               description:
@@ -414,8 +411,6 @@ export const useWorkflowActions = () => {
               action: {
                 label: "Retry",
                 onClick: () => {
-                  // Retry save operation
-                  // Using void to explicitly ignore the promise
                   void (async () => {
                     try {
                       await store.saveWorkflow();

@@ -448,7 +448,6 @@ defmodule LightningWeb.WorkflowChannel do
     user = socket.assigns.current_user
     project = socket.assigns.project
 
-    # Refetch project_user to get latest role
     project_user = Lightning.Projects.get_project_user(project, user)
 
     case Permissions.can(
