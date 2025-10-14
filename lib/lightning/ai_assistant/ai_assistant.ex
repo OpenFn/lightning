@@ -525,6 +525,69 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
+  Finalizes a streamed message by applying metadata, usage tracking, and code.
+
+  After streaming is complete, this function processes the complete payload from Apollo,
+  updating the last assistant message with:
+  - Code field (response_yaml for workflow chat)
+  - Session meta
+  - AI usage tracking
+
+  This function is called after `handle_streaming_complete/1` saves the streamed message content.
+
+  ## Parameters
+
+  - `session` - The `%ChatSession{}` with messages already saved
+  - `payload_data` - Map containing:
+    - `:usage` - Usage statistics from Apollo
+    - `:meta` - Session metadata
+    - `:code` - Generated code/YAML (optional, workflow chat only)
+
+  ## Returns
+
+  - `{:ok, session}` - Successfully finalized with updated data
+  - `{:error, changeset}` - Update failed with validation errors
+  """
+  @spec finalize_streamed_message(ChatSession.t(), map()) ::
+          {:ok, ChatSession.t()} | {:error, Changeset.t()}
+  def finalize_streamed_message(session, payload_data) do
+    # Get the last assistant message (just saved during streaming)
+    last_message =
+      session.messages
+      |> Enum.reverse()
+      |> Enum.find(&(&1.role == :assistant))
+
+    if last_message do
+      usage = payload_data[:usage] || %{}
+      meta = payload_data[:meta]
+      code = payload_data[:code]
+
+      Multi.new()
+      |> Multi.put(:usage, usage)
+      |> Multi.put(:message, last_message)
+      |> Multi.update(
+        :updated_message,
+        ChatMessage.changeset(last_message, %{code: code})
+      )
+      |> Multi.update(:session, fn _ ->
+        ChatSession.changeset(session, %{meta: meta || session.meta})
+      end)
+      |> Multi.merge(&maybe_increment_ai_usage/1)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{session: updated_session}} ->
+          {:ok, Repo.preload(updated_session, [messages: :user], force: true)}
+
+        {:error, _step, changeset, _changes} ->
+          {:error, changeset}
+      end
+    else
+      # No assistant message found, just return the session as-is
+      {:ok, session}
+    end
+  end
+
+  @doc """
   Updates the status of a specific message within a chat session.
 
   Changes the status of an individual message (e.g., from `:pending` to `:success` or `:error`)

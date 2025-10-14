@@ -151,8 +151,17 @@ defmodule Lightning.ApolloClient.SSEStream do
         broadcast_complete(session_id)
 
       "complete" ->
-        Logger.info("[SSEStream] Received complete event")
-        # Don't broadcast here - message_stop already did it
+        Logger.info("[SSEStream] Received complete event with payload")
+        # Parse and broadcast the complete payload with usage, meta, and code
+        case Jason.decode(data) do
+          {:ok, payload} ->
+            Logger.info("[SSEStream] Broadcasting complete payload: #{inspect(Map.keys(payload))}")
+            broadcast_payload_complete(session_id, payload)
+
+          {:error, error} ->
+            Logger.error("[SSEStream] Failed to parse complete event payload: #{inspect(error)}")
+        end
+
         :ok
 
       "error" ->
@@ -186,6 +195,23 @@ defmodule Lightning.ApolloClient.SSEStream do
     Lightning.broadcast(
       "ai_session:#{session_id}",
       {:ai_assistant, :streaming_complete, %{session_id: session_id}}
+    )
+  end
+
+  defp broadcast_payload_complete(session_id, payload) do
+    # Extract relevant fields from the complete payload
+    # For job_chat: payload has "usage", "meta"
+    # For workflow_chat: payload has "usage", "meta", "response_yaml"
+    payload_data = %{
+      session_id: session_id,
+      usage: Map.get(payload, "usage"),
+      meta: Map.get(payload, "meta"),
+      code: Map.get(payload, "response_yaml")
+    }
+
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_payload_complete, payload_data}
     )
   end
 end

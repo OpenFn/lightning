@@ -84,6 +84,12 @@ defmodule LightningWeb.AiAssistant.Component do
     {:ok, handle_streaming_complete(socket)}
   end
 
+  def update(%{id: _id, streaming_payload_complete: payload_data}, socket) do
+    require Logger
+    Logger.info("[Component] PAYLOAD_COMPLETE | usage=#{inspect(payload_data[:usage])} | meta=#{inspect(payload_data[:meta])} | code=#{inspect(payload_data[:code] != nil)}")
+    {:ok, handle_streaming_payload_complete(payload_data, socket)}
+  end
+
   def update(%{action: :code_error} = assigns, socket) do
     {:ok, handle_code_error(socket, assigns)}
   end
@@ -231,21 +237,31 @@ defmodule LightningWeb.AiAssistant.Component do
 
       Logger.info("[Component] Saving streamed message to database: #{String.slice(content, 0, 50)}...")
 
-      # Create assistant message
-      case AiAssistant.save_message(session, %{
+      # Create assistant message - DON'T use save_message as it enqueues another Oban job
+      # Instead, create the message directly
+      message_attrs = %{
         role: :assistant,
         content: content,
-        status: :success
-      }) do
-        {:ok, updated_session} ->
+        status: :success,
+        chat_session_id: session.id
+      }
+
+      case Lightning.Repo.insert(Lightning.AiAssistant.ChatMessage.changeset(%Lightning.AiAssistant.ChatMessage{}, message_attrs)) do
+        {:ok, _message} ->
           Logger.info("[Component] Successfully saved streamed message")
-          # Update component with new session and clear streaming state
+          # Reload session to get updated messages
+          {:ok, updated_session} = AiAssistant.get_session(session.id)
+
+          # Don't mark pending user messages as success yet - wait for payload_complete
+          # This ensures we don't clear the loading state before code is applied
+
+          # Update component with new session and clear streaming content
+          # Keep pending_message in loading state until payload_complete
           socket
           |> assign(
             session: updated_session,
             streaming_content: "",
-            streaming_status: nil,
-            pending_message: AsyncResult.ok(nil)
+            streaming_status: nil
           )
 
         {:error, error} ->
@@ -260,12 +276,63 @@ defmodule LightningWeb.AiAssistant.Component do
       end
     else
       Logger.warning("[Component] streaming_complete received but no content accumulated")
+      # Keep pending_message in loading state - wait for payload_complete
       socket
       |> assign(
         streaming_content: "",
-        streaming_status: nil,
-        pending_message: AsyncResult.ok(nil)
+        streaming_status: nil
       )
+    end
+  end
+
+  defp handle_streaming_payload_complete(payload_data, socket) do
+    require Logger
+    # Process the complete payload (usage, meta, code) after streaming is done
+    session = socket.assigns.session
+
+    Logger.info("[Component] Processing complete payload for session #{session.id}")
+
+    # Call the finalize function to process usage, meta, and code
+    case AiAssistant.finalize_streamed_message(session, payload_data) do
+      {:ok, updated_session} ->
+        Logger.info("[Component] Successfully finalized streamed message with payload data")
+
+        # Update the session and trigger callback to apply workflow code
+        socket = assign(socket, session: updated_session)
+
+        # Only call the on_message_received callback if there's actual code to apply
+        # (response_yaml is not null/nil)
+        socket = case socket.assigns.callbacks[:on_message_received] do
+          callback when is_function(callback, 2) ->
+            # Get the last message's code (response_yaml)
+            last_message = updated_session.messages |> List.last()
+            code = if last_message, do: last_message.code, else: nil
+
+            # Only call callback if there's actual code to apply
+            if code != nil and code != "" do
+              Logger.info("[Component] Applying workflow code from streamed message")
+              # Pass the code and message to the callback
+              callback.(code, last_message)
+            else
+              Logger.info("[Component] No workflow code to apply (response_yaml was null)")
+            end
+
+            socket
+
+          _ ->
+            socket
+        end
+
+        # Clear the loading state now that everything is complete
+        Logger.info("[Component] Clearing pending_message loading state")
+        socket
+        |> assign(pending_message: AsyncResult.ok(nil))
+
+      {:error, error} ->
+        Logger.error("[Component] Failed to finalize streamed message: #{inspect(error)}")
+        # Clear loading state even on error
+        socket
+        |> assign(pending_message: AsyncResult.ok(nil))
     end
   end
 
