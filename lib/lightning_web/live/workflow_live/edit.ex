@@ -2363,6 +2363,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :streaming_complete ->
         handle_streaming_update(socket, payload, :streaming_complete)
+
+      :streaming_payload_complete ->
+        handle_streaming_update(socket, payload, :streaming_payload_complete)
     end
   end
 
