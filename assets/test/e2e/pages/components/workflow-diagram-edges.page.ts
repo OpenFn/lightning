@@ -1,12 +1,11 @@
 import { expect } from "@playwright/test";
 import type { Page, Locator } from "@playwright/test";
-import { LiveViewPage } from "../base/liveview.page";
 
 /**
  * Page Object Model for WorkflowDiagram edge interactions
  * Handles edge queries, drag-and-drop operations, and edge-related verifications
  */
-export class WorkflowDiagramEdgesPage extends LiveViewPage {
+export class WorkflowDiagramEdgesPage {
   protected selectors = {
     edges: ".react-flow__edge",
     edgePath: ".react-flow__edge-path",
@@ -14,9 +13,7 @@ export class WorkflowDiagramEdgesPage extends LiveViewPage {
     nodes: ".react-flow__node",
   };
 
-  constructor(page: Page) {
-    super(page);
-  }
+  constructor(protected page: Page) {}
 
   /**
    * Get the total count of edges in the workflow

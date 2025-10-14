@@ -1,6 +1,5 @@
 import { expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { LiveViewPage } from "../base";
 import { WorkflowDiagramEdgesPage } from "./workflow-diagram-edges.page";
 import { WorkflowDiagramNodesPage } from "./workflow-diagram-nodes.page";
 
@@ -8,7 +7,7 @@ import { WorkflowDiagramNodesPage } from "./workflow-diagram-nodes.page";
  * Page Object Model for the WorkflowDiagram React component
  * Handles interactions with React Flow canvas and workflow nodes
  */
-export class WorkflowDiagramPage extends LiveViewPage {
+export class WorkflowDiagramPage {
   // Sub-POMs for edges and nodes
   readonly edges: WorkflowDiagramEdgesPage;
   readonly nodes: WorkflowDiagramNodesPage;
@@ -19,8 +18,7 @@ export class WorkflowDiagramPage extends LiveViewPage {
     fitViewButton: '.react-flow__controls-button[data-tooltip="Fit view"]',
   };
 
-  constructor(page: Page) {
-    super(page);
+  constructor(protected page: Page) {
     this.edges = new WorkflowDiagramEdgesPage(page);
     this.nodes = new WorkflowDiagramNodesPage(page);
   }

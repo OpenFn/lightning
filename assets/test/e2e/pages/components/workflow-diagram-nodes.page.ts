@@ -1,12 +1,11 @@
 import { expect } from "@playwright/test";
 import type { Page, Locator } from "@playwright/test";
-import { LiveViewPage } from "../base/liveview.page";
 
 /**
  * Page Object Model for WorkflowDiagram node interactions
  * Handles node queries, state verification, and visual feedback during drag operations
  */
-export class WorkflowDiagramNodesPage extends LiveViewPage {
+export class WorkflowDiagramNodesPage {
   protected selectors = {
     nodes: ".react-flow__node",
     jobNodes: ".react-flow__node-job",
@@ -18,9 +17,7 @@ export class WorkflowDiagramNodesPage extends LiveViewPage {
     activeDropTarget: '[data-active-drop-target="true"]',
   };
 
-  constructor(page: Page) {
-    super(page);
-  }
+  constructor(protected page: Page) {}
 
   /**
    * Find a React Flow node container by its display name/text
