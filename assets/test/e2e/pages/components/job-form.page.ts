@@ -1,11 +1,10 @@
 import type { Page, Locator } from "@playwright/test";
-import { LiveViewPage } from "../base";
 
 /**
  * Page Object Model for the Job Form component
  * Handles interactions with the job configuration form
  */
-export class JobFormPage extends LiveViewPage {
+export class JobFormPage {
   private jobIndex: number;
 
   protected selectors = {
@@ -14,8 +13,10 @@ export class JobFormPage extends LiveViewPage {
     closeNodePanelButton: '[data-testid="CloseNodePanelViaEscape"]',
   };
 
-  constructor(page: Page, jobIndex: number = 0) {
-    super(page);
+  constructor(
+    protected page: Page,
+    jobIndex: number = 0
+  ) {
     this.jobIndex = jobIndex;
     this.selectors.workflowForm = `[data-testid='job-pane-${this.jobIndex}']`;
   }

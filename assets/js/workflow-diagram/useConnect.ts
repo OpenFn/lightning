@@ -123,6 +123,9 @@ const resetModel = (model: Flow.Model) => ({
   edges: model.edges,
 });
 
+// Export validation functions for testing
+export { isUpstream, isChild, getDropTargetError };
+
 export default (
   model: Flow.Model,
   setModel: React.Dispatch<React.SetStateAction<Flow.Model>>,
