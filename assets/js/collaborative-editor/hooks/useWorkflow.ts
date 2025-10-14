@@ -373,8 +373,7 @@ export const useWorkflowActions = () => {
 
             if (workflowId && projectId) {
               // Update URL to include project_id
-              const newUrl =
-                `/projects/${projectId}/w/${workflowId}/collaborate`;
+              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate`;
               window.history.replaceState(null, "", newUrl);
 
               // Clear isNewWorkflow flag after successful save

@@ -40,7 +40,9 @@ function createWrapper() {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SessionContext.Provider value={{ sessionStore: store, isNewWorkflow: false }}>
+    <SessionContext.Provider
+      value={{ sessionStore: store, isNewWorkflow: false }}
+    >
       {children}
     </SessionContext.Provider>
   );
@@ -56,7 +58,9 @@ function createUninitializedWrapper() {
   const store = createSessionStore();
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SessionContext.Provider value={{ sessionStore: store, isNewWorkflow: false }}>
+    <SessionContext.Provider
+      value={{ sessionStore: store, isNewWorkflow: false }}
+    >
       {children}
     </SessionContext.Provider>
   );

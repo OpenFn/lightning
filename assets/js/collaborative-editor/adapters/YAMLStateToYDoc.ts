@@ -1,11 +1,11 @@
 import * as Y from "yjs";
+
 import type {
   WorkflowState as YAMLWorkflowState,
   StateJob as YAMLStateJob,
   StateTrigger as YAMLStateTrigger,
   StateEdge as YAMLStateEdge,
 } from "../../yaml/types";
-
 import type { Session } from "../types/session";
 
 /**

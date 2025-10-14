@@ -133,9 +133,9 @@ import type { Channel } from "phoenix";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 import * as Y from "yjs";
 
-import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import _logger from "#/utils/logger";
 
+import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { YAMLStateToYDoc } from "../adapters/YAMLStateToYDoc";
 import { channelRequest } from "../hooks/useChannel";
 import { JobSchema } from "../types/job";

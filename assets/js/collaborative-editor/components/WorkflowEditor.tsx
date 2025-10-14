@@ -2,8 +2,8 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { useURLState } from "../../react/lib/use-url-state";
+import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { useSession } from "../hooks/useSession";
 import {
   useCurrentJob,

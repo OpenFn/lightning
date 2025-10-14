@@ -21,8 +21,7 @@ interface SessionContextValue {
   isNewWorkflow: boolean;
 }
 
-export const SessionContext =
-  createContext<SessionContextValue | null>(null);
+export const SessionContext = createContext<SessionContextValue | null>(null);
 
 interface SessionProviderProps {
   workflowId: string;
