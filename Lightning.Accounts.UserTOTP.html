@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-57D756EC.js"></script>
+    <script defer src="dist/sidebar_items-14DBD1AB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -134,7 +134,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#valid_totp?/2" data-no-tooltip="" translate="no">valid_totp?(totp, code)</a>
+        <a href="#validate_totp/3" data-no-tooltip="" translate="no">validate_totp(totp, code, options \\ [])</a>
 
       </div>
 
@@ -164,7 +164,7 @@ Lightning
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L7" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L9" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -180,6 +180,7 @@ Lightning
   code: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  last_totp_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   secret: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   user: <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>() | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
@@ -214,7 +215,7 @@ Lightning
       <h1 class="signature" translate="no">changeset(totp, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L23" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L26" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -226,17 +227,19 @@ Lightning
 
   </section>
 </section>
-<section class="detail" id="valid_totp?/2">
+<section class="detail" id="validate_totp/3">
+
+    <span id="validate_totp/2"></span>
 
   <div class="detail-header">
-    <a href="#valid_totp?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#validate_totp/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">valid_totp?(totp, code)</h1>
+      <h1 class="signature" translate="no">validate_totp(totp, code, options \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L41" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L45" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
