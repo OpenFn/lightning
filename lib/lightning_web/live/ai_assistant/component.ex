@@ -271,19 +271,12 @@ defmodule LightningWeb.AiAssistant.Component do
           streaming_status: nil
         )
 
-        # Call callback if there's code to apply
+        # Always call callback to notify message received (sets sending_ai_message: false)
         case socket.assigns.callbacks[:on_message_received] do
           callback when is_function(callback, 2) ->
             code = payload_data[:code]
-
-            if code != nil and code != "" do
-              Logger.info("[Component] Applying workflow code from saved message")
-              last_message = final_session.messages |> List.last()
-              callback.(code, last_message)
-            else
-              Logger.info("[Component] No workflow code to apply")
-            end
-
+            last_message = final_session.messages |> List.last()
+            callback.(code, last_message)
             socket
 
           _ ->
