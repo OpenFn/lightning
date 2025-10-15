@@ -186,6 +186,58 @@ setup_environment_variables() {
   fi
 }
 
+detect_stale_native_caches() {
+  # Check for stale CMake caches that can occur when:
+  # - Using git worktrees with copied dependencies
+  # - Moving/renaming the repository directory
+  # - Restoring from backup at a different path
+  # - Syncing code between machines with different paths
+
+  local found_stale_cache=false
+  local current_repo_path
+  current_repo_path="$(pwd)"
+
+  # Search for any CMakeCache.txt files in dependency build directories
+  while IFS= read -r cache_file; do
+    if [[ -f "$cache_file" ]]; then
+      local cached_path
+      cached_path=$(grep "CMAKE_HOME_DIRECTORY:INTERNAL=" "$cache_file" 2>/dev/null | cut -d= -f2)
+
+      if [[ -n "$cached_path" ]]; then
+        # Extract the expected current path from the cached path
+        # Replace the old repo path prefix with current repo path
+        local dep_suffix="${cached_path#*/deps/}"
+        local expected_path="$current_repo_path/deps/$dep_suffix"
+
+        if [[ "$cached_path" != "$expected_path" ]]; then
+          if [[ "$found_stale_cache" == false ]]; then
+            echo "⚠️  Detected stale CMake cache(s)"
+            found_stale_cache=true
+          fi
+          echo "   Package: $(echo "$cache_file" | cut -d/ -f2)"
+          echo "   Expected: $expected_path"
+          echo "   Found:    $cached_path"
+        fi
+      fi
+    fi
+  done < <(find deps -name "CMakeCache.txt" -type f 2>/dev/null)
+
+  if [[ "$found_stale_cache" == true ]]; then
+    echo "🔧 Cleaning native dependency build artifacts..."
+
+    # Clean CMake build directories (various common names)
+    rm -rf deps/*/c_build deps/*/build deps/*/cmake-build 2>/dev/null || true
+
+    # Clean compiled native libraries
+    rm -rf deps/*/priv/*.so 2>/dev/null || true
+
+    # Clean rebar3 build directories that may have stale paths
+    rm -rf deps/*/_build 2>/dev/null || true
+
+    echo "✅ Native dependency caches cleaned"
+  fi
+}
+
 main() {
   gather_environment_facts
   check_environment_status
@@ -198,6 +250,9 @@ main() {
 
   echo "📦 Installing Elixir dependencies..."
   mix deps.get
+
+  detect_stale_native_caches
+
   mix deps.compile
 
   # If you have already compiled Rambo explicitly via `mix compile.rambo`, and you

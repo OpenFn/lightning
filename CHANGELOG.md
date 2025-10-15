@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Changed
 
+- Detect and clean stale CMake caches in bootstrap script
+  [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
+
 ### Fixed
 
 ## [2.14.11-pre] - 2025-10-14
