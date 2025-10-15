@@ -16,6 +16,7 @@ import tippy from "tippy.js";
 import {
   useWorkflowState,
   usePositions,
+  useWorkflowStoreContext,
 } from "#/collaborative-editor/hooks/useWorkflow";
 import _logger from "#/utils/logger";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
@@ -89,10 +90,14 @@ const useTippyForControls = (isManualLayout: boolean) => {
 const logger = _logger.ns("WorkflowDiagram").seal();
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const flow = useReactFlow();
+  const flowInstance = useReactFlow();
+  const [flow, setFlow] = useState<typeof flowInstance | null>(null);
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, inspectorId } = props;
+
+  // Get Y.Doc workflow store for placeholder operations
+  const workflowStore = useWorkflowStoreContext();
 
   // Get workflow actions including position updates
   const {
@@ -163,6 +168,75 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updatePlaceholderPosition,
   } = usePlaceholders(el, isManualLayout, updateSelection);
 
+  // Override the placeholder commit handler to use Y.Doc store
+  useEffect(() => {
+    if (!el) return;
+
+    const handleCommit = (evt: CustomEvent) => {
+      const { id, name } = evt.detail;
+
+      // Get placeholder data
+      const placeholderNode = placeholders.nodes[0];
+      const placeholderEdge = placeholders.edges[0];
+      if (!placeholderNode) return;
+
+      // Cast data to access placeholder-specific properties
+      const nodeData = placeholderNode.data as any;
+
+      // Create job data for Y.Doc
+      const newJob = {
+        id,
+        name,
+        body: nodeData.body as string,
+        adaptor: nodeData.adaptor as string,
+      };
+
+      // Add to Y.Doc store
+      workflowStore.addJob(newJob);
+
+      // Handle position for manual layout mode
+      if (isManualLayout) {
+        workflowStore.updatePosition(id, placeholderNode.position);
+      }
+
+      // Create edge if placeholder has one
+      if (placeholderEdge) {
+        const edgeData = placeholderEdge.data as any;
+
+        // Determine if source is a job or trigger by checking the workflow state
+        const sourceIsJob = jobs.some(j => j.id === placeholderEdge.source);
+
+        const newEdge: Record<string, any> = {
+          id: placeholderEdge.id,
+          target_job_id: id,
+          condition_type: edgeData?.condition_type || "on_job_success",
+          enabled: true,
+        };
+
+        // Set either source_job_id or source_trigger_id
+        if (sourceIsJob) {
+          newEdge["source_job_id"] = placeholderEdge.source;
+          newEdge["source_trigger_id"] = null;
+        } else {
+          newEdge["source_job_id"] = null;
+          newEdge["source_trigger_id"] = placeholderEdge.source;
+        }
+
+        workflowStore.addEdge(newEdge);
+      }
+
+      // Select the new job
+      updateSelection(id);
+    };
+
+    // Attach our custom commit handler
+    el.addEventListener("commit-placeholder" as any, handleCommit);
+
+    return () => {
+      el.removeEventListener("commit-placeholder" as any, handleCommit);
+    };
+  }, [el, placeholders, isManualLayout, workflowStore, updateSelection, jobs]);
+
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
     positions: {},
@@ -172,7 +246,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   });
 
   const forceLayout = useCallback(() => {
-    // if (!flow) return Promise.resolve();
+    if (!flow) return Promise.resolve({});
 
     const viewBounds = {
       width: workflowDiagramRef.current?.clientWidth ?? 0,
@@ -216,7 +290,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       ),
       lastSelection
     );
-    if (newModel.nodes.length) {
+    if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
         newModel.edges,
         newModel.nodes,
@@ -275,7 +349,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       setDrawerWidth(0);
 
       // Fit view when AI assistant panel closes
-      if (model.nodes.length > 0) {
+      if (flow && model.nodes.length > 0) {
         setTimeout(() => {
           const bounds = flow.getNodesBounds(model.nodes);
           void flow.fitBounds(bounds, {
@@ -310,7 +384,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         setDrawerWidth(drawer.getBoundingClientRect().width);
 
         // Fit view when AI assistant panel opens
-        if (model.nodes.length > 0) {
+        if (flow && model.nodes.length > 0) {
           setTimeout(() => {
             const bounds = flow.getNodesBounds(model.nodes);
             void flow.fitBounds(bounds, {
@@ -331,7 +405,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   }, [props.showAiAssistant, props.aiAssistantId]);
 
   useEffect(() => {
-    if (props.forceFit && model.nodes.length > 0) {
+    if (props.forceFit && flow && model.nodes.length > 0) {
       // Immediately fit to bounds when forceFit becomes true
       const bounds = flow.getNodesBounds(model.nodes);
       flow
@@ -400,7 +474,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // when a new resize starts
   // This will be imperfect but stops the user completely losing context
   useEffect(() => {
-    if (el) {
+    if (flow && el) {
       let isFirstCallback = true;
 
       let cachedTargetBounds: Rect | null = null;
@@ -459,6 +533,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   };
 
   const handleFitView = useCallback(() => {
+    if (!flow) return;
     const bounds = flow.getNodesBounds(model.nodes);
     void flow.fitBounds(bounds, {
       duration: 200,
@@ -474,7 +549,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       cancelPlaceholder();
       updateSelection(null);
     },
-    flow
+    flowInstance
   );
   // Set up tooltips for control buttons
   useTippyForControls(isManualLayout);
@@ -517,6 +592,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         edgeTypes={edgeTypes}
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
+        onInit={setFlow}
         deleteKeyCode={null}
         fitView
         fitViewOptions={{ padding: FIT_PADDING }}
