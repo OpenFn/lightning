@@ -16,9 +16,17 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [2.14.11-pr1] - 2025-10-15
+
+### Added
+
 - Create new workflow via YAML in the collaborative editor
   [#3700](https://github.com/OpenFn/lightning/issues/3700)
-
 - E2E tests for edge validation in collaborative editor
   [#3724](https://github.com/OpenFn/lightning/issues/3724)
 - Ensure that TOTP codes cannot be reused.
