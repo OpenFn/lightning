@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Default failure notifications for project users are now disabled to minimize
+  email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
+
 ### Fixed
 
 ## [2.14.11-pr1] - 2025-10-15
