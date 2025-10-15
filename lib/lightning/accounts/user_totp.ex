@@ -17,7 +17,7 @@ defmodule Lightning.Accounts.UserTOTP do
   schema "user_totps" do
     field :secret, :binary, redact: true
     field :code, :string, virtual: true
-    field :last_totp_at, :utc_datetime_usec
+    field :last_totp_at, :utc_datetime_usec, default: nil
     belongs_to :user, Lightning.Accounts.User
 
     timestamps()
