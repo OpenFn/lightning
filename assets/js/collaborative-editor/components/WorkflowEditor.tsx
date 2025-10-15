@@ -2,12 +2,16 @@
  * WorkflowEditor - Main workflow editing component
  */
 
+import { useState } from "react";
+
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { useSession } from "../hooks/useSession";
+import { useIsNewWorkflow } from "../hooks/useSessionContext";
 import {
   useCurrentJob,
   useNodeSelection,
+  useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
@@ -15,7 +19,7 @@ import {
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { Inspector } from "./inspector";
-import { YAMLImportPanel } from "./yaml-import";
+import { LeftPanel } from "./left-panel";
 
 export function WorkflowEditor() {
   const { hash, searchParams, updateSearchParams } = useURLState();
@@ -23,8 +27,10 @@ export function WorkflowEditor() {
   const { currentNode, selectNode } = useNodeSelection();
   const { awareness } = useSession();
   const workflowStore = useWorkflowStoreContext();
+  const isNewWorkflow = useIsNewWorkflow();
+  const { saveWorkflow } = useWorkflowActions();
 
-  const isImportOpen = searchParams.get("method") === "import";
+  const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
   // Construct full workflow object from state
   const workflow = useWorkflowState(state =>
@@ -39,6 +45,16 @@ export function WorkflowEditor() {
       : null
   );
 
+  // Get current creation method from URL
+  const currentMethod = searchParams.get("method") as
+    | "template"
+    | "import"
+    | "ai"
+    | null;
+
+  // Default to template method if no method specified and panel is open
+  const leftPanelMethod = showLeftPanel ? currentMethod || "template" : null;
+
   const handleCloseInspector = () => {
     selectNode(null);
   };
@@ -46,12 +62,32 @@ export function WorkflowEditor() {
   // Show inspector panel if settings is open OR a node is selected
   const showInspector = hash === "settings" || currentNode.node;
 
-  const handleCloseImport = () => {
+  const handleMethodChange = (method: "template" | "import" | "ai" | null) => {
+    updateSearchParams({ method });
+  };
+
+  const handleImport = async (workflowState: YAMLWorkflowState) => {
+    // Validate workflow name with server before importing
+    try {
+      const validatedState =
+        await workflowStore.validateWorkflowName(workflowState);
+
+      workflowStore.importWorkflow(validatedState);
+    } catch (error) {
+      console.error("Failed to validate workflow name:", error);
+      // Fall back to original state if validation fails
+      workflowStore.importWorkflow(workflowState);
+    }
+  };
+
+  const handleCloseLeftPanel = () => {
+    setShowLeftPanel(false);
     updateSearchParams({ method: null });
   };
 
-  const handleImport = (workflowState: YAMLWorkflowState) => {
-    workflowStore.importWorkflow(workflowState);
+  const handleSaveAndClose = async () => {
+    await saveWorkflow();
+    handleCloseLeftPanel();
   };
 
   return (
@@ -59,7 +95,7 @@ export function WorkflowEditor() {
       {/* Main content area - flex grows to fill remaining space */}
       <div
         className={`flex-1 relative transition-all duration-300 ease-in-out ${
-          isImportOpen ? "ml-[33.333333%]" : "ml-0"
+          showLeftPanel ? "ml-[33.333333%]" : "ml-0"
         }`}
       >
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
@@ -85,12 +121,15 @@ export function WorkflowEditor() {
         )}
       </div>
 
-      {/* Left Panel - YAML Import (absolute positioned, slides over) */}
-      <YAMLImportPanel
-        isOpen={isImportOpen}
-        onClose={handleCloseImport}
+      {/* Left Panel - Workflow creation methods (absolute positioned, slides over) */}
+      <LeftPanel
+        method={leftPanelMethod}
+        onMethodChange={handleMethodChange}
         onImport={handleImport}
+        onClosePanel={handleCloseLeftPanel}
+        onSave={handleSaveAndClose}
       />
+
       {false && ( // Leaving this here for now, but we'll remove/replace it in the future
         <div className="flex flex-col h-full">
           {/* Main Content */}

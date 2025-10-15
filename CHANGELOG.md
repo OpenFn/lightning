@@ -16,6 +16,8 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Create new workflow via YAML in the collaborative editor
+  [#3700](https://github.com/OpenFn/lightning/issues/3700)
 
 - E2E tests for edge validation in collaborative editor
   [#3724](https://github.com/OpenFn/lightning/issues/3724)

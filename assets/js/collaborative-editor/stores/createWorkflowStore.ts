@@ -605,6 +605,7 @@ export const createWorkflowStore = () => {
       }>(provider.channel, "save_workflow", payload);
 
       logger.debug("Saved workflow", response);
+
       return response;
     } catch (error) {
       logger.error("Failed to save workflow", error);
@@ -630,6 +631,47 @@ export const createWorkflowStore = () => {
       logger.debug("Reset workflow successfully", response);
     } catch (error) {
       logger.error("Failed to reset workflow", error);
+      throw error;
+    }
+  };
+
+  /**
+   * Validate workflow name uniqueness via Phoenix Channel
+   *
+   * Sends workflow name to server for validation and receives a
+   * guaranteed unique name back. The server applies the same
+   * uniqueness logic used in the LiveView path.
+   *
+   * @param workflowState - Workflow state with name to validate
+   * @returns Promise resolving to workflow state with unique name
+   */
+  const validateWorkflowName = async (
+    workflowState: YAMLWorkflowState
+  ): Promise<YAMLWorkflowState> => {
+    if (!provider) {
+      logger.warn("No provider available for name validation");
+      return workflowState;
+    }
+
+    try {
+      const response = await channelRequest<{ workflow: { name: string } }>(
+        provider.channel,
+        "validate_workflow_name",
+        { workflow: { name: workflowState.name } }
+      );
+
+      logger.debug("Validated workflow name", {
+        original: workflowState.name,
+        validated: response.workflow.name,
+      });
+
+      // Return state with validated unique name
+      return {
+        ...workflowState,
+        name: response.workflow.name,
+      };
+    } catch (error) {
+      logger.error("Failed to validate workflow name", error);
       throw error;
     }
   };
@@ -733,6 +775,7 @@ export const createWorkflowStore = () => {
     clearSelection,
     saveWorkflow,
     resetWorkflow,
+    validateWorkflowName,
   };
 };
 

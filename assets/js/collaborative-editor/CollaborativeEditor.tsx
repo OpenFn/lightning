@@ -11,6 +11,7 @@ import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { StoreProvider } from "./contexts/StoreProvider";
 import { useProject } from "./hooks/useSessionContext";
+import { useWorkflowState } from "./hooks/useWorkflow";
 
 export interface CollaborativeEditorDataProps {
   "data-workflow-id": string;
@@ -48,6 +49,9 @@ function BreadcrumbContent({
   // Get project from store (may be null if not yet loaded)
   const projectFromStore = useProject();
 
+  // Get workflow from store to read the current name
+  const workflowFromStore = useWorkflowState(state => state.workflow);
+
   // Store-first with props-fallback pattern
   // This ensures breadcrumbs work during:
   // 1. Initial server-side render (uses props)
@@ -55,6 +59,7 @@ function BreadcrumbContent({
   // 3. Full collaborative mode (uses store)
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
+  const currentWorkflowName = workflowFromStore?.name ?? workflowName;
 
   const breadcrumbElements = useMemo(() => {
     return [
@@ -71,7 +76,7 @@ function BreadcrumbContent({
         Workflows
       </BreadcrumbLink>,
       <div key="workflow" className="flex items-center gap-2">
-        <BreadcrumbText>{workflowName}</BreadcrumbText>
+        <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
         <div
           id="canvas-workflow-version-container"
           className="flex items-middle text-sm font-normal"
@@ -86,7 +91,7 @@ function BreadcrumbContent({
         </div>
       </div>,
     ];
-  }, [projectId, projectName, workflowName, projectFromStore]);
+  }, [projectId, projectName, currentWorkflowName]);
 
   return (
     <Header
