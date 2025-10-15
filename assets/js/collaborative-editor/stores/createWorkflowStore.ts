@@ -466,6 +466,25 @@ export const createWorkflowStore = () => {
     }
   };
 
+  const addEdge = (edge: Partial<Session.Edge>) => {
+    if (!ydoc || !edge.id || !edge.target_job_id) return;
+
+    const edgesArray = ydoc.getArray("edges");
+    const edgeMap = new Y.Map();
+
+    ydoc.transact(() => {
+      edgeMap.set("id", edge.id);
+      edgeMap.set("source_job_id", edge.source_job_id || null);
+      edgeMap.set("source_trigger_id", edge.source_trigger_id || null);
+      edgeMap.set("target_job_id", edge.target_job_id);
+      edgeMap.set("condition_type", edge.condition_type || "on_job_success");
+      edgeMap.set("condition_label", edge.condition_label || null);
+      edgeMap.set("condition_expression", edge.condition_expression || null);
+      edgeMap.set("enabled", edge.enabled !== undefined ? edge.enabled : true);
+      edgesArray.push([edgeMap]);
+    });
+  };
+
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
     if (!ydoc) return;
 
@@ -754,6 +773,7 @@ export const createWorkflowStore = () => {
     updateJobBody,
     addJob,
     removeJob,
+    addEdge,
     updateTrigger,
     setEnabled,
     getJobBodyYText,
