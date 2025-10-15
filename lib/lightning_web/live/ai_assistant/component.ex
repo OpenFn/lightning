@@ -212,10 +212,9 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp handle_streaming_complete(socket) do
-    # Keep streamed content in memory until payload arrives
+    # Keep streamed content and status in memory until payload arrives
     # This allows saving content + code together in one operation
     socket
-    |> assign(streaming_status: nil)
   end
 
   defp handle_streaming_payload_complete(payload_data, socket) do
