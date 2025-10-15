@@ -1911,4 +1911,232 @@ defmodule Lightning.CredentialsTest do
       assert Enum.empty?(credentials)
     end
   end
+
+  describe "credential propagation to sandbox descendants" do
+    test "automatically propagates credential to all descendant sandboxes when added to parent project" do
+      user = insert(:user)
+
+      # Create parent project with owner role
+      parent_project =
+        insert(:project,
+          name: "parent-project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # Create sandbox hierarchy: parent -> sandbox1 -> sandbox2
+      {:ok, sandbox1} =
+        Lightning.Projects.provision_sandbox(parent_project, user, %{
+          name: "sandbox-1",
+          env: "staging"
+        })
+
+      {:ok, sandbox2} =
+        Lightning.Projects.provision_sandbox(sandbox1, user, %{
+          name: "sandbox-2",
+          env: "dev"
+        })
+
+      # Create a credential and add it to the parent project
+      valid_attrs = %{
+        name: "test credential",
+        user_id: user.id,
+        schema: "raw",
+        project_credentials: [
+          %{project_id: parent_project.id}
+        ],
+        credential_bodies: [
+          %{name: "main", body: %{"api_key" => "secret"}}
+        ]
+      }
+
+      assert {:ok, %Credential{} = credential} =
+               Credentials.create_credential(valid_attrs)
+
+      # Verify credential was added to parent
+      parent_credentials =
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^parent_project.id and
+              pc.credential_id == ^credential.id
+        )
+        |> Repo.all()
+
+      assert length(parent_credentials) == 1
+
+      # Verify credential was automatically propagated to sandbox1
+      sandbox1_credentials =
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^sandbox1.id and pc.credential_id == ^credential.id
+        )
+        |> Repo.all()
+
+      assert length(sandbox1_credentials) == 1
+
+      # Verify credential was automatically propagated to sandbox2
+      sandbox2_credentials =
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^sandbox2.id and pc.credential_id == ^credential.id
+        )
+        |> Repo.all()
+
+      assert length(sandbox2_credentials) == 1
+    end
+
+    test "propagates credential to existing sandboxes when added via update" do
+      user = insert(:user)
+
+      # Create parent and sandbox with owner role
+      parent_project =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent_project, user, %{
+          name: "sandbox",
+          env: "staging"
+        })
+
+      # Create credential without project association
+      credential =
+        insert(:credential, name: "test cred", schema: "raw", user: user)
+        |> with_body(%{name: "main", body: %{}})
+        |> Repo.preload(:project_credentials)
+
+      # Update credential to add it to parent project
+      update_attrs = %{
+        project_credentials: [%{project_id: parent_project.id}]
+      }
+
+      assert {:ok, %Credential{}} =
+               Credentials.update_credential(credential, update_attrs)
+
+      # Verify credential was propagated to sandbox
+      sandbox_credentials =
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^sandbox.id and pc.credential_id == ^credential.id
+        )
+        |> Repo.all()
+
+      assert length(sandbox_credentials) == 1
+    end
+
+    test "does not duplicate credentials when adding to project multiple times" do
+      user = insert(:user)
+
+      parent_project =
+        insert(:project,
+          name: "parent",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent_project, user, %{
+          name: "sandbox",
+          env: "staging"
+        })
+
+      # Create credential with parent project using create_credential (not factory insert)
+      {:ok, credential} =
+        Credentials.create_credential(%{
+          name: "test cred",
+          schema: "raw",
+          user_id: user.id,
+          project_credentials: [%{project_id: parent_project.id}],
+          credential_bodies: [%{name: "main", body: %{}}]
+        })
+
+      # Verify credential already exists in sandbox from initial creation
+      sandbox_credentials =
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^sandbox.id and pc.credential_id == ^credential.id
+        )
+        |> Repo.all()
+
+      # Should already be propagated from initial creation
+      assert length(sandbox_credentials) == 1
+
+      # Reload credential with associations
+      credential = Repo.preload(credential, :project_credentials, force: true)
+
+      # Try to update credential (keeping same project) - should not duplicate
+      original_project_credentials =
+        Enum.map(credential.project_credentials, &Map.from_struct/1)
+
+      update_attrs = %{
+        name: "updated test cred",
+        project_credentials: original_project_credentials
+      }
+
+      assert {:ok, %Credential{}} =
+               Credentials.update_credential(credential, update_attrs)
+
+      # Verify no duplicates in sandbox
+      sandbox_credentials =
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^sandbox.id and pc.credential_id == ^credential.id
+        )
+        |> Repo.all()
+
+      assert length(sandbox_credentials) == 1
+    end
+
+    test "propagates to all descendants in deep hierarchy" do
+      user = insert(:user)
+
+      # Create deep hierarchy: root -> level1 -> level2 -> level3
+      root =
+        insert(:project,
+          name: "root",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      {:ok, level1} =
+        Lightning.Projects.provision_sandbox(root, user, %{
+          name: "level-1",
+          env: "staging"
+        })
+
+      {:ok, level2} =
+        Lightning.Projects.provision_sandbox(level1, user, %{
+          name: "level-2",
+          env: "dev"
+        })
+
+      {:ok, level3} =
+        Lightning.Projects.provision_sandbox(level2, user, %{
+          name: "level-3",
+          env: "test"
+        })
+
+      # Add credential to root
+      {:ok, credential} =
+        Credentials.create_credential(%{
+          name: "deep cred",
+          schema: "raw",
+          user_id: user.id,
+          project_credentials: [%{project_id: root.id}],
+          credential_bodies: [%{name: "main", body: %{}}]
+        })
+
+      # Verify propagation to all levels
+      for project <- [root, level1, level2, level3] do
+        credentials =
+          from(pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^project.id and pc.credential_id == ^credential.id
+          )
+          |> Repo.all()
+
+        assert length(credentials) == 1,
+               "Credential should be present in project #{project.name}"
+      end
+    end
+  end
 end

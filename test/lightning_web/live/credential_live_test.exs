@@ -2920,4 +2920,475 @@ defmodule LightningWeb.CredentialLiveTest do
       refute scopes_in_url |> String.contains?(scope_to_unselect)
     end
   end
+
+  describe "credential propagation to sandboxes" do
+    test "creating credential with project propagates to descendant sandboxes",
+         %{
+           conn: conn,
+           user: user
+         } do
+      # Create parent project
+      parent =
+        insert(:project, project_users: [%{user: user, role: :owner}])
+
+      # Create sandbox hierarchy
+      {:ok, sandbox_1} =
+        Lightning.Projects.provision_sandbox(parent, user, %{
+          name: "sandbox-1",
+          env: "staging"
+        })
+
+      {:ok, sandbox_2} =
+        Lightning.Projects.provision_sandbox(sandbox_1, user, %{
+          name: "sandbox-2",
+          env: "dev"
+        })
+
+      # Create credential via LiveView
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(index_live)
+      index_live |> select_credential_type("raw")
+      index_live |> click_continue()
+
+      # Select parent project
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => parent.id})
+
+      # Submit the credential form
+      {:ok, _index_live, _html} =
+        index_live
+        |> form("#credential-form-new",
+          credential: %{
+            name: "Test Propagation Credential",
+            body: Jason.encode!(%{"key" => "value"})
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      # Verify credential was created
+      credential =
+        Repo.get_by(Credential, name: "Test Propagation Credential")
+
+      assert credential
+
+      # Verify credential is accessible in all projects
+      parent_has_credential =
+        Repo.one(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^parent.id and
+                pc.credential_id == ^credential.id
+        )
+
+      sandbox_1_has_credential =
+        Repo.one(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^sandbox_1.id and
+                pc.credential_id == ^credential.id
+        )
+
+      sandbox_2_has_credential =
+        Repo.one(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^sandbox_2.id and
+                pc.credential_id == ^credential.id
+        )
+
+      assert parent_has_credential
+      assert sandbox_1_has_credential
+      assert sandbox_2_has_credential
+    end
+
+    test "updating credential to add project propagates to that project's sandboxes",
+         %{
+           conn: conn,
+           user: user
+         } do
+      # Create a credential first
+      credential =
+        insert(:credential,
+          name: "Update Test Credential",
+          schema: "http",
+          body: %{"username" => "test", "password" => "test"},
+          user: user
+        )
+
+      # Create parent project and sandboxes
+      parent =
+        insert(:project, project_users: [%{user: user, role: :owner}])
+
+      {:ok, sandbox_1} =
+        Lightning.Projects.provision_sandbox(parent, user, %{
+          name: "sandbox-1",
+          env: "staging"
+        })
+
+      {:ok, sandbox_2} =
+        Lightning.Projects.provision_sandbox(sandbox_1, user, %{
+          name: "sandbox-2",
+          env: "dev"
+        })
+
+      # Open edit modal and add the parent project
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      open_edit_credential_modal(view, credential.id)
+
+      view
+      |> element("#project-credentials-list-#{credential.id}")
+      |> render_change(%{"project_id" => parent.id})
+
+      # Submit the form
+      view
+      |> form("#credential-form-#{credential.id}")
+      |> render_submit()
+
+      assert_redirected(view, ~p"/credentials")
+
+      # Verify credential was propagated to all descendants
+      parent_has_credential =
+        Repo.one(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^parent.id and
+                pc.credential_id == ^credential.id
+        )
+
+      sandbox_1_has_credential =
+        Repo.one(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^sandbox_1.id and
+                pc.credential_id == ^credential.id
+        )
+
+      sandbox_2_has_credential =
+        Repo.one(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^sandbox_2.id and
+                pc.credential_id == ^credential.id
+        )
+
+      assert parent_has_credential
+      assert sandbox_1_has_credential
+      assert sandbox_2_has_credential
+    end
+
+    test "credential propagates to branching sandbox hierarchy", %{
+      conn: conn,
+      user: user
+    } do
+      # Create parent project
+      parent =
+        insert(:project, project_users: [%{user: user, role: :owner}])
+
+      # Create branching structure
+      {:ok, sandbox_a} =
+        Lightning.Projects.provision_sandbox(parent, user, %{
+          name: "sandbox-a",
+          env: "staging"
+        })
+
+      {:ok, sandbox_b} =
+        Lightning.Projects.provision_sandbox(parent, user, %{
+          name: "sandbox-b",
+          env: "dev"
+        })
+
+      {:ok, sandbox_a1} =
+        Lightning.Projects.provision_sandbox(sandbox_a, user, %{
+          name: "sandbox-a1",
+          env: "test"
+        })
+
+      # Create credential with parent project
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(index_live)
+      index_live |> select_credential_type("raw")
+      index_live |> click_continue()
+
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => parent.id})
+
+      {:ok, _index_live, _html} =
+        index_live
+        |> form("#credential-form-new",
+          credential: %{
+            name: "Branching Test Credential",
+            body: Jason.encode!(%{"key" => "value"})
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      credential =
+        Repo.get_by(Credential, name: "Branching Test Credential")
+
+      # Verify all branches have access
+      sandbox_ids = [parent.id, sandbox_a.id, sandbox_b.id, sandbox_a1.id]
+
+      project_credentials =
+        Repo.all(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.credential_id == ^credential.id and
+                pc.project_id in ^sandbox_ids,
+            select: pc.project_id
+        )
+
+      assert length(project_credentials) == 4
+
+      assert MapSet.equal?(
+               MapSet.new(project_credentials),
+               MapSet.new(sandbox_ids)
+             )
+    end
+
+    test "credential propagates through deep hierarchy (4+ levels)", %{
+      conn: conn,
+      user: user
+    } do
+      # Create deep hierarchy
+      parent =
+        insert(:project, project_users: [%{user: user, role: :owner}])
+
+      {:ok, level_1} =
+        Lightning.Projects.provision_sandbox(parent, user, %{
+          name: "level-1",
+          env: "staging"
+        })
+
+      {:ok, level_2} =
+        Lightning.Projects.provision_sandbox(level_1, user, %{
+          name: "level-2",
+          env: "dev"
+        })
+
+      {:ok, level_3} =
+        Lightning.Projects.provision_sandbox(level_2, user, %{
+          name: "level-3",
+          env: "test"
+        })
+
+      {:ok, level_4} =
+        Lightning.Projects.provision_sandbox(level_3, user, %{
+          name: "level-4",
+          env: "local"
+        })
+
+      # Create credential via LiveView
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(index_live)
+      index_live |> select_credential_type("raw")
+      index_live |> click_continue()
+
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => parent.id})
+
+      {:ok, _index_live, _html} =
+        index_live
+        |> form("#credential-form-new",
+          credential: %{
+            name: "Deep Hierarchy Credential",
+            body: Jason.encode!(%{"key" => "value"})
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      credential =
+        Repo.get_by(Credential, name: "Deep Hierarchy Credential")
+
+      # Verify all levels have access
+      all_project_ids = [
+        parent.id,
+        level_1.id,
+        level_2.id,
+        level_3.id,
+        level_4.id
+      ]
+
+      project_credentials =
+        Repo.all(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.credential_id == ^credential.id and
+                pc.project_id in ^all_project_ids,
+            select: pc.project_id
+        )
+
+      assert length(project_credentials) == 5
+
+      assert MapSet.equal?(
+               MapSet.new(project_credentials),
+               MapSet.new(all_project_ids)
+             )
+    end
+
+    test "multiple credentials propagate independently to same sandbox hierarchy",
+         %{
+           conn: conn,
+           user: user
+         } do
+      # Create parent and sandbox
+      parent =
+        insert(:project, project_users: [%{user: user, role: :owner}])
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{
+          name: "sandbox",
+          env: "staging"
+        })
+
+      # Create first credential
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(index_live)
+      index_live |> select_credential_type("raw")
+      index_live |> click_continue()
+
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => parent.id})
+
+      {:ok, index_live, _html} =
+        index_live
+        |> form("#credential-form-new",
+          credential: %{
+            name: "First Credential",
+            body: Jason.encode!(%{"key" => "value1"})
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      # Create second credential
+      open_create_credential_modal(index_live)
+      index_live |> select_credential_type("raw")
+      index_live |> click_continue()
+
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => parent.id})
+
+      {:ok, _index_live, _html} =
+        index_live
+        |> form("#credential-form-new",
+          credential: %{
+            name: "Second Credential",
+            body: Jason.encode!(%{"key" => "value2"})
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      # Verify both credentials are in parent and sandbox
+      cred1 = Repo.get_by(Credential, name: "First Credential")
+      cred2 = Repo.get_by(Credential, name: "Second Credential")
+
+      parent_credentials =
+        Repo.all(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^parent.id and
+                pc.credential_id in [^cred1.id, ^cred2.id],
+            select: pc.credential_id
+        )
+
+      sandbox_credentials =
+        Repo.all(
+          from pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^sandbox.id and
+                pc.credential_id in [^cred1.id, ^cred2.id],
+            select: pc.credential_id
+        )
+
+      assert length(parent_credentials) == 2
+      assert length(sandbox_credentials) == 2
+
+      assert MapSet.equal?(
+               MapSet.new(parent_credentials),
+               MapSet.new([cred1.id, cred2.id])
+             )
+
+      assert MapSet.equal?(
+               MapSet.new(sandbox_credentials),
+               MapSet.new([cred1.id, cred2.id])
+             )
+    end
+
+    test "credential propagation is idempotent (no duplicate associations)", %{
+      conn: conn,
+      user: user
+    } do
+      # Create parent and sandbox
+      parent =
+        insert(:project, project_users: [%{user: user, role: :owner}])
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{
+          name: "sandbox",
+          env: "staging"
+        })
+
+      # Create credential and associate with parent twice
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(index_live)
+      index_live |> select_credential_type("raw")
+      index_live |> click_continue()
+
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => parent.id})
+
+      {:ok, index_live, _html} =
+        index_live
+        |> form("#credential-form-new",
+          credential: %{
+            name: "Idempotent Test Credential",
+            body: Jason.encode!(%{"key" => "value"})
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      credential =
+        Repo.get_by(Credential, name: "Idempotent Test Credential")
+
+      # Try to add the same project again via edit
+      open_edit_credential_modal(index_live, credential.id)
+
+      index_live
+      |> element("#project-credentials-list-#{credential.id}")
+      |> render_change(%{"project_id" => parent.id})
+
+      index_live
+      |> form("#credential-form-#{credential.id}")
+      |> render_submit()
+
+      # Verify no duplicate associations
+      sandbox_credential_count =
+        Repo.aggregate(
+          from(pc in Lightning.Projects.ProjectCredential,
+            where:
+              pc.project_id == ^sandbox.id and
+                pc.credential_id == ^credential.id
+          ),
+          :count
+        )
+
+      assert sandbox_credential_count == 1
+    end
+  end
 end
