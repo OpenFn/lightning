@@ -2,7 +2,6 @@ defmodule Lightning.Accounts.UserTOTPTest do
   use Lightning.DataCase, async: true
 
   alias Ecto.Changeset
-  alias Lightning.Accounts.User
   alias Lightning.Accounts.UserTOTP
   alias Lightning.Repo
 
@@ -197,7 +196,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
       totp_time: totp_time,
       user_totp: user_totp
     } do
-      set_last_totp_at(user_totp.user_id, totp_time)
+      user_totp = set_last_totp_at(user_totp, totp_time)
 
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
@@ -209,7 +208,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
       totp_time: totp_time,
       user_totp: user_totp
     } do
-      set_last_totp_at(user_totp.user_id, totp_time - 60)
+      user_totp = set_last_totp_at(user_totp, totp_time - 60)
 
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
@@ -221,7 +220,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
       totp_time: totp_time,
       user_totp: user_totp
     } do
-      set_last_totp_at(user_totp.user_id, nil)
+      user_totp = set_last_totp_at(user_totp, nil)
 
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
@@ -229,17 +228,19 @@ defmodule Lightning.Accounts.UserTOTPTest do
       assert UserTOTP.validate_totp(user_totp, valid_code, time: totp_time)
     end
 
-    defp set_last_totp_at(user_id, last_totp_at_unix) do
+    defp set_last_totp_at(user_totp, last_totp_at_unix) do
       last_totp_at =
         case last_totp_at_unix do
           nil -> nil
           unix -> DateTime.from_unix!(unix * 1_000_000, :microsecond)
         end
 
-      User
-      |> Repo.get!(user_id)
-      |> Ecto.Changeset.change(%{last_totp_at: last_totp_at})
-      |> Repo.update!()
+      Map.merge(user_totp, %{last_totp_at: last_totp_at})
+      #
+      # User
+      # |> Repo.get!(user_id)
+      # |> Ecto.Changeset.change(%{last_totp_at: last_totp_at})
+      # |> Repo.update!()
     end
   end
 end

@@ -4,7 +4,6 @@ defmodule Lightning.Accounts.UserTOTP do
   """
   use Lightning.Schema
 
-  alias Lightning.Accounts.User
   alias Lightning.Repo
 
   @type t :: %__MODULE__{
@@ -60,9 +59,8 @@ defmodule Lightning.Accounts.UserTOTP do
     with true <- is_struct(totp, __MODULE__),
          true <- is_binary(code),
          true <- byte_size(code) == 6,
-         time <- Keyword.get(options, :time, System.os_time(:second)),
-         %{last_totp_at: since} <- Repo.get(User, totp.user_id) do
-      NimbleTOTP.valid?(totp.secret, code, time: time, since: since)
+         time <- Keyword.get(options, :time, System.os_time(:second)) do
+      NimbleTOTP.valid?(totp.secret, code, time: time, since: totp.last_totp_at)
     end
   end
 end
