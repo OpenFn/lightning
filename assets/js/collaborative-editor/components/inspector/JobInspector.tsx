@@ -1,5 +1,5 @@
 import { useStore } from "@tanstack/react-form";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
@@ -10,6 +10,13 @@ import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
 
 import { createZodValidator } from "../form/createZodValidator";
+import { Button } from "../Button";
+import { InspectorFooter } from "./InspectorFooter";
+import { Tooltip } from "../Tooltip";
+import { AlertDialog } from "../AlertDialog";
+import { notifications } from "../../lib/notifications";
+import { usePermissions } from "../../hooks/useSessionContext";
+import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
 
 interface JobInspectorProps {
   job: Workflow.Job;
@@ -143,9 +150,15 @@ const useCredentialOptions = () => {
 };
 
 export function JobInspector({ job }: JobInspectorProps) {
-  const { updateJob } = useWorkflowActions();
+  const { updateJob, removeJobAndClearSelection } = useWorkflowActions();
   const { credentialOptions, isLoading, resolveCredentialId } =
     useCredentialOptions();
+
+  // Delete button state and validation
+  const permissions = usePermissions();
+  const validation = useJobDeleteValidation(job.id);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Parse initial adaptor value to get separate package and version
   const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
@@ -228,6 +241,32 @@ export function JobInspector({ job }: JobInspectorProps) {
       updateJob(job.id, form.state.values);
     }
   }, [adaptorPackage, getLatestVersion, form, job.id, updateJob]);
+
+  // Delete handler
+  const handleDelete = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      removeJobAndClearSelection(job.id);
+      // Success - Y.Doc sync provides immediate visual feedback
+      // No success toast needed - job disappears from diagram
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      console.error("Delete failed:", error);
+
+      // Show error toast to inform user
+      notifications.alert({
+        title: "Failed to delete job",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred. Please try again.",
+      });
+
+      // Keep dialog open so user can retry
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [job.id, removeJobAndClearSelection]);
 
   return (
     <div>
@@ -315,6 +354,40 @@ export function JobInspector({ job }: JobInspectorProps) {
           </pre>
         </div>
       </div>
+
+      {/* Footer - Always shows, buttons handle their own permissions */}
+      <InspectorFooter
+        rightButtons={
+          permissions?.can_edit_workflow && (
+            <Tooltip
+              content={validation.disableReason || "Delete this job"}
+              side="top"
+            >
+              <Button
+                variant="danger"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={isDeleting || !validation.canDelete}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </Tooltip>
+          )
+        }
+      />
+
+      <AlertDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => !isDeleting && setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Job?"
+        description={
+          `This will permanently remove "${job.name}" from the ` +
+          `workflow. This action cannot be undone.`
+        }
+        confirmLabel={isDeleting ? "Deleting..." : "Delete Job"}
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

@@ -1,0 +1,77 @@
+import { useMemo } from "react";
+
+import { usePermissions } from "./useSessionContext";
+import { useWorkflowState } from "./useWorkflow";
+
+interface DeleteValidation {
+  canDelete: boolean;
+  disableReason: string | null;
+  hasChildEdges: boolean;
+  isFirstJob: boolean;
+}
+
+/**
+ * Validates whether a job can be deleted and provides
+ * user-facing tooltip messages for disabled states.
+ *
+ * Follows the useCanSave pattern (useWorkflow.ts:442-487)
+ *
+ * @param jobId - The ID of the job to validate
+ * @returns Validation state with tooltip message
+ */
+export const useJobDeleteValidation = (
+  jobId: string
+): DeleteValidation => {
+  // STEP 1: Get data from multiple stores
+  const permissions = usePermissions();
+
+  // Select edges using deps array to track jobId changes
+  const edges = useWorkflowState(state => state.edges, []);
+
+  // STEP 2: Compute derived state with useMemo
+  const childEdges = useMemo(
+    () => edges.filter(edge => edge.source_job_id === jobId),
+    [edges, jobId]
+  );
+
+  const parentEdges = useMemo(
+    () => edges.filter(edge => edge.target_job_id === jobId),
+    [edges, jobId]
+  );
+
+  const hasChildEdges = childEdges.length > 0;
+
+  // Check if job is first in workflow (has trigger as parent)
+  const isFirstJob = parentEdges.some(
+    edge => edge.source_trigger_id !== undefined
+  );
+
+  // STEP 3: Return memoized validation result
+  return useMemo(() => {
+    const canEdit = permissions?.can_edit_workflow ?? false;
+    let canDelete = true;
+    let disableReason: string | null = null;
+
+    // Check in priority order
+    if (!canEdit) {
+      canDelete = false;
+      disableReason =
+        "You don't have permission to edit this workflow";
+    } else if (hasChildEdges) {
+      canDelete = false;
+      disableReason =
+        "Cannot delete: other jobs depend on this step";
+    } else if (isFirstJob) {
+      canDelete = false;
+      disableReason =
+        "Cannot delete: this is the first job in the workflow";
+    }
+
+    return {
+      canDelete,
+      disableReason,
+      hasChildEdges,
+      isFirstJob,
+    };
+  }, [permissions, hasChildEdges, isFirstJob]);
+};
