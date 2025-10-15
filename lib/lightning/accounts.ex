@@ -267,7 +267,7 @@ defmodule Lightning.Accounts do
   def valid_user_totp?(user, code) do
     totp = Repo.get_by(UserTOTP, user_id: user.id) |> Repo.preload(:user)
 
-    UserTOTP.valid_totp?(totp, code)
+    UserTOTP.validate_totp(totp, code)
     |> tap(fn valid ->
       if valid do
         Repo.update!(

@@ -18,10 +18,18 @@ defmodule Lightning.Accounts.UserTOTPTest do
     test "creates a valid changeset if given a valid code", %{
       user_totp: user_totp
     } do
+      current_time =
+        DateTime.utc_now()
+        |> DateTime.add(-60, :second)
+
+      Lightning.Stub.freeze_time(current_time)
+
       valid_code = NimbleTOTP.verification_code(user_totp.secret)
 
-      assert %Changeset{valid?: true, changes: %{code: ^valid_code}} =
+      assert %Changeset{valid?: true, changes: changes} =
                UserTOTP.changeset(user_totp, %{code: valid_code})
+
+      assert %{code: ^valid_code, last_totp_at: ^current_time} = changes
     end
 
     test "invalidates the changeset if not given a code", %{
@@ -96,7 +104,25 @@ defmodule Lightning.Accounts.UserTOTPTest do
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
 
-      assert UserTOTP.valid_totp?(user_totp, valid_code)
+      assert UserTOTP.validate_totp(user_totp, valid_code)
+    end
+
+    test "updates last_otp_at for a valid code", %{
+      user_totp: user_totp,
+      totp_time: totp_time
+    } do
+      current_time =
+        DateTime.utc_now()
+        |> DateTime.add(-60, :second)
+
+      Lightning.Stub.freeze_time(current_time)
+
+      valid_code =
+        NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
+
+      assert UserTOTP.validate_totp(user_totp, valid_code)
+
+      assert %{last_totp_at: ^current_time} = Repo.reload!(user_totp)
     end
 
     test "returns false for an invalid code", %{
@@ -108,7 +134,21 @@ defmodule Lightning.Accounts.UserTOTPTest do
       invalid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: stale_time)
 
-      refute UserTOTP.valid_totp?(user_totp, invalid_code)
+      refute UserTOTP.validate_totp(user_totp, invalid_code)
+    end
+
+    test "does not update last_otp_at for an invalid code", %{
+      user_totp: user_totp,
+      totp_time: totp_time
+    } do
+      stale_time = totp_time - 120
+
+      invalid_code =
+        NimbleTOTP.verification_code(user_totp.secret, time: stale_time)
+
+      refute UserTOTP.validate_totp(user_totp, invalid_code)
+
+      assert %{last_totp_at: nil} = Repo.reload!(user_totp)
     end
 
     test "returns false if not passed an instance of UserTOTP", %{
@@ -120,13 +160,13 @@ defmodule Lightning.Accounts.UserTOTPTest do
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
 
-      refute UserTOTP.valid_totp?(not_a_user_totp, valid_code)
+      refute UserTOTP.validate_totp(not_a_user_totp, valid_code)
     end
 
     test "returns false for a code that is not binary", %{
       user_totp: user_totp
     } do
-      refute UserTOTP.valid_totp?(user_totp, 123_456)
+      refute UserTOTP.validate_totp(user_totp, 123_456)
     end
 
     test "returns false for a code that does not have byte_size of 6", %{
@@ -138,7 +178,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
 
       provided_code = String.slice(valid_code, 0..4)
 
-      refute UserTOTP.valid_totp?(user_totp, provided_code)
+      refute UserTOTP.validate_totp(user_totp, provided_code)
     end
 
     test "uses the passed in time when validating the code", %{
@@ -150,7 +190,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
 
-      refute UserTOTP.valid_totp?(user_totp, valid_code, time: stale_time)
+      refute UserTOTP.validate_totp(user_totp, valid_code, time: stale_time)
     end
 
     test "rejects valid code if TOTP was last validated within window", %{
@@ -162,7 +202,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
 
-      refute UserTOTP.valid_totp?(user_totp, valid_code, time: totp_time)
+      refute UserTOTP.validate_totp(user_totp, valid_code, time: totp_time)
     end
 
     test "allows valid code reuse if TOTP was last validated outside window", %{
@@ -174,7 +214,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
 
-      assert UserTOTP.valid_totp?(user_totp, valid_code, time: totp_time)
+      assert UserTOTP.validate_totp(user_totp, valid_code, time: totp_time)
     end
 
     test "allows use of valid code if last_totp_at has not been set", %{
@@ -186,7 +226,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
       valid_code =
         NimbleTOTP.verification_code(user_totp.secret, time: totp_time)
 
-      assert UserTOTP.valid_totp?(user_totp, valid_code, time: totp_time)
+      assert UserTOTP.validate_totp(user_totp, valid_code, time: totp_time)
     end
 
     defp set_last_totp_at(user_id, last_totp_at_unix) do
