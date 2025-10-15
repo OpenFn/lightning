@@ -81,7 +81,7 @@ describe("WorkflowStore - Save Workflow", () => {
     store.connect(ydoc, mockProvider);
   });
 
-  test("updates workflow lock_version in Y.Doc after successful save", async () => {
+  test("returns response with lock_version after successful save", async () => {
     // Verify initial state
     const workflowMap = ydoc.getMap("workflow");
     expect(workflowMap.get("lock_version")).toBeNull();
@@ -95,8 +95,10 @@ describe("WorkflowStore - Save Workflow", () => {
       lock_version: 1,
     });
 
-    // Verify Y.Doc was updated with new lock_version
-    expect(workflowMap.get("lock_version")).toBe(1);
+    // Note: Y.Doc lock_version is NOT updated by client
+    // The server will merge the saved workflow back into Y.Doc
+    // and broadcast the update to all clients via Y.js sync
+    expect(workflowMap.get("lock_version")).toBeNull();
 
     // Verify channel.push was called with correct payload
     expect(mockChannel.push).toHaveBeenCalledWith(
@@ -109,11 +111,13 @@ describe("WorkflowStore - Save Workflow", () => {
     );
   });
 
-  test("updates lock_version on subsequent saves", async () => {
+  test("returns incremented lock_version on subsequent saves", async () => {
     // First save
     await store.saveWorkflow();
     const workflowMap = ydoc.getMap("workflow");
-    expect(workflowMap.get("lock_version")).toBe(1);
+
+    // Simulate server updating Y.Doc (would happen via Y.js sync in real scenario)
+    workflowMap.set("lock_version", 1);
 
     // Mock incremented lock_version for second save
     mockChannel.push = vi.fn(() => {
@@ -141,8 +145,9 @@ describe("WorkflowStore - Save Workflow", () => {
       lock_version: 2,
     });
 
-    // Verify Y.Doc updated to lock_version 2
-    expect(workflowMap.get("lock_version")).toBe(2);
+    // Note: Client doesn't update Y.Doc - server handles that
+    // Y.Doc still shows version 1 until server broadcasts the update
+    expect(workflowMap.get("lock_version")).toBe(1);
   });
 
   test("does not update lock_version if save fails", async () => {
@@ -300,49 +305,22 @@ describe("WorkflowStore - Save Workflow", () => {
     expect(response).toBeNull();
   });
 
-  test("updateWorkflowLockVersion can be called directly", () => {
-    const workflowMap = ydoc.getMap("workflow");
-    expect(workflowMap.get("lock_version")).toBeNull();
-
-    // Call updateWorkflowLockVersion directly
-    store.updateWorkflowLockVersion(5);
-
-    // Verify Y.Doc updated
-    expect(workflowMap.get("lock_version")).toBe(5);
-
-    // Call again with different value
-    store.updateWorkflowLockVersion(10);
-    expect(workflowMap.get("lock_version")).toBe(10);
-  });
-
-  test("updateWorkflowLockVersion handles disconnected Y.Doc gracefully", () => {
-    // Create disconnected store
-    const disconnectedStore = createWorkflowStore();
-
-    // Should not throw when Y.Doc not connected
-    expect(() => {
-      disconnectedStore.updateWorkflowLockVersion(1);
-    }).not.toThrow();
-  });
-
-  test("Y.Doc observer propagates lock_version changes to Immer state", async () => {
+  test("Y.Doc observer propagates lock_version changes to Immer state when server updates", () => {
     // Track state updates via subscription
     let stateUpdateCount = 0;
     const unsubscribe = store.subscribe(() => {
       stateUpdateCount++;
     });
 
-    // Save workflow (triggers Y.Doc update which should trigger observer)
-    await store.saveWorkflow();
-
-    // Wait for observer to process (Y.js observers are synchronous)
-    // The observer should update the Immer state
+    // Simulate server updating Y.Doc (would happen via Y.js sync in real scenario)
+    const workflowMap = ydoc.getMap("workflow");
+    workflowMap.set("lock_version", 5);
 
     // Get current snapshot
     const snapshot = store.getSnapshot();
 
-    // Verify Immer state reflects Y.Doc update
-    expect(snapshot.workflow?.lock_version).toBe(1);
+    // Verify Immer state reflects Y.Doc update from server
+    expect(snapshot.workflow?.lock_version).toBe(5);
 
     // Verify at least one state update occurred
     expect(stateUpdateCount).toBeGreaterThan(0);

@@ -312,7 +312,8 @@ defmodule Lightning.Collaboration.Session do
          {:ok, saved_workflow} <-
            Lightning.Workflows.save_workflow(changeset, user,
              skip_reconcile: true
-           ) do
+           ),
+         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow) do
       Logger.info("Successfully saved workflow #{state.workflow.id}")
       {:reply, {:ok, saved_workflow}, %{state | workflow: saved_workflow}}
     else
@@ -447,6 +448,21 @@ defmodule Lightning.Collaboration.Session do
       nil -> {:error, :workflow_deleted}
       workflow -> {:ok, workflow}
     end
+  end
+
+  defp merge_saved_workflow_into_ydoc(
+         %{shared_doc_pid: shared_doc_pid},
+         workflow
+       ) do
+    SharedDoc.update_doc(shared_doc_pid, fn doc ->
+      # Update the workflow map with the saved workflow data
+      # This ensures the lock_version and other fields are synced to Y.Doc
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "merge_saved_workflow", fn ->
+        Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
+      end)
+    end)
   end
 
   defp clear_and_reset_doc(%{shared_doc_pid: nil}, _workflow),

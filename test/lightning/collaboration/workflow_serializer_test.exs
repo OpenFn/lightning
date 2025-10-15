@@ -603,8 +603,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "cron_expression" => nil
              } == extracted_trigger
 
-      # Verify positions is a map
-      assert is_map(extracted["positions"])
+      assert is_nil(extracted["positions"])
     end
 
     test "converts Y.Text body field to String" do
@@ -840,7 +839,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "jobs" => [],
                "edges" => [],
                "triggers" => [],
-               "positions" => %{}
+               "positions" => nil
              } = extracted
     end
 
@@ -1157,6 +1156,28 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       assert extracted["positions"][job1.id] == %{"x" => 150, "y" => 250}
       assert extracted["positions"][job2.id] == %{"x" => 450, "y" => 350}
       assert extracted["positions"][trigger.id] == %{"x" => 50, "y" => 100}
+    end
+
+    test "positions are not nil when workflow has positions" do
+      job = build(:job)
+
+      positions = %{
+        job.id => %{"x" => 100, "y" => 200}
+      }
+
+      workflow =
+        build(:workflow, positions: positions)
+        |> with_job(job)
+        |> insert()
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      refute is_nil(extracted["positions"])
+      assert extracted["positions"] == positions
     end
   end
 end

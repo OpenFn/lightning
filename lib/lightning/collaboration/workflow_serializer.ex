@@ -106,6 +106,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     id = Yex.Map.fetch!(workflow_map, "id")
     name = Yex.Map.fetch!(workflow_map, "name")
 
+    positions = extract_positions(positions_map)
+
     # Build the map for save_workflow/2
     %{
       "id" => id,
@@ -113,7 +115,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
       "jobs" => extract_jobs(jobs_array),
       "edges" => extract_edges(edges_array),
       "triggers" => extract_triggers(triggers_array),
-      "positions" => extract_positions(positions_map)
+      "positions" => if(Enum.empty?(positions), do: nil, else: positions)
     }
   end
 
