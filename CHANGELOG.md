@@ -21,6 +21,8 @@ and this project adheres to
 
 - E2E tests for edge validation in collaborative editor
   [#3724](https://github.com/OpenFn/lightning/issues/3724)
+- Ensure that TOTP codes cannot be reused.
+  [#3758](ihttps://github.com/OpenFn/lightning/issues/3758)
 
 ### Changed
 
