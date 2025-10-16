@@ -112,6 +112,14 @@ const Node = ({
     <div
       className={`group ${didRun ? 'opacity-100' : 'opacity-30'}`}
       data-a-node
+      data-id={id}
+      data-valid-drop-target={
+        data.isValidDropTarget !== undefined
+          ? String(data.isValidDropTarget)
+          : undefined
+      }
+      data-active-drop-target={data.isActiveDropTarget ? 'true' : undefined}
+      data-drop-target-error={data.dropTargetError || undefined}
     >
       <div className="flex flex-row cursor-pointer">
         <div className="relative">

@@ -37,7 +37,12 @@ export namespace Session {
   >;
 
   // TODO: update with extra fields from the server
-  export type Workflow = { id: string; name: string };
+  export type Workflow = {
+    id: string;
+    name: string;
+    lock_version: number;
+    deleted_at: string | null;
+  };
 
   export type Job = {
     id: string;

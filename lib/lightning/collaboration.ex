@@ -4,15 +4,26 @@ defmodule Lightning.Collaborate do
 
   This module serves as the main entry point for collaborative editing,
   coordinating the creation and management of document and session processes
-  for workflow collaboration. It manages the lifecycle of SharedDoc processes
-  and ensures proper process discovery through :pg process groups and the
-  collaboration Registry.
+  for workflow collaboration.
 
-  Key responsibilities:
-  - Starting collaborative editing sessions for users and workflows
-  - Coordinating DocumentSupervisor creation when needed
-  - Managing SharedDoc discovery via :pg process groups
-  - Delegating process lookup operations to the Registry
+  All collaborative sessions require a workflow struct.
+
+  ## Example
+
+      # Existing workflow
+      workflow = Lightning.Workflows.get_workflow(workflow_id)
+
+      Collaborate.start(user: user, workflow: workflow)
+
+      # New workflow
+      workflow = %Lightning.Workflows.Workflow{
+        id: workflow_id,
+        project_id: project_id,
+        name: "",
+        positions: %{}
+      }
+
+      Collaborate.start(user: user, workflow: workflow)
   """
   alias Lightning.Collaboration.DocumentSupervisor
   alias Lightning.Collaboration.Registry
@@ -29,40 +40,35 @@ defmodule Lightning.Collaborate do
     parent_pid = Keyword.get(opts, :parent_pid, self())
 
     user = Keyword.fetch!(opts, :user)
+    workflow = Keyword.fetch!(opts, :workflow)
 
-    workflow_id = Keyword.fetch!(opts, :workflow_id)
-
-    case lookup_shared_doc(workflow_id) do
+    case lookup_shared_doc(workflow.id) do
       nil ->
-        Logger.info("Starting document for workflow #{workflow_id}")
-        {:ok, _doc_supervisor_pid} = start_document(workflow_id)
+        Logger.info("Starting document for workflow #{workflow.id}")
+        {:ok, _doc_supervisor_pid} = start_document(workflow)
 
       shared_doc_pid when is_pid(shared_doc_pid) ->
         shared_doc_pid
     end
 
-    # IDEA: Maybe we should link the parent process to the session?
-    # Using Process.link/1?
-    # Because we should be able to do something if the session crashes,
-    # because the WorkflowChannel is expecting it's pid to be alive.
     SessionSupervisor.start_child({
       Session,
-      workflow_id: workflow_id,
+      workflow: workflow,
       user: user,
       parent_pid: parent_pid,
       name:
         Registry.via(
-          {:session, "workflow:#{workflow_id}:#{session_id}", user.id}
+          {:session, "workflow:#{workflow.id}:#{session_id}", user.id}
         )
     })
   end
 
-  def start_document(workflow_id) do
+  def start_document(%Lightning.Workflows.Workflow{} = workflow) do
     {:ok, doc_supervisor_pid} =
       SessionSupervisor.start_child(
         {DocumentSupervisor,
-         workflow_id: workflow_id,
-         name: Registry.via({:doc_supervisor, "workflow:#{workflow_id}"})}
+         workflow: workflow,
+         name: Registry.via({:doc_supervisor, "workflow:#{workflow.id}"})}
       )
 
     {:ok, doc_supervisor_pid}

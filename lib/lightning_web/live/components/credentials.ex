@@ -83,11 +83,12 @@ defmodule LightningWeb.Components.Credentials do
   attr :id, :string, required: false
   attr :type, :string, required: true
   attr :form, :map, required: true
+  attr :current_body, :map, default: %{}
   slot :inner_block
 
   def form_component(%{type: "raw"} = assigns) do
     ~H"""
-    <RawBodyComponent.fieldset :let={l} form={@form}>
+    <RawBodyComponent.fieldset :let={l} form={@form} current_body={@current_body}>
       {render_slot(@inner_block, l)}
     </RawBodyComponent.fieldset>
     """
@@ -95,7 +96,11 @@ defmodule LightningWeb.Components.Credentials do
 
   def form_component(%{type: _schema} = assigns) do
     ~H"""
-    <JsonSchemaBodyComponent.fieldset :let={l} form={@form}>
+    <JsonSchemaBodyComponent.fieldset
+      :let={l}
+      form={@form}
+      current_body={@current_body}
+    >
       {render_slot(@inner_block, l)}
     </JsonSchemaBodyComponent.fieldset>
     """
@@ -133,12 +138,12 @@ defmodule LightningWeb.Components.Credentials do
     ~H"""
     <div class="col-span-3">
       <div>
-        <label
+        <%!-- <label
           for={@select_id}
           class={["block text-sm font-semibold leading-6 text-slate-800"]}
         >
           Project
-        </label>
+        </label> --%>
         <div class="mt-1 pb-3">
           <select
             id={@select_id}

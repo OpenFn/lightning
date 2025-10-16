@@ -56,6 +56,29 @@
  * - withSelector utility provides memoized selectors for performance
  */
 
+/**
+ * ## Redux DevTools Integration
+ *
+ * This store integrates with Redux DevTools for debugging in
+ * development and test environments.
+ *
+ * **Features:**
+ * - Real-time state inspection
+ * - Action history with timestamps
+ * - Time-travel debugging (jump to previous states)
+ * - State export/import for reproducing bugs
+ *
+ * **Usage:**
+ * 1. Install Redux DevTools browser extension
+ * 2. Open DevTools and select the "SessionContextStore" instance
+ * 3. Perform actions in the app and watch them appear in DevTools
+ *
+ * **Note:** DevTools is automatically disabled in production builds.
+ *
+ * **Excluded from DevTools:**
+ * None (all state is serializable)
+ */
+
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
 
@@ -69,19 +92,25 @@ import {
 } from "../types/sessionContext";
 
 import { createWithSelector } from "./common";
+import { wrapStoreWithDevTools } from "./devtools";
 
 const logger = _logger.ns("SessionContextStore").seal();
 
 /**
  * Creates a session context store instance with useSyncExternalStore + Immer pattern
  */
-export const createSessionContextStore = (): SessionContextStore => {
+export const createSessionContextStore = (
+  isNewWorkflow: boolean = false
+): SessionContextStore => {
   // Single Immer-managed state object (referentially stable)
   let state: SessionContextState = produce(
     {
       user: null,
       project: null,
       config: null,
+      permissions: null,
+      latestSnapshotLockVersion: null,
+      isNewWorkflow,
       isLoading: false,
       error: null,
       lastUpdated: null,
@@ -92,7 +121,15 @@ export const createSessionContextStore = (): SessionContextStore => {
 
   const listeners = new Set<() => void>();
 
-  const notify = () => {
+  // Redux DevTools integration
+  const devtools = wrapStoreWithDevTools({
+    name: "SessionContextStore",
+    excludeKeys: [], // All state is serializable
+    maxAge: 100,
+  });
+
+  const notify = (actionName: string = "stateChange") => {
+    devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
     });
@@ -130,11 +167,14 @@ export const createSessionContextStore = (): SessionContextStore => {
         draft.user = sessionContext.user;
         draft.project = sessionContext.project;
         draft.config = sessionContext.config;
+        draft.permissions = sessionContext.permissions;
+        draft.latestSnapshotLockVersion =
+          sessionContext.latest_snapshot_lock_version;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();
       });
-      notify();
+      notify("handleSessionContextReceived");
     } else {
       const errorMessage = `Invalid session context data: ${result.error.message}`;
       logger.error("Failed to parse session context data", {
@@ -146,7 +186,7 @@ export const createSessionContextStore = (): SessionContextStore => {
         draft.isLoading = false;
         draft.error = errorMessage;
       });
-      notify();
+      notify("sessionContextError");
     }
   };
 
@@ -166,7 +206,7 @@ export const createSessionContextStore = (): SessionContextStore => {
     state = produce(state, draft => {
       draft.isLoading = loading;
     });
-    notify();
+    notify("setLoading");
   };
 
   const setError = (error: string | null) => {
@@ -174,14 +214,37 @@ export const createSessionContextStore = (): SessionContextStore => {
       draft.error = error;
       draft.isLoading = false;
     });
-    notify();
+    notify("setError");
   };
 
   const clearError = () => {
     state = produce(state, draft => {
       draft.error = null;
     });
-    notify();
+    notify("clearError");
+  };
+
+  /**
+   * Update latest snapshot lock version
+   * Called when workflow is saved and backend returns new lock version
+   */
+  const setLatestSnapshotLockVersion = (lockVersion: number) => {
+    state = produce(state, draft => {
+      draft.latestSnapshotLockVersion = lockVersion;
+      draft.lastUpdated = Date.now();
+    });
+    notify("setLatestSnapshotLockVersion");
+  };
+
+  /**
+   * Clear isNewWorkflow flag
+   * Called after first successful save of a new workflow
+   */
+  const clearIsNewWorkflow = () => {
+    state = produce(state, draft => {
+      draft.isNewWorkflow = false;
+    });
+    notify("clearIsNewWorkflow");
   };
 
   // =============================================================================
@@ -208,18 +271,41 @@ export const createSessionContextStore = (): SessionContextStore => {
       handleSessionContextUpdated(message);
     };
 
+    const workflowSavedHandler = (message: unknown) => {
+      logger.debug("Received workflow_saved message", message);
+      // Type guard for workflow saved message
+      if (
+        typeof message === "object" &&
+        message !== null &&
+        "latest_snapshot_lock_version" in message &&
+        typeof (message as { latest_snapshot_lock_version: unknown })
+          .latest_snapshot_lock_version === "number"
+      ) {
+        const lockVersion = (
+          message as { latest_snapshot_lock_version: number }
+        ).latest_snapshot_lock_version;
+        logger.debug("Workflow saved - updating lock version", lockVersion);
+        setLatestSnapshotLockVersion(lockVersion);
+      }
+    };
+
     // Set up channel listeners
     if (channel) {
       channel.on("session_context", sessionContextHandler);
       channel.on("session_context_updated", sessionContextUpdatedHandler);
+      channel.on("workflow_saved", workflowSavedHandler);
     }
+
+    devtools.connect();
 
     void requestSessionContext();
 
     return () => {
+      devtools.disconnect();
       if (channel) {
         channel.off("session_context", sessionContextHandler);
         channel.off("session_context_updated", sessionContextUpdatedHandler);
+        channel.off("workflow_saved", workflowSavedHandler);
       }
       _channelProvider = null;
     };
@@ -271,6 +357,8 @@ export const createSessionContextStore = (): SessionContextStore => {
     setLoading,
     setError,
     clearError,
+    setLatestSnapshotLockVersion,
+    clearIsNewWorkflow,
 
     // Internal methods (not part of public SessionContextStore interface)
     _connectChannel,

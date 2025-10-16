@@ -4,6 +4,8 @@ defmodule Lightning.Accounts.UserTOTP do
   """
   use Lightning.Schema
 
+  alias Lightning.Repo
+
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
           secret: String.t() | nil,
@@ -15,6 +17,7 @@ defmodule Lightning.Accounts.UserTOTP do
   schema "user_totps" do
     field :secret, :binary, redact: true
     field :code, :string, virtual: true
+    field :last_totp_at, :utc_datetime_usec, default: nil
     belongs_to :user, Lightning.Accounts.User
 
     timestamps()
@@ -23,6 +26,7 @@ defmodule Lightning.Accounts.UserTOTP do
   def changeset(totp, attrs) do
     totp
     |> cast(attrs, [:code])
+    |> put_change(:last_totp_at, Lightning.current_time())
     |> validate_required([:code, :secret])
     |> validate_format(:code, ~r/^\d{6}$/, message: "should be a 6 digit number")
     |> maybe_validate_code(totp)
@@ -38,8 +42,25 @@ defmodule Lightning.Accounts.UserTOTP do
     end
   end
 
-  def valid_totp?(totp, code) do
-    is_struct(totp, __MODULE__) and is_binary(code) and byte_size(code) == 6 and
-      NimbleTOTP.valid?(totp.secret, code)
+  def validate_totp(totp, code, options \\ []) do
+    valid_totp?(totp, code, options)
+    |> tap(fn valid ->
+      if valid, do: update_last_totp_at(totp)
+    end)
+  end
+
+  defp update_last_totp_at(totp) do
+    totp
+    |> change(%{last_totp_at: Lightning.current_time()})
+    |> Repo.update!()
+  end
+
+  defp valid_totp?(totp, code, options \\ []) do
+    with true <- is_struct(totp, __MODULE__),
+         true <- is_binary(code),
+         true <- byte_size(code) == 6,
+         time <- Keyword.get(options, :time, System.os_time(:second)) do
+      NimbleTOTP.valid?(totp.secret, code, time: time, since: totp.last_totp_at)
+    end
   end
 end

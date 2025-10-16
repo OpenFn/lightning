@@ -243,6 +243,7 @@ defmodule Lightning.Accounts do
     Multi.new()
     |> Multi.update(:user, fn _changes ->
       totp = Repo.preload(totp, [:user])
+
       Ecto.Changeset.change(totp.user, %{mfa_enabled: false})
     end)
     |> Multi.delete(:totp, totp)
@@ -258,9 +259,9 @@ defmodule Lightning.Accounts do
   """
   @spec valid_user_totp?(User.t(), String.t()) :: true | false
   def valid_user_totp?(user, code) do
-    totp = Repo.get_by(UserTOTP, user_id: user.id)
+    totp = Repo.get_by(UserTOTP, user_id: user.id) |> Repo.preload(:user)
 
-    UserTOTP.valid_totp?(totp, code)
+    UserTOTP.validate_totp(totp, code)
   end
 
   @doc """

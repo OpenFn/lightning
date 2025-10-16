@@ -32,6 +32,7 @@ import {
   triggerProviderStatus,
   applyProviderUpdate,
   waitForState,
+  assertCleanAwareness,
 } from "./__helpers__/sessionStoreHelpers";
 
 // Vitest 3.x fixtures for cleaner test setup and automatic cleanup
@@ -81,59 +82,29 @@ describe("createSessionStore", () => {
       expect(initialState.lastStatus).toBe(null);
     });
 
-    test("subscribe/unsubscribe functionality works correctly", () => {
+    test("subscribe/unsubscribe and selector work correctly", () => {
       const store = createSessionStore();
       let callCount = 0;
+      const unsubscribe = store.subscribe(() => callCount++);
 
-      const listener = () => {
-        callCount++;
-      };
-
-      // Subscribe to changes
-      const unsubscribe = store.subscribe(listener);
-
-      // Trigger a state change
+      // Trigger state changes and verify subscription
       store.initializeSession(createMockSocket(), "test:room", {
         id: "user-1",
         name: "Test User",
         color: "#ff0000",
       });
+      expect(callCount).toBe(1);
 
-      expect(callCount).toBe(1); // Listener should be called once for state change
-
-      // Unsubscribe and trigger another change
       unsubscribe();
       store.destroy();
+      expect(callCount).toBe(1); // No call after unsubscribe
 
-      expect(callCount).toBe(1); // Listener should not be called after unsubscribe
-    });
-
-    test("withSelector creates memoized selector with referential stability", () => {
-      const store = createSessionStore();
-
-      const selectYdoc = store.withSelector(state => state.ydoc);
-      const selectProvider = store.withSelector(state => state.provider);
-
-      // Initial calls
-      const ydoc1 = selectYdoc();
-
-      // Change YDoc
-      const newYDoc = store.initializeYDoc();
-      const ydoc2 = selectYdoc();
-      const provider2 = selectProvider();
-
-      expect(ydoc2).toBe(newYDoc);
-      expect(provider2).toBeNull();
-
-      // Same selector calls should return same references
-      expect(selectYdoc()).toBe(
-        ydoc2,
-        "Selector should return same reference for unchanged state"
-      );
-      expect(selectProvider()).toBe(
-        provider2,
-        "Selector should return same reference for unchanged state"
-      );
+      // Verify selector referential stability
+      const store2 = createSessionStore();
+      const selectYdoc = store2.withSelector(state => state.ydoc);
+      const newYDoc = store2.initializeYDoc();
+      expect(selectYdoc()).toBe(newYDoc);
+      expect(selectYdoc()).toBe(selectYdoc()); // Same reference
     });
   });
 
@@ -196,201 +167,70 @@ describe("createSessionStore", () => {
 
   describe("provider initialization", () => {
     sessionTest(
-      "creates provider and attaches event handlers",
-      ({ initializedSession }) => {
-        const { store } = initializedSession;
+      "creates provider with correct state",
+      ({ initializedSession, store, mockSocket }) => {
         const result = store.getSnapshot();
+        expect(result.provider).toBeTruthy();
+        expect(store.getProvider()).toBe(result.provider);
+        expect(result.isSynced).toBe(result.provider.synced);
 
-        expect(result.provider).toBeTruthy(); // "Should return provider instance"
-        expect(store.getProvider()).toBe(result.provider); // "Query should return same provider"
-
-        // Verify initial sync state is reflected
-        expect(result.isSynced).toBe(result.provider.synced); // "Store should reflect provider sync state"
-
-        // Cleanup happens automatically via fixture
+        // Verify provider replacement works
+        const userData = { id: "user-2", name: "User 2", color: "#00ff00" };
+        const secondResult = store.initializeSession(
+          mockSocket,
+          "test:room:456",
+          userData,
+          { connect: false }
+        );
+        expect(secondResult.provider).not.toBe(result.provider);
+        expect(store.getSnapshot().provider).toBe(secondResult.provider);
       }
     );
-
-    test("replaces existing provider", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const roomname1 = "test:room:123";
-      const roomname2 = "test:room:456";
-      const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
-
-      const firstResult = store.initializeSession(
-        mockSocket,
-        roomname1,
-        userData,
-        {
-          connect: false,
-        }
-      );
-      const secondResult = store.initializeSession(
-        mockSocket,
-        roomname2,
-        userData,
-        {
-          connect: false,
-        }
-      );
-
-      expect(firstResult.provider).not.toBe(secondResult.provider); // "Should create different instances"
-      expect(store.getSnapshot().provider).toBe(secondResult.provider); // "Should store latest provider"
-
-      store.destroy();
-    });
   });
 
   describe("lifecycle", () => {
-    sessionTest(
-      "destroy cleans up provider and YDoc",
-      ({ store, mockSocket }) => {
-        const roomname = "test:room:123";
-
-        store.initializeSession(mockSocket, roomname, null, { connect: false });
-
-        store.destroy();
-
-        const finalState = store.getSnapshot();
-        expect(finalState.provider).toBeNull();
-        expect(finalState.ydoc).toBeNull();
-        expect(finalState.isConnected).toBe(false);
-        expect(finalState.isSynced).toBe(false);
-      }
-    );
-
-    test("handles null provider gracefully", () => {
-      const store = createSessionStore();
-
-      expect(() => {
-        store.destroy();
-      }).not.toThrow();
-    });
-
     sessionTest("performs complete cleanup", ({ initializedSession }) => {
       const { store } = initializedSession;
       const state = store.getSnapshot();
-      const result = {
-        ydoc: state.ydoc!,
-        awareness: state.awareness!,
-      };
-
-      // Track destruction calls
       let ydocDestroyed = false;
       let awarenessDestroyed = false;
 
-      const originalDestroy = result.ydoc.destroy;
-      result.ydoc.destroy = () => {
+      const originalDestroy = state.ydoc!.destroy;
+      state.ydoc!.destroy = () => {
         ydocDestroyed = true;
-        originalDestroy.call(result.ydoc);
+        originalDestroy.call(state.ydoc);
       };
 
-      if (result.awareness) {
-        const originalAwarenessDestroy = result.awareness.destroy;
-        result.awareness.destroy = () => {
-          awarenessDestroyed = true;
-          originalAwarenessDestroy.call(result.awareness);
-        };
-      }
+      const originalAwarenessDestroy = state.awareness!.destroy;
+      state.awareness!.destroy = () => {
+        awarenessDestroyed = true;
+        originalAwarenessDestroy.call(state.awareness);
+      };
 
       store.destroy();
 
       const afterState = store.getSnapshot();
-      expect(afterState.ydoc).toBeNull();
-      expect(afterState.provider).toBeNull();
-      expect(afterState.awareness).toBeNull();
-      expect(ydocDestroyed).toBe(true, "YDoc destroy should have been called");
-      expect(awarenessDestroyed).toBe(
-        true,
-        "Awareness destroy should have been called"
-      );
+      expect(afterState).toMatchObject({
+        ydoc: null,
+        provider: null,
+        awareness: null,
+        userData: null,
+        isConnected: false,
+        isSynced: false,
+        lastStatus: null,
+      });
+      expect(ydocDestroyed).toBe(true);
+      expect(awarenessDestroyed).toBe(true);
     });
 
-    test("is safe when called on empty state", () => {
+    test("is safe with empty or partial state", () => {
       const store = createSessionStore();
+      expect(() => store.destroy()).not.toThrow();
 
-      expect(() => {
-        store.destroy();
-      }).not.toThrow();
-    });
-
-    test("handles partial state cleanup", () => {
-      const store = createSessionStore();
-
-      const ydoc = store.initializeYDoc();
-
-      let ydocDestroyed = false;
-      const originalDestroy = ydoc.destroy;
-      ydoc.destroy = () => {
-        ydocDestroyed = true;
-        originalDestroy.call(ydoc);
-      };
-
-      expect(() => {
-        store.destroy();
-      }).not.toThrow();
-
-      expect(store.getSnapshot().ydoc).toBeNull();
-      expect(ydocDestroyed).toBe(true, "YDoc destroy should have been called");
-    });
-
-    sessionTest("cleans up event handlers", ({ initializedSession }) => {
-      const { store } = initializedSession;
-
-      // Verify initial state
-      expect(store.getSnapshot().provider).toBeTruthy(); // "Should have provider"
-
-      // Perform cleanup
-      store.destroy();
-
-      // Verify provider destruction
-      const finalState = store.getSnapshot();
-      expect(finalState.provider).toBe(null); // "Provider should be destroyed"
-    });
-
-    sessionTest("maintains comprehensive cleanup", ({ initializedSession }) => {
-      const { store } = initializedSession;
-      const state = store.getSnapshot();
-      const result = {
-        ydoc: state.ydoc!,
-        awareness: state.awareness!,
-      };
-
-      // Track destruction calls
-      let ydocDestroyed = false;
-      let awarenessDestroyed = false;
-
-      const originalYdocDestroy = result.ydoc.destroy;
-      result.ydoc.destroy = () => {
-        ydocDestroyed = true;
-        originalYdocDestroy.call(result.ydoc);
-      };
-
-      if (result.awareness) {
-        const originalAwarenessDestroy = result.awareness.destroy;
-        result.awareness.destroy = () => {
-          awarenessDestroyed = true;
-          originalAwarenessDestroy.call(result.awareness);
-        };
-      }
-
-      // destroy should clean up everything
-      store.destroy();
-
-      // Verify complete cleanup
-      const afterState = store.getSnapshot();
-      expect(afterState.ydoc).toBe(null); // "YDoc should be null after destroy"
-      expect(afterState.provider).toBe(null); // "Provider should be null after destroy"
-      expect(afterState.awareness).toBe(null); // "Awareness should be null after destroy"
-      expect(afterState.userData).toBe(null); // "userData should be null after destroy"
-      expect(afterState.isConnected).toBe(false); // "isConnected should be false"
-      expect(afterState.isSynced).toBe(false); // "isSynced should be false"
-      expect(afterState.lastStatus).toBe(null); // "lastStatus should be null"
-
-      // Verify all destruction was called
-      expect(ydocDestroyed).toBe(true); // "YDoc destroy should have been called"
-      expect(awarenessDestroyed).toBe(true); // "Awareness destroy should have been called"
+      const store2 = createSessionStore();
+      store2.initializeYDoc();
+      expect(() => store2.destroy()).not.toThrow();
+      expect(store2.getSnapshot().ydoc).toBeNull();
     });
   });
 
@@ -425,260 +265,132 @@ describe("createSessionStore", () => {
 
   describe("awareness state", () => {
     sessionTest(
-      "reuses existing awareness when re-initializing",
+      "creates new awareness when re-initializing",
       ({ store, mockSocket }) => {
-        const roomname = "test:room:123";
-
-        // First initialize with userData to create internal awareness
-        const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
+        const userData1 = { id: "user-1", name: "Test User", color: "#ff0000" };
         const firstResult = store.initializeSession(
           mockSocket,
-          roomname,
-          userData,
-          {
-            connect: false,
-          }
+          "test:room:123",
+          userData1,
+          { connect: false }
         );
         const firstAwareness = firstResult.awareness;
 
-        // Re-initialize with different userData - should create new awareness
-        const newUserData = {
-          id: "user-2",
-          name: "New User",
-          color: "#00ff00",
-        };
+        const userData2 = { id: "user-2", name: "New User", color: "#00ff00" };
         const secondResult = store.initializeSession(
           mockSocket,
-          roomname + "2",
-          newUserData,
-          {
-            connect: false,
-          }
+          "test:room:456",
+          userData2,
+          { connect: false }
         );
 
-        expect(secondResult.provider).toBeTruthy(); // "Should create provider with awareness"
-        expect(secondResult.awareness).not.toBe(firstAwareness); // "Should create new awareness with new userData"
-        expect(store.getSnapshot().provider).toBe(secondResult.provider); // "Should store new provider in state"
-
-        // Verify userData is stored in session state instead of awareness
-        const sessionUserData = store.getSnapshot().userData;
-        expect(sessionUserData).toEqual(newUserData); // "Session state should contain user data"
-
-        // Verify awareness does not have user data set (clean awareness)
-        const awarenessUserData = secondResult.awareness?.getLocalState()?.user;
-        expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
-
-        // Cleanup happens automatically via fixture
+        expect(secondResult.awareness).not.toBe(firstAwareness);
+        assertCleanAwareness(store.getSnapshot(), userData2);
       }
     );
   });
 
   describe("session initialization", () => {
     sessionTest(
-      "creates YDoc, provider, and sets awareness atomically",
+      "creates YDoc, provider, and awareness atomically",
       ({ initializedSession }) => {
         const { store, userData } = initializedSession;
-        const finalState = store.getSnapshot();
-
-        expect(finalState.ydoc).toBeTruthy(); // "Should return YDoc instance"
-        expect(finalState.provider).toBeTruthy(); // "Should return provider instance"
-        expect(finalState.awareness).toBeTruthy(); // "Should create and return awareness instance"
-
-        // Verify userData is stored in session state instead of awareness
-        expect(finalState.userData).toEqual(userData); // "Session state should contain provided user data"
-
-        // Verify awareness does not have user data set (clean awareness)
-        const awarenessUserData = finalState.awareness?.getLocalState()?.user;
-        expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
-
-        // Cleanup happens automatically via fixture
+        const state = store.getSnapshot();
+        expect(state.ydoc).toBeTruthy();
+        expect(state.provider).toBeTruthy();
+        expect(state.awareness).toBeTruthy();
+        assertCleanAwareness(state, userData);
       }
     );
 
     sessionTest("reuses existing YDoc if present", ({ store, mockSocket }) => {
-      const roomname = "test:room:123";
-      const userData = {
-        id: "user-2",
-        name: "Another User",
-        color: "#00ff00",
-      };
-
+      const userData = { id: "user-2", name: "Another User", color: "#00ff00" };
       const existingYDoc = store.initializeYDoc();
+      const result = store.initializeSession(
+        mockSocket,
+        "test:room:123",
+        userData,
+        { connect: false }
+      );
 
-      const result = store.initializeSession(mockSocket, roomname, userData, {
-        connect: false,
-      });
-
-      expect(result.ydoc).toBe(existingYDoc); // "Should reuse existing YDoc"
-      expect(result.provider).toBeTruthy(); // "Should create provider"
-      expect(result.awareness).toBeTruthy(); // "Should create awareness"
-
-      // Verify userData is stored in session state instead of awareness
-      const sessionUserData = store.getSnapshot().userData;
-      expect(sessionUserData).toEqual(userData); // "Session state should contain provided user data"
-
-      // Verify awareness does not have user data set (clean awareness)
-      const awarenessUserData = result.awareness?.getLocalState()?.user;
-      expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
-
-      // Cleanup happens automatically via fixture
+      expect(result.ydoc).toBe(existingYDoc);
+      expect(result.provider).toBeTruthy();
+      assertCleanAwareness(store.getSnapshot(), userData);
     });
 
-    test("handles null userData gracefully", () => {
+    test("creates awareness via provider even without userData", () => {
       const store = createSessionStore();
       const mockSocket = createMockSocket();
-      const roomname = "test:room:123";
 
-      const ydoc = store.initializeYDoc();
-
-      const result = store.initializeSession(mockSocket, roomname, null, {
+      // Without userData - PhoenixChannelProvider still creates awareness
+      store.initializeSession(mockSocket, "test:room:123", null, {
         connect: false,
       });
+      const state1 = store.getSnapshot();
+      expect(state1.ydoc).toBeTruthy();
+      expect(state1.provider).toBeTruthy();
+      // PhoenixChannelProvider creates awareness even when not explicitly provided
+      expect(state1.awareness).toBeTruthy();
+      expect(state1.userData).toBe(null);
 
-      expect(result.awareness).toBe(null); // "Should not create awareness when userData is null"
-      expect(result.provider).toBeTruthy(); // "Should create provider"
-      expect(result.ydoc).toBe(ydoc); // "Should use existing YDoc"
+      // With userData - creates new awareness and sets userData
+      const userData = { id: "user-4", name: "Test User 4", color: "#ff00ff" };
+      store.initializeSession(mockSocket, "test:room:456", userData, {
+        connect: false,
+      });
+      const state2 = store.getSnapshot();
+      expect(state2.awareness).toBeTruthy();
+      expect(state2.userData).toEqual(userData);
+      assertCleanAwareness(state2, userData);
 
       store.destroy();
     });
 
     test("throws error with null socket", () => {
       const store = createSessionStore();
-      const roomname = "test:room:123";
-
-      expect(() => {
-        store.initializeSession(null, roomname, null);
-      }).toThrow("Socket must be connected before initializing session");
-
-      // Ensure no partial state on failure
-      const finalState = store.getSnapshot();
-      expect(finalState.ydoc).toBe(null); // "YDoc should remain null"
-      expect(finalState.provider).toBe(null); // "Provider should remain null"
-      expect(finalState.awareness).toBe(null); // "Awareness should remain null"
-      expect(finalState.userData).toBe(null); // "userData should remain null"
-    });
-
-    test("supports connect=false option", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const roomname = "test:room:123";
-      const userData = { id: "user-3", name: "Test User 3", color: "#0000ff" };
-
-      const result = store.initializeSession(mockSocket, roomname, userData, {
-        connect: false,
+      expect(() => store.initializeSession(null, "test:room", null)).toThrow(
+        "Socket must be connected before initializing session"
+      );
+      expect(store.getSnapshot()).toMatchObject({
+        ydoc: null,
+        provider: null,
+        awareness: null,
+        userData: null,
       });
-
-      expect(result.provider).toBeTruthy(); // "Should create provider"
-      expect(result.awareness).toBeTruthy(); // "Should create awareness"
-      expect(result.ydoc).toBeTruthy(); // "Should create/use YDoc"
-
-      // Verify userData is stored in session state instead of awareness
-      const sessionUserData = store.getSnapshot().userData;
-      expect(sessionUserData).toEqual(userData); // "Session state should contain provided user data"
-
-      // Verify awareness does not have user data set (clean awareness)
-      const awarenessUserData = result.awareness?.getLocalState()?.user;
-      expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
-
-      store.destroy();
-    });
-
-    test("creates awareness only when userData is provided", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-      const roomname = "test:room:123";
-
-      // Test without userData
-      store.initializeSession(mockSocket, roomname, null, {
-        connect: false,
-      });
-      const result1 = store.getSnapshot();
-      expect(result1.ydoc).toBeTruthy(); // "Should have YDoc"
-      expect(result1.provider).toBeTruthy(); // "Should have provider"
-      expect(result1.awareness).toBe(null); // "Awareness should be null when no userData"
-      expect(result1.userData).toBe(null); // "userData should be null when no userData provided"
-
-      // Test with userData
-      const userData = { id: "user-4", name: "Test User 4", color: "#ff00ff" };
-      store.initializeSession(mockSocket, roomname + "2", userData, {
-        connect: false,
-      });
-      const result2 = store.getSnapshot();
-      expect(result2.awareness).toBeTruthy(); // "Should create awareness when userData provided"
-
-      // Verify userData is stored in session state instead of awareness
-      expect(result2.userData).toEqual(userData); // "Session state should contain provided user data"
-
-      // Verify awareness does not have user data set (clean awareness)
-      const awarenessUserData = result2.awareness?.getLocalState()?.user;
-      expect(awarenessUserData).toBe(undefined); // "Awareness should not contain user data (clean awareness)"
-
-      store.destroy();
     });
   });
 
   describe("event handler integration", () => {
-    test("attachProvider integration works with initializeSession", () => {
+    test("provider event handlers work correctly", () => {
       const store = createSessionStore();
       const mockSocket = createMockSocket();
+      const userData = { id: "user-1", name: "Test User", color: "#ff0000" };
 
-      // Test that initializeSession properly integrates with attachProvider
-      // by verifying that provider events can be processed (implicit test)
-
-      // Initialize session - should call attachProvider internally
-      const result1 = store.initializeSession(
-        mockSocket,
-        "room1",
-        { id: "user-1", name: "Test User", color: "#ff0000" },
-        { connect: false }
-      );
-      expect(result1.provider).toBeTruthy(); // "initializeSession should create provider"
-
-      // Re-initialize with new session - should call attachProvider internally and replace provider
-      const result2 = store.initializeSession(
-        mockSocket,
-        "room2",
-        { id: "user-2", name: "Test User 2", color: "#00ff00" },
-        { connect: false }
-      );
-      expect(result2.provider).toBeTruthy(); // "second initializeSession should create provider"
-      expect(result1.provider).not.toBe(result2.provider); // "Should create different provider instances"
-      expect(store.getSnapshot().provider).toBe(result2.provider); // "Should store latest provider"
-
-      store.destroy();
-    });
-
-    test("provider event handler integration via public interface", () => {
-      const store = createSessionStore();
-      const mockSocket = createMockSocket();
-
-      // Create provider and verify initial state
       const result = store.initializeSession(
         mockSocket,
         "test:room",
-        { id: "user-1", name: "Test User", color: "#ff0000" },
+        userData,
         { connect: false }
       );
+      expect(result.provider).toBeTruthy();
+      expect(store.getSnapshot().isSynced).toBe(result.provider.synced);
 
-      // Initial state should reflect provider's synced status
-      expect(store.getSnapshot().isSynced).toBe(result.provider.synced); // "Store should reflect provider sync state"
+      // Verify provider replacement
+      const result2 = store.initializeSession(mockSocket, "room2", userData, {
+        connect: false,
+      });
+      expect(result2.provider).not.toBe(result.provider);
+      expect(store.getSnapshot().provider).toBe(result2.provider);
 
-      // Test that provider status changes are reflected in store state
-      // (This verifies attachProvider event handlers are working)
-      expect(store.getSnapshot().isConnected).toBe(false); // "Should start disconnected"
-      expect(store.getSnapshot().lastStatus).toBe(null); // "Should have no initial status"
-
-      // Verify event handlers are working by checking that destroy cleans up properly
-      expect(() => {
-        store.destroy();
-      }).not.toThrow();
-
-      // After destroy, all state should be reset
+      // Verify cleanup
+      store.destroy();
       const finalState = store.getSnapshot();
-      expect(finalState.provider).toBe(null); // "Provider should be null after destroy"
-      expect(finalState.isConnected).toBe(false); // "Should not be connected after destroy"
-      expect(finalState.isSynced).toBe(false); // "Should not be synced after destroy"
-      expect(finalState.lastStatus).toBe(null); // "Status should be null after destroy"
+      expect(finalState).toMatchObject({
+        provider: null,
+        isConnected: false,
+        isSynced: false,
+        lastStatus: null,
+      });
     });
   });
 

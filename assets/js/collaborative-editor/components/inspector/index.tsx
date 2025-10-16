@@ -24,13 +24,22 @@ interface InspectorProps {
 export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
   const { hash, updateHash } = useURLState();
 
-  const mode = hash === "settings" ? "settings" : "node";
   const hasSelectedNode = currentNode.node && currentNode.type;
 
+  // Settings hash takes precedence, then node inspector
+  const mode =
+    hash === "settings" ? "settings" : hasSelectedNode ? "node" : null;
+
   const handleClose = () => {
-    updateHash(null);
-    onClose();
+    if (mode === "settings") {
+      updateHash(null);
+    } else {
+      onClose(); // Clears node selection
+    }
   };
+
+  // Don't render if no mode selected
+  if (!mode) return null;
 
   return (
     <div className="pointer-events-auto w-screen max-w-md h-full">
@@ -64,7 +73,7 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
           <div className="relative mt-6 flex-1 px-4 sm:px-6">
             {mode === "settings" ? (
               <WorkflowSettings workflow={workflow} />
-            ) : hasSelectedNode ? (
+            ) : (
               <>
                 {currentNode.type === "job" && (
                   <JobInspector
@@ -85,15 +94,6 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
                   />
                 )}
               </>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <div className="text-center">
-                  <p className="text-sm">No node selected</p>
-                  <p className="text-xs mt-1">
-                    Select a job, trigger, or edge to inspect
-                  </p>
-                </div>
-              </div>
             )}
           </div>
         </div>

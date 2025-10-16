@@ -84,6 +84,15 @@ export namespace Workflow {
 
     // Y.js specific operations
     getJobBodyYText: (id: string) => Y.Text | null;
+
+    // Workflow save operation
+    saveWorkflow: () => Promise<{
+      saved_at?: string;
+      lock_version?: number;
+    } | null>;
+
+    // Workflow reset operation
+    resetWorkflow: () => Promise<void>;
   }
 }
 

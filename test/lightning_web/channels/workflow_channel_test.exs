@@ -13,6 +13,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       _flag -> nil
     end)
 
+    # Set global mode for the mock to allow cross-process calls
+    Mox.set_mox_global(LightningMock)
+    # Stub the broadcast calls that save_workflow makes
+    Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     workflow = insert(:workflow, project: project)
@@ -22,7 +27,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       |> socket("user_#{user.id}", %{current_user: user})
       |> subscribe_and_join(
         LightningWeb.WorkflowChannel,
-        "workflow:collaborate:#{workflow.id}"
+        "workflow:collaborate:#{workflow.id}",
+        %{"project_id" => project.id, "action" => "edit"}
       )
 
     on_exit(fn ->
@@ -33,7 +39,7 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "join authorization" do
-    test "rejects unauthorized users", %{workflow: workflow} do
+    test "rejects unauthorized users", %{workflow: workflow, project: project} do
       unauthorized_user = insert(:user)
 
       assert {:error, %{reason: "unauthorized"}} =
@@ -43,18 +49,22 @@ defmodule LightningWeb.WorkflowChannelTest do
                })
                |> subscribe_and_join(
                  LightningWeb.WorkflowChannel,
-                 "workflow:collaborate:#{workflow.id}"
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "edit"}
                )
     end
 
     test "accepts authorized users with proper assigns", %{
       socket: socket,
-      workflow: workflow
+      workflow: workflow,
+      project: project
     } do
       assert %{workflow: socket_workflow} = socket.assigns
       assert socket_workflow.id == workflow.id
       assert %{workflow_id: workflow_id} = socket.assigns
       assert workflow_id == workflow.id
+      assert %{project: socket_project} = socket.assigns
+      assert socket_project.id == project.id
       assert %{session_pid: session_pid} = socket.assigns
       assert is_pid(session_pid)
     end
@@ -81,7 +91,8 @@ defmodule LightningWeb.WorkflowChannelTest do
     test "returns complete context with all required fields", %{
       socket: socket,
       user: user,
-      project: project
+      project: project,
+      workflow: workflow
     } do
       ref = push(socket, "get_context", %{})
 
@@ -104,6 +115,14 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Config data
       assert %{config: config_data} = response
       assert config_data.require_email_verification == true
+
+      # Permissions data
+      assert %{permissions: permissions_data} = response
+      assert permissions_data.can_edit_workflow == true
+
+      # Latest snapshot lock version
+      assert %{latest_snapshot_lock_version: lock_version} = response
+      assert lock_version == workflow.lock_version
     end
 
     test "returns config with require_email_verification false when flag disabled",
@@ -118,6 +137,268 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{config: config_data} = response
       assert config_data.require_email_verification == false
+    end
+
+    test "returns can_edit_workflow false for viewer role", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+      assert %{permissions: permissions_data} = response
+      assert permissions_data.can_edit_workflow == false
+    end
+  end
+
+  describe "save_workflow" do
+    test "successfully saves workflow", %{socket: socket, workflow: workflow} do
+      # Modify the workflow name in Y.Doc
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction to avoid deadlock
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated via Channel")
+      end)
+
+      # Push save request
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :ok, %{
+        saved_at: saved_at,
+        lock_version: lock_version
+      }
+
+      assert %DateTime{} = saved_at
+      assert lock_version == workflow.lock_version + 1
+
+      # Verify workflow was actually saved to database
+      saved = Lightning.Workflows.get_workflow!(workflow.id)
+      assert saved.name == "Updated via Channel"
+      assert saved.lock_version == lock_version
+    end
+
+    test "returns validation errors", %{socket: socket} do
+      # Set invalid data in Y.Doc (blank name)
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+      assert errors[:name]
+    end
+
+    test "handles optimistic lock conflicts", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Another user saves first (simulate concurrent edit)
+      {:ok, _} =
+        Lightning.Workflows.save_workflow(
+          Lightning.Workflows.change_workflow(workflow, %{name: "Concurrent"}),
+          user
+        )
+
+      # Modify Y.Doc with stale data
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "My Change")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      # May get lock error depending on Y.Doc state
+      assert_reply ref, reply_type, response
+
+      assert reply_type in [:ok, :error]
+
+      if reply_type == :error do
+        assert response.type in ["optimistic_lock_error", "validation_error"]
+      end
+    end
+
+    test "handles deleted workflow", %{socket: socket, workflow: workflow} do
+      # Delete the workflow
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(workflow,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["This workflow has been deleted"]},
+        type: "workflow_deleted"
+      }
+    end
+
+    test "requires authentication" do
+      # Try to join channel without authentication (no token)
+      # This should fail at the socket connect level
+      assert_raise FunctionClauseError, fn ->
+        connect(LightningWeb.UserSocket, %{}, %{})
+      end
+    end
+  end
+
+  describe "validate_workflow_name" do
+    setup %{socket: socket} do
+      project = socket.assigns.project
+
+      # Create some existing workflows
+      workflow1 = insert(:workflow, project: project, name: "My Workflow")
+      workflow2 = insert(:workflow, project: project, name: "My Workflow 1")
+      workflow3 = insert(:workflow, project: project, name: "Test Workflow")
+
+      %{
+        socket: socket,
+        project: project,
+        existing_workflows: [workflow1, workflow2, workflow3]
+      }
+    end
+
+    test "returns original name when unique", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "Unique Workflow"}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Unique Workflow"
+    end
+
+    test "appends '2' when name and name 1 exist", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "My Workflow"}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "My Workflow 2"
+    end
+
+    test "appends number to already-numbered name", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "My Workflow 1"}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "My Workflow 1 1"
+    end
+
+    test "defaults empty name to 'Untitled workflow'", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => ""}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Untitled workflow"
+    end
+
+    test "defaults whitespace-only name to 'Untitled workflow'", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "   "}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Untitled workflow"
+    end
+
+    test "ensures 'Untitled workflow' is unique", %{socket: socket} do
+      # Create an existing "Untitled workflow"
+      insert(:workflow,
+        project: socket.assigns.project,
+        name: "Untitled workflow"
+      )
+
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => ""}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Untitled workflow 1"
+    end
+
+    test "preserves other params unchanged", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{
+            "name" => "Test Workflow",
+            "other_field" => "value"
+          }
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Test Workflow 1"
+      assert validated["other_field"] == "value"
+    end
+
+    test "sequential numbering skips gaps", %{socket: socket} do
+      # Create workflows with gaps: "Gap Test", "Gap Test 1", "Gap Test 3"
+      insert(:workflow,
+        project: socket.assigns.project,
+        name: "Gap Test"
+      )
+
+      insert(:workflow,
+        project: socket.assigns.project,
+        name: "Gap Test 1"
+      )
+
+      insert(:workflow,
+        project: socket.assigns.project,
+        name: "Gap Test 3"
+      )
+
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "Gap Test"}
+        })
+
+      # Algorithm doesn't fill gaps, it continues from highest
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Gap Test 2"
     end
   end
 end

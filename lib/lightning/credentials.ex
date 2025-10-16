@@ -22,7 +22,6 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.CredentialBody
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.OauthClient
-  alias Lightning.Credentials.OauthToken
   alias Lightning.Credentials.OauthValidation
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
@@ -49,9 +48,7 @@ defmodule Lightning.Credentials do
 
     credentials_with_empty_body =
       for credential <- credentials_to_update,
-          {:ok, updated_credential} <- [
-            update_credential(credential, %{body: %{}})
-          ],
+          {:ok, updated_credential} <- [clear_credential_bodies(credential)],
           do: updated_credential
 
     credentials_to_delete =
@@ -68,6 +65,17 @@ defmodule Lightning.Credentials do
       end)
 
     {:ok, %{deleted_count: deleted_count}}
+  end
+
+  defp clear_credential_bodies(credential) do
+    credential = Repo.preload(credential, :credential_bodies)
+
+    Enum.each(credential.credential_bodies, fn cb ->
+      CredentialBody.changeset(cb, %{body: %{}})
+      |> Repo.update()
+    end)
+
+    {:ok, Repo.reload!(credential) |> Repo.preload(:credential_bodies)}
   end
 
   @doc """
@@ -100,7 +108,8 @@ defmodule Lightning.Credentials do
           :user,
           :project_credentials,
           :projects,
-          oauth_token: :oauth_client
+          :credential_bodies,
+          :oauth_client
         ],
         order_by: [asc: fragment("lower(?)", c.name)],
         group_by: c.id
@@ -118,7 +127,7 @@ defmodule Lightning.Credentials do
   defp list_credentials_query(user_id) do
     from(c in Credential,
       where: c.user_id == ^user_id,
-      preload: [:projects, :user, oauth_token: :oauth_client]
+      preload: [:projects, :user, :credential_bodies, :oauth_client]
     )
   end
 
@@ -150,19 +159,38 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Creates a new credential.
+  Gets a credential body for a specific environment.
 
-  For regular credentials, this simply inserts the changeset.
-  For OAuth credentials, this creates a new OAuth token with the provided
-  oauth_token data and associates it with the credential in a 1:1 relationship.
+  Returns nil if no body exists for the given credential and environment combination.
+
+  ## Examples
+
+      iex> get_credential_body(credential_id, "production")
+      %CredentialBody{name: "production", body: %{...}}
+
+      iex> get_credential_body(credential_id, "nonexistent")
+      nil
+  """
+  @spec get_credential_body(String.t(), String.t()) :: CredentialBody.t() | nil
+  def get_credential_body(credential_id, env_name) do
+    from(cb in CredentialBody,
+      where: cb.credential_id == ^credential_id and cb.name == ^env_name
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Creates a new credential with its credential bodies.
 
   ## Parameters
     * `attrs` - Map of attributes for the credential including:
-      * `user_id` - User ID
-      * `schema` - Schema type ("oauth" for OAuth credentials)
+      * `user_id` - User ID (required)
+      * `name` - Credential name (required)
+      * `schema` - Schema type (e.g., "oauth", "raw", etc.)
       * `oauth_client_id` - OAuth client ID (for OAuth credentials)
-      * `body` - Credential configuration data
-      * `oauth_token` - OAuth token data (for OAuth credentials)
+      * `credential_bodies` - List of credential body maps, each containing:
+        * `name` - Environment name (e.g., "production", "staging")
+        * `body` - Credential configuration data
       * `expected_scopes` - List of expected scopes (for OAuth credentials)
 
   ## Returns
@@ -172,85 +200,223 @@ defmodule Lightning.Credentials do
   @spec create_credential(map()) :: {:ok, Credential.t()} | {:error, any()}
   def create_credential(attrs \\ %{}) do
     attrs = normalize_keys(attrs)
-    changeset = change_credential(%Credential{}, attrs)
+    credential_bodies = get_credential_bodies(attrs)
 
-    build_create_multi(changeset, attrs)
-    |> derive_events(changeset)
-    |> Repo.transaction()
-    |> handle_transaction_result()
-  end
-
-  defp build_create_multi(changeset, attrs) do
-    if oauth_credential?(attrs) do
-      build_oauth_create_multi(changeset, attrs)
-    else
-      # Credential environments foundation: During the migration period, we maintain
-      # dual storage where both credentials.body and credential_bodies contain the same data.
-      # Once the runtime switches to using credential_bodies exclusively, remove this
-      # credential_body creation and the credentials.body field will become unused.
-      Multi.new()
-      |> Multi.insert(:credential, changeset)
-      |> Multi.insert(:credential_body, fn %{credential: credential} ->
-        %CredentialBody{}
-        |> CredentialBody.changeset(%{
-          credential_id: credential.id,
-          name: "main",
-          body: attrs |> coerce_json_field("body") |> Map.get("body")
-        })
-      end)
+    with :ok <- validate_credential_bodies(credential_bodies, attrs),
+         changeset <- change_credential(%Credential{}, attrs) do
+      build_create_multi(changeset, credential_bodies)
+      |> derive_events(changeset)
+      |> Repo.transaction()
+      |> handle_transaction_result()
     end
   end
 
-  defp oauth_credential?(attrs), do: attrs["schema"] == "oauth"
+  defp build_create_multi(changeset, credential_bodies) do
+    multi = Multi.new() |> Multi.insert(:credential, changeset)
 
-  defp build_oauth_create_multi(changeset, %{"oauth_token" => token} = attrs) do
-    Multi.new()
-    |> Multi.run(:prepare_token_data, fn _repo, _changes ->
-      prepare_oauth_token_data(token, attrs)
-    end)
-    |> Multi.insert(:credential, changeset)
-    |> Multi.insert(:credential_body, fn %{credential: credential} ->
-      # Environments migration: Creating matching credential_body for new credentials.
-      # When environments go live, this becomes the primary storage and credentials.body
-      # can be deprecated. The "main" environment represents the current single environment.
-      %CredentialBody{}
-      |> CredentialBody.changeset(%{
-        credential_id: credential.id,
-        name: "main",
-        body: attrs |> coerce_json_field("body") |> Map.get("body")
-      })
-    end)
-    |> Multi.insert(:oauth_token, fn %{
-                                       prepare_token_data: token_attrs,
-                                       credential_body: cb
-                                     } ->
-      token_attrs
-      |> Map.put(:credential_body_id, cb.id)
-      |> then(&OauthToken.changeset(%OauthToken{}, &1))
-    end)
-    |> Multi.update(:update_credential, fn %{
-                                             oauth_token: fresh_token,
-                                             credential: credential
-                                           } ->
-      credential
-      |> Ecto.Changeset.change(oauth_token_id: fresh_token.id)
+    schema_name = Ecto.Changeset.get_field(changeset, :schema)
+
+    credential_bodies
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {body_attrs, index}, acc ->
+      acc
+      |> Multi.insert(:"credential_body_#{index}", fn %{credential: credential} ->
+        %CredentialBody{}
+        |> CredentialBody.changeset(%{
+          credential_id: credential.id,
+          name: body_attrs["name"],
+          body: body_attrs["body"]
+        })
+        |> cast_credential_body_change(schema_name)
+      end)
     end)
   end
 
-  @spec prepare_oauth_token_data(map(), map()) ::
-          {:ok, map()} | {:error, OauthValidation.Error.t()}
-  defp prepare_oauth_token_data(token_data, attrs) do
-    with {:ok, _} <- OauthValidation.validate_token_data(token_data),
-         {:ok, scopes} <- OauthValidation.extract_scopes(token_data),
-         :ok <- validate_expected_scopes(token_data, attrs) do
-      {:ok,
-       %{
-         user_id: attrs["user_id"],
-         oauth_client_id: attrs["oauth_client_id"],
-         scopes: scopes,
-         body: token_data,
-         last_refreshed: DateTime.utc_now() |> DateTime.truncate(:second)
-       }}
+  @doc """
+  Updates an existing credential and its credential bodies.
+
+  ## Parameters
+    * `credential` - The credential to update
+    * `attrs` - Map of attributes to update, including:
+      * `credential_bodies` - List of credential body maps to create/update
+
+  ## Returns
+    * `{:ok, credential}` - Successfully updated credential
+    * `{:error, error}` - Error with update process
+  """
+  @spec update_credential(Credential.t(), map()) ::
+          {:ok, Credential.t()} | {:error, any()}
+  def update_credential(%Credential{} = credential, attrs) do
+    attrs = normalize_keys(attrs)
+
+    credential_bodies =
+      attrs
+      |> get_credential_bodies()
+      |> then(fn bodies ->
+        if credential.schema == "oauth" do
+          preserve_refresh_tokens(bodies, credential)
+        else
+          bodies
+        end
+      end)
+
+    with :ok <-
+           validate_credential_bodies(
+             credential_bodies,
+             attrs,
+             credential.schema
+           ),
+         changeset <- change_credential(credential, attrs) do
+      build_update_multi(credential, changeset, credential_bodies)
+      |> derive_events(changeset)
+      |> Repo.transaction()
+      |> handle_transaction_result()
+    end
+  end
+
+  defp build_update_multi(credential, changeset, credential_bodies) do
+    schema_name = Ecto.Changeset.get_field(changeset, :schema)
+    delete_environments = Map.get(changeset.params, "delete_environments", [])
+
+    Multi.new()
+    |> Multi.update(:credential, changeset)
+    |> add_environment_deletions(credential.id, delete_environments)
+    |> add_credential_body_upserts(credential.id, credential_bodies, schema_name)
+  end
+
+  defp add_environment_deletions(multi, _credential_id, []), do: multi
+
+  defp add_environment_deletions(multi, credential_id, delete_environments) do
+    Enum.reduce(delete_environments, multi, fn env_name, acc ->
+      Multi.run(acc, :"delete_env_#{env_name}", fn _repo, _changes ->
+        delete_credential_body_if_exists(credential_id, env_name)
+      end)
+    end)
+  end
+
+  defp delete_credential_body_if_exists(credential_id, env_name) do
+    case Repo.get_by(CredentialBody,
+           credential_id: credential_id,
+           name: env_name
+         ) do
+      nil ->
+        {:ok, :not_found}
+
+      credential_body ->
+        Repo.delete(credential_body)
+        {:ok, :deleted}
+    end
+  end
+
+  defp add_credential_body_upserts(multi, _credential_id, [], _schema_name),
+    do: multi
+
+  defp add_credential_body_upserts(
+         multi,
+         credential_id,
+         credential_bodies,
+         schema_name
+       ) do
+    credential_bodies
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {body_attrs, index}, acc ->
+      Multi.run(acc, :"credential_body_#{index}", fn _repo, _changes ->
+        upsert_credential_body(credential_id, body_attrs, schema_name)
+      end)
+    end)
+  end
+
+  defp upsert_credential_body(credential_id, body_attrs, schema_name) do
+    environment_name = body_attrs["name"]
+    body_data = body_attrs["body"]
+
+    case Repo.get_by(CredentialBody,
+           credential_id: credential_id,
+           name: environment_name
+         ) do
+      nil ->
+        %CredentialBody{}
+        |> CredentialBody.changeset(%{
+          credential_id: credential_id,
+          name: environment_name,
+          body: body_data
+        })
+        |> cast_credential_body_change(schema_name)
+        |> Repo.insert()
+
+      credential_body ->
+        credential_body
+        |> CredentialBody.changeset(%{body: body_data})
+        |> cast_credential_body_change(schema_name)
+        |> Repo.update()
+    end
+  end
+
+  defp get_credential_bodies(attrs) do
+    case Map.get(attrs, "credential_bodies") do
+      nil ->
+        []
+
+      bodies when is_list(bodies) ->
+        Enum.map(bodies, &normalize_body_attrs/1)
+
+      _ ->
+        []
+    end
+  end
+
+  defp normalize_body_attrs(body_attrs) when is_map(body_attrs) do
+    body_attrs
+    |> Map.new(fn {k, v} -> {to_string(k), v} end)
+    |> then(fn attrs ->
+      env_name = attrs["name"]
+      body_data = attrs["body"]
+      actual_body = extract_actual_body(body_data, env_name)
+
+      %{"name" => env_name, "body" => actual_body}
+    end)
+    |> coerce_json_field("body")
+  end
+
+  defp extract_actual_body(%{} = body_data, env_name)
+       when is_map_key(body_data, env_name) do
+    parse_nested_value(Map.get(body_data, env_name))
+  end
+
+  defp extract_actual_body(map, _env_name) when is_map(map), do: map
+
+  defp extract_actual_body(_, _env_name), do: %{}
+
+  defp parse_nested_value(json_string) when is_binary(json_string) do
+    case Jason.decode(json_string) do
+      {:ok, decoded} -> decoded
+      {:error, _} -> %{}
+    end
+  end
+
+  defp parse_nested_value(map) when is_map(map), do: map
+
+  defp parse_nested_value(_), do: %{}
+
+  defp validate_credential_bodies(credential_bodies, attrs, schema \\ nil) do
+    credential_schema = schema || Map.get(attrs, "schema")
+
+    if credential_schema == "oauth" do
+      credential_bodies
+      |> Enum.reduce_while(:ok, fn body_attrs, _acc ->
+        case validate_oauth_body(body_attrs["body"], attrs) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+      end)
+    else
+      :ok
+    end
+  end
+
+  defp validate_oauth_body(body_data, attrs) do
+    with {:ok, _} <- OauthValidation.validate_token_data(body_data) do
+      validate_expected_scopes(body_data, attrs)
     end
   end
 
@@ -261,176 +427,6 @@ defmodule Lightning.Credentials do
       :ok
     else
       OauthValidation.validate_scope_grant(token_data, expected_scopes)
-    end
-  end
-
-  @doc """
-  Updates an existing credential.
-
-  For regular credentials, this simply updates the changeset.
-  For OAuth credentials, this updates the associated OAuth token
-  with token data provided in the oauth_token parameter.
-
-  ## Parameters
-    * `credential` - The credential to update
-    * `attrs` - Map of attributes to update
-
-  ## Returns
-    * `{:ok, credential}` - Successfully updated credential
-    * `{:error, error}` - Error with update process
-  """
-  @spec update_credential(Credential.t(), map()) ::
-          {:ok, Credential.t()} | {:error, any()}
-  def update_credential(%Credential{} = credential, attrs) do
-    attrs = normalize_keys(attrs)
-    changeset = change_credential(credential, attrs)
-
-    build_update_multi(credential, changeset, attrs)
-    |> derive_events(changeset)
-    |> Repo.transaction()
-    |> handle_transaction_result()
-  end
-
-  defp build_update_multi(credential, changeset, attrs) do
-    if should_update_oauth?(credential, attrs) do
-      build_oauth_update_multi(credential, changeset, attrs)
-    else
-      Multi.new()
-      |> Multi.update(:credential, changeset)
-      |> maybe_sync_credential_body(credential, attrs)
-    end
-  end
-
-  defp maybe_sync_credential_body(multi, credential, attrs) do
-    if Map.has_key?(attrs, "body") do
-      multi
-      |> Multi.run(:credential_body, fn _repo, _changes ->
-        sync_credential_body_for_update(credential, attrs)
-      end)
-    else
-      multi
-    end
-  end
-
-  defp sync_credential_body_for_update(credential, attrs) do
-    # Synchronization layer: Keep credential_bodies in sync with credentials table changes.
-    # This ensures data consistency during the environments transition period.
-    # Remove this function when credential_bodies becomes the source of truth.
-    processed_attrs = attrs |> coerce_json_field("body")
-
-    case get_or_create_main_credential_body(credential.id) do
-      {:ok, credential_body} ->
-        credential_body
-        |> CredentialBody.changeset(%{
-          body: processed_attrs["body"]
-        })
-        |> Repo.update()
-
-      {:error, :not_found} ->
-        # Handle credentials created before the environments migration
-        %CredentialBody{}
-        |> CredentialBody.changeset(%{
-          credential_id: credential.id,
-          name: "main",
-          body: processed_attrs["body"]
-        })
-        |> Repo.insert()
-    end
-  end
-
-  defp should_update_oauth?(credential, attrs) do
-    credential.schema == "oauth" && Map.has_key?(attrs, "oauth_token")
-  end
-
-  defp build_oauth_update_multi(credential, changeset, attrs) do
-    credential = Repo.preload(credential, :oauth_token)
-
-    Multi.new()
-    |> Multi.run(:prepare_update_data, fn _repo, _changes ->
-      prepare_oauth_update_data(
-        credential.oauth_token,
-        attrs["oauth_token"],
-        attrs
-      )
-    end)
-    |> Multi.update(:oauth_token, fn %{prepare_update_data: token_attrs} ->
-      OauthToken.update_changeset(credential.oauth_token, token_attrs)
-    end)
-    |> Multi.update(:credential, fn %{oauth_token: token} ->
-      changeset
-      |> Ecto.Changeset.put_change(
-        :body,
-        Map.get(attrs, "body", credential.body)
-      )
-      |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
-    end)
-    |> Multi.run(:credential_body, fn _repo, %{credential: updated_credential} ->
-      # Dual-write pattern: Update both credentials.body and credential_bodies during migration.
-      # When environments are fully implemented, remove this sync logic and update only
-      # the specific environment's credential_body instead of the "main" environment.
-      processed_attrs = attrs |> coerce_json_field("body")
-
-      case get_or_create_main_credential_body(updated_credential.id) do
-        {:ok, credential_body} ->
-          credential_body
-          |> CredentialBody.changeset(%{
-            body: Map.get(processed_attrs, "body", credential.body)
-          })
-          |> Repo.update()
-
-        _error ->
-          # Backfill credential_body for existing OAuth credentials
-          %CredentialBody{}
-          |> CredentialBody.changeset(%{
-            credential_id: updated_credential.id,
-            name: "main",
-            body: Map.get(processed_attrs, "body", credential.body)
-          })
-          |> Repo.insert()
-      end
-    end)
-  end
-
-  defp get_or_create_main_credential_body(credential_id) do
-    # Helper for the transition period. When environments are fully implemented,
-    # this function should be removed and callers should work directly with
-    # the appropriate environment's credential_body rather than defaulting to "main".
-    case Repo.get_by(Lightning.Credentials.CredentialBody,
-           credential_id: credential_id,
-           name: "main"
-         ) do
-      nil ->
-        {:error, :not_found}
-
-      credential_body ->
-        {:ok, credential_body}
-    end
-  end
-
-  defp prepare_oauth_update_data(existing_token, new_token_data, attrs) do
-    complete_token_data =
-      ensure_refresh_token(existing_token.body, new_token_data)
-
-    with {:ok, _} <- OauthValidation.validate_token_data(complete_token_data),
-         {:ok, scopes} <- OauthValidation.extract_scopes(complete_token_data),
-         :ok <- validate_expected_scopes(complete_token_data, attrs) do
-      {:ok,
-       %{
-         body: complete_token_data,
-         scopes: scopes,
-         last_refreshed: DateTime.utc_now() |> DateTime.truncate(:second)
-       }}
-    end
-  end
-
-  defp ensure_refresh_token(existing_body, new_body)
-       when is_map(existing_body) and is_map(new_body) do
-    case {existing_body["refresh_token"], new_body["refresh_token"]} do
-      {existing, nil} when existing != nil ->
-        Map.put(new_body, "refresh_token", existing)
-
-      _ ->
-        new_body
     end
   end
 
@@ -458,7 +454,7 @@ defmodule Lightning.Credentials do
            :user,
            :project_credentials,
            :projects,
-           oauth_token: :oauth_client
+           :credential_bodies
          ])}
     end
   end
@@ -467,8 +463,6 @@ defmodule Lightning.Credentials do
   Creates a credential schema from credential json schema.
   """
   @spec get_schema(String.t()) :: Credentials.Schema.t()
-  # false positive, it's safe file path (path from config)
-  # sobelow_skip ["Traversal.FileModule"]
   def get_schema(schema_name) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
@@ -482,11 +476,10 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp cast_body_change(
-         %Ecto.Changeset{valid?: true, changes: %{body: body}} = changeset
+  defp cast_credential_body_change(
+         %Ecto.Changeset{valid?: true, changes: %{body: body}} = changeset,
+         schema_name
        ) do
-    schema_name = Ecto.Changeset.get_field(changeset, :schema)
-
     case put_typed_body(body, schema_name) do
       {:ok, updated_body} ->
         Ecto.Changeset.put_change(changeset, :body, updated_body)
@@ -496,10 +489,10 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp cast_body_change(changeset), do: changeset
+  defp cast_credential_body_change(changeset, _schema_name), do: changeset
 
   defp put_typed_body(body, schema_name)
-       when schema_name in ["raw", "salesforce_oauth", "googlesheets", "oauth"],
+       when schema_name in ["raw", "oauth"],
        do: {:ok, body}
 
   defp put_typed_body(body, schema_name) do
@@ -514,6 +507,23 @@ defmodule Lightning.Credentials do
 
       {:ok, updated_body}
     end
+  end
+
+  defp extract_environment_bodies(changes) do
+    Enum.reduce(changes, [], fn
+      {key, credential_body}, acc when is_atom(key) ->
+        case Atom.to_string(key) do
+          "credential_body_" <> _ ->
+            [{credential_body.name, credential_body.body} | acc]
+
+          _ ->
+            acc
+        end
+
+      _, acc ->
+        acc
+    end)
+    |> Enum.reverse()
   end
 
   defp derive_events(
@@ -533,13 +543,17 @@ defmodule Lightning.Credentials do
           end)
 
         multi
+        |> Multi.run(:collect_env_bodies, fn _repo, changes ->
+          {:ok, extract_environment_bodies(changes)}
+        end)
         |> Multi.insert(
           :audit,
-          fn %{credential: credential} ->
+          fn %{credential: credential, collect_env_bodies: env_bodies} ->
             Audit.user_initiated_event(
               if(state == :built, do: "created", else: "updated"),
               credential,
-              changeset
+              changeset,
+              env_bodies
             )
           end
         )
@@ -579,16 +593,22 @@ defmodule Lightning.Credentials do
            data: %Lightning.Projects.ProjectCredential{}
          } = changeset
        ) do
-    Multi.insert(
-      multi,
-      {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
+    project_id = Ecto.Changeset.get_field(changeset, :project_id)
+
+    multi
+    |> Multi.insert(
+      {:audit, project_id},
       fn %{credential: credential} ->
         Audit.user_initiated_event("added_to_project", credential, %{
           before: %{project_id: nil},
-          after: %{
-            project_id: Ecto.Changeset.get_field(changeset, :project_id)
-          }
+          after: %{project_id: project_id}
         })
+      end
+    )
+    |> Multi.run(
+      {:propagate_to_descendants, project_id},
+      fn _repo, %{credential: credential} ->
+        propagate_credential_to_descendants(credential.id, project_id)
       end
     )
   end
@@ -598,6 +618,34 @@ defmodule Lightning.Credentials do
          data: %Lightning.Projects.ProjectCredential{}
        }) do
     multi
+  end
+
+  @spec propagate_credential_to_descendants(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  defp propagate_credential_to_descendants(credential_id, project_id) do
+    current_time = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    credential_rows =
+      Lightning.Projects.list_workspace_projects(project_id)
+      |> Map.get(:descendants, [])
+      |> Enum.map(fn descendant ->
+        %{
+          project_id: descendant.id,
+          credential_id: credential_id,
+          inserted_at: current_time,
+          updated_at: current_time
+        }
+      end)
+
+    {count, _} =
+      Repo.insert_all(
+        Lightning.Projects.ProjectCredential,
+        credential_rows,
+        on_conflict: :nothing,
+        conflict_target: [:project_id, :credential_id]
+      )
+
+    {:ok, count}
   end
 
   @doc """
@@ -630,6 +678,7 @@ defmodule Lightning.Credentials do
 
   The function will also perform necessary side effects such as:
     - Removing associations of the credential.
+    - Revoking OAuth tokens if the credential is an OAuth credential.
     - Notifying the owner of the credential about the scheduled deletion.
 
   ## Parameters
@@ -660,14 +709,14 @@ defmodule Lightning.Credentials do
     Multi.new()
     |> Multi.update(:credential, changeset)
     |> Multi.run(:preloaded, fn repo, %{credential: cred} ->
-      {:ok, repo.preload(cred, [:oauth_token])}
+      {:ok, repo.preload(cred, [:credential_bodies, :oauth_client])}
     end)
     |> Multi.run(:associations, fn _repo, %{preloaded: cred} ->
       remove_credential_associations(cred)
       {:ok, cred}
     end)
     |> Multi.run(:revoke_oauth, fn _repo, %{preloaded: cred} ->
-      maybe_revoke_oauth(cred.oauth_token)
+      maybe_revoke_oauth_tokens(cred)
       {:ok, cred}
     end)
     |> Multi.run(:notify, fn _repo, %{preloaded: cred} ->
@@ -696,92 +745,70 @@ defmodule Lightning.Credentials do
     })
   end
 
-  defp maybe_revoke_oauth(nil), do: :ok
-  defp maybe_revoke_oauth(%OauthToken{oauth_client_id: nil}), do: :ok
+  defp maybe_revoke_oauth_tokens(%Credential{schema: "oauth"} = credential) do
+    if credential.oauth_client_id do
+      client = Repo.get(OauthClient, credential.oauth_client_id)
 
-  defp maybe_revoke_oauth(
-         %OauthToken{
-           oauth_client_id: oauth_client_id,
-           body: body
-         } = oauth_token
-       ) do
-    client = Repo.get(OauthClient, oauth_client_id)
-
-    if client.revocation_endpoint do
-      case OauthHTTPClient.revoke_token(client, body) do
-        :ok ->
-          # Audit successful revocation
-          revocation_metadata = %{
-            client_id: oauth_client_id,
-            revocation_endpoint: client.revocation_endpoint,
-            success: true
-          }
-
-          # Find the credential using the oauth_token relationship
-          # Note: We need to find the credential that has this oauth_token_id
-          credential =
-            from(c in Credential, where: c.oauth_token_id == ^oauth_token.id)
-            |> Repo.one()
-            |> Repo.preload(:user)
-
-          if credential do
-            audit_changeset =
-              Audit.oauth_token_revoked_event(credential, revocation_metadata)
-
-            save_audit_event(audit_changeset)
-          end
-
-          Logger.info("Successfully revoked OAuth token")
-          :ok
-
-        {:error, error} ->
-          # Audit failed revocation but don't fail the deletion process
-          revocation_metadata = %{
-            client_id: oauth_client_id,
-            revocation_endpoint: client.revocation_endpoint,
-            success: false,
-            error: inspect(error)
-          }
-
-          # Find the credential using the oauth_token relationship
-          credential =
-            from(c in Credential, where: c.oauth_token_id == ^oauth_token.id)
-            |> Repo.one()
-            |> Repo.preload(:user)
-
-          if credential do
-            audit_changeset =
-              Audit.oauth_token_revoked_event(credential, revocation_metadata)
-
-            save_audit_event(audit_changeset)
-          end
-
-          Logger.warning("Failed to revoke OAuth token: #{inspect(error)}")
-          :ok
+      if client && client.revocation_endpoint do
+        credential.credential_bodies
+        |> Enum.each(fn credential_body ->
+          revoke_oauth_token(credential, client, credential_body)
+        end)
       end
-    else
-      :ok
+    end
+
+    :ok
+  end
+
+  defp maybe_revoke_oauth_tokens(_credential), do: :ok
+
+  defp revoke_oauth_token(credential, client, credential_body) do
+    case OauthHTTPClient.revoke_token(client, credential_body.body) do
+      :ok ->
+        revocation_metadata = %{
+          client_id: client.id,
+          revocation_endpoint: client.revocation_endpoint,
+          environment: credential_body.name,
+          success: true
+        }
+
+        credential = Repo.preload(credential, :user)
+
+        audit_changeset =
+          Audit.oauth_token_revoked_event(credential, revocation_metadata)
+
+        save_audit_event(audit_changeset)
+
+        Logger.info(
+          "Successfully revoked OAuth token for environment: #{credential_body.name}"
+        )
+
+        :ok
+
+      {:error, error} ->
+        revocation_metadata = %{
+          client_id: client.id,
+          revocation_endpoint: client.revocation_endpoint,
+          environment: credential_body.name,
+          success: false,
+          error: inspect(error)
+        }
+
+        credential = Repo.preload(credential, :user)
+
+        audit_changeset =
+          Audit.oauth_token_revoked_event(credential, revocation_metadata)
+
+        save_audit_event(audit_changeset)
+
+        Logger.warning(
+          "Failed to revoke OAuth token for environment #{credential_body.name}: #{inspect(error)}"
+        )
+
+        :ok
     end
   end
 
-  # Helper function to update credential with audit event in a transaction
-  defp update_credential_with_audit(credential, attrs, audit_changeset) do
-    Multi.new()
-    |> Multi.run(:update_result, fn _repo, _changes ->
-      update_credential(credential, attrs)
-    end)
-    |> Multi.insert(:audit_event, audit_changeset)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{update_result: updated_credential}} ->
-        {:ok, updated_credential}
-
-      {:error, _operation, changeset, _changes} ->
-        {:error, changeset}
-    end
-  end
-
-  # Helper function to save audit events independently
   defp save_audit_event(audit_changeset) do
     case Repo.insert(audit_changeset) do
       {:ok, _audit} ->
@@ -789,7 +816,6 @@ defmodule Lightning.Credentials do
 
       {:error, changeset} ->
         Logger.error("Failed to save audit event: #{inspect(changeset.errors)}")
-        # Don't fail the main operation
         :ok
     end
   end
@@ -863,35 +889,35 @@ defmodule Lightning.Credentials do
 
   """
   def change_credential(%Credential{} = credential, attrs \\ %{}) do
-    Credential.changeset(
-      credential,
-      attrs |> normalize_keys() |> coerce_json_field("body")
-    )
-    |> cast_body_change()
+    Credential.changeset(credential, attrs |> normalize_keys())
   end
 
-  @spec sensitive_values_for(Ecto.UUID.t() | Credential.t() | nil) :: [any()]
-  def sensitive_values_for(id) when is_binary(id) do
-    sensitive_values_for(get_credential!(id))
+  @doc """
+  Extracts sensitive values from a credential body map.
+
+  ## Examples
+
+      iex> sensitive_values_from_body(%{"password" => "secret123"})
+      ["secret123"]
+  """
+  @spec sensitive_values_from_body(map() | nil) :: [any()]
+  def sensitive_values_from_body(body) when is_map(body) do
+    SensitiveValues.secret_values(body)
   end
 
-  def sensitive_values_for(nil), do: []
+  def sensitive_values_from_body(_), do: []
 
-  def sensitive_values_for(%Credential{body: body}) do
-    if is_nil(body) do
-      []
-    else
-      SensitiveValues.secret_values(body)
-    end
-  end
+  @doc """
+  Extracts basic auth strings from a credential body map.
 
-  @spec basic_auth_for(Credential.t() | nil) :: [String.t()]
-  def basic_auth_for(%Credential{body: body}) when is_map(body) do
-    usernames =
-      body
-      |> Map.take(["username", "email"])
-      |> Map.values()
+  ## Examples
 
+      iex> basic_auth_from_body(%{"username" => "user", "password" => "pass"})
+      ["dXNlcjpwYXNz"]
+  """
+  @spec basic_auth_from_body(map() | nil) :: [String.t()]
+  def basic_auth_from_body(body) when is_map(body) do
+    usernames = body |> Map.take(["username", "email"]) |> Map.values()
     password = Map.get(body, "password", "")
 
     usernames
@@ -901,122 +927,312 @@ defmodule Lightning.Credentials do
     end)
   end
 
-  def basic_auth_for(_credential), do: []
+  def basic_auth_from_body(_), do: []
 
+  # Existing functions refactored to use the body-based functions
   @doc """
-  Refreshes an OAuth token if it has expired, or returns the credential unchanged.
+  Retrieves sensitive values for a credential in a specific environment.
 
-  This function checks the freshness of a credential's associated OAuth token and refreshes
-  it if necessary. For non-OAuth credentials, it simply returns the credential unchanged.
-
-  ## Refresh Logic
-  The function handles several cases:
-  1. Non-OAuth credentials: Returns the credential unchanged
-  2. OAuth credential with missing token: Returns the credential unchanged
-  3. OAuth credential with missing client: Returns the credential unchanged
-  4. OAuth credential with fresh token: Returns the credential unchanged
-  5. OAuth credential with expired token: Attempts to refresh the token
+  Used primarily for scrubbing historical dataclips where we need to look up
+  the credential body by environment.
 
   ## Parameters
-   - `credential`: The `Credential` struct to check and potentially refresh
-
-  ## Returns
-   - `{:ok, credential}`: If the credential was fresh or successfully refreshed
-   - `{:error, error}`: If refreshing the token failed
+    - `id_or_credential`: Credential ID, Credential struct, or nil
+    - `environment`: Environment name (defaults to "main")
 
   ## Examples
 
-     iex> maybe_refresh_token(non_oauth_credential)
-     {:ok, non_oauth_credential}
-
-     iex> maybe_refresh_token(fresh_oauth_credential)
-     {:ok, fresh_oauth_credential}
-
-     iex> maybe_refresh_token(expired_oauth_credential)
-     {:ok, refreshed_oauth_credential}
+      iex> sensitive_values_for(credential, "production")
+      ["secret123", "api_key_xyz"]
   """
-  @spec maybe_refresh_token(Credential.t()) ::
-          {:ok, Credential.t()} | {:error, oauth_refresh_error() | any()}
-  def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
-    credential
-    |> Repo.preload(oauth_token: :oauth_client)
-    |> refresh_oauth_token()
+  @spec sensitive_values_for(Ecto.UUID.t() | Credential.t() | nil, String.t()) ::
+          [any()]
+  def sensitive_values_for(id_or_credential, environment \\ "main")
+
+  def sensitive_values_for(id, environment) when is_binary(id) do
+    sensitive_values_for(get_credential!(id), environment)
   end
 
-  def maybe_refresh_token(%Credential{} = credential) do
-    {:ok, credential}
-  end
+  def sensitive_values_for(nil, _environment), do: []
 
-  defp refresh_oauth_token(%Credential{oauth_token: nil} = credential) do
-    {:ok, credential}
-  end
+  def sensitive_values_for(%Credential{} = credential, environment) do
+    credential = Repo.preload(credential, :credential_bodies)
 
-  defp refresh_oauth_token(
-         %Credential{oauth_token: %{oauth_client_id: nil}} = credential
-       ) do
-    {:ok, credential}
-  end
+    credential.credential_bodies
+    |> Enum.find(fn cb -> cb.name == environment end)
+    |> case do
+      nil ->
+        []
 
-  defp refresh_oauth_token(%Credential{oauth_token: oauth_token} = credential) do
-    if OauthToken.still_fresh?(oauth_token) do
-      {:ok, credential}
-    else
-      case OauthHTTPClient.refresh_token(
-             oauth_token.oauth_client,
-             oauth_token.body
-           ) do
-        {:ok, fresh_token} ->
-          refresh_metadata = %{
-            client_id: oauth_token.oauth_client_id,
-            scopes: oauth_token.scopes,
-            expires_in: Map.get(fresh_token, "expires_in"),
-            token_type: Map.get(fresh_token, "token_type", "Bearer")
-          }
-
-          audit_changeset =
-            Audit.oauth_token_refreshed_event(credential, refresh_metadata)
-
-          update_credential_with_audit(
-            credential,
-            %{oauth_token: fresh_token},
-            audit_changeset
-          )
-
-        {:error, %{error: "invalid_grant"} = error_response} ->
-          handle_oauth_token_refresh_failed(credential, error_response)
-
-        {:error, %{status: status} = error_response} when status in [400, 401] ->
-          handle_oauth_token_refresh_failed(credential, error_response)
-
-        {:error, %{status: status} = error_response} when status in [429, 503] ->
-          error_details =
-            Map.take(error_response, [:status, :error, :details])
-            |> Map.put(:error_type, "temporary_failure")
-            |> Map.put(:client_id, oauth_token.oauth_client_id)
-
-          audit_changeset =
-            Audit.oauth_token_refresh_failed_event(credential, error_details)
-
-          save_audit_event(audit_changeset)
-
-          {:error, :temporary_failure}
-
-        {:error, error} ->
-          audit_changeset =
-            Audit.oauth_token_refresh_failed_event(credential, inspect(error))
-
-          save_audit_event(audit_changeset)
-
-          {:error, error}
-      end
+      credential_body ->
+        sensitive_values_from_body(credential_body.body)
     end
   end
 
-  defp handle_oauth_token_refresh_failed(credential, error_response) do
+  @doc """
+  Retrieves basic auth strings for a credential in a specific environment.
+
+  Used primarily for scrubbing historical dataclips where we need to look up
+  the credential body by environment.
+
+  ## Parameters
+    - `credential`: Credential struct or nil
+    - `environment`: Environment name (defaults to "main")
+
+  ## Examples
+
+      iex> basic_auth_for(credential, "staging")
+      ["dXNlcjpwYXNz"]
+  """
+  @spec basic_auth_for(Credential.t() | nil, String.t()) :: [String.t()]
+  def basic_auth_for(credential, environment \\ "main")
+
+  def basic_auth_for(nil, _environment), do: []
+
+  def basic_auth_for(%Credential{} = credential, environment) do
+    credential = Repo.preload(credential, :credential_bodies)
+
+    credential.credential_bodies
+    |> Enum.find(fn cb -> cb.name == environment end)
+    |> case do
+      nil -> []
+      credential_body -> basic_auth_from_body(credential_body.body)
+    end
+  end
+
+  @doc """
+  Gets a credential body for an environment and refreshes OAuth tokens if expired.
+
+  This is the primary function for credential resolution during workflow execution.
+  It handles the full flow: fetch body → check expiration → refresh if needed → return final body.
+
+  ## Parameters
+    - `credential`: The credential struct
+    - `environment`: Environment name (e.g., "production", "staging")
+
+  ## Returns
+    - `{:ok, body}` - The credential body (with fresh tokens if OAuth was refreshed)
+    - `{:error, :environment_not_found}` - No body exists for this environment
+    - `{:error, oauth_refresh_error()}` - OAuth refresh failed
+  """
+  @spec resolve_credential_body(Credential.t(), String.t()) ::
+          {:ok, map()} | {:error, :environment_not_found | oauth_refresh_error()}
+  def resolve_credential_body(%Credential{} = credential, environment) do
+    case get_credential_body(credential.id, environment) do
+      nil ->
+        {:error, :environment_not_found}
+
+      %CredentialBody{body: body} = credential_body ->
+        if credential.schema == "oauth" && oauth_token_expired?(body) do
+          credential
+          |> Repo.preload(:oauth_client)
+          |> refresh_credential_body_token(credential_body)
+          |> case do
+            {:ok, %CredentialBody{body: fresh_body}} ->
+              {:ok, fresh_body}
+
+            {:error, reason} ->
+              {:error, reason}
+          end
+        else
+          {:ok, body}
+        end
+    end
+  end
+
+  defp refresh_credential_body_token(credential, credential_body) do
+    with {:ok, fresh_token} <-
+           OauthHTTPClient.refresh_token(
+             credential.oauth_client,
+             credential_body.body
+           ),
+         scopes <- extract_scopes_or_default(fresh_token) do
+      refresh_metadata = %{
+        client_id: credential.oauth_client_id,
+        environment: credential_body.name,
+        scopes: scopes,
+        expires_in: Map.get(fresh_token, "expires_in"),
+        token_type: Map.get(fresh_token, "token_type", "Bearer")
+      }
+
+      audit_changeset =
+        Audit.oauth_token_refreshed_event(credential, refresh_metadata)
+
+      updated_token =
+        Map.merge(credential_body.body, fresh_token)
+        |> ensure_refresh_token_preserved(credential_body.body)
+        |> normalize_token_expiry()
+
+      case CredentialBody.changeset(credential_body, %{body: updated_token})
+           |> Repo.update() do
+        {:ok, updated_cb} ->
+          save_audit_event(audit_changeset)
+          {:ok, updated_cb}
+
+        error ->
+          error
+      end
+    else
+      {:error, %{error: "invalid_grant"} = error_response} ->
+        handle_oauth_refresh_failed(credential, credential_body, error_response)
+
+      {:error, %{status: status} = error_response} when status in [400, 401] ->
+        handle_oauth_refresh_failed(credential, credential_body, error_response)
+
+      {:error, %{status: status} = error_response} when status in [429, 503] ->
+        error_details =
+          Map.take(error_response, [:status, :error, :details])
+          |> Map.put(:error_type, "temporary_failure")
+          |> Map.put(:client_id, credential.oauth_client_id)
+          |> Map.put(:environment, credential_body.name)
+
+        audit_changeset =
+          Audit.oauth_token_refresh_failed_event(credential, error_details)
+
+        save_audit_event(audit_changeset)
+        {:error, :temporary_failure}
+
+      {:error, error} ->
+        audit_changeset =
+          Audit.oauth_token_refresh_failed_event(
+            credential,
+            %{error: inspect(error), environment: credential_body.name}
+          )
+
+        save_audit_event(audit_changeset)
+        {:error, error}
+    end
+  end
+
+  defp ensure_refresh_token_preserved(merged_body, original_body) do
+    if is_nil(merged_body["refresh_token"]) && original_body["refresh_token"] do
+      Map.put(merged_body, "refresh_token", original_body["refresh_token"])
+    else
+      merged_body
+    end
+  end
+
+  defp preserve_refresh_tokens(credential_bodies, credential) do
+    existing_bodies =
+      credential
+      |> Repo.preload(:credential_bodies)
+      |> Map.get(:credential_bodies)
+      |> Enum.into(%{}, fn body -> {body.name, body} end)
+
+    Enum.map(credential_bodies, fn body_attrs ->
+      env_name = body_attrs["name"]
+      new_body = body_attrs["body"]
+
+      case Map.get(existing_bodies, env_name) do
+        nil ->
+          body_attrs
+
+        existing ->
+          updated_body =
+            if is_nil(new_body["refresh_token"]) &&
+                 existing.body["refresh_token"] do
+              Map.put(new_body, "refresh_token", existing.body["refresh_token"])
+            else
+              new_body
+            end
+
+          Map.put(body_attrs, "body", updated_body)
+      end
+    end)
+  end
+
+  defp extract_scopes_or_default(token) do
+    case OauthValidation.extract_scopes(token) do
+      {:ok, scopes} -> scopes
+      :error -> []
+    end
+  end
+
+  @doc """
+  Normalizes OAuth token expiry time to always use expires_at.
+
+  Converts relative expires_in to absolute expires_at timestamp based on current time.
+  If the token already has expires_at, returns it unchanged.
+
+  ## Examples
+
+      iex> normalize_token_expiry(%{"expires_in" => 3600})
+      %{"expires_in" => 3600, "expires_at" => 1234567890}
+
+      iex> normalize_token_expiry(%{"expires_at" => 1234567890})
+      %{"expires_at" => 1234567890}
+  """
+  @spec normalize_token_expiry(map()) :: map()
+  def normalize_token_expiry(token) when is_map(token) do
+    cond do
+      Map.has_key?(token, "expires_at") ->
+        token
+
+      Map.has_key?(token, "expires_in") ->
+        expires_in =
+          case token["expires_in"] do
+            n when is_integer(n) -> n
+            s when is_binary(s) -> String.to_integer(s)
+          end
+
+        expires_at =
+          DateTime.utc_now()
+          |> DateTime.add(expires_in, :second)
+          |> DateTime.to_unix()
+
+        Map.put(token, "expires_at", expires_at)
+
+      true ->
+        token
+    end
+  end
+
+  def normalize_token_expiry(token), do: token
+
+  @doc """
+  Checks if an OAuth token body is expired or expires soon.
+
+  Returns true if the token expires within the next 5 minutes (300 seconds buffer).
+  If expiry cannot be determined, conservatively returns true to trigger refresh.
+
+  ## Examples
+
+      iex> oauth_token_expired?(%{"expires_at" => future_timestamp})
+      false
+
+      iex> oauth_token_expired?(%{"expires_at" => soon_timestamp})
+      true
+  """
+  @spec oauth_token_expired?(map()) :: boolean()
+  def oauth_token_expired?(body) when is_map(body) do
+    case Map.get(body, "expires_at") do
+      expires_at when is_integer(expires_at) ->
+        current_time = DateTime.utc_now() |> DateTime.to_unix()
+        expires_at - current_time < 300
+
+      expires_at when is_binary(expires_at) ->
+        case Integer.parse(expires_at) do
+          {timestamp, ""} ->
+            current_time = DateTime.utc_now() |> DateTime.to_unix()
+            timestamp - current_time < 300
+
+          _ ->
+            true
+        end
+
+      nil ->
+        true
+    end
+  end
+
+  def oauth_token_expired?(_), do: true
+
+  defp handle_oauth_refresh_failed(credential, credential_body, error_response) do
     error_details =
       Map.take(error_response, [:status, :error, :details])
       |> Map.put(:error_type, "reauthorization_required")
-      |> Map.put(:client_id, credential.oauth_token.oauth_client_id)
+      |> Map.put(:client_id, credential.oauth_client_id)
+      |> Map.put(:environment, credential_body.name)
 
     audit_changeset =
       Audit.oauth_token_refresh_failed_event(credential, error_details)

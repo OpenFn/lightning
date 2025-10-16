@@ -25,7 +25,7 @@ defmodule Lightning.CollaborateTest do
       workflow: workflow
     } do
       assert {:ok, session_pid} =
-               Collaborate.start(user: user, workflow_id: workflow.id)
+               Collaborate.start(user: user, workflow: workflow)
 
       assert Process.alive?(session_pid)
 
@@ -47,10 +47,10 @@ defmodule Lightning.CollaborateTest do
       workflow: workflow
     } do
       assert {:ok, session_1} =
-               Collaborate.start(user: user, workflow_id: workflow.id)
+               Collaborate.start(user: user, workflow: workflow)
 
       assert {:ok, session_2} =
-               Collaborate.start(user: user, workflow_id: workflow.id)
+               Collaborate.start(user: user, workflow: workflow)
 
       refute session_1 == session_2, "Same user and workflow get new sessions"
 

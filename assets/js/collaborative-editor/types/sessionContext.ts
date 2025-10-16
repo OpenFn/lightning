@@ -21,10 +21,18 @@ export const AppConfigSchema = z.object({
   require_email_verification: z.boolean(),
 });
 
+export const PermissionsSchema = z.object({
+  can_edit_workflow: z.boolean(),
+});
+
+export type Permissions = z.infer<typeof PermissionsSchema>;
+
 export const SessionContextResponseSchema = z.object({
   user: UserContextSchema.nullable(),
   project: ProjectContextSchema.nullable(),
   config: AppConfigSchema,
+  permissions: PermissionsSchema,
+  latest_snapshot_lock_version: z.number().int(),
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
@@ -35,6 +43,9 @@ export interface SessionContextState {
   user: UserContext | null;
   project: ProjectContext | null;
   config: AppConfig | null;
+  permissions: Permissions | null;
+  latestSnapshotLockVersion: number | null;
+  isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;
   lastUpdated: number | null;
@@ -45,6 +56,8 @@ interface SessionContextCommands {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
+  setLatestSnapshotLockVersion: (lockVersion: number) => void;
+  clearIsNewWorkflow: () => void;
 }
 
 interface SessionContextQueries {

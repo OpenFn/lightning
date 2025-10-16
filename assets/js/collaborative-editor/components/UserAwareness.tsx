@@ -1,4 +1,4 @@
-import { useSession } from "../contexts/SessionProvider";
+import { useSession } from "../hooks/useSession";
 
 export function UserAwareness() {
   const { users, isConnected, isSynced } = useSession();

@@ -6,6 +6,29 @@
  * and shared Yjs/Phoenix provider references.
  */
 
+/**
+ * ## Redux DevTools Integration
+ *
+ * This store integrates with Redux DevTools for debugging in
+ * development and test environments.
+ *
+ * **Features:**
+ * - Real-time state inspection
+ * - Action history with timestamps
+ * - Time-travel debugging (jump to previous states)
+ * - State export/import for reproducing bugs
+ *
+ * **Usage:**
+ * 1. Install Redux DevTools browser extension
+ * 2. Open DevTools and select the "SessionStore" instance
+ * 3. Perform actions in the app and watch them appear in DevTools
+ *
+ * **Note:** DevTools is automatically disabled in production builds.
+ *
+ * **Excluded from DevTools:**
+ * Y.Doc, Provider, Awareness (too large/circular)
+ */
+
 import { produce } from "immer";
 import { Socket as PhoenixSocket } from "phoenix";
 import { PhoenixChannelProvider } from "y-phoenix-channel";
@@ -18,6 +41,7 @@ import _logger from "#/utils/logger";
 import type { LocalUserData } from "../types/awareness";
 
 import { createWithSelector, type WithSelector } from "./common";
+import { wrapStoreWithDevTools } from "./devtools";
 
 const logger = _logger.ns("SessionStore").seal();
 
@@ -63,7 +87,7 @@ export interface SessionStore {
   get awareness(): awarenessProtocol.Awareness | null;
 }
 
-type UpdateFn<T> = (updater: (draft: T) => void) => void;
+type UpdateFn<T> = (updater: (draft: T) => void, actionName?: string) => void;
 
 export const createSessionStore = (): SessionStore => {
   let state: SessionState = produce(
@@ -84,12 +108,22 @@ export const createSessionStore = (): SessionStore => {
   let cleanupProviderHandlers: (() => void) | null = null;
   let settlingSubscriptionCleanup: (() => void) | null = null;
 
+  // Redux DevTools integration
+  const devtools = wrapStoreWithDevTools({
+    name: "SessionStore",
+    excludeKeys: ["ydoc", "provider", "awareness"], // Exclude large Y.js objects
+    maxAge: 100,
+  });
+
   const notify = () => {
     listeners.forEach(listener => listener());
   };
 
   // Helper to update state
-  const updateState: UpdateFn<SessionState> = updater => {
+  const updateState: UpdateFn<SessionState> = (
+    updater,
+    actionName = "updateState"
+  ) => {
     const nextState = produce(state, updater);
     // const changedKeys = Object.keys(nextState).filter(key => {
     //   return nextState[key as keyof SessionState] !== state[key as keyof SessionState];
@@ -100,6 +134,7 @@ export const createSessionStore = (): SessionStore => {
     // }
     if (nextState !== state) {
       state = nextState;
+      devtools.notifyWithAction(actionName, () => state);
       notify();
     }
     return nextState;
@@ -118,7 +153,7 @@ export const createSessionStore = (): SessionStore => {
     const ydoc = new YDoc();
     updateState(draft => {
       draft.ydoc = ydoc;
-    });
+    }, "initializeYDoc");
     return ydoc;
   };
 
@@ -136,7 +171,7 @@ export const createSessionStore = (): SessionStore => {
       draft.ydoc = null;
       draft.awareness = null;
       draft.userData = null;
-    });
+    }, "destroyYDoc");
   };
 
   const initializeSession = (
@@ -145,6 +180,7 @@ export const createSessionStore = (): SessionStore => {
     userData: LocalUserData | null = null,
     options: {
       connect?: boolean;
+      joinParams?: Record<string, unknown>;
     } = {}
   ) => {
     // Atomic initialization to prevent partial states
@@ -165,16 +201,18 @@ export const createSessionStore = (): SessionStore => {
     const provider = new PhoenixChannelProvider(socket, roomname, ydoc, {
       awareness: awarenessToUse || undefined,
       connect: options.connect ?? true,
+      params: options.joinParams || {},
     });
 
     // Step 4: Update state
     updateState(draft => {
       draft.ydoc = ydoc;
-      draft.awareness = awarenessToUse;
+      // Always use provider.awareness since PhoenixChannelProvider creates one if not provided
+      draft.awareness = provider.awareness;
       draft.provider = provider;
       draft.userData = userData;
       draft.isSynced = provider.synced;
-    });
+    }, "initializeSession");
 
     // Step 5: Attach provider event handlers and store cleanup function
     cleanupProviderHandlers?.(); // Clean up any existing handlers
@@ -187,6 +225,8 @@ export const createSessionStore = (): SessionStore => {
       getSnapshot,
       updateState
     );
+
+    devtools.connect();
 
     return { ydoc, provider, awareness: awarenessToUse };
   };
@@ -212,6 +252,8 @@ export const createSessionStore = (): SessionStore => {
     state.awareness?.destroy();
     state.ydoc?.destroy();
 
+    devtools.disconnect();
+
     // Reset all state to initial values
     updateState(draft => {
       draft.provider = null;
@@ -222,7 +264,7 @@ export const createSessionStore = (): SessionStore => {
       draft.isSynced = false;
       draft.settled = false;
       draft.lastStatus = null;
-    });
+    }, "destroy");
   };
 
   // Queries (CQS)
@@ -290,14 +332,14 @@ function attachProvider(
       updateState(draft => {
         draft.isConnected = nowConnected;
         draft.lastStatus = next;
-      });
+      }, "connectionStatusChange");
     }
   };
 
   const syncHandler = (synced: boolean) => {
     updateState(draft => {
       draft.isSynced = synced;
-    });
+    }, "syncStatusChange");
   };
 
   provider.on("status", statusHandler);
@@ -338,7 +380,7 @@ function createSettlingSubscription(
     // Reset settled state
     updateState(draft => {
       draft.settled = false;
-    });
+    }, "settlingStarted");
 
     // Start waiting for settled state
     Promise.all([
@@ -350,7 +392,7 @@ function createSettlingSubscription(
           updateState(draft => {
             logger.debug("Settled");
             draft.settled = true;
-          });
+          }, "settledStatusChange");
         }
         return undefined;
       })
@@ -375,7 +417,7 @@ function createSettlingSubscription(
       currentController?.abort();
       updateState(draft => {
         draft.settled = false;
-      });
+      }, "disconnected");
     }
   };
 

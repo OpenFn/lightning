@@ -22,10 +22,17 @@
  */
 
 import type React from "react";
-import { createContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import _logger from "#/utils/logger";
 
+import { SessionContext } from "../contexts/SessionProvider";
 import { useSession } from "../hooks/useSession";
 import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
 import { createAdaptorStore } from "../stores/createAdaptorStore";
@@ -46,6 +53,7 @@ import {
   type WorkflowStoreInstance,
 } from "../stores/createWorkflowStore";
 import type { Session } from "../types/session";
+import { generateUserColor } from "../utils/userColor";
 
 export interface StoreContextValue {
   adaptorStore: AdaptorStoreInstance;
@@ -66,41 +74,65 @@ const logger = _logger.ns("StoreProvider").seal();
 export const StoreProvider = ({ children }: StoreProviderProps) => {
   const session = useSession();
 
+  // Get isNewWorkflow from SessionContext
+  const sessionContext = useContext(SessionContext);
+  const isNewWorkflow = sessionContext?.isNewWorkflow ?? false;
+
   // Create store instances once and reuse them
   const [stores] = useState(() => ({
     adaptorStore: createAdaptorStore(),
     credentialStore: createCredentialStore(),
     awarenessStore: createAwarenessStore(),
     workflowStore: createWorkflowStore(),
-    sessionContextStore: createSessionContextStore(),
+    sessionContextStore: createSessionContextStore(isNewWorkflow),
   }));
 
-  // Initialize awareness when both awareness instance and userData are available
+  // Subscribe to sessionContextStore user changes
+  // Note: We use useSyncExternalStore directly here (not useUser hook) because
+  // this is StoreProvider itself - the hooks require StoreContext to be available,
+  // which we're in the process of providing.
+  const user = useSyncExternalStore(
+    stores.sessionContextStore.subscribe,
+    stores.sessionContextStore.withSelector(state => state.user)
+  );
+
+  // Initialize awareness when both awareness instance and user data are available
+  // User data comes from SessionContextStore, not from props
   useEffect(() => {
+    logger.debug("Awareness initialization check", {
+      hasAwareness: !!session.awareness,
+      hasUser: !!user,
+      user: user,
+      isReady: stores.awarenessStore.isAwarenessReady(),
+    });
+
     if (
       session.awareness &&
-      session.userData &&
+      user &&
+      user.id &&
+      user.first_name &&
+      user.last_name &&
       !stores.awarenessStore.isAwarenessReady()
     ) {
-      logger.debug("Initializing awareness", {
-        userData: session.userData,
-      });
+      // Create LocalUserData from SessionContextStore user
+      const userData = {
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`,
+        color: generateUserColor(user.id),
+      };
+
+      logger.debug("Initializing awareness", { userData });
 
       // AwarenessStore is the ONLY place that sets awareness local state
-      stores.awarenessStore.initializeAwareness(
-        session.awareness,
-        session.userData
-      );
+      stores.awarenessStore.initializeAwareness(session.awareness, userData);
 
       // Set up last seen timer
-      // TODO: the awarenessStore should be responsible for this
-      // TODO: also the destroyAwareness call should be in this effect.
       const cleanupTimer = stores.awarenessStore._internal.setupLastSeenTimer();
 
       return cleanupTimer;
     }
     return undefined;
-  }, [session.awareness, session.userData, stores]);
+  }, [session.awareness, user, stores.awarenessStore]);
 
   // Connect stores when provider is ready
   useEffect(() => {
@@ -146,7 +178,6 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     session.isConnected,
   ]);
 
-  // Clean up awareness when session is destroyed
   useEffect(() => {
     return () => {
       logger.debug("Cleaning up awareness on unmount");

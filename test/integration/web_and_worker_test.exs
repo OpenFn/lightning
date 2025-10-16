@@ -1,4 +1,3 @@
-# This module will be re-introduced in https://github.com/OpenFn/Lightning/issues/1143
 defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
@@ -70,11 +69,6 @@ defmodule Lightning.WebAndWorkerTest do
       assert response.status == 200
       assert %{"work_order_id" => workorder_id} = response.body
 
-      # conn = post(conn, "/i/#{webhook_trigger_id}", webhook_body)
-
-      # assert %{"work_order_id" => workorder_id} =
-      #          json_response(conn, 200)
-
       assert %{runs: [run]} =
                WorkOrders.get(workorder_id, include: [:runs])
 
@@ -119,31 +113,53 @@ defmodule Lightning.WebAndWorkerTest do
 
     @tag :integration
     @tag timeout: 20_000
-    test "the whole thing", %{conn: conn} do
+    test "the whole thing", %{conn: conn, user: user} do
       project = insert(:project)
+
+      # Create credential with body for main environment
+      credential_1 =
+        insert(:credential,
+          name: "test credential",
+          user: user,
+          schema: "raw"
+        )
+        |> with_body(%{
+          name: "main",
+          body: %{"username" => "quux", "password" => "immasecret"}
+        })
 
       project_credential =
         insert(:project_credential,
-          credential: %{
-            name: "test credential",
-            body: %{"username" => "quux", "password" => "immasecret"}
-          },
+          credential: credential_1,
           project: project
         )
 
-      project_credential_2 =
+      # Create credential with body for main environment and external_id
+      credential_2 =
+        insert(:credential,
+          name: "resolved by keychain",
+          user: user,
+          schema: "raw",
+          external_id: "some_string"
+        )
+        |> with_body(%{
+          name: "main",
+          body: %{"username" => "foo", "password" => "immasecret"}
+        })
+
+      _project_credential_2 =
         insert(:project_credential,
-          credential: %{
-            name: "resolved by keychain",
-            body: %{"username" => "foo", "password" => "immasecret"},
-            external_id: "some_string"
-          },
+          credential: credential_2,
           project: project
         )
 
       # Matches the webhook body, resolves to the project_credential_2
       keychain_credential =
-        insert(:keychain_credential, project: project, path: "$.fieldTwo")
+        insert(:keychain_credential,
+          project: project,
+          path: "$.fieldTwo",
+          default_credential: credential_2
+        )
 
       # Doesn't match anything, resolves to `nil`
       keychain_credential_2 =
@@ -318,8 +334,12 @@ defmodule Lightning.WebAndWorkerTest do
 
       # Is set to use keychain_credential, which matches on the webhook body
       # and resolves to the project_credential_2
+      # Get the credential body from the "main" environment
+      credential_2_body =
+        Lightning.Credentials.get_credential_body(credential_2.id, "main").body
+
       assert pick_out_config(step_3.log_lines) |> Jason.decode!() ==
-               project_credential_2.credential.body
+               credential_2_body
 
       assert Enum.any?(
                step_3.log_lines,

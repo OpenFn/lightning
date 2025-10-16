@@ -67,6 +67,29 @@
  * - Enables fine-grained subscriptions to specific awareness data
  */
 
+/**
+ * ## Redux DevTools Integration
+ *
+ * This store integrates with Redux DevTools for debugging in
+ * development and test environments.
+ *
+ * **Features:**
+ * - Real-time state inspection
+ * - Action history with timestamps
+ * - Time-travel debugging (jump to previous states)
+ * - State export/import for reproducing bugs
+ *
+ * **Usage:**
+ * 1. Install Redux DevTools browser extension
+ * 2. Open DevTools and select the "AwarenessStore" instance
+ * 3. Perform actions in the app and watch them appear in DevTools
+ *
+ * **Note:** DevTools is automatically disabled in production builds.
+ *
+ * **Excluded from DevTools:**
+ * rawAwareness (too large/circular)
+ */
+
 import { produce } from "immer";
 import type { Awareness } from "y-protocols/awareness";
 
@@ -80,6 +103,7 @@ import type {
 } from "../types/awareness";
 
 import { createWithSelector } from "./common";
+import { wrapStoreWithDevTools } from "./devtools";
 
 const logger = _logger.ns("AwarenessStore").seal();
 
@@ -105,7 +129,15 @@ export const createAwarenessStore = (): AwarenessStore => {
   let awarenessInstance: Awareness | null = null;
   let lastSeenTimer: NodeJS.Timeout | null = null;
 
-  const notify = () => {
+  // Redux DevTools integration
+  const devtools = wrapStoreWithDevTools({
+    name: "AwarenessStore",
+    excludeKeys: ["rawAwareness"], // Exclude Y.js Awareness object
+    maxAge: 200, // Higher limit since awareness changes are frequent
+  });
+
+  const notify = (actionName: string = "stateChange") => {
+    devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
     });
@@ -178,7 +210,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       draft.users = users;
       draft.lastUpdated = Date.now();
     });
-    notify();
+    notify("awarenessChange");
   };
 
   // =============================================================================
@@ -214,7 +246,9 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     // Initial sync of users
     handleAwarenessChange();
-    notify();
+
+    devtools.connect();
+    notify("initializeAwareness");
   };
 
   /**
@@ -233,6 +267,8 @@ export const createAwarenessStore = (): AwarenessStore => {
       lastSeenTimer = null;
     }
 
+    devtools.disconnect();
+
     state = produce(state, draft => {
       draft.users = [];
       draft.localUser = null;
@@ -241,7 +277,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       draft.isConnected = false;
       draft.lastUpdated = Date.now();
     });
-    notify();
+    notify("destroyAwareness");
   };
 
   /**
@@ -262,7 +298,7 @@ export const createAwarenessStore = (): AwarenessStore => {
     state = produce(state, draft => {
       draft.localUser = updatedUserData;
     });
-    notify();
+    notify("updateLocalUserData");
 
     // Note: awareness observer will also fire and update the users array
   };
@@ -294,7 +330,7 @@ export const createAwarenessStore = (): AwarenessStore => {
         }
       }
     });
-    notify();
+    notify("updateLocalCursor");
   };
 
   /**
@@ -326,7 +362,7 @@ export const createAwarenessStore = (): AwarenessStore => {
         }
       }
     });
-    notify();
+    notify("updateLocalSelection");
   };
 
   /**
@@ -374,7 +410,7 @@ export const createAwarenessStore = (): AwarenessStore => {
     state = produce(state, draft => {
       draft.isConnected = isConnected;
     });
-    notify();
+    notify("setConnected");
   };
 
   // =============================================================================

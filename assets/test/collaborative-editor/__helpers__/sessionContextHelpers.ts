@@ -15,6 +15,7 @@ import type {
   UserContext,
   ProjectContext,
   AppConfig,
+  Permissions,
 } from "../../../js/collaborative-editor/types/sessionContext";
 
 import {
@@ -52,6 +53,8 @@ export function configureMockChannelForContext(
     user: UserContext | null;
     project: ProjectContext | null;
     config: AppConfig;
+    permissions: Permissions;
+    latest_snapshot_lock_version: number;
   },
   responseStatus: "ok" | "error" | "timeout" = "ok"
 ): void {
@@ -103,6 +106,8 @@ export function emitSessionContextEvent(
     user: UserContext | null;
     project: ProjectContext | null;
     config: AppConfig;
+    permissions: Permissions;
+    latest_snapshot_lock_version: number;
   }
 ): void {
   const channelWithTest = channel as MockPhoenixChannel & {
@@ -134,6 +139,8 @@ export function emitSessionContextUpdatedEvent(
     user: UserContext | null;
     project: ProjectContext | null;
     config: AppConfig;
+    permissions: Permissions;
+    latest_snapshot_lock_version: number;
   }
 ): void {
   const channelWithTest = channel as MockPhoenixChannel & {
@@ -166,6 +173,8 @@ export async function testSessionContextRequest(
     user: UserContext | null;
     project: ProjectContext | null;
     config: AppConfig;
+    permissions: Permissions;
+    latest_snapshot_lock_version: number;
   }
 ): Promise<void> {
   await store.requestSessionContext();
@@ -175,6 +184,10 @@ export async function testSessionContextRequest(
   expect(state.user).toEqual(expected.user);
   expect(state.project).toEqual(expected.project);
   expect(state.config).toEqual(expected.config);
+  expect(state.permissions).toEqual(expected.permissions);
+  expect(state.latestSnapshotLockVersion).toEqual(
+    expected.latest_snapshot_lock_version
+  );
   expect(state.isLoading).toBe(false);
   expect(state.error).toBe(null);
 }
@@ -289,6 +302,8 @@ export async function simulateContextUpdateSequence(
     user: UserContext | null;
     project: ProjectContext | null;
     config: AppConfig;
+    permissions: Permissions;
+    latest_snapshot_lock_version: number;
   }>
 ): Promise<void> {
   for (const update of updates) {
@@ -352,6 +367,8 @@ export function createMockChannelForScenario(
     user: UserContext | null;
     project: ProjectContext | null;
     config: AppConfig;
+    permissions: Permissions;
+    latest_snapshot_lock_version: number;
   }>
 ): MockPhoenixChannel {
   const channel = createMockPhoenixChannel();
@@ -361,6 +378,7 @@ export function createMockChannelForScenario(
     mockUserContext,
     mockProjectContext,
     mockAppConfig,
+    mockPermissions,
   } = require("../fixtures/sessionContextData");
 
   switch (scenario) {
@@ -369,6 +387,9 @@ export function createMockChannelForScenario(
         user: customData?.user ?? mockUserContext,
         project: customData?.project ?? mockProjectContext,
         config: customData?.config ?? mockAppConfig,
+        permissions: customData?.permissions ?? mockPermissions,
+        latest_snapshot_lock_version:
+          customData?.latest_snapshot_lock_version ?? 1,
       });
       break;
 
@@ -377,6 +398,9 @@ export function createMockChannelForScenario(
         user: null,
         project: null,
         config: customData?.config ?? mockAppConfig,
+        permissions: customData?.permissions ?? mockPermissions,
+        latest_snapshot_lock_version:
+          customData?.latest_snapshot_lock_version ?? 1,
       });
       break;
 
@@ -387,6 +411,8 @@ export function createMockChannelForScenario(
           user: null,
           project: null,
           config: mockAppConfig,
+          permissions: mockPermissions,
+          latest_snapshot_lock_version: 1,
         },
         "error"
       );
@@ -399,6 +425,8 @@ export function createMockChannelForScenario(
           user: null,
           project: null,
           config: mockAppConfig,
+          permissions: mockPermissions,
+          latest_snapshot_lock_version: 1,
         },
         "timeout"
       );

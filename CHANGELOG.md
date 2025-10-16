@@ -21,6 +21,73 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.14.11-pr1] - 2025-10-15
+
+### Added
+
+- Create new workflow via YAML in the collaborative editor
+  [#3700](https://github.com/OpenFn/lightning/issues/3700)
+- E2E tests for edge validation in collaborative editor
+  [#3724](https://github.com/OpenFn/lightning/issues/3724)
+- Ensure that TOTP codes cannot be reused.
+  [#3758](https://github.com/OpenFn/lightning/issues/3758)
+
+### Changed
+
+- Detect and clean stale CMake caches in bootstrap script
+  [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
+
+### Fixed
+
+- Credentials added to parent projects now automatically propagate to all
+  descendant sandbox projects, ensuring sandboxes have access to parent
+  credentials. Includes migration to backfill existing missing associations.
+  [#3756](https://github.com/OpenFn/lightning/issues/3756)
+
+## [2.14.11-pre] - 2025-10-14
+
+### Added
+
+- User interface for merging sandboxes
+  [#3436](https://github.com/OpenFn/lightning/issues/3436)
+- Credential environments user interface and runtime
+  [#3598](https://github.com/OpenFn/lightning/issues/3598)
+- Save button with validation and permissions in collaborative workflow editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Workflow reset functionality in collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Toast notifications and Redux DevTools integration for collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- E2E test infrastructure with Page Object Models for workflow testing
+- E2E testing guidelines for Playwright
+- Add project merging functionality
+  [#3432](https://github.com/OpenFn/lightning/issues/3432)
+- SessionContextStore for collaborative workflow editor to provide user,
+  project, and config data to React components via Phoenix Channel
+- E2E test infrastructure with Page Object Models for workflow editor testing
+- E2E test for workflow step creation and configuration
+- Force restart and AdaptorRegistry warming on E2E manager script
+
+### Changed
+
+- Delete oauth_tokens tables
+  [#3608](https://github.com/OpenFn/lightning/issues/3608)
+- Improved state management and store architecture in collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Upgraded Tailwind CSS from 4.0.13 to 4.1.14
+
+### Fixed
+
+- Project merge now correctly preserves target project identity (name,
+  description, env, color) instead of overwriting with source metadata
+  [#3742](https://github.com/OpenFn/lightning/issues/3742)
+- New workflows created in sandboxes now properly retain all jobs, triggers, and
+  edges when merged into target projects (previously only workflow metadata was
+  copied, resulting in empty workflows)
+  [#3744](https://github.com/OpenFn/lightning/issues/3744)
+
 ### Released
 
 ## [2.14.10] - 2025-10-07
@@ -50,6 +117,8 @@ and this project adheres to
 
 - Removed unused functions for getting dataclip bodies from postgres as
   JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
+- Limit sandbox creation
+  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
 
 ### Fixed
 

@@ -122,8 +122,11 @@ config :esbuild,
         )
       |> then(fn args ->
         case config_env() do
-          :prod -> args
-          _ -> args ++ ["--jsx-dev"]
+          :prod ->
+            args ++ ["--define:ENABLE_DEVTOOLS=false"]
+
+          _ ->
+            args ++ ["--jsx-dev", "--define:ENABLE_DEVTOOLS=true"]
         end
       end),
     cd: Path.expand("../assets", __DIR__),
@@ -132,7 +135,7 @@ config :esbuild,
 
 # https://fly.io/phoenix-files/tailwind-standalone/
 config :tailwind,
-  version: "4.0.13",
+  version: "4.1.14",
   default: [
     args: ~w(
       --input=assets/css/app.css
@@ -151,7 +154,15 @@ config :tailwind,
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id, :session_id, :prompt_size, :credential_id]
+  metadata: [
+    :request_id,
+    :session_id,
+    :prompt_size,
+    :credential_id,
+    :run_id,
+    :project_id,
+    :project_env
+  ]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

@@ -9,6 +9,7 @@ import type {
   UserContext,
   ProjectContext,
   AppConfig,
+  Permissions,
 } from "../../../js/collaborative-editor/types/sessionContext";
 
 /**
@@ -39,12 +40,21 @@ export const mockAppConfig: AppConfig = {
 };
 
 /**
+ * Sample permissions for testing
+ */
+export const mockPermissions: Permissions = {
+  can_edit_workflow: true,
+};
+
+/**
  * Complete session context response for testing
  */
 export const mockSessionContextResponse = {
   user: mockUserContext,
   project: mockProjectContext,
   config: mockAppConfig,
+  permissions: mockPermissions,
+  latest_snapshot_lock_version: 1,
 };
 
 /**
@@ -54,6 +64,8 @@ export const mockUnauthenticatedSessionContext = {
   user: null,
   project: null,
   config: mockAppConfig,
+  permissions: mockPermissions,
+  latest_snapshot_lock_version: 1,
 };
 
 /**
@@ -83,6 +95,8 @@ export const mockUpdatedSessionContext = {
   user: mockAlternativeUserContext,
   project: mockAlternativeProjectContext,
   config: { require_email_verification: true },
+  permissions: mockPermissions,
+  latest_snapshot_lock_version: 2,
 };
 
 /**
@@ -93,6 +107,8 @@ export const invalidSessionContextData = {
     // user missing entirely (not null)
     project: mockProjectContext,
     config: mockAppConfig,
+    permissions: mockPermissions,
+    latest_snapshot_lock_version: 1,
   },
 
   invalidUserId: {
@@ -102,6 +118,8 @@ export const invalidSessionContextData = {
     },
     project: mockProjectContext,
     config: mockAppConfig,
+    permissions: mockPermissions,
+    latest_snapshot_lock_version: 1,
   },
 
   invalidUserEmail: {
@@ -111,12 +129,16 @@ export const invalidSessionContextData = {
     },
     project: mockProjectContext,
     config: mockAppConfig,
+    permissions: mockPermissions,
+    latest_snapshot_lock_version: 1,
   },
 
   missingConfig: {
     user: mockUserContext,
     project: mockProjectContext,
     // config missing entirely
+    permissions: mockPermissions,
+    latest_snapshot_lock_version: 1,
   },
 
   invalidConfigType: {
@@ -125,6 +147,8 @@ export const invalidSessionContextData = {
     config: {
       require_email_verification: "invalid", // should be boolean
     },
+    permissions: mockPermissions,
+    latest_snapshot_lock_version: 1,
   },
 
   invalidProjectId: {
@@ -134,6 +158,8 @@ export const invalidSessionContextData = {
       id: 12345, // should be string UUID
     },
     config: mockAppConfig,
+    permissions: mockPermissions,
+    latest_snapshot_lock_version: 1,
   },
 
   missingProjectName: {
@@ -143,6 +169,8 @@ export const invalidSessionContextData = {
       // name missing
     },
     config: mockAppConfig,
+    permissions: mockPermissions,
+    latest_snapshot_lock_version: 1,
   },
 };
 
@@ -154,6 +182,8 @@ export function createMockSessionContext(
     user?: UserContext | null;
     project?: ProjectContext | null;
     config?: AppConfig;
+    permissions?: Permissions;
+    latest_snapshot_lock_version?: number;
   } = {}
 ) {
   return {
@@ -161,6 +191,8 @@ export function createMockSessionContext(
     project:
       overrides.project !== undefined ? overrides.project : mockProjectContext,
     config: overrides.config || mockAppConfig,
+    permissions: overrides.permissions || mockPermissions,
+    latest_snapshot_lock_version: overrides.latest_snapshot_lock_version ?? 1,
   };
 }
 
