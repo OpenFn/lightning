@@ -36,15 +36,16 @@ import {
   mockAdaptorsList,
   mockAdaptor,
   invalidAdaptorData,
-  createMockAdaptor,
 } from "./fixtures/adaptorData.js";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
   waitForCondition,
-  createSuccessfulMockPush,
-  createErrorMockPush,
 } from "./mocks/phoenixChannel.js";
+import {
+  createMockChannelPushOk,
+  createMockChannelPushError,
+} from "./__helpers__/channelMocks";
 import type {
   MockPhoenixChannel,
   MockPhoenixChannelProvider,
@@ -258,7 +259,9 @@ describe("createAdaptorStore", () => {
         async ({ mockChannel, mockProvider }) => {
           // Test successful response with valid data
           const store1 = createAdaptorStore();
-          mockChannel.push = createSuccessfulMockPush(mockAdaptorsList);
+          mockChannel.push = createMockChannelPushOk({
+            adaptors: mockAdaptorsList,
+          });
           store1._connectChannel(mockProvider as any);
           await store1.requestAdaptors();
 
@@ -273,9 +276,9 @@ describe("createAdaptorStore", () => {
 
           // Test invalid data handling with fresh store
           const store2 = createAdaptorStore();
-          mockChannel.push = createSuccessfulMockPush([
-            invalidAdaptorData.missingName,
-          ]);
+          mockChannel.push = createMockChannelPushOk({
+            adaptors: [invalidAdaptorData.missingName],
+          });
           store2._connectChannel(mockProvider as any);
           await store2.requestAdaptors();
 
@@ -290,7 +293,10 @@ describe("createAdaptorStore", () => {
         "handles error response and no connection",
         async ({ store, mockChannel, mockProvider }) => {
           // Test error response
-          mockChannel.push = createErrorMockPush("Server error");
+          mockChannel.push = createMockChannelPushError(
+            "Server error",
+            "server_error"
+          );
           store._connectChannel(mockProvider as any);
           await store.requestAdaptors();
 
@@ -315,7 +321,9 @@ describe("createAdaptorStore", () => {
         "connects channel, loads adaptors, and processes real-time updates",
         async ({ store, mockChannel, mockProvider }) => {
           // Setup mock to return adaptors on initial request
-          mockChannel.push = createSuccessfulMockPush(mockAdaptorsList);
+          mockChannel.push = createMockChannelPushOk({
+            adaptors: mockAdaptorsList,
+          });
 
           // Connect to channel
           const cleanup = store._connectChannel(mockProvider as any);

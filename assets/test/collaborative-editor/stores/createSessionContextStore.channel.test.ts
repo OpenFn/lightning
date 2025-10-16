@@ -186,7 +186,10 @@ describe("createSessionContextStore - Channel Operations", () => {
                 }, 0);
               } else if (status === "error") {
                 setTimeout(() => {
-                  callback({ reason: "Error" });
+                  callback({
+                    errors: { base: ["Error"] },
+                    type: "error",
+                  });
                 }, 0);
               } else if (status === "timeout") {
                 setTimeout(() => {
@@ -244,7 +247,10 @@ describe("createSessionContextStore - Channel Operations", () => {
                 }, 0);
               } else if (status === "error") {
                 setTimeout(() => {
-                  callback({ reason: "Error" });
+                  callback({
+                    errors: { base: ["Error"] },
+                    type: "error",
+                  });
                 }, 0);
               } else if (status === "timeout") {
                 setTimeout(() => {
@@ -295,7 +301,10 @@ describe("createSessionContextStore - Channel Operations", () => {
                 }, 0);
               } else if (status === "error") {
                 setTimeout(() => {
-                  callback({ reason: "Error" });
+                  callback({
+                    errors: { base: ["Error"] },
+                    type: "error",
+                  });
                 }, 0);
               } else if (status === "timeout") {
                 setTimeout(() => {
@@ -344,7 +353,10 @@ describe("createSessionContextStore - Channel Operations", () => {
                 }, 0);
               } else if (status === "error") {
                 setTimeout(() => {
-                  callback({ reason: "Error" });
+                  callback({
+                    errors: { base: ["Error"] },
+                    type: "error",
+                  });
                 }, 0);
               } else if (status === "timeout") {
                 setTimeout(() => {
@@ -388,7 +400,10 @@ describe("createSessionContextStore - Channel Operations", () => {
             ) => {
               if (status === "error") {
                 setTimeout(() => {
-                  callback({ reason: "Server error" });
+                  callback({
+                    errors: { base: ["Server error"] },
+                    type: "server_error",
+                  });
                 }, 0);
               } else if (status === "ok") {
                 // Do nothing for ok status in error test

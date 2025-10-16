@@ -1,240 +1,341 @@
 /**
- * Phoenix Channel Mock Factories
+ * Phoenix Channel Mock Helpers
  *
- * Reusable factory functions for creating Phoenix channel mocks with various
- * response patterns. These factories consolidate channel mocking logic that was
- * previously duplicated across test files.
+ * These helpers use Phoenix terminology ("ok", "error", "timeout") to match
+ * Phoenix Channel's `.receive("ok", ...)` pattern and ensure correct error structure:
+ * { errors: { base: ["message"] }, type: "error_type" }
  *
- * Usage:
- *   const mockChannel = createMockPhoenixChannel();
- *   const push = createMockPushWithResponse("ok", { data: "value" });
- *   const provider = createMockPhoenixChannelProvider(mockChannel);
+ * Key principles:
+ * - Be explicit: Developers should clearly see what channel behavior they're mocking
+ * - Match Phoenix: Use ok/error/timeout to match Phoenix's internal terminology
+ * - Correct by default: Ensures correct error structure automatically
+ *
+ * This matches the expected format in useChannel.ts channelRequest()
  */
 
-import {
-  createMockPhoenixChannel as baseCreateMockPhoenixChannel,
-  createMockPhoenixChannelProvider as baseCreateMockPhoenixChannelProvider,
+import { vi } from "vitest";
+import type { Channel } from "phoenix";
+import type { MockPush } from "../mocks/phoenixChannel";
+
+// Re-export base Phoenix Channel mocks
+export {
+  createMockPhoenixChannel,
+  createMockPhoenixChannelProvider,
   type MockPhoenixChannel,
   type MockPhoenixChannelProvider,
   type MockPush,
 } from "../mocks/phoenixChannel";
 
-// Re-export types for convenience
-export type { MockPhoenixChannel, MockPhoenixChannelProvider, MockPush };
-
 /**
- * Creates a mock Phoenix channel with optional topic override
- *
- * This is a convenience wrapper around the base mock that can be extended
- * with custom push behavior in tests.
- *
- * @param topic - Optional channel topic (defaults to "test:channel")
- * @returns Configured mock Phoenix channel
- *
- * @example
- * const channel = createMockPhoenixChannel("workflow:123");
- * channel.push = createMockPushWithResponse("ok", { adaptors: [] });
+ * Phoenix Channel Error Structure
+ * Matches the format expected by channelRequest in useChannel.ts
  */
-export function createMockPhoenixChannel(
-  topic: string = "test:channel"
-): MockPhoenixChannel {
-  return baseCreateMockPhoenixChannel(topic);
+export interface PhoenixChannelError {
+  errors: Record<string, string[]>;
+  type: string;
 }
 
 /**
- * Creates a mock push response handler with customizable status and payload
+ * Creates a properly structured Phoenix channel error response
  *
- * This factory simplifies the common pattern of mocking channel.push() with
- * specific responses for different status codes (ok, error, timeout).
- *
- * @param okStatus - The status to respond to ("ok", "error", or "timeout")
- * @param okPayload - The payload to return for the ok status
- * @param errorPayload - Optional error payload (defaults to { reason: "Error" })
- * @returns MockPush object that can be returned from channel.push()
+ * @param message - Error message (will be placed in errors.base[0])
+ * @param type - Error type identifier (e.g., "save_error", "validation_error")
+ * @returns Structured error object
  *
  * @example
- * // Create a successful response
- * const push = createMockPushWithResponse("ok", { adaptors: mockData });
- * mockChannel.push = () => push;
- *
- * @example
- * // Create an error response
- * const push = createMockPushWithResponse("error", undefined, {
- *   reason: "Not found"
- * });
+ * createChannelError("Save failed", "save_error")
+ * // Returns: { errors: { base: ["Save failed"] }, type: "save_error" }
  */
-export function createMockPushWithResponse(
-  okStatus: "ok" | "error" | "timeout",
-  okPayload: unknown,
-  errorPayload: unknown = { reason: "Error" }
-): MockPush {
+export function createChannelError(
+  message: string,
+  type: string = "error"
+): PhoenixChannelError {
+  return {
+    errors: { base: [message] },
+    type,
+  };
+}
+
+/**
+ * Configuration for mock push responses
+ */
+export interface MockPushConfig {
+  /** Response to send on "ok" status */
+  okResponse?: unknown;
+  /** Error to send on "error" status (will be converted to Phoenix format if string) */
+  errorResponse?: string | PhoenixChannelError;
+  /** Whether to call timeout handler */
+  shouldTimeout?: boolean;
+  /** Delay before calling handlers (defaults to 0) */
+  delay?: number;
+}
+
+/**
+ * Creates a mock push with flexible response configuration
+ *
+ * This is the core building block for channel mocks with proper error structure.
+ *
+ * @param config - Configuration for ok, error, and timeout responses
+ * @returns MockPush object with chainable receive() method
+ *
+ * @example
+ * // Ok response
+ * const push = createMockPush({ okResponse: { saved_at: "..." } });
+ *
+ * @example
+ * // Error response with structured error
+ * const push = createMockPush({
+ *   errorResponse: "Save failed",  // Automatically formatted
+ * });
+ *
+ * @example
+ * // Timeout response
+ * const push = createMockPush({ shouldTimeout: true });
+ */
+export function createMockPush(config: MockPushConfig = {}): MockPush {
+  const {
+    okResponse,
+    errorResponse,
+    shouldTimeout = false,
+    delay = 0,
+  } = config;
+
   const mockPush: MockPush = {
     receive(status: string, callback: (response?: unknown) => void) {
-      if (status === "ok" && okStatus === "ok") {
-        setTimeout(() => callback(okPayload), 0);
-      } else if (status === "error" && okStatus === "error") {
-        setTimeout(() => callback(errorPayload), 0);
-      } else if (status === "timeout" && okStatus === "timeout") {
-        setTimeout(() => callback(), 0);
+      if (status === "ok" && okResponse !== undefined) {
+        setTimeout(() => callback(okResponse), delay);
+      } else if (status === "error" && errorResponse !== undefined) {
+        setTimeout(() => {
+          const error =
+            typeof errorResponse === "string"
+              ? createChannelError(errorResponse, "error")
+              : errorResponse;
+          callback(error);
+        }, delay);
+      } else if (status === "timeout" && shouldTimeout) {
+        setTimeout(() => callback(), delay);
       }
       return mockPush;
     },
   };
+
   return mockPush;
 }
 
 /**
- * Creates a mock push that handles all three status types (ok, error, timeout)
+ * Creates a mock channel.push function that returns "ok" responses
  *
- * This is useful for more complex scenarios where the test needs to handle
- * multiple status types in sequence.
+ * Uses Phoenix's `.receive("ok", ...)` terminology to make it clear this mock
+ * simulates a successful channel operation.
  *
- * @param okPayload - Payload for "ok" status
- * @param errorPayload - Payload for "error" status (defaults to { reason: "Error" })
- * @returns MockPush object
+ * Automatically wraps with vi.fn() for call tracking and verification.
+ *
+ * @param response - Response data to return on "ok" status
+ * @returns Function suitable for mockChannel.push assignment
  *
  * @example
- * mockChannel.push = () => createMockPushWithAllStatuses({ data: "success" });
+ * mockChannel.push = createMockChannelPushOk({ lock_version: 1 });
+ *
+ * @example
+ * mockChannel.push = createMockChannelPushOk({ saved_at: "...", lock_version: 1 });
  */
-export function createMockPushWithAllStatuses(
-  okPayload: unknown,
-  errorPayload: unknown = { reason: "Error" }
-): MockPush {
-  const mockPush: MockPush = {
-    receive(status: string, callback: (response?: unknown) => void) {
-      if (status === "ok") {
-        setTimeout(() => callback(okPayload), 0);
-      } else if (status === "error") {
-        setTimeout(() => callback(errorPayload), 0);
-      } else if (status === "timeout") {
-        setTimeout(() => callback(), 0);
+export function createMockChannelPushOk(response: unknown): Channel["push"] {
+  const pushFn = (_event: string, _payload: unknown) =>
+    createMockPush({ okResponse: response });
+
+  return vi.fn(pushFn) as unknown as Channel["push"];
+}
+
+/**
+ * Creates a mock channel.push function that returns "error" responses
+ *
+ * Uses Phoenix's `.receive("error", ...)` terminology and automatically formats
+ * errors in the structure expected by channelRequest.
+ *
+ * Automatically wraps with vi.fn() for call tracking and verification.
+ *
+ * @param message - Error message (will be placed in errors.base[0])
+ * @param type - Error type identifier (defaults to "error")
+ * @returns Function suitable for mockChannel.push assignment
+ *
+ * @example
+ * mockChannel.push = createMockChannelPushError("Save failed", "save_error");
+ *
+ * @example
+ * mockChannel.push = createMockChannelPushError("Database error", "db_error");
+ */
+export function createMockChannelPushError(
+  message: string,
+  type: string = "error"
+): Channel["push"] {
+  const pushFn = (_event: string, _payload: unknown) =>
+    createMockPush({ errorResponse: createChannelError(message, type) });
+
+  return vi.fn(pushFn) as unknown as Channel["push"];
+}
+
+/**
+ * Creates a mock channel.push function that triggers "timeout" handlers
+ *
+ * Uses Phoenix's `.receive("timeout", ...)` terminology to simulate
+ * channel operations that don't respond in time.
+ *
+ * Automatically wraps with vi.fn() for call tracking and verification.
+ *
+ * @returns Function suitable for mockChannel.push assignment
+ *
+ * @example
+ * mockChannel.push = createMockChannelPushTimeout();
+ */
+export function createMockChannelPushTimeout(): Channel["push"] {
+  const pushFn = (_event: string, _payload: unknown) =>
+    createMockPush({ shouldTimeout: true });
+
+  return vi.fn(pushFn) as unknown as Channel["push"];
+}
+
+/**
+ * Configuration for event-specific mock responses
+ */
+interface EventResponseConfig {
+  /** Map of event names to ok responses or response objects with ok/error/timeout */
+  events: Record<
+    string,
+    | unknown
+    | {
+        ok?: unknown;
+        error?: string | PhoenixChannelError;
+        timeout?: boolean;
       }
-      return mockPush;
-    },
-  };
-  return mockPush;
+  >;
+  /** Default response for unmatched events (sent on "ok" status) */
+  defaultResponse?: unknown;
 }
 
 /**
- * Creates a mock channel provider wrapping the given channel
+ * Creates a mock channel.push function with event-specific responses
  *
- * This is a convenience wrapper for creating channel providers in tests.
+ * Allows different events to return different responses. Each event can specify
+ * ok, error, or timeout behavior, matching Phoenix's receive handler pattern.
  *
- * @param channel - Optional channel to wrap (defaults to new mock channel)
- * @returns Mock channel provider
+ * Automatically wraps with vi.fn() for call tracking and verification.
  *
- * @example
- * const channel = createMockPhoenixChannel();
- * const provider = createMockPhoenixChannelProvider(channel);
- * store._connectChannel(provider);
- */
-export function createMockPhoenixChannelProvider(
-  channel: MockPhoenixChannel | null = null
-): MockPhoenixChannelProvider {
-  return baseCreateMockPhoenixChannelProvider(channel);
-}
-
-/**
- * Configures a mock channel to respond with specific payloads for named events
- *
- * This factory simplifies setting up channel.push() with event-specific responses,
- * which is a common pattern in store tests.
- *
- * @param channel - The mock channel to configure
- * @param eventResponses - Map of event names to response payloads
+ * @param config - Event response configuration
+ * @returns Function suitable for mockChannel.push assignment
  *
  * @example
- * const channel = createMockPhoenixChannel();
- * configureMockChannelPush(channel, {
- *   "request_adaptors": { adaptors: mockAdaptorsList },
- *   "get_context": { user: mockUser, project: mockProject }
+ * // Simple event-to-ok-response mapping
+ * mockChannel.push = createMockChannelPushByEvent({
+ *   events: {
+ *     "save_workflow": { saved_at: "...", lock_version: 1 },
+ *     "validate_workflow_name": { workflow: { name: "..." } }
+ *   }
+ * });
+ *
+ * @example
+ * // Event with explicit ok response
+ * mockChannel.push = createMockChannelPushByEvent({
+ *   events: {
+ *     "save_workflow": {
+ *       ok: { saved_at: "...", lock_version: 1 }
+ *     }
+ *   }
+ * });
+ *
+ * @example
+ * // Event with error response
+ * mockChannel.push = createMockChannelPushByEvent({
+ *   events: {
+ *     "save_workflow": {
+ *       error: "Save failed"  // Auto-formatted to Phoenix error structure
+ *     }
+ *   }
  * });
  */
-export function configureMockChannelPush(
-  channel: MockPhoenixChannel,
-  eventResponses: Record<string, unknown>
-): void {
-  channel.push = (event: string, _payload: unknown) => {
-    const responsePayload = eventResponses[event];
+export function createMockChannelPushByEvent(
+  config: EventResponseConfig
+): Channel["push"] {
+  const { events, defaultResponse } = config;
 
-    if (responsePayload) {
-      return createMockPushWithAllStatuses(responsePayload);
+  const pushFn = (event: string, _payload: unknown) => {
+    const eventConfig = events[event];
+
+    if (!eventConfig) {
+      return createMockPush({
+        okResponse: defaultResponse ?? { status: "ok" },
+      });
     }
 
-    // Default response if event not found
-    return createMockPushWithAllStatuses({ status: "ok" });
-  };
-}
+    // Handle simple response (just the data)
+    if (
+      typeof eventConfig !== "object" ||
+      !(
+        "ok" in eventConfig ||
+        "error" in eventConfig ||
+        "timeout" in eventConfig
+      )
+    ) {
+      return createMockPush({ okResponse: eventConfig });
+    }
 
-/**
- * Creates a mock channel with pre-configured event responses
- *
- * Convenience function that creates a channel and configures its push behavior
- * in one step.
- *
- * @param eventResponses - Map of event names to response payloads
- * @param topic - Optional channel topic
- * @returns Configured mock channel
- *
- * @example
- * const channel = createMockChannelWithResponses({
- *   "request_adaptors": { adaptors: [] },
- *   "get_context": { user: null, project: null }
- * });
- */
-export function createMockChannelWithResponses(
-  eventResponses: Record<string, unknown>,
-  topic: string = "test:channel"
-): MockPhoenixChannel {
-  const channel = createMockPhoenixChannel(topic);
-  configureMockChannelPush(channel, eventResponses);
-  return channel;
-}
-
-/**
- * Creates a mock channel that always returns errors
- *
- * Useful for testing error handling paths.
- *
- * @param errorReason - Error reason to return (defaults to "Server error")
- * @param topic - Optional channel topic
- * @returns Mock channel configured to return errors
- *
- * @example
- * const channel = createMockChannelWithError("Not authorized");
- * store._connectChannel(createMockPhoenixChannelProvider(channel));
- */
-export function createMockChannelWithError(
-  errorReason: string = "Server error",
-  topic: string = "test:channel"
-): MockPhoenixChannel {
-  const channel = createMockPhoenixChannel(topic);
-  channel.push = (_event: string, _payload: unknown) => {
-    return createMockPushWithResponse("error", undefined, {
-      reason: errorReason,
+    // Handle complex response with ok/error/timeout
+    const complexConfig = eventConfig as {
+      ok?: unknown;
+      error?: string | PhoenixChannelError;
+      timeout?: boolean;
+    };
+    return createMockPush({
+      okResponse: complexConfig.ok,
+      errorResponse: complexConfig.error,
+      shouldTimeout: complexConfig.timeout,
     });
   };
-  return channel;
+
+  return vi.fn(pushFn) as unknown as Channel["push"];
 }
 
 /**
- * Creates a mock channel that always times out
+ * Creates a mock channel.push function with custom logic based on event and payload
  *
- * Useful for testing timeout handling.
+ * Provides maximum flexibility for tests that need to generate responses dynamically.
+ * Your handler function determines what to return on the "ok", "error", or "timeout"
+ * receive handlers based on the event name and payload.
  *
- * @param topic - Optional channel topic
- * @returns Mock channel configured to timeout
+ * Automatically wraps with vi.fn() for call tracking and verification.
+ *
+ * @param handler - Function that receives event and payload, returns mock push config
+ * @returns Function suitable for mockChannel.push assignment
  *
  * @example
- * const channel = createMockChannelWithTimeout();
- * store._connectChannel(createMockPhoenixChannelProvider(channel));
+ * // Workflow name validation that appends " 1"
+ * mockChannel.push = createMockChannelPushWithHandler((event, payload) => {
+ *   if (event === "validate_workflow_name") {
+ *     const { workflow } = payload as { workflow: { name: string } };
+ *     return { okResponse: { workflow: { name: workflow.name + " 1" } } };
+ *   }
+ *   return { okResponse: { status: "ok" } };
+ * });
+ *
+ * @example
+ * // Different responses based on payload content
+ * mockChannel.push = createMockChannelPushWithHandler((event, payload) => {
+ *   if (event === "save_workflow") {
+ *     const { workflow } = payload as { workflow: { name: string } };
+ *     if (workflow.name === "") {
+ *       return { errorResponse: "Name cannot be empty" };
+ *     }
+ *     return { okResponse: { lock_version: 1 } };
+ *   }
+ *   return { okResponse: { status: "ok" } };
+ * });
  */
-export function createMockChannelWithTimeout(
-  topic: string = "test:channel"
-): MockPhoenixChannel {
-  const channel = createMockPhoenixChannel(topic);
-  channel.push = (_event: string, _payload: unknown) => {
-    return createMockPushWithResponse("timeout", undefined);
+export function createMockChannelPushWithHandler(
+  handler: (event: string, payload: unknown) => MockPushConfig
+): Channel["push"] {
+  const pushFn = (event: string, payload: unknown) => {
+    const config = handler(event, payload);
+    return createMockPush(config);
   };
-  return channel;
+
+  return vi.fn(pushFn) as unknown as Channel["push"];
 }
