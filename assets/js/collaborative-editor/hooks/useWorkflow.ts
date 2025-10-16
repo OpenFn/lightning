@@ -331,6 +331,9 @@ export const useWorkflowActions = () => {
       addJob: store.addJob,
       removeJob: store.removeJob,
 
+      // Workflow actions (Pattern 1: Y.Doc sync)
+      updateWorkflow: store.updateWorkflow,
+
       // Trigger actions
       updateTrigger: store.updateTrigger,
       setEnabled: store.setEnabled,

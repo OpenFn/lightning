@@ -8,10 +8,38 @@
  */
 
 import type * as Y from "yjs";
+import { z } from "zod";
 
 import type { Job as JobType } from "./job";
 import type { Session } from "./session";
 import type { Trigger as TriggerType } from "./trigger";
+
+/**
+ * Zod schema for workflow validation
+ *
+ * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-89
+ */
+export const WorkflowSchema = z.object({
+  id: z.string().uuid(),
+  name: z
+    .string()
+    .min(1, "can't be blank")
+    .max(255, "should be at most 255 character(s)"),
+  lock_version: z.number().int(),
+  deleted_at: z.string().nullable(),
+
+  // Note: These fields exist in backend but not in Y.Doc Session.Workflow type
+  // They will be added to form state as virtual fields for future use
+  concurrency: z
+    .number()
+    .int()
+    .min(1, "must be at least 1")
+    .nullable()
+    .optional(),
+  enable_job_logs: z.boolean().optional(),
+});
+
+export type WorkflowFormValues = z.infer<typeof WorkflowSchema>;
 
 export interface Workflow {
   name: string;
