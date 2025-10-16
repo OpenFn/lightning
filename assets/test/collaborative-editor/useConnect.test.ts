@@ -291,8 +291,8 @@ function yDocToFlowModel(ydoc: Y.Doc): Flow.Model {
     .map((yEdge: any) => yEdge.toJSON())
     .map((edge: any) => ({
       id: edge.id,
-      source: edge.source,
-      target: edge.target,
+      source: edge.source_job_id || edge.source_trigger_id,
+      target: edge.target_job_id,
       data: {},
     }));
 
@@ -373,8 +373,8 @@ describe("useConnect - Integration Tests with Y.js", () => {
     const edgesArray = ydoc.getArray("edges");
     const edgeMap = new Y.Map();
     edgeMap.set("id", "edge-1");
-    edgeMap.set("source", "job-a");
-    edgeMap.set("target", "job-b");
+    edgeMap.set("source_job_id", "job-a");
+    edgeMap.set("target_job_id", "job-b");
     edgeMap.set("condition_type", "on_job_success");
     edgesArray.push([edgeMap]);
 
@@ -412,16 +412,16 @@ describe("useConnect - Integration Tests with Y.js", () => {
     // User 1 creates A→B
     const edge1Map = new Y.Map();
     edge1Map.set("id", "edge-1");
-    edge1Map.set("source", "job-a");
-    edge1Map.set("target", "job-b");
+    edge1Map.set("source_job_id", "job-a");
+    edge1Map.set("target_job_id", "job-b");
     edge1Map.set("condition_type", "on_job_success");
     edgesArray.push([edge1Map]);
 
     // User 2 creates B→C
     const edge2Map = new Y.Map();
     edge2Map.set("id", "edge-2");
-    edge2Map.set("source", "job-b");
-    edge2Map.set("target", "job-c");
+    edge2Map.set("source_job_id", "job-b");
+    edge2Map.set("target_job_id", "job-c");
     edge2Map.set("condition_type", "on_job_success");
     edgesArray.push([edge2Map]);
 

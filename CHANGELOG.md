@@ -17,7 +17,13 @@ and this project adheres to
 
 ### Added
 
+- Delete nodes from Job panel in Collaborative Editor
+  [#3702](https://github.com/OpenFn/lightning/issues/3702)
+
 ### Changed
+
+- Detect and clean stale CMake caches in bootstrap script
+  [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
 
 ### Fixed
 
