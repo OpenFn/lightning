@@ -9,17 +9,17 @@ import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
 
-import { createZodValidator } from "../form/createZodValidator";
-import { Button } from "../Button";
-import { InspectorFooter } from "./InspectorFooter";
-import { Tooltip } from "../Tooltip";
-import { AlertDialog } from "../AlertDialog";
-import { notifications } from "../../lib/notifications";
-import { usePermissions } from "../../hooks/useSessionContext";
 import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
+import { usePermissions } from "../../hooks/useSessionContext";
+import { notifications } from "../../lib/notifications";
+import { AlertDialog } from "../AlertDialog";
+import { Button } from "../Button";
+import { createZodValidator } from "../form/createZodValidator";
+import { Tooltip } from "../Tooltip";
 
 interface JobInspectorProps {
   job: Workflow.Job;
+  renderFooter?: (buttons: React.ReactNode) => void;
 }
 
 /**
@@ -96,13 +96,7 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
 }
 
 const useCredentialOptions = () => {
-  const { keychainCredentials, projectCredentials, isLoading } = useCredentials(
-    state => ({
-      keychainCredentials: state.keychainCredentials,
-      projectCredentials: state.projectCredentials,
-      isLoading: state.isLoading,
-    })
-  );
+  const { keychainCredentials, projectCredentials } = useCredentials();
 
   const credentialOptions = useMemo(() => {
     return [
@@ -142,17 +136,15 @@ const useCredentialOptions = () => {
   return useMemo(
     () => ({
       credentialOptions,
-      isLoading,
       resolveCredentialId,
     }),
-    [credentialOptions, isLoading, resolveCredentialId]
+    [credentialOptions, resolveCredentialId]
   );
 };
 
-export function JobInspector({ job }: JobInspectorProps) {
+export function JobInspector({ job, renderFooter }: JobInspectorProps) {
   const { updateJob, removeJobAndClearSelection } = useWorkflowActions();
-  const { credentialOptions, isLoading, resolveCredentialId } =
-    useCredentialOptions();
+  const { credentialOptions, resolveCredentialId } = useCredentialOptions();
 
   // Delete button state and validation
   const permissions = usePermissions();
@@ -268,6 +260,42 @@ export function JobInspector({ job }: JobInspectorProps) {
     }
   }, [job.id, removeJobAndClearSelection]);
 
+  // Pass delete button to parent footer via renderFooter callback
+  useEffect(() => {
+    if (renderFooter && permissions?.can_edit_workflow) {
+      const deleteButton = (
+        <Tooltip
+          content={validation.disableReason || "Delete this job"}
+          side="top"
+        >
+          <span className="inline-block">
+            <Button
+              variant="danger"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={isDeleting || !validation.canDelete}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </span>
+        </Tooltip>
+      );
+      renderFooter(deleteButton);
+    }
+
+    // Cleanup: remove button when component unmounts
+    return () => {
+      if (renderFooter) {
+        renderFooter(null);
+      }
+    };
+  }, [
+    renderFooter,
+    permissions,
+    validation.disableReason,
+    validation.canDelete,
+    isDeleting,
+  ]);
+
   return (
     <div>
       <div className="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
@@ -326,54 +354,12 @@ export function JobInspector({ job }: JobInspectorProps) {
                   label="Credential"
                   placeholder=" "
                   options={credentialOptions}
-                  disabled={isLoading}
                 />
               );
             }}
           </form.AppField>
         </div>
-
-        {/* Display current full adaptor specifier for debugging */}
-        <div className="col-span-6">
-          <span className="text-xs text-gray-500 mb-1 block">
-            Current Adaptor Specifier
-          </span>
-          <div className="bg-gray-50 p-2 rounded text-xs font-mono">
-            <code className="text-gray-700">{form.state.values.adaptor}</code>
-          </div>
-        </div>
       </div>
-
-      <div className="col-span-6">
-        <label htmlFor="body" className="text-xs text-gray-500 mb-1 block">
-          Body Preview
-        </label>
-        <div className="bg-gray-50 p-2 rounded text-xs font-mono max-h-32 overflow-y-auto">
-          <pre className="whitespace-pre-wrap text-gray-700">
-            {job.body || "// No code yet"}
-          </pre>
-        </div>
-      </div>
-
-      {/* Footer - Always shows, buttons handle their own permissions */}
-      <InspectorFooter
-        rightButtons={
-          permissions?.can_edit_workflow && (
-            <Tooltip
-              content={validation.disableReason || "Delete this job"}
-              side="top"
-            >
-              <Button
-                variant="danger"
-                onClick={() => setIsDeleteDialogOpen(true)}
-                disabled={isDeleting || !validation.canDelete}
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </Tooltip>
-          )
-        }
-      />
 
       <AlertDialog
         isOpen={isDeleteDialogOpen}

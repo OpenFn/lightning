@@ -19,9 +19,7 @@ interface DeleteValidation {
  * @param jobId - The ID of the job to validate
  * @returns Validation state with tooltip message
  */
-export const useJobDeleteValidation = (
-  jobId: string
-): DeleteValidation => {
+export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
   // STEP 1: Get data from multiple stores
   const permissions = usePermissions();
 
@@ -55,16 +53,13 @@ export const useJobDeleteValidation = (
     // Check in priority order
     if (!canEdit) {
       canDelete = false;
-      disableReason =
-        "You don't have permission to edit this workflow";
+      disableReason = "You don't have permission to edit this workflow";
     } else if (hasChildEdges) {
       canDelete = false;
-      disableReason =
-        "Cannot delete: other jobs depend on this step";
+      disableReason = "Cannot delete: other jobs depend on this step";
     } else if (isFirstJob) {
       canDelete = false;
-      disableReason =
-        "Cannot delete: this is the first job in the workflow";
+      disableReason = "Cannot delete: this is the first job in the workflow";
     }
 
     return {

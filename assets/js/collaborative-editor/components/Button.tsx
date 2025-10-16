@@ -65,7 +65,9 @@ export function Button({
         ${baseClasses}
         ${variantClasses[variant]}
         ${className}
-      `.replace(/\s+/g, " ").trim()}
+      `
+        .replace(/\s+/g, " ")
+        .trim()}
     >
       {children}
     </button>
