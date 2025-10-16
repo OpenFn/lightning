@@ -11,49 +11,35 @@
  * - Verifies Y.Doc state directly (not just response validation)
  */
 
-import { describe, test, expect, beforeEach, vi } from "vitest";
+import { describe, test, expect, beforeEach } from "vitest";
 import * as Y from "yjs";
 import type { Channel } from "phoenix";
 
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import type { Session } from "../../../js/collaborative-editor/types/session";
+import {
+  createMockChannelPushOk,
+  createMockChannelPushError,
+} from "../__helpers__/channelMocks";
 
 describe("WorkflowStore - Save Workflow", () => {
   let store: WorkflowStoreInstance;
-  let ydoc: Y.Doc;
+  let ydoc: Session.WorkflowDoc;
   let mockChannel: Channel;
   let mockProvider: PhoenixChannelProvider & { channel: Channel };
 
   beforeEach(() => {
     // Create fresh store and Y.Doc instances
     store = createWorkflowStore();
-    ydoc = new Y.Doc();
+    ydoc = new Y.Doc() as Session.WorkflowDoc;
 
     // Mock Phoenix Channel with save_workflow support
-    // The push().receive() chain requires each receive to return an object with receive method
     mockChannel = {
-      push: vi.fn((event: string) => {
-        // Create chainable mock push object
-        const mockPush = {
-          receive: (status: string, callback: (response?: unknown) => void) => {
-            if (event === "save_workflow" && status === "ok") {
-              // Simulate successful save with lock_version in response
-              setTimeout(() => {
-                callback({
-                  saved_at: new Date().toISOString(),
-                  lock_version: 1,
-                });
-              }, 0);
-            } else if (status === "error") {
-              // Keep error handler registered but don't call it
-            } else if (status === "timeout") {
-              // Keep timeout handler registered but don't call it
-            }
-            return mockPush; // Return self for chaining
-          },
-        };
-        return mockPush;
+      push: createMockChannelPushOk({
+        saved_at: new Date().toISOString(),
+        lock_version: 1,
       }),
     } as unknown as Channel;
 
@@ -120,22 +106,10 @@ describe("WorkflowStore - Save Workflow", () => {
     workflowMap.set("lock_version", 1);
 
     // Mock incremented lock_version for second save
-    mockChannel.push = vi.fn(() => {
-      const mockPush = {
-        receive: (status: string, callback: (response?: unknown) => void) => {
-          if (status === "ok") {
-            setTimeout(() => {
-              callback({
-                saved_at: new Date().toISOString(),
-                lock_version: 2,
-              });
-            }, 0);
-          }
-          return mockPush;
-        },
-      };
-      return mockPush;
-    }) as unknown as Channel["push"];
+    mockChannel.push = createMockChannelPushOk({
+      saved_at: new Date().toISOString(),
+      lock_version: 2,
+    });
 
     // Second save
     const response = await store.saveWorkflow();
@@ -151,22 +125,8 @@ describe("WorkflowStore - Save Workflow", () => {
   });
 
   test("does not update lock_version if save fails", async () => {
-    // Mock failure response
-    mockChannel.push = vi.fn(() => {
-      const mockPush = {
-        receive: (status: string, callback: (response?: unknown) => void) => {
-          if (status === "error") {
-            setTimeout(() => {
-              callback({ reason: "Save failed" });
-            }, 0);
-          } else if (status === "ok") {
-            // Don't call ok handler
-          }
-          return mockPush;
-        },
-      };
-      return mockPush;
-    }) as unknown as Channel["push"];
+    // Mock failure response with correct error structure
+    mockChannel.push = createMockChannelPushError("Save failed", "save_error");
 
     const workflowMap = ydoc.getMap("workflow");
     expect(workflowMap.get("lock_version")).toBeNull();
@@ -180,22 +140,10 @@ describe("WorkflowStore - Save Workflow", () => {
 
   test("handles response without lock_version gracefully", async () => {
     // Mock response without lock_version (shouldn't happen, but defensive)
-    mockChannel.push = vi.fn(() => {
-      const mockPush = {
-        receive: (status: string, callback: (response?: unknown) => void) => {
-          if (status === "ok") {
-            setTimeout(() => {
-              callback({
-                saved_at: new Date().toISOString(),
-                // lock_version intentionally omitted
-              });
-            }, 0);
-          }
-          return mockPush;
-        },
-      };
-      return mockPush;
-    }) as unknown as Channel["push"];
+    mockChannel.push = createMockChannelPushOk({
+      saved_at: new Date().toISOString(),
+      // lock_version intentionally omitted
+    });
 
     const workflowMap = ydoc.getMap("workflow");
     const originalLockVersion = workflowMap.get("lock_version");

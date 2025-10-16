@@ -347,15 +347,12 @@ export const useWorkflowActions = () => {
       removeJobAndClearSelection: store.removeJobAndClearSelection,
 
       // Workflow actions - wrapped to handle lock version updates
-      saveWorkflow: async () => {
-        try {
-          const response = await store.saveWorkflow();
-
-          if (!response) {
-            // saveWorkflow returns null when not connected
-            // Connection status is already shown in UI, no toast needed
-            return null;
-          }
+      saveWorkflow: (() => {
+        // Helper: Handle successful save operations
+        const handleSaveSuccess = (
+          response: Awaited<ReturnType<typeof store.saveWorkflow>>
+        ) => {
+          if (!response) return;
 
           // Update session context with new lock version if present
           if (response.lock_version !== undefined) {
@@ -388,36 +385,62 @@ export const useWorkflowActions = () => {
               ? `Last saved at ${new Date(response.saved_at).toLocaleTimeString()}`
               : "All changes have been synced",
           });
+        };
 
-          return response;
-        } catch (error) {
-          // Show error notification with retry action
-          notifications.alert({
-            title: "Failed to save workflow",
-            description:
-              error instanceof Error
-                ? error.message
-                : "Please check your connection and try again",
-            action: {
-              label: "Retry",
-              onClick: () => {
-                // Retry save operation
-                // Using void to explicitly ignore the promise
-                void (async () => {
-                  try {
-                    await store.saveWorkflow();
-                  } catch {
-                    // Error already handled by outer try-catch
-                  }
-                })();
+        // Helper: Handle save errors with appropriate notifications
+        const handleSaveError = (
+          error: unknown,
+          retrySaveWorkflow: () => Promise<unknown>
+        ) => {
+          const errorType = (error as Error & { type?: string }).type;
+
+          if (errorType === "unauthorized") {
+            notifications.alert({
+              title: "Permission Denied",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "You no longer have permission to edit this workflow. Your role may have changed.",
+            });
+          } else {
+            notifications.alert({
+              title: "Failed to save workflow",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Please check your connection and try again",
+              action: {
+                label: "Retry",
+                onClick: () => {
+                  void retrySaveWorkflow();
+                },
               },
-            },
-          });
+            });
+          }
+        };
 
-          // Re-throw error for any upstream error handling
-          throw error;
-        }
-      },
+        // Main wrapped saveWorkflow function
+        const wrappedSaveWorkflow = async () => {
+          try {
+            const response = await store.saveWorkflow();
+
+            if (!response) {
+              // saveWorkflow returns null when not connected
+              // Connection status is already shown in UI, no toast needed
+              return null;
+            }
+
+            handleSaveSuccess(response);
+            return response;
+          } catch (error) {
+            handleSaveError(error, wrappedSaveWorkflow);
+            // Re-throw error for any upstream error handling
+            throw error;
+          }
+        };
+
+        return wrappedSaveWorkflow;
+      })(),
       resetWorkflow: store.resetWorkflow,
       importWorkflow: store.importWorkflow,
     }),
