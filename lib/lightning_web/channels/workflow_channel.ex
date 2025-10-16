@@ -501,6 +501,7 @@ defmodule LightningWeb.WorkflowChannel do
   defp name_available?(name, existing_names) do
     not MapSet.member?(existing_names, name)
   end
+
   # Load workflow for "edit" action - fetch from database
   defp load_workflow("edit", workflow_id, project, user) do
     case Lightning.Workflows.get_workflow(workflow_id) do
