@@ -20,8 +20,7 @@ export async function channelRequest<T = unknown>(
         resolve(response);
       })
       .receive("error", (error: ChannelError) => {
-        const errorMessage =
-          error.errors?.["base"]?.[0] || "An error occurred";
+        const errorMessage = error.errors["base"][0] || "An error occurred";
         const customError = new Error(errorMessage) as Error & {
           type?: string;
           errors?: Record<string, string[]>;
