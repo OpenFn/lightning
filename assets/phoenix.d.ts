@@ -11,7 +11,7 @@ declare module "phoenix" {
   export class Channel {
     on(event: string, callback: (data: unknown) => void): number;
     off(event: string, callback: (data: unknown) => void): void;
-    push(event: string, payload: object): Push;
+    push(event: string, payload?: object, timeout?: number): Push;
   }
 
   export class Presence {}
