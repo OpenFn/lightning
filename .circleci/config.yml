@@ -133,3 +133,5 @@ workflows:
           name: "Check Javascript tests"
           execute:
             - run: cd assets; sudo -u lightning npm install && npm run test-report
+            - store_test_results:
+                path: test/reports/
