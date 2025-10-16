@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Adjusted padding of labels in the Workflow Diagram.
+
 ### Fixed
 
 ## [2.14.11-pr1] - 2025-10-15
