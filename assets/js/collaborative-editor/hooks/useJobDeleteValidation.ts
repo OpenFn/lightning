@@ -39,10 +39,14 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
 
   const hasChildEdges = childEdges.length > 0;
 
-  // Check if job is first in workflow (has trigger as parent)
-  const isFirstJob = parentEdges.some(
+  // Check if job is first in workflow (has ONLY triggers as parents, no job parents)
+  const hasTriggerParent = parentEdges.some(
     edge => edge.source_trigger_id !== undefined
   );
+  const hasJobParent = parentEdges.some(
+    edge => edge.source_job_id !== undefined
+  );
+  const isFirstJob = hasTriggerParent && !hasJobParent;
 
   // STEP 3: Return memoized validation result
   return useMemo(() => {

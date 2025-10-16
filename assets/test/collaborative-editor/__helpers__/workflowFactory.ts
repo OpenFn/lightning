@@ -103,8 +103,18 @@ export function createWorkflowYDoc(config: CreateWorkflowInput): Y.Doc {
     config.edges.forEach(edge => {
       const edgeMap = new Y.Map();
       edgeMap.set("id", edge.id);
-      edgeMap.set("source", edge.source);
-      edgeMap.set("target", edge.target);
+
+      // Determine if source is a job or trigger by checking the config
+      const isSourceTrigger = config.triggers?.[edge.source] !== undefined;
+      if (isSourceTrigger) {
+        edgeMap.set("source_trigger_id", edge.source);
+      } else {
+        edgeMap.set("source_job_id", edge.source);
+      }
+
+      // Target is always a job
+      edgeMap.set("target_job_id", edge.target);
+
       edgeMap.set("condition_type", edge.condition_type || "on_job_success");
       edgesArray.push([edgeMap]);
     });
