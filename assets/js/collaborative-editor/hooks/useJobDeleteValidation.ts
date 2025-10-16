@@ -12,21 +12,16 @@ interface DeleteValidation {
 
 /**
  * Validates whether a job can be deleted and provides
- * user-facing tooltip messages for disabled states.
- *
- * Follows the useCanSave pattern (useWorkflow.ts:442-487)
+ *  messages for disabled states.
  *
  * @param jobId - The ID of the job to validate
  * @returns Validation state with tooltip message
  */
 export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
-  // STEP 1: Get data from multiple stores
   const permissions = usePermissions();
 
-  // Select edges using deps array to track jobId changes
   const edges = useWorkflowState(state => state.edges, []);
 
-  // STEP 2: Compute derived state with useMemo
   const childEdges = useMemo(
     () => edges.filter(edge => edge.source_job_id === jobId),
     [edges, jobId]
@@ -48,7 +43,6 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
   );
   const isFirstJob = hasTriggerParent && !hasJobParent;
 
-  // STEP 3: Return memoized validation result
   return useMemo(() => {
     const canEdit = permissions?.can_edit_workflow ?? false;
     let canDelete = true;

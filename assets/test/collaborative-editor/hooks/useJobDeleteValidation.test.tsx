@@ -1,17 +1,3 @@
-/**
- * useJobDeleteValidation Hook Tests
- *
- * Tests validation logic for job deletion in the collaborative editor.
- * Verifies that jobs can only be deleted when:
- * 1. User has edit permissions
- * 2. Job has no child edges (downstream dependencies)
- * 3. Job is not the first job (only parent is a trigger with no job parents)
- *
- * CRITICAL BUG FIX: This test suite specifically validates that jobs with
- * BOTH trigger AND job parents are correctly identified as NOT being first jobs.
- * Previously, the hook incorrectly blocked deletion of such jobs.
- */
-
 import { describe, expect, test, beforeEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import type React from "react";
