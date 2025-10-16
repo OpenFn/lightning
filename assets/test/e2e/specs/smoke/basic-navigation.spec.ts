@@ -60,7 +60,7 @@ test.describe("Workflow Navigation with Dynamic Data", () => {
     await workflowEdit.diagram.verifyReactFlowPresent();
 
     // Assert we have 5 nodes visible in the workflow
-    await workflowEdit.diagram.verifyNodeCount(5);
+    await workflowEdit.diagram.nodes.verifyCount(5);
     await expect(page.getByRole("main")).toMatchAriaSnapshot(`
       - navigation "Breadcrumb":
         - list:

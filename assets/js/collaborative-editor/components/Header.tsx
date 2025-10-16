@@ -1,6 +1,7 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 
-import { useUser } from "../hooks/useSessionContext";
+import { useURLState } from "../../react/lib/use-url-state";
+import { useUser, useIsNewWorkflow } from "../hooks/useSessionContext";
 import {
   useCanSave,
   useWorkflowActions,
@@ -107,6 +108,10 @@ export function Header({
 
   // Session context queries
   const user = useUser();
+  const isNewWorkflow = useIsNewWorkflow();
+
+  // URL state management
+  const { updateHash } = useURLState();
 
   // Generate avatar initials from user data
   const avatarInitials = getAvatarInitials(user);
@@ -121,7 +126,11 @@ export function Header({
           {projectId && workflowId && (
             <>
               <a
-                href={`/projects/${projectId}/w/${workflowId}`}
+                href={
+                  isNewWorkflow
+                    ? `/projects/${projectId}/w/new`
+                    : `/projects/${projectId}/w/${workflowId}`
+                }
                 className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-4"
@@ -145,14 +154,15 @@ export function Header({
               <Switch checked={enabled ?? false} onChange={setEnabled} />
 
               <div>
-                <a
-                  href="#settings"
+                <button
+                  type="button"
+                  onClick={() => updateHash("settings")}
                   id="toggle-settings"
                   className="w-5 h-5 place-self-center cursor-pointer
                   text-slate-500 hover:text-slate-400"
                 >
                   <span className="hero-adjustments-vertical"></span>
-                </a>
+                </button>
               </div>
             </div>
             <div

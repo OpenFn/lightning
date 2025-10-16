@@ -115,7 +115,7 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
           <span className="mx-auto hero-cloud-arrow-up size-10 text-gray-300"></span>
           <div className="mt-4 text-sm/6 text-gray-600">
             <label
-              for="workflow-file"
+              htmlFor="workflow-file"
               className="relative cursor-pointer font-semibold text-indigo-600 hover:text-indigo-500"
             >
               Upload a file

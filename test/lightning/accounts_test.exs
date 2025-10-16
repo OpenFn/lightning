@@ -215,18 +215,6 @@ defmodule Lightning.AccountsTest do
       assert %{code: ["invalid code"]} = errors_on(changeset)
     end
 
-    test "creates the UserTOTP successfully with a valid code", %{user: user} do
-      user_totp = %UserTOTP{secret: NimbleTOTP.secret(), user_id: user.id}
-      valid_code = NimbleTOTP.verification_code(user_totp.secret)
-      refute user.mfa_enabled
-
-      assert {:ok, _totp} =
-               Accounts.upsert_user_totp(user_totp, %{code: valid_code})
-
-      updated_user = Repo.get(User, user.id)
-      assert updated_user.mfa_enabled
-    end
-
     test "generates backup codes", %{user: user} do
       assert Repo.preload(user, [:backup_codes]).backup_codes == []
 
@@ -309,9 +297,13 @@ defmodule Lightning.AccountsTest do
 
   describe "valid_user_totp?/2" do
     setup do
-      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+      user =
+        insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
-      %{totp: Accounts.get_user_totp(user), user: user}
+      %{
+        totp: Accounts.get_user_totp(user),
+        user: user
+      }
     end
 
     test "returns false if the code is not valid", %{user: user} do
@@ -319,7 +311,9 @@ defmodule Lightning.AccountsTest do
     end
 
     test "returns true for valid totp", %{user: user, totp: totp} do
-      code = NimbleTOTP.verification_code(totp.secret)
+      code =
+        NimbleTOTP.verification_code(totp.secret)
+
       assert Accounts.valid_user_totp?(user, code) == true
     end
   end
@@ -360,9 +354,14 @@ defmodule Lightning.AccountsTest do
       user_totp = %UserTOTP{secret: NimbleTOTP.secret(), user_id: user.id}
       valid_code = NimbleTOTP.verification_code(user_totp.secret)
       {:ok, totp} = Accounts.upsert_user_totp(user_totp, %{code: valid_code})
-      assert Repo.get(User, user.id).mfa_enabled
+
+      user = Repo.get(User, user.id)
+      assert user.mfa_enabled
+
       {:ok, _} = Accounts.delete_user_totp(totp)
-      refute Repo.get(User, user.id).mfa_enabled
+
+      updated_user = Repo.get(User, user.id)
+      refute updated_user.mfa_enabled
     end
   end
 

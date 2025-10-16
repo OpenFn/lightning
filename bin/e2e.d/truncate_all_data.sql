@@ -69,9 +69,6 @@ TRUNCATE project_files CASCADE;
 TRUNCATE project_repo_connections CASCADE;
 TRUNCATE project_oauth_clients CASCADE;
 
--- OAuth system
-TRUNCATE oauth_tokens CASCADE;
-
 -- Run execution system (depends on workflows/jobs)
 TRUNCATE run_steps CASCADE;
 TRUNCATE steps CASCADE;

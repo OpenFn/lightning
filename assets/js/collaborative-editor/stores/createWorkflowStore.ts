@@ -466,6 +466,25 @@ export const createWorkflowStore = () => {
     }
   };
 
+  const addEdge = (edge: Partial<Session.Edge>) => {
+    if (!ydoc || !edge.id || !edge.target_job_id) return;
+
+    const edgesArray = ydoc.getArray("edges");
+    const edgeMap = new Y.Map();
+
+    ydoc.transact(() => {
+      edgeMap.set("id", edge.id);
+      edgeMap.set("source_job_id", edge.source_job_id || null);
+      edgeMap.set("source_trigger_id", edge.source_trigger_id || null);
+      edgeMap.set("target_job_id", edge.target_job_id);
+      edgeMap.set("condition_type", edge.condition_type || "on_job_success");
+      edgeMap.set("condition_label", edge.condition_label || null);
+      edgeMap.set("condition_expression", edge.condition_expression || null);
+      edgeMap.set("enabled", edge.enabled !== undefined ? edge.enabled : true);
+      edgesArray.push([edgeMap]);
+    });
+  };
+
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
     if (!ydoc) return;
 
@@ -605,6 +624,7 @@ export const createWorkflowStore = () => {
       }>(provider.channel, "save_workflow", payload);
 
       logger.debug("Saved workflow", response);
+
       return response;
     } catch (error) {
       logger.error("Failed to save workflow", error);
@@ -630,6 +650,47 @@ export const createWorkflowStore = () => {
       logger.debug("Reset workflow successfully", response);
     } catch (error) {
       logger.error("Failed to reset workflow", error);
+      throw error;
+    }
+  };
+
+  /**
+   * Validate workflow name uniqueness via Phoenix Channel
+   *
+   * Sends workflow name to server for validation and receives a
+   * guaranteed unique name back. The server applies the same
+   * uniqueness logic used in the LiveView path.
+   *
+   * @param workflowState - Workflow state with name to validate
+   * @returns Promise resolving to workflow state with unique name
+   */
+  const validateWorkflowName = async (
+    workflowState: YAMLWorkflowState
+  ): Promise<YAMLWorkflowState> => {
+    if (!provider) {
+      logger.warn("No provider available for name validation");
+      return workflowState;
+    }
+
+    try {
+      const response = await channelRequest<{ workflow: { name: string } }>(
+        provider.channel,
+        "validate_workflow_name",
+        { workflow: { name: workflowState.name } }
+      );
+
+      logger.debug("Validated workflow name", {
+        original: workflowState.name,
+        validated: response.workflow.name,
+      });
+
+      // Return state with validated unique name
+      return {
+        ...workflowState,
+        name: response.workflow.name,
+      };
+    } catch (error) {
+      logger.error("Failed to validate workflow name", error);
       throw error;
     }
   };
@@ -712,6 +773,7 @@ export const createWorkflowStore = () => {
     updateJobBody,
     addJob,
     removeJob,
+    addEdge,
     updateTrigger,
     setEnabled,
     getJobBodyYText,
@@ -733,6 +795,7 @@ export const createWorkflowStore = () => {
     clearSelection,
     saveWorkflow,
     resetWorkflow,
+    validateWorkflowName,
   };
 };
 

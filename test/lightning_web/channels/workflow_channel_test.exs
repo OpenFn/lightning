@@ -464,4 +464,130 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert message =~ "don't have permission to edit"
     end
   end
+
+  describe "validate_workflow_name" do
+    setup %{socket: socket} do
+      project = socket.assigns.project
+
+      # Create some existing workflows
+      workflow1 = insert(:workflow, project: project, name: "My Workflow")
+      workflow2 = insert(:workflow, project: project, name: "My Workflow 1")
+      workflow3 = insert(:workflow, project: project, name: "Test Workflow")
+
+      %{
+        socket: socket,
+        project: project,
+        existing_workflows: [workflow1, workflow2, workflow3]
+      }
+    end
+
+    test "returns original name when unique", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "Unique Workflow"}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Unique Workflow"
+    end
+
+    test "appends '2' when name and name 1 exist", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "My Workflow"}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "My Workflow 2"
+    end
+
+    test "appends number to already-numbered name", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "My Workflow 1"}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "My Workflow 1 1"
+    end
+
+    test "defaults empty name to 'Untitled workflow'", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => ""}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Untitled workflow"
+    end
+
+    test "defaults whitespace-only name to 'Untitled workflow'", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "   "}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Untitled workflow"
+    end
+
+    test "ensures 'Untitled workflow' is unique", %{socket: socket} do
+      # Create an existing "Untitled workflow"
+      insert(:workflow,
+        project: socket.assigns.project,
+        name: "Untitled workflow"
+      )
+
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => ""}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Untitled workflow 1"
+    end
+
+    test "preserves other params unchanged", %{socket: socket} do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{
+            "name" => "Test Workflow",
+            "other_field" => "value"
+          }
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Test Workflow 1"
+      assert validated["other_field"] == "value"
+    end
+
+    test "sequential numbering skips gaps", %{socket: socket} do
+      # Create workflows with gaps: "Gap Test", "Gap Test 1", "Gap Test 3"
+      insert(:workflow,
+        project: socket.assigns.project,
+        name: "Gap Test"
+      )
+
+      insert(:workflow,
+        project: socket.assigns.project,
+        name: "Gap Test 1"
+      )
+
+      insert(:workflow,
+        project: socket.assigns.project,
+        name: "Gap Test 3"
+      )
+
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "Gap Test"}
+        })
+
+      # Algorithm doesn't fill gaps, it continues from highest
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Gap Test 2"
+    end
+  end
 end

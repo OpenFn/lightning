@@ -17,13 +17,42 @@ and this project adheres to
 
 ### Added
 
+- Delete nodes from Job panel in Collaborative Editor
+  [#3702](https://github.com/OpenFn/lightning/issues/3702)
+
 ### Changed
+
+- Detect and clean stale CMake caches in bootstrap script
+  [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
 
 ### Fixed
 
 - Runtime permission checks in WorkflowChannel save/reset operations to prevent
   unauthorized edits when user roles change during active collaboration sessions
   [#3749](https://github.com/OpenFn/lightning/issues/3749)
+
+## [2.14.11-pr1] - 2025-10-15
+
+### Added
+
+- Create new workflow via YAML in the collaborative editor
+  [#3700](https://github.com/OpenFn/lightning/issues/3700)
+- E2E tests for edge validation in collaborative editor
+  [#3724](https://github.com/OpenFn/lightning/issues/3724)
+- Ensure that TOTP codes cannot be reused.
+  [#3758](https://github.com/OpenFn/lightning/issues/3758)
+
+### Changed
+
+- Detect and clean stale CMake caches in bootstrap script
+  [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
+
+### Fixed
+
+- Credentials added to parent projects now automatically propagate to all
+  descendant sandbox projects, ensuring sandboxes have access to parent
+  credentials. Includes migration to backfill existing missing associations.
+  [#3756](https://github.com/OpenFn/lightning/issues/3756)
 
 ## [2.14.11-pre] - 2025-10-14
 

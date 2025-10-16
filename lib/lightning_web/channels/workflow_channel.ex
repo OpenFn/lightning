@@ -195,6 +195,16 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("validate_workflow_name", %{"workflow" => params}, socket) do
+    project = socket.assigns.project
+
+    # Apply name uniqueness logic
+    validated_params = ensure_unique_name(params, project)
+
+    {:reply, {:ok, %{workflow: validated_params}}, socket}
+  end
+
+  @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
     {:noreply, socket}
@@ -453,6 +463,44 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
+  # Private helper functions for validate_workflow_name
+
+  defp ensure_unique_name(params, project) do
+    workflow_name =
+      params["name"]
+      |> to_string()
+      |> String.trim()
+      |> case do
+        "" -> "Untitled workflow"
+        name -> name
+      end
+
+    existing_workflows = Lightning.Projects.list_workflows(project)
+    unique_name = generate_unique_name(workflow_name, existing_workflows)
+
+    Map.put(params, "name", unique_name)
+  end
+
+  defp generate_unique_name(base_name, existing_workflows) do
+    existing_names = MapSet.new(existing_workflows, & &1.name)
+
+    if MapSet.member?(existing_names, base_name) do
+      find_available_name(base_name, existing_names)
+    else
+      base_name
+    end
+  end
+
+  defp find_available_name(base_name, existing_names) do
+    1
+    |> Stream.iterate(&(&1 + 1))
+    |> Stream.map(&"#{base_name} #{&1}")
+    |> Enum.find(&name_available?(&1, existing_names))
+  end
+
+  defp name_available?(name, existing_names) do
+    not MapSet.member?(existing_names, name)
+  end
   # Load workflow for "edit" action - fetch from database
   defp load_workflow("edit", workflow_id, project, user) do
     case Lightning.Workflows.get_workflow(workflow_id) do

@@ -4,6 +4,7 @@
  */
 
 import { ReactFlowProvider } from "@xyflow/react";
+import { useRef } from "react";
 
 import { useNodeSelection, useWorkflowState } from "../../hooks/useWorkflow";
 
@@ -21,6 +22,9 @@ export function CollaborativeWorkflowDiagram({
   const workflow = useWorkflowState(state => state.workflow);
   const { currentNode, selectNode } = useNodeSelection();
 
+  // Create container ref for event delegation
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // Don't render if no workflow data yet
   if (!workflow) {
     return (
@@ -33,7 +37,7 @@ export function CollaborativeWorkflowDiagram({
   }
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={className}>
       <ReactFlowProvider>
         <CollaborativeWorkflowDiagramImpl
           selection={currentNode.id}
@@ -41,6 +45,7 @@ export function CollaborativeWorkflowDiagram({
           forceFit={true}
           showAiAssistant={false}
           inspectorId={inspectorId}
+          containerEl={containerRef.current}
         />
       </ReactFlowProvider>
     </div>
