@@ -28,6 +28,7 @@ defmodule LightningWeb.RunLive.Index do
     id: :boolean,
     body: :boolean,
     log: :boolean,
+    dataclip_name: :boolean,
     workflow_id: :string,
     workorder_id: :string,
     date_after: :utc_datetime,
@@ -113,7 +114,12 @@ defmodule LightningWeb.RunLive.Index do
         label:
           "Include inputs (note that very large/complex inputs—often around 10MB—may not appear in string search due to a ts_vector index length limit of 1MB)"
       },
-      %{id: :log, icon: "hero-bars-arrow-down-mini", label: "Include run logs"}
+      %{id: :log, icon: "hero-bars-arrow-down-mini", label: "Include run logs"},
+      %{
+        id: :dataclip_name,
+        icon: "hero-identification",
+        label: "Include dataclip names"
+      }
     ]
 
     params = Map.put_new(params, "filters", init_filters())

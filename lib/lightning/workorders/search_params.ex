@@ -23,7 +23,7 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   @statuses ~w(pending running success failed crashed killed cancelled lost exception rejected)
   @statuses_set MapSet.new(@statuses)
-  @search_fields ~w(id body log)
+  @search_fields ~w(id body log dataclip_name)
 
   defmacro status_list do
     quote do
