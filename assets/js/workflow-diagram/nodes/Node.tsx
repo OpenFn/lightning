@@ -49,7 +49,7 @@ const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
   if (children && (children as any).length) {
     return (
       <p
-        className={`line-clamp-2 align-left text-m max-w-[120px] text-ellipsis overflow-hidden ${textColorClass}`}
+        className={`line-clamp-2 align-left text-m max-w-[220px] text-ellipsis overflow-hidden ${textColorClass}`}
       >
         {children}
       </p>
@@ -311,7 +311,7 @@ const Node = ({
             }}
           />
         )}
-        <div className="flex flex-col mt-8 ml-2 absolute left-[116px] top-0 pointer-events-none min-w-[275px]">
+        <div className="flex flex-col mt-8 absolute left-[116px] top-0 pointer-events-none min-w-[275px]">
           <Label hasErrors={hasErrors(errors)}>{label}</Label>
           <SubLabel>{sublabel}</SubLabel>
           {data.isActiveDropTarget &&
