@@ -331,6 +331,11 @@ export const useWorkflowActions = () => {
       addJob: store.addJob,
       removeJob: store.removeJob,
 
+      // Edge actions
+      addEdge: store.addEdge,
+      updateEdge: store.updateEdge,
+      removeEdge: store.removeEdge,
+
       // Trigger actions
       updateTrigger: store.updateTrigger,
       setEnabled: store.setEnabled,

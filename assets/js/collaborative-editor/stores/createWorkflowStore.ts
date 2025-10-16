@@ -138,6 +138,7 @@ import _logger from "#/utils/logger";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { YAMLStateToYDoc } from "../adapters/YAMLStateToYDoc";
 import { channelRequest } from "../hooks/useChannel";
+import { EdgeSchema } from "../types/edge";
 import { JobSchema } from "../types/job";
 import type { Session } from "../types/session";
 import type { Workflow } from "../types/workflow";
@@ -148,6 +149,7 @@ import { wrapStoreWithDevTools } from "./devtools";
 const logger = _logger.ns("WorkflowStore").seal();
 
 const JobShape = JobSchema.shape;
+const EdgeShape = EdgeSchema.shape;
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
   // Compute enabled from triggers
@@ -485,6 +487,47 @@ export const createWorkflowStore = () => {
     });
   };
 
+  const updateEdge = (id: string, updates: Partial<Session.Edge>) => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
+    const edgesArray = ydoc.getArray("edges");
+    const edges = edgesArray.toArray() as Y.Map<unknown>[];
+    const edgeIndex = edges.findIndex(edge => edge.get("id") === id);
+
+    if (edgeIndex >= 0) {
+      const yjsEdge = edges[edgeIndex];
+      if (yjsEdge) {
+        ydoc.transact(() => {
+          Object.entries(updates)
+            .filter(([key]) => key in EdgeShape)
+            .forEach(([key, value]) => {
+              yjsEdge.set(key, value);
+            });
+        });
+      }
+    }
+    // Observer handles the rest: Y.Doc → immer → notify
+  };
+
+  const removeEdge = (id: string) => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
+    const edgesArray = ydoc.getArray("edges");
+    const edges = edgesArray.toArray() as Y.Map<unknown>[];
+    const edgeIndex = edges.findIndex(edge => edge.get("id") === id);
+
+    if (edgeIndex >= 0) {
+      ydoc.transact(() => {
+        edgesArray.delete(edgeIndex, 1);
+      });
+    }
+    // Observer handles: Y.Doc → Immer → notify
+  };
+
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
     if (!ydoc) return;
 
@@ -774,6 +817,8 @@ export const createWorkflowStore = () => {
     addJob,
     removeJob,
     addEdge,
+    updateEdge,
+    removeEdge,
     updateTrigger,
     setEnabled,
     getJobBodyYText,
