@@ -5,9 +5,7 @@ defmodule LightningWeb.SandboxLive.Components do
   alias Phoenix.LiveView.JS
 
   @color_palette [
-    {"#E040FB", "."},
-    {"#E64A2E", "Tomato"},
-    {"#E33D63", "Crimson"},
+    {"#E040FB", "Pink"},
     {"#8E3FB1", "Purple"},
     {"#5E3FB8", "Deep Purple"},
     {"#5AA1F0", "Azure"},
@@ -15,12 +13,14 @@ defmodule LightningWeb.SandboxLive.Components do
     {"#4AC1CE", "Teal"},
     {"#2E9B92", "Sea Green"},
     {"#56B15A", "Green"},
-    {"#9AD04E", "Lime"},
-    {"#C9E145", "Chartreuse"},
-    {"#FFF35A", "Yellow"},
-    {"#F4C644", "Amber"},
+    {"#5D4037", "Brown"},
+    {"#E33D63", "Crimson"},
+    {"#E64A2E", "Tomato"},
     {"#F39B33", "Orange"},
-    {"#5D4037", "."}
+    {"#F4C644", "Amber"},
+    {"#FFF35A", "Yellow"},
+    {"#C9E145", "Chartreuse"},
+    {"#9AD04E", "Lime"}
   ]
 
   def color_palette_hex_colors do
