@@ -40,7 +40,7 @@ export namespace Session {
   export type Workflow = {
     id: string;
     name: string;
-    lock_version: number;
+    lock_version: number | null;
     deleted_at: string | null;
   };
 

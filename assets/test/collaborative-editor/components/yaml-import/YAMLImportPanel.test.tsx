@@ -260,9 +260,13 @@ describe("YAMLImportPanel", () => {
 
       fireEvent.change(textarea, { target: { value: invalidYAML } });
 
-      // Wait for debounce + validation - button should still be disabled
-      await new Promise(resolve => setTimeout(resolve, 400));
-      expect(createButton).toBeDisabled();
+      // Wait for debounce (300ms) + validation - button should still be disabled
+      await waitFor(
+        () => {
+          expect(createButton).toBeDisabled();
+        },
+        { timeout: 500, interval: 50 }
+      );
     });
   });
 

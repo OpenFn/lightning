@@ -3,6 +3,8 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
+import { useEffect, useState } from "react";
+
 import { useURLState } from "../../../react/lib/use-url-state";
 import type { Workflow } from "../../types/workflow";
 
@@ -23,12 +25,20 @@ interface InspectorProps {
 
 export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
   const { hash, updateHash } = useURLState();
+  const [jobFooterButton, setJobFooterButton] = useState<React.ReactNode>(null);
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
   // Settings hash takes precedence, then node inspector
   const mode =
     hash === "settings" ? "settings" : hasSelectedNode ? "node" : null;
+
+  // Clear footer button when mode changes away from job node
+  useEffect(() => {
+    if (mode !== "node" || currentNode.type !== "job") {
+      setJobFooterButton(null);
+    }
+  }, [mode, currentNode.type]);
 
   const handleClose = () => {
     if (mode === "settings") {
@@ -79,6 +89,7 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
                   <JobInspector
                     key={`job-${currentNode.id}`}
                     job={currentNode.node as Workflow.Job}
+                    renderFooter={setJobFooterButton}
                   />
                 )}
                 {currentNode.type === "trigger" && (
@@ -112,6 +123,9 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
             >
               Save
             </button>
+          )}
+          {mode === "node" && currentNode.type === "job" && jobFooterButton && (
+            <div className="ml-4">{jobFooterButton}</div>
           )}
         </div>
       </div>

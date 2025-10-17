@@ -4,8 +4,8 @@
   "main": "js/app.js",
   "scripts": {
     "start": "node dev-server.js",
-    "test": "vitest",
-    "test:run": "vitest run",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test-report": "vitest run --reporter=junit --outputFile=../test/reports/vitest.xml",
