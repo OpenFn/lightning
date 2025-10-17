@@ -17,8 +17,8 @@ and this project adheres to
 
 ### Added
 
-- Editable EdgeInspector form in collaborative workflow editor with TanStack Form,
-  enabling users to configure edge properties (label, condition type, JS
+- Editable EdgeInspector form in collaborative workflow editor with TanStack
+  Form, enabling users to configure edge properties (label, condition type, JS
   expressions, enabled state) with auto-save and real-time collaborative editing
   [#3701](https://github.com/OpenFn/lightning/issues/3701)
 - Delete nodes from Job panel in Collaborative Editor
@@ -26,6 +26,7 @@ and this project adheres to
 
 ### Changed
 
+- Tweaked the Sandbox color palette
 - Detect and clean stale CMake caches in bootstrap script
   [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
 
