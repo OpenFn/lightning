@@ -5,11 +5,11 @@ defmodule LightningWeb.SandboxLive.Components do
   alias Phoenix.LiveView.JS
 
   @color_palette [
+    {"#E040FB", "."},
     {"#E64A2E", "Tomato"},
     {"#E33D63", "Crimson"},
     {"#8E3FB1", "Purple"},
     {"#5E3FB8", "Deep Purple"},
-    {"#4A55C5", "Indigo"},
     {"#5AA1F0", "Azure"},
     {"#67C1E2", "Sky"},
     {"#4AC1CE", "Teal"},
@@ -20,7 +20,7 @@ defmodule LightningWeb.SandboxLive.Components do
     {"#FFF35A", "Yellow"},
     {"#F4C644", "Amber"},
     {"#F39B33", "Orange"},
-    {"#F0682E", "Vermilion"}
+    {"#5D4037", "."}
   ]
 
   def color_palette_hex_colors do
@@ -373,8 +373,6 @@ defmodule LightningWeb.SandboxLive.Components do
             index={index}
           />
         </div>
-
-        <.color_display current={@current} current_name={@current_name} />
       </div>
 
       <p class="sr-only" aria-live="polite">
@@ -660,20 +658,6 @@ defmodule LightningWeb.SandboxLive.Components do
 
   attr :current, :string, required: true
   attr :current_name, :string, required: true
-
-  defp color_display(assigns) do
-    ~H"""
-    <div class="inline-flex items-center gap-2 rounded-md border border-black/10 bg-white px-3 py-2 text-sm text-slate-700">
-      <span
-        class="inline-block h-4 w-4 rounded-sm ring-1 ring-black/10 flex-shrink-0"
-        style={"background-color: #{@current};"}
-        aria-hidden="true"
-      />
-      <span class="font-medium">{@current_name}</span>
-      <span class="font-mono text-slate-400 text-xs">{@current}</span>
-    </div>
-    """
-  end
 
   defp has_environment?(%{env: env}) when is_binary(env) do
     String.trim(env) != ""
