@@ -8,6 +8,7 @@ import type { Workflow } from "../../types/workflow";
 import { useAppForm } from "../form";
 import { createZodValidator } from "../form/createZodValidator";
 import { ErrorMessage } from "../form/error-message";
+import { Tooltip } from "../Tooltip";
 
 interface EdgeInspectorProps {
   edge: Workflow.Edge;
@@ -94,9 +95,10 @@ export function EdgeInspector({ edge }: EdgeInspectorProps) {
     form.store,
     state => state.values.condition_expression || ""
   );
-  const isExpressionUnsafe = /(\bimport\b|\brequire\b|\bprocess\b|\bawait\b|\beval\b)/.test(
-    conditionExpression
-  );
+  const isExpressionUnsafe =
+    /(\bimport\b|\brequire\b|\bprocess\b|\bawait\b|\beval\b)/.test(
+      conditionExpression
+    );
 
   const handleDelete = useCallback(() => {
     if (
@@ -119,90 +121,74 @@ export function EdgeInspector({ edge }: EdgeInspectorProps) {
       {/* Condition Type Dropdown */}
       <form.AppField name="condition_type">
         {field => (
-          <field.SelectField
-            label="Condition"
-            options={conditionOptions}
-          />
+          <field.SelectField label="Condition" options={conditionOptions} />
         )}
       </form.AppField>
 
       {/* JS Expression Editor (conditional) */}
       {showExpressionEditor && (
-          <div className="space-y-2">
-            <form.Field name="condition_expression">
-              {field => (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <label
-                      htmlFor={field.name}
-                      className="text-sm font-medium text-slate-800"
+        <div className="space-y-2">
+          <form.Field name="condition_expression">
+            {field => (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <label
+                    htmlFor={field.name}
+                    className="text-sm font-medium text-slate-800"
+                  >
+                    JS Expression
+                  </label>
+                  {isExpressionUnsafe && (
+                    <Tooltip
+                      content="Expression contains potentially unsafe functions"
+                      side="top"
                     >
-                      JS Expression
-                    </label>
-                    {isExpressionUnsafe && (
-                      <span
-                        className="text-yellow-600"
-                        title="Expression contains potentially unsafe functions"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
-                      </span>
-                    )}
-                  </div>
-                  <textarea
-                    id={field.name}
-                    value={field.state.value || ""}
-                    onChange={e => field.handleChange(e.target.value)}
-                    placeholder="eg: !state.error"
-                    className="block w-full h-24 px-3 py-2 rounded-md border-slate-300
+                      <span className="hero-exclamation-triangle text-yellow-600 h-4 w-4 inline-flex" />
+                    </Tooltip>
+                  )}
+                </div>
+                <textarea
+                  id={field.name}
+                  value={field.state.value || ""}
+                  onChange={e => field.handleChange(e.target.value)}
+                  placeholder="eg: !state.error"
+                  className="block w-full h-24 px-3 py-2 rounded-md border-slate-300
                                font-mono text-slate-200 bg-slate-700 text-sm
                                focus:border-slate-400 focus:ring-0"
-                  />
-                  <ErrorMessage meta={field.state.meta} />
-                </div>
-              )}
-            </form.Field>
-
-            <details className="text-xs text-slate-600">
-              <summary className="cursor-pointer hover:text-slate-800">
-                How to write expressions
-              </summary>
-              <div className="mt-2 space-y-1">
-                <p>
-                  Use the state from the previous step to decide whether
-                  this step should run.
-                </p>
-                <p>
-                  Must be a single JavaScript expression with `state` in
-                  scope.
-                </p>
-                <p>
-                  Check{" "}
-                  <a
-                    href="https://docs.openfn.org/documentation/build/paths#writing-javascript-expressions-for-custom-path-conditions"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-600 hover:underline"
-                  >
-                    docs.openfn.org
-                  </a>{" "}
-                  for more details.
-                </p>
+                />
+                <ErrorMessage meta={field.state.meta} />
               </div>
-            </details>
-          </div>
-        )}
+            )}
+          </form.Field>
+
+          <details className="text-xs text-slate-600">
+            <summary className="cursor-pointer hover:text-slate-800">
+              How to write expressions
+            </summary>
+            <div className="mt-2 space-y-1">
+              <p>
+                Use the state from the previous step to decide whether this step
+                should run.
+              </p>
+              <p>
+                Must be a single JavaScript expression with `state` in scope.
+              </p>
+              <p>
+                Check{" "}
+                <a
+                  href="https://docs.openfn.org/documentation/build/paths#writing-javascript-expressions-for-custom-path-conditions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 hover:underline"
+                >
+                  docs.openfn.org
+                </a>{" "}
+                for more details.
+              </p>
+            </div>
+          </details>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="border-t border-slate-200 pt-4 mt-6">
