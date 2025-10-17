@@ -41,14 +41,12 @@ export function NumberField({
   const field = useFieldContext<number | null>();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === "") {
+    const value = e.target.valueAsNumber;
+    if (isNaN(value)) {
+      // Empty input or invalid → null
       field.handleChange(null);
     } else {
-      const numValue = parseInt(value, 10);
-      if (!isNaN(numValue)) {
-        field.handleChange(numValue);
-      }
+      field.handleChange(value);
     }
   };
 
@@ -62,9 +60,7 @@ export function NumberField({
         {label}
       </label>
       <input
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
+        type="number"
         id={field.name}
         value={field.state.value === null ? "" : field.state.value}
         onChange={handleChange}
