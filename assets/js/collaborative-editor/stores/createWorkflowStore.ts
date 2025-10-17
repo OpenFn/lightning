@@ -138,6 +138,7 @@ import _logger from "#/utils/logger";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { YAMLStateToYDoc } from "../adapters/YAMLStateToYDoc";
 import { channelRequest } from "../hooks/useChannel";
+import { EdgeSchema } from "../types/edge";
 import { JobSchema } from "../types/job";
 import type { Session } from "../types/session";
 import type { Workflow } from "../types/workflow";
@@ -148,6 +149,7 @@ import { wrapStoreWithDevTools } from "./devtools";
 const logger = _logger.ns("WorkflowStore").seal();
 
 const JobShape = JobSchema.shape;
+const EdgeShape = EdgeSchema.shape;
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
   // Compute enabled from triggers
@@ -473,7 +475,10 @@ export const createWorkflowStore = () => {
   };
 
   const addJob = (job: Partial<Session.Job>) => {
-    if (!ydoc || !job.id || !job.name) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+    if (!job.id || !job.name) return;
 
     const jobsArray = ydoc.getArray("jobs");
     const jobMap = new Y.Map();
@@ -489,7 +494,9 @@ export const createWorkflowStore = () => {
   };
 
   const removeJob = (id: string) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const jobsArray = ydoc.getArray("jobs");
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
@@ -503,7 +510,10 @@ export const createWorkflowStore = () => {
   };
 
   const addEdge = (edge: Partial<Session.Edge>) => {
-    if (!ydoc || !edge.id || !edge.target_job_id) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+    if (!edge.id || !edge.target_job_id) return;
 
     const edgesArray = ydoc.getArray("edges");
     const edgeMap = new Y.Map();
@@ -521,8 +531,51 @@ export const createWorkflowStore = () => {
     });
   };
 
+  const updateEdge = (id: string, updates: Partial<Session.Edge>) => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
+    const edgesArray = ydoc.getArray("edges");
+    const edges = edgesArray.toArray() as Y.Map<unknown>[];
+    const edgeIndex = edges.findIndex(edge => edge.get("id") === id);
+
+    if (edgeIndex >= 0) {
+      const yjsEdge = edges[edgeIndex];
+      if (yjsEdge) {
+        ydoc.transact(() => {
+          Object.entries(updates)
+            .filter(([key]) => key in EdgeShape)
+            .forEach(([key, value]) => {
+              yjsEdge.set(key, value);
+            });
+        });
+      }
+    }
+    // Observer handles the rest: Y.Doc → immer → notify
+  };
+
+  const removeEdge = (id: string) => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
+    const edgesArray = ydoc.getArray("edges");
+    const edges = edgesArray.toArray() as Y.Map<unknown>[];
+    const edgeIndex = edges.findIndex(edge => edge.get("id") === id);
+
+    if (edgeIndex >= 0) {
+      ydoc.transact(() => {
+        edgesArray.delete(edgeIndex, 1);
+      });
+    }
+    // Observer handles: Y.Doc → Immer → notify
+  };
+
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const triggersArray = ydoc.getArray("triggers");
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
@@ -541,7 +594,9 @@ export const createWorkflowStore = () => {
   };
 
   const setEnabled = (enabled: boolean) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const triggersArray = ydoc.getArray("triggers");
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
@@ -564,7 +619,9 @@ export const createWorkflowStore = () => {
   };
 
   const updatePositions = (positions: Workflow.Positions | null) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const positionsMap = ydoc.getMap("positions");
 
@@ -582,7 +639,9 @@ export const createWorkflowStore = () => {
   };
 
   const updatePosition = (id: string, position: { x: number; y: number }) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const positionsMap = ydoc.getMap("positions");
     ydoc.transact(() => {
@@ -811,6 +870,8 @@ export const createWorkflowStore = () => {
     addJob,
     removeJob,
     addEdge,
+    updateEdge,
+    removeEdge,
     updateTrigger,
     setEnabled,
     getJobBodyYText,

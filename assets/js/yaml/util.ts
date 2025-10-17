@@ -3,6 +3,7 @@ import YAML from 'yaml';
 import { randomUUID } from '../common';
 import workflowV1Schema from './schema/workflow-spec.json';
 import {
+  WorkflowError,
   YamlSyntaxError,
   JobNotFoundError,
   TriggerNotFoundError,

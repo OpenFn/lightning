@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Editable EdgeInspector form in collaborative workflow editor with TanStack Form,
+  enabling users to configure edge properties (label, condition type, JS
+  expressions, enabled state) with auto-save and real-time collaborative editing
+  [#3701](https://github.com/OpenFn/lightning/issues/3701)
 - Delete nodes from Job panel in Collaborative Editor
   [#3702](https://github.com/OpenFn/lightning/issues/3702)
 
@@ -28,6 +32,10 @@ and this project adheres to
   [#3643](https://github.com/OpenFn/lightning/issues/3643)
 
 ### Fixed
+
+- Runtime permission checks in WorkflowChannel save/reset operations to prevent
+  unauthorized edits when user roles change during active collaboration sessions
+  [#3749](https://github.com/OpenFn/lightning/issues/3749)
 
 ## [2.14.11-pr1] - 2025-10-15
 

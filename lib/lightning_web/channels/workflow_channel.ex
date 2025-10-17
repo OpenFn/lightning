@@ -163,46 +163,16 @@ defmodule LightningWeb.WorkflowChannel do
     session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
 
-    case Session.save_workflow(session_pid, user) do
-      {:ok, workflow} ->
-        {:reply,
-         {:ok,
-          %{
-            saved_at: DateTime.utc_now(),
-            lock_version: workflow.lock_version
-          }}, socket}
-
-      {:error, :workflow_deleted} ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: ["This workflow has been deleted"]},
-            type: "workflow_deleted"
-          }}, socket}
-
-      {:error, :deserialization_failed} ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: ["Failed to extract workflow data from editor"]},
-            type: "deserialization_error"
-          }}, socket}
-
-      {:error, :internal_error} ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: ["An internal error occurred"]},
-            type: "internal_error"
-          }}, socket}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:reply,
-         {:error,
-          %{
-            errors: format_changeset_errors(changeset),
-            type: determine_error_type(changeset)
-          }}, socket}
+    with :ok <- authorize_edit_workflow(socket),
+         {:ok, workflow} <- Session.save_workflow(session_pid, user) do
+      {:reply,
+       {:ok,
+        %{
+          saved_at: workflow.updated_at,
+          lock_version: workflow.lock_version
+        }}, socket}
+    else
+      error -> workflow_error_reply(socket, error)
     end
   end
 
@@ -211,30 +181,16 @@ defmodule LightningWeb.WorkflowChannel do
     session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
 
-    case Session.reset_workflow(session_pid, user) do
-      {:ok, workflow} ->
-        {:reply,
-         {:ok,
-          %{
-            lock_version: workflow.lock_version,
-            workflow_id: workflow.id
-          }}, socket}
-
-      {:error, :workflow_deleted} ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: ["This workflow has been deleted"]},
-            type: "workflow_deleted"
-          }}, socket}
-
-      {:error, :internal_error} ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: ["An internal error occurred"]},
-            type: "internal_error"
-          }}, socket}
+    with :ok <- authorize_edit_workflow(socket),
+         {:ok, workflow} <- Session.reset_workflow(session_pid, user) do
+      {:reply,
+       {:ok,
+        %{
+          lock_version: workflow.lock_version,
+          workflow_id: workflow.id
+        }}, socket}
+    else
+      error -> workflow_error_reply(socket, error)
     end
   end
 
@@ -414,7 +370,52 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
-  # Private helper functions for save_workflow
+  # Private helper functions for save_workflow and reset_workflow
+
+  defp workflow_error_reply(socket, {:error, %{type: type, message: message}}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: [message]},
+        type: type
+      }}, socket}
+  end
+
+  defp workflow_error_reply(socket, {:error, :workflow_deleted}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: ["This workflow has been deleted"]},
+        type: "workflow_deleted"
+      }}, socket}
+  end
+
+  defp workflow_error_reply(socket, {:error, :deserialization_failed}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: ["Failed to extract workflow data from editor"]},
+        type: "deserialization_error"
+      }}, socket}
+  end
+
+  defp workflow_error_reply(socket, {:error, :internal_error}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: ["An internal error occurred"]},
+        type: "internal_error"
+      }}, socket}
+  end
+
+  defp workflow_error_reply(socket, {:error, %Ecto.Changeset{} = changeset}) do
+    {:reply,
+     {:error,
+      %{
+        errors: format_changeset_errors(changeset),
+        type: determine_error_type(changeset)
+      }}, socket}
+  end
 
   defp format_changeset_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
@@ -429,6 +430,36 @@ defmodule LightningWeb.WorkflowChannel do
       "optimistic_lock_error"
     else
       "validation_error"
+    end
+  end
+
+  # Authorizes edit operations on the workflow by checking current user permissions.
+  #
+  # This function refetches the project_user to get the latest role, ensuring
+  # that permission changes made during an active session are enforced.
+  #
+  # Returns :ok if authorized, {:error, %{type: string, message: string}} if not.
+  defp authorize_edit_workflow(socket) do
+    user = socket.assigns.current_user
+    project = socket.assigns.project
+
+    project_user = Lightning.Projects.get_project_user(project, user)
+
+    case Permissions.can(
+           :project_users,
+           :edit_workflow,
+           user,
+           project_user
+         ) do
+      :ok ->
+        :ok
+
+      {:error, :unauthorized} ->
+        {:error,
+         %{
+           type: "unauthorized",
+           message: "You don't have permission to edit this workflow"
+         }}
     end
   end
 
