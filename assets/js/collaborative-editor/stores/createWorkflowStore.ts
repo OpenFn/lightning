@@ -439,7 +439,10 @@ export const createWorkflowStore = () => {
   };
 
   const addJob = (job: Partial<Session.Job>) => {
-    if (!ydoc || !job.id || !job.name) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+    if (!job.id || !job.name) return;
 
     const jobsArray = ydoc.getArray("jobs");
     const jobMap = new Y.Map();
@@ -455,7 +458,9 @@ export const createWorkflowStore = () => {
   };
 
   const removeJob = (id: string) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const jobsArray = ydoc.getArray("jobs");
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
@@ -469,7 +474,10 @@ export const createWorkflowStore = () => {
   };
 
   const addEdge = (edge: Partial<Session.Edge>) => {
-    if (!ydoc || !edge.id || !edge.target_job_id) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+    if (!edge.id || !edge.target_job_id) return;
 
     const edgesArray = ydoc.getArray("edges");
     const edgeMap = new Y.Map();
@@ -529,7 +537,9 @@ export const createWorkflowStore = () => {
   };
 
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const triggersArray = ydoc.getArray("triggers");
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
@@ -548,7 +558,9 @@ export const createWorkflowStore = () => {
   };
 
   const setEnabled = (enabled: boolean) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const triggersArray = ydoc.getArray("triggers");
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
@@ -571,7 +583,9 @@ export const createWorkflowStore = () => {
   };
 
   const updatePositions = (positions: Workflow.Positions | null) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const positionsMap = ydoc.getMap("positions");
 
@@ -589,7 +603,9 @@ export const createWorkflowStore = () => {
   };
 
   const updatePosition = (id: string, position: { x: number; y: number }) => {
-    if (!ydoc) return;
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
 
     const positionsMap = ydoc.getMap("positions");
     ydoc.transact(() => {
