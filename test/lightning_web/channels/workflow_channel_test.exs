@@ -85,6 +85,39 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert is_list(credentials.project_credentials)
       assert is_list(credentials.keychain_credentials)
     end
+
+    test "returns correctly structured project credentials", %{
+      socket: socket,
+      project: project
+    } do
+      # Create a credential with project association
+      credential =
+        insert(:credential,
+          name: "Test Credential",
+          schema: "raw",
+          external_id: "ext_123"
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      ref = push(socket, "request_credentials", %{})
+
+      assert_reply ref, :ok, %{credentials: credentials}
+
+      # Verify credential structure and values using pattern matching
+      assert [
+               %{
+                 id: _,
+                 project_credential_id: _,
+                 name: "Test Credential",
+                 external_id: "ext_123",
+                 schema: "raw",
+                 inserted_at: _,
+                 updated_at: _
+               }
+               | _
+             ] = credentials.project_credentials
+    end
   end
 
   describe "get_context" do

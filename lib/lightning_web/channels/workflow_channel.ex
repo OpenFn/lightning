@@ -268,7 +268,6 @@ defmodule LightningWeb.WorkflowChannel do
             project_credential_id: project_credential_id,
             name: credential.name,
             external_id: credential.external_id,
-            production: credential.production,
             schema: credential.schema,
             inserted_at: credential.inserted_at,
             updated_at: credential.updated_at
