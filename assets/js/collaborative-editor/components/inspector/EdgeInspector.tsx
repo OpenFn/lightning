@@ -1,7 +1,7 @@
 import { useStore } from "@tanstack/react-form";
 import { useCallback, useEffect, useMemo } from "react";
 
-import { useWorkflowActions, useWorkflowState } from "../../hooks/useWorkflow";
+import { useWorkflowActions } from "../../hooks/useWorkflow";
 import { useWatchFields } from "../../stores/common";
 import { EdgeSchema } from "../../types/edge";
 import type { Workflow } from "../../types/workflow";
@@ -15,10 +15,6 @@ interface EdgeInspectorProps {
 
 export function EdgeInspector({ edge }: EdgeInspectorProps) {
   const { updateEdge, removeEdge, clearSelection } = useWorkflowActions();
-  const { jobs, triggers } = useWorkflowState(state => ({
-    jobs: state.jobs,
-    triggers: state.triggers,
-  }));
 
   // Initialize form with edge data
   const form = useAppForm({
@@ -60,24 +56,6 @@ export function EdgeInspector({ edge }: EdgeInspectorProps) {
   useEffect(() => {
     form.reset();
   }, [edge.id, form]);
-
-  // Resolve source and target names
-  const sourceNode = useMemo(() => {
-    if (edge.source_job_id) {
-      const job = jobs.find(j => j.id === edge.source_job_id);
-      return job ? { type: "Job", name: job.name } : null;
-    }
-    if (edge.source_trigger_id) {
-      const trigger = triggers.find(t => t.id === edge.source_trigger_id);
-      return trigger ? { type: "Trigger", name: trigger.type } : null;
-    }
-    return null;
-  }, [edge, jobs, triggers]);
-
-  const targetNode = useMemo(() => {
-    const job = jobs.find(j => j.id === edge.target_job_id);
-    return job ? { name: job.name } : null;
-  }, [edge.target_job_id, jobs]);
 
   // Determine available options based on source
   const conditionOptions = useMemo(() => {
@@ -132,45 +110,24 @@ export function EdgeInspector({ edge }: EdgeInspectorProps) {
   }, [edge.id, removeEdge, clearSelection]);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-2">Path</h3>
+    <div>
+      {/* Label Field */}
+      <form.AppField name="condition_label">
+        {field => <field.TextField label="Label" />}
+      </form.AppField>
 
-        {/* Source/Target Display */}
-        <div className="space-y-2 mb-4 p-3 bg-slate-50 rounded border border-slate-200">
-          <div>
-            <span className="text-xs text-slate-500 block">Source</span>
-            <p className="text-sm text-slate-900">
-              {sourceNode
-                ? `${sourceNode.type}: ${sourceNode.name}`
-                : "Unknown"}
-            </p>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500 block">Target</span>
-            <p className="text-sm text-slate-900">
-              {targetNode ? `Job: ${targetNode.name}` : "Unknown"}
-            </p>
-          </div>
-        </div>
+      {/* Condition Type Dropdown */}
+      <form.AppField name="condition_type">
+        {field => (
+          <field.SelectField
+            label="Condition"
+            options={conditionOptions}
+          />
+        )}
+      </form.AppField>
 
-        {/* Label Field */}
-        <form.AppField name="condition_label">
-          {field => <field.TextField label="Label" />}
-        </form.AppField>
-
-        {/* Condition Type Dropdown */}
-        <form.AppField name="condition_type">
-          {field => (
-            <field.SelectField
-              label="Condition"
-              options={conditionOptions}
-            />
-          )}
-        </form.AppField>
-
-        {/* JS Expression Editor (conditional) */}
-        {showExpressionEditor && (
+      {/* JS Expression Editor (conditional) */}
+      {showExpressionEditor && (
           <div className="space-y-2">
             <form.Field name="condition_expression">
               {field => (
@@ -246,7 +203,6 @@ export function EdgeInspector({ edge }: EdgeInspectorProps) {
             </details>
           </div>
         )}
-      </div>
 
       {/* Footer */}
       <div className="border-t border-slate-200 pt-4 mt-6">

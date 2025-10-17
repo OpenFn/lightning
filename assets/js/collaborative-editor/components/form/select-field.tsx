@@ -35,7 +35,7 @@ export function SelectField({
   const field = useFieldContext<string>();
 
   return (
-    <div>
+    <div className="mb-4">
       <label
         htmlFor={field.name}
         className="text-sm/6 font-medium text-slate-800 mb-2"
