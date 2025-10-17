@@ -199,6 +199,7 @@ components:
 - Key dependencies: @xyflow/react (workflow visualization), Yjs (collaborative
   editing), Monaco Editor (code editing)
 - React components integrated into Phoenix app via LiveView mounting
+- **Icons**: Use heroicons via Tailwind classes (e.g., `className="hero-check-micro h-4 w-4"`). Never create custom SVG icons.
 
 #### Toast Notifications
 
