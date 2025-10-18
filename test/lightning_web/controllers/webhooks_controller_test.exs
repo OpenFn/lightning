@@ -504,7 +504,7 @@ defmodule LightningWeb.WebhooksControllerTest do
       Task.await(task)
     end
 
-    test "returns timeout after 30 seconds if workflow doesn't complete", %{
+    test "returns timeout if workflow doesn't complete within timeout period", %{
       conn: conn
     } do
       %{triggers: [trigger]} =
@@ -519,7 +519,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       message = %{"foo" => "bar"}
 
-      # This will timeout after 30 seconds since we never broadcast a response
+      # This will timeout since we never broadcast a response
       conn = post(conn, "/i/#{trigger.id}", message)
 
       assert json_response(conn, 504) == %{

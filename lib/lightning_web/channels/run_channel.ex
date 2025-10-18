@@ -197,6 +197,8 @@ defmodule LightningWeb.RunChannel do
          trigger.webhook_reply == :after_completion do
       topic = "work_order:#{work_order.id}:webhook_response"
 
+      # TODO - Decide how we want to determine (or later let the workflow author
+      # determine) the status code and body of the reply.
       {status_code, body} =
         case run.state do
           :success ->

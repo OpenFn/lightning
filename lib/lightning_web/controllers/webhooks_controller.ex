@@ -140,7 +140,7 @@ defmodule LightningWeb.WebhooksController do
         |> put_status(status_code)
         |> json(%{error: error})
     after
-      30_000 ->
+      Lightning.Config.webhook_response_timeout_ms() ->
         conn
         |> put_status(:gateway_timeout)
         |> json(%{

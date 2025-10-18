@@ -373,6 +373,11 @@ defmodule Lightning.Config do
       webhook_retry() |> Keyword.fetch!(key)
     end
 
+    @impl true
+    def webhook_response_timeout_ms do
+      Application.get_env(:lightning, :webhook_response_timeout_ms)
+    end
+
     defp default_webhook_retry do
       [
         max_attempts: 5,
@@ -462,6 +467,7 @@ defmodule Lightning.Config do
   @callback sentry() :: module()
   @callback webhook_retry() :: Keyword.t()
   @callback webhook_retry(key :: atom()) :: any()
+  @callback webhook_response_timeout_ms() :: integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -719,6 +725,10 @@ defmodule Lightning.Config do
 
   def webhook_retry(key) when is_atom(key) do
     impl().webhook_retry(key)
+  end
+
+  def webhook_response_timeout_ms do
+    impl().webhook_response_timeout_ms()
   end
 
   defp impl do
