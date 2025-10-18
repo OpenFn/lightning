@@ -4,6 +4,7 @@ import tippy, {
 } from 'tippy.js';
 import { format, formatRelative } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { marked } from 'marked';
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
@@ -684,6 +685,14 @@ export const BlurDataclipEditor = {
 
 export const ScrollToMessage = {
   mounted() {
+    this.shouldAutoScroll = true;
+
+    // Track if user manually scrolls away from bottom
+    this.el.addEventListener('scroll', () => {
+      const isAtBottom = this.isAtBottom();
+      this.shouldAutoScroll = isAtBottom;
+    });
+
     this.handleScroll();
   },
 
@@ -696,7 +705,8 @@ export const ScrollToMessage = {
 
     if (targetMessageId) {
       this.scrollToSpecificMessage(targetMessageId);
-    } else {
+    } else if (this.shouldAutoScroll) {
+      // Only auto-scroll if user hasn't manually scrolled up
       this.scrollToBottom();
     }
   },
@@ -717,18 +727,23 @@ export const ScrollToMessage = {
     }
   },
 
+  isAtBottom() {
+    const threshold = 50; // pixels from bottom
+    const position = this.el.scrollTop + this.el.clientHeight;
+    const height = this.el.scrollHeight;
+    return height - position <= threshold;
+  },
+
   scrollToBottom() {
-    setTimeout(() => {
-      this.el.scrollTo({
-        top: this.el.scrollHeight,
-        behavior: 'smooth',
-      });
-    }, 600);
+    // Use instant scroll during updates to prevent jank
+    this.el.scrollTop = this.el.scrollHeight;
   },
 } as PhoenixHook<{
+  shouldAutoScroll: boolean;
   handleScroll: () => void;
   scrollToSpecificMessage: (messageId: string) => void;
   scrollToBottom: () => void;
+  isAtBottom: () => boolean;
 }>;
 
 export const Copy = {
@@ -1019,4 +1034,73 @@ export const LocalTimeConverter = {
 } as PhoenixHook<{
   convertDateTime: () => void;
   convertToDisplayTime: (isoTimestamp: string, display: string) => void;
+}>;
+
+export const StreamingText = {
+  mounted() {
+    this.lastContent = '';
+    this.renderer = this.createCustomRenderer();
+    this.updateContent();
+  },
+
+  updated() {
+    this.updateContent();
+  },
+
+  createCustomRenderer() {
+    const renderer = new marked.Renderer();
+
+    // Apply custom CSS classes to match backend Earmark styles
+    renderer.code = (code, language) => {
+      const lang = language ? ` class="${language}"` : '';
+      return `<pre class="rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-auto"><code${lang}>${code}</code></pre>`;
+    };
+
+    renderer.link = (href, title, text) => {
+      return `<a href="${href}" class="text-primary-400 hover:text-primary-600" target="_blank">${text}</a>`;
+    };
+
+    renderer.heading = (text, level) => {
+      const classes = level === 1 ? 'text-2xl font-bold mb-6' : 'text-xl font-semibold mb-4 mt-8';
+      return `<h${level} class="${classes}">${text}</h${level}>`;
+    };
+
+    renderer.list = (body, ordered) => {
+      const tag = ordered ? 'ol' : 'ul';
+      const classes = ordered ? 'list-decimal pl-8 space-y-1' : 'list-disc pl-8 space-y-1';
+      return `<${tag} class="${classes}">${body}</${tag}>`;
+    };
+
+    renderer.listitem = (text) => {
+      return `<li class="text-gray-800">${text}</li>`;
+    };
+
+    renderer.paragraph = (text) => {
+      return `<p class="mt-1 mb-2 text-gray-800">${text}</p>`;
+    };
+
+    return renderer;
+  },
+
+  updateContent() {
+    const newContent = this.el.dataset.streamingContent || '';
+
+    if (newContent !== this.lastContent) {
+      // Re-parse entire content as markdown
+      // This handles split ticks because we always parse the full accumulated string
+      const htmlContent = marked.parse(newContent, {
+        renderer: this.renderer,
+        breaks: true,
+        gfm: true,
+      });
+
+      this.el.innerHTML = htmlContent;
+      this.lastContent = newContent;
+    }
+  },
+} as PhoenixHook<{
+  lastContent: string;
+  renderer: marked.Renderer;
+  createCustomRenderer: () => marked.Renderer;
+  updateContent: () => void;
 }>;

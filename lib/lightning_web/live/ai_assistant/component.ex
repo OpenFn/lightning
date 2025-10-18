@@ -43,7 +43,9 @@ defmodule LightningWeb.AiAssistant.Component do
        callbacks: %{},
        selected_message: nil,
        registered_session_id: nil,
-       registered_component_id: nil
+       registered_component_id: nil,
+       streaming_content: "",
+       streaming_status: nil
      })
      |> assign_async(:endpoint_available, fn ->
        {:ok, %{endpoint_available: AiAssistant.endpoint_available?()}}
@@ -53,6 +55,22 @@ defmodule LightningWeb.AiAssistant.Component do
   @impl true
   def update(%{message_status_changed: status}, socket) do
     {:ok, handle_message_status(status, socket)}
+  end
+
+  def update(%{id: _id, streaming_chunk: chunk_data}, socket) do
+    {:ok, handle_streaming_chunk(chunk_data, socket)}
+  end
+
+  def update(%{id: _id, status_update: status_data}, socket) do
+    {:ok, handle_status_update(status_data, socket)}
+  end
+
+  def update(%{id: _id, streaming_complete: _}, socket) do
+    {:ok, handle_streaming_complete(socket)}
+  end
+
+  def update(%{id: _id, streaming_payload_complete: payload_data}, socket) do
+    {:ok, handle_streaming_payload_complete(payload_data, socket)}
   end
 
   def update(%{action: :code_error} = assigns, socket) do
@@ -167,7 +185,9 @@ defmodule LightningWeb.AiAssistant.Component do
       session: session,
       pending_message: AsyncResult.ok(nil),
       selected_message: nil,
-      code_error: nil
+      code_error: nil,
+      streaming_content: Map.get(socket.assigns, :streaming_content, ""),
+      streaming_status: Map.get(socket.assigns, :streaming_status, nil)
     )
     |> delegate_to_handler(:on_message_received, [session])
   end
@@ -175,8 +195,102 @@ defmodule LightningWeb.AiAssistant.Component do
   defp handle_message_status({:error, session}, socket) do
     assign(socket,
       session: session,
-      pending_message: AsyncResult.ok(nil)
+      pending_message: AsyncResult.ok(nil),
+      streaming_content: Map.get(socket.assigns, :streaming_content, ""),
+      streaming_status: Map.get(socket.assigns, :streaming_status, nil)
     )
+  end
+
+  defp handle_streaming_chunk(chunk_data, socket) do
+    current_content = socket.assigns.streaming_content
+    new_content = current_content <> chunk_data.content
+    assign(socket, streaming_content: new_content)
+  end
+
+  defp handle_status_update(status_data, socket) do
+    assign(socket, streaming_status: status_data.status)
+  end
+
+  defp handle_streaming_complete(socket) do
+    # Keep streamed content and status in memory until payload arrives
+    # This allows saving content + code together in one operation
+    socket
+  end
+
+  defp handle_streaming_payload_complete(payload_data, socket) do
+    require Logger
+    session = socket.assigns.session
+    content = socket.assigns.streaming_content
+
+    Logger.info("[Component] Processing complete payload for session #{session.id}")
+
+    # Save the assistant message with ALL data at once (content + code + usage + meta)
+    # This matches the non-streaming approach
+    message_attrs = %{
+      role: :assistant,
+      content: content,
+      status: :success
+    }
+
+    opts = [
+      usage: payload_data[:usage] || %{},
+      meta: payload_data[:meta],
+      code: payload_data[:code]
+    ]
+
+    case AiAssistant.save_message(session, message_attrs, opts) do
+      {:ok, _updated_session} ->
+        Logger.info("[Component] Successfully saved complete message with payload data")
+
+        # Mark all pending/processing user messages as success
+        # Need to reload first to get current state
+        {:ok, fresh_session} = AiAssistant.get_session(session.id)
+        pending_user_messages = AiAssistant.find_pending_user_messages(fresh_session)
+
+        Logger.info("[Component] Found #{length(pending_user_messages)} pending user messages to mark as success")
+
+        results = Enum.map(pending_user_messages, fn user_message ->
+          Logger.info("[Component] Updating user message #{user_message.id} from #{user_message.status} to :success")
+          AiAssistant.update_message_status(fresh_session, user_message, :success)
+        end)
+
+        Logger.info("[Component] Update results: #{inspect(results)}")
+
+        # Reload session again to get fresh user message statuses after updates
+        {:ok, final_session} = AiAssistant.get_session(session.id)
+        Logger.info("[Component] Final user message statuses: #{inspect(Enum.filter(final_session.messages, &(&1.role == :user)) |> Enum.map(&{&1.id, &1.status}))}")
+
+        # Clear loading state and streaming content
+        Logger.info("[Component] Clearing pending_message and streaming state")
+        socket = socket
+        |> assign(
+          session: final_session,
+          pending_message: AsyncResult.ok(nil),
+          streaming_content: "",
+          streaming_status: nil
+        )
+
+        # Always call callback to notify message received (sets sending_ai_message: false)
+        case socket.assigns.callbacks[:on_message_received] do
+          callback when is_function(callback, 2) ->
+            code = payload_data[:code]
+            last_message = final_session.messages |> List.last()
+            callback.(code, last_message)
+            socket
+
+          _ ->
+            socket
+        end
+
+      {:error, error} ->
+        Logger.error("[Component] Failed to save complete message: #{inspect(error)}")
+        socket
+        |> assign(
+          pending_message: AsyncResult.ok(nil),
+          streaming_content: "",
+          streaming_status: nil
+        )
+    end
   end
 
   defp handle_code_error(socket, assigns) do
@@ -201,6 +315,8 @@ defmodule LightningWeb.AiAssistant.Component do
     |> assign_new(:changeset, fn _ ->
       handler.validate_form(%{"content" => nil})
     end)
+    |> assign_new(:streaming_content, fn -> "" end)
+    |> assign_new(:streaming_status, fn -> nil end)
   end
 
   defp extract_message_id(%ChatSession{messages: messages}) do
@@ -422,14 +538,20 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp save_message(socket, action, content) do
+    require Logger
+    Logger.info("[AI Component] save_message called with action: #{inspect(action)}")
+
     result =
       case action do
         :new -> create_new_session(socket, content)
         :show -> add_to_existing_session(socket, content)
       end
 
+    Logger.info("[AI Component] save_message result: #{inspect(result)}")
+
     case result do
       {:ok, session} ->
+        Logger.info("[AI Component] Calling handle_successful_save")
         handle_successful_save(socket, session, action)
 
       {:error, error} ->
@@ -446,6 +568,11 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp handle_successful_save(socket, session, :new) do
+    # Parent LiveView handles PubSub subscription via component registration
+    # Component receives updates via send_update from parent
+    require Logger
+    Logger.info("[AI Component] New session created: #{session.id}")
+
     socket
     |> assign(:session, session)
     |> assign(:pending_message, AsyncResult.loading())
@@ -453,6 +580,11 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp handle_successful_save(socket, session, :show) do
+    # Parent LiveView handles PubSub subscription via component registration
+    # Component receives updates via send_update from parent
+    require Logger
+    Logger.info("[AI Component] Message added to session: #{session.id}")
+
     socket
     |> assign(:session, session)
     |> assign(:pending_message, AsyncResult.loading())
@@ -583,6 +715,8 @@ defmodule LightningWeb.AiAssistant.Component do
             handler={@handler}
             code_error={@code_error}
             mode={@mode}
+            streaming_status={@streaming_status}
+            streaming_content={@streaming_content}
           />
       <% end %>
 
@@ -1121,6 +1255,8 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :handler, :any, required: true
   attr :code_error, :any, required: true
   attr :mode, :atom, required: true
+  attr :streaming_status, :string, default: nil
+  attr :streaming_content, :string, default: ""
 
   defp render_individual_session(assigns) do
     assigns = assign(assigns, ai_feedback: ai_feedback())
@@ -1187,7 +1323,11 @@ defmodule LightningWeb.AiAssistant.Component do
 
         <.async_result assign={@pending_message}>
           <:loading>
-            <.assistant_typing_indicator handler={@handler} />
+            <.assistant_typing_indicator
+              handler={@handler}
+              streaming_status={@streaming_status}
+              streaming_content={@streaming_content}
+            />
           </:loading>
 
           <:failed :let={failure}>
@@ -1405,6 +1545,10 @@ defmodule LightningWeb.AiAssistant.Component do
     """
   end
 
+  attr :handler, :any, required: true
+  attr :streaming_status, :string, default: nil
+  attr :streaming_content, :string, default: ""
+
   defp assistant_typing_indicator(assigns) do
     assigns = assign(assigns, animation_delay: @typing_animation_delay_ms)
 
@@ -1417,8 +1561,8 @@ defmodule LightningWeb.AiAssistant.Component do
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-gray-100 px-4 py-3">
-          <div class="flex items-center gap-1">
+        <div class="bg-white rounded-2xl border border-gray-100 px-4 py-3 min-w-[200px]">
+          <div :if={@streaming_content == ""} class="flex items-center gap-1">
             <div class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
             <div
               class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
@@ -1431,7 +1575,15 @@ defmodule LightningWeb.AiAssistant.Component do
             >
             </div>
           </div>
-          <p class="text-xs text-gray-500 mt-2">Processing...</p>
+          <p class="text-xs text-gray-500 mt-2">{@streaming_status || "Processing..."}</p>
+          <div
+            class="mt-2 text-sm text-gray-800 leading-relaxed"
+            phx-update="ignore"
+            phx-hook="StreamingText"
+            id="streaming-text-content"
+            data-streaming-content={@streaming_content}
+          >
+          </div>
         </div>
       </div>
     </div>
