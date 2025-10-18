@@ -66,7 +66,11 @@ defmodule LightningWeb.WebhooksController do
       )
       |> case do
         {:ok, work_order} ->
-          json(conn, %{work_order_id: work_order.id})
+          if trigger.webhook_reply != :before_start do
+            handle_delayed_response(conn, work_order)
+          else
+            json(conn, %{work_order_id: work_order.id})
+          end
 
         {:error, %DBConnection.ConnectionError{} = error} ->
           LightningWeb.Utils.respond_service_unavailable(
@@ -117,6 +121,32 @@ defmodule LightningWeb.WebhooksController do
           error: :trigger_disabled,
           message:
             "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
+        })
+    end
+  end
+
+  defp handle_delayed_response(conn, work_order) do
+    topic = "work_order:#{work_order.id}:webhook_response"
+    Phoenix.PubSub.subscribe(Lightning.PubSub, topic)
+
+    receive do
+      {:webhook_response, status_code, body} ->
+        conn
+        |> put_status(status_code)
+        |> json(body)
+
+      {:webhook_error, status_code, error} ->
+        conn
+        |> put_status(status_code)
+        |> json(%{error: error})
+    after
+      30_000 ->
+        conn
+        |> put_status(:gateway_timeout)
+        |> json(%{
+          error: :timeout,
+          message: "Workflow did not complete within timeout period",
+          work_order_id: work_order.id
         })
     end
   end

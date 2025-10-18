@@ -76,9 +76,15 @@ defmodule LightningWeb.RunChannel do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
-        run
-        |> Repo.preload([:log_lines, work_order: [:workflow]])
+        run_with_preloads =
+          run
+          |> Repo.preload([:log_lines, work_order: [:workflow, :trigger]])
+
+        run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
+
+        # Broadcast webhook response if after_completion is enabled
+        maybe_broadcast_webhook_response(run_with_preloads, payload)
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
@@ -180,6 +186,44 @@ defmodule LightningWeb.RunChannel do
 
       {:ok, log_line} ->
         reply_with(socket, {:ok, %{log_line_id: log_line.id}})
+    end
+  end
+
+  defp maybe_broadcast_webhook_response(run, payload) do
+    work_order = run.work_order
+    trigger = work_order.trigger
+
+    if trigger && trigger.type == :webhook &&
+         trigger.webhook_reply == :after_completion do
+      topic = "work_order:#{work_order.id}:webhook_response"
+
+      {status_code, body} =
+        case run.state do
+          :success ->
+            # For success, return the final output from the worker
+            {200, payload["final_state"]}
+
+          :failed ->
+            {500, payload["final_state"]}
+
+          state when state in [:crashed, :exception] ->
+            {500, Map.put(payload, "state", to_string(state))}
+
+          :killed ->
+            {499, Map.put(payload, "state", "killed")}
+
+          :cancelled ->
+            {422, Map.put(payload, "state", "cancelled")}
+
+          _other ->
+            {200, Map.put(payload, "state", to_string(run.state))}
+        end
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        topic,
+        {:webhook_response, status_code, body}
+      )
     end
   end
 

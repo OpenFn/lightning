@@ -59,6 +59,10 @@ defmodule Lightning.Workflows.Snapshot do
       field :type, Ecto.Enum, values: [:webhook, :cron, :kafka]
       field :has_auth_method, :boolean, virtual: true
 
+      field :webhook_reply, Ecto.Enum,
+        values: [:before_start, :after_completion, :custom],
+        default: :before_start
+
       many_to_many :webhook_auth_methods, WebhookAuthMethod,
         join_through: "trigger_webhook_auth_methods",
         on_replace: :delete
