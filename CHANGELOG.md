@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Ability to delay webhook trigger replies until a workflow finishes
+  [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
 - Editable EdgeInspector form in collaborative workflow editor with TanStack
   Form, enabling users to configure edge properties (label, condition type, JS
   expressions, enabled state) with auto-save and real-time collaborative editing
