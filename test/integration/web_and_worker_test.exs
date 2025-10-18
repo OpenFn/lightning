@@ -1,6 +1,7 @@
 defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
+  import Ecto.Query
   import Lightning.Factories
   import Mox
 
@@ -420,15 +421,9 @@ defmodule Lightning.WebAndWorkerTest do
 
       workflow =
         build(:workflow, project: project)
-        |> with_triggers([webhook_trigger])
-        |> with_jobs([job])
-        |> with_edges([
-          build(:edge,
-            source_trigger: webhook_trigger,
-            target_job: job,
-            condition_type: :always
-          )
-        ])
+        |> with_trigger(webhook_trigger)
+        |> with_job(job)
+        |> with_edge({webhook_trigger, job}, condition_type: :always)
         |> insert()
 
       # Update trigger to use after_completion
@@ -510,15 +505,9 @@ defmodule Lightning.WebAndWorkerTest do
 
       workflow =
         build(:workflow, project: project)
-        |> with_triggers([webhook_trigger])
-        |> with_jobs([job])
-        |> with_edges([
-          build(:edge,
-            source_trigger: webhook_trigger,
-            target_job: job,
-            condition_type: :always
-          )
-        ])
+        |> with_trigger(webhook_trigger)
+        |> with_job(job)
+        |> with_edge({webhook_trigger, job}, condition_type: :always)
         |> insert()
 
       [trigger] = workflow.triggers
@@ -627,8 +616,6 @@ defmodule Lightning.WebAndWorkerTest do
   end
 
   defp select_dataclip_body(uuid) do
-    import Ecto.Query
-
     from(d in Lightning.Invocation.Dataclip,
       where: d.id == ^uuid,
       select: d.body

@@ -1,6 +1,7 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
+  import Ecto.Query
   import Lightning.Factories
   import Mox
 
