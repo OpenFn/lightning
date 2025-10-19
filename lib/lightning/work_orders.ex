@@ -671,6 +671,15 @@ defmodule Lightning.WorkOrders do
     |> Repo.one()
   end
 
+  @doc """
+  Returns a query for work orders belonging to a specific project
+  """
+  @spec work_orders_for_project_query(Lightning.Projects.Project.t()) ::
+          Ecto.Queryable.t()
+  def work_orders_for_project_query(%Lightning.Projects.Project{} = project) do
+    Lightning.Invocation.Query.work_orders_for(project)
+  end
+
   defp new_retry_run(
          snapshot,
          workorder,

@@ -1,52 +1,66 @@
-# defmodule LightningWeb.API.RunController do
-#   use LightningWeb, :controller
+defmodule LightningWeb.API.RunController do
+  @moduledoc """
+  API controller for managing runs.
 
-#   alias Lightning.Invocation
-#   alias Lightning.Policies.Permissions
-#   alias Lightning.Policies.ProjectUsers
-#   alias Lightning.Projects.Project
-#   alias Lightning.Repo
+  ## Query Parameters
 
-#   action_fallback LightningWeb.FallbackController
+  - `page` - Page number (default: 1)
+  - `page_size` - Number of items per page (default: 10)
+  - `inserted_after` - Filter runs created after this ISO8601 datetime
+  - `inserted_before` - Filter runs created before this ISO8601 datetime
+  - `updated_after` - Filter runs updated after this ISO8601 datetime
+  - `updated_before` - Filter runs updated before this ISO8601 datetime
 
-#   def index(conn, %{"project_id" => project_id} = params) do
-#     pagination_attrs = Map.take(params, ["page_size", "page"])
+  ## Examples
 
-#     with project = %Project{} <-
-#            Lightning.Projects.get_project(project_id) || {:error, :not_found},
-#          :ok <-
-#            ProjectUsers
-#            |> Permissions.can(
-#              :access_project,
-#              conn.assigns.current_user,
-#              project
-#            ) do
-#       page = Invocation.list_runs_for_project(project, pagination_attrs)
+      GET /api/runs?page=1&page_size=20
+      GET /api/runs?inserted_after=2024-01-01T00:00:00Z
+      GET /api/runs?inserted_after=2024-01-01T00:00:00Z&inserted_before=2024-12-31T23:59:59Z
+      GET /api/projects/:project_id/runs?inserted_after=2024-01-01T00:00:00Z
 
-#       render(conn, "index.json", %{page: page, conn: conn})
-#     end
-#   end
+  """
+  use LightningWeb, :controller
 
-#   def index(conn, params) do
-#     pagination_attrs = Map.take(params, ["page_size", "page"])
+  alias Lightning.Invocation
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Runs
 
-#     page =
-#       Invocation.Query.runs_for(conn.assigns.current_user)
-#       |> Lightning.Repo.paginate(pagination_attrs)
+  action_fallback LightningWeb.FallbackController
 
-#     render(conn, "index.json", %{page: page, conn: conn})
-#   end
+  def index(conn, %{"project_id" => project_id} = params) do
+    pagination_attrs = Map.take(params, ["page_size", "page"])
 
-#   def show(conn, %{"id" => id}) do
-#     with run <- Invocation.get_run_with_job!(id),
-#          :ok <-
-#            ProjectUsers
-#            |> Permissions.can(
-#              :access_project,
-#              conn.assigns.current_user,
-#              Repo.preload(run.job, :project).project
-#            ) do
-#       render(conn, "show.json", %{run: run, conn: conn})
-#     end
-#   end
-# end
+    with project <- Lightning.Projects.get_project(project_id),
+         :ok <-
+           ProjectUsers
+           |> Permissions.can(
+             :access_project,
+             conn.assigns.current_resource,
+             project
+           ) do
+      page =
+        Runs.runs_for_project_query(project)
+        |> Invocation.Query.filter_runs_by_date(params)
+        |> Lightning.Repo.paginate(pagination_attrs)
+
+      render(conn, "index.json", page: page, conn: conn)
+    end
+  end
+
+  def index(conn, params) do
+    pagination_attrs = Map.take(params, ["page_size", "page"])
+
+    page =
+      Invocation.Query.runs_for(conn.assigns.current_resource)
+      |> Invocation.Query.filter_runs_by_date(params)
+      |> Lightning.Repo.paginate(pagination_attrs)
+
+    render(conn, "index.json", page: page, conn: conn)
+  end
+
+  def show(conn, %{"id" => id}) do
+    run = Runs.get(id, include: [:work_order, :workflow])
+    render(conn, "show.json", run: run, conn: conn)
+  end
+end

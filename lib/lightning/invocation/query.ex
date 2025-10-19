@@ -7,7 +7,120 @@ defmodule Lightning.Invocation.Query do
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.Project
+  alias Lightning.Run
   alias Lightning.Workflows.Job
+  alias Lightning.WorkOrder
+
+  @doc """
+  Work orders for a specific project, or all runs available to the requesting user
+  """
+  @spec work_orders_for(User.t()) :: Ecto.Queryable.t()
+  def work_orders_for(%User{} = user) do
+    projects = Ecto.assoc(user, :projects) |> select([:id])
+
+    from(wo in WorkOrder,
+      join: w in assoc(wo, :workflow),
+      join: p in subquery(projects),
+      on: w.project_id == p.id,
+      order_by: [desc: wo.last_activity]
+    )
+  end
+
+  @spec work_orders_for(Project.t()) :: Ecto.Queryable.t()
+  def work_orders_for(%Project{id: project_id}) do
+    from(wo in WorkOrder,
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project_id,
+      order_by: [desc: wo.last_activity]
+    )
+  end
+
+  @doc """
+  Runs for a specific project, or all runs available to the requesting user
+  """
+  @spec runs_for(User.t()) :: Ecto.Queryable.t()
+  def runs_for(%User{} = user) do
+    projects = Ecto.assoc(user, :projects) |> select([:id])
+
+    from(r in Run,
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      join: p in subquery(projects),
+      on: w.project_id == p.id,
+      order_by: [desc: r.inserted_at]
+    )
+  end
+
+  @spec runs_for(Project.t()) :: Ecto.Queryable.t()
+  def runs_for(%Project{id: project_id}) do
+    from(r in Run,
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project_id,
+      order_by: [desc: r.inserted_at]
+    )
+  end
+
+  @doc """
+  Filter runs by inserted_at date range
+  """
+  @spec filter_runs_by_date(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
+  def filter_runs_by_date(query, params) do
+    query
+    |> filter_by_inserted_after(params["inserted_after"])
+    |> filter_by_inserted_before(params["inserted_before"])
+    |> filter_by_updated_after(params["updated_after"])
+    |> filter_by_updated_before(params["updated_before"])
+  end
+
+  defp filter_by_inserted_after(query, nil), do: query
+
+  defp filter_by_inserted_after(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from(r in query, where: r.inserted_at >= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp filter_by_inserted_before(query, nil), do: query
+
+  defp filter_by_inserted_before(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from(r in query, where: r.inserted_at <= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp filter_by_updated_after(query, nil), do: query
+
+  defp filter_by_updated_after(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from(r in query, where: r.updated_at >= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp filter_by_updated_before(query, nil), do: query
+
+  defp filter_by_updated_before(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from(r in query, where: r.updated_at <= ^datetime)
+
+      :error ->
+        query
+    end
+  end
 
   @doc """
   Steps for a specific user
@@ -123,4 +236,76 @@ defmodule Lightning.Invocation.Query do
       ]
     )
   end
+
+  @doc """
+  Filter work orders by date range
+  """
+  @spec filter_work_orders_by_date(Ecto.Queryable.t(), map()) ::
+          Ecto.Queryable.t()
+  def filter_work_orders_by_date(query, params) do
+    query
+    |> filter_wo_by_inserted_after(params["inserted_after"])
+    |> filter_wo_by_inserted_before(params["inserted_before"])
+    |> filter_wo_by_updated_after(params["updated_after"])
+    |> filter_wo_by_updated_before(params["updated_before"])
+  end
+
+  defp filter_wo_by_inserted_after(query, nil), do: query
+
+  defp filter_wo_by_inserted_after(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from(wo in query, where: wo.inserted_at >= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp filter_wo_by_inserted_before(query, nil), do: query
+
+  defp filter_wo_by_inserted_before(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from(wo in query, where: wo.inserted_at <= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp filter_wo_by_updated_after(query, nil), do: query
+
+  defp filter_wo_by_updated_after(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from(wo in query, where: wo.updated_at >= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp filter_wo_by_updated_before(query, nil), do: query
+
+  defp filter_wo_by_updated_before(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from(wo in query, where: wo.updated_at <= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp parse_datetime(nil), do: :error
+
+  defp parse_datetime(datetime_string) when is_binary(datetime_string) do
+    case DateTime.from_iso8601(datetime_string) do
+      {:ok, datetime, _offset} -> {:ok, datetime}
+      {:error, _} -> :error
+    end
+  end
+
+  defp parse_datetime(_), do: :error
 end
