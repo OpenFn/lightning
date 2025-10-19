@@ -202,7 +202,7 @@ defmodule LightningWeb.RunChannel do
       status_code = determine_status_code(run.state)
 
       body = %{
-        data: payload["final_state"] || %{},
+        data: payload["final_state"],
         meta: %{
           work_order_id: work_order.id,
           run_id: run.id,
