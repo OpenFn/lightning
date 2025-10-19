@@ -197,35 +197,41 @@ defmodule LightningWeb.RunChannel do
          trigger.webhook_reply == :after_completion do
       topic = "work_order:#{work_order.id}:webhook_response"
 
-      # TODO - Decide how we want to determine (or later let the workflow author
-      # determine) the status code and body of the reply.
-      {status_code, body} =
-        case run.state do
-          :success ->
-            # For success, return the final output from the worker
-            {200, payload["final_state"]}
+      # TODO - Later allow workflow authors to customize the status code
+      # and body of the reply.
+      status_code = determine_status_code(run.state)
 
-          :failed ->
-            {500, payload["final_state"]}
-
-          state when state in [:crashed, :exception] ->
-            {500, Map.put(payload, "state", to_string(state))}
-
-          :killed ->
-            {499, Map.put(payload, "state", "killed")}
-
-          :cancelled ->
-            {422, Map.put(payload, "state", "cancelled")}
-
-          _other ->
-            {200, Map.put(payload, "state", to_string(run.state))}
-        end
+      body = %{
+        data: payload["final_state"] || %{},
+        meta: %{
+          work_order_id: work_order.id,
+          run_id: run.id,
+          state: run.state,
+          error_type: run.error_type,
+          inserted_at: run.inserted_at,
+          started_at: run.started_at,
+          claimed_at: run.claimed_at,
+          finished_at: run.finished_at
+        }
+      }
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
         topic,
         {:webhook_response, status_code, body}
       )
+    end
+  end
+
+  defp determine_status_code(state) do
+    case state do
+      :success -> 200
+      :failed -> 422
+      :crashed -> 500
+      :exception -> 500
+      :killed -> 410
+      :cancelled -> 499
+      _other -> 500
     end
   end
 

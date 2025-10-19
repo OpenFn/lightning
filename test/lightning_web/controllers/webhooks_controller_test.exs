@@ -440,19 +440,45 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert work_order
 
+      # Get the run for metadata
+      run =
+        Lightning.Repo.one(
+          from r in Lightning.Run,
+            where: r.work_order_id == ^work_order.id,
+            limit: 1
+        )
+
       # Simulate the worker completing the run with final state
-      final_state = %{"result" => "success", "data" => %{"x" => 42}}
+      final_state_data = %{"result" => "success", "data" => %{"x" => 42}}
+
+      response_body = %{
+        data: final_state_data,
+        meta: %{
+          work_order_id: work_order.id,
+          run_id: run.id,
+          state: :success,
+          error_type: nil,
+          inserted_at: run.inserted_at,
+          started_at: run.started_at,
+          claimed_at: run.claimed_at,
+          finished_at: run.finished_at
+        }
+      }
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
         "work_order:#{work_order.id}:webhook_response",
-        {:webhook_response, 200, final_state}
+        {:webhook_response, 200, response_body}
       )
 
       # Now the task should complete with the response
       assert_receive {:response, response_conn}, 5_000
 
-      assert json_response(response_conn, 200) == final_state
+      response = json_response(response_conn, 200)
+      assert response["data"] == final_state_data
+      assert response["meta"]["work_order_id"] == work_order.id
+      assert response["meta"]["run_id"] == run.id
+      assert response["meta"]["state"] == "success"
 
       Task.await(task)
     end
@@ -489,17 +515,44 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert work_order
 
-      error_state = %{"error" => "Something went wrong", "state" => "failed"}
+      # Get the run for metadata
+      run =
+        Lightning.Repo.one(
+          from r in Lightning.Run,
+            where: r.work_order_id == ^work_order.id,
+            limit: 1
+        )
+
+      error_data = %{"error" => "Something went wrong"}
+
+      response_body = %{
+        data: error_data,
+        meta: %{
+          work_order_id: work_order.id,
+          run_id: run.id,
+          state: :failed,
+          error_type: "RuntimeError",
+          inserted_at: run.inserted_at,
+          started_at: run.started_at,
+          claimed_at: run.claimed_at,
+          finished_at: run.finished_at
+        }
+      }
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
         "work_order:#{work_order.id}:webhook_response",
-        {:webhook_response, 500, error_state}
+        {:webhook_response, 422, response_body}
       )
 
       assert_receive {:response, response_conn}, 5_000
 
-      assert json_response(response_conn, 500) == error_state
+      response = json_response(response_conn, 422)
+      assert response["data"] == error_data
+      assert response["meta"]["work_order_id"] == work_order.id
+      assert response["meta"]["run_id"] == run.id
+      assert response["meta"]["state"] == "failed"
+      assert response["meta"]["error_type"] == "RuntimeError"
 
       Task.await(task)
     end
