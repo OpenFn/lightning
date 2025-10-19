@@ -308,4 +308,116 @@ defmodule Lightning.Invocation.Query do
   end
 
   defp parse_datetime(_), do: :error
+
+  @doc """
+  Log lines for a specific user, filtered by their accessible projects
+  """
+  @spec log_lines_for(User.t()) :: Ecto.Queryable.t()
+  def log_lines_for(%User{} = user) do
+    projects = Ecto.assoc(user, :projects) |> select([:id])
+
+    from(log in Lightning.Invocation.LogLine,
+      as: :log,
+      join: r in assoc(log, :run),
+      as: :run,
+      join: wo in assoc(r, :work_order),
+      as: :work_order,
+      join: w in assoc(wo, :workflow),
+      as: :workflow,
+      join: p in subquery(projects),
+      on: w.project_id == p.id,
+      order_by: [desc: log.timestamp]
+    )
+  end
+
+  @doc """
+  Filter log lines by various criteria
+  """
+  @spec filter_log_lines(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
+  def filter_log_lines(query, params) do
+    query
+    |> filter_log_by_timestamp_after(params["timestamp_after"])
+    |> filter_log_by_timestamp_before(params["timestamp_before"])
+    |> filter_log_by_project(params["project_id"])
+    |> filter_log_by_workflow(params["workflow_id"])
+    |> filter_log_by_job(params["job_id"])
+    |> filter_log_by_work_order(params["work_order_id"])
+    |> filter_log_by_run(params["run_id"])
+    |> filter_log_by_level(params["level"])
+  end
+
+  defp filter_log_by_timestamp_after(query, nil), do: query
+
+  defp filter_log_by_timestamp_after(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from([log: log] in query, where: log.timestamp >= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp filter_log_by_timestamp_before(query, nil), do: query
+
+  defp filter_log_by_timestamp_before(query, date_string) do
+    case parse_datetime(date_string) do
+      {:ok, datetime} ->
+        from([log: log] in query, where: log.timestamp <= ^datetime)
+
+      :error ->
+        query
+    end
+  end
+
+  defp filter_log_by_project(query, nil), do: query
+
+  defp filter_log_by_project(query, project_id) do
+    from([workflow: w] in query, where: w.project_id == ^project_id)
+  end
+
+  defp filter_log_by_workflow(query, nil), do: query
+
+  defp filter_log_by_workflow(query, workflow_id) do
+    from([work_order: wo] in query, where: wo.workflow_id == ^workflow_id)
+  end
+
+  defp filter_log_by_job(query, nil), do: query
+
+  defp filter_log_by_job(query, job_id) do
+    from([log: log] in query,
+      join: s in assoc(log, :step),
+      where: s.job_id == ^job_id
+    )
+  end
+
+  defp filter_log_by_work_order(query, nil), do: query
+
+  defp filter_log_by_work_order(query, work_order_id) do
+    from([run: r] in query, where: r.work_order_id == ^work_order_id)
+  end
+
+  defp filter_log_by_run(query, nil), do: query
+
+  defp filter_log_by_run(query, run_id) do
+    from([log: log] in query, where: log.run_id == ^run_id)
+  end
+
+  defp filter_log_by_level(query, nil), do: query
+
+  defp filter_log_by_level(query, level) when is_binary(level) do
+    try do
+      level_atom = String.to_existing_atom(level)
+
+      if level_atom in [:success, :always, :info, :warn, :error, :debug] do
+        from([log: log] in query, where: log.level == ^level_atom)
+      else
+        query
+      end
+    rescue
+      ArgumentError -> query
+    end
+  end
+
+  defp filter_log_by_level(query, _), do: query
 end

@@ -38,7 +38,16 @@ defmodule LightningWeb.API.JobController do
   end
 
   def show(conn, %{"id" => id}) do
-    job = Jobs.get_job!(id)
-    render(conn, "show.json", job: job, conn: conn)
+    with job <- Jobs.get_job!(id),
+         job_with_project <- Lightning.Repo.preload(job, workflow: :project),
+         :ok <-
+           ProjectUsers
+           |> Permissions.can(
+             :access_project,
+             conn.assigns.current_resource,
+             job_with_project.workflow.project
+           ) do
+      render(conn, "show.json", job: job, conn: conn)
+    end
   end
 end
