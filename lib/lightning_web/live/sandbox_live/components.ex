@@ -648,9 +648,6 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
-  attr :current, :string, required: true
-  attr :current_name, :string, required: true
-
   defp has_environment?(%{env: env}) when is_binary(env) do
     String.trim(env) != ""
   end
