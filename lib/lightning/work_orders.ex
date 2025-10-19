@@ -656,11 +656,13 @@ defmodule Lightning.WorkOrders do
   @doc """
   Get a Work Order by id.
 
-  Optionally preload associations by passing a list of atoms to `:include`.
+  Optionally preload associations by passing a list to `:include`.
+  Supports nested preloads.
 
       Lightning.WorkOrders.get(id, include: [:runs])
+      Lightning.WorkOrders.get(id, include: [workflow: :project, runs: []])
   """
-  @spec get(Ecto.UUID.t(), [{:include, [atom()]}]) :: WorkOrder.t() | nil
+  @spec get(Ecto.UUID.t(), [{:include, list()}]) :: WorkOrder.t() | nil
   def get(id, opts \\ []) do
     preloads = opts |> Keyword.get(:include, [])
 
