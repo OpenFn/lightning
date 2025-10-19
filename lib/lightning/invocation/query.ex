@@ -406,17 +406,15 @@ defmodule Lightning.Invocation.Query do
   defp filter_log_by_level(query, nil), do: query
 
   defp filter_log_by_level(query, level) when is_binary(level) do
-    try do
-      level_atom = String.to_existing_atom(level)
+    level_atom = String.to_existing_atom(level)
 
-      if level_atom in [:success, :always, :info, :warn, :error, :debug] do
-        from([log: log] in query, where: log.level == ^level_atom)
-      else
-        query
-      end
-    rescue
-      ArgumentError -> query
+    if level_atom in [:success, :always, :info, :warn, :error, :debug] do
+      from([log: log] in query, where: log.level == ^level_atom)
+    else
+      query
     end
+  rescue
+    ArgumentError -> query
   end
 
   defp filter_log_by_level(query, _), do: query
