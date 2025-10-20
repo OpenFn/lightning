@@ -65,7 +65,7 @@
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.4.1",
     "@eslint/js": "^9.21.0",
-    "@openfn/ws-worker": "^1.15.0",
+    "@openfn/ws-worker": "^1.17.0",
     "@playwright/test": "^1.55.0",
     "@redux-devtools/extension": "^3.3.0",
     "@testing-library/jest-dom": "^6.9.0",

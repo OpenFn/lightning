@@ -267,7 +267,7 @@ defmodule Lightning.WebAndWorkerTest do
 
       version_logs = pick_out_version_logs(run)
       assert version_logs["@openfn/language-http"] =~ "3.1.12"
-      assert version_logs["worker"] =~ "1.15"
+      assert version_logs["worker"] =~ "1.17"
       assert version_logs["node.js"] =~ "22.12"
       assert version_logs["@openfn/language-common"] == "3.0.2"
 
@@ -457,7 +457,7 @@ defmodule Lightning.WebAndWorkerTest do
       Process.sleep(500)
 
       # Verify work order was created but response not yet returned
-      refute Task.yield(task, 100),
+      refute Task.yield(task, 50),
              "Expected webhook request to still be waiting"
 
       # Wait for the workflow to complete (up to 115 seconds)
@@ -466,11 +466,30 @@ defmodule Lightning.WebAndWorkerTest do
       # Should return 200 with the final state
       assert response.status == 200
 
-      # The response body should be the final state from the job
-      assert response.body == %{
-               "result" => "success",
-               "data" => %{"value" => 10}
-             }
+      # The response body should be the final state from the job inside a "data"
+      # key and the metadata inside a "meta" key.
+      assert %{
+               "data" => %{"data" => %{"value" => 10}, "result" => "success"},
+               "meta" => meta
+             } = response.body
+
+      # Verify meta fields exist with correct types and values
+      assert meta["error_type"] == nil
+      assert meta["state"] == "success"
+      assert is_binary(meta["run_id"])
+      assert is_binary(meta["work_order_id"])
+
+      # Verify datetime fields are present and valid ISO8601 strings
+      assert is_binary(meta["claimed_at"])
+      assert is_binary(meta["finished_at"])
+      assert is_binary(meta["inserted_at"])
+      assert is_binary(meta["started_at"])
+
+      # Verify datetime fields match ISO8601 format
+      assert meta["claimed_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      assert meta["finished_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      assert meta["inserted_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      assert meta["started_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
 
       # Verify the work order completed successfully
       work_order =
@@ -531,8 +550,8 @@ defmodule Lightning.WebAndWorkerTest do
         )
         |> Tesla.post!("/i/#{trigger.id}", webhook_body)
 
-      # Should return 500 for failed workflow
-      assert response.status == 500
+      # Should return 422 for failed workflow
+      assert response.status == 422
 
       # Response should include the final state
       assert is_map(response.body)
