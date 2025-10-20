@@ -10,7 +10,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   ## Y.Doc Structure
 
-  The Y.Doc contains five top-level collections:
+  The Y.Doc contains six top-level collections:
 
   - `workflow` (Map): Core workflow metadata (id, name, lock_version,
     deleted_at)
@@ -18,6 +18,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   - `edges` (Array): Array of edge objects connecting jobs/triggers
   - `triggers` (Array): Array of trigger objects (webhook, cron, kafka)
   - `positions` (Map): Canvas positions for visual editor (node_id → {x, y})
+  - `errors` (Map): Field-level validation errors (field_path → error_message)
 
   ## Field Mappings
 
@@ -58,6 +59,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     edges_array = Yex.Doc.get_array(doc, "edges")
     triggers_array = Yex.Doc.get_array(doc, "triggers")
     positions = Yex.Doc.get_map(doc, "positions")
+    errors = Yex.Doc.get_map(doc, "errors")
 
     Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
       # Set workflow properties
@@ -75,6 +77,11 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
       initialize_edges(edges_array, workflow.edges)
       initialize_triggers(triggers_array, workflow.triggers)
       initialize_positions(positions, workflow.positions)
+
+      # Initialize empty errors map (no errors on fresh load)
+      # Note: We don't set individual keys here, just ensure the map exists
+      # Keys will be added by validation error writing logic
+      _errors_initialized = errors
     end)
 
     doc

@@ -805,4 +805,124 @@ defmodule Lightning.SessionTest do
       end
     end
   end
+
+  describe "save_workflow/2 validation errors" do
+    setup do
+      # Set global mode for the mock to allow cross-process calls
+      Mox.set_mox_global(LightningMock)
+      # Stub the broadcast calls that save_workflow makes
+      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, name: "Original Name", project: project)
+
+      start_supervised!({DocumentSupervisor, workflow: workflow})
+
+      session_pid =
+        start_supervised!({Session, workflow: workflow, user: user})
+
+      %{
+        session: session_pid,
+        user: user,
+        workflow: workflow,
+        project: project
+      }
+    end
+
+    test "writes validation errors to Y.Doc when workflow name is blank", %{
+      session: session,
+      user: user
+    } do
+      # Get Y.Doc and set blank name
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_blank_name", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Attempt save (should fail validation)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check errors were written to Y.Doc
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      errors = Yex.Map.to_json(errors_map)
+
+      assert errors["name"] =~ "can't be blank"
+    end
+
+    test "clears errors from Y.Doc after successful save", %{
+      session: session,
+      user: user
+    } do
+      # Set up: Create errors in Y.Doc manually
+      doc = Session.get_doc(session)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      Yex.Doc.transaction(doc, "test_add_error", fn ->
+        Yex.Map.set(errors_map, "name", "some error")
+      end)
+
+      # Set valid name
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_valid_name", fn ->
+        Yex.Map.set(
+          workflow_map,
+          "name",
+          "Valid Workflow Name #{System.unique_integer()}"
+        )
+      end)
+
+      # Save should succeed and clear errors
+      assert {:ok, _saved_workflow} = Session.save_workflow(session, user)
+
+      # Verify errors were cleared
+      errors = Yex.Map.to_json(errors_map)
+      assert errors == %{}
+    end
+
+    test "writes nested job validation errors to Y.Doc", %{
+      session: session,
+      user: user
+    } do
+      # Add a job with blank name
+      doc = Session.get_doc(session)
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      job_id = Ecto.UUID.generate()
+
+      job_map =
+        Yex.MapPrelim.from(%{
+          "id" => job_id,
+          "name" => "",
+          # Invalid - blank
+          "body" => Yex.TextPrelim.from(""),
+          "adaptor" => "@openfn/language-common@1.0.0",
+          "project_credential_id" => nil,
+          "keychain_credential_id" => nil
+        })
+
+      Yex.Doc.transaction(doc, "test_add_invalid_job", fn ->
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save (should fail validation)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check job error was written to Y.Doc with proper key format
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      errors = Yex.Map.to_json(errors_map)
+
+      # Error key should be jobs.{index}.name or jobs.{id}.name
+      job_error_key =
+        Enum.find(Map.keys(errors), fn key ->
+          String.starts_with?(key, "jobs.") && String.ends_with?(key, ".name")
+        end)
+
+      assert job_error_key != nil
+      assert errors[job_error_key] =~ "can't be blank"
+    end
+  end
 end

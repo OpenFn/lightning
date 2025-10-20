@@ -340,6 +340,9 @@ defmodule Lightning.Collaboration.Session do
           "Failed to save workflow #{state.workflow.id}: #{inspect(changeset.errors)}"
         )
 
+        # Write validation errors to Y.Doc
+        write_validation_errors_to_ydoc(state, changeset)
+
         {:reply, {:error, changeset}, state}
     end
   end
@@ -458,9 +461,14 @@ defmodule Lightning.Collaboration.Session do
       # Update the workflow map with the saved workflow data
       # This ensures the lock_version and other fields are synced to Y.Doc
       workflow_map = Yex.Doc.get_map(doc, "workflow")
+      errors_map = Yex.Doc.get_map(doc, "errors")
 
       Yex.Doc.transaction(doc, "merge_saved_workflow", fn ->
+        # Update lock version
         Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
+
+        # Clear all errors after successful save
+        clear_map(errors_map)
       end)
     end)
   end
@@ -475,12 +483,16 @@ defmodule Lightning.Collaboration.Session do
       jobs_array = Yex.Doc.get_array(doc, "jobs")
       edges_array = Yex.Doc.get_array(doc, "edges")
       triggers_array = Yex.Doc.get_array(doc, "triggers")
+      positions_map = Yex.Doc.get_map(doc, "positions")
+      errors_map = Yex.Doc.get_map(doc, "errors")
 
-      # Transaction 1: Clear all arrays
+      # Transaction 1: Clear all arrays and errors
       Yex.Doc.transaction(doc, "clear_workflow", fn ->
         clear_array(jobs_array)
         clear_array(edges_array)
         clear_array(triggers_array)
+        clear_map(positions_map)
+        clear_map(errors_map)
       end)
 
       # Transaction 2: Re-serialize workflow (WorkflowSerializer does its own
@@ -501,5 +513,106 @@ defmodule Lightning.Collaboration.Session do
     if length > 0 do
       Yex.Array.delete_range(array, 0, length)
     end
+  end
+
+  defp clear_map(map) do
+    map
+    |> Yex.Map.to_map()
+    |> Enum.each(fn {key, _val} -> Yex.Map.delete(map, key) end)
+  end
+
+  # Format changeset errors into flat key-value structure for Y.Doc
+  #
+  # Examples:
+  #   %{name: ["can't be blank"]} -> %{"name" => "can't be blank"}
+  #   %{jobs: [%{name: ["too long"]}]} -> %{"jobs.{job-id}.name" => "too long"}
+  #
+  # Note: Takes first error message only for simplicity
+  defp format_changeset_errors_for_ydoc(changeset) do
+    errors =
+      Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+        Enum.reduce(opts, msg, fn {key, value}, acc ->
+          String.replace(acc, "%{#{key}}", to_string(value))
+        end)
+      end)
+
+    flatten_errors(errors, [])
+  end
+
+  # Recursively flatten nested error maps into dot-notation keys
+  # %{jobs: [%{name: ["error"]}]} becomes %{"jobs.0.name" => "error"}
+  defp flatten_errors(errors, prefix) when is_map(errors) do
+    Enum.reduce(errors, %{}, fn {key, value}, acc ->
+      new_prefix = if prefix == [], do: [key], else: prefix ++ [key]
+      Map.merge(acc, flatten_errors(value, new_prefix))
+    end)
+  end
+
+  defp flatten_errors([first_error | _rest], prefix)
+       when is_binary(first_error) do
+    # List of error strings for a field - take first error message only
+    key = Enum.join(prefix, ".")
+    %{key => first_error}
+  end
+
+  defp flatten_errors(errors, prefix) when is_list(errors) do
+    # List of error maps (nested changeset errors like jobs)
+    errors
+    |> Enum.with_index()
+    |> Enum.reduce(%{}, fn {item, index}, acc ->
+      new_prefix = prefix ++ [index]
+
+      case item do
+        error_map when is_map(error_map) ->
+          Map.merge(acc, flatten_errors(error_map, new_prefix))
+
+        error_string when is_binary(error_string) ->
+          key = Enum.join(new_prefix, ".")
+          Map.put(acc, key, error_string)
+      end
+    end)
+  end
+
+  defp flatten_errors(error, prefix) when is_binary(error) do
+    key = Enum.join(prefix, ".")
+    %{key => error}
+  end
+
+  defp flatten_errors(_, _), do: %{}
+
+  # Write validation errors to Y.Doc errors map
+  # This makes errors visible to all connected users
+  defp write_validation_errors_to_ydoc(%{shared_doc_pid: nil}, _changeset) do
+    Logger.warning("Cannot write errors: no shared doc")
+    :ok
+  end
+
+  defp write_validation_errors_to_ydoc(
+         %{shared_doc_pid: shared_doc_pid},
+         changeset
+       ) do
+    formatted_errors = format_changeset_errors_for_ydoc(changeset)
+
+    SharedDoc.update_doc(shared_doc_pid, fn doc ->
+      # Get errors map BEFORE transaction (avoid VM deadlock)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      Yex.Doc.transaction(doc, "write_validation_errors", fn ->
+        # Clear existing errors first
+        clear_map(errors_map)
+
+        # Set new errors
+        Enum.each(formatted_errors, fn {field, message} ->
+          Yex.Map.set(errors_map, field, message)
+        end)
+      end)
+    end)
+
+    :ok
+  rescue
+    error ->
+      Logger.error("Error writing validation errors to Y.Doc: #{inspect(error)}")
+
+      :ok
   end
 end

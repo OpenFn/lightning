@@ -182,6 +182,7 @@ function produceInitialState() {
       triggers: [],
       edges: [],
       positions: {},
+      errors: {}, // NEW: Initialize empty errors map
 
       // Initialize UI state
       selectedJobId: null,
@@ -281,6 +282,7 @@ export const createWorkflowStore = () => {
     const triggersArray = ydoc.getArray("triggers");
     const edgesArray = ydoc.getArray("edges");
     const positionsMap = ydoc.getMap("positions");
+    const errorsMap = ydoc.getMap("errors"); // NEW: Get errors map
 
     // Set up observers
     const workflowObserver = () => {
@@ -330,12 +332,20 @@ export const createWorkflowStore = () => {
       }, "positions/observerUpdate");
     };
 
+    // NEW: Errors observer
+    const errorsObserver = () => {
+      updateState(draft => {
+        draft.errors = errorsMap.toJSON() as Record<string, string>;
+      }, "errors/observerUpdate");
+    };
+
     // Attach observers with deep observation for nested changes
     workflowMap.observeDeep(workflowObserver);
     jobsArray.observeDeep(jobsObserver);
     triggersArray.observeDeep(triggersObserver);
     edgesArray.observeDeep(edgesObserver);
     positionsMap.observeDeep(positionsObserver);
+    errorsMap.observeDeep(errorsObserver); // NEW: Attach errors observer
 
     // Store cleanup functions
     logger.debug("Attaching observers");
@@ -345,6 +355,7 @@ export const createWorkflowStore = () => {
       () => triggersArray.unobserveDeep(triggersObserver),
       () => edgesArray.unobserveDeep(edgesObserver),
       () => positionsMap.unobserveDeep(positionsObserver),
+      () => errorsMap.unobserveDeep(errorsObserver), // NEW: Cleanup function
     ];
 
     state = produce(state, draft => {
@@ -357,6 +368,7 @@ export const createWorkflowStore = () => {
     triggersObserver();
     edgesObserver();
     positionsObserver();
+    errorsObserver(); // NEW: Initial sync
 
     // Initialize DevTools connection
     devtools.connect();
@@ -653,6 +665,74 @@ export const createWorkflowStore = () => {
     });
   };
 
+  /**
+   * Clear a specific validation error
+   *
+   * Pattern 1: Y.Doc → Observer → Immer → Notify
+   * - Removes error key from errorsMap in Y.Doc
+   * - Observer automatically syncs to Immer state
+   */
+  const clearError = (key: string) => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
+    const errorsMap = ydoc.getMap("errors");
+
+    ydoc.transact(() => {
+      errorsMap.delete(key);
+    });
+
+    // Observer handles the rest: Y.Doc → immer → notify
+  };
+
+  /**
+   * Clear all validation errors
+   *
+   * Pattern 1: Y.Doc → Observer → Immer → Notify
+   * - Clears all keys from errorsMap in Y.Doc
+   * - Observer automatically syncs to Immer state
+   */
+  const clearAllErrors = () => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
+    const errorsMap = ydoc.getMap("errors");
+
+    ydoc.transact(() => {
+      // Get all keys and delete them
+      const keys = Array.from(errorsMap.keys());
+      keys.forEach(key => errorsMap.delete(key));
+    });
+
+    // Observer handles the rest: Y.Doc → immer → notify
+  };
+
+  /**
+   * Set a validation error (for testing purposes)
+   *
+   * Pattern 1: Y.Doc → Observer → Immer → Notify
+   * - Sets error key in errorsMap in Y.Doc
+   * - Observer automatically syncs to Immer state
+   *
+   * Note: In production, errors are set by the server during save
+   * validation
+   */
+  const setError = (key: string, message: string) => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
+    const errorsMap = ydoc.getMap("errors");
+
+    ydoc.transact(() => {
+      errorsMap.set(key, message);
+    });
+
+    // Observer handles the rest: Y.Doc → immer → notify
+  };
+
   // =============================================================================
   // PATTERN 3: Direct Immer → Notify (Local UI State)
   // =============================================================================
@@ -882,6 +962,9 @@ export const createWorkflowStore = () => {
     updatePositions,
     updatePosition,
     importWorkflow,
+    setError,
+    clearError,
+    clearAllErrors,
 
     // =============================================================================
     // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations - Use Sparingly)
@@ -898,6 +981,11 @@ export const createWorkflowStore = () => {
     saveWorkflow,
     resetWorkflow,
     validateWorkflowName,
+
+    // Getters for state properties
+    get errors() {
+      return state.errors;
+    },
   };
 };
 

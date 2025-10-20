@@ -28,6 +28,7 @@ export namespace Session {
     {
       workflow: TypedMap<Workflow>;
       positions: TypedMap<WorkflowType.Positions>;
+      errors: TypedMap<Record<string, string>>;
     },
     {
       jobs: TypedArray<TypedMap<Job & { body: Y.Text }>>;
