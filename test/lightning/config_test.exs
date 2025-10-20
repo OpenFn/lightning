@@ -34,6 +34,15 @@ defmodule Lightning.Configtest do
       assert expected == actual
     end
 
+    test "indicates if expensive metrics are enabled" do
+      expected =
+        extract_from_config(Lightning.PromEx, :expensive_metrics_enabled)
+
+      actual = API.promex_expensive_metrics_enabled?()
+
+      assert expected == actual
+    end
+
     test "indicates if the tracking of UI metrics is enabled" do
       expected =
         extract_from_config(:ui_metrics_tracking, :enabled)
