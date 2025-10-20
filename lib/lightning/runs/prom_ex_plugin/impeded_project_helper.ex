@@ -20,29 +20,32 @@ defmodule Lightning.Runs.PromExPlugin.ImpededProjectHelper do
   defp workflows_with_available_runs_query(threshold_time) do
     workflows_with_available_runs_query =
       from r in Lightning.Run,
-      where: r.state == :available and r.inserted_at <= ^threshold_time,
-      join: w in assoc(r, :work_order),
-      select: w.workflow_id,
-      distinct: true
+        where: r.state == :available and r.inserted_at <= ^threshold_time,
+        join: w in assoc(r, :work_order),
+        select: w.workflow_id,
+        distinct: true
 
     in_progress_runs_query =
       from r in Lightning.Run,
-      where: r.state in [:claimed, :started],
-      join: w in assoc(r, :work_order),
-      group_by: w.workflow_id,
-      select: %{workflow_id: w.workflow_id, count: count(r.id)}
+        where: r.state in [:claimed, :started],
+        join: w in assoc(r, :work_order),
+        group_by: w.workflow_id,
+        select: %{workflow_id: w.workflow_id, count: count(r.id)}
 
     from wwar in subquery(workflows_with_available_runs_query),
-      join: wf in Lightning.Workflows.Workflow, on: wf.id == wwar.workflow_id,
-      join: p in Lightning.Projects.Project, on: p.id == wf.project_id,
-      left_join: ipr in subquery(in_progress_runs_query), on: wwar.workflow_id == ipr.workflow_id,
+      join: wf in Lightning.Workflows.Workflow,
+      on: wf.id == wwar.workflow_id,
+      join: p in Lightning.Projects.Project,
+      on: p.id == wf.project_id,
+      left_join: ipr in subquery(in_progress_runs_query),
+      on: wwar.workflow_id == ipr.workflow_id,
       select: %{
         project_id: p.id,
         workflow_id: wf.id,
         project_concurrency: p.concurrency,
         workflow_concurrency: wf.concurrency,
         inprogress_runs_count: coalesce(ipr.count, 0)
-      } 
+      }
   end
 
   def find_projects_with_unused_concurrency(workflow_stats) do
