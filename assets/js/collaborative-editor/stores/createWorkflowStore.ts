@@ -474,7 +474,12 @@ export const createWorkflowStore = () => {
     // Observer handles the rest: Y.Doc → immer → notify
   };
 
-  const addJob = (job: Partial<Session.Job>) => {
+  const addJob = (
+    job: Partial<Session.Job> & {
+      project_credential_id?: string | null;
+      keychain_credential_id?: string | null;
+    }
+  ) => {
     if (!ydoc) {
       throw new Error("Y.Doc not connected");
     }
@@ -489,6 +494,10 @@ export const createWorkflowStore = () => {
       if (job.body) {
         jobMap.set("body", new Y.Text(job.body));
       }
+      // Initialize credential fields to null
+      jobMap.set("project_credential_id", job.project_credential_id || null);
+      jobMap.set("keychain_credential_id", job.keychain_credential_id || null);
+
       jobsArray.push([jobMap]);
     });
   };
