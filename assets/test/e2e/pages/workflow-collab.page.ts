@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { LiveViewPage } from "./base/liveview.page";
+import { JobInspectorPage } from "./components/job-inspector.page";
 
 /**
  * Page Object Model for the Collaborative Workflow Editor
@@ -25,6 +26,16 @@ export class WorkflowCollaborativePage extends LiveViewPage {
 
   constructor(page: Page) {
     super(page);
+  }
+
+  /**
+   * Get the job inspector page object for interacting with job
+   * properties.
+   *
+   * @returns JobInspectorPage instance for the current page
+   */
+  get jobInspector(): JobInspectorPage {
+    return new JobInspectorPage(this.page);
   }
 
   /**
@@ -84,6 +95,20 @@ export class WorkflowCollaborativePage extends LiveViewPage {
    */
   get container(): Locator {
     return this.page.locator(this.selectors.collaborativeEditor);
+  }
+
+  /**
+   * Get the save workflow button
+   */
+  get saveButton(): Locator {
+    return this.page.locator('[data-testid="save-workflow-button"]');
+  }
+
+  /**
+   * Click the save workflow button
+   */
+  async saveWorkflow(): Promise<void> {
+    await this.saveButton.click();
   }
 
   /**

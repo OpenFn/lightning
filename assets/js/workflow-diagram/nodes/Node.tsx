@@ -113,6 +113,7 @@ const Node = ({
       className={`group ${didRun ? 'opacity-100' : 'opacity-30'}`}
       data-a-node
       data-id={id}
+      data-testid={type === 'trigger' ? `trigger-node-${id}` : `job-node-${id}`}
       data-valid-drop-target={
         data.isValidDropTarget !== undefined
           ? String(data.isValidDropTarget)

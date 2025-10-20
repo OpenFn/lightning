@@ -72,6 +72,7 @@ function SaveButton({
       <Tooltip content={tooltipMessage} side="bottom">
         <button
           type="button"
+          data-testid="save-workflow-button"
           className="rounded-md text-sm font-semibold shadow-xs
           phx-submit-loading:opacity-75 cursor-pointer
           disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2

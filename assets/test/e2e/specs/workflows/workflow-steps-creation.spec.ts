@@ -132,4 +132,110 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
       /@openfn\/language-postgresql@\d\.\d\.\d/
     );
   });
+
+  test("TC-3760-LV-01: Save job without credential in LiveView editor", async ({
+    page,
+  }) => {
+    const workflowsPage = new WorkflowsPage(page);
+    const workflowEdit = new WorkflowEditPage(page);
+
+    const projectsPage = new ProjectsPage(page);
+    await projectsPage.navigateToProject("openhie-project");
+
+    // Create a new workflow
+    await workflowsPage.clickNewWorkflow();
+    await workflowEdit.selectWorkflowType("Event-based Workflow");
+    await workflowEdit.clickCreateWorkflow();
+
+    // Configure the first job WITHOUT credential
+    await workflowEdit.diagram.nodes.clickJobByIndex(0);
+
+    await expect(workflowEdit.jobForm(0).workflowForm).toBeAttached();
+
+    await workflowEdit.jobForm(0).adaptorSelect.selectOption("@openfn/language-http");
+    await workflowEdit.jobForm(0).nameInput.fill("HTTP Request No Cred");
+
+    // Verify credential dropdown is empty
+    const credentialField = page.locator(
+      'select[name="workflow[jobs][0][project_credential_id]"]'
+    );
+
+    await expect(credentialField).toHaveValue("");
+
+    // Save and verify
+    await workflowEdit.clickSaveWorkflow();
+    await workflowEdit.expectFlashMessage("Workflow saved successfully.");
+  });
+
+  test("TC-3760-LV-02: Save job with credential in LiveView editor", async ({
+    page,
+  }) => {
+    const workflowsPage = new WorkflowsPage(page);
+    const workflowEdit = new WorkflowEditPage(page);
+
+    const projectsPage = new ProjectsPage(page);
+    await projectsPage.navigateToProject("openhie-project");
+
+    await workflowsPage.clickNewWorkflow();
+    await workflowEdit.selectWorkflowType("Event-based Workflow");
+    await workflowEdit.clickCreateWorkflow();
+
+    await workflowEdit.diagram.nodes.clickJobByIndex(0);
+    await expect(workflowEdit.jobForm(0).workflowForm).toBeAttached();
+
+    await workflowEdit.jobForm(0).adaptorSelect.selectOption("@openfn/language-http");
+    await workflowEdit.jobForm(0).nameInput.fill("HTTP Request With Cred");
+
+    // Select first available credential
+    const credentialField = page.locator(
+      'select[name="workflow[jobs][0][project_credential_id]"]'
+    );
+
+    // Select first non-empty option
+    await credentialField.selectOption({ index: 1 });
+    const selectedValue = await credentialField.inputValue();
+    expect(selectedValue).not.toBe("");
+
+    // Save and verify
+    await workflowEdit.clickSaveWorkflow();
+    await workflowEdit.expectFlashMessage("Workflow saved successfully.");
+
+    // Reload and verify persistence
+    await page.reload();
+    await workflowEdit.diagram.nodes.clickJobByIndex(0);
+    await expect(credentialField).toHaveValue(selectedValue);
+  });
+
+  test("TC-3760-LV-03: Clear credential in LiveView editor", async ({ page }) => {
+    const workflowsPage = new WorkflowsPage(page);
+    const workflowEdit = new WorkflowEditPage(page);
+
+    const projectsPage = new ProjectsPage(page);
+    await projectsPage.navigateToProject("openhie-project");
+
+    await workflowsPage.clickNewWorkflow();
+    await workflowEdit.selectWorkflowType("Event-based Workflow");
+    await workflowEdit.clickCreateWorkflow();
+
+    await workflowEdit.diagram.nodes.clickJobByIndex(0);
+
+    const credentialField = page.locator(
+      'select[name="workflow[jobs][0][project_credential_id]"]'
+    );
+
+    // Select credential
+    await credentialField.selectOption({ index: 1 });
+    await workflowEdit.clickSaveWorkflow();
+    await workflowEdit.expectFlashMessage("Workflow saved successfully.");
+
+    // Clear credential
+    await credentialField.selectOption("");
+    await workflowEdit.clickSaveWorkflow();
+    await workflowEdit.expectFlashMessage("Workflow saved successfully.");
+
+    // Verify cleared
+    await page.reload();
+    await workflowEdit.diagram.nodes.clickJobByIndex(0);
+    await expect(credentialField).toHaveValue("");
+  });
 });
