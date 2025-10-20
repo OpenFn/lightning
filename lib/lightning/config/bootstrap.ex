@@ -573,6 +573,8 @@ defmodule Lightning.Config.Bootstrap do
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
       manual_metrics_start_delay: :no_delay,
       drop_metrics_groups: [],
+      expensive_metrics_enabled:
+        env!("PROMEX_EXPENSIVE_METRICS_ENABLED", &Utils.ensure_boolean/1, false),
       grafana: [
         host: env!("PROMEX_GRAFANA_HOST", :string, ""),
         username: env!("PROMEX_GRAFANA_USER", :string, ""),
