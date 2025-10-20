@@ -10,3 +10,10 @@ console.debug = () => {};
 // Or if you want to capture them but not display:
 const originalDebug = console.debug;
 console.debug = process.env.LOG_LEVEL === "debug" ? originalDebug : () => {};
+
+// Mock ResizeObserver for HeadlessUI components (Menu, Popover, etc.)
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
