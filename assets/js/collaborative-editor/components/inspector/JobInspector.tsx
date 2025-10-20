@@ -345,6 +345,11 @@ export function JobInspector({ job, renderFooter }: JobInspectorProps) {
                   "keychain_credential_id",
                   resolved.keychain_credential_id
                 );
+                // Manually trigger updateJob to persist credentials to Y.Doc
+                updateJob(job.id, {
+                  project_credential_id: resolved.project_credential_id,
+                  keychain_credential_id: resolved.keychain_credential_id,
+                });
               },
             }}
           >
