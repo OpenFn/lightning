@@ -14,6 +14,7 @@ import {
   useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
+  useWorkflowReadOnly,
 } from "../hooks/useWorkflow";
 
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
@@ -29,6 +30,7 @@ export function WorkflowEditor() {
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
   const { saveWorkflow } = useWorkflowActions();
+  const { isReadOnly } = useWorkflowReadOnly();
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
@@ -148,7 +150,7 @@ export function WorkflowEditor() {
                   ytext={currentJobYText}
                   awareness={awareness}
                   adaptor="common"
-                  disabled={false}
+                  disabled={isReadOnly}
                   className="h-full w-full"
                 />
               ) : (
