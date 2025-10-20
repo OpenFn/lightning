@@ -26,6 +26,7 @@ and this project adheres to
 
 ### Changed
 
+- Tweaked the Sandbox color palette
 - Detect and clean stale CMake caches in bootstrap script
   [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
 - Implement workflow settings form using tanstack form

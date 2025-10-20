@@ -273,7 +273,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       assert html =~ "Create a new sandbox"
 
-      assert html =~ ~s(background-color: #ff0000)
       assert html =~ ~s(#ff0000)
 
       assert html =~ ~s(name="project[color]")
@@ -284,7 +283,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       |> render_change(%{"project" => %{"color" => "#00ff00"}})
 
       updated_html = render(view)
-      assert updated_html =~ ~s(background-color: #00ff00)
+      assert updated_html =~ ~s(#00ff00)
     end
   end
 
