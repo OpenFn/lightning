@@ -52,6 +52,95 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
       assert Process.alive?(pid)
     end
 
+    test "handles successful streaming with SSE data chunks", %{
+      session_id: session_id
+    } do
+      # Test the full successful streaming path with properly formatted SSE chunks
+
+      # Stub Finch to simulate successful streaming with SSE chunks
+      Mimic.stub(Finch, :stream, fn _request, _finch_name, acc, fun ->
+        # Simulate status callback
+        acc = fun.({:status, 200}, acc)
+
+        # Simulate headers callback
+        acc = fun.({:headers, [{"content-type", "text/event-stream"}]}, acc)
+
+        # Simulate SSE data chunks
+        chunk1 = "event: content_block_delta\ndata: {\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello\"}}\n\n"
+        acc = fun.({:data, chunk1}, acc)
+
+        chunk2 = "event: message_stop\ndata: {}\n\n"
+        acc = fun.({:data, chunk2}, acc)
+
+        {:ok, acc}
+      end)
+
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, _pid} = SSEStream.start_stream(url, payload)
+
+      # Should receive the text chunk
+      assert_receive {:ai_assistant, :streaming_chunk,
+                      %{content: "Hello", session_id: ^session_id}},
+                     1000
+
+      # Should receive completion
+      assert_receive {:ai_assistant, :streaming_complete, %{session_id: ^session_id}},
+                     1000
+    end
+
+    test "handles streaming with thinking_delta status updates", %{
+      session_id: session_id
+    } do
+      # Test status update streaming
+      Mimic.stub(Finch, :stream, fn _request, _finch_name, acc, fun ->
+        acc = fun.({:status, 200}, acc)
+        acc = fun.({:headers, []}, acc)
+
+        chunk = "event: content_block_delta\ndata: {\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"Analyzing...\"}}\n\n"
+        acc = fun.({:data, chunk}, acc)
+
+        {:ok, acc}
+      end)
+
+      url = "http://localhost:3000/services/job_chat/stream"
+      payload = %{"lightning_session_id" => session_id, "stream" => true}
+
+      {:ok, _pid} = SSEStream.start_stream(url, payload)
+
+      # Should receive status update
+      assert_receive {:ai_assistant, :status_update,
+                      %{status: "Analyzing...", session_id: ^session_id}},
+                     1000
+    end
+
+    test "handles HTTP 4xx/5xx error during streaming", %{session_id: session_id} do
+      # Test handling of HTTP error status codes during streaming
+      Mimic.stub(Finch, :stream, fn _request, _finch_name, acc, fun ->
+        # Simulate 500 status
+        acc = fun.({:status, 500}, acc)
+
+        {:ok, acc}
+      end)
+
+      url = "http://localhost:3000/services/job_chat/stream"
+      payload = %{"lightning_session_id" => session_id, "stream" => true}
+
+      {:ok, _pid} = SSEStream.start_stream(url, payload)
+
+      # Should receive error about HTTP 500
+      assert_receive {:ai_assistant, :streaming_error,
+                      %{session_id: ^session_id, error: error}},
+                     1000
+
+      assert error =~ "500"
+    end
+
     test "handles error events from Apollo", %{session_id: session_id} do
       # Simulate receiving an error event by sending it directly to a GenServer
       # In a real implementation, this would come from Apollo via SSE
