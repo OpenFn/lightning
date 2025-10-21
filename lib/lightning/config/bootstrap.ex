@@ -610,7 +610,7 @@ defmodule Lightning.Config.Bootstrap do
       run_queue_metrics_period_seconds:
         env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5),
       unclaimed_run_threshold_seconds:
-        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 300)
+        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 10)
 
     config :lightning,
            :per_workflow_claim_limit,

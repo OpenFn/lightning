@@ -5,7 +5,7 @@ defmodule Lightning.Runs.PromExPlugin.ImpededProjectHelper do
   The methods in this module will find workflows that have available runs that
   are older than a given threshold. These workflows can then be checked
   to see if they could benefit from increased worker capacity based on comparing
-  inprogress runss against the concurrency limits of the project and workflow.
+  in-progress runs against the concurrency limits of the project and workflow.
   """
   import Ecto.Query
 
