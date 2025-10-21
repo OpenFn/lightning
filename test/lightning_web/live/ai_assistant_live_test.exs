@@ -1,18 +1,25 @@
 defmodule LightningWeb.AiAssistantLiveTest do
   use LightningWeb.ConnCase, async: false
+  use Mimic
 
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
-  import Mox
+  import Mox, except: [verify_on_exit!: 1]
   import Eventually
+  import Ecto.Query
   use Oban.Testing, repo: Lightning.Repo
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
   setup :set_mox_global
-  setup :verify_on_exit!
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+
+  setup do
+    Mox.verify_on_exit!()
+    Mimic.set_mimic_global()
+    :ok
+  end
 
   defp skip_disclaimer(user, read_at \\ DateTime.utc_now() |> DateTime.to_unix()) do
     Ecto.Changeset.change(user, %{
@@ -3309,6 +3316,117 @@ defmodule LightningWeb.AiAssistantLiveTest do
             html =~ "Cancel" and
             html =~ "bg-red-50" and
             html =~ "text-red-800"
+        end,
+        true,
+        5000,
+        50
+      )
+    end
+
+    @tag email: "user@openfn.org"
+    test "retry_streaming when no user message exists", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow,
+      user: user
+    } do
+      Lightning.AiAssistantHelpers.stub_online()
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+        )
+
+      render_async(view)
+
+      {:ok, session} = Lightning.AiAssistant.create_session(job_1, user, "Test")
+      Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session.id}")
+
+      # Trigger streaming error
+      Lightning.AiAssistantHelpers.simulate_streaming_error(
+        session.id,
+        "Error"
+      )
+
+      assert_receive {:ai_assistant, :streaming_error, _}, 1000
+      render_async(view)
+
+      # Delete all user messages to trigger the "else" branch
+      Lightning.Repo.delete_all(
+        from m in Lightning.AiAssistant.ChatMessage,
+          where: m.chat_session_id == ^session.id and m.role == :user
+      )
+
+      # Click retry - should handle gracefully (else branch: no user message)
+      eventually(
+        fn ->
+          if has_element?(view, "[phx-click='retry_streaming']") do
+            view
+            |> element("[phx-click='retry_streaming']")
+            |> render_click()
+
+            true
+          else
+            false
+          end
+        end,
+        true,
+        5000,
+        50
+      )
+
+      # Should not crash
+      refute_receive {:EXIT, _, _}, 100
+    end
+
+    @tag email: "user@openfn.org"
+    test "retry_streaming with retry_message error", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow,
+      user: user
+    } do
+      Lightning.AiAssistantHelpers.stub_online()
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+        )
+
+      render_async(view)
+
+      {:ok, session} = Lightning.AiAssistant.create_session(job_1, user, "Test")
+      Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session.id}")
+
+      # Trigger streaming error
+      Lightning.AiAssistantHelpers.simulate_streaming_error(session.id, "Error")
+      assert_receive {:ai_assistant, :streaming_error, _}, 1000
+      render_async(view)
+
+      # Copy and stub retry_message to return error
+      Mimic.copy(Lightning.AiAssistant)
+
+      Mimic.stub(Lightning.AiAssistant, :retry_message, fn _msg ->
+        {:error, %Ecto.Changeset{}}
+      end)
+
+      # Click retry - should show error flash
+      eventually(
+        fn ->
+          if has_element?(view, "[phx-click='retry_streaming']") do
+            html =
+              view
+              |> element("[phx-click='retry_streaming']")
+              |> render_click()
+
+            html =~ "Failed to retry request"
+          else
+            false
+          end
         end,
         true,
         5000,
