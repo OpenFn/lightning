@@ -1,4 +1,4 @@
-defmodule Lightning.AiAssistant.MessageProcessorComprehensiveTest do
+defmodule Lightning.AiAssistant.MessageProcessorTest do
   use Lightning.DataCase, async: false
   use Mimic
 
