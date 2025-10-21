@@ -9,20 +9,6 @@ import {
   WorkflowCollaborativePage,
 } from "../../pages";
 
-/**
- * E2E Test Suite for Collaborative Editor - Job Credentials
- *
- * Tests credential handling in the collaborative workflow editor, covering:
- * - Saving jobs without credentials (null values)
- * - Selecting project credentials
- * - Clearing credentials after selection
- * - Switching between project and keychain credentials
- * - Multiple jobs with different credential configurations
- * - Jobs created via diagram plus button
- *
- * Related issue: #3760
- */
-
 test.describe("Collaborative Editor - Job Credentials", () => {
   let testData: Awaited<ReturnType<typeof getTestData>>;
 
@@ -43,7 +29,7 @@ test.describe("Collaborative Editor - Job Credentials", () => {
     );
   });
 
-  test("TC-3760-01: Save job without credential in collaborative editor", async ({
+  test("Save job without credential in collaborative editor", async ({
     page,
   }) => {
     await test.step("Navigate to project and create new workflow", async () => {
@@ -114,7 +100,7 @@ test.describe("Collaborative Editor - Job Credentials", () => {
     });
   });
 
-  test("TC-3760-02: Save job with project credential", async ({ page }) => {
+  test("Save job with project credential", async ({ page }) => {
     await test.step("Navigate to project and create new workflow", async () => {
       const projectsPage = new ProjectsPage(page);
       await projectsPage.navigateToProject(testData.projects.openhie.name);
@@ -196,7 +182,7 @@ test.describe("Collaborative Editor - Job Credentials", () => {
     });
   });
 
-  test("TC-3760-03: Clear credential after it was selected", async ({
+  test("Clear credential after it was selected", async ({
     page,
   }) => {
     await test.step("Navigate to project and create new workflow", async () => {
@@ -273,7 +259,7 @@ test.describe("Collaborative Editor - Job Credentials", () => {
     });
   });
 
-  test("TC-3760-04: Switch between project and keychain credentials", async ({
+  test("Switch between project and keychain credentials", async ({
     page,
   }) => {
     await test.step("Navigate to project and create new workflow", async () => {
@@ -385,7 +371,7 @@ test.describe("Collaborative Editor - Job Credentials", () => {
     });
   });
 
-  test("TC-3760-05: Multiple jobs with different credential configurations", async ({
+  test("Multiple jobs with different credential configurations", async ({
     page,
   }) => {
     await test.step("Navigate to project and create new workflow", async () => {
@@ -504,7 +490,7 @@ test.describe("Collaborative Editor - Job Credentials", () => {
     });
   });
 
-  test("TC-3760-06: Job created via diagram plus button has null credentials", async ({
+  test("Job created via diagram plus button has null credentials", async ({
     page,
   }) => {
     await test.step("Navigate to project and create new workflow", async () => {

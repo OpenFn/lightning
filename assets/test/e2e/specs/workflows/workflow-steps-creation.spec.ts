@@ -133,7 +133,7 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     );
   });
 
-  test("TC-3760-LV-01: Save job without credential in LiveView editor", async ({
+  test("Save job without credential in LiveView editor", async ({
     page,
   }) => {
     const workflowsPage = new WorkflowsPage(page);
@@ -167,7 +167,7 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     await workflowEdit.expectFlashMessage("Workflow saved successfully.");
   });
 
-  test("TC-3760-LV-02: Save job with credential in LiveView editor", async ({
+  test("Save job with credential in LiveView editor", async ({
     page,
   }) => {
     const workflowsPage = new WorkflowsPage(page);
@@ -206,7 +206,7 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     await expect(credentialField).toHaveValue(selectedValue);
   });
 
-  test("TC-3760-LV-03: Clear credential in LiveView editor", async ({ page }) => {
+  test("Clear credential in LiveView editor", async ({ page }) => {
     const workflowsPage = new WorkflowsPage(page);
     const workflowEdit = new WorkflowEditPage(page);
 
