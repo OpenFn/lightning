@@ -147,10 +147,6 @@ defmodule Lightning.ApolloClient.SSEStream do
         Logger.error("[SSEStream] Stream failed with status: #{status}")
         send(parent, {:sse_error, {:http_error, status}})
 
-      {:error, reason} ->
-        Logger.error("[SSEStream] Stream failed: #{inspect(reason)}")
-        send(parent, {:sse_error, reason})
-
       {:error, reason, _acc} ->
         # Handle error with accumulator (e.g., connection refused before any response)
         Logger.error(

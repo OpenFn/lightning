@@ -77,7 +77,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_message(String.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t() | :streaming} | {:error, String.t()}
   defp process_message(message_id) do
     {:ok, session, message} =
       ChatMessage
@@ -115,7 +115,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_job_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, :streaming | AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_job_message(session, message) do
     enriched_session = AiAssistant.enrich_session_with_job_context(session)
 
@@ -231,7 +231,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_workflow_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, :streaming | AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_workflow_message(session, message) do
     code = message.code || workflow_code_from_session(session)
 
