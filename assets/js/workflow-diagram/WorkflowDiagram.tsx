@@ -214,23 +214,54 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         chartCache.current.lastLayout
       );
 
+      // If defaulting positions for multiple nodes,
+      // try to offset them a bit
+      // Note that we can't do anything about overlaps
+      const positionOffsetMap: Record<string, number> = {};
+
       const ensureNodePosition = (node: Flow.Node) => {
         if (!node.position) {
-          const edge = newModel.edges.find(e => e.target === node.id);
-          if (edge) {
-            const parent =
-              positions[edge.source] ??
-              (fixedPositions && fixedPositions[edge.source]);
-            if (parent) {
-              node.position = {
-                x: parent.x,
-                y: parent.y + 225 /* magic number */,
-              };
-              return true;
+          // Try and find the first parent node in the tree, and append to that
+          let bestParent;
+          let currentNodeId = node.id;
+          while (currentNodeId && !bestParent) {
+            const edge = newModel.edges.find(e => e.target === currentNodeId);
+            if (edge) {
+              currentNodeId = edge.source;
+
+              const parent =
+                positions[edge.source] ??
+                (fixedPositions && fixedPositions[edge.source]);
+              if (parent) {
+                bestParent = {
+                  id: edge.source,
+                  ...parent,
+                };
+              }
+            } else {
+              break;
             }
           }
+          if (bestParent) {
+            if (bestParent.id in positionOffsetMap) {
+              positionOffsetMap[bestParent.id] += 30;
+            } else {
+              positionOffsetMap[bestParent.id] = 0;
+            }
+
+            const offset = positionOffsetMap[bestParent.id];
+            node.position = {
+              x: bestParent.x + offset,
+              y: bestParent.y + 227 /* magic number */ + offset,
+            };
+            return true;
+          } else {
+            console.error(
+              "ERROR: could not auto-calculate position for ",
+              node.id
+            );
+          }
         }
-        console.error("ERROR: could not auto-calculate position for ", node.id);
       };
 
       if (layoutId) {
