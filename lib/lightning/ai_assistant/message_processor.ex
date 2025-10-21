@@ -13,6 +13,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
+  alias Lightning.ApolloClient.SSEStream
   alias Lightning.Repo
 
   require Logger
@@ -137,15 +138,13 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           {:ok, :streaming | AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp stream_job_message(session, content, options) do
     # For now, start streaming and use existing query as fallback
-    try do
-      start_streaming_request(session, content, options)
-      # Return :streaming indicator - message stays in processing state
-      {:ok, :streaming}
-    rescue
-      _ ->
-        # Fallback to non-streaming if streaming fails
-        AiAssistant.query(session, content, options)
-    end
+    start_streaming_request(session, content, options)
+    # Return :streaming indicator - message stays in processing state
+    {:ok, :streaming}
+  rescue
+    _ ->
+      # Fallback to non-streaming if streaming fails
+      AiAssistant.query(session, content, options)
   end
 
   @doc false
@@ -174,7 +173,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     # Start Apollo SSE stream
     apollo_url = get_apollo_url("job_chat")
 
-    case Lightning.ApolloClient.SSEStream.start_stream(apollo_url, sse_payload) do
+    case SSEStream.start_stream(apollo_url, sse_payload) do
       {:ok, _pid} ->
         Logger.debug(
           "[MessageProcessor] Started Apollo SSE stream for session #{session.id}"
@@ -274,7 +273,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     # Start Apollo SSE stream for workflow_chat
     apollo_url = get_apollo_url("workflow_chat")
 
-    case Lightning.ApolloClient.SSEStream.start_stream(apollo_url, sse_payload) do
+    case SSEStream.start_stream(apollo_url, sse_payload) do
       {:ok, _pid} ->
         Logger.debug(
           "[MessageProcessor] Started Apollo SSE stream for workflow session #{session.id}"
