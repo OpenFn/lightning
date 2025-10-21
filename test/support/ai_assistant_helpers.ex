@@ -28,9 +28,8 @@ defmodule Lightning.AiAssistantHelpers do
 
     # Stub Finch to prevent actual SSE connections
     # This prevents Oban jobs from attempting real HTTP requests during tests
-    # Use :global mode so stub works in spawned Oban worker processes
-    Mimic.set_mimic_global()
-
+    # Note: Tests that call create_session (which spawns Oban workers) must
+    # call Mimic.set_mimic_global() before calling stub_online()
     Mimic.stub(Finch, :stream, fn _request, _finch_name, _acc, _fun ->
       # Block indefinitely - the stream is "in progress" but never completes
       # This allows simulated errors to be broadcast without interference

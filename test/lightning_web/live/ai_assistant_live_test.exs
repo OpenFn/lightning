@@ -3129,6 +3129,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       workflow: %{jobs: [job_1 | _]} = workflow,
       user: user
     } do
+      Mimic.set_mimic_global()
       Lightning.AiAssistantHelpers.stub_online()
       skip_disclaimer(user)
 
@@ -3206,6 +3207,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       workflow: %{jobs: [job_1 | _]} = workflow,
       user: user
     } do
+      Mimic.set_mimic_global()
       Lightning.AiAssistantHelpers.stub_online()
       skip_disclaimer(user)
 
@@ -3269,6 +3271,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       workflow: %{jobs: [job_1 | _]} = workflow,
       user: user
     } do
+      Mimic.set_mimic_global()
       Lightning.AiAssistantHelpers.stub_online()
       skip_disclaimer(user)
 
