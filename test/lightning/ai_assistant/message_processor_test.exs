@@ -54,7 +54,8 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
     test "processes job message with streaming", %{message: message} do
       # Stub streaming to succeed
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         {:ok, self()}
       end)
 
@@ -62,14 +63,20 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert :ok = MessageProcessor.perform(job)
     end
 
-    test "handles streaming fallback on exception", %{message: message, session: session} do
+    test "handles streaming fallback on exception", %{
+      message: message,
+      session: session
+    } do
       # Update session meta to include options
       session
-      |> Ecto.Changeset.change(meta: %{"message_options" => %{"include_logs" => "false"}})
+      |> Ecto.Changeset.change(
+        meta: %{"message_options" => %{"include_logs" => "false"}}
+      )
       |> Repo.update!()
 
       # Stub streaming to fail
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         raise "Streaming failed"
       end)
 
@@ -110,9 +117,12 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert updated_message.status == :error
     end
 
-    test "handles SSEStream.start_stream error for job message", %{message: message} do
+    test "handles SSEStream.start_stream error for job message", %{
+      message: message
+    } do
       # Stub streaming to return error
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         {:error, :connection_failed}
       end)
 
@@ -124,7 +134,8 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
     test "handles failed message processing", %{message: message} do
       # Stub streaming to succeed but return error on query fallback
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         raise "Streaming failed"
       end)
 
@@ -143,7 +154,8 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
     test "logs successful message processing", %{message: message} do
       # Stub streaming to fail, then fallback to succeed
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         raise "Streaming failed"
       end)
 
@@ -162,7 +174,8 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
     test "logs successful SSE stream start for job message", %{message: message} do
       # Stub streaming to succeed and verify logging happens
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         {:ok, self()}
       end)
 
@@ -198,7 +211,8 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
     test "processes workflow message with streaming", %{message: message} do
       # Stub streaming to succeed
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         {:ok, self()}
       end)
 
@@ -206,9 +220,12 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert :ok = MessageProcessor.perform(job)
     end
 
-    test "handles SSEStream.start_stream error for workflow message", %{message: message} do
+    test "handles SSEStream.start_stream error for workflow message", %{
+      message: message
+    } do
       # Stub streaming to return error
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         {:error, :connection_failed}
       end)
 
@@ -218,14 +235,20 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert :ok = MessageProcessor.perform(job)
     end
 
-    test "falls back to query_workflow on streaming failure", %{message: message, session: session} do
+    test "falls back to query_workflow on streaming failure", %{
+      message: message,
+      session: session
+    } do
       # Stub streaming to fail
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         raise "Streaming failed"
       end)
 
       # Stub the fallback query_workflow
-      Mimic.stub(Lightning.AiAssistant, :query_workflow, fn _session, _content, _opts ->
+      Mimic.stub(Lightning.AiAssistant, :query_workflow, fn _session,
+                                                            _content,
+                                                            _opts ->
         {:ok, session}
       end)
 
@@ -265,7 +288,8 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
           )
 
         # Stub streaming to succeed
-        Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, payload ->
+        Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                       payload ->
           # Verify it used the code from the previous assistant message
           assert payload["existing_yaml"] == assistant_msg.code
           {:ok, self()}
@@ -276,9 +300,12 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       end)
     end
 
-    test "logs successful SSE stream start for workflow message", %{message: message} do
+    test "logs successful SSE stream start for workflow message", %{
+      message: message
+    } do
       # Stub streaming to succeed
-      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url, _payload ->
+      Mimic.stub(Lightning.ApolloClient.SSEStream, :start_stream, fn _url,
+                                                                     _payload ->
         {:ok, self()}
       end)
 
