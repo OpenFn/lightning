@@ -7,31 +7,31 @@
  * Focus: Test credential selection behavior through user interactions and Y.Doc synchronization
  */
 
-import { describe, test, expect, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { act } from "react";
 import type React from "react";
-import * as Y from "yjs";
+import { act } from "react";
+import { beforeEach, describe, expect, test } from "vitest";
+import type * as Y from "yjs";
 
 import { JobInspector } from "../../../../js/collaborative-editor/components/inspector/JobInspector";
-import { StoreContext } from "../../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import { createWorkflowYDoc } from "../../__helpers__/workflowFactory";
-import { createWorkflowStore } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
-import { createCredentialStore } from "../../../../js/collaborative-editor/stores/createCredentialStore";
-import { createSessionContextStore } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
+import { StoreContext } from "../../../../js/collaborative-editor/contexts/StoreProvider";
+import type { AdaptorStoreInstance } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
 import { createAdaptorStore } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
+import type { AwarenessStoreInstance } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
 import { createAwarenessStore } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
+import type { CredentialStoreInstance } from "../../../../js/collaborative-editor/stores/createCredentialStore";
+import { createCredentialStore } from "../../../../js/collaborative-editor/stores/createCredentialStore";
+import type { SessionContextStoreInstance } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
+import { createSessionContextStore } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
+import type { WorkflowStoreInstance } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
+import { createWorkflowStore } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../../__helpers__/channelMocks";
-import type { WorkflowStoreInstance } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { CredentialStoreInstance } from "../../../../js/collaborative-editor/stores/createCredentialStore";
-import type { SessionContextStoreInstance } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
-import type { AdaptorStoreInstance } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
-import type { AwarenessStoreInstance } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
+import { createWorkflowYDoc } from "../../__helpers__/workflowFactory";
 
 /**
  * Helper to create and connect a workflow store with Y.Doc

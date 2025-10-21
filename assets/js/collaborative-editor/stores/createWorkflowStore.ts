@@ -462,7 +462,7 @@ export const createWorkflowStore = () => {
       (
         Object.entries(updates) as [
           keyof typeof updates,
-          (typeof updates)[keyof typeof updates]
+          (typeof updates)[keyof typeof updates],
         ][]
       ).forEach(([key, value]) => {
         if (value !== undefined) {
@@ -474,12 +474,7 @@ export const createWorkflowStore = () => {
     // Observer handles the rest: Y.Doc → immer → notify
   };
 
-  const addJob = (
-    job: Partial<Session.Job> & {
-      project_credential_id?: string | null;
-      keychain_credential_id?: string | null;
-    }
-  ) => {
+  const addJob = (job: Partial<Session.Job>) => {
     if (!ydoc) {
       throw new Error("Y.Doc not connected");
     }

@@ -1,7 +1,7 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 
 import { useURLState } from "../../react/lib/use-url-state";
-import { useUser, useIsNewWorkflow } from "../hooks/useSessionContext";
+import { useIsNewWorkflow, useUser } from "../hooks/useSessionContext";
 import {
   useCanSave,
   useWorkflowActions,
@@ -125,27 +125,23 @@ export function Header({
           <Breadcrumbs>{children}</Breadcrumbs>
 
           {projectId && workflowId && (
-            <>
-              <a
-                href={
-                  isNewWorkflow
-                    ? `/projects/${projectId}/w/new`
-                    : `/projects/${projectId}/w/${workflowId}`
-                }
-                className="inline-flex items-center justify-center
+            <a
+              href={
+                isNewWorkflow
+                  ? `/projects/${projectId}/w/new`
+                  : `/projects/${projectId}/w/${workflowId}`
+              }
+              className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-4"
+            >
+              <Tooltip
+                content={"You're using the new editor — click to switch back."}
+                side="bottom"
               >
-                <Tooltip
-                  content={
-                    "You're using the new editor — click to switch back."
-                  }
-                  side="bottom"
-                >
-                  <span className="hero-beaker-solid h-4 w-4" />
-                </Tooltip>
-              </a>
-            </>
+                <span className="hero-beaker-solid h-4 w-4" />
+              </Tooltip>
+            </a>
           )}
 
           <div className="grow"></div>
@@ -158,7 +154,6 @@ export function Header({
                 <button
                   type="button"
                   onClick={() => updateHash("settings")}
-                  id="toggle-settings"
                   className="w-5 h-5 place-self-center cursor-pointer
                   text-slate-500 hover:text-slate-400"
                 >

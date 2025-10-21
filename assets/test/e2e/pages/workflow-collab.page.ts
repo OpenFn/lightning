@@ -24,10 +24,6 @@ export class WorkflowCollaborativePage extends LiveViewPage {
     socketError: "text=/socket (error|disconnected)/i",
   };
 
-  constructor(page: Page) {
-    super(page);
-  }
-
   /**
    * Get the job inspector page object for interacting with job
    * properties.
