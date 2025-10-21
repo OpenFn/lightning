@@ -49,6 +49,8 @@ and this project adheres to
 - Runtime permission checks in WorkflowChannel save/reset operations to prevent
   unauthorized edits when user roles change during active collaboration sessions
   [#3749](https://github.com/OpenFn/lightning/issues/3749)
+- Ensure default positions when using the Workflow Assistant with manual
+  positioning enabled [#3795](https://github.com/OpenFn/lightning/issues/3795)
 
 ## [2.14.11] - 2025-10-15
 
