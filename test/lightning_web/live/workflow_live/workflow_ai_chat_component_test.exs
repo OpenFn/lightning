@@ -1,11 +1,12 @@
 defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
   import Mox
   import Ecto.Query
 
+  setup :set_mox_global
   setup :register_and_log_in_user
   setup :create_project_for_current_user
   setup :verify_on_exit!

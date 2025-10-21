@@ -1,5 +1,5 @@
 defmodule LightningWeb.AiAssistantLiveTest do
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
@@ -8,6 +8,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
+  setup :set_mox_global
   setup :verify_on_exit!
   setup :register_and_log_in_user
   setup :create_project_for_current_user
