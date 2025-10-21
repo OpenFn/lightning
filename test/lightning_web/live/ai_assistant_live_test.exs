@@ -3131,6 +3131,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
     } do
       Mimic.set_mimic_global()
       Lightning.AiAssistantHelpers.stub_online()
+      Lightning.AiAssistantHelpers.stub_finch_streaming()
       skip_disclaimer(user)
 
       {:ok, view, _html} =
@@ -3209,6 +3210,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
     } do
       Mimic.set_mimic_global()
       Lightning.AiAssistantHelpers.stub_online()
+      Lightning.AiAssistantHelpers.stub_finch_streaming()
       skip_disclaimer(user)
 
       {:ok, view, _html} =
@@ -3273,6 +3275,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
     } do
       Mimic.set_mimic_global()
       Lightning.AiAssistantHelpers.stub_online()
+      Lightning.AiAssistantHelpers.stub_finch_streaming()
       skip_disclaimer(user)
 
       {:ok, view, _html} =

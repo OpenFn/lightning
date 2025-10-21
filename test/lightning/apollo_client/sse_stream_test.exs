@@ -18,6 +18,10 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
       :ai_assistant_api_key -> "test_key"
     end)
 
+    # Reject any global Finch stubs from other tests
+    # SSEStream tests expect real Finch behavior (connection failures)
+    Mimic.reject(Finch, :stream, 4)
+
     # Subscribe to PubSub to receive broadcasted messages
     session_id = Ecto.UUID.generate()
     Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session_id}")
