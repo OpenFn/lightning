@@ -31,6 +31,8 @@ and this project adheres to
   [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
 - Implement workflow settings form using tanstack form
   [#3643](https://github.com/OpenFn/lightning/issues/3643)
+- [#3774](https://github.com/OpenFn/lightning/pull/3774)Adjusted padding of
+  labels in the Workflow Diagram.
 
 ### Fixed
 
