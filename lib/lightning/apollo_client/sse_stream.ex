@@ -31,14 +31,11 @@ defmodule Lightning.ApolloClient.SSEStream do
     lightning_session_id = payload["lightning_session_id"]
     apollo_payload = Map.delete(payload, "lightning_session_id")
 
-    # Calculate timeout: Apollo timeout + buffer
     apollo_timeout = Lightning.Config.apollo(:timeout) || 30_000
     stream_timeout = apollo_timeout + 10_000
 
-    # Schedule timeout
     timeout_ref = Process.send_after(self(), :stream_timeout, stream_timeout)
 
-    # Start the HTTP streaming request in a separate process
     parent = self()
 
     spawn_link(fn ->
@@ -66,19 +63,16 @@ defmodule Lightning.ApolloClient.SSEStream do
   end
 
   def handle_info(:stream_timeout, state) do
-    # Stream already completed, ignore timeout
     {:noreply, state}
   end
 
   def handle_info({:sse_complete}, state) do
-    # Cancel timeout since stream completed successfully
     if state.timeout_ref, do: Process.cancel_timer(state.timeout_ref)
     Logger.info("[SSEStream] Stream completed for session #{state.session_id}")
     {:stop, :normal, %{state | completed: true}}
   end
 
   def handle_info({:sse_error, reason}, state) do
-    # Cancel timeout since we have an error
     if state.timeout_ref, do: Process.cancel_timer(state.timeout_ref)
 
     Logger.error(
@@ -109,16 +103,11 @@ defmodule Lightning.ApolloClient.SSEStream do
        "Bearer #{Lightning.Config.apollo(:ai_assistant_api_key)}"}
     ]
 
-    body = Jason.encode!(payload)
-
-    # Use Finch for streaming HTTP requests
-    request = Finch.build(:post, url, headers, body)
-
-    case Finch.stream(request, Lightning.Finch, %{}, fn
+    case Finch.build(:post, url, headers, Jason.encode!(payload))
+         |> Finch.stream(Lightning.Finch, %{}, fn
            {:status, status}, acc ->
              Logger.debug("[SSEStream] Response status: #{status}")
 
-             # Handle non-2xx status codes
              if status >= 400 do
                send(parent, {:sse_error, {:http_error, status}})
              end
@@ -132,7 +121,6 @@ defmodule Lightning.ApolloClient.SSEStream do
            {:data, chunk}, acc ->
              Logger.debug("[SSEStream] Raw chunk received: #{inspect(chunk)}")
 
-             # Only parse if we got a successful status
              if Map.get(acc, :status, 200) in 200..299 do
                parse_sse_chunk(chunk, parent, session_id)
              end
@@ -148,7 +136,6 @@ defmodule Lightning.ApolloClient.SSEStream do
         send(parent, {:sse_error, {:http_error, status}})
 
       {:error, reason, _acc} ->
-        # Handle error with accumulator (e.g., connection refused before any response)
         Logger.error(
           "[SSEStream] Stream failed before response: #{inspect(reason)}"
         )
@@ -158,12 +145,6 @@ defmodule Lightning.ApolloClient.SSEStream do
   end
 
   defp parse_sse_chunk(chunk, parent, _session_id) do
-    # SSE format:
-    # event: CHUNK
-    # data: {"content": "hello"}
-    #
-    # (blank line)
-
     chunk
     |> String.split("\n")
     |> Enum.reduce(%{event: nil, data: nil}, fn line, acc ->
@@ -177,7 +158,6 @@ defmodule Lightning.ApolloClient.SSEStream do
           %{acc | data: data}
 
         (line == "" and acc.event) && acc.data ->
-          # Complete event, send it
           send(parent, {:sse_event, acc.event, acc.data})
           %{event: nil, data: nil}
 
@@ -188,21 +168,19 @@ defmodule Lightning.ApolloClient.SSEStream do
   end
 
   defp handle_sse_event(event_type, data, state) do
-    session_id = state.session_id
-
     case event_type do
       "content_block_delta" ->
-        handle_content_block_delta(data, session_id)
+        handle_content_block_delta(data, state.session_id)
 
       "message_stop" ->
         Logger.debug("[SSEStream] Received message_stop, broadcasting complete")
-        broadcast_complete(session_id)
+        broadcast_complete(state.session_id)
 
       "complete" ->
-        handle_complete_event(data, session_id)
+        handle_complete_event(data, state.session_id)
 
       "error" ->
-        handle_error_event(data, session_id)
+        handle_error_event(data, state.session_id)
 
       "log" ->
         Logger.debug("[SSEStream] Apollo log: #{inspect(data)}")
@@ -283,9 +261,6 @@ defmodule Lightning.ApolloClient.SSEStream do
   end
 
   defp broadcast_payload_complete(session_id, payload) do
-    # Extract relevant fields from the complete payload
-    # For job_chat: payload has "usage", "meta"
-    # For workflow_chat: payload has "usage", "meta", "response_yaml"
     payload_data = %{
       session_id: session_id,
       usage: Map.get(payload, "usage"),
@@ -300,13 +275,14 @@ defmodule Lightning.ApolloClient.SSEStream do
   end
 
   defp broadcast_error(session_id, error_message) do
+    payload_data = %{
+      session_id: session_id,
+      error: error_message
+    }
+
     Lightning.broadcast(
       "ai_session:#{session_id}",
-      {:ai_assistant, :streaming_error,
-       %{
-         session_id: session_id,
-         error: error_message
-       }}
+      {:ai_assistant, :streaming_error, payload_data}
     )
   end
 end

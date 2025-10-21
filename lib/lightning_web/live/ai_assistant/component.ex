@@ -348,7 +348,7 @@ defmodule LightningWeb.AiAssistant.Component do
     socket
     |> assign(
       session: updated_session,
-      pending_message: AsyncResult.ok(nil),
+      pending_message: AsyncResult.loading(),
       streaming_content: "",
       streaming_status: nil,
       streaming_error: error_data.error

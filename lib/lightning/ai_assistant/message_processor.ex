@@ -96,8 +96,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     case result do
       {:ok, :streaming} ->
-        # Streaming in progress, don't mark as success yet
-        # The streaming_complete event will trigger success later
         {:ok, session}
 
       {:ok, _} ->
@@ -129,7 +127,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           []
       end
 
-    # Use streaming for job messages
     stream_job_message(enriched_session, message.content, options)
   end
 
@@ -137,13 +134,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec stream_job_message(AiAssistant.ChatSession.t(), String.t(), keyword()) ::
           {:ok, :streaming | AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp stream_job_message(session, content, options) do
-    # For now, start streaming and use existing query as fallback
     start_streaming_request(session, content, options)
-    # Return :streaming indicator - message stays in processing state
     {:ok, :streaming}
   rescue
     _ ->
-      # Fallback to non-streaming if streaming fails
       AiAssistant.query(session, content, options)
   end
 
@@ -154,7 +148,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           keyword()
         ) :: :ok
   defp start_streaming_request(session, content, options) do
-    # Build payload for Apollo
     context = build_context(session, options)
     history = get_chat_history(session)
 
@@ -167,10 +160,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       "stream" => true
     }
 
-    # Add session ID for Lightning broadcasts
     sse_payload = Map.put(payload, "lightning_session_id", session.id)
-
-    # Start Apollo SSE stream
     apollo_url = get_apollo_url("job_chat")
 
     case SSEStream.start_stream(apollo_url, sse_payload) do
@@ -185,7 +175,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         )
 
         Logger.debug("[MessageProcessor] Falling back to HTTP client")
-        # Fall back to existing HTTP implementation
         raise "SSE stream failed, falling back to HTTP (not implemented yet)"
     end
 
@@ -193,8 +182,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   defp get_apollo_url(service) do
-    base_url = Lightning.Config.apollo(:endpoint)
-    "#{base_url}/services/#{service}/stream"
+    "#{Lightning.Config.apollo(:endpoint)}/services/#{service}/stream"
   end
 
   defp get_chat_history(session) do
@@ -208,14 +196,12 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   defp build_context(session, options) do
-    # Start with session context (expression, adaptor, logs)
     base_context = %{
       expression: session.expression,
       adaptor: session.adaptor,
       log: session.logs
     }
 
-    # Apply options to filter context (e.g., code: false removes expression)
     Enum.reduce(options, base_context, fn
       {:code, false}, acc ->
         Map.drop(acc, [:expression])
@@ -234,13 +220,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   defp process_workflow_message(session, message) do
     code = message.code || workflow_code_from_session(session)
 
-    # Try streaming first, fall back to HTTP if it fails
     try do
       start_workflow_streaming_request(session, message.content, code)
       {:ok, :streaming}
     rescue
       _ ->
-        # Fallback to non-streaming
         AiAssistant.query_workflow(session, message.content, code: code)
     end
   end
@@ -252,7 +236,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           String.t() | nil
         ) :: :ok
   defp start_workflow_streaming_request(session, content, code) do
-    # Build payload for Apollo workflow_chat
     history = get_chat_history(session)
 
     payload =
@@ -267,10 +250,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
       |> Enum.into(%{})
 
-    # Add session ID for Lightning broadcasts
     sse_payload = Map.put(payload, "lightning_session_id", session.id)
-
-    # Start Apollo SSE stream for workflow_chat
     apollo_url = get_apollo_url("workflow_chat")
 
     case SSEStream.start_stream(apollo_url, sse_payload) do

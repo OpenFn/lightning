@@ -687,11 +687,10 @@ export const ScrollToMessage = {
   mounted() {
     this.shouldAutoScroll = true;
 
-    // Throttle scroll tracking to reduce CPU usage
     this.handleScrollThrottled = this.throttle(() => {
       const isAtBottom = this.isAtBottom();
       this.shouldAutoScroll = isAtBottom;
-    }, 100); // Only check every 100ms
+    }, 100);
 
     this.el.addEventListener('scroll', this.handleScrollThrottled);
     this.handleScroll();
@@ -728,7 +727,6 @@ export const ScrollToMessage = {
     if (targetMessageId) {
       this.scrollToSpecificMessage(targetMessageId);
     } else if (this.shouldAutoScroll) {
-      // Only auto-scroll if user hasn't manually scrolled up
       this.scrollToBottom();
     }
   },
@@ -750,14 +748,13 @@ export const ScrollToMessage = {
   },
 
   isAtBottom() {
-    const threshold = 50; // pixels from bottom
+    const threshold = 50;
     const position = this.el.scrollTop + this.el.clientHeight;
     const height = this.el.scrollHeight;
     return height - position <= threshold;
   },
 
   scrollToBottom() {
-    // Use instant scroll during updates to prevent jank
     this.el.scrollTop = this.el.scrollHeight;
   },
 } as PhoenixHook<{
@@ -1091,7 +1088,6 @@ export const StreamingText = {
   createCustomRenderer() {
     const renderer = new marked.Renderer();
 
-    // Apply custom CSS classes to match backend Earmark styles
     renderer.code = (code, language) => {
       const lang = language ? ` class="${language}"` : '';
       return `<pre class="rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-auto"><code${lang}>${code}</code></pre>`;
@@ -1130,8 +1126,6 @@ export const StreamingText = {
     if (newContent !== this.lastContent) {
       this.parseCount++;
 
-      // Re-parse entire content as markdown
-      // This handles split ticks because we always parse the full accumulated string
       const htmlContent = marked.parse(newContent, {
         renderer: this.renderer,
         breaks: true,

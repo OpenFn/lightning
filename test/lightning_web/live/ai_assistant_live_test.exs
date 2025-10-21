@@ -3287,16 +3287,33 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      # Create session manually without processing the message
-      {:ok, session} =
-        Lightning.AiAssistant.create_session(job_1, user, "Test query")
+      # Send a message to trigger pending_message loading state
+      view
+      |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant", %{
+        assistant: %{content: "Test query"}
+      })
+      |> render_submit()
 
-      # Subscribe to the session PubSub topic
-      Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session.id}")
+      render_async(view)
 
-      # Simulate error WITHOUT waiting for message save
+      # Get the session that was created
+      session_id =
+        receive do
+          {:ai_assistant, :register_component, %{session_id: sid}} -> sid
+        after
+          2000 ->
+            # Fallback: find the session manually
+            {:ok, session} =
+              Lightning.AiAssistant.create_session(job_1, user, "Test")
+
+            session.id
+        end
+
+      Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session_id}")
+
+      # Simulate streaming error while message is still processing (pending_message loading)
       Lightning.AiAssistantHelpers.simulate_streaming_error(
-        session.id,
+        session_id,
         "Custom error message"
       )
 
@@ -3305,7 +3322,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       render_async(view)
 
-      # Check error UI elements are present
+      # Check error UI elements are present (streaming_error_state template should render)
       eventually(
         fn ->
           html = render(view)
