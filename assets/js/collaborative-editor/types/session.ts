@@ -50,6 +50,8 @@ export namespace Session {
     body: string;
     adaptor: string;
     enabled: boolean;
+    project_credential_id: string | null;
+    keychain_credential_id: string | null;
   };
 
   export type Trigger = {

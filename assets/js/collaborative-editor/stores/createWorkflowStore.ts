@@ -462,7 +462,7 @@ export const createWorkflowStore = () => {
       (
         Object.entries(updates) as [
           keyof typeof updates,
-          (typeof updates)[keyof typeof updates]
+          (typeof updates)[keyof typeof updates],
         ][]
       ).forEach(([key, value]) => {
         if (value !== undefined) {
@@ -489,6 +489,10 @@ export const createWorkflowStore = () => {
       if (job.body) {
         jobMap.set("body", new Y.Text(job.body));
       }
+      // Initialize credential fields to null
+      jobMap.set("project_credential_id", job.project_credential_id || null);
+      jobMap.set("keychain_credential_id", job.keychain_credential_id || null);
+
       jobsArray.push([jobMap]);
     });
   };

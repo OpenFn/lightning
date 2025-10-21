@@ -297,7 +297,7 @@ export function JobInspector({ job, renderFooter }: JobInspectorProps) {
   ]);
 
   return (
-    <div>
+    <div data-testid="job-inspector">
       <div className="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
         <div className="col-span-6">
           <form.AppField name="name">
@@ -345,6 +345,11 @@ export function JobInspector({ job, renderFooter }: JobInspectorProps) {
                   "keychain_credential_id",
                   resolved.keychain_credential_id
                 );
+                // Manually trigger updateJob to persist credentials to Y.Doc
+                updateJob(job.id, {
+                  project_credential_id: resolved.project_credential_id,
+                  keychain_credential_id: resolved.keychain_credential_id,
+                });
               },
             }}
           >
