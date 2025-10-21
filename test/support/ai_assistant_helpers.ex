@@ -27,7 +27,17 @@ defmodule Lightning.AiAssistantHelpers do
     end)
 
     # Stub Finch to prevent actual SSE connections
-    # SSEStream will spawn, fail immediately, and streaming simulation will take over
+    # This prevents Oban jobs from attempting real HTTP requests during tests
+    # Use :global mode so stub works in spawned Oban worker processes
+    Mimic.set_mimic_global()
+
+    Mimic.stub(Finch, :stream, fn _request, _finch_name, _acc, _fun ->
+      # Block indefinitely - the stream is "in progress" but never completes
+      # This allows simulated errors to be broadcast without interference
+      Process.sleep(:infinity)
+      {:ok, %{status: 200}}
+    end)
+
     :ok
   end
 

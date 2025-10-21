@@ -4,6 +4,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
   import Mox
+  import Eventually
   use Oban.Testing, repo: Lightning.Repo
   import Phoenix.Component
   import Phoenix.LiveViewTest
@@ -3119,6 +3120,200 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       # User should be able to retry
       assert has_element?(view, "[phx-click='retry_message']")
+    end
+
+    @tag email: "user@openfn.org"
+    test "users can retry streaming errors", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow,
+      user: user
+    } do
+      Lightning.AiAssistantHelpers.stub_online()
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+        )
+
+      render_async(view)
+
+      # Create session manually without processing the message
+      {:ok, session} =
+        Lightning.AiAssistant.create_session(job_1, user, "Test query")
+
+      # Subscribe to the session PubSub topic
+      Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session.id}")
+
+      # Simulate error WITHOUT waiting for message save
+      Lightning.AiAssistantHelpers.simulate_streaming_error(
+        session.id,
+        "Connection timeout"
+      )
+
+      # Wait for LiveView to receive the error
+      assert_receive {:ai_assistant, :streaming_error, _}, 1000
+
+      render_async(view)
+
+      # Wait for UI and click retry button while it's visible
+      eventually(
+        fn ->
+          if has_element?(view, "[phx-click='retry_streaming']") and
+               has_element?(view, "[phx-click='cancel_streaming']") do
+            # UI is visible, click retry button
+            view
+            |> element("[phx-click='retry_streaming']")
+            |> render_click()
+
+            true
+          else
+            false
+          end
+        end,
+        true,
+        5000,
+        50
+      )
+
+      Lightning.AiAssistantHelpers.simulate_streaming_response(
+        session.id,
+        "Successfully retried"
+      )
+
+      # Wait for streaming to complete
+      assert_receive {:ai_assistant, :streaming_payload_complete, _}, 1000
+
+      # Poll until the response appears in the UI
+      eventually(
+        fn ->
+          render_async(view)
+          html = render(view)
+          html =~ "Successfully retried"
+        end,
+        true,
+        5000,
+        50
+      )
+    end
+
+    @tag email: "user@openfn.org"
+    test "users can cancel streaming errors", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow,
+      user: user
+    } do
+      Lightning.AiAssistantHelpers.stub_online()
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+        )
+
+      render_async(view)
+
+      # Create session manually without processing the message
+      {:ok, session} =
+        Lightning.AiAssistant.create_session(job_1, user, "Test query")
+
+      # Subscribe to the session PubSub topic
+      Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session.id}")
+
+      # Simulate error WITHOUT waiting for message save
+      Lightning.AiAssistantHelpers.simulate_streaming_error(
+        session.id,
+        "Server unavailable"
+      )
+
+      # Wait for LiveView to receive the error
+      assert_receive {:ai_assistant, :streaming_error, _}, 1000
+
+      render_async(view)
+
+      # Wait for UI and click cancel button while it's visible
+      eventually(
+        fn ->
+          if has_element?(view, "[phx-click='cancel_streaming']") do
+            # UI is visible, click cancel button
+            view
+            |> element("[phx-click='cancel_streaming']")
+            |> render_click()
+
+            true
+          else
+            false
+          end
+        end,
+        true,
+        5000,
+        50
+      )
+
+      render_async(view)
+
+      assert has_element?(
+               view,
+               "#ai-assistant-form-job-#{job_1.id}-ai-assistant"
+             )
+    end
+
+    @tag email: "user@openfn.org"
+    test "streaming error UI is rendered correctly", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow,
+      user: user
+    } do
+      Lightning.AiAssistantHelpers.stub_online()
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+        )
+
+      render_async(view)
+
+      # Create session manually without processing the message
+      {:ok, session} =
+        Lightning.AiAssistant.create_session(job_1, user, "Test query")
+
+      # Subscribe to the session PubSub topic
+      Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session.id}")
+
+      # Simulate error WITHOUT waiting for message save
+      Lightning.AiAssistantHelpers.simulate_streaming_error(
+        session.id,
+        "Custom error message"
+      )
+
+      # Wait for LiveView to receive the error
+      assert_receive {:ai_assistant, :streaming_error, _}, 1000
+
+      render_async(view)
+
+      # Check error UI elements are present
+      eventually(
+        fn ->
+          html = render(view)
+
+          html =~ "hero-exclamation-triangle" and
+            html =~ "Custom error message" and
+            html =~ "Retry" and
+            html =~ "Cancel" and
+            html =~ "bg-red-50" and
+            html =~ "text-red-800"
+        end,
+        true,
+        5000,
+        50
+      )
     end
   end
 
