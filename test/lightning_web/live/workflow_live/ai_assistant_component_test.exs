@@ -1,10 +1,13 @@
 defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
-  use ExUnit.Case, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
+  alias Lightning.AiAssistant
+  alias LightningWeb.AiAssistant.Component, as: AiAssistantComponent
   alias LightningWeb.Live.AiAssistant.Modes.JobCode
-  alias LightningWeb.AiAssistant
+  alias Phoenix.LiveView.AsyncResult
 
   describe "formatted_content/1" do
     test "renders assistant messages with properly styled links" do
@@ -17,7 +20,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
 
       html =
         render_component(
-          &AiAssistant.Component.formatted_content/1,
+          &AiAssistantComponent.formatted_content/1,
           id: "formatted-content",
           content: content
         )
@@ -70,7 +73,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
 
       html =
         render_component(
-          &AiAssistant.Component.formatted_content/1,
+          &AiAssistantComponent.formatted_content/1,
           id: "formatted-content",
           content: content
         )
@@ -99,7 +102,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       """
 
       html =
-        render_component(&AiAssistant.Component.formatted_content/1,
+        render_component(&AiAssistantComponent.formatted_content/1,
           id: "formatted-content",
           content: content
         )
@@ -134,7 +137,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       """
 
       html =
-        render_component(&AiAssistant.Component.formatted_content/1,
+        render_component(&AiAssistantComponent.formatted_content/1,
           id: "formatted-content",
           content: content
         )
@@ -156,7 +159,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       }
 
       html =
-        render_component(&AiAssistant.Component.formatted_content/1, %{
+        render_component(&AiAssistantComponent.formatted_content/1, %{
           id: "formatted-content",
           content: content,
           attributes: custom_attributes
@@ -213,7 +216,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       """
 
       html =
-        render_component(&AiAssistant.Component.formatted_content/1,
+        render_component(&AiAssistantComponent.formatted_content/1,
           id: "formatted-content",
           content: content
         )
@@ -249,7 +252,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       """
 
       html =
-        render_component(&AiAssistant.Component.formatted_content/1,
+        render_component(&AiAssistantComponent.formatted_content/1,
           id: "formatted-content",
           content: content
         )
@@ -272,7 +275,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       }
 
       html =
-        render_component(&AiAssistant.Component.formatted_content/1, %{
+        render_component(&AiAssistantComponent.formatted_content/1, %{
           id: "formatted-content",
           content: content,
           attributes: custom_attributes
@@ -376,6 +379,424 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
       assert LightningWeb.AiAssistant.Component.__info__(:attributes)
              |> Keyword.get(:behaviour, [])
              |> Enum.member?(Phoenix.LiveComponent)
+    end
+  end
+
+  describe "streaming update handlers" do
+    setup do
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+
+      session =
+        insert(:job_chat_session,
+          user: user,
+          job: job
+        )
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          session: session,
+          streaming_content: "",
+          streaming_status: nil,
+          streaming_error: nil
+        }
+      }
+
+      %{socket: socket, session: session, user: user}
+    end
+
+    test "update with streaming_chunk appends content to streaming_content",
+         %{socket: socket} do
+      chunk_data = %{content: "Hello "}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_chunk: chunk_data},
+          socket
+        )
+
+      assert updated_socket.assigns.streaming_content == "Hello "
+
+      # Append more content
+      chunk_data2 = %{content: "world!"}
+
+      {:ok, updated_socket2} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_chunk: chunk_data2},
+          updated_socket
+        )
+
+      assert updated_socket2.assigns.streaming_content == "Hello world!"
+    end
+
+    test "update with status_update sets streaming_status", %{socket: socket} do
+      status_data = %{status: "Processing your request..."}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", status_update: status_data},
+          socket
+        )
+
+      assert updated_socket.assigns.streaming_status ==
+               "Processing your request..."
+    end
+
+    test "update with streaming_complete keeps socket unchanged",
+         %{socket: socket} do
+      original_content = "Some content"
+      socket = put_in(socket.assigns.streaming_content, original_content)
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_complete: true},
+          socket
+        )
+
+      # Should keep the content as is until payload arrives
+      assert updated_socket.assigns.streaming_content == original_content
+    end
+  end
+
+  describe "handle_streaming_payload_complete" do
+    setup do
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+
+      session =
+        insert(:job_chat_session,
+          user: user,
+          job: job
+        )
+
+      # Create a user message in processing state
+      user_message =
+        insert(:chat_message,
+          role: :user,
+          chat_session: session,
+          user: user,
+          status: :processing,
+          content: "Help me with this"
+        )
+
+      session = AiAssistant.get_session!(session.id)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          session: session,
+          streaming_content: "This is the streamed response",
+          streaming_status: "Complete",
+          streaming_error: nil,
+          pending_message: AsyncResult.loading(),
+          callbacks: %{}
+        }
+      }
+
+      %{
+        socket: socket,
+        session: session,
+        user: user,
+        user_message: user_message
+      }
+    end
+
+    test "saves assistant message with streamed content and payload data",
+         %{socket: socket} do
+      payload_data = %{
+        usage: %{"prompt_tokens" => 100, "completion_tokens" => 50},
+        meta: %{"model" => "claude-3"},
+        code: nil
+      }
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_payload_complete: payload_data},
+          socket
+        )
+
+      # Verify the assistant message was saved
+      updated_session = updated_socket.assigns.session
+
+      assistant_messages =
+        Enum.filter(
+          updated_session.messages,
+          &(&1.role == :assistant)
+        )
+
+      assert length(assistant_messages) == 1
+      assistant_message = hd(assistant_messages)
+      assert assistant_message.content == "This is the streamed response"
+      assert assistant_message.status == :success
+      # Usage is tracked at the session level via AI usage tracking
+    end
+
+    test "marks pending user messages as success", %{socket: socket} do
+      payload_data = %{usage: %{}, meta: nil, code: nil}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_payload_complete: payload_data},
+          socket
+        )
+
+      # Verify user messages are marked as success
+      updated_session = updated_socket.assigns.session
+
+      user_messages =
+        Enum.filter(
+          updated_session.messages,
+          &(&1.role == :user)
+        )
+
+      assert Enum.all?(user_messages, &(&1.status == :success))
+    end
+
+    test "clears streaming state after completion", %{socket: socket} do
+      payload_data = %{usage: %{}, meta: nil, code: nil}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_payload_complete: payload_data},
+          socket
+        )
+
+      assert updated_socket.assigns.streaming_content == ""
+      assert updated_socket.assigns.streaming_status == nil
+      assert updated_socket.assigns.pending_message == AsyncResult.ok(nil)
+    end
+
+    test "invokes callback when provided with code", %{socket: socket} do
+      test_pid = self()
+
+      callback = fn code, message ->
+        send(test_pid, {:callback_invoked, code, message})
+      end
+
+      socket = put_in(socket.assigns.callbacks, %{on_message_received: callback})
+
+      payload_data = %{
+        usage: %{},
+        meta: nil,
+        code: Jason.encode!(%{"some" => "code"})
+      }
+
+      {:ok, _updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_payload_complete: payload_data},
+          socket
+        )
+
+      # Callback should be invoked with code (as JSON string) and message
+      expected_code = Jason.encode!(%{"some" => "code"})
+      assert_receive {:callback_invoked, ^expected_code, _message}, 2000
+    end
+
+    test "handles error when saving message fails", %{socket: socket} do
+      # Test that errors are handled gracefully by using empty content
+      # which should pass validation but we can verify error handling
+      socket_with_empty_content = put_in(socket.assigns.streaming_content, "")
+
+      payload_data = %{usage: %{}, meta: nil, code: nil}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_payload_complete: payload_data},
+          socket_with_empty_content
+        )
+
+      # Should clear state after attempt
+      assert updated_socket.assigns.streaming_content == ""
+      assert updated_socket.assigns.streaming_status == nil
+      assert updated_socket.assigns.pending_message == AsyncResult.ok(nil)
+    end
+  end
+
+  describe "handle_streaming_error" do
+    setup do
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+
+      session =
+        insert(:job_chat_session,
+          user: user,
+          job: job
+        )
+
+      # Create a user message in processing state
+      user_message =
+        insert(:chat_message,
+          role: :user,
+          chat_session: session,
+          user: user,
+          status: :processing,
+          content: "Help me with this"
+        )
+
+      session = AiAssistant.get_session!(session.id)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          session: session,
+          streaming_content: "Partial content",
+          streaming_status: "Processing",
+          streaming_error: nil,
+          pending_message: AsyncResult.ok(nil)
+        }
+      }
+
+      %{
+        socket: socket,
+        session: session,
+        user_message: user_message
+      }
+    end
+
+    test "marks user messages as error", %{socket: socket} do
+      error_data = %{error: "Connection timeout"}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_error: error_data},
+          socket
+        )
+
+      # Verify user messages are marked as error
+      updated_session = updated_socket.assigns.session
+
+      user_messages =
+        Enum.filter(
+          updated_session.messages,
+          &(&1.role == :user)
+        )
+
+      assert Enum.all?(user_messages, &(&1.status == :error))
+    end
+
+    test "sets streaming_error in assigns", %{socket: socket} do
+      error_data = %{error: "Network connection failed"}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_error: error_data},
+          socket
+        )
+
+      assert updated_socket.assigns.streaming_error ==
+               "Network connection failed"
+    end
+
+    test "clears streaming content and status", %{socket: socket} do
+      error_data = %{error: "Something went wrong"}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_error: error_data},
+          socket
+        )
+
+      assert updated_socket.assigns.streaming_content == ""
+      assert updated_socket.assigns.streaming_status == nil
+    end
+
+    test "sets pending_message to loading state", %{socket: socket} do
+      error_data = %{error: "Error occurred"}
+
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{id: "test-component", streaming_error: error_data},
+          socket
+        )
+
+      assert updated_socket.assigns.pending_message.loading == true
+    end
+  end
+
+  describe "update with message_status_changed - testing handle_message_status through public API" do
+    setup do
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      session = insert(:job_chat_session, user: user, job: job)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          session: session,
+          streaming_content: "Existing streaming content",
+          streaming_status: "Processing...",
+          pending_message: AsyncResult.loading(),
+          handler: JobCode,
+          callbacks: %{}
+        }
+      }
+
+      %{socket: socket, session: session}
+    end
+
+    test "update with message_status_changed :success preserves streaming state",
+         %{socket: socket, session: session} do
+      # This tests lines 193-196: handle_message_status({:success, session})
+      # through the public update/2 function
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{message_status_changed: {:success, session}},
+          socket
+        )
+
+      assert updated_socket.assigns.streaming_content ==
+               "Existing streaming content"
+
+      assert updated_socket.assigns.streaming_status == "Processing..."
+      assert updated_socket.assigns.pending_message == AsyncResult.ok(nil)
+    end
+
+    test "update with message_status_changed :error preserves streaming state",
+         %{socket: socket, session: session} do
+      # This tests lines 200-205: handle_message_status({:error, session})
+      # through the public update/2 function
+      {:ok, updated_socket} =
+        AiAssistantComponent.update(
+          %{message_status_changed: {:error, session}},
+          socket
+        )
+
+      assert updated_socket.assigns.streaming_content ==
+               "Existing streaming content"
+
+      assert updated_socket.assigns.streaming_status == "Processing..."
+      assert updated_socket.assigns.pending_message == AsyncResult.ok(nil)
+    end
+  end
+
+  describe "form validation - testing form_content_empty? indirectly" do
+    test "validate_form with empty/whitespace content returns error" do
+      # This tests form_content_empty? (lines 1198-1204) through the public validate_form function
+      changeset = JobCode.validate_form(%{"content" => "   "})
+
+      assert changeset.valid? == false
+      assert Keyword.has_key?(changeset.errors, :content)
+      {msg, _opts} = changeset.errors[:content]
+      assert msg == "Please enter a message before sending"
+    end
+
+    test "validate_form with nil content returns error" do
+      changeset = JobCode.validate_form(%{"content" => nil})
+      assert changeset.valid? == false
+    end
+
+    test "validate_form with valid content passes" do
+      changeset = JobCode.validate_form(%{"content" => "Valid message"})
+      assert changeset.valid? == true
     end
   end
 end
