@@ -66,7 +66,9 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
         acc = fun.({:headers, [{"content-type", "text/event-stream"}]}, acc)
 
         # Simulate SSE data chunks
-        chunk1 = "event: content_block_delta\ndata: {\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello\"}}\n\n"
+        chunk1 =
+          "event: content_block_delta\ndata: {\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello\"}}\n\n"
+
         acc = fun.({:data, chunk1}, acc)
 
         chunk2 = "event: message_stop\ndata: {}\n\n"
@@ -90,7 +92,8 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
                      1000
 
       # Should receive completion
-      assert_receive {:ai_assistant, :streaming_complete, %{session_id: ^session_id}},
+      assert_receive {:ai_assistant, :streaming_complete,
+                      %{session_id: ^session_id}},
                      1000
     end
 
@@ -102,7 +105,9 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
         acc = fun.({:status, 200}, acc)
         acc = fun.({:headers, []}, acc)
 
-        chunk = "event: content_block_delta\ndata: {\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"Analyzing...\"}}\n\n"
+        chunk =
+          "event: content_block_delta\ndata: {\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"Analyzing...\"}}\n\n"
+
         acc = fun.({:data, chunk}, acc)
 
         {:ok, acc}
