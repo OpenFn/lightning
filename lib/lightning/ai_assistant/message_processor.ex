@@ -38,11 +38,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @impl Oban.Worker
   @spec perform(Oban.Job.t()) :: :ok
   def perform(%Oban.Job{args: %{"message_id" => message_id}}) do
-    Logger.info("[MessageProcessor] Processing message: #{message_id}")
+    Logger.debug("[MessageProcessor] Processing message: #{message_id}")
 
     case process_message(message_id) do
       {:ok, _updated_session} ->
-        Logger.info(
+        Logger.debug(
           "[MessageProcessor] Successfully processed message: #{message_id}"
         )
 
@@ -56,7 +56,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         :ok
     end
   end
-
 
   @doc """
   Defines the job timeout based on Apollo configuration.
@@ -150,7 +149,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   @doc false
-  @spec start_streaming_request(AiAssistant.ChatSession.t(), String.t(), keyword()) :: :ok
+  @spec start_streaming_request(
+          AiAssistant.ChatSession.t(),
+          String.t(),
+          keyword()
+        ) :: :ok
   defp start_streaming_request(session, content, options) do
     # Build payload for Apollo
     context = build_context(session, options)
@@ -173,11 +176,16 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     case Lightning.ApolloClient.SSEStream.start_stream(apollo_url, sse_payload) do
       {:ok, _pid} ->
-        Logger.info("[MessageProcessor] Started Apollo SSE stream for session #{session.id}")
+        Logger.debug(
+          "[MessageProcessor] Started Apollo SSE stream for session #{session.id}"
+        )
 
       {:error, reason} ->
-        Logger.error("[MessageProcessor] Failed to start Apollo stream: #{inspect(reason)}")
-        Logger.info("[MessageProcessor] Falling back to HTTP client")
+        Logger.error(
+          "[MessageProcessor] Failed to start Apollo stream: #{inspect(reason)}"
+        )
+
+        Logger.debug("[MessageProcessor] Falling back to HTTP client")
         # Fall back to existing HTTP implementation
         raise "SSE stream failed, falling back to HTTP (not implemented yet)"
     end
@@ -239,21 +247,26 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   @doc false
-  @spec start_workflow_streaming_request(AiAssistant.ChatSession.t(), String.t(), String.t() | nil) :: :ok
+  @spec start_workflow_streaming_request(
+          AiAssistant.ChatSession.t(),
+          String.t(),
+          String.t() | nil
+        ) :: :ok
   defp start_workflow_streaming_request(session, content, code) do
     # Build payload for Apollo workflow_chat
     history = get_chat_history(session)
 
-    payload = %{
-      "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
-      "content" => content,
-      "existing_yaml" => code,
-      "history" => history,
-      "meta" => session.meta || %{},
-      "stream" => true
-    }
-    |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Enum.into(%{})
+    payload =
+      %{
+        "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
+        "content" => content,
+        "existing_yaml" => code,
+        "history" => history,
+        "meta" => session.meta || %{},
+        "stream" => true
+      }
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Enum.into(%{})
 
     # Add session ID for Lightning broadcasts
     sse_payload = Map.put(payload, "lightning_session_id", session.id)
@@ -263,11 +276,16 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     case Lightning.ApolloClient.SSEStream.start_stream(apollo_url, sse_payload) do
       {:ok, _pid} ->
-        Logger.info("[MessageProcessor] Started Apollo SSE stream for workflow session #{session.id}")
+        Logger.debug(
+          "[MessageProcessor] Started Apollo SSE stream for workflow session #{session.id}"
+        )
 
       {:error, reason} ->
-        Logger.error("[MessageProcessor] Failed to start Apollo workflow stream: #{inspect(reason)}")
-        Logger.info("[MessageProcessor] Falling back to HTTP client")
+        Logger.error(
+          "[MessageProcessor] Failed to start Apollo workflow stream: #{inspect(reason)}"
+        )
+
+        Logger.debug("[MessageProcessor] Falling back to HTTP client")
         raise "SSE stream failed, triggering fallback to HTTP"
     end
 
@@ -289,7 +307,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
        }}
     )
   end
-
 
   @doc """
   Updates a message's status and broadcasts the change.
@@ -389,7 +406,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     |> case do
       %ChatMessage{id: message_id, status: status} = message
       when status in [:pending, :processing] ->
-        Logger.info(
+        Logger.debug(
           "[AI Assistant] Updating message #{message_id} to error status after exception"
         )
 
@@ -466,7 +483,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         |> case do
           %ChatMessage{id: message_id, status: status} = message
           when status in [:pending, :processing] ->
-            Logger.info(
+            Logger.debug(
               "[AI Assistant] Updating message #{message_id} to error status after stop=#{other}"
             )
 

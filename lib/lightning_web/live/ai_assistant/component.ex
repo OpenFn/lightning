@@ -45,7 +45,8 @@ defmodule LightningWeb.AiAssistant.Component do
        registered_session_id: nil,
        registered_component_id: nil,
        streaming_content: "",
-       streaming_status: nil
+       streaming_status: nil,
+       streaming_error: nil
      })
      |> assign_async(:endpoint_available, fn ->
        {:ok, %{endpoint_available: AiAssistant.endpoint_available?()}}
@@ -71,6 +72,10 @@ defmodule LightningWeb.AiAssistant.Component do
 
   def update(%{id: _id, streaming_payload_complete: payload_data}, socket) do
     {:ok, handle_streaming_payload_complete(payload_data, socket)}
+  end
+
+  def update(%{id: _id, streaming_error: error_data}, socket) do
+    {:ok, handle_streaming_error(error_data, socket)}
   end
 
   def update(%{action: :code_error} = assigns, socket) do
@@ -222,7 +227,9 @@ defmodule LightningWeb.AiAssistant.Component do
     session = socket.assigns.session
     content = socket.assigns.streaming_content
 
-    Logger.info("[Component] Processing complete payload for session #{session.id}")
+    Logger.debug(
+      "[Component] Processing complete payload for session #{session.id}"
+    )
 
     # Save the assistant message with ALL data at once (content + code + usage + meta)
     # This matches the non-streaming approach
@@ -240,35 +247,54 @@ defmodule LightningWeb.AiAssistant.Component do
 
     case AiAssistant.save_message(session, message_attrs, opts) do
       {:ok, _updated_session} ->
-        Logger.info("[Component] Successfully saved complete message with payload data")
+        Logger.debug(
+          "[Component] Successfully saved complete message with payload data"
+        )
 
         # Mark all pending/processing user messages as success
         # Need to reload first to get current state
         {:ok, fresh_session} = AiAssistant.get_session(session.id)
-        pending_user_messages = AiAssistant.find_pending_user_messages(fresh_session)
 
-        Logger.info("[Component] Found #{length(pending_user_messages)} pending user messages to mark as success")
+        pending_user_messages =
+          AiAssistant.find_pending_user_messages(fresh_session)
 
-        results = Enum.map(pending_user_messages, fn user_message ->
-          Logger.info("[Component] Updating user message #{user_message.id} from #{user_message.status} to :success")
-          AiAssistant.update_message_status(fresh_session, user_message, :success)
-        end)
+        Logger.debug(
+          "[Component] Found #{length(pending_user_messages)} pending user messages to mark as success"
+        )
 
-        Logger.info("[Component] Update results: #{inspect(results)}")
+        results =
+          Enum.map(pending_user_messages, fn user_message ->
+            Logger.debug(
+              "[Component] Updating user message #{user_message.id} from #{user_message.status} to :success"
+            )
+
+            AiAssistant.update_message_status(
+              fresh_session,
+              user_message,
+              :success
+            )
+          end)
+
+        Logger.debug("[Component] Update results: #{inspect(results)}")
 
         # Reload session again to get fresh user message statuses after updates
         {:ok, final_session} = AiAssistant.get_session(session.id)
-        Logger.info("[Component] Final user message statuses: #{inspect(Enum.filter(final_session.messages, &(&1.role == :user)) |> Enum.map(&{&1.id, &1.status}))}")
+
+        Logger.debug(
+          "[Component] Final user message statuses: #{inspect(Enum.filter(final_session.messages, &(&1.role == :user)) |> Enum.map(&{&1.id, &1.status}))}"
+        )
 
         # Clear loading state and streaming content
-        Logger.info("[Component] Clearing pending_message and streaming state")
-        socket = socket
-        |> assign(
-          session: final_session,
-          pending_message: AsyncResult.ok(nil),
-          streaming_content: "",
-          streaming_status: nil
-        )
+        Logger.debug("[Component] Clearing pending_message and streaming state")
+
+        socket =
+          socket
+          |> assign(
+            session: final_session,
+            pending_message: AsyncResult.ok(nil),
+            streaming_content: "",
+            streaming_status: nil
+          )
 
         # Always call callback to notify message received (sets sending_ai_message: false)
         case socket.assigns.callbacks[:on_message_received] do
@@ -283,7 +309,10 @@ defmodule LightningWeb.AiAssistant.Component do
         end
 
       {:error, error} ->
-        Logger.error("[Component] Failed to save complete message: #{inspect(error)}")
+        Logger.error(
+          "[Component] Failed to save complete message: #{inspect(error)}"
+        )
+
         socket
         |> assign(
           pending_message: AsyncResult.ok(nil),
@@ -291,6 +320,39 @@ defmodule LightningWeb.AiAssistant.Component do
           streaming_status: nil
         )
     end
+  end
+
+  defp handle_streaming_error(error_data, socket) do
+    require Logger
+    session = socket.assigns.session
+
+    Logger.error(
+      "[Component] Streaming error for session #{session.id}: #{error_data.error}"
+    )
+
+    # Find the user message that was being processed
+    user_messages =
+      Enum.filter(
+        session.messages,
+        &(&1.role == :user && &1.status == :processing)
+      )
+
+    # Mark user messages as failed
+    Enum.each(user_messages, fn msg ->
+      AiAssistant.update_message_status(session, msg, :error)
+    end)
+
+    # Reload session with updated statuses
+    {:ok, updated_session} = AiAssistant.get_session(session.id)
+
+    socket
+    |> assign(
+      session: updated_session,
+      pending_message: AsyncResult.ok(nil),
+      streaming_content: "",
+      streaming_status: nil,
+      streaming_error: error_data.error
+    )
   end
 
   defp handle_code_error(socket, assigns) do
@@ -317,6 +379,7 @@ defmodule LightningWeb.AiAssistant.Component do
     end)
     |> assign_new(:streaming_content, fn -> "" end)
     |> assign_new(:streaming_status, fn -> nil end)
+    |> assign_new(:streaming_error, fn -> nil end)
   end
 
   defp extract_message_id(%ChatSession{messages: messages}) do
@@ -457,6 +520,47 @@ defmodule LightningWeb.AiAssistant.Component do
     end
   end
 
+  def handle_event("retry_streaming", _params, socket) do
+    # Re-submit the last user message
+    session = socket.assigns.session
+
+    last_user_msg =
+      Enum.reverse(session.messages)
+      |> Enum.find(&(&1.role == :user))
+
+    if last_user_msg do
+      # Reset error state
+      socket = assign(socket, streaming_error: nil)
+
+      # Resubmit message
+      case AiAssistant.retry_message(last_user_msg) do
+        {:ok, {_message, _oban_job}} ->
+          {:ok, updated_session} = AiAssistant.get_session(session.id)
+
+          {:noreply,
+           assign(socket,
+             session: updated_session,
+             pending_message: AsyncResult.loading()
+           )}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to retry request")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("cancel_streaming", _params, socket) do
+    # Just clear the error state
+    socket =
+      socket
+      |> assign(streaming_error: nil, pending_message: AsyncResult.ok(nil))
+      |> put_flash(:info, "Request cancelled")
+
+    {:noreply, socket}
+  end
+
   def handle_event(
         "select_assistant_message",
         %{"message-id" => message_id},
@@ -539,7 +643,10 @@ defmodule LightningWeb.AiAssistant.Component do
 
   defp save_message(socket, action, content) do
     require Logger
-    Logger.info("[AI Component] save_message called with action: #{inspect(action)}")
+
+    Logger.debug(
+      "[AI Component] save_message called with action: #{inspect(action)}"
+    )
 
     result =
       case action do
@@ -547,11 +654,11 @@ defmodule LightningWeb.AiAssistant.Component do
         :show -> add_to_existing_session(socket, content)
       end
 
-    Logger.info("[AI Component] save_message result: #{inspect(result)}")
+    Logger.debug("[AI Component] save_message result: #{inspect(result)}")
 
     case result do
       {:ok, session} ->
-        Logger.info("[AI Component] Calling handle_successful_save")
+        Logger.debug("[AI Component] Calling handle_successful_save")
         handle_successful_save(socket, session, action)
 
       {:error, error} ->
@@ -571,7 +678,7 @@ defmodule LightningWeb.AiAssistant.Component do
     # Parent LiveView handles PubSub subscription via component registration
     # Component receives updates via send_update from parent
     require Logger
-    Logger.info("[AI Component] New session created: #{session.id}")
+    Logger.debug("[AI Component] New session created: #{session.id}")
 
     socket
     |> assign(:session, session)
@@ -583,7 +690,7 @@ defmodule LightningWeb.AiAssistant.Component do
     # Parent LiveView handles PubSub subscription via component registration
     # Component receives updates via send_update from parent
     require Logger
-    Logger.info("[AI Component] Message added to session: #{session.id}")
+    Logger.debug("[AI Component] Message added to session: #{session.id}")
 
     socket
     |> assign(:session, session)
@@ -717,6 +824,7 @@ defmodule LightningWeb.AiAssistant.Component do
             mode={@mode}
             streaming_status={@streaming_status}
             streaming_content={@streaming_content}
+            streaming_error={@streaming_error}
           />
       <% end %>
 
@@ -1257,6 +1365,7 @@ defmodule LightningWeb.AiAssistant.Component do
   attr :mode, :atom, required: true
   attr :streaming_status, :string, default: nil
   attr :streaming_content, :string, default: ""
+  attr :streaming_error, :string, default: nil
 
   defp render_individual_session(assigns) do
     assigns = assign(assigns, ai_feedback: ai_feedback())
@@ -1323,11 +1432,15 @@ defmodule LightningWeb.AiAssistant.Component do
 
         <.async_result assign={@pending_message}>
           <:loading>
-            <.assistant_typing_indicator
-              handler={@handler}
-              streaming_status={@streaming_status}
-              streaming_content={@streaming_content}
-            />
+            <%= if @streaming_error do %>
+              <.streaming_error_state error={@streaming_error} target={@target} />
+            <% else %>
+              <.assistant_typing_indicator
+                handler={@handler}
+                streaming_status={@streaming_status}
+                streaming_content={@streaming_content}
+              />
+            <% end %>
           </:loading>
 
           <:failed :let={failure}>
@@ -1545,6 +1658,45 @@ defmodule LightningWeb.AiAssistant.Component do
     """
   end
 
+  attr :error, :string, required: true
+  attr :target, :any, required: true
+
+  defp streaming_error_state(assigns) do
+    ~H"""
+    <div class="flex items-start gap-3 mb-4">
+      <div class="flex-shrink-0">
+        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+          <.icon name="hero-exclamation-triangle" class="text-red-600 h-5 w-5" />
+        </div>
+      </div>
+
+      <div class="bg-red-50 rounded-2xl border border-red-200 px-4 py-3 flex-1">
+        <p class="text-sm text-red-800 mb-3">{@error}</p>
+
+        <div class="flex gap-2">
+          <button
+            type="button"
+            phx-click="retry_streaming"
+            phx-target={@target}
+            class="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Retry
+          </button>
+
+          <button
+            type="button"
+            phx-click="cancel_streaming"
+            phx-target={@target}
+            class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :handler, :any, required: true
   attr :streaming_status, :string, default: nil
   attr :streaming_content, :string, default: ""
@@ -1575,7 +1727,9 @@ defmodule LightningWeb.AiAssistant.Component do
             >
             </div>
           </div>
-          <p class="text-xs text-gray-500 mt-2">{@streaming_status || "Processing..."}</p>
+          <p class="text-xs text-gray-500 mt-2">
+            {@streaming_status || "Processing..."}
+          </p>
           <div
             class="mt-2 text-sm text-gray-800 leading-relaxed"
             phx-update="ignore"

@@ -687,13 +687,35 @@ export const ScrollToMessage = {
   mounted() {
     this.shouldAutoScroll = true;
 
-    // Track if user manually scrolls away from bottom
-    this.el.addEventListener('scroll', () => {
+    // Throttle scroll tracking to reduce CPU usage
+    this.handleScrollThrottled = this.throttle(() => {
       const isAtBottom = this.isAtBottom();
       this.shouldAutoScroll = isAtBottom;
-    });
+    }, 100); // Only check every 100ms
 
+    this.el.addEventListener('scroll', this.handleScrollThrottled);
     this.handleScroll();
+  },
+
+  destroyed() {
+    if (this.handleScrollThrottled) {
+      this.el.removeEventListener('scroll', this.handleScrollThrottled);
+    }
+    if (this.throttleTimeout !== undefined) {
+      clearTimeout(this.throttleTimeout);
+    }
+  },
+
+  throttle(func: () => void, wait: number): () => void {
+    return () => {
+      if (this.throttleTimeout !== undefined) {
+        clearTimeout(this.throttleTimeout);
+      }
+      this.throttleTimeout = setTimeout(() => {
+        func();
+        this.throttleTimeout = undefined;
+      }, wait) as unknown as number;
+    };
   },
 
   updated() {
@@ -740,6 +762,9 @@ export const ScrollToMessage = {
   },
 } as PhoenixHook<{
   shouldAutoScroll: boolean;
+  handleScrollThrottled?: () => void;
+  throttleTimeout?: number;
+  throttle: (func: () => void, wait: number) => () => void;
   handleScroll: () => void;
   scrollToSpecificMessage: (messageId: string) => void;
   scrollToBottom: () => void;
@@ -1040,11 +1065,27 @@ export const StreamingText = {
   mounted() {
     this.lastContent = '';
     this.renderer = this.createCustomRenderer();
+    this.parseCount = 0;
+    this.pendingUpdate = undefined;
     this.updateContent();
   },
 
   updated() {
-    this.updateContent();
+    // Debounce updates by 50ms to batch rapid chunk arrivals
+    if (this.pendingUpdate !== undefined) {
+      clearTimeout(this.pendingUpdate);
+    }
+
+    this.pendingUpdate = setTimeout(() => {
+      this.updateContent();
+      this.pendingUpdate = undefined;
+    }, 50) as unknown as number;
+  },
+
+  destroyed() {
+    if (this.pendingUpdate !== undefined) {
+      clearTimeout(this.pendingUpdate);
+    }
   },
 
   createCustomRenderer() {
@@ -1083,9 +1124,12 @@ export const StreamingText = {
   },
 
   updateContent() {
+    const start = performance.now();
     const newContent = this.el.dataset.streamingContent || '';
 
     if (newContent !== this.lastContent) {
+      this.parseCount++;
+
       // Re-parse entire content as markdown
       // This handles split ticks because we always parse the full accumulated string
       const htmlContent = marked.parse(newContent, {
@@ -1096,11 +1140,18 @@ export const StreamingText = {
 
       this.el.innerHTML = htmlContent;
       this.lastContent = newContent;
+
+      const duration = performance.now() - start;
+      console.debug(
+        `[StreamingText] Parse #${this.parseCount}: ${duration.toFixed(2)}ms for ${newContent.length} chars`
+      );
     }
   },
 } as PhoenixHook<{
   lastContent: string;
   renderer: marked.Renderer;
+  parseCount: number;
+  pendingUpdate?: number;
   createCustomRenderer: () => marked.Renderer;
   updateContent: () => void;
 }>;

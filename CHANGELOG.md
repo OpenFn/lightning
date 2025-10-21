@@ -47,6 +47,12 @@ and this project adheres to
   [#3702](https://github.com/OpenFn/lightning/issues/3702)
 - Reintroduce the impeded project with hopefully better performance
   characteristics [#3542](https://github.com/OpenFn/lightning/issues/3542)
+- **AI Assistant Streaming**: AI responses now stream in real-time with status updates
+  - Users see AI responses appear word-by-word as they're generated
+  - Status indicators show thinking progress (e.g., "Researching...", "Generating code...")
+  - Automatic error recovery with retry/cancel options
+  - Configurable timeout based on Apollo settings
+  [#3585](https://github.com/OpenFn/lightning/issues/3585)
 
 ### Changed
 
@@ -65,6 +71,13 @@ and this project adheres to
 - Runtime permission checks in WorkflowChannel save/reset operations to prevent
   unauthorized edits when user roles change during active collaboration sessions
   [#3749](https://github.com/OpenFn/lightning/issues/3749)
+
+### Technical
+
+- Added `Lightning.ApolloClient.SSEStream` for Server-Sent Events handling
+- Enhanced `MessageProcessor` to support streaming responses
+- Updated AI Assistant component with real-time markdown rendering
+- Improved error handling for network failures and timeouts
 
 ## [2.14.11] - 2025-10-15
 
