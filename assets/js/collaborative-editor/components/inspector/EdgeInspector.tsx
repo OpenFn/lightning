@@ -18,19 +18,22 @@ export function EdgeInspector({ edge }: EdgeInspectorProps) {
   const { updateEdge, removeEdge, clearSelection } = useWorkflowActions();
 
   // Initialize form with edge data
-  const form = useAppForm({
-    defaultValues: edge,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (edge.id) {
-          updateEdge(edge.id, formApi.state.values);
-        }
+  const form = useAppForm(
+    {
+      defaultValues: edge,
+      listeners: {
+        onChange: ({ formApi }) => {
+          if (edge.id) {
+            updateEdge(edge.id, formApi.state.values);
+          }
+        },
+      },
+      validators: {
+        onChange: createZodValidator(EdgeSchema),
       },
     },
-    validators: {
-      onChange: createZodValidator(EdgeSchema),
-    },
-  });
+    `edges.${edge.id}` // Server validation automatically filtered to this edge
+  );
 
   // Sync external Y.js changes back into form
   useWatchFields(

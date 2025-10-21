@@ -20,19 +20,22 @@ export function TriggerInspector({ trigger }: TriggerInspectorProps) {
   const { updateTrigger } = useWorkflowActions();
   const [copySuccess, setCopySuccess] = useState<string>("");
 
-  const form = useAppForm({
-    defaultValues: trigger,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (trigger.id) {
-          updateTrigger(trigger.id, formApi.state.values);
-        }
+  const form = useAppForm(
+    {
+      defaultValues: trigger,
+      listeners: {
+        onChange: ({ formApi }) => {
+          if (trigger.id) {
+            updateTrigger(trigger.id, formApi.state.values);
+          }
+        },
+      },
+      validators: {
+        onChange: createZodValidator(TriggerSchema),
       },
     },
-    validators: {
-      onChange: createZodValidator(TriggerSchema),
-    },
-  });
+    `triggers.${trigger.id}` // Server validation automatically filtered to this trigger
+  );
 
   // Generate webhook URL based on trigger ID
   const webhookUrl = new URL(

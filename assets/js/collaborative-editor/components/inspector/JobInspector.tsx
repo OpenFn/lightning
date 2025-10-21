@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
-import { useServerValidation } from "#/collaborative-editor/hooks/useServerValidation";
 import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
@@ -178,23 +177,22 @@ export function JobInspector({ job, renderFooter }: JobInspectorProps) {
     [job, initialAdaptor, initialAdaptorPackage, initialCredentialId]
   );
 
-  const form = useAppForm({
-    defaultValues,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (job.id) {
-          updateJob(job.id, formApi.state.values);
-        }
+  const form = useAppForm(
+    {
+      defaultValues,
+      listeners: {
+        onChange: ({ formApi }) => {
+          if (job.id) {
+            updateJob(job.id, formApi.state.values);
+          }
+        },
+      },
+      validators: {
+        onChange: createZodValidator(JobSchema),
       },
     },
-    validators: {
-      onChange: createZodValidator(JobSchema),
-    },
-  });
-
-  // Inject server validation errors for this specific job
-  // Prefix filters errors to only this job (e.g., "jobs.abc-123.name")
-  useServerValidation(form, `jobs.${job.id}`);
+    `jobs.${job.id}` // Server validation automatically filtered to this job
+  );
 
   useWatchFields(
     job,

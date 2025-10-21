@@ -334,8 +334,9 @@ export const createWorkflowStore = () => {
 
     // NEW: Errors observer
     const errorsObserver = () => {
+      const errorsJSON = errorsMap.toJSON() as Record<string, string>;
       updateState(draft => {
-        draft.errors = errorsMap.toJSON() as Record<string, string>;
+        draft.errors = errorsJSON;
       }, "errors/observerUpdate");
     };
 
