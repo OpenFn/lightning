@@ -192,65 +192,73 @@ defmodule Lightning.ApolloClient.SSEStream do
 
     case event_type do
       "content_block_delta" ->
-        # Parse the Anthropic streaming event
-        case Jason.decode(data) do
-          {:ok, %{"delta" => %{"type" => "text_delta", "text" => text}}} ->
-            Logger.debug("[SSEStream] Broadcasting chunk: #{inspect(text)}")
-            broadcast_chunk(session_id, text)
-
-          {:ok,
-           %{"delta" => %{"type" => "thinking_delta", "thinking" => thinking}}} ->
-            Logger.debug("[SSEStream] Broadcasting status: #{inspect(thinking)}")
-            broadcast_status(session_id, thinking)
-
-          _ ->
-            :ok
-        end
+        handle_content_block_delta(data, session_id)
 
       "message_stop" ->
         Logger.debug("[SSEStream] Received message_stop, broadcasting complete")
         broadcast_complete(session_id)
 
       "complete" ->
-        Logger.debug("[SSEStream] Received complete event with payload")
-        # Parse and broadcast the complete payload with usage, meta, and code
-        case Jason.decode(data) do
-          {:ok, payload} ->
-            Logger.debug(
-              "[SSEStream] Broadcasting complete payload: #{inspect(Map.keys(payload))}"
-            )
-
-            broadcast_payload_complete(session_id, payload)
-
-          {:error, error} ->
-            Logger.error(
-              "[SSEStream] Failed to parse complete event payload: #{inspect(error)}"
-            )
-        end
-
-        :ok
+        handle_complete_event(data, session_id)
 
       "error" ->
-        Logger.error("[SSEStream] Received error event: #{inspect(data)}")
-
-        # Parse error message from Apollo
-        error_message =
-          case Jason.decode(data) do
-            {:ok, %{"message" => msg}} -> msg
-            {:ok, %{"error" => err}} -> err
-            _ -> "An error occurred while streaming"
-          end
-
-        broadcast_error(session_id, error_message)
+        handle_error_event(data, session_id)
 
       "log" ->
-        # Just log messages from Apollo, don't broadcast
         Logger.debug("[SSEStream] Apollo log: #{inspect(data)}")
 
       _ ->
         Logger.debug("[SSEStream] Unhandled event type: #{event_type}")
         :ok
     end
+  end
+
+  defp handle_content_block_delta(data, session_id) do
+    case Jason.decode(data) do
+      {:ok, %{"delta" => %{"type" => "text_delta", "text" => text}}} ->
+        Logger.debug("[SSEStream] Broadcasting chunk: #{inspect(text)}")
+        broadcast_chunk(session_id, text)
+
+      {:ok, %{"delta" => %{"type" => "thinking_delta", "thinking" => thinking}}} ->
+        Logger.debug("[SSEStream] Broadcasting status: #{inspect(thinking)}")
+        broadcast_status(session_id, thinking)
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp handle_complete_event(data, session_id) do
+    Logger.debug("[SSEStream] Received complete event with payload")
+
+    case Jason.decode(data) do
+      {:ok, payload} ->
+        Logger.debug(
+          "[SSEStream] Broadcasting complete payload: #{inspect(Map.keys(payload))}"
+        )
+
+        broadcast_payload_complete(session_id, payload)
+
+      {:error, error} ->
+        Logger.error(
+          "[SSEStream] Failed to parse complete event payload: #{inspect(error)}"
+        )
+    end
+
+    :ok
+  end
+
+  defp handle_error_event(data, session_id) do
+    Logger.error("[SSEStream] Received error event: #{inspect(data)}")
+
+    error_message =
+      case Jason.decode(data) do
+        {:ok, %{"message" => msg}} -> msg
+        {:ok, %{"error" => err}} -> err
+        _ -> "An error occurred while streaming"
+      end
+
+    broadcast_error(session_id, error_message)
   end
 
   defp broadcast_chunk(session_id, data) do

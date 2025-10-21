@@ -2362,20 +2362,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :unregister_component ->
         handle_component_unregistration(socket, payload)
 
-      :streaming_chunk ->
-        handle_streaming_update(socket, payload, :streaming_chunk)
-
-      :status_update ->
-        handle_streaming_update(socket, payload, :status_update)
-
-      :streaming_complete ->
-        handle_streaming_update(socket, payload, :streaming_complete)
-
-      :streaming_payload_complete ->
-        handle_streaming_update(socket, payload, :streaming_payload_complete)
-
-      :streaming_error ->
-        handle_streaming_update(socket, payload, :streaming_error)
+      action
+      when action in [
+             :streaming_chunk,
+             :status_update,
+             :streaming_complete,
+             :streaming_payload_complete,
+             :streaming_error
+           ] ->
+        handle_streaming_update(socket, payload, action)
     end
   end
 
