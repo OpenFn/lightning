@@ -30,24 +30,6 @@ defmodule Lightning.AiAssistantHelpers do
   end
 
   @doc """
-  Stubs Finch to prevent actual SSE connection attempts.
-
-  Call this after stub_online() in tests that spawn Oban workers which
-  would otherwise attempt real HTTP connections via Finch.
-
-  Requires Mimic.set_mimic_global() to be called first so the stub works
-  in spawned processes.
-  """
-  def stub_finch_streaming do
-    Mimic.stub(Finch, :stream, fn _request, _finch_name, acc, _fun ->
-      # Don't make a real connection - return immediately with success
-      # This prevents Oban jobs from failing with connection errors
-      # but doesn't interfere with tests that need real Finch behavior
-      {:ok, Map.put(acc, :status, 200)}
-    end)
-  end
-
-  @doc """
   Waits for a chat session to be created and then simulates a streaming response.
 
   This is useful in tests where you've submitted a form and need to simulate
