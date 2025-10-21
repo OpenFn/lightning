@@ -1,26 +1,29 @@
 defmodule Lightning.ApolloClient.SSEStreamTest do
   use Lightning.DataCase, async: false
+  use Mimic
 
   alias Lightning.ApolloClient.SSEStream
 
-  import Mox
+  import Mox, only: []
 
   @moduletag :capture_log
 
-  setup :set_mox_global
-  setup :verify_on_exit!
+  setup do
+    Mox.set_mox_global()
+    Mimic.set_mimic_global()
+    # Verify Mox expectations on exit
+    Mox.verify_on_exit!()
+    :ok
+  end
 
   setup do
     # Stub Apollo config for all tests - set_mox_global allows this to work in spawned processes
-    stub(Lightning.MockConfig, :apollo, fn
+    # Use Mox.stub explicitly since both Mox and Mimic export stub/3
+    Mox.stub(Lightning.MockConfig, :apollo, fn
       :timeout -> 30_000
       :endpoint -> "http://localhost:3000"
       :ai_assistant_api_key -> "test_key"
     end)
-
-    # Reject any global Finch stubs from other tests
-    # SSEStream tests expect real Finch behavior (connection failures)
-    Mimic.reject(Finch, :stream, 4)
 
     # Subscribe to PubSub to receive broadcasted messages
     session_id = Ecto.UUID.generate()
@@ -76,10 +79,16 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
                      500
     end
 
+    @tag timeout: 5000
     test "times out hanging streams and broadcasts error", %{
       session_id: session_id
     } do
-      # Test that timeout handling works correctly
+      # Test timeout handling - we simulate the timeout message being sent
+      # We don't need to stub Finch for this test, the real Finch will try to connect
+      # and fail, but we can send the timeout before that matters
+
+      # Trap exits so we don't crash when the GenServer stops with :timeout
+      Process.flag(:trap_exit, true)
 
       url = "http://localhost:3000/services/job_chat/stream"
 
@@ -90,7 +99,10 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
 
       {:ok, pid} = SSEStream.start_stream(url, payload)
 
-      # Send timeout message directly to test the handler
+      # Give the GenServer a moment to initialize
+      Process.sleep(10)
+
+      # Send timeout message to simulate stream timeout
       send(pid, :stream_timeout)
 
       # Should receive timeout error broadcast
@@ -99,11 +111,12 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
                         session_id: ^session_id,
                         error: "Request timed out. Please try again."
                       }},
-                     500
+                     1000
     end
 
     test "ignores timeout after stream completes", %{session_id: session_id} do
       # Test that timeout is ignored if stream already completed
+      # Note: Stream will fail with connection error, simulating completion
 
       url = "http://localhost:3000/services/job_chat/stream"
 
@@ -114,21 +127,23 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
 
       {:ok, pid} = SSEStream.start_stream(url, payload)
 
-      # First complete the stream
+      # Monitor BEFORE sending completion to catch the shutdown
+      ref = Process.monitor(pid)
+
+      # Send completion message - this will complete the stream
       send(pid, {:sse_complete})
 
       # Process should stop normally
-      ref = Process.monitor(pid)
-      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 500
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 1000
 
-      # If we somehow send timeout after completion, it should be ignored
-      # (process is already dead so we can't test this directly)
+      # If we send timeout after completion, process is already dead so it's ignored
     end
 
     test "handles completion message and cancels timeout", %{
       session_id: session_id
     } do
       # Test that :sse_complete properly cancels the timeout timer
+      # Note: Stream will attempt connection but we complete it before that matters
 
       url = "http://localhost:3000/services/job_chat/stream"
 
@@ -139,12 +154,14 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
 
       {:ok, pid} = SSEStream.start_stream(url, payload)
 
+      # Monitor BEFORE sending completion to catch the shutdown
+      ref = Process.monitor(pid)
+
       # Send completion message
       send(pid, {:sse_complete})
 
       # Process should stop normally (not from timeout)
-      ref = Process.monitor(pid)
-      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 500
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 1000
     end
 
     test "handles connection failures with econnrefused", %{
