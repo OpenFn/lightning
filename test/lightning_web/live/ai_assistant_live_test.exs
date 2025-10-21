@@ -485,35 +485,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            # Simply return the response immediately
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"}
-                 ]
-               }
-             }}
-        end
-      )
+      Lightning.AiAssistantHelpers.stub_online()
 
       {:ok, view, _html} =
         live(
@@ -529,6 +501,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping"})
 
+      # Simulate streaming response
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        job_id: job_1.id,
+        response: "Pong"
+      )
+
       assert_patch(view)
 
       # In test environment with inline Oban, response appears immediately
@@ -543,39 +521,10 @@ defmodule LightningWeb.AiAssistantLiveTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       expected_question = "Can you help me with this?"
       expected_answer = "No, I am a robot"
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"},
-                   %{"role" => "user", "content" => expected_question},
-                   %{"role" => "assistant", "content" => expected_answer}
-                 ]
-               }
-             }}
-        end
-      )
 
       session =
         insert(:job_chat_session,
@@ -608,6 +557,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: expected_question})
 
+      # Simulate streaming response
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        job_id: job_1.id,
+        response: expected_answer
+      )
+
       # In test environment with inline Oban, the response appears immediately
       html = render(view)
       assert html =~ expected_answer
@@ -620,25 +575,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok, %Tesla.Env{status: 400, body: %{"message" => "Bad request"}}}
-        end
-      )
+      Lightning.AiAssistantHelpers.stub_online()
 
       {:ok, view, _html} =
         live(
@@ -653,6 +590,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_error(
+        job_id: job_1.id,
+        error: "Bad request"
+      )
 
       assert_patch(view)
 
@@ -672,30 +614,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            # Return an error response
-            {:ok,
-             %Tesla.Env{
-               status: 500,
-               body: %{"message" => "Internal server error"}
-             }}
-        end
-      )
+      Lightning.AiAssistantHelpers.stub_online()
 
       {:ok, view, _html} =
         live(
@@ -712,9 +631,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
           view
           |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
           |> render_submit(assistant: %{content: "Ping"})
+
+          Lightning.AiAssistantHelpers.submit_and_simulate_error(
+            job_id: job_1.id,
+            error: "Internal server error"
+          )
         end)
 
-      assert log =~ "AI query failed"
+      assert log =~ "Streaming error for session"
       assert log =~ "Internal server error"
 
       assert_patch(view)
@@ -785,34 +709,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       error_message = "Server is temporarily unavailable"
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 503,
-               body: %{
-                 "code" => 503,
-                 "message" => error_message
-               }
-             }}
-        end
-      )
 
       {:ok, view, _html} =
         live(
@@ -828,9 +727,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
           view
           |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
           |> render_submit(assistant: %{content: "Ping"})
+
+          Lightning.AiAssistantHelpers.submit_and_simulate_error(
+            job_id: job_1.id,
+            error: error_message
+          )
         end)
 
-      assert log =~ "AI query failed for session"
+      assert log =~ "Streaming error for session"
       assert log =~ "Server is temporarily unavailable"
 
       assert_patch(view)
@@ -850,25 +754,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:error, :timeout}
-        end
-      )
+      Lightning.AiAssistantHelpers.stub_online()
 
       {:ok, view, _html} =
         live(
@@ -885,9 +771,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
           view
           |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
           |> render_submit(assistant: %{content: "Ping"})
+
+          Lightning.AiAssistantHelpers.submit_and_simulate_error(
+            job_id: job_1.id,
+            error: "Request timed out. Please try again."
+          )
         end)
 
-      assert log =~ "AI query timed out for session"
+      assert log =~ "Streaming error for session"
       assert log =~ "Request timed out. Please try again."
 
       assert_patch(view)
@@ -907,25 +798,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:error, :econnrefused}
-        end
-      )
+      Lightning.AiAssistantHelpers.stub_online()
 
       {:ok, view, _html} =
         live(
@@ -943,9 +816,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
           view
           |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
           |> render_submit(assistant: %{content: "Ping"})
+
+          Lightning.AiAssistantHelpers.submit_and_simulate_error(
+            job_id: job_1.id,
+            error: "Unable to reach the AI server. Please try again later."
+          )
         end)
 
-      assert log =~ "Connection refused to AI server for session"
+      assert log =~ "Streaming error for session"
       assert log =~ "Unable to reach the AI server. Please try again later."
 
       html = render_async(view)
@@ -963,25 +841,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:error, :unknown_error}
-        end
-      )
+      Lightning.AiAssistantHelpers.stub_online()
 
       {:ok, view, _html} =
         live(
@@ -995,6 +855,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_error(
+        job_id: job_1.id,
+        error: "An unexpected error occurred"
+      )
 
       assert_patch(view)
       render_async(view)
@@ -1199,21 +1064,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok, %Tesla.Env{status: 500}}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       session =
         insert(:job_chat_session,
@@ -1252,24 +1103,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
                  "#cancel-message-#{List.first(session.messages).id}"
                )
 
-        # Update the mock for successful response
-        Mox.stub(Lightning.Tesla.Mock, :call, fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Hello"},
-                   %{"role" => "assistant", "content" => "Hi there!"}
-                 ]
-               }
-             }}
-        end)
-
         # Click retry
         view
         |> element("#retry-message-#{List.first(session.messages).id}")
@@ -1285,9 +1118,34 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
         assert job.args["message_id"] == List.first(session.messages).id
 
-        # Process the job
+        # Process the job and simulate streaming response
         assert %{success: 1} =
                  Oban.drain_queue(Lightning.Oban, queue: :ai_assistant)
+
+        # Subscribe to wait for completion
+        Phoenix.PubSub.subscribe(Lightning.PubSub, "ai_session:#{session.id}")
+
+        Lightning.AiAssistantHelpers.simulate_streaming_response(
+          session.id,
+          "Hi there!"
+        )
+
+        # Wait for streaming to complete
+        assert_receive {:ai_assistant, :streaming_payload_complete, _}, 1000
+
+        # Poll until LiveView has processed the message
+        Eventually.eventually(
+          fn ->
+            session
+            |> Lightning.Repo.reload()
+            |> Lightning.Repo.preload(:messages, force: true)
+            |> then(& &1.messages)
+            |> Enum.any?(fn msg -> msg.status == :success end)
+          end,
+          true,
+          1000,
+          10
+        )
 
         # Re-render to see the updated state
         html = render(view)
@@ -1774,42 +1632,10 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       insert(:log_line, run: run)
-      log1 = insert(:log_line, run: run, step: hd(run.steps))
-      log2 = insert(:log_line, run: run, step: hd(run.steps))
+      _log1 = insert(:log_line, run: run, step: hd(run.steps))
+      _log2 = insert(:log_line, run: run, step: hd(run.steps))
 
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Lightning.Tesla.Mock
-      |> expect(
-        :call,
-        2,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post, body: json_body}, _opts ->
-            body = Jason.decode!(json_body)
-            assert Map.has_key?(body["context"], "log")
-            assert body["context"]["log"] == log1.message <> "\n" <> log2.message
-
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"}
-                 ]
-               }
-             }}
-        end
-      )
+      Lightning.AiAssistantHelpers.stub_online()
 
       {:ok, view, _html} =
         live(
@@ -1826,9 +1652,15 @@ defmodule LightningWeb.AiAssistantLiveTest do
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Ping", options: %{logs: "true"}})
 
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        job_id: job_1.id,
+        response: "Pong"
+      )
+
       assert_patch(view)
 
-      render_async(view)
+      html = render_async(view)
+      assert html =~ "Pong"
     end
   end
 
@@ -1875,35 +1707,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       user: user
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "I'll help you create a Salesforce sync workflow",
-               "response_yaml" => nil,
-               "usage" => %{},
-               "history" => [
-                 %{
-                   "role" => "user",
-                   "content" => "Create a Salesforce sync workflow"
-                 }
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -1916,6 +1720,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
       |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(
         assistant: %{content: "Create a Salesforce sync workflow"}
+      )
+
+      # Simulate streaming response - workflow mode uses project_id as workflow_id
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        workflow_id: project.id,
+        response: "I'll help you create a Salesforce sync workflow"
       )
 
       assert_patch(view)
@@ -1931,13 +1741,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       user: user
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       workflow_yaml = """
       name: "Salesforce Sync Workflow"
@@ -1962,22 +1766,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
           enabled: true
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Here's your Salesforce sync workflow:",
-               "response_yaml" => workflow_yaml,
-               "usage" => %{}
-             }
-           }}
-      end)
-
       skip_disclaimer(user)
 
       {:ok, view, _html} =
@@ -1989,6 +1777,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
       |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(
         assistant: %{content: "Create a Salesforce sync workflow"}
+      )
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        workflow_id: project.id,
+        response: "Here's your Salesforce sync workflow:",
+        code: workflow_yaml
       )
 
       assert_patch(view)
@@ -2088,25 +1882,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       project: project,
       user: user
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 503,
-             body: %{"message" => "Service temporarily unavailable"}
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -2118,6 +1894,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       view
       |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create a workflow"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_error(
+        workflow_id: project.id,
+        error: "Service temporarily unavailable"
+      )
 
       assert_patch(view)
 
@@ -2519,21 +2300,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:error, :timeout}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -2550,9 +2317,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
           job_view
           |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
           |> render_submit(assistant: %{content: "Help with code"})
+
+          Lightning.AiAssistantHelpers.submit_and_simulate_error(
+            job_id: job_1.id,
+            error: "Request timed out. Please try again."
+          )
         end)
 
-      assert log =~ "AI query timed out for session"
+      assert log =~ "Streaming error for session"
       assert log =~ "Request timed out. Please try again."
 
       html = render_async(job_view)
@@ -2572,9 +2344,14 @@ defmodule LightningWeb.AiAssistantLiveTest do
           workflow_view
           |> form("#ai-assistant-form-new-workflow-panel-assistant")
           |> render_submit(assistant: %{content: "Create workflow"})
+
+          Lightning.AiAssistantHelpers.submit_and_simulate_error(
+            workflow_id: project.id,
+            error: "Request timed out. Please try again."
+          )
         end)
 
-      assert log =~ "AI query timed out for session"
+      assert log =~ "Streaming error for session"
       assert log =~ "Request timed out. Please try again."
 
       html = render_async(workflow_view)
@@ -2814,13 +2591,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       markdown_response = """
       Here's your solution:
@@ -2839,23 +2610,6 @@ defmodule LightningWeb.AiAssistantLiveTest do
       2. Deploy to production
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => markdown_response,
-               "history" => [
-                 %{"role" => "assistant", "content" => markdown_response}
-               ]
-             }
-           }}
-      end)
-
       skip_disclaimer(user)
 
       {:ok, job_view, _html} =
@@ -2869,6 +2623,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       job_view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Help me"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        job_id: job_1.id,
+        response: markdown_response
+      )
 
       render_async(job_view)
 
@@ -2886,6 +2645,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create workflow"})
 
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        workflow_id: project.id,
+        response: markdown_response
+      )
+
       render_async(workflow_view)
 
       workflow_html = render(workflow_view)
@@ -2900,34 +2664,9 @@ defmodule LightningWeb.AiAssistantLiveTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       response_content = "Here's some code you can copy"
-
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => response_content,
-               "response_yaml" => nil,
-               "usage" => %{},
-               "history" => [
-                 %{"role" => "assistant", "content" => response_content}
-               ]
-             }
-           }}
-      end)
 
       skip_disclaimer(user)
 
@@ -2942,6 +2681,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       job_view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Help"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        job_id: job_1.id,
+        response: response_content
+      )
 
       assert_patch(job_view)
       render_async(job_view)
@@ -2967,6 +2711,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       workflow_view
       |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        workflow_id: project.id,
+        response: response_content
+      )
 
       assert_patch(workflow_view)
       render_async(workflow_view)
@@ -3227,54 +2976,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post, url: ^apollo_endpoint <> "/query"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "assistant", "content" => "Response content"}
-               ]
-             }
-           }}
-
-        %{method: :post, url: ^apollo_endpoint <> "/workflow_chat"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Response content",
-               "response_yaml" => nil,
-               "usage" => %{}
-             }
-           }}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "assistant", "content" => "Response content"}
-               ],
-               "response" => "Response content",
-               "response_yaml" => nil,
-               "usage" => %{}
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -3290,6 +2992,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       job_view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Help with debugging"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        job_id: job_1.id,
+        response: "Response content"
+      )
 
       # This creates a session and navigates to include j-chat parameter
       current_path = assert_patch(job_view)
@@ -3308,6 +3015,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       workflow_view
       |> form("#ai-assistant-form-new-workflow-panel-assistant")
       |> render_submit(assistant: %{content: "Create new workflow"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        workflow_id: project.id,
+        response: "Response content"
+      )
 
       assert_patch(workflow_view)
       render_async(workflow_view)
@@ -3334,32 +3046,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Delayed response",
-               "response_yaml" => nil,
-               "usage" => %{},
-               "history" => [
-                 %{"role" => "assistant", "content" => "Delayed response"}
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -3375,6 +3062,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Test async"})
 
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        job_id: job_1.id,
+        response: "Delayed response"
+      )
+
       assert_patch(view)
 
       html = render(view)
@@ -3389,29 +3081,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      apollo_endpoint = "http://localhost:4001"
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :ai_assistant_api_key -> "ai_assistant_api_key"
-        :timeout -> 5_000
-      end)
-
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          # Return a server error
-          {:ok,
-           %Tesla.Env{
-             status: 500,
-             body: %{
-               "error" => "Internal server error",
-               "message" => "Service crashed"
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -3426,6 +3096,11 @@ defmodule LightningWeb.AiAssistantLiveTest do
       view
       |> form("#ai-assistant-form-job-#{job_1.id}-ai-assistant")
       |> render_submit(assistant: %{content: "Trigger error"})
+
+      Lightning.AiAssistantHelpers.submit_and_simulate_error(
+        job_id: job_1.id,
+        error: "Service crashed"
+      )
 
       assert_patch(view)
 
