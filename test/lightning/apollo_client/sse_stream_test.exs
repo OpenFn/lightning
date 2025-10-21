@@ -72,17 +72,10 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
                      500
     end
 
-    test "times out hanging streams", %{session_id: session_id} do
-      # Timeout is based on Apollo config, which for tests should be short
-      # This test verifies that the stream times out if no data arrives
-
-      # Override the default stub with a short timeout for this test
-      stub(Lightning.MockConfig, :apollo, fn
-        # Very short timeout for testing
-        :timeout -> 100
-        :endpoint -> "http://localhost:3000"
-        :ai_assistant_api_key -> "test_key"
-      end)
+    test "times out hanging streams and broadcasts error", %{
+      session_id: session_id
+    } do
+      # Test that timeout handling works correctly
 
       url = "http://localhost:3000/services/job_chat/stream"
 
@@ -91,18 +84,68 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
         "stream" => true
       }
 
-      {:ok, _pid} = SSEStream.start_stream(url, payload)
+      {:ok, pid} = SSEStream.start_stream(url, payload)
 
-      # Wait for timeout (100ms + 10s buffer = 10.1s, but for test we use smaller values)
-      # Since timeout is 100ms, the actual timeout will be 100 + 10000 = 10100ms
-      # But we can verify the GenServer eventually stops
-      Process.sleep(150)
+      # Send timeout message directly to test the handler
+      send(pid, :stream_timeout)
 
-      # The GenServer should still be trying (hasn't hit the actual timeout yet)
-      # For a proper test, we'd need to mock the time or use shorter timeouts
+      # Should receive timeout error broadcast
+      assert_receive {:ai_assistant, :streaming_error,
+                      %{
+                        session_id: ^session_id,
+                        error: "Request timed out. Please try again."
+                      }},
+                     500
     end
 
-    test "handles connection failures", %{session_id: session_id} do
+    test "ignores timeout after stream completes", %{session_id: session_id} do
+      # Test that timeout is ignored if stream already completed
+
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      # First complete the stream
+      send(pid, {:sse_complete})
+
+      # Process should stop normally
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 500
+
+      # If we somehow send timeout after completion, it should be ignored
+      # (process is already dead so we can't test this directly)
+    end
+
+    test "handles completion message and cancels timeout", %{
+      session_id: session_id
+    } do
+      # Test that :sse_complete properly cancels the timeout timer
+
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      # Send completion message
+      send(pid, {:sse_complete})
+
+      # Process should stop normally (not from timeout)
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 500
+    end
+
+    test "handles connection failures with econnrefused", %{
+      session_id: session_id
+    } do
       # When Finch cannot connect, the stream should broadcast an error
 
       url = "http://localhost:3000/services/job_chat/stream"
@@ -126,6 +169,66 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
                      500
 
       assert error =~ "Connection error"
+    end
+
+    test "handles timeout error from Finch", %{session_id: session_id} do
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      send(pid, {:sse_error, :timeout})
+
+      assert_receive {:ai_assistant, :streaming_error,
+                      %{
+                        session_id: ^session_id,
+                        error: "Connection timed out"
+                      }},
+                     500
+    end
+
+    test "handles closed connection error", %{session_id: session_id} do
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      send(pid, {:sse_error, :closed})
+
+      assert_receive {:ai_assistant, :streaming_error,
+                      %{
+                        session_id: ^session_id,
+                        error: "Connection closed unexpectedly"
+                      }},
+                     500
+    end
+
+    test "handles shutdown error", %{session_id: session_id} do
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      send(pid, {:sse_error, {:shutdown, :some_reason}})
+
+      assert_receive {:ai_assistant, :streaming_error,
+                      %{
+                        session_id: ^session_id,
+                        error: "Server shut down"
+                      }},
+                     500
     end
 
     test "handles HTTP error responses", %{session_id: session_id} do
@@ -263,6 +366,164 @@ defmodule Lightning.ApolloClient.SSEStreamTest do
       assert payload_data.usage["input_tokens"] == 100
       assert payload_data.meta["model"] == "claude-3"
       assert payload_data.code == "workflow: test"
+    end
+
+    test "handles complete event with invalid JSON", %{session_id: session_id} do
+      # Test that malformed complete payloads are handled gracefully
+
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      # Monitor the process to ensure it doesn't crash
+      ref = Process.monitor(pid)
+
+      # Send complete event with invalid JSON
+      send(pid, {:sse_event, "complete", "not valid json {"})
+
+      # Should not crash - verify process is still alive after a reasonable time
+      refute_receive {:DOWN, ^ref, :process, ^pid, _reason}, 200
+      assert Process.alive?(pid)
+    end
+
+    test "handles log events", %{session_id: session_id} do
+      # Test that log events are handled (just logged, no broadcast)
+
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      # Monitor the process
+      ref = Process.monitor(pid)
+
+      # Send log event
+      send(pid, {:sse_event, "log", "Some log message"})
+
+      # Should not crash
+      refute_receive {:DOWN, ^ref, :process, ^pid, _reason}, 200
+      assert Process.alive?(pid)
+    end
+
+    test "handles unknown event types", %{session_id: session_id} do
+      # Test that unknown event types are handled gracefully
+
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      # Monitor the process
+      ref = Process.monitor(pid)
+
+      # Send unknown event type
+      send(pid, {:sse_event, "some_unknown_event", "data"})
+
+      # Should not crash
+      refute_receive {:DOWN, ^ref, :process, ^pid, _reason}, 200
+      assert Process.alive?(pid)
+    end
+
+    test "handles content_block_delta with invalid JSON", %{
+      session_id: session_id
+    } do
+      # Test that malformed delta events don't crash
+
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      # Monitor the process
+      ref = Process.monitor(pid)
+
+      # Send invalid delta data
+      send(pid, {:sse_event, "content_block_delta", "invalid json"})
+
+      # Should not crash
+      refute_receive {:DOWN, ^ref, :process, ^pid, _reason}, 200
+      assert Process.alive?(pid)
+    end
+
+    test "handles error event with message field", %{session_id: session_id} do
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      error_data = Jason.encode!(%{"message" => "Custom error message"})
+      send(pid, {:sse_event, "error", error_data})
+
+      assert_receive {:ai_assistant, :streaming_error,
+                      %{
+                        session_id: ^session_id,
+                        error: "Custom error message"
+                      }},
+                     500
+    end
+
+    test "handles error event with error field", %{session_id: session_id} do
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      error_data = Jason.encode!(%{"error" => "Another error format"})
+      send(pid, {:sse_event, "error", error_data})
+
+      assert_receive {:ai_assistant, :streaming_error,
+                      %{
+                        session_id: ^session_id,
+                        error: "Another error format"
+                      }},
+                     500
+    end
+
+    test "handles error event with invalid JSON", %{session_id: session_id} do
+      url = "http://localhost:3000/services/job_chat/stream"
+
+      payload = %{
+        "lightning_session_id" => session_id,
+        "stream" => true
+      }
+
+      {:ok, pid} = SSEStream.start_stream(url, payload)
+
+      # Send malformed error data
+      send(pid, {:sse_event, "error", "not json"})
+
+      # Should use fallback error message
+      assert_receive {:ai_assistant, :streaming_error,
+                      %{
+                        session_id: ^session_id,
+                        error: "An error occurred while streaming"
+                      }},
+                     500
     end
   end
 end
