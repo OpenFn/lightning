@@ -37,6 +37,7 @@ import {
 } from "#/workflow-diagram/util/viewport";
 
 import { useInspectorOverlap } from "./useInspectorOverlap";
+import { ensureNodePosition } from "#/workflow-diagram/util/ensure-node-position";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -298,6 +299,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         chartCache.current.lastLayout
       );
 
+      // If defaulting positions for multiple nodes,
+      // try to offset them a bit
+      const positionOffsetMap: Record<string, number> = {};
+
       if (layoutId) {
         chartCache.current.lastLayout = layoutId;
         const viewBounds = {
@@ -310,12 +315,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             // during manualLayout. a placeholder wouldn't have position in positions in store
             // hence use the position on the placeholder node
             const isPlaceholder = node.type === "placeholder";
-            return {
+
+            const newNode = {
               ...node,
               position: isPlaceholder
                 ? node.position
-                : workflowPositions[node.id] || { x: 0, y: 0 },
+                : workflowPositions[node.id],
             };
+            ensureNodePosition(
+              newModel,
+              { ...positions, ...workflowPositions },
+              newNode,
+              positionOffsetMap
+            );
+            return newNode;
           });
           setModel({ ...newModel, nodes: nodesWPos });
           chartCache.current.positions = workflowPositions;
@@ -333,8 +346,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         // if isManualLayout, then we use values from store instead
         newModel.nodes.forEach(n => {
           if (isManualLayout && n.type !== "placeholder") {
-            n.position = workflowPositions[n.id] || { x: 0, y: 0 };
+            n.position = workflowPositions[n.id];
           }
+          ensureNodePosition(
+            newModel,
+            { ...positions, ...workflowPositions },
+            n,
+            positionOffsetMap
+          );
         });
         setModel(newModel);
       }

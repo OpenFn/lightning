@@ -34,6 +34,7 @@ import {
   hasXY,
 } from "./util/safe-bounds";
 import { AiAssistantToggle } from "./AiAssistantToggle";
+import { ensureNodePosition } from "./util/ensure-node-position";
 
 const controlButtonStyle = (disabled: boolean) =>
   disabled
@@ -219,51 +220,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // Note that we can't do anything about overlaps
       const positionOffsetMap: Record<string, number> = {};
 
-      const ensureNodePosition = (node: Flow.Node) => {
-        if (!node.position) {
-          // Try and find the first parent node in the tree, and append to that
-          let bestParent;
-          let currentNodeId = node.id;
-          while (currentNodeId && !bestParent) {
-            const edge = newModel.edges.find(e => e.target === currentNodeId);
-            if (edge) {
-              currentNodeId = edge.source;
-
-              const parent =
-                positions[edge.source] ??
-                (fixedPositions && fixedPositions[edge.source]);
-              if (parent) {
-                bestParent = {
-                  id: edge.source,
-                  ...parent,
-                };
-              }
-            } else {
-              break;
-            }
-          }
-          if (bestParent) {
-            if (bestParent.id in positionOffsetMap) {
-              positionOffsetMap[bestParent.id] += 30;
-            } else {
-              positionOffsetMap[bestParent.id] = 0;
-            }
-
-            const offset = positionOffsetMap[bestParent.id];
-            node.position = {
-              x: bestParent.x + offset,
-              y: bestParent.y + 227 /* magic number */ + offset,
-            };
-            return true;
-          } else {
-            console.error(
-              "ERROR: could not auto-calculate position for ",
-              node.id
-            );
-          }
-        }
-      };
-
       if (layoutId) {
         chartCache.current.lastLayout = layoutId;
         const viewBounds = {
@@ -280,7 +236,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
               ...node,
               position: isPlaceholder ? node.position : fixedPositions[node.id],
             };
-            ensureNodePosition(newNode);
+            ensureNodePosition(
+              newModel,
+              { ...positions, ...fixedPositions },
+              newNode,
+              positionOffsetMap
+            );
             return newNode;
           });
           setModel({ ...newModel, nodes: nodesWPos });
@@ -300,7 +261,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           if (n.type !== "placeholder") {
             n.position = fixedPositions[n.id];
           }
-          ensureNodePosition(n);
+          ensureNodePosition(
+            newModel,
+            { ...positions, ...fixedPositions },
+            n,
+            positionOffsetMap
+          );
         });
         setModel(newModel);
       } else if (newModel.nodes.some(n => !hasXY(n))) {
