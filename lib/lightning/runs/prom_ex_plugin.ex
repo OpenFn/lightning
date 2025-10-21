@@ -79,6 +79,9 @@ defmodule Lightning.Runs.PromExPlugin do
     {:ok, run_queue_metrics_period_seconds} =
       opts |> Keyword.fetch(:run_queue_metrics_period_seconds)
 
+    {:ok, unclaimed_run_threshold_seconds} =
+      opts |> Keyword.fetch(:unclaimed_run_threshold_seconds)
+
     [
       stalled_run_metrics(
         stalled_run_threshold_seconds,
@@ -88,7 +91,12 @@ defmodule Lightning.Runs.PromExPlugin do
         run_performance_age_seconds,
         run_queue_metrics_period_seconds
       )
-    ]
+    ] ++
+      project_polling_metrics(
+        Lightning.Config.promex_expensive_metrics_enabled?(),
+        unclaimed_run_threshold_seconds,
+        run_queue_metrics_period_seconds
+      )
   end
 
   defp stalled_run_metrics(threshold_seconds, period_in_seconds) do
@@ -266,6 +274,36 @@ defmodule Lightning.Runs.PromExPlugin do
         where: r.finished_at > ^threshold_time
 
     query |> Repo.aggregate(:count)
+  end
+
+  defp project_polling_metrics(
+         false,
+         _unclaimed_threshold_seconds,
+         _period_in_seconds
+       ) do
+    []
+  end
+
+  defp project_polling_metrics(
+         true,
+         unclaimed_threshold_seconds,
+         period_in_seconds
+       ) do
+    [
+      Polling.build(
+        :lightning_run_project_metrics,
+        period_in_seconds * 1000,
+        {__MODULE__, :project_metrics, [unclaimed_threshold_seconds]},
+        [
+          last_value(
+            @impeded_project_event ++ [:count],
+            description:
+              "The count of projects impeded due to lack of worker capacity"
+          )
+        ],
+        detach_on_error: false
+      )
+    ]
   end
 
   def project_metrics(unclaimed_threshold_seconds) do

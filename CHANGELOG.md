@@ -23,6 +23,8 @@ and this project adheres to
   [#3701](https://github.com/OpenFn/lightning/issues/3701)
 - Delete nodes from Job panel in Collaborative Editor
   [#3702](https://github.com/OpenFn/lightning/issues/3702)
+- Reintroduce the impeded project with hopefully better performance characteristics
+  [#3542](https://github.com/OpenFn/lightning/issues/3542)
 
 ### Changed
 
