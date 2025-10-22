@@ -2330,6 +2330,96 @@ defmodule Lightning.Projects.MergeProjectsTest do
                sandbox_keychain_credential.id,
              "Keychain credential ID should not be the sandbox's credential ID"
     end
+
+    test "preserves credentials when adding new jobs from sandbox with project_credential_id" do
+      # Test the else branch: new jobs from sandbox should keep their credentials
+
+      # Create parent project with credential
+      parent_project = insert(:project, name: "Parent Project")
+      parent_credential = insert(:credential, name: "Salesforce API Key")
+
+      parent_project_credential =
+        insert(:project_credential,
+          project: parent_project,
+          credential: parent_credential
+        )
+
+      # Create parent workflow with one job
+      {parent_workflow, %{:webhook => _parent_trigger, "job_one" => _job_one}} =
+        generate_workflow(
+          [
+            {:webhook, "job_one"}
+          ],
+          %{
+            :workflow => %{name: "data_sync", project: parent_project},
+            "job_one" => %{
+              body: "fn(state => state)",
+              adaptor: "@openfn/language-common@latest"
+            }
+          }
+        )
+
+      # Create sandbox with additional new job that has a credential
+      sandbox_project = insert(:project, name: "Sandbox Project")
+
+      sandbox_project_credential =
+        insert(:project_credential,
+          project: sandbox_project,
+          credential: parent_credential
+        )
+
+      # Sandbox has the original job plus a NEW job with credential
+      {sandbox_workflow,
+       %{
+         :webhook => _sandbox_trigger,
+         "job_one" => _job_one,
+         "new_job" => _new_job
+       }} =
+        generate_workflow(
+          [
+            {:webhook, "job_one"},
+            {"job_one", "new_job"}
+          ],
+          %{
+            :workflow => %{name: "data_sync", project: sandbox_project},
+            "job_one" => %{
+              body: "fn(state => state)",
+              adaptor: "@openfn/language-common@latest"
+            },
+            "new_job" => %{
+              body: "fn(state => ({ ...state, processed: true }))",
+              adaptor: "@openfn/language-http@latest"
+            }
+          }
+        )
+
+      # Update the NEW job in sandbox to have the sandbox credential
+      new_job = Enum.find(sandbox_workflow.jobs, &(&1.name == "new_job"))
+
+      {:ok, _} =
+        Lightning.Jobs.update_job(new_job, %{
+          project_credential_id: sandbox_project_credential.id
+        })
+
+      sandbox_workflow =
+        Repo.preload(sandbox_workflow, [:jobs, :triggers, :edges], force: true)
+
+      # Merge sandbox back to parent
+      result = MergeProjects.merge_workflow(sandbox_workflow, parent_workflow)
+
+      # Find the new job in the result
+      result_new_job = Enum.find(result["jobs"], &(&1["name"] == "new_job"))
+
+      # The new job should KEEP the sandbox's credential ID (not matched to parent job)
+      assert result_new_job["project_credential_id"] ==
+               sandbox_project_credential.id,
+             "New job should keep sandbox credential #{sandbox_project_credential.id}, got #{result_new_job["project_credential_id"]}"
+
+      # It should NOT have the parent's credential (since it's a new job)
+      refute result_new_job["project_credential_id"] ==
+               parent_project_credential.id,
+             "New job should not have parent's credential ID"
+    end
   end
 
   defp find_edge_by_names(workflow, source_name, target_name) do
