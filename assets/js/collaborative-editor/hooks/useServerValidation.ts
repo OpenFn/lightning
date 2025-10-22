@@ -85,9 +85,10 @@ export function useServerValidation<TFormData>(
       // Check if this field exists in the form
       if (fieldName in form.state.values) {
         // Take the first error message from the array (if it exists)
-        const errorMessage = Array.isArray(errorMessages) && errorMessages.length > 0
-          ? errorMessages[0]
-          : undefined;
+        const errorMessage =
+          Array.isArray(errorMessages) && errorMessages.length > 0
+            ? errorMessages[0]
+            : undefined;
 
         form.setFieldMeta(fieldName as any, old => ({
           ...old,

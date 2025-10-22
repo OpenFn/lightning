@@ -35,16 +35,11 @@ export interface NodeErrors {
   triggers: Record<string, Record<string, string[]>>;
 }
 
-export function extractNodeErrors(
-  errors: Record<string, any>
-): NodeErrors {
+export function extractNodeErrors(errors: Record<string, any>): NodeErrors {
   return {
-    jobs:
-      (errors.jobs as Record<string, Record<string, string[]>>) || {},
-    edges:
-      (errors.edges as Record<string, Record<string, string[]>>) || {},
+    jobs: (errors.jobs as Record<string, Record<string, string[]>>) || {},
+    edges: (errors.edges as Record<string, Record<string, string[]>>) || {},
     triggers:
-      (errors.triggers as Record<string, Record<string, string[]>>) ||
-      {},
+      (errors.triggers as Record<string, Record<string, string[]>>) || {},
   };
 }
