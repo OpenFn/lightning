@@ -22,9 +22,15 @@ interface InspectorProps {
     id: string | null;
   };
   onClose: () => void;
+  onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
 }
 
-export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
+export function Inspector({
+  workflow,
+  currentNode,
+  onClose,
+  onOpenRunPanel,
+}: InspectorProps) {
   const { hash, updateHash } = useURLState();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
@@ -60,6 +66,7 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
         key={`job-${currentNode.id}`}
         job={currentNode.node as Workflow.Job}
         onClose={handleClose}
+        onOpenRunPanel={onOpenRunPanel}
       />
     );
   }
@@ -70,6 +77,7 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
         key={`trigger-${currentNode.id}`}
         trigger={currentNode.node as Workflow.Trigger}
         onClose={handleClose}
+        onOpenRunPanel={onOpenRunPanel}
       />
     );
   }

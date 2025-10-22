@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { useIsNewWorkflow } from "../hooks/useSessionContext";
+import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
 import {
   useNodeSelection,
   useWorkflowActions,
@@ -18,13 +18,35 @@ import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDia
 import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";
 import { LeftPanel } from "./left-panel";
+import { ManualRunPanel } from "./ManualRunPanel";
 
-export function WorkflowEditor() {
+interface WorkflowEditorProps {
+  runPanelContext: {
+    jobId?: string;
+    triggerId?: string;
+  } | null;
+  onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
+  onCloseRunPanel: () => void;
+}
+
+export function WorkflowEditor({
+  runPanelContext,
+  onOpenRunPanel,
+  onCloseRunPanel,
+}: WorkflowEditorProps) {
   const { hash, searchParams, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
   const { saveWorkflow } = useWorkflowActions();
+
+  // Get projectId from session context store
+  const project = useProject();
+  const projectId = project?.id;
+
+  // WorkflowId comes from workflow state
+  const workflowState = useWorkflowState(state => state.workflow);
+  const workflowId = workflowState?.id;
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
@@ -123,6 +145,21 @@ export function WorkflowEditor() {
                   workflow={workflow}
                   currentNode={currentNode}
                   onClose={handleCloseInspector}
+                  onOpenRunPanel={onOpenRunPanel}
+                />
+              </div>
+            )}
+
+            {/* Run panel overlays inspector when open */}
+            {workflow && runPanelContext && projectId && workflowId && (
+              <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+                <ManualRunPanel
+                  workflow={workflow}
+                  projectId={projectId}
+                  workflowId={workflowId}
+                  jobId={runPanelContext.jobId ?? undefined}
+                  triggerId={runPanelContext.triggerId ?? undefined}
+                  onClose={onCloseRunPanel}
                 />
               </div>
             )}

@@ -1,16 +1,24 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { useCallback } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
-import { useIsNewWorkflow, useUser } from "../hooks/useSessionContext";
+import {
+  useIsNewWorkflow,
+  usePermissions,
+  useUser,
+} from "../hooks/useSessionContext";
 import {
   useCanSave,
+  useNodeSelection,
   useWorkflowActions,
   useWorkflowEnabled,
+  useWorkflowState,
 } from "../hooks/useWorkflow";
 import { getAvatarInitials } from "../utils/avatar";
 
 import { Breadcrumbs } from "./Breadcrumbs";
+import { Button } from "./Button";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
 import { Switch } from "./inputs/Switch";
 import { Tooltip } from "./Tooltip";
@@ -25,35 +33,6 @@ const userNavigation = [
     icon: "hero-arrow-right-on-rectangle",
   },
 ];
-
-/**
- * Run button component - visible in React DevTools
- * Uses Phoenix LiveView patch navigation
- */
-function RunButton({
-  projectId,
-  workflowId,
-}: {
-  projectId: string;
-  workflowId: string;
-}) {
-  return (
-    <a
-      href={`/projects/${projectId}/w/${workflowId}?m=workflow_input&s=cae544ab-03dc-4ccc-a09c-fb4edb255d7a`}
-      data-phx-link="patch"
-      data-phx-link-state="push"
-      type="button"
-      className="rounded-md text-sm font-semibold shadow-xs
-      phx-submit-loading:opacity-75 inline-block px-3 py-2
-      bg-primary-600 hover:bg-primary-500 text-white
-      focus-visible:outline-2 focus-visible:outline-offset-2
-      focus-visible:outline-primary-600"
-    >
-      Run
-    </a>
-  );
-}
-RunButton.displayName = "RunButton";
 
 /**
  * Save button component - visible in React DevTools
@@ -96,11 +75,19 @@ export function Header({
   children,
   projectId,
   workflowId,
+  onOpenRunPanel,
 }: {
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
+  onOpenRunPanel?: (context: { jobId?: string; triggerId?: string }) => void;
 }) {
+  // URL state management (needed early for handleRunClick)
+  const { updateHash } = useURLState();
+
+  // Node selection
+  const { selectNode } = useNodeSelection();
+
   // Separate queries and commands for proper CQS
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
@@ -108,10 +95,29 @@ export function Header({
   // Get save button state
   const { canSave, tooltipMessage } = useCanSave();
 
+  // Get triggers to check if workflow has any
+  const triggers = useWorkflowState(state => state.triggers);
+  const firstTriggerId = triggers[0]?.id;
+
+  // Permission checks for Run button
+  // Note: can_run_workflow doesn't exist yet in permissions type
+  // For Phase 2, we'll just use can_edit_workflow as a placeholder
+  const permissions = usePermissions();
+  const canRun = permissions?.can_edit_workflow && firstTriggerId;
+
+  const handleRunClick = useCallback(() => {
+    if (firstTriggerId && onOpenRunPanel) {
+      // Select the trigger in the diagram
+      selectNode(firstTriggerId);
+      // Open the run panel
+      onOpenRunPanel({ triggerId: firstTriggerId });
+    }
+  }, [firstTriggerId, onOpenRunPanel, selectNode]);
+
   // Global save shortcut: Ctrl/Cmd+S
   useHotkeys(
     "ctrl+s,meta+s", // Windows/Linux: Ctrl+S, Mac: Cmd+S
-    (event) => {
+    event => {
       event.preventDefault(); // Always prevent browser's "Save Page" dialog
       if (canSave) {
         saveWorkflow(); // Only save when allowed
@@ -128,9 +134,6 @@ export function Header({
   // Session context queries
   const user = useUser();
   const isNewWorkflow = useIsNewWorkflow();
-
-  // URL state management
-  const { updateHash } = useURLState();
 
   // Generate avatar initials from user data
   const avatarInitials = getAvatarInitials(user);
@@ -187,8 +190,25 @@ export function Header({
               <span className="hero-signal-slash w-6 h-6 mr-2 text-red-500"></span>
             </div>
             <div className="relative flex gap-2">
-              {projectId && workflowId && (
-                <RunButton projectId={projectId} workflowId={workflowId} />
+              {projectId && workflowId && firstTriggerId && (
+                <Tooltip
+                  content={
+                    !canRun
+                      ? "You do not have permission to run workflows"
+                      : "Run workflow"
+                  }
+                  side="bottom"
+                >
+                  <span className="inline-block">
+                    <Button
+                      variant="secondary"
+                      onClick={handleRunClick}
+                      disabled={!canRun}
+                    >
+                      Run
+                    </Button>
+                  </span>
+                </Tooltip>
               )}
               <SaveButton
                 canSave={canSave}
