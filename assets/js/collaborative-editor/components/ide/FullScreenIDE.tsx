@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 import {
   Panel,
   PanelGroup,
@@ -30,6 +31,7 @@ interface FullScreenIDEProps {
  * - 3 resizable, collapsible panels (left, center, right)
  * - CollaborativeMonaco editor in center panel
  * - Placeholder content in left and right panels
+ * - Keyboard shortcut (Escape to close)
  *
  * Panel layout persists to localStorage automatically.
  */
@@ -48,6 +50,42 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(true);
   const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
+
+  const { enableScope, disableScope } = useHotkeysContext();
+
+  // Enable/disable ide scope based on whether IDE is open
+  useEffect(() => {
+    enableScope("ide");
+    return () => {
+      disableScope("ide");
+    };
+  }, [enableScope, disableScope]);
+
+  // Handle Escape key to close the IDE
+  // Two-step behavior: first Escape removes focus from Monaco, second closes IDE
+  useHotkeys(
+    "escape",
+    event => {
+      // Check if Monaco editor has focus
+      const activeElement = document.activeElement;
+      const isMonacoFocused = activeElement?.closest(".monaco-editor");
+
+      if (isMonacoFocused) {
+        // First Escape: blur Monaco editor to remove focus
+        (activeElement as HTMLElement)?.blur();
+        event.preventDefault();
+      } else {
+        // Second Escape: close IDE
+        onClose();
+      }
+    },
+    {
+      enabled: true,
+      scopes: ["ide"],
+      enableOnFormTags: true, // Allow Escape even in Monaco editor
+    },
+    [onClose]
+  );
 
   // Sync URL job ID to workflow store selection
   useEffect(() => {
@@ -195,8 +233,10 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
 
               {/* Panel content */}
               {!isLeftCollapsed && (
-                <div className="flex-1 p-4 flex items-center
-                  justify-center">
+                <div
+                  className="flex-1 p-4 flex items-center
+                  justify-center"
+                >
                   <div className="text-center text-gray-500">
                     <p className="text-sm font-medium">
                       Input Picker / AI Assistant
@@ -333,12 +373,12 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
 
               {/* Panel content */}
               {!isRightCollapsed && (
-                <div className="flex-1 p-4 flex items-center
-                  justify-center">
+                <div
+                  className="flex-1 p-4 flex items-center
+                  justify-center"
+                >
                   <div className="text-center text-gray-500">
-                    <p className="text-sm font-medium">
-                      Run / Logs / Step I/O
-                    </p>
+                    <p className="text-sm font-medium">Run / Logs / Step I/O</p>
                     <p className="text-xs mt-1">Coming Soon</p>
                   </div>
                 </div>
