@@ -26,6 +26,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed credential preservation during sandbox workflow merge - credentials are
+  now correctly maintained when merging sandboxes back to parent projects
+  [#3782](https://github.com/OpenFn/lightning/issues/3782)
+
 ## [2.14.12] - 2025-10-21
 
 ## [2.14.12-pre1] - 2025-10-21
