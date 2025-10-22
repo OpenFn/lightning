@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-133B2930.js"></script>
+    <script defer src="dist/sidebar_items-D524B83C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -142,6 +142,17 @@ or all jobs in a given project.</p></div>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#workflows_for/1" data-no-tooltip="" translate="no">workflows_for(user)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns all workflows accessible to a user, via their projects
+or all workflows in a given project.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -166,7 +177,7 @@ or all jobs in a given project.</p></div>
       <h1 class="signature" translate="no">enabled_cron_jobs_by_edge()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L41" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L65" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -195,7 +206,7 @@ service.</p>
       <h1 class="signature" translate="no">jobs_for(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L22" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L46" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -226,7 +237,7 @@ or all jobs in a given project.</p>
       <h1 class="signature" translate="no">unused_snapshots()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L60" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L84" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -242,6 +253,37 @@ or all jobs in a given project.</p>
       </div>
 
 <p>Returns snapshots that are no longer being used by any workflow, work order, run, or step.</p><p>A snapshot is considered unused if:</p><ul><li>It's not the current version of any workflow (lock_version doesn't match workflow's lock_version)</li><li>It's not referenced by any work order</li><li>It's not referenced by any run</li><li>It's not referenced by any step</li></ul>
+  </section>
+</section>
+<section class="detail" id="workflows_for/1">
+
+  <div class="detail-header">
+    <a href="#workflows_for/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">workflows_for(user)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L22" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> workflows_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+          <pre translate="no"><span class="attribute">@spec</span> workflows_for(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Returns all workflows accessible to a user, via their projects
+or all workflows in a given project.</p>
   </section>
 </section>
 

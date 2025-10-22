@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-133B2930.js"></script>
+    <script defer src="dist/sidebar_items-D524B83C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -134,6 +134,56 @@ the body specifically.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#filter_log_lines/2" data-no-tooltip="" translate="no">filter_log_lines(query, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Filter log lines by various criteria</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#filter_runs/2" data-no-tooltip="" translate="no">filter_runs(query, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Filter runs by various criteria</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#filter_runs_by_date/2" data-no-tooltip="" translate="no">filter_runs_by_date(query, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Filter runs by inserted_at date range</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#filter_work_orders/2" data-no-tooltip="" translate="no">filter_work_orders(query, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Filter work orders by various criteria</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#filter_work_orders_by_date/2" data-no-tooltip="" translate="no">filter_work_orders_by_date(query, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Filter work orders by date range</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#last_n_for_job/2" data-no-tooltip="" translate="no">last_n_for_job(job_id, limit)</a>
 
       </div>
@@ -158,6 +208,26 @@ the body specifically.</p></div>
 
         <div class="summary-synopsis"><p>The last successful step for a job, used in scheduler to enable downstream runs
 to access a previous run's state</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#log_lines_for/1" data-no-tooltip="" translate="no">log_lines_for(user)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Log lines for a specific user, filtered by their accessible projects</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#runs_for/1" data-no-tooltip="" translate="no">runs_for(user)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Runs for a specific project, or all runs available to the requesting user</p></div>
 
     </div>
 
@@ -193,9 +263,29 @@ to access a previous run's state</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#validate_datetime_params/2" data-no-tooltip="" translate="no">validate_datetime_params(params, keys)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Validate datetime parameters for filtering</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#wipe_dataclips/1" data-no-tooltip="" translate="no">wipe_dataclips(query \\ Dataclip)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#work_orders_for/1" data-no-tooltip="" translate="no">work_orders_for(user)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Work orders for a specific project, or all runs available to the requesting user</p></div>
 
     </div>
 
@@ -223,7 +313,7 @@ to access a previous run's state</p></div>
       <h1 class="signature" translate="no">any_step()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L43" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L204" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -246,7 +336,7 @@ step is all the information we need. As in, &quot;Does this job have any steps?&
       <h1 class="signature" translate="no">dataclip_with_body()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L76" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L237" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -259,6 +349,146 @@ step is all the information we need. As in, &quot;Does this job have any steps?&
 the body specifically.</p>
   </section>
 </section>
+<section class="detail" id="filter_log_lines/2">
+
+  <div class="detail-header">
+    <a href="#filter_log_lines/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">filter_log_lines(query, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L388" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> filter_log_lines(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Filter log lines by various criteria</p>
+  </section>
+</section>
+<section class="detail" id="filter_runs/2">
+
+  <div class="detail-header">
+    <a href="#filter_runs/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">filter_runs(query, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L119" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> filter_runs(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Filter runs by various criteria</p>
+  </section>
+</section>
+<section class="detail" id="filter_runs_by_date/2">
+
+  <div class="detail-header">
+    <a href="#filter_runs_by_date/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">filter_runs_by_date(query, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L107" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> filter_runs_by_date(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Filter runs by inserted_at date range</p>
+  </section>
+</section>
+<section class="detail" id="filter_work_orders/2">
+
+  <div class="detail-header">
+    <a href="#filter_work_orders/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">filter_work_orders(query, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L305" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> filter_work_orders(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Filter work orders by various criteria</p>
+  </section>
+</section>
+<section class="detail" id="filter_work_orders_by_date/2">
+
+  <div class="detail-header">
+    <a href="#filter_work_orders_by_date/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">filter_work_orders_by_date(query, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L293" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> filter_work_orders_by_date(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Filter work orders by date range</p>
+  </section>
+</section>
 <section class="detail" id="last_n_for_job/2">
 
   <div class="detail-header">
@@ -269,7 +499,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">last_n_for_job(job_id, limit)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L78" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L239" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -291,7 +521,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">last_step_for_job(job)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L31" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L192" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -319,7 +549,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">last_successful_step_for_job(job)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L228" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -338,6 +568,64 @@ the body specifically.</p>
 to access a previous run's state</p>
   </section>
 </section>
+<section class="detail" id="log_lines_for/1">
+
+  <div class="detail-header">
+    <a href="#log_lines_for/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">log_lines_for(user)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L367" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> log_lines_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Log lines for a specific user, filtered by their accessible projects</p>
+  </section>
+</section>
+<section class="detail" id="runs_for/1">
+
+  <div class="detail-header">
+    <a href="#runs_for/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">runs_for(user)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L47" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> runs_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+          <pre translate="no"><span class="attribute">@spec</span> runs_for(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Runs for a specific project, or all runs available to the requesting user</p>
+  </section>
+</section>
 <section class="detail" id="select_as_input_text/1">
 
   <div class="detail-header">
@@ -348,7 +636,7 @@ to access a previous run's state</p>
       <h1 class="signature" translate="no">select_as_input_text(query)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L98" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L259" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -372,7 +660,7 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
       <h1 class="signature" translate="no">steps_for(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L16" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L177" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -400,7 +688,7 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
       <h1 class="signature" translate="no">steps_with_reason(query, exit_reason)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L58" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L219" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -418,6 +706,34 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
 <p>The last step for a job for a particular exit reason, used in scheduler</p>
   </section>
 </section>
+<section class="detail" id="validate_datetime_params/2">
+
+  <div class="detail-header">
+    <a href="#validate_datetime_params/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">validate_datetime_params(params, keys)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L80" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> validate_datetime_params(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()]) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}</pre>
+
+      </div>
+
+<p>Validate datetime parameters for filtering</p>
+  </section>
+</section>
 <section class="detail" id="wipe_dataclips/1">
 
     <span id="wipe_dataclips/0"></span>
@@ -430,7 +746,7 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
       <h1 class="signature" translate="no">wipe_dataclips(query \\ Dataclip)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L117" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L278" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -440,6 +756,36 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="work_orders_for/1">
+
+  <div class="detail-header">
+    <a href="#work_orders_for/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">work_orders_for(user)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L19" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> work_orders_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+          <pre translate="no"><span class="attribute">@spec</span> work_orders_for(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Work orders for a specific project, or all runs available to the requesting user</p>
   </section>
 </section>
 
