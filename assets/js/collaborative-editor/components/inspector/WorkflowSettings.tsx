@@ -27,8 +27,8 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
       name: workflow.name,
       lock_version: workflow.lock_version,
       deleted_at: workflow.deleted_at,
-      // Virtual fields for future use (not yet in Y.Doc)
       concurrency: workflow.concurrency,
+      // Virtual field for future use (not yet in Y.Doc)
       enable_job_logs: true,
     }),
     [workflow]
@@ -39,10 +39,11 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
     listeners: {
       onChange: ({ formApi }) => {
         // Form → Y.Doc: Update workflow immediately on change
-        const { name } = formApi.state.values;
+        const { name, concurrency } = formApi.state.values;
         updateWorkflow({
           name,
-          // Note: concurrency and enable_job_logs will be no-ops
+          concurrency,
+          // Note: enable_job_logs will be no-ops
           // until Y.Doc type is updated
         });
       },
@@ -62,7 +63,7 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
         }
       });
     },
-    ["name"]
+    ["name", "concurrency"]
   );
 
   // Reset form when workflow changes

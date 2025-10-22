@@ -13,7 +13,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   The Y.Doc contains five top-level collections:
 
   - `workflow` (Map): Core workflow metadata (id, name, lock_version,
-    deleted_at)
+    deleted_at, concurrency)
   - `jobs` (Array): Array of job objects with Y.Text body field
   - `edges` (Array): Array of edge objects connecting jobs/triggers
   - `triggers` (Array): Array of trigger objects (webhook, cron, kafka)
@@ -34,7 +34,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   Writes a workflow's data into a Y.Doc.
 
   This initializes the Y.Doc structure with:
-  - `workflow` map: Core workflow metadata (id, name, lock_version, deleted_at)
+  - `workflow` map: Core workflow metadata (id, name, lock_version, deleted_at,
+    concurrency)
   - `jobs` array: Array of job objects
   - `edges` array: Array of edge objects
   - `triggers` array: Array of trigger objects
@@ -108,12 +109,22 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     id = Yex.Map.fetch!(workflow_map, "id")
     name = Yex.Map.fetch!(workflow_map, "name")
 
+    # Y.js numbers are floats - convert to integer for database
+    concurrency =
+      case Yex.Map.fetch(workflow_map, "concurrency") do
+        {:ok, value} when is_float(value) -> trunc(value)
+        {:ok, value} when is_integer(value) -> value
+        {:ok, nil} -> nil
+        :error -> nil
+      end
+
     positions = extract_positions(positions_map)
 
     # Build the map for save_workflow/2
     %{
       "id" => id,
       "name" => name,
+      "concurrency" => concurrency,
       "jobs" => extract_jobs(jobs_array),
       "edges" => extract_edges(edges_array),
       "triggers" => extract_triggers(triggers_array),
