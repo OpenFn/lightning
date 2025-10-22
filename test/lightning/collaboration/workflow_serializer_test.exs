@@ -504,6 +504,70 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
     end
   end
 
+  describe "concurrency field" do
+    test "serializes concurrency to Y.Doc" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", concurrency: 10)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      assert Yex.Map.fetch!(workflow_map, "concurrency") == 10
+    end
+
+    test "handles concurrency field with float-to-integer conversion" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", concurrency: 10)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      # Serialize
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Y.js stores numbers as floats, so manually set it as float to simulate
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.set(workflow_map, "concurrency", 10.0)
+
+      # Deserialize - should convert float to integer
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert extracted["concurrency"] == 10
+      assert is_integer(extracted["concurrency"])
+    end
+
+    test "handles nil concurrency field" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", concurrency: nil)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert is_nil(extracted["concurrency"])
+    end
+
+    test "concurrency is included in deserialized data" do
+      workflow =
+        insert(:workflow, name: "Test", concurrency: 5)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # Concurrency should be in the deserialized data
+      assert Map.has_key?(extracted, "concurrency")
+      assert extracted["concurrency"] == 5
+    end
+  end
+
   describe "deserialize_from_ydoc/2" do
     test "extracts workflow data from Y.Doc" do
       # Create a workflow with all components
