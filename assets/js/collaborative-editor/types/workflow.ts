@@ -65,6 +65,7 @@ export namespace Workflow {
     condition_expression?: string;
     condition_label?: string;
     enabled?: boolean;
+    errors?: Record<string, string[]>;
   }
 
   export type NodeType = "job" | "trigger" | "edge";
