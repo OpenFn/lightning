@@ -8,6 +8,7 @@ import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
+import { useURLState } from "#/react/lib/use-url-state";
 
 import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
 import { usePermissions } from "../../hooks/useSessionContext";
@@ -152,6 +153,10 @@ export function JobInspector({ job, renderFooter }: JobInspectorProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // URL state for Edit button
+  const { searchParams, updateSearchParams } = useURLState();
+  const isIDEOpen = searchParams.get("editor") === "open";
+
   // Parse initial adaptor value to get separate package and version
   const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
   const { package: initialAdaptorPackage } = resolveAdaptor(initialAdaptor);
@@ -260,26 +265,51 @@ export function JobInspector({ job, renderFooter }: JobInspectorProps) {
     }
   }, [job.id, removeJobAndClearSelection]);
 
-  // Pass delete button to parent footer via renderFooter callback
+  // Pass delete and edit buttons to parent footer via renderFooter callback
   useEffect(() => {
     if (renderFooter && permissions?.can_edit_workflow) {
-      const deleteButton = (
-        <Tooltip
-          content={validation.disableReason || "Delete this job"}
-          side="top"
-        >
-          <span className="inline-block">
-            <Button
-              variant="danger"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              disabled={isDeleting || !validation.canDelete}
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </span>
-        </Tooltip>
+      const buttons = (
+        <>
+          <Tooltip
+            content={validation.disableReason || "Delete this job"}
+            side="top"
+          >
+            <span className="inline-block">
+              <Button
+                variant="danger"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={isDeleting || !validation.canDelete}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </span>
+          </Tooltip>
+
+          <Tooltip
+            content={
+              isIDEOpen
+                ? "IDE is already open"
+                : "Open full-screen code editor"
+            }
+            side="top"
+          >
+            <span className="inline-block ml-4">
+              <Button
+                variant="primary"
+                onClick={() => updateSearchParams({ editor: "open" })}
+                disabled={isIDEOpen}
+              >
+                <span
+                  className="hero-code-bracket size-4 inline-block mr-1"
+                  aria-hidden="true"
+                />
+                Edit
+              </Button>
+            </span>
+          </Tooltip>
+        </>
       );
-      renderFooter(deleteButton);
+      renderFooter(buttons);
     }
 
     // Cleanup: remove button when component unmounts
@@ -294,6 +324,8 @@ export function JobInspector({ job, renderFooter }: JobInspectorProps) {
     validation.disableReason,
     validation.canDelete,
     isDeleting,
+    isIDEOpen,
+    updateSearchParams,
   ]);
 
   return (
