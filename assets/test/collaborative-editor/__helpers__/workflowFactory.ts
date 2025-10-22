@@ -26,6 +26,8 @@ export interface CreateWorkflowInput {
       name: string;
       adaptor: string;
       body?: string;
+      project_credential_id?: string | null;
+      keychain_credential_id?: string | null;
     }
   >;
   triggers?: Record<
@@ -81,6 +83,9 @@ export function createWorkflowYDoc(config: CreateWorkflowInput): Y.Doc {
       } else {
         jobMap.set("body", new Y.Text(""));
       }
+      // Set credential fields explicitly - default to null if not provided
+      jobMap.set("project_credential_id", job.project_credential_id ?? null);
+      jobMap.set("keychain_credential_id", job.keychain_credential_id ?? null);
       jobsArray.push([jobMap]);
     });
   }

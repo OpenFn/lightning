@@ -4867,6 +4867,56 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert updated_user.preferences["existing_pref"] == "value"
       assert updated_user.preferences["another_setting"] == false
     end
+
+    test "shows collaborative editor toggle when creating new workflow with experimental features",
+         %{
+           conn: conn,
+           user: user,
+           project: project
+         } do
+      # Enable experimental features
+      user_with_experimental =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      {:ok, view, html} =
+        conn
+        |> log_in_user(user_with_experimental)
+        |> live(~p"/projects/#{project.id}/w/new")
+
+      # Should show the beaker icon toggle even on new workflow page
+      assert has_element?(
+               view,
+               "a[aria-label*='collaborative editor (experimental)']"
+             )
+
+      # Should have correct navigation link to new workflow collaborative editor
+      assert has_element?(
+               view,
+               "a[href='/projects/#{project.id}/w/new/collaborate']"
+             )
+
+      # Should have beaker icon
+      assert html =~ "hero-beaker"
+    end
+
+    test "hides collaborative editor toggle when creating new workflow without experimental features",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new")
+
+      # Should not show the toggle without experimental features
+      refute has_element?(
+               view,
+               "a[aria-label*='collaborative editor (experimental)']"
+             )
+    end
   end
 
   defp stub_apollo_unavailable(_context) do

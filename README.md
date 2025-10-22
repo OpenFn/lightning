@@ -199,11 +199,21 @@ docker start lightning-postgres
 We use [asdf](https://github.com/asdf-vm/asdf) to configure our local
 environments. Included in the repo is a `.tool-versions` file that is read by
 asdf in order to dynamically make the specified versions of Elixir and Erlang
-available. You'll need asdf plugins for
-[Erlang](https://github.com/asdf-vm/asdf-erlang),
-[NodeJs](https://github.com/asdf-vm/asdf-nodejs)
-[Elixir](https://github.com/asdf-vm/asdf-elixir) and
-[k6](https://github.com/grimoh/asdf-k6).
+available.
+
+You'll need to install asdf plugins for Erlang, NodeJs, Elixir, and k6.
+**Important**: Before installing these plugins, make sure to follow the
+prerequisite installation steps for each plugin (linked below), as they often
+require system dependencies to be installed first:
+
+- [Erlang](https://github.com/asdf-vm/asdf-erlang) - **Follow the "Before asdf
+  install" section**
+- [NodeJs](https://github.com/asdf-vm/asdf-nodejs)
+- [Elixir](https://github.com/asdf-vm/asdf-elixir)
+- [k6](https://github.com/grimoh/asdf-k6)
+
+Then follow the installation instructions for each plugin from their respective
+documentation pages.
 
 We use [libsodium](https://doc.libsodium.org/) for encoding values as required
 by the
