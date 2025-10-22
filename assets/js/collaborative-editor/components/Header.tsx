@@ -186,7 +186,7 @@ export function Header({
             >
               <span className="hero-signal-slash w-6 h-6 mr-2 text-red-500"></span>
             </div>
-            <div className="relative">
+            <div className="relative flex gap-2">
               {projectId && workflowId && (
                 <RunButton projectId={projectId} workflowId={workflowId} />
               )}

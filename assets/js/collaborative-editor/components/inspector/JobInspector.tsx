@@ -5,6 +5,7 @@ import { usePermissions } from "../../hooks/useSessionContext";
 import { useWorkflowActions } from "../../hooks/useWorkflow";
 import { notifications } from "../../lib/notifications";
 import type { Workflow } from "../../types/workflow";
+import { useURLState } from "#/react/lib/use-url-state";
 import { AlertDialog } from "../AlertDialog";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
@@ -32,6 +33,10 @@ export function JobInspector({ job, onClose }: JobInspectorProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // URL state for Edit button
+  const { searchParams, updateSearchParams } = useURLState();
+  const isIDEOpen = searchParams.get("editor") === "open";
+
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
     try {
@@ -52,9 +57,31 @@ export function JobInspector({ job, onClose }: JobInspectorProps) {
     }
   }, [job.id, removeJobAndClearSelection]);
 
-  // Build footer with delete button (only if user has permission)
+  // Build footer with delete and edit buttons (only if user has permission)
   const footer = permissions?.can_edit_workflow ? (
     <InspectorFooter
+      leftButtons={
+        <Tooltip
+          content={
+            isIDEOpen ? "IDE is already open" : "Open full-screen code editor"
+          }
+          side="top"
+        >
+          <span className="inline-block">
+            <Button
+              variant="primary"
+              onClick={() => updateSearchParams({ editor: "open" })}
+              disabled={isIDEOpen}
+            >
+              <span
+                className="hero-code-bracket size-4 inline-block mr-1"
+                aria-hidden="true"
+              />
+              Edit
+            </Button>
+          </span>
+        </Tooltip>
+      }
       rightButtons={
         <Tooltip content={validation.disableReason || "Delete this job"}>
           <span className="inline-block">
