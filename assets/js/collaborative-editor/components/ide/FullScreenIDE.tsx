@@ -42,9 +42,11 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
   const { canSave, tooltipMessage } = useCanSave();
 
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
+  const centerPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
 
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(true);
+  const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
 
   // Sync URL job ID to workflow store selection
@@ -83,6 +85,40 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
     );
   }
 
+  // Check how many panels are open
+  const openPanelCount =
+    (!isLeftCollapsed ? 1 : 0) +
+    (!isCenterCollapsed ? 1 : 0) +
+    (!isRightCollapsed ? 1 : 0);
+
+  // Toggle handlers for panel collapse/expand
+  const toggleLeftPanel = () => {
+    if (!isLeftCollapsed && openPanelCount === 1) return;
+    if (isLeftCollapsed) {
+      leftPanelRef.current?.expand();
+    } else {
+      leftPanelRef.current?.collapse();
+    }
+  };
+
+  const toggleCenterPanel = () => {
+    if (!isCenterCollapsed && openPanelCount === 1) return;
+    if (isCenterCollapsed) {
+      centerPanelRef.current?.expand();
+    } else {
+      centerPanelRef.current?.collapse();
+    }
+  };
+
+  const toggleRightPanel = () => {
+    if (!isRightCollapsed && openPanelCount === 1) return;
+    if (isRightCollapsed) {
+      rightPanelRef.current?.expand();
+    } else {
+      rightPanelRef.current?.collapse();
+    }
+  };
+
   // Handler for Save button
   const handleSave = () => {
     void saveWorkflow();
@@ -115,9 +151,8 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
           {/* Left Panel - Placeholder for Input Picker / AI Assistant */}
           <Panel
             ref={leftPanelRef}
-            defaultSize={0}
-            minSize={15}
-            maxSize={40}
+            defaultSize={1}
+            minSize={5}
             collapsible
             collapsedSize={1}
             onCollapse={() => setIsLeftCollapsed(true)}
@@ -131,12 +166,31 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
                   isLeftCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <h3
-                  className="text-xs font-medium text-gray-400
-                  uppercase tracking-wide px-3 py-2"
-                >
-                  Input
-                </h3>
+                <div className="flex items-center justify-between px-3 py-2">
+                  <button
+                    onClick={toggleLeftPanel}
+                    className="text-xs font-medium text-gray-400
+                      uppercase tracking-wide hover:text-gray-600
+                      transition-colors cursor-pointer"
+                  >
+                    Input
+                  </button>
+                  {!isLeftCollapsed && (
+                    <button
+                      onClick={toggleLeftPanel}
+                      disabled={openPanelCount === 1}
+                      className="text-gray-400 hover:text-gray-600
+                        disabled:opacity-30 disabled:cursor-not-allowed
+                        transition-colors"
+                      aria-label="Collapse left panel"
+                    >
+                      <span
+                        className="hero-chevron-left size-3"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Panel content */}
@@ -161,35 +215,68 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
           />
 
           {/* Center Panel - CollaborativeMonaco Editor */}
-          <Panel minSize={40} className="bg-white">
+          <Panel
+            ref={centerPanelRef}
+            defaultSize={100}
+            minSize={15}
+            collapsible
+            collapsedSize={1}
+            onCollapse={() => setIsCenterCollapsed(true)}
+            onExpand={() => setIsCenterCollapsed(false)}
+            className="bg-white"
+          >
             <div className="h-full flex flex-col">
               {/* Panel heading */}
-              <div className="shrink-0">
-                <h3
-                  className="text-xs font-medium text-gray-400
-                  uppercase tracking-wide px-3 py-2 border-b
-                  border-gray-100"
-                >
-                  Code
-                </h3>
+              <div
+                className={`shrink-0 border-b border-gray-100 transition-transform ${
+                  isCenterCollapsed ? "rotate-90" : ""
+                }`}
+              >
+                <div className="flex items-center justify-between px-3 py-2">
+                  <button
+                    onClick={toggleCenterPanel}
+                    className="text-xs font-medium text-gray-400
+                      uppercase tracking-wide hover:text-gray-600
+                      transition-colors cursor-pointer"
+                  >
+                    Code
+                  </button>
+                  {!isCenterCollapsed && (
+                    <button
+                      onClick={toggleCenterPanel}
+                      disabled={openPanelCount === 1}
+                      className="text-gray-400 hover:text-gray-600
+                        disabled:opacity-30 disabled:cursor-not-allowed
+                        transition-colors"
+                      aria-label="Collapse code panel"
+                    >
+                      <span
+                        className="hero-chevron-down size-3"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Editor */}
-              <div className="flex-1 overflow-hidden">
-                <CollaborativeMonaco
-                  ytext={currentJobYText}
-                  awareness={awareness}
-                  adaptor={currentJob.adaptor || "common"}
-                  disabled={false}
-                  className="h-full w-full"
-                  options={{
-                    automaticLayout: true,
-                    minimap: { enabled: true },
-                    lineNumbers: "on",
-                    wordWrap: "on",
-                  }}
-                />
-              </div>
+              {!isCenterCollapsed && (
+                <div className="flex-1 overflow-hidden">
+                  <CollaborativeMonaco
+                    ytext={currentJobYText}
+                    awareness={awareness}
+                    adaptor={currentJob.adaptor || "common"}
+                    disabled={false}
+                    className="h-full w-full"
+                    options={{
+                      automaticLayout: true,
+                      minimap: { enabled: true },
+                      lineNumbers: "on",
+                      wordWrap: "on",
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </Panel>
 
@@ -202,9 +289,8 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
           {/* Right Panel - Placeholder for Run / Logs / Step I/O */}
           <Panel
             ref={rightPanelRef}
-            defaultSize={0}
-            minSize={20}
-            maxSize={50}
+            defaultSize={1}
+            minSize={5}
             collapsible
             collapsedSize={1}
             onCollapse={() => setIsRightCollapsed(true)}
@@ -218,12 +304,31 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
                   isRightCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <h3
-                  className="text-xs font-medium text-gray-400
-                  uppercase tracking-wide px-3 py-2"
-                >
-                  Output
-                </h3>
+                <div className="flex items-center justify-between px-3 py-2">
+                  <button
+                    onClick={toggleRightPanel}
+                    className="text-xs font-medium text-gray-400
+                      uppercase tracking-wide hover:text-gray-600
+                      transition-colors cursor-pointer"
+                  >
+                    Output
+                  </button>
+                  {!isRightCollapsed && (
+                    <button
+                      onClick={toggleRightPanel}
+                      disabled={openPanelCount === 1}
+                      className="text-gray-400 hover:text-gray-600
+                        disabled:opacity-30 disabled:cursor-not-allowed
+                        transition-colors"
+                      aria-label="Collapse right panel"
+                    >
+                      <span
+                        className="hero-chevron-right size-3"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Panel content */}
