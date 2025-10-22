@@ -467,6 +467,7 @@ defmodule Lightning.Projects.MergeProjects do
     |> stringify_keys()
     |> Map.merge(%{
       "id" => target_workflow.id,
+      "lock_version" => target_workflow.lock_version,
       "positions" => merged_positions,
       "jobs" => merged_jobs,
       "triggers" => merged_triggers,
