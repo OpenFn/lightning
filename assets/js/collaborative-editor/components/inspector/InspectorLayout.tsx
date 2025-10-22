@@ -86,11 +86,7 @@ export function InspectorLayout({
         </div>
 
         {/* Footer - only render if provided */}
-        {footer && (
-          <div className="flex shrink-0 justify-end px-4 py-4 gap-4">
-            {footer}
-          </div>
-        )}
+        {footer && <div className="shrink-0 px-4 py-4">{footer}</div>}
       </div>
     </div>
   );

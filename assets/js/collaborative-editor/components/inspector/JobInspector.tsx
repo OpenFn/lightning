@@ -60,43 +60,40 @@ export function JobInspector({ job, onClose }: JobInspectorProps) {
   // Build footer with delete and edit buttons (only if user has permission)
   const footer = permissions?.can_edit_workflow ? (
     <InspectorFooter
+      leftButtons={
+        <Tooltip
+          content={
+            isIDEOpen ? "IDE is already open" : "Open full-screen code editor"
+          }
+          side="top"
+        >
+          <span className="inline-block">
+            <Button
+              variant="primary"
+              onClick={() => updateSearchParams({ editor: "open" })}
+              disabled={isIDEOpen}
+            >
+              <span
+                className="hero-code-bracket size-4 inline-block mr-1"
+                aria-hidden="true"
+              />
+              Edit
+            </Button>
+          </span>
+        </Tooltip>
+      }
       rightButtons={
-        <>
-          <Tooltip content={validation.disableReason || "Delete this job"}>
-            <span className="inline-block">
-              <Button
-                variant="danger"
-                onClick={() => setIsDeleteDialogOpen(true)}
-                disabled={!validation.canDelete || isDeleting}
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </span>
-          </Tooltip>
-
-          <Tooltip
-            content={
-              isIDEOpen
-                ? "IDE is already open"
-                : "Open full-screen code editor"
-            }
-            side="top"
-          >
-            <span className="inline-block ml-4">
-              <Button
-                variant="primary"
-                onClick={() => updateSearchParams({ editor: "open" })}
-                disabled={isIDEOpen}
-              >
-                <span
-                  className="hero-code-bracket size-4 inline-block mr-1"
-                  aria-hidden="true"
-                />
-                Edit
-              </Button>
-            </span>
-          </Tooltip>
-        </>
+        <Tooltip content={validation.disableReason || "Delete this job"}>
+          <span className="inline-block">
+            <Button
+              variant="danger"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={!validation.canDelete || isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </span>
+        </Tooltip>
       }
     />
   ) : undefined;
