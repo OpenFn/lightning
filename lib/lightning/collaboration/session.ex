@@ -18,6 +18,8 @@ defmodule Lightning.Collaboration.Session do
   """
   use GenServer, restart: :temporary
 
+  import LightningWeb.CoreComponents, only: [translate_error: 1]
+
   alias Lightning.Accounts.User
   alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.WorkflowSerializer
@@ -560,57 +562,66 @@ defmodule Lightning.Collaboration.Session do
   # Format changeset errors into nested structure for Y.Doc
   #
   # Examples:
-  #   %{name: ["can't be blank"]} -> %{"name" => "can't be blank"}
-  #   %{jobs: [%{name: ["too long"]}]} -> %{"jobs" => %{"job-id" => %{"name" => "too long"}}}
+  #   %{name: ["can't be blank"]} -> %{"name" => ["can't be blank"]}
+  #   %{jobs: [%{name: ["too long"]}]} -> %{"jobs" => %{"job-id" => %{"name" => ["too long"]}}}
   #
-  # Note: Takes first error message only for simplicity
+  # Note: Preserves error messages as lists for consistency with Ecto changeset format
   # Inspired by traverse_provision_errors in provisioning_json.ex
   defp format_changeset_errors_for_ydoc(changeset) do
-    changeset.errors
-    |> Enum.reverse()
-    |> merge_keyword_keys()
-    |> merge_related_keys(changeset)
-    |> convert_nested_maps_to_yjs()
-    |> dbg
-  end
-
-  # Convert nested maps (but not the top-level map) to Y.js compatible MapPrelim
-  defp convert_nested_maps_to_yjs(errors_map) when is_map(errors_map) do
-    Map.new(errors_map, fn {key, value} ->
+    changeset
+    |> extract_changeset_errors()
+    |> Map.new(fn {key, value} ->
       {key, convert_to_yjs_value(value)}
     end)
   end
 
+  defp extract_changeset_errors(changeset) do
+    changeset.errors
+    |> Enum.reverse()
+    |> merge_keyword_keys()
+    |> merge_related_keys(changeset)
+  end
+
   defp merge_keyword_keys(keyword_list) do
     Enum.reduce(keyword_list, %{}, fn {key, val}, acc ->
-      # Translate error tuple to string and take first error if multiple
-      val = val |> translate_error()
-      Map.put(acc, key, val)
+      val = translate_error(val)
+      Map.update(acc, key, [val], &[val | &1])
     end)
   end
 
-  defp merge_related_keys(map, %Ecto.Changeset{changes: changes}) do
-    Enum.reduce([:jobs, :triggers, :edges], map, fn
+  defp merge_related_keys(map, %Ecto.Changeset{
+         changes: changes,
+         data: %schema_module{}
+       }) do
+    fields =
+      schema_module.__schema__(:associations) ++
+        schema_module.__schema__(:embeds)
+
+    Enum.reduce(fields, map, fn
+      field, acc when field in [:jobs, :triggers, :edges] ->
+        traverse_field_errors(acc, changes, field, fn
+          field_changeset ->
+            Ecto.Changeset.get_field(field_changeset, :id)
+        end)
+
       field, acc ->
-        traverse_field_errors(acc, changes, field)
+        traverse_field_errors(acc, changes, field, fn _ -> field end)
     end)
   end
 
-  defp traverse_field_errors(acc, changes, field) do
+  defp traverse_field_errors(acc, changes, field, child_name_func)
+       when is_function(child_name_func, 1) do
     changesets =
       case Map.get(changes, field) do
         %{} = change ->
           [change]
 
-        changes when is_list(changes) ->
+        changes ->
           changes
-
-        _ ->
-          nil
       end
 
     if changesets do
-      child = traverse_nested_changesets(changesets)
+      child = traverse_nested_changesets(changesets, child_name_func)
 
       if child == %{} do
         acc
@@ -622,23 +633,16 @@ defmodule Lightning.Collaboration.Session do
     end
   end
 
-  defp traverse_nested_changesets(changesets) do
+  defp traverse_nested_changesets(changesets, child_name_func) do
     Enum.reduce(changesets, %{}, fn changeset, acc ->
-      child = format_changeset_errors_for_ydoc(changeset)
+      child = extract_changeset_errors(changeset)
 
       if child == %{} do
         acc
       else
-        child_name = changeset |> Ecto.Changeset.get_field(:id) |> to_string()
+        child_name = changeset |> child_name_func.() |> to_string()
         Map.put(acc, child_name, child)
       end
-    end)
-  end
-
-  # Translate error tuple to string (simplified version)
-  defp translate_error({msg, opts}) do
-    Enum.reduce(opts, msg, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", to_string(value))
     end)
   end
 
@@ -649,6 +653,11 @@ defmodule Lightning.Collaboration.Session do
         {to_string(key), convert_to_yjs_value(val)}
       end)
     )
+  end
+
+  # Convert lists to Y.js compatible ArrayPrelim
+  defp convert_to_yjs_value(value) when is_list(value) do
+    Yex.ArrayPrelim.from(Enum.map(value, &convert_to_yjs_value/1))
   end
 
   defp convert_to_yjs_value(value), do: value

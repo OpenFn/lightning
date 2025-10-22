@@ -444,7 +444,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Verify error was written to Y.Doc
       errors_map = Yex.Doc.get_map(doc, "errors")
       ydoc_errors = Yex.Map.to_json(errors_map)
-      assert ydoc_errors["name"] =~ "can't be blank"
+      assert is_list(ydoc_errors["name"])
+      assert "This field can't be blank." in ydoc_errors["name"]
     end
 
     test "clears Y.Doc errors after successful save",
@@ -500,18 +501,21 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "save_workflow", %{})
       assert_reply ref, :error, %{type: "validation_error"}
 
-      # Check job error in Y.Doc with proper key format
+      # Check job error in Y.Doc with nested structure
       errors_map = Yex.Doc.get_map(doc, "errors")
       ydoc_errors = Yex.Map.to_json(errors_map)
 
-      # Find error key for this job
-      job_error_key =
-        Enum.find(Map.keys(ydoc_errors), fn key ->
-          String.contains?(key, "jobs.") && String.contains?(key, ".name")
-        end)
+      # Errors should be nested: %{jobs: %{job-id: %{name: ["error"]}}}
+      assert Map.has_key?(ydoc_errors, "jobs")
+      assert is_map(ydoc_errors["jobs"])
+      assert Map.has_key?(ydoc_errors["jobs"], job_id)
+      assert is_map(ydoc_errors["jobs"][job_id])
+      assert is_list(ydoc_errors["jobs"][job_id]["name"])
 
-      assert job_error_key != nil
-      assert ydoc_errors[job_error_key] =~ "can't be blank"
+      assert Enum.any?(
+               ydoc_errors["jobs"][job_id]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
     end
 
     test "handles duplicate workflow name validation",
@@ -540,7 +544,12 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Verify error in Y.Doc
       errors_map = Yex.Doc.get_map(doc, "errors")
       ydoc_errors = Yex.Map.to_json(errors_map)
-      assert ydoc_errors["name"] =~ "already exists"
+      assert is_list(ydoc_errors["name"])
+
+      assert Enum.any?(
+               ydoc_errors["name"],
+               &String.contains?(&1, "already exists")
+             )
     end
   end
 

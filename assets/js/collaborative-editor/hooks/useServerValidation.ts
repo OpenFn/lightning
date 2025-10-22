@@ -25,8 +25,10 @@ import { useWorkflowState } from "./useWorkflow";
  * client-side validation errors.
  *
  * Error Structure:
- * - Workflow fields: { name: "error message", concurrency: "error" }
- * - Nested entities: { jobs: { "job-id": { name: "error" } } }
+ * - Workflow fields: { name: ["error message"], concurrency: ["error"] }
+ * - Nested entities: { jobs: { "job-id": { name: ["error"] } } }
+ *
+ * Note: Error messages are arrays, but only the first message is displayed
  *
  * @param form - TanStack Form instance
  * @param jsonPath - Optional JSONPath expression to query nested errors
@@ -40,7 +42,7 @@ export function useServerValidation<TFormData>(
 
   useEffect(() => {
     // Navigate to the relevant errors using JSONPath
-    let relevantErrors: Record<string, string> = {};
+    let relevantErrors: Record<string, string[]> = {};
 
     if (jsonPath) {
       try {
@@ -61,7 +63,7 @@ export function useServerValidation<TFormData>(
         Object.entries(errors).filter(
           ([key]) => !["jobs", "edges", "triggers"].includes(key)
         )
-      );
+      ) as Record<string, string[]>;
     }
 
     // Clear previous server errors from all fields
@@ -79,9 +81,14 @@ export function useServerValidation<TFormData>(
     });
 
     // Inject new server errors into form fields
-    Object.entries(relevantErrors).forEach(([fieldName, errorMessage]) => {
+    Object.entries(relevantErrors).forEach(([fieldName, errorMessages]) => {
       // Check if this field exists in the form
       if (fieldName in form.state.values) {
+        // Take the first error message from the array (if it exists)
+        const errorMessage = Array.isArray(errorMessages) && errorMessages.length > 0
+          ? errorMessages[0]
+          : undefined;
+
         form.setFieldMeta(fieldName as any, old => ({
           ...old,
           errorMap: {

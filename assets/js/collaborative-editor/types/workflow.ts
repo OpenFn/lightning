@@ -79,7 +79,7 @@ export namespace Workflow {
     triggers: Workflow.Trigger[];
     edges: Workflow.Edge[];
     positions: Workflow.Positions;
-    errors: Record<string, string>;
+    errors: Record<string, string[]>;
 
     // Local UI state
     selectedJobId: string | null;

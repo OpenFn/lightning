@@ -849,7 +849,8 @@ defmodule Lightning.SessionTest do
       errors_map = Yex.Doc.get_map(doc, "errors")
       errors = Yex.Map.to_json(errors_map)
 
-      assert errors["name"] =~ "can't be blank"
+      assert is_list(errors["name"])
+      assert "This field can't be blank." in errors["name"]
     end
 
     test "clears errors from Y.Doc after successful save", %{
@@ -915,12 +916,17 @@ defmodule Lightning.SessionTest do
       errors_map = Yex.Doc.get_map(doc, "errors")
       errors = Yex.Map.to_json(errors_map)
 
-      # Errors should be nested: %{jobs: %{job-id: %{name: "error"}}}
+      # Errors should be nested: %{jobs: %{job-id: %{name: ["error"]}}}
       assert Map.has_key?(errors, "jobs")
       assert is_map(errors["jobs"])
       assert Map.has_key?(errors["jobs"], job_id)
       assert is_map(errors["jobs"][job_id])
-      assert errors["jobs"][job_id]["name"] =~ "can't be blank"
+      assert is_list(errors["jobs"][job_id]["name"])
+
+      assert Enum.any?(
+               errors["jobs"][job_id]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
     end
   end
 end

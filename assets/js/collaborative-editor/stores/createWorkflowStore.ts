@@ -334,7 +334,7 @@ export const createWorkflowStore = () => {
 
     // NEW: Errors observer
     const errorsObserver = () => {
-      const errorsJSON = errorsMap.toJSON() as Record<string, string>;
+      const errorsJSON = errorsMap.toJSON() as Record<string, string[]>;
       updateState(draft => {
         draft.errors = errorsJSON;
       }, "errors/observerUpdate");
@@ -720,7 +720,7 @@ export const createWorkflowStore = () => {
    * Note: In production, errors are set by the server during save
    * validation
    */
-  const setError = (key: string, message: string) => {
+  const setError = (key: string, messages: string[]) => {
     if (!ydoc) {
       throw new Error("Y.Doc not connected");
     }
@@ -728,7 +728,7 @@ export const createWorkflowStore = () => {
     const errorsMap = ydoc.getMap("errors");
 
     ydoc.transact(() => {
-      errorsMap.set(key, message);
+      errorsMap.set(key, messages);
     });
 
     // Observer handles the rest: Y.Doc → immer → notify

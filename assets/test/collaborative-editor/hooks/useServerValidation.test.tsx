@@ -14,9 +14,9 @@ describe("useServerValidation", () => {
   });
 
   it("should inject server errors into form field meta", async () => {
-    // Mock server errors from Y.Doc
+    // Mock server errors from Y.Doc (as arrays)
     const mockFn = vi.fn(selector => {
-      const state = { errors: { name: "Name is required" } };
+      const state = { errors: { name: ["Name is required"] } };
       return selector ? selector(state) : state;
     });
     vi.mocked(useWorkflowModule.useWorkflowState).mockImplementation(
@@ -38,8 +38,8 @@ describe("useServerValidation", () => {
   });
 
   it("should clear server errors when errors removed from Y.Doc", async () => {
-    // Start with errors
-    let mockErrors = { name: "Name is required" };
+    // Start with errors (as arrays)
+    let mockErrors = { name: ["Name is required"] };
     const mockFn = vi.fn(selector => {
       const state = { errors: mockErrors };
       return selector ? selector(state) : state;
@@ -76,16 +76,16 @@ describe("useServerValidation", () => {
   });
 
   it("should filter errors by JSONPath for nested entities", async () => {
-    // Mock errors for multiple jobs (nested structure)
+    // Mock errors for multiple jobs (nested structure with arrays)
     const mockFn = vi.fn(selector => {
       const state = {
         errors: {
           jobs: {
             "abc-123": {
-              name: "Job name is required",
+              name: ["Job name is required"],
             },
             "def-456": {
-              name: "Other job name is required",
+              name: ["Other job name is required"],
             },
           },
         },
@@ -121,8 +121,8 @@ describe("useServerValidation", () => {
     const mockFn = vi.fn(selector => {
       const state = {
         errors: {
-          name: "Name is required",
-          concurrency: "Must be positive",
+          name: ["Name is required"],
+          concurrency: ["Must be positive"],
         },
       };
       return selector ? selector(state) : state;
