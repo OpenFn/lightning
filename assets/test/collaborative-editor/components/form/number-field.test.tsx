@@ -1,10 +1,27 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { useAppForm } from "../../../../js/collaborative-editor/components/form";
 import { NumberField } from "../../../../js/collaborative-editor/components/form/number-field";
+import * as useWorkflowModule from "../../../../js/collaborative-editor/hooks/useWorkflow";
+
+// Mock useWorkflowState
+vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
+  useWorkflowState: vi.fn(),
+}));
 
 describe("NumberField", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Mock useWorkflowState to return empty errors
+    const mockFn = vi.fn(selector => {
+      const state = { errors: {} };
+      return selector ? selector(state) : state;
+    });
+    vi.mocked(useWorkflowModule.useWorkflowState).mockImplementation(
+      mockFn as any
+    );
+  });
   function TestForm({ defaultValue = null }: { defaultValue?: number | null }) {
     const form = useAppForm({
       defaultValues: { count: defaultValue },
