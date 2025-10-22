@@ -9,6 +9,7 @@ import {
 import { useURLState } from "../../../react/lib/use-url-state";
 import { useSession } from "../../hooks/useSession";
 import {
+  useCanSave,
   useCurrentJob,
   useWorkflowActions,
 } from "../../hooks/useWorkflow";
@@ -35,9 +36,10 @@ interface FullScreenIDEProps {
 export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
   const { searchParams } = useURLState();
   const jobIdFromURL = searchParams.get("job");
-  const { selectJob } = useWorkflowActions();
+  const { selectJob, saveWorkflow } = useWorkflowActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
+  const { canSave, tooltipMessage } = useCanSave();
 
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
@@ -81,11 +83,12 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
     );
   }
 
-  // Placeholder handlers for disabled buttons
+  // Handler for Save button
   const handleSave = () => {
-    console.log("Save clicked (not yet implemented)");
+    void saveWorkflow();
   };
 
+  // Placeholder handler for disabled Run button
   const handleRun = () => {
     console.log("Run clicked (not yet implemented)");
   };
@@ -98,6 +101,8 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
         onClose={onClose}
         onSave={handleSave}
         onRun={handleRun}
+        canSave={canSave}
+        saveTooltip={tooltipMessage}
       />
 
       {/* 3-panel layout */}

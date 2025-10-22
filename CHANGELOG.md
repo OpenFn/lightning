@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Added full-screen IDE for job editing
+  [#3708](https://github.com/OpenFn/lightning/issues/3708)
+
 ### Changed
 
 ### Fixed

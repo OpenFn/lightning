@@ -1,23 +1,29 @@
 import { Button } from "../Button";
+import { Tooltip } from "../Tooltip";
 
 interface IDEHeaderProps {
   jobName: string;
   onClose: () => void;
   onSave: () => void;
   onRun: () => void;
+  canSave: boolean;
+  saveTooltip: string;
 }
 
 /**
  * IDE Header component with job name and action buttons
  *
  * Displays job name on left, Run/Save/Close buttons on right.
- * Run and Save are disabled placeholders for future features.
+ * Run is disabled placeholder for future features.
+ * Save is wired to workflow save functionality.
  */
 export function IDEHeader({
   jobName,
   onClose,
   onSave,
   onRun,
+  canSave,
+  saveTooltip,
 }: IDEHeaderProps) {
   return (
     <div
@@ -49,18 +55,21 @@ export function IDEHeader({
             Run
           </Button>
 
-          <Button
-            variant="secondary"
-            onClick={onSave}
-            disabled
-            className="opacity-50"
-          >
-            <span
-              className="hero-check size-4 inline-block mr-1"
-              aria-hidden="true"
-            />
-            Save
-          </Button>
+          <Tooltip content={saveTooltip} side="bottom">
+            <span className="inline-block">
+              <Button
+                variant="secondary"
+                onClick={onSave}
+                disabled={!canSave}
+              >
+                <span
+                  className="hero-check size-4 inline-block mr-1"
+                  aria-hidden="true"
+                />
+                Save
+              </Button>
+            </span>
+          </Tooltip>
 
           <Button
             variant="secondary"
