@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { useIsNewWorkflow } from "../hooks/useSessionContext";
+import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
 import {
   useNodeSelection,
   useWorkflowActions,
@@ -14,7 +14,6 @@ import {
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
 
-import { useProject } from "../hooks/useSessionContext";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";

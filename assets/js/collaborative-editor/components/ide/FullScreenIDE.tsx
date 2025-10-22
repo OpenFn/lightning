@@ -8,8 +8,8 @@ import {
 } from "react-resizable-panels";
 
 import { useURLState } from "../../../react/lib/use-url-state";
-import { useProject } from "../../hooks/useSessionContext";
 import { useSession } from "../../hooks/useSession";
+import { useProject } from "../../hooks/useSessionContext";
 import {
   useCanSave,
   useCurrentJob,
@@ -81,7 +81,7 @@ export function FullScreenIDE({
 
       if (isMonacoFocused) {
         // First Escape: blur Monaco editor to remove focus
-        (activeElement as HTMLElement)?.blur();
+        (activeElement as HTMLElement).blur();
         event.preventDefault();
       } else {
         // Second Escape: close IDE
