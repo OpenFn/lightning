@@ -19,6 +19,8 @@ and this project adheres to
 
 - Added full-screen IDE for job editing
   [#3708](https://github.com/OpenFn/lightning/issues/3708)
+- Show collaborative editor toggle (beaker icon) when creating new workflows
+  [#3797](https://github.com/OpenFn/lightning/pull/3797)
 
 ### Changed
 
