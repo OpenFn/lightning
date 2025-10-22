@@ -1,13 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { useAppForm } from "../../../../js/collaborative-editor/components/form";
 import { NumberField } from "../../../../js/collaborative-editor/components/form/number-field";
-
-// Mock useWorkflowState since these tests don't need server validation
-vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
-  useWorkflowState: vi.fn(() => ({})),
-}));
 
 describe("NumberField", () => {
   function TestForm({ defaultValue = null }: { defaultValue?: number | null }) {

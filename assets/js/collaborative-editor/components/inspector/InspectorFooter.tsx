@@ -34,12 +34,7 @@ export function InspectorFooter({
   }
 
   return (
-    <div
-      className={[
-        "border-t border-gray-200 pt-4 px-2",
-        "flex justify-between items-center",
-      ].join(" ")}
-    >
+    <div className={"flex justify-between items-center"}>
       {/* Left side: Edit, Run, etc. */}
       <div className="flex gap-2">{leftButtons}</div>
 

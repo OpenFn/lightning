@@ -17,10 +17,23 @@ and this project adheres to
 
 ### Added
 
+- Added full-screen IDE for job editing
+  [#3708](https://github.com/OpenFn/lightning/issues/3708)
 - Show collaborative editor toggle (beaker icon) when creating new workflows
   [#3797](https://github.com/OpenFn/lightning/pull/3797)
+- Auto-format code on commit with git hooks
+  [#3806](https://github.com/OpenFn/lightning/pull/3806)
+- Escape key support for closing inspector panels in collaborative workflow
+  editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
+  priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
 
 ### Changed
+
+- Removed Cancel button from inspector panel footers (redundant with X button
+  and Escape key) [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Refactored inspector component architecture to use composition pattern with
+  reusable layout shell and pure form components
+  [#3768](https://github.com/OpenFn/lightning/issues/3768)
 
 ### Fixed
 
@@ -906,8 +919,9 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes
   [#2908](https://github.com/OpenFn/lightning/issues/2908) \
   ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
-  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
-  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  To do that run the following command:
+  `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or
+  `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
   for production environments.
 
 ### Changed
