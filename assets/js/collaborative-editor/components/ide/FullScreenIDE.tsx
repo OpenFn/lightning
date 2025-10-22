@@ -251,7 +251,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
                       aria-label="Collapse code panel"
                     >
                       <span
-                        className="hero-chevron-down size-3"
+                        className="hero-chevron-left size-3"
                         aria-hidden="true"
                       />
                     </button>
