@@ -8,6 +8,7 @@ import {
 } from "react-resizable-panels";
 
 import { useURLState } from "../../../react/lib/use-url-state";
+import { useProject } from "../../hooks/useSessionContext";
 import { useSession } from "../../hooks/useSession";
 import {
   useCanSave,
@@ -15,12 +16,15 @@ import {
   useWorkflowActions,
 } from "../../hooks/useWorkflow";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
+import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 
 import { IDEHeader } from "./IDEHeader";
 
 interface FullScreenIDEProps {
   jobId?: string;
   onClose: () => void;
+  parentProjectId?: string | null | undefined;
+  parentProjectName?: string | null | undefined;
 }
 
 /**
@@ -35,13 +39,18 @@ interface FullScreenIDEProps {
  *
  * Panel layout persists to localStorage automatically.
  */
-export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
+export function FullScreenIDE({
+  onClose,
+  parentProjectId,
+  parentProjectName,
+}: FullScreenIDEProps) {
   const { searchParams } = useURLState();
   const jobIdFromURL = searchParams.get("job");
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
+  const project = useProject();
 
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const centerPanelRef = useRef<ImperativePanelHandle>(null);
@@ -177,6 +186,12 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
         onRun={handleRun}
         canSave={canSave}
         saveTooltip={tooltipMessage}
+      />
+      <SandboxIndicatorBanner
+        parentProjectId={parentProjectId}
+        parentProjectName={parentProjectName}
+        projectName={project?.name}
+        position="relative"
       />
 
       {/* 3-panel layout */}

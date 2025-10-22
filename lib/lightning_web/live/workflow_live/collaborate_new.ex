@@ -20,11 +20,12 @@ defmodule LightningWeb.WorkflowLive.CollaborateNew do
   def mount(_params, _session, socket) do
     workflow_id = Ecto.UUID.generate()
     user_id = socket.assigns.current_user.id
+    project = socket.assigns.project
 
     workflow = %Workflow{
       id: workflow_id,
       name: "Untitled Workflow",
-      project_id: socket.assigns.project.id
+      project_id: project.id
     }
 
     {:ok,
@@ -34,7 +35,8 @@ defmodule LightningWeb.WorkflowLive.CollaborateNew do
        page_title: "New Workflow",
        workflow: workflow,
        workflow_id: workflow_id,
-       user_id: user_id
+       user_id: user_id,
+       project: project
      )}
   end
 
@@ -55,6 +57,14 @@ defmodule LightningWeb.WorkflowLive.CollaborateNew do
       data-workflow-id={@workflow_id}
       data-workflow-name={@workflow.name}
       data-project-id={@workflow.project_id}
+      data-project-name={@project.name}
+      data-project-color={@project.color}
+      data-root-project-id={
+        if @project.parent, do: Lightning.Projects.root_of(@project).id, else: nil
+      }
+      data-root-project-name={
+        if @project.parent, do: Lightning.Projects.root_of(@project).name, else: nil
+      }
       data-is-new-workflow="true"
     />
     """

@@ -136,6 +136,20 @@ defmodule LightningWeb.WorkflowLive.JobView do
             </.link>
           </div>
         </div>
+        <Common.banner
+          :if={@project.parent}
+          type="warning"
+          id="sandbox-mode-alert"
+          message={"You are currently working in the sandbox #{@project.name}."}
+          action={
+            %{
+              text: "Switch to #{Lightning.Projects.root_of(@project).name}",
+              target: "/projects/#{Lightning.Projects.root_of(@project).id}/w"
+            }
+          }
+          icon
+          centered
+        />
       </:top>
       <%= for slot <- @collapsible_panel do %>
         <.collapsible_panel

@@ -26,6 +26,9 @@ and this project adheres to
 - Escape key support for closing inspector panels in collaborative workflow
   editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
   priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Sandbox indicator warning banners in workflow editor (canvas and inspector)
+  with links to root project, clearly indicating when working in a sandbox
+  environment [#3413](https://github.com/OpenFn/lightning/issues/3413)
 
 ### Changed
 
