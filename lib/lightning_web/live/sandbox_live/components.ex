@@ -200,6 +200,7 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :target_options, :list, required: true
   attr :changeset, :any, required: true
   attr :descendants, :list, default: []
+  attr :has_diverged, :boolean, default: false
 
   def merge_modal(assigns) do
     assigns =
@@ -303,6 +304,18 @@ defmodule LightningWeb.SandboxLive.Components do
             </Common.alert>
           <% end %>
 
+          <%= if @has_diverged do %>
+            <Common.alert
+              id="merge-divergence-alert"
+              type="danger"
+              header="Warning: Target branch has diverged"
+            >
+              <:message>
+                The target branch has been modified since this sandbox was created. Merging may result in lost changes. Are you sure you wish to proceed?
+              </:message>
+            </Common.alert>
+          <% end %>
+
           <Common.alert
             id="merge-beta-warning"
             type="warning"
@@ -314,11 +327,14 @@ defmodule LightningWeb.SandboxLive.Components do
           </Common.alert>
 
           <.modal_footer>
-            <.button theme="primary" type="submit">
-              Merge
+            <.button
+              theme={if @has_diverged, do: "secondary", else: "primary"}
+              type="submit"
+            >
+              {if @has_diverged, do: "Merge Anyway", else: "Merge"}
             </.button>
             <.button
-              theme="secondary"
+              theme={if @has_diverged, do: "primary", else: "secondary"}
               type="button"
               phx-click={JS.push("close-merge-modal")}
             >

@@ -29,6 +29,9 @@ and this project adheres to
 - Escape key support for closing inspector panels in collaborative workflow
   editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
   priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Divergence warning when merging sandboxes - displays alert if target branch
+  was modified after sandbox creation to prevent data loss
+  [#3747](https://github.com/OpenFn/lightning/issues/3747)
 
 ### Changed
 
@@ -922,8 +925,9 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes
   [#2908](https://github.com/OpenFn/lightning/issues/2908) \
   ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
-  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
-  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  To do that run the following command:
+  `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or
+  `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
   for production environments.
 
 ### Changed

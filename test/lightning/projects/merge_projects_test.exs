@@ -2311,4 +2311,179 @@ defmodule Lightning.Projects.MergeProjectsTest do
         with_edge(wf, {source_job, target_job}, edge_opts)
     end)
   end
+
+  describe "has_diverged?/2" do
+    test "returns false when target workflow versions match sandbox versions" do
+      target_project = insert(:project)
+
+      target_workflow =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      # Create initial version for target workflow
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      # Create sandbox
+      source_project = insert(:project, parent_id: target_project.id)
+      # Sandbox workflow has same name as target (as it's a copy)
+      source_workflow =
+        insert(:workflow, project: source_project, name: "Workflow 1")
+
+      # Sandbox gets same version hash (as it was copied at creation)
+      insert(:workflow_version,
+        workflow: source_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns true when target workflow version differs from sandbox version" do
+      target_project = insert(:project)
+
+      target_workflow =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      # Create initial version for target workflow
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      # Create sandbox
+      source_project = insert(:project, parent_id: target_project.id)
+      # Sandbox workflow has same name (it's a copy)
+      source_workflow =
+        insert(:workflow, project: source_project, name: "Workflow 1")
+
+      # Sandbox has old version hash
+      insert(:workflow_version,
+        workflow: source_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      # Target workflow is updated with new version after sandbox creation
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "def456",
+        source: "app"
+      )
+
+      assert MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns false when target has no workflows" do
+      target_project = insert(:project)
+
+      source_project = insert(:project, parent_id: target_project.id)
+      source_workflow = insert(:workflow, project: source_project)
+
+      insert(:workflow_version,
+        workflow: source_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns true when any workflow in target has different version" do
+      target_project = insert(:project)
+
+      target_workflow_1 =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      target_workflow_2 =
+        insert(:workflow, project: target_project, name: "Workflow 2")
+
+      # Both target workflows have initial versions
+      insert(:workflow_version,
+        workflow: target_workflow_1,
+        hash: "abc123",
+        source: "app"
+      )
+
+      insert(:workflow_version,
+        workflow: target_workflow_2,
+        hash: "def456",
+        source: "app"
+      )
+
+      # Create sandbox with matching workflow names (copies of target workflows)
+      source_project = insert(:project, parent_id: target_project.id)
+
+      source_workflow_1 =
+        insert(:workflow, project: source_project, name: "Workflow 1")
+
+      source_workflow_2 =
+        insert(:workflow, project: source_project, name: "Workflow 2")
+
+      # Sandbox gets same versions
+      insert(:workflow_version,
+        workflow: source_workflow_1,
+        hash: "abc123",
+        source: "app"
+      )
+
+      insert(:workflow_version,
+        workflow: source_workflow_2,
+        hash: "def456",
+        source: "app"
+      )
+
+      # Update only one target workflow with new version
+      insert(:workflow_version,
+        workflow: target_workflow_2,
+        hash: "xyz789",
+        source: "app"
+      )
+
+      # Should detect divergence
+      assert MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "uses most recent version hash when multiple versions exist" do
+      target_project = insert(:project)
+
+      target_workflow =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      # Create multiple versions, most recent should be used
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "old_version",
+        source: "app",
+        inserted_at: DateTime.add(DateTime.utc_now(), -2, :hour)
+      )
+
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "latest_version",
+        source: "app",
+        inserted_at: DateTime.utc_now()
+      )
+
+      # Create sandbox with matching workflow name
+      source_project = insert(:project, parent_id: target_project.id)
+
+      source_workflow =
+        insert(:workflow, project: source_project, name: "Workflow 1")
+
+      # Sandbox has the latest version at creation time
+      insert(:workflow_version,
+        workflow: source_workflow,
+        hash: "latest_version",
+        source: "app"
+      )
+
+      # No divergence since versions match
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+  end
 end
