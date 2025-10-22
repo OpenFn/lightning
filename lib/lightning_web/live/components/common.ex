@@ -142,7 +142,7 @@ defmodule LightningWeb.Components.Common do
     >
       <p class="text-sm leading-6">
         <%= if @icon == true do %>
-          <.icon name={@icon_name} class="h-5 w-5 align-top mr-1" />
+          <.icon name={@icon_name} class="h-5 w-5 inline-block align-middle mr-2" />
         <% end %>
         {@message}
         <%= if assigns[:action] do %>

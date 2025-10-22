@@ -481,6 +481,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
           />
           <Common.banner
+            :if={@project.parent}
+            type="warning"
+            id="sandbox-mode-alert"
+            message={"You are currently working in the sandbox #{@project.name}."}
+            action={
+              %{
+                text: "Switch to #{Lightning.Projects.root_of(@project).name}",
+                target: "/projects/#{Lightning.Projects.root_of(@project).id}/w"
+              }
+            }
+            class="absolute"
+            icon
+            centered
+          />
+          <Common.banner
             :if={@display_banner}
             type="warning"
             id={"canvas-banner-#{@current_user.id}"}

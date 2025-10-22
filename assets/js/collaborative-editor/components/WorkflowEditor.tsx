@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { useIsNewWorkflow } from "../hooks/useSessionContext";
+import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
 import {
   useNodeSelection,
   useWorkflowActions,
@@ -18,13 +18,23 @@ import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDia
 import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";
 import { LeftPanel } from "./left-panel";
+import { SandboxIndicatorBanner } from "./SandboxIndicatorBanner";
 
-export function WorkflowEditor() {
+interface WorkflowEditorProps {
+  parentProjectId?: string | null;
+  parentProjectName?: string | null;
+}
+
+export function WorkflowEditor({
+  parentProjectId,
+  parentProjectName,
+}: WorkflowEditorProps = {}) {
   const { hash, searchParams, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
   const { saveWorkflow } = useWorkflowActions();
+  const project = useProject();
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
@@ -105,6 +115,11 @@ export function WorkflowEditor() {
               showLeftPanel ? "ml-[33.333333%]" : "ml-0"
             }`}
           >
+            <SandboxIndicatorBanner
+              parentProjectId={parentProjectId}
+              parentProjectName={parentProjectName}
+              projectName={project?.name}
+            />
             <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
             {/* Inspector slides in from the right and appears on top
@@ -113,7 +128,7 @@ export function WorkflowEditor() {
             {workflow && (
               <div
                 id="inspector"
-                className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
+                className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-10 ${
                   showInspector
                     ? "translate-x-0"
                     : "translate-x-full pointer-events-none"
@@ -141,7 +156,12 @@ export function WorkflowEditor() {
 
       {/* Full-Screen IDE - replaces canvas when open */}
       {isIDEOpen && selectedJobId && (
-        <FullScreenIDE jobId={selectedJobId} onClose={handleCloseIDE} />
+        <FullScreenIDE
+          jobId={selectedJobId}
+          onClose={handleCloseIDE}
+          parentProjectId={parentProjectId}
+          parentProjectName={parentProjectName}
+        />
       )}
     </div>
   );
