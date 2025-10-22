@@ -26,6 +26,8 @@ and this project adheres to
 - Escape key support for closing inspector panels in collaborative workflow
   editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
   priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Show server validation errors in the collab editor forms
+  [#3783](https://github.com/OpenFn/lightning/issues/3783)
 
 ### Changed
 
