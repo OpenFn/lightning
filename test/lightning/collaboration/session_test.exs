@@ -911,18 +911,16 @@ defmodule Lightning.SessionTest do
       # Attempt save (should fail validation)
       assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
 
-      # Check job error was written to Y.Doc with proper key format
+      # Check job error was written to Y.Doc with nested structure
       errors_map = Yex.Doc.get_map(doc, "errors")
       errors = Yex.Map.to_json(errors_map)
 
-      # Error key should be jobs.{index}.name or jobs.{id}.name
-      job_error_key =
-        Enum.find(Map.keys(errors), fn key ->
-          String.starts_with?(key, "jobs.") && String.ends_with?(key, ".name")
-        end)
-
-      assert job_error_key != nil
-      assert errors[job_error_key] =~ "can't be blank"
+      # Errors should be nested: %{jobs: %{job-id: %{name: "error"}}}
+      assert Map.has_key?(errors, "jobs")
+      assert is_map(errors["jobs"])
+      assert Map.has_key?(errors["jobs"], job_id)
+      assert is_map(errors["jobs"][job_id])
+      assert errors["jobs"][job_id]["name"] =~ "can't be blank"
     end
   end
 end

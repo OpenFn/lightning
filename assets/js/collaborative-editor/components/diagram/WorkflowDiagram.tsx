@@ -27,6 +27,7 @@ import nodeTypes from "#/workflow-diagram/nodes";
 import type { Flow, Positions } from "#/workflow-diagram/types";
 import useConnect from "#/workflow-diagram/useConnect";
 import usePlaceholders from "#/workflow-diagram/usePlaceholders";
+import { ensureNodePosition } from "#/workflow-diagram/util/ensure-node-position";
 import fromWorkflow from "#/workflow-diagram/util/from-workflow";
 import shouldLayout from "#/workflow-diagram/util/should-layout";
 import throttle from "#/workflow-diagram/util/throttle";
@@ -37,7 +38,6 @@ import {
 } from "#/workflow-diagram/util/viewport";
 
 import { useInspectorOverlap } from "./useInspectorOverlap";
-import { ensureNodePosition } from "#/workflow-diagram/util/ensure-node-position";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;

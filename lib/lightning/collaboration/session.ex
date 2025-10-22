@@ -521,65 +521,6 @@ defmodule Lightning.Collaboration.Session do
     |> Enum.each(fn {key, _val} -> Yex.Map.delete(map, key) end)
   end
 
-  # Format changeset errors into flat key-value structure for Y.Doc
-  #
-  # Examples:
-  #   %{name: ["can't be blank"]} -> %{"name" => "can't be blank"}
-  #   %{jobs: [%{name: ["too long"]}]} -> %{"jobs.{job-id}.name" => "too long"}
-  #
-  # Note: Takes first error message only for simplicity
-  defp format_changeset_errors_for_ydoc(changeset) do
-    errors =
-      Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-        Enum.reduce(opts, msg, fn {key, value}, acc ->
-          String.replace(acc, "%{#{key}}", to_string(value))
-        end)
-      end)
-
-    flatten_errors(errors, [])
-  end
-
-  # Recursively flatten nested error maps into dot-notation keys
-  # %{jobs: [%{name: ["error"]}]} becomes %{"jobs.0.name" => "error"}
-  defp flatten_errors(errors, prefix) when is_map(errors) do
-    Enum.reduce(errors, %{}, fn {key, value}, acc ->
-      new_prefix = if prefix == [], do: [key], else: prefix ++ [key]
-      Map.merge(acc, flatten_errors(value, new_prefix))
-    end)
-  end
-
-  defp flatten_errors([first_error | _rest], prefix)
-       when is_binary(first_error) do
-    # List of error strings for a field - take first error message only
-    key = Enum.join(prefix, ".")
-    %{key => first_error}
-  end
-
-  defp flatten_errors(errors, prefix) when is_list(errors) do
-    # List of error maps (nested changeset errors like jobs)
-    errors
-    |> Enum.with_index()
-    |> Enum.reduce(%{}, fn {item, index}, acc ->
-      new_prefix = prefix ++ [index]
-
-      case item do
-        error_map when is_map(error_map) ->
-          Map.merge(acc, flatten_errors(error_map, new_prefix))
-
-        error_string when is_binary(error_string) ->
-          key = Enum.join(new_prefix, ".")
-          Map.put(acc, key, error_string)
-      end
-    end)
-  end
-
-  defp flatten_errors(error, prefix) when is_binary(error) do
-    key = Enum.join(prefix, ".")
-    %{key => error}
-  end
-
-  defp flatten_errors(_, _), do: %{}
-
   # Write validation errors to Y.Doc errors map
   # This makes errors visible to all connected users
   defp write_validation_errors_to_ydoc(%{shared_doc_pid: nil}, _changeset) do
@@ -601,9 +542,9 @@ defmodule Lightning.Collaboration.Session do
         # Clear existing errors first
         clear_map(errors_map)
 
-        # Set new errors
-        Enum.each(formatted_errors, fn {field, message} ->
-          Yex.Map.set(errors_map, field, message)
+        # Set new errors (already converted to Y.js compatible types)
+        Enum.each(formatted_errors, fn {field, value} ->
+          Yex.Map.set(errors_map, to_string(field), value)
         end)
       end)
     end)
@@ -615,4 +556,100 @@ defmodule Lightning.Collaboration.Session do
 
       :ok
   end
+
+  # Format changeset errors into nested structure for Y.Doc
+  #
+  # Examples:
+  #   %{name: ["can't be blank"]} -> %{"name" => "can't be blank"}
+  #   %{jobs: [%{name: ["too long"]}]} -> %{"jobs" => %{"job-id" => %{"name" => "too long"}}}
+  #
+  # Note: Takes first error message only for simplicity
+  # Inspired by traverse_provision_errors in provisioning_json.ex
+  defp format_changeset_errors_for_ydoc(changeset) do
+    changeset.errors
+    |> Enum.reverse()
+    |> merge_keyword_keys()
+    |> merge_related_keys(changeset)
+    |> convert_nested_maps_to_yjs()
+    |> dbg
+  end
+
+  # Convert nested maps (but not the top-level map) to Y.js compatible MapPrelim
+  defp convert_nested_maps_to_yjs(errors_map) when is_map(errors_map) do
+    Map.new(errors_map, fn {key, value} ->
+      {key, convert_to_yjs_value(value)}
+    end)
+  end
+
+  defp merge_keyword_keys(keyword_list) do
+    Enum.reduce(keyword_list, %{}, fn {key, val}, acc ->
+      # Translate error tuple to string and take first error if multiple
+      val = val |> translate_error()
+      Map.put(acc, key, val)
+    end)
+  end
+
+  defp merge_related_keys(map, %Ecto.Changeset{changes: changes}) do
+    Enum.reduce([:jobs, :triggers, :edges], map, fn
+      field, acc ->
+        traverse_field_errors(acc, changes, field)
+    end)
+  end
+
+  defp traverse_field_errors(acc, changes, field) do
+    changesets =
+      case Map.get(changes, field) do
+        %{} = change ->
+          [change]
+
+        changes when is_list(changes) ->
+          changes
+
+        _ ->
+          nil
+      end
+
+    if changesets do
+      child = traverse_nested_changesets(changesets)
+
+      if child == %{} do
+        acc
+      else
+        Map.put(acc, field, child)
+      end
+    else
+      acc
+    end
+  end
+
+  defp traverse_nested_changesets(changesets) do
+    Enum.reduce(changesets, %{}, fn changeset, acc ->
+      child = format_changeset_errors_for_ydoc(changeset)
+
+      if child == %{} do
+        acc
+      else
+        child_name = changeset |> Ecto.Changeset.get_field(:id) |> to_string()
+        Map.put(acc, child_name, child)
+      end
+    end)
+  end
+
+  # Translate error tuple to string (simplified version)
+  defp translate_error({msg, opts}) do
+    Enum.reduce(opts, msg, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", to_string(value))
+    end)
+  end
+
+  # Recursively convert nested maps to Y.js compatible MapPrelim
+  defp convert_to_yjs_value(value) when is_map(value) do
+    Yex.MapPrelim.from(
+      Map.new(value, fn {key, val} ->
+        {to_string(key), convert_to_yjs_value(val)}
+      end)
+    )
+  end
+
+  defp convert_to_yjs_value(value), do: value
 end

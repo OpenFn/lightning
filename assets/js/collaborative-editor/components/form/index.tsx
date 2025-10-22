@@ -30,33 +30,41 @@ const { useAppForm: useBaseAppForm } = createFormHook({
  * This hook wraps TanStack Form's useForm and automatically injects server
  * validation errors from the WorkflowStore's errors map into form fields.
  *
- * Server validation is determined by error key patterns:
- * - Workflow fields: "name", "concurrency"
- * - Job fields: "jobs.{job-id}.name", "jobs.{job-id}.body"
- * - Trigger fields: "triggers.{trigger-id}.cron_expression"
- * - Edge fields: "edges.{edge-id}.condition_expression"
+ * Server validation uses a nested structure:
+ * - Workflow fields: { name: "error message" }
+ * - Nested entities: { jobs: { "job-id": { name: "error" } } }
  *
  * @param formOptions - Standard TanStack Form options
- * @param errorPrefix - Optional prefix to filter errors for nested entities
- *                      (e.g., "jobs.abc-123" for a specific job)
+ * @param errorPath - Optional dot-separated path to filter errors for nested entities.
+ *                    Will be converted to a JSONPath expression.
+ *                    (e.g., "jobs.abc-123" becomes "$.jobs['abc-123']")
  * @returns TanStack Form instance with automatic server validation
  *
  * @example
- * // Workflow-level form (no prefix)
+ * // Workflow-level form (no path)
  * const form = useAppForm({ defaultValues: { name: "" } });
  *
  * @example
- * // Job-specific form (with prefix)
+ * // Job-specific form (with path)
  * const form = useAppForm({ defaultValues: { name: "" } }, `jobs.${jobId}`);
  */
 export function useAppForm<TFormData>(
   formOptions: FormOptions<TFormData>,
-  errorPrefix?: string
+  errorPath?: string
 ) {
   const form = useBaseAppForm(formOptions);
 
+  // Convert dot-separated path to JSONPath expression
+  // e.g., "jobs.abc-123" becomes "$.jobs['abc-123']"
+  const jsonPath = errorPath
+    ? `$${errorPath
+        .split(".")
+        .map(key => `['${key}']`)
+        .join("")}`
+    : undefined;
+
   // Automatically inject server validation errors from Y.Doc
-  useServerValidation(form, errorPrefix);
+  useServerValidation(form, jsonPath);
 
   return form;
 }

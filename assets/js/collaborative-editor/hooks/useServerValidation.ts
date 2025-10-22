@@ -1,4 +1,5 @@
 import type { FormApi } from "@tanstack/react-form";
+import jp from "jsonpath";
 import { useEffect } from "react";
 
 import { useWorkflowState } from "./useWorkflow";
@@ -13,31 +14,55 @@ import { useWorkflowState } from "./useWorkflow";
  * useServerValidation(form);
  * ```
  *
+ * For nested entities (jobs, edges, triggers):
+ * ```tsx
+ * const form = useAppForm({ ... });
+ * useServerValidation(form, "$.jobs['job-id']");
+ * ```
+ *
  * When the server returns validation errors (written to Y.Doc), they'll
  * automatically appear in the corresponding form fields as if they were
  * client-side validation errors.
  *
- * Error Key Format:
- * - Workflow fields: "name", "concurrency"
- * - Job fields: "jobs.{job-id}.name", "jobs.{job-id}.body"
- * - Trigger fields: "triggers.{trigger-id}.cron_expression"
- * - Edge fields: "edges.{edge-id}.condition_expression"
+ * Error Structure:
+ * - Workflow fields: { name: "error message", concurrency: "error" }
+ * - Nested entities: { jobs: { "job-id": { name: "error" } } }
  *
  * @param form - TanStack Form instance
- * @param prefix - Optional prefix to filter errors (e.g., "jobs.abc-123"
- * for a specific job)
+ * @param jsonPath - Optional JSONPath expression to query nested errors
+ *   e.g., "$.jobs['job-id']" to get errors for a specific job
  */
 export function useServerValidation<TFormData>(
   form: FormApi<TFormData, unknown>,
-  prefix?: string
+  jsonPath?: string
 ) {
   const errors = useWorkflowState(state => state.errors);
 
   useEffect(() => {
-    // Filter errors by prefix if provided
-    const relevantErrors = prefix
-      ? Object.entries(errors).filter(([key]) => key.startsWith(prefix))
-      : Object.entries(errors);
+    // Navigate to the relevant errors using JSONPath
+    let relevantErrors: Record<string, string> = {};
+
+    if (jsonPath) {
+      try {
+        // Query the errors object using JSONPath
+        const results = jp.query(errors, jsonPath);
+
+        // JSONPath query returns an array of matches
+        // We expect a single object with field errors
+        if (results.length > 0 && typeof results[0] === "object") {
+          relevantErrors = results[0];
+        }
+      } catch (error) {
+        console.error("Invalid JSONPath expression:", jsonPath, error);
+      }
+    } else {
+      // No jsonPath - filter out nested entity errors (jobs, edges, triggers)
+      relevantErrors = Object.fromEntries(
+        Object.entries(errors).filter(
+          ([key]) => !["jobs", "edges", "triggers"].includes(key)
+        )
+      );
+    }
 
     // Clear previous server errors from all fields
     Object.keys(form.state.values).forEach(fieldName => {
@@ -54,28 +79,17 @@ export function useServerValidation<TFormData>(
     });
 
     // Inject new server errors into form fields
-    relevantErrors.forEach(([errorKey, errorMessage]) => {
-      // Extract field name from error key
-      // "name" -> "name"
-      // "jobs.abc-123.name" -> "name" (if prefix is "jobs.abc-123")
-      // "concurrency" -> "concurrency"
-      const fieldName = prefix
-        ? errorKey.substring(prefix.length + 1) // Remove prefix + dot
-        : errorKey;
-
+    Object.entries(relevantErrors).forEach(([fieldName, errorMessage]) => {
       // Check if this field exists in the form
       if (fieldName in form.state.values) {
-        const currentMeta = form.getFieldMeta(fieldName as any);
-        if (currentMeta) {
-          form.setFieldMeta(fieldName as any, old => ({
-            ...old,
-            errorMap: {
-              ...(old?.errorMap || {}),
-              onServer: errorMessage,
-            },
-          }));
-        }
+        form.setFieldMeta(fieldName as any, old => ({
+          ...old,
+          errorMap: {
+            ...(old?.errorMap || {}),
+            onServer: errorMessage,
+          },
+        }));
       }
     });
-  }, [errors, form, prefix]);
+  }, [errors, jsonPath]); // Removed 'form' from dependencies - it's always the same instance
 }
