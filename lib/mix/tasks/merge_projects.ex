@@ -2,8 +2,8 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   @moduledoc """
   Merges two project state files (JSON) and outputs the result.
 
-  This task is useful for merging sandbox projects without requiring database
-  access. It takes two state files (source and target) and produces a merged
+  This task is useful for merging sandbox projects.
+  It takes two state files (source and target) and produces a merged
   state that can be imported.
 
   ## Usage
@@ -72,7 +72,6 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   end
 
   defp merge_and_output(source_file, target_file, opts) do
-    # Validate output path early (fail fast before doing expensive operations)
     if output_path = Keyword.get(opts, :output) do
       validate_output_path(output_path)
     end
@@ -188,7 +187,6 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
       """)
     end
 
-    # Check if parent directory is writable
     case File.stat(parent_dir) do
       {:ok, %File.Stat{access: access}} when access in [:read_write, :write] ->
         :ok

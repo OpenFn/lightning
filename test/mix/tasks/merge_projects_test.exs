@@ -11,7 +11,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
          %{
            tmp_dir: tmp_dir
          } do
-      # Test with keys that include cron_expression and kafka_configuration
       source = %{
         "id" => "source-id",
         "name" => "Source",
@@ -70,7 +69,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       File.write!(source_file, Jason.encode!(source))
       File.write!(target_file, Jason.encode!(target))
 
-      # This should work without errors if all keys are properly handled
       output =
         capture_io(fn ->
           Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
@@ -83,7 +81,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
 
       assert result["id"] == "target-id"
 
-      # Verify the cron trigger with all its keys (including kafka_configuration) was preserved
       workflow = hd(result["workflows"])
       trigger = hd(workflow["triggers"])
       assert trigger["type"] == "cron"
@@ -95,9 +92,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     test "handles unknown string keys without crashing", %{
       tmp_dir: tmp_dir
     } do
-      # Test that atomize_keys safely handles unknown keys that don't exist as atoms
-      # Note: The merge logic itself only preserves known fields via Map.take/2,
-      # so unknown fields are dropped regardless of atomization
       source = %{
         "id" => "source-id",
         "name" => "Source",
@@ -127,7 +121,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
 
       {:ok, result} = Jason.decode(json_output)
 
-      # Should complete successfully without crashing on unknown keys
       assert result["id"] == "target-id"
 
       # Unknown field is not preserved (merge logic uses Map.take for known fields only)
@@ -137,8 +130,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     test "handles deeply nested structures with all key types", %{
       tmp_dir: tmp_dir
     } do
-      # Test that atomize_keys handles deeply nested JSON structures
-      # with various field types (jobs, triggers, edges, credentials)
       source = %{
         "id" => "source-id",
         "name" => "Source",
@@ -181,7 +172,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       File.write!(source_file, Jason.encode!(source))
       File.write!(target_file, Jason.encode!(target))
 
-      # This should not crash even with deeply nested structures
       output =
         capture_io(fn ->
           Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
@@ -192,13 +182,11 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
 
       {:ok, result} = Jason.decode(json_output)
 
-      # Should complete successfully
       assert result["id"] == "target-id"
       assert length(result["workflows"]) == 1
     end
 
     test "MergeProjects.merge_project/2 works with atom keys" do
-      # Test if merge_project can handle maps with atom keys
       source = %{
         id: "source-id",
         name: "Source",
@@ -243,7 +231,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
 
       result = MergeProjects.merge_project(source, target)
 
-      # Should work fine with atom keys
       assert result["id"] == "target-id"
       assert result["name"] == "Target"
     end
@@ -253,7 +240,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     test "merges two valid project state files and outputs to stdout", %{
       tmp_dir: tmp_dir
     } do
-      # Create source project state
       source_state = %{
         "id" => "source-id",
         "name" => "Source",
@@ -285,7 +271,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
         ]
       }
 
-      # Create target project state
       target_state = %{
         "id" => "target-id",
         "name" => "Target",
@@ -334,7 +319,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
 
       {:ok, result} = Jason.decode(json_output)
 
-      # Verify merge result
       assert result["id"] == "target-id"
       assert result["name"] == "Target"
       assert result["env"] == "production"
@@ -344,7 +328,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       assert workflow["id"] == "workflow-target"
       assert workflow["name"] == "Test Workflow"
 
-      # Verify the job body was updated from source
       job = hd(workflow["jobs"])
       assert job["body"] == "console.log('updated')"
     end
@@ -529,7 +512,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       File.write!(source_file, Jason.encode!(%{}))
       File.write!(target_file, Jason.encode!(%{}))
 
-      # Remove read permissions
       File.chmod!(source_file, 0o000)
 
       try do
@@ -537,7 +519,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
           Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
         end
       after
-        # Cleanup: restore permissions so file can be deleted
         File.chmod!(source_file, 0o644)
       end
     end
@@ -551,7 +532,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       File.write!(source_file, Jason.encode!(%{}))
       File.write!(target_file, Jason.encode!(%{}))
 
-      # Remove read permissions
       File.chmod!(target_file, 0o000)
 
       try do
@@ -559,13 +539,57 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
           Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
         end
       after
-        # Cleanup: restore permissions
         File.chmod!(target_file, 0o644)
       end
     end
   end
 
   describe "output path validation" do
+    test "raises clear error when File.stat fails on output directory", %{
+      tmp_dir: tmp_dir
+    } do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(
+        source_file,
+        Jason.encode!(%{"id" => "s", "name" => "S", "workflows" => []})
+      )
+
+      File.write!(
+        target_file,
+        Jason.encode!(%{"id" => "t", "name" => "T", "workflows" => []})
+      )
+
+      output_dir = Path.join(tmp_dir, "output_dir")
+      File.mkdir_p!(output_dir)
+      output_file = Path.join(output_dir, "output.json")
+
+      :meck.new(File, [:passthrough, :unstick])
+
+      try do
+        # Mock File.stat to return an error for the specific directory
+        :meck.expect(File, :stat, fn path ->
+          if String.ends_with?(path, "output_dir") do
+            {:error, :eacces}
+          else
+            :meck.passthrough([path])
+          end
+        end)
+
+        assert_raise Mix.Error, ~r/Cannot access output directory/, fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([
+            source_file,
+            target_file,
+            "-o",
+            output_file
+          ])
+        end
+      after
+        :meck.unload(File)
+      end
+    end
+
     test "raises clear error when output directory does not exist", %{
       tmp_dir: tmp_dir
     } do
@@ -615,7 +639,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       File.mkdir_p!(readonly_dir)
       output_file = Path.join(readonly_dir, "output.json")
 
-      # Remove write permissions
       File.chmod!(readonly_dir, 0o555)
 
       try do
@@ -628,7 +651,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
           ])
         end
       after
-        # Cleanup: restore permissions
         File.chmod!(readonly_dir, 0o755)
       end
     end
@@ -652,7 +674,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
         Jason.encode!(%{"id" => "t", "name" => "T", "workflows" => []})
       )
 
-      # Create output file with no write permissions
       output_file = Path.join(tmp_dir, "readonly_output.json")
       File.write!(output_file, "")
       File.chmod!(output_file, 0o444)
@@ -695,11 +716,9 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       File.mkdir_p!(protected_dir)
       output_file = Path.join(protected_dir, "output.json")
 
-      # Make directory read-only
       File.chmod!(protected_dir, 0o555)
 
       try do
-        # Early validation catches this, so we expect the validation error
         assert_raise Mix.Error, ~r/No write permission for directory/, fn ->
           Mix.Tasks.Lightning.MergeProjects.run([
             source_file,
@@ -709,7 +728,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
           ])
         end
       after
-        # Cleanup
         File.chmod!(protected_dir, 0o755)
       end
     end
@@ -719,7 +737,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     test "raises clear error when project structure causes merge to fail", %{
       tmp_dir: tmp_dir
     } do
-      # Create source with structure that will cause MergeProjects to fail
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
 
@@ -836,7 +853,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       File.mkdir_p!(output_dir)
 
       output_file = Path.join(tmp_dir, "output.json")
-      # Create symlink pointing to directory
+
       :ok =
         :file.make_symlink(
           String.to_charlist(output_dir),
@@ -889,7 +906,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       output_file = Path.join(output_dir, "output.json")
 
       try do
-        # File.dir? will return false for broken symlink, so this will hit the dir check
         assert_raise Mix.Error, ~r/Output directory does not exist/, fn ->
           Mix.Tasks.Lightning.MergeProjects.run([
             source_file,
@@ -919,7 +935,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
         Jason.encode!(%{"id" => "t", "name" => "T", "workflows" => []})
       )
 
-      # Use :meck to mock Jason.encode! to raise Protocol.UndefinedError
       :meck.new(Jason, [:passthrough])
 
       :meck.expect(Jason, :encode!, fn _data, _opts ->
@@ -956,7 +971,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
         Jason.encode!(%{"id" => "t", "name" => "T", "workflows" => []})
       )
 
-      # Use :meck to mock Jason.encode! to raise a generic error
       :meck.new(Jason, [:passthrough])
 
       :meck.expect(Jason, :encode!, fn _data, _opts ->
@@ -994,7 +1008,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
         Jason.encode!(%{"id" => "t", "name" => "T", "workflows" => []})
       )
 
-      # Use :meck to mock File.write to return :enoent error
       :meck.new(File, [:passthrough, :unstick])
 
       :meck.expect(File, :write, fn ^output_file, _content ->
@@ -1032,7 +1045,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
         Jason.encode!(%{"id" => "t", "name" => "T", "workflows" => []})
       )
 
-      # Use :meck to mock File.write to return :enospc error
       :meck.new(File, [:passthrough, :unstick])
 
       :meck.expect(File, :write, fn ^output_file, _content ->
@@ -1053,8 +1065,4 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       end
     end
   end
-
-  # Note: All error paths are now tested. The only scenarios not covered would be
-  # errors that are truly impossible to reach (dead code) or would require breaking
-  # Elixir's type system itself.
 end
