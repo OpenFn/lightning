@@ -37,6 +37,9 @@ and this project adheres to
 
 ### Fixed
 
+- Show validation error message when creating sandbox with duplicate name
+  [#3776](https://github.com/OpenFn/lightning/issues/3776)
+
 ## [2.14.12] - 2025-10-21
 
 ## [2.14.12-pre1] - 2025-10-21
@@ -919,8 +922,9 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes
   [#2908](https://github.com/OpenFn/lightning/issues/2908) \
   ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
-  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
-  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  To do that run the following command:
+  `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or
+  `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
   for production environments.
 
 ### Changed
