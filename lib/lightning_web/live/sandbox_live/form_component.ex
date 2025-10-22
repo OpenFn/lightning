@@ -271,8 +271,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   defp base_struct(_assigns), do: %Project{}
 
   defp get_parent_id(%{parent: %Project{id: id}}), do: id
-  defp get_parent_id(%{sandbox: %Project{parent_id: parent_id}}), do: parent_id
-  defp get_parent_id(_assigns), do: nil
 
   defp initial_params(%{sandbox: %Project{} = sandbox}) do
     %{
@@ -286,8 +284,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   defp initial_params(%{mode: :new}) do
     %{"color" => get_random_color()}
   end
-
-  defp initial_params(_assigns), do: %{}
 
   defp form_changeset(%Project{} = base, params, parent_id) do
     params
