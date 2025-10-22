@@ -20,7 +20,9 @@ defmodule Lightning.Invocation.Query do
     projects = Ecto.assoc(user, :projects) |> select([:id])
 
     from(wo in WorkOrder,
+      as: :work_order,
       join: w in assoc(wo, :workflow),
+      as: :workflow,
       join: p in subquery(projects),
       on: w.project_id == p.id,
       order_by: [desc: wo.last_activity]
@@ -30,7 +32,9 @@ defmodule Lightning.Invocation.Query do
   @spec work_orders_for(Project.t()) :: Ecto.Queryable.t()
   def work_orders_for(%Project{id: project_id}) do
     from(wo in WorkOrder,
+      as: :work_order,
       join: w in assoc(wo, :workflow),
+      as: :workflow,
       where: w.project_id == ^project_id,
       order_by: [desc: wo.last_activity]
     )
@@ -44,8 +48,11 @@ defmodule Lightning.Invocation.Query do
     projects = Ecto.assoc(user, :projects) |> select([:id])
 
     from(r in Run,
+      as: :run,
       join: wo in assoc(r, :work_order),
+      as: :work_order,
       join: w in assoc(wo, :workflow),
+      as: :workflow,
       join: p in subquery(projects),
       on: w.project_id == p.id,
       order_by: [desc: r.inserted_at]
@@ -55,11 +62,42 @@ defmodule Lightning.Invocation.Query do
   @spec runs_for(Project.t()) :: Ecto.Queryable.t()
   def runs_for(%Project{id: project_id}) do
     from(r in Run,
+      as: :run,
       join: wo in assoc(r, :work_order),
+      as: :work_order,
       join: w in assoc(wo, :workflow),
+      as: :workflow,
       where: w.project_id == ^project_id,
       order_by: [desc: r.inserted_at]
     )
+  end
+
+  @doc """
+  Validate datetime parameters for filtering
+  """
+  @spec validate_datetime_params(map(), list(String.t())) ::
+          :ok | {:error, String.t()}
+  def validate_datetime_params(params, keys) do
+    keys
+    |> Enum.find_value(fn key ->
+      case params[key] do
+        nil ->
+          nil
+
+        value ->
+          case parse_datetime(value) do
+            {:ok, _} ->
+              nil
+
+            :error ->
+              {:error, "Invalid datetime format for '#{key}': #{inspect(value)}"}
+          end
+      end
+    end)
+    |> case do
+      nil -> :ok
+      error -> error
+    end
   end
 
   @doc """
@@ -74,52 +112,62 @@ defmodule Lightning.Invocation.Query do
     |> filter_by_updated_before(params["updated_before"])
   end
 
+  @doc """
+  Filter runs by various criteria
+  """
+  @spec filter_runs(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
+  def filter_runs(query, params) do
+    query
+    |> filter_runs_by_date(params)
+    |> filter_runs_by_project(params["project_id"])
+    |> filter_runs_by_workflow(params["workflow_id"])
+    |> filter_runs_by_work_order(params["work_order_id"])
+  end
+
+  defp filter_runs_by_project(query, nil), do: query
+
+  defp filter_runs_by_project(query, project_id) do
+    from([workflow: w] in query, where: w.project_id == ^project_id)
+  end
+
+  defp filter_runs_by_workflow(query, nil), do: query
+
+  defp filter_runs_by_workflow(query, workflow_id) do
+    from([workflow: w] in query, where: w.id == ^workflow_id)
+  end
+
+  defp filter_runs_by_work_order(query, nil), do: query
+
+  defp filter_runs_by_work_order(query, work_order_id) do
+    from([work_order: wo] in query, where: wo.id == ^work_order_id)
+  end
+
   defp filter_by_inserted_after(query, nil), do: query
 
   defp filter_by_inserted_after(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from(r in query, where: r.inserted_at >= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from(r in query, where: r.inserted_at >= ^datetime)
   end
 
   defp filter_by_inserted_before(query, nil), do: query
 
   defp filter_by_inserted_before(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from(r in query, where: r.inserted_at <= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from(r in query, where: r.inserted_at <= ^datetime)
   end
 
   defp filter_by_updated_after(query, nil), do: query
 
   defp filter_by_updated_after(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from(r in query, where: r.updated_at >= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from(r in query, where: r.updated_at >= ^datetime)
   end
 
   defp filter_by_updated_before(query, nil), do: query
 
   defp filter_by_updated_before(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from(r in query, where: r.updated_at <= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from(r in query, where: r.updated_at <= ^datetime)
   end
 
   @doc """
@@ -250,52 +298,55 @@ defmodule Lightning.Invocation.Query do
     |> filter_wo_by_updated_before(params["updated_before"])
   end
 
+  @doc """
+  Filter work orders by various criteria
+  """
+  @spec filter_work_orders(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
+  def filter_work_orders(query, params) do
+    query
+    |> filter_work_orders_by_date(params)
+    |> filter_work_orders_by_project(params["project_id"])
+    |> filter_work_orders_by_workflow(params["workflow_id"])
+  end
+
+  defp filter_work_orders_by_project(query, nil), do: query
+
+  defp filter_work_orders_by_project(query, project_id) do
+    from([workflow: w] in query, where: w.project_id == ^project_id)
+  end
+
+  defp filter_work_orders_by_workflow(query, nil), do: query
+
+  defp filter_work_orders_by_workflow(query, workflow_id) do
+    from([workflow: w] in query, where: w.id == ^workflow_id)
+  end
+
   defp filter_wo_by_inserted_after(query, nil), do: query
 
   defp filter_wo_by_inserted_after(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from(wo in query, where: wo.inserted_at >= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from(wo in query, where: wo.inserted_at >= ^datetime)
   end
 
   defp filter_wo_by_inserted_before(query, nil), do: query
 
   defp filter_wo_by_inserted_before(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from(wo in query, where: wo.inserted_at <= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from(wo in query, where: wo.inserted_at <= ^datetime)
   end
 
   defp filter_wo_by_updated_after(query, nil), do: query
 
   defp filter_wo_by_updated_after(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from(wo in query, where: wo.updated_at >= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from(wo in query, where: wo.updated_at >= ^datetime)
   end
 
   defp filter_wo_by_updated_before(query, nil), do: query
 
   defp filter_wo_by_updated_before(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from(wo in query, where: wo.updated_at <= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from(wo in query, where: wo.updated_at <= ^datetime)
   end
 
   defp parse_datetime(nil), do: :error
@@ -349,25 +400,15 @@ defmodule Lightning.Invocation.Query do
   defp filter_log_by_timestamp_after(query, nil), do: query
 
   defp filter_log_by_timestamp_after(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from([log: log] in query, where: log.timestamp >= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from([log: log] in query, where: log.timestamp >= ^datetime)
   end
 
   defp filter_log_by_timestamp_before(query, nil), do: query
 
   defp filter_log_by_timestamp_before(query, date_string) do
-    case parse_datetime(date_string) do
-      {:ok, datetime} ->
-        from([log: log] in query, where: log.timestamp <= ^datetime)
-
-      :error ->
-        query
-    end
+    {:ok, datetime} = parse_datetime(date_string)
+    from([log: log] in query, where: log.timestamp <= ^datetime)
   end
 
   defp filter_log_by_project(query, nil), do: query

@@ -31,7 +31,14 @@ defmodule LightningWeb.API.WorkOrdersController do
   def index(conn, %{"project_id" => project_id} = params) do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
-    with project <- Lightning.Projects.get_project(project_id),
+    with :ok <-
+           Invocation.Query.validate_datetime_params(params, [
+             "inserted_after",
+             "inserted_before",
+             "updated_after",
+             "updated_before"
+           ]),
+         project <- Lightning.Projects.get_project(project_id),
          :ok <-
            ProjectUsers
            |> Permissions.can(
@@ -41,7 +48,7 @@ defmodule LightningWeb.API.WorkOrdersController do
            ) do
       page =
         WorkOrders.work_orders_for_project_query(project)
-        |> Invocation.Query.filter_work_orders_by_date(params)
+        |> Invocation.Query.filter_work_orders(params)
         |> Lightning.Repo.paginate(pagination_attrs)
 
       render(conn, "index.json", page: page, conn: conn)
@@ -49,14 +56,22 @@ defmodule LightningWeb.API.WorkOrdersController do
   end
 
   def index(conn, params) do
-    pagination_attrs = Map.take(params, ["page_size", "page"])
+    with :ok <-
+           Invocation.Query.validate_datetime_params(params, [
+             "inserted_after",
+             "inserted_before",
+             "updated_after",
+             "updated_before"
+           ]) do
+      pagination_attrs = Map.take(params, ["page_size", "page"])
 
-    page =
-      Invocation.Query.work_orders_for(conn.assigns.current_resource)
-      |> Invocation.Query.filter_work_orders_by_date(params)
-      |> Lightning.Repo.paginate(pagination_attrs)
+      page =
+        Invocation.Query.work_orders_for(conn.assigns.current_resource)
+        |> Invocation.Query.filter_work_orders(params)
+        |> Lightning.Repo.paginate(pagination_attrs)
 
-    render(conn, "index.json", page: page, conn: conn)
+      render(conn, "index.json", page: page, conn: conn)
+    end
   end
 
   def show(conn, %{"id" => id}) do

@@ -30,13 +30,19 @@ defmodule LightningWeb.API.LogLinesController do
   action_fallback LightningWeb.FallbackController
 
   def index(conn, params) do
-    pagination_attrs = Map.take(params, ["page_size", "page"])
+    with :ok <-
+           Invocation.Query.validate_datetime_params(params, [
+             "timestamp_after",
+             "timestamp_before"
+           ]) do
+      pagination_attrs = Map.take(params, ["page_size", "page"])
 
-    page =
-      Invocation.Query.log_lines_for(conn.assigns.current_resource)
-      |> Invocation.Query.filter_log_lines(params)
-      |> Lightning.Repo.paginate(pagination_attrs)
+      page =
+        Invocation.Query.log_lines_for(conn.assigns.current_resource)
+        |> Invocation.Query.filter_log_lines(params)
+        |> Lightning.Repo.paginate(pagination_attrs)
 
-    render(conn, "index.json", page: page, conn: conn)
+      render(conn, "index.json", page: page, conn: conn)
+    end
   end
 end

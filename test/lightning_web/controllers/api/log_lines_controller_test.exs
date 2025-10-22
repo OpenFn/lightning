@@ -87,7 +87,7 @@ defmodule LightningWeb.API.LogLinesControllerTest do
 
       other_run = List.first(other_workorder.runs)
 
-      _other_log =
+      other_log =
         insert(:log_line,
           run: other_run,
           message: "Other project log",
@@ -105,6 +105,7 @@ defmodule LightningWeb.API.LogLinesControllerTest do
       log_ids = Enum.map(response["data"], & &1["id"])
       assert log1.id in log_ids
       assert log2.id in log_ids
+      refute other_log.id in log_ids
 
       # Verify pagination metadata
       assert response["meta"]["total_entries"] == 2
@@ -636,6 +637,128 @@ defmodule LightningWeb.API.LogLinesControllerTest do
       response = json_response(conn, 200)
 
       assert List.first(response["data"])["id"] == log2.id
+    end
+
+    test "returns error for invalid timestamp_after format", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :started,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      run = List.first(workorder.runs)
+
+      insert(:log_line,
+        run: run,
+        message: "Test log",
+        timestamp: DateTime.utc_now()
+      )
+
+      conn =
+        get(
+          conn,
+          ~p"/api/log_lines?timestamp_after=not-a-valid-datetime"
+        )
+
+      response = json_response(conn, 400)
+
+      assert %{"error" => error_message} = response
+      assert error_message =~ "Invalid datetime format for 'timestamp_after'"
+      assert error_message =~ "not-a-valid-datetime"
+    end
+
+    test "returns error for invalid timestamp_before format", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :started,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      run = List.first(workorder.runs)
+
+      insert(:log_line,
+        run: run,
+        message: "Test log",
+        timestamp: DateTime.utc_now()
+      )
+
+      conn =
+        get(
+          conn,
+          ~p"/api/log_lines?timestamp_before=2024-13-45"
+        )
+
+      response = json_response(conn, 400)
+
+      assert %{"error" => error_message} = response
+      assert error_message =~ "Invalid datetime format for 'timestamp_before'"
+      assert error_message =~ "2024-13-45"
+    end
+
+    test "returns error for invalid datetime with integer", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :started,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      run = List.first(workorder.runs)
+
+      insert(:log_line,
+        run: run,
+        message: "Test log",
+        timestamp: DateTime.utc_now()
+      )
+
+      conn = get(conn, ~p"/api/log_lines?timestamp_after=123456")
+
+      response = json_response(conn, 400)
+
+      assert %{"error" => error_message} = response
+      assert error_message =~ "Invalid datetime format for 'timestamp_after'"
+      assert error_message =~ "123456"
     end
   end
 end
