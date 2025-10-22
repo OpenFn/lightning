@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 
 import { useURLState } from "../../../react/lib/use-url-state";
 import type { Workflow } from "../../types/workflow";
@@ -26,19 +27,13 @@ interface InspectorProps {
 export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
   const { hash, updateHash } = useURLState();
   const [jobFooterButton, setJobFooterButton] = useState<React.ReactNode>(null);
+  const { enableScope, disableScope } = useHotkeysContext();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
   // Settings hash takes precedence, then node inspector
   const mode =
     hash === "settings" ? "settings" : hasSelectedNode ? "node" : null;
-
-  // Clear footer button when mode changes away from job node
-  useEffect(() => {
-    if (mode !== "node" || currentNode.type !== "job") {
-      setJobFooterButton(null);
-    }
-  }, [mode, currentNode.type]);
 
   const handleClose = () => {
     if (mode === "settings") {
@@ -47,6 +42,42 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
       onClose(); // Clears node selection
     }
   };
+
+  // Enable/disable panel scope based on whether panel is open
+  // When modal opens, it will disable this scope externally
+  useEffect(() => {
+    if (mode !== null) {
+      enableScope("panel");
+    } else {
+      disableScope("panel");
+    }
+
+    return () => {
+      disableScope("panel");
+    };
+  }, [mode, enableScope, disableScope]);
+
+  // Handle Escape key to close the panel
+  // Uses panel scope which is externally controlled by modals
+  useHotkeys(
+    "escape",
+    () => {
+      handleClose();
+    },
+    {
+      enabled: mode !== null,
+      scopes: ["panel"],
+      enableOnFormTags: true, // Allow Escape in forms
+    },
+    [mode, handleClose]
+  );
+
+  // Clear footer button when mode changes away from job node
+  useEffect(() => {
+    if (mode !== "node" || currentNode.type !== "job") {
+      setJobFooterButton(null);
+    }
+  }, [mode, currentNode.type]);
 
   // Don't render if no mode selected
   if (!mode) return null;
