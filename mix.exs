@@ -90,6 +90,7 @@ defmodule Lightning.MixProject do
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.26"},
+      {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
       {:google_api_storage, "~> 0.46.0"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
