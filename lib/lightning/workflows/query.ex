@@ -15,6 +15,30 @@ defmodule Lightning.Workflows.Query do
   alias Lightning.WorkOrder
 
   @doc """
+  Returns all workflows accessible to a user, via their projects
+  or all workflows in a given project.
+  """
+  @spec workflows_for(User.t()) :: Ecto.Queryable.t()
+  def workflows_for(%User{} = user) do
+    projects = Ecto.assoc(user, :projects) |> select([:id])
+
+    from(w in Workflow,
+      join: p in subquery(projects),
+      on: w.project_id == p.id,
+      where: is_nil(w.deleted_at),
+      order_by: [desc: w.inserted_at]
+    )
+  end
+
+  @spec workflows_for(Project.t()) :: Ecto.Queryable.t()
+  def workflows_for(%Project{id: project_id}) do
+    from(w in Workflow,
+      where: w.project_id == ^project_id and is_nil(w.deleted_at),
+      order_by: [desc: w.inserted_at]
+    )
+  end
+
+  @doc """
   Returns all jobs accessible to a user, via their projects
   or all jobs in a given project.
   """

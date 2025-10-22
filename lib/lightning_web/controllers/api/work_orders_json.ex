@@ -1,11 +1,11 @@
-defmodule LightningWeb.API.RunJSON do
+defmodule LightningWeb.API.WorkOrdersJSON do
   @moduledoc false
 
   import LightningWeb.API.Helpers
 
   alias LightningWeb.Router.Helpers, as: Routes
 
-  @fields ~w(state started_at finished_at priority error_type)a
+  @fields ~w(state last_activity inserted_at updated_at)a
 
   def render("index.json", %{page: page, conn: conn}) do
     %{
@@ -25,9 +25,9 @@ defmodule LightningWeb.API.RunJSON do
     }
   end
 
-  def render("show.json", %{run: run, conn: conn}) do
+  def render("show.json", %{work_order: work_order, conn: conn}) do
     %{
-      data: resource(conn, run),
+      data: resource(conn, work_order),
       included: [],
       links: %{
         self: url_for(conn)
@@ -35,13 +35,13 @@ defmodule LightningWeb.API.RunJSON do
     }
   end
 
-  defp resource(conn, run) do
+  defp resource(conn, work_order) do
     %{
-      type: "runs",
+      type: "work_orders",
       relationships: %{},
-      links: %{self: Routes.api_run_url(conn, :show, run)},
-      id: run.id,
-      attributes: Map.take(run, @fields)
+      links: %{self: Routes.api_work_orders_url(conn, :show, work_order)},
+      id: work_order.id,
+      attributes: Map.take(work_order, @fields)
     }
   end
 end
