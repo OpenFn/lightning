@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Panel,
   PanelGroup,
@@ -41,6 +41,9 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
 
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
+
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(true);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(true);
 
   // Sync URL job ID to workflow store selection
   useEffect(() => {
@@ -111,19 +114,38 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
             minSize={15}
             maxSize={40}
             collapsible
-            collapsedSize={0}
+            collapsedSize={1}
+            onCollapse={() => setIsLeftCollapsed(true)}
+            onExpand={() => setIsLeftCollapsed(false)}
             className="bg-gray-50 border-r border-gray-200"
           >
-            <div
-              className="h-full p-4 flex items-center
-              justify-center"
-            >
-              <div className="text-center text-gray-500">
-                <p className="text-sm font-medium">
-                  Input Picker / AI Assistant
-                </p>
-                <p className="text-xs mt-1">Coming Soon</p>
+            <div className="h-full flex flex-col">
+              {/* Panel heading */}
+              <div
+                className={`shrink-0 transition-transform ${
+                  isLeftCollapsed ? "rotate-90" : ""
+                }`}
+              >
+                <h3
+                  className="text-xs font-medium text-gray-400
+                  uppercase tracking-wide px-3 py-2"
+                >
+                  Input
+                </h3>
               </div>
+
+              {/* Panel content */}
+              {!isLeftCollapsed && (
+                <div className="flex-1 p-4 flex items-center
+                  justify-center">
+                  <div className="text-center text-gray-500">
+                    <p className="text-sm font-medium">
+                      Input Picker / AI Assistant
+                    </p>
+                    <p className="text-xs mt-1">Coming Soon</p>
+                  </div>
+                </div>
+              )}
             </div>
           </Panel>
 
@@ -135,19 +157,35 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
 
           {/* Center Panel - CollaborativeMonaco Editor */}
           <Panel minSize={40} className="bg-white">
-            <CollaborativeMonaco
-              ytext={currentJobYText}
-              awareness={awareness}
-              adaptor={currentJob.adaptor || "common"}
-              disabled={false}
-              className="h-full w-full"
-              options={{
-                automaticLayout: true,
-                minimap: { enabled: true },
-                lineNumbers: "on",
-                wordWrap: "on",
-              }}
-            />
+            <div className="h-full flex flex-col">
+              {/* Panel heading */}
+              <div className="shrink-0">
+                <h3
+                  className="text-xs font-medium text-gray-400
+                  uppercase tracking-wide px-3 py-2 border-b
+                  border-gray-100"
+                >
+                  Code
+                </h3>
+              </div>
+
+              {/* Editor */}
+              <div className="flex-1 overflow-hidden">
+                <CollaborativeMonaco
+                  ytext={currentJobYText}
+                  awareness={awareness}
+                  adaptor={currentJob.adaptor || "common"}
+                  disabled={false}
+                  className="h-full w-full"
+                  options={{
+                    automaticLayout: true,
+                    minimap: { enabled: true },
+                    lineNumbers: "on",
+                    wordWrap: "on",
+                  }}
+                />
+              </div>
+            </div>
           </Panel>
 
           {/* Resize Handle */}
@@ -163,19 +201,38 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
             minSize={20}
             maxSize={50}
             collapsible
-            collapsedSize={0}
+            collapsedSize={1}
+            onCollapse={() => setIsRightCollapsed(true)}
+            onExpand={() => setIsRightCollapsed(false)}
             className="bg-gray-50 border-l border-gray-200"
           >
-            <div
-              className="h-full p-4 flex items-center
-              justify-center"
-            >
-              <div className="text-center text-gray-500">
-                <p className="text-sm font-medium">
-                  Run / Logs / Step I/O
-                </p>
-                <p className="text-xs mt-1">Coming Soon</p>
+            <div className="h-full flex flex-col">
+              {/* Panel heading */}
+              <div
+                className={`shrink-0 transition-transform ${
+                  isRightCollapsed ? "rotate-90" : ""
+                }`}
+              >
+                <h3
+                  className="text-xs font-medium text-gray-400
+                  uppercase tracking-wide px-3 py-2"
+                >
+                  Output
+                </h3>
               </div>
+
+              {/* Panel content */}
+              {!isRightCollapsed && (
+                <div className="flex-1 p-4 flex items-center
+                  justify-center">
+                  <div className="text-center text-gray-500">
+                    <p className="text-sm font-medium">
+                      Run / Logs / Step I/O
+                    </p>
+                    <p className="text-xs mt-1">Coming Soon</p>
+                  </div>
+                </div>
+              )}
             </div>
           </Panel>
         </PanelGroup>
