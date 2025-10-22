@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Show collaborative editor toggle (beaker icon) when creating new workflows
+  [#3797](https://github.com/OpenFn/lightning/pull/3797)
+
 ### Changed
 
 ### Fixed
