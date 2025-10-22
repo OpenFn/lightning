@@ -82,12 +82,13 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       {:ok, result} = Jason.decode(json_output)
 
       assert result["id"] == "target-id"
-      # Verify the cron trigger with all its keys was preserved
+      # Verify the cron trigger with all its keys (including kafka_configuration) was preserved
       workflow = hd(result["workflows"])
       trigger = hd(workflow["triggers"])
       assert trigger["type"] == "cron"
       assert trigger["cron_expression"] == "0 0 * * *"
       assert trigger["comment"] == "Daily trigger"
+      assert trigger["kafka_configuration"] == %{"topic" => "test"}
     end
 
     test "handles unknown string keys without crashing", %{

@@ -44,7 +44,16 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
     cond do
       length(invalid) > 0 ->
-        Mix.raise("Invalid options: #{inspect(invalid)}")
+        invalid_opts = Enum.map_join(invalid, ", ", fn {opt, _} -> opt end)
+
+        Mix.raise("""
+        Unknown option(s): #{invalid_opts}
+
+        Valid options:
+          -o, --output PATH    Write output to file instead of stdout
+
+        Run `mix help lightning.merge_projects` for more information.
+        """)
 
       length(positional) != 2 ->
         Mix.raise("""
@@ -63,25 +72,141 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   end
 
   defp merge_and_output(source_file, target_file, opts) do
+    # Validate output path early (fail fast before doing expensive operations)
+    if output_path = Keyword.get(opts, :output) do
+      validate_output_path(output_path)
+    end
+
     source_project = read_state_file(source_file, "source")
 
     target_project = read_state_file(target_file, "target")
 
     Mix.shell().info("Merging #{source_file} into #{target_file}...")
 
-    merged_project = MergeProjects.merge_project(source_project, target_project)
+    merged_project = perform_merge(source_project, target_project)
 
-    output =
-      Jason.encode!(merged_project, pretty: true)
+    output = encode_json(merged_project)
+    write_output(output, Keyword.get(opts, :output))
+  end
 
-    case Keyword.get(opts, :output) do
-      nil ->
-        IO.puts(output)
+  defp perform_merge(source_project, target_project) do
+    MergeProjects.merge_project(source_project, target_project)
+  rescue
+    e in KeyError ->
+      Mix.raise("""
+      Failed to merge projects - missing required field: #{inspect(e.key)}
 
-      output_path ->
-        File.write!(output_path, output)
+      #{Exception.message(e)}
 
+      This may indicate incompatible or corrupted project state files.
+      Please verify both files are valid Lightning project exports.
+      """)
+
+    e ->
+      Mix.raise("""
+      Failed to merge projects
+
+      #{Exception.message(e)}
+
+      This may indicate incompatible project structures or corrupted data.
+      Please verify both files are valid Lightning project exports.
+      """)
+  end
+
+  defp encode_json(project) do
+    Jason.encode!(project, pretty: true)
+  rescue
+    e in Protocol.UndefinedError ->
+      Mix.raise("""
+      Failed to encode merged project as JSON
+
+      #{Exception.message(e)}
+
+      This is unexpected and may indicate a bug.
+      Please report this issue with your input files (if possible).
+      """)
+
+    e ->
+      Mix.raise("""
+      Failed to encode merged project as JSON
+
+      #{Exception.message(e)}
+      """)
+  end
+
+  defp write_output(output, nil), do: IO.puts(output)
+
+  defp write_output(output, output_path) do
+    case File.write(output_path, output) do
+      :ok ->
         Mix.shell().info("Merged project written to #{output_path}")
+
+      {:error, :eacces} ->
+        Mix.raise("""
+        Permission denied writing to: #{output_path}
+
+        Please check:
+          - You have write permissions for this location
+          - The file is not locked by another process
+        """)
+
+      {:error, :enospc} ->
+        Mix.raise("""
+        Not enough disk space to write: #{output_path}
+
+        Please free up disk space and try again.
+        """)
+
+      {:error, :enoent} ->
+        parent_dir = Path.dirname(output_path)
+
+        Mix.raise("""
+        Output directory does not exist: #{parent_dir}
+
+        Create the directory first:
+          mkdir -p #{parent_dir}
+        """)
+
+      {:error, reason} ->
+        Mix.raise("""
+        Failed to write merged project to: #{output_path}
+
+        Error: #{:file.format_error(reason)}
+        """)
+    end
+  end
+
+  defp validate_output_path(path) do
+    parent_dir = Path.dirname(path)
+
+    unless File.dir?(parent_dir) do
+      Mix.raise("""
+      Output directory does not exist: #{parent_dir}
+
+      Create the directory first:
+        mkdir -p #{parent_dir}
+      """)
+    end
+
+    # Check if parent directory is writable
+    case File.stat(parent_dir) do
+      {:ok, %File.Stat{access: access}} when access in [:read_write, :write] ->
+        :ok
+
+      {:ok, %File.Stat{}} ->
+        Mix.raise("""
+        No write permission for directory: #{parent_dir}
+
+        Please check directory permissions:
+          chmod +w #{parent_dir}
+        """)
+
+      {:error, reason} ->
+        Mix.raise("""
+        Cannot access output directory: #{parent_dir}
+
+        Error: #{:file.format_error(reason)}
+        """)
     end
   end
 
@@ -90,36 +215,40 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
       Mix.raise("#{String.capitalize(label)} file not found: #{path}")
     end
 
-    case File.read!(path) |> Jason.decode() do
-      {:ok, data} ->
-        # Convert string keys to atom keys for nested structures
-        # The merge_project function expects maps with atom keys for
-        # workflows, jobs, triggers, edges
-        atomize_keys(data)
+    content =
+      case File.read(path) do
+        {:ok, content} ->
+          content
 
-      {:error, error} ->
-        Mix.raise("Failed to parse #{label} file as JSON: #{inspect(error)}")
+        {:error, :eacces} ->
+          Mix.raise("""
+          Permission denied reading #{label} file: #{path}
+
+          Please check file permissions:
+            chmod +r #{path}
+          """)
+
+        {:error, reason} ->
+          Mix.raise("""
+          Failed to read #{label} file: #{path}
+
+          Error: #{:file.format_error(reason)}
+          """)
+      end
+
+    case Jason.decode(content, keys: :atoms) do
+      {:ok, data} ->
+        # Jason's keys: :atoms option converts all string keys to atoms
+        # This is safe for controlled JSON file input (not arbitrary user input)
+        # The merge_project function requires atom keys for dot notation access
+        data
+
+      {:error, %Jason.DecodeError{} = error} ->
+        Mix.raise("""
+        Failed to parse #{label} file as JSON: #{path}
+
+        #{Exception.message(error)}
+        """)
     end
   end
-
-  defp atomize_keys(map) when is_map(map) do
-    Map.new(map, fn {key, value} ->
-      atom_key = convert_to_atom(key)
-      {atom_key, atomize_keys(value)}
-    end)
-  end
-
-  defp atomize_keys(list) when is_list(list) do
-    Enum.map(list, &atomize_keys/1)
-  end
-
-  defp atomize_keys(value), do: value
-
-  defp convert_to_atom(key) when is_binary(key) do
-    String.to_existing_atom(key)
-  rescue
-    ArgumentError -> key
-  end
-
-  defp convert_to_atom(key), do: key
 end

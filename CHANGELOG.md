@@ -17,10 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Add a mix task to merge projects
+  [#3615](https://github.com/OpenFn/lightning/issues/3615)
 - Show collaborative editor toggle (beaker icon) when creating new workflows
   [#3797](https://github.com/OpenFn/lightning/pull/3797)
-- Mix task to merge project state files without database access
-  [#3615](https://github.com/OpenFn/lightning/issues/3615)
 
 ### Changed
 
