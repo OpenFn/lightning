@@ -42,6 +42,7 @@ export namespace Session {
     name: string;
     lock_version: number | null;
     deleted_at: string | null;
+    concurrency: number | null;
   };
 
   export type Job = {

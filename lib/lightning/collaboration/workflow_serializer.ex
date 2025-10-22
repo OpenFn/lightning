@@ -71,6 +71,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
         datetime_to_string(workflow.deleted_at)
       )
 
+      Yex.Map.set(workflow_map, "concurrency", workflow.concurrency)
+
       initialize_jobs(jobs_array, workflow.jobs)
       initialize_edges(edges_array, workflow.edges)
       initialize_triggers(triggers_array, workflow.triggers)

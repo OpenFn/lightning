@@ -28,7 +28,7 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
       lock_version: workflow.lock_version,
       deleted_at: workflow.deleted_at,
       // Virtual fields for future use (not yet in Y.Doc)
-      concurrency: null as number | null,
+      concurrency: workflow.concurrency,
       enable_job_logs: true,
     }),
     [workflow]

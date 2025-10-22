@@ -32,7 +32,7 @@ export function WorkflowEditor() {
   const workflow = useWorkflowState(state =>
     state.workflow
       ? {
-          name: state.workflow.name,
+          ...state.workflow,
           jobs: state.jobs,
           triggers: state.triggers,
           edges: state.edges,
