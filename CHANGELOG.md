@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- REST API for runs, work_orders, and log_lines to refresh GovStack compliance
+  [#1656](https://github.com/OpenFn/lightning/issues/1656) &
+  [PR#3786](https://github.com/OpenFn/lightning/pull/3786)
 - Added full-screen IDE for job editing
   [#3708](https://github.com/OpenFn/lightning/issues/3708)
 - Show collaborative editor toggle (beaker icon) when creating new workflows
