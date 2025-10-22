@@ -21,8 +21,17 @@ and this project adheres to
   [#3797](https://github.com/OpenFn/lightning/pull/3797)
 - Auto-format code on commit with git hooks
   [#3806](https://github.com/OpenFn/lightning/pull/3806)
+- Escape key support for closing inspector panels in collaborative workflow
+  editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
+  priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
 
 ### Changed
+
+- Removed Cancel button from inspector panel footers (redundant with X button
+  and Escape key) [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Refactored inspector component architecture to use composition pattern with
+  reusable layout shell and pure form components
+  [#3768](https://github.com/OpenFn/lightning/issues/3768)
 
 ### Fixed
 
