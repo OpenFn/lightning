@@ -568,6 +568,68 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
     end
   end
 
+  describe "enable_job_logs field" do
+    test "serializes enable_job_logs to Y.Doc" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", enable_job_logs: false)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      assert Yex.Map.fetch!(workflow_map, "enable_job_logs") == false
+    end
+
+    test "handles enable_job_logs boolean values" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", enable_job_logs: true)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert extracted["enable_job_logs"] == true
+      assert is_boolean(extracted["enable_job_logs"])
+    end
+
+    test "handles missing enable_job_logs field with nil default" do
+      workflow =
+        insert(:workflow, name: "Test Workflow")
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Remove the field to simulate legacy Y.Doc
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.delete(workflow_map, "enable_job_logs")
+
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # Should return nil, letting database default handle it
+      assert is_nil(extracted["enable_job_logs"])
+    end
+
+    test "enable_job_logs is included in deserialized data" do
+      workflow =
+        insert(:workflow, name: "Test", enable_job_logs: false)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert Map.has_key?(extracted, "enable_job_logs")
+      assert extracted["enable_job_logs"] == false
+    end
+  end
+
   describe "deserialize_from_ydoc/2" do
     test "extracts workflow data from Y.Doc" do
       # Create a workflow with all components
