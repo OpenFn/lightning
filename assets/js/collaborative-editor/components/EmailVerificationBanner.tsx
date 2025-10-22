@@ -31,6 +31,7 @@ export function EmailVerificationBanner() {
       id="account-confirmation-alert"
       className="alert-danger w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1"
       data-testid="email-verification-banner"
+      role="alert"
     >
       <p className="text-sm leading-6">
         <span className="hero-x-circle-solid h-5 w-5 inline-block align-middle mr-2" />{" "}
