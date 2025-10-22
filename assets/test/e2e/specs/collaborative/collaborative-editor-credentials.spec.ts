@@ -182,7 +182,9 @@ test.describe("Collaborative Editor - Job Credentials", () => {
     });
   });
 
-  test("Clear credential after it was selected", async ({ page }) => {
+  test("Clear credential after it was selected", async ({
+    page,
+  }) => {
     await test.step("Navigate to project and create new workflow", async () => {
       const projectsPage = new ProjectsPage(page);
       await projectsPage.navigateToProject(testData.projects.openhie.name);
@@ -257,7 +259,9 @@ test.describe("Collaborative Editor - Job Credentials", () => {
     });
   });
 
-  test("Switch between project and keychain credentials", async ({ page }) => {
+  test("Switch between project and keychain credentials", async ({
+    page,
+  }) => {
     await test.step("Navigate to project and create new workflow", async () => {
       const projectsPage = new ProjectsPage(page);
       await projectsPage.navigateToProject(testData.projects.openhie.name);
