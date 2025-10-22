@@ -1,4 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import { useIsNewWorkflow, useUser } from "../hooks/useSessionContext";
@@ -106,6 +107,23 @@ export function Header({
 
   // Get save button state
   const { canSave, tooltipMessage } = useCanSave();
+
+  // Global save shortcut: Ctrl/Cmd+S
+  useHotkeys(
+    "ctrl+s,meta+s", // Windows/Linux: Ctrl+S, Mac: Cmd+S
+    (event) => {
+      event.preventDefault(); // Always prevent browser's "Save Page" dialog
+      if (canSave) {
+        saveWorkflow(); // Only save when allowed
+      }
+    },
+    {
+      enabled: true, // Always listen to prevent browser save
+      scopes: ["global"], // Active everywhere in collaborative editor
+      enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
+    },
+    [saveWorkflow, canSave] // Re-register when dependencies change
+  );
 
   // Session context queries
   const user = useUser();
