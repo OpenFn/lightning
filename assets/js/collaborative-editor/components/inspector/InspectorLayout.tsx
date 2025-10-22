@@ -8,6 +8,7 @@ interface InspectorLayoutProps {
   onClose: () => void;
   footer?: ReactNode;
   children: ReactNode;
+  "data-testid"?: string;
 }
 
 /**
@@ -21,6 +22,7 @@ export function InspectorLayout({
   onClose,
   footer,
   children,
+  "data-testid": dataTestId,
 }: InspectorLayoutProps) {
   const { enableScope, disableScope } = useHotkeysContext();
 
@@ -48,7 +50,10 @@ export function InspectorLayout({
   );
 
   return (
-    <div className="pointer-events-auto w-screen max-w-md h-full">
+    <div
+      className="pointer-events-auto w-screen max-w-md h-full"
+      data-testid={dataTestId}
+    >
       <div className="relative flex h-full flex-col divide-y divide-gray-200 bg-white shadow-xl">
         {/* Header */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto py-6">

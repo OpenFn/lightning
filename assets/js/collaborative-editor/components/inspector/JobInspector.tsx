@@ -72,12 +72,13 @@ export function JobInspector({ job, onClose }: JobInspectorProps) {
   ) : undefined;
 
   return (
-    <div data-testid="job-inspector">
+    <>
       <InspectorLayout
         title="Inspector"
         nodeType="job"
         onClose={onClose}
         footer={footer}
+        data-testid="job-inspector"
       >
         <JobForm job={job} />
       </InspectorLayout>
@@ -95,6 +96,6 @@ export function JobInspector({ job, onClose }: JobInspectorProps) {
         cancelLabel="Cancel"
         variant="danger"
       />
-    </div>
+    </>
   );
 }
