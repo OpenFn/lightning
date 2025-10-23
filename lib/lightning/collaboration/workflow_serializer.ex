@@ -114,7 +114,6 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     concurrency =
       case Yex.Map.fetch(workflow_map, "concurrency") do
         {:ok, value} when is_float(value) -> trunc(value)
-        {:ok, value} when is_integer(value) -> value
         {:ok, nil} -> nil
         :error -> nil
       end
