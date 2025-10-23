@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { HotkeysProvider, useHotkeysContext } from "react-hotkeys-hook";
+import { useMemo } from "react";
+import { HotkeysProvider } from "react-hotkeys-hook";
 
 import { SocketProvider } from "../react/contexts/SocketProvider";
 import type { WithActionProps } from "../react/lib/with-props";
@@ -12,7 +12,7 @@ import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { StoreProvider } from "./contexts/StoreProvider";
 import { useProject } from "./hooks/useSessionContext";
-import { useNodeSelection, useWorkflowState } from "./hooks/useWorkflow";
+import { useWorkflowState } from "./hooks/useWorkflow";
 
 export interface CollaborativeEditorDataProps {
   "data-workflow-id": string;
@@ -46,10 +46,7 @@ function BreadcrumbContent({
   workflowName,
   projectIdFallback,
   projectNameFallback,
-  onOpenRunPanel,
-}: BreadcrumbContentProps & {
-  onOpenRunPanel?: (context: { jobId?: string; triggerId?: string }) => void;
-}) {
+}: BreadcrumbContentProps) {
   // Get project from store (may be null if not yet loaded)
   const projectFromStore = useProject();
 
@@ -101,7 +98,6 @@ function BreadcrumbContent({
     <Header
       {...(projectId !== undefined && { projectId })}
       workflowId={workflowId}
-      onOpenRunPanel={onOpenRunPanel}
     >
       {breadcrumbElements}
     </Header>
@@ -133,12 +129,20 @@ export const CollaborativeEditor: WithActionProps<
           >
             <StoreProvider>
               <Toaster />
-              <InnerEditor
+              <BreadcrumbContent
                 workflowId={workflowId}
                 workflowName={workflowName}
-                projectId={projectId}
-                projectName={projectName}
+                {...(projectId !== undefined && {
+                  projectIdFallback: projectId,
+                })}
+                {...(projectName !== undefined && {
+                  projectNameFallback: projectName,
+                })}
               />
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <WorkflowEditor />
+                <CollaborationWidget />
+              </div>
             </StoreProvider>
           </SessionProvider>
         </SocketProvider>
@@ -146,94 +150,3 @@ export const CollaborativeEditor: WithActionProps<
     </HotkeysProvider>
   );
 };
-
-/**
- * Inner editor component that manages run panel state
- * Needs to be inside StoreProvider to share state between Header and WorkflowEditor
- */
-function InnerEditor({
-  workflowId,
-  workflowName,
-  projectId,
-  projectName,
-}: {
-  workflowId: string;
-  workflowName: string;
-  projectId?: string;
-  projectName?: string;
-}) {
-  // Run panel state - lifted to this level so both Header and WorkflowEditor can access
-  const [runPanelContext, setRunPanelContext] = useState<{
-    jobId?: string;
-    triggerId?: string;
-  } | null>(null);
-
-  // Get current node selection from URL
-  const { currentNode } = useNodeSelection();
-
-  // Use HotkeysContext to manage scope precedence for run panel
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  // Manage "panel" scope based on whether run panel is open
-  // When run panel opens, disable "panel" scope so InspectorLayout's Escape doesn't fire
-  // When run panel closes, re-enable "panel" scope so InspectorLayout's Escape works again
-  useEffect(() => {
-    if (runPanelContext) {
-      // Run panel is open - disable panel scope
-      disableScope("panel");
-    } else {
-      // Run panel is closed - enable panel scope
-      enableScope("panel");
-    }
-  }, [runPanelContext, enableScope, disableScope]);
-
-  // Update run panel context when selected node changes (if panel is open)
-  useEffect(() => {
-    if (runPanelContext) {
-      // Panel is open, update context based on selected node
-      if (currentNode.type === "job" && currentNode.node) {
-        setRunPanelContext({ jobId: currentNode.node.id });
-      } else if (currentNode.type === "trigger" && currentNode.node) {
-        setRunPanelContext({ triggerId: currentNode.node.id });
-      } else if (currentNode.type === "edge" || !currentNode.node) {
-        // Close panel if edge selected or nothing selected (clicked canvas)
-        setRunPanelContext(null);
-      }
-    }
-  }, [currentNode.type, currentNode.node, runPanelContext]);
-
-  const openRunPanel = useCallback(
-    (context: { jobId?: string; triggerId?: string }) => {
-      setRunPanelContext(context);
-    },
-    []
-  );
-
-  const closeRunPanel = useCallback(() => {
-    setRunPanelContext(null);
-  }, []);
-
-  return (
-    <>
-      <BreadcrumbContent
-        workflowId={workflowId}
-        workflowName={workflowName}
-        {...(projectId !== undefined && {
-          projectIdFallback: projectId,
-        })}
-        {...(projectName !== undefined && {
-          projectNameFallback: projectName,
-        })}
-        onOpenRunPanel={openRunPanel}
-      />
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <WorkflowEditor
-          runPanelContext={runPanelContext}
-          onOpenRunPanel={openRunPanel}
-          onCloseRunPanel={closeRunPanel}
-        />
-        <CollaborationWidget />
-      </div>
-    </>
-  );
-}

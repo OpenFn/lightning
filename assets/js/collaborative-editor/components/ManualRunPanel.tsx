@@ -1,31 +1,32 @@
-import { useCallback, useEffect, useState } from "react";
-import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 import {
   DocumentIcon,
   PencilSquareIcon,
   QueueListIcon,
 } from "@heroicons/react/24/outline";
-
+import { useCallback, useEffect, useState } from "react";
+import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+import _logger from "#/utils/logger";
+import { FilterTypes } from "../../manual-run-panel/types";
+import CustomView from "../../manual-run-panel/views/CustomView";
+import EmptyView from "../../manual-run-panel/views/EmptyView";
+import ExistingView from "../../manual-run-panel/views/ExistingView";
+import type { Dataclip } from "../api/dataclips";
+import * as dataclipApi from "../api/dataclips";
 import type { Workflow } from "../types/workflow";
-
 import { Button } from "./Button";
 import { InspectorFooter } from "./inspector/InspectorFooter";
 import { InspectorLayout } from "./inspector/InspectorLayout";
-import { Tabs } from "./Tabs";
-import EmptyView from "../../manual-run-panel/views/EmptyView";
-import CustomView from "../../manual-run-panel/views/CustomView";
-import ExistingView from "../../manual-run-panel/views/ExistingView";
 import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
-import * as dataclipApi from "../api/dataclips";
-import type { Dataclip } from "../api/dataclips";
-import { FilterTypes } from "../../manual-run-panel/types";
+import { Tabs } from "./Tabs";
+
+const logger = _logger.ns("ManualRunPanel").seal();
 
 interface ManualRunPanelProps {
   workflow: Workflow;
   projectId: string;
   workflowId: string;
-  jobId?: string | null | undefined;
-  triggerId?: string | null | undefined;
+  jobId?: string | null;
+  triggerId?: string | null;
   onClose: () => void;
 }
 
@@ -272,7 +273,9 @@ export function ManualRunPanel({
     selectedTab === "custom";
 
   // Use HotkeysContext to manage runPanel scope
-  const { enableScope, disableScope } = useHotkeysContext();
+  const { enableScope, disableScope, activeScopes } = useHotkeysContext();
+
+  logger.debug("Active hotkey scopes:", activeScopes);
 
   // Enable runPanel scope when this component mounts
   // Parent (WorkflowEditor) manages the "panel" scope to prevent conflicts

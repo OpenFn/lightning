@@ -8,6 +8,7 @@ import {
   usePermissions,
   useUser,
 } from "../hooks/useSessionContext";
+import { useUICommands } from "../hooks/useUI";
 import {
   useCanSave,
   useNodeSelection,
@@ -75,12 +76,10 @@ export function Header({
   children,
   projectId,
   workflowId,
-  onOpenRunPanel,
 }: {
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
-  onOpenRunPanel?: (context: { jobId?: string; triggerId?: string }) => void;
 }) {
   // URL state management (needed early for handleRunClick)
   const { updateHash } = useURLState();
@@ -105,14 +104,17 @@ export function Header({
   const permissions = usePermissions();
   const canRun = permissions?.can_edit_workflow && firstTriggerId;
 
+  // Get UI commands from store
+  const { openRunPanel } = useUICommands();
+
   const handleRunClick = useCallback(() => {
-    if (firstTriggerId && onOpenRunPanel) {
+    if (firstTriggerId) {
       // Select the trigger in the diagram
       selectNode(firstTriggerId);
-      // Open the run panel
-      onOpenRunPanel({ triggerId: firstTriggerId });
+      // Open the run panel via store
+      openRunPanel({ triggerId: firstTriggerId });
     }
-  }, [firstTriggerId, onOpenRunPanel, selectNode]);
+  }, [firstTriggerId, openRunPanel, selectNode]);
 
   // Global save shortcut: Ctrl/Cmd+S
   useHotkeys(

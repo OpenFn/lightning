@@ -2,11 +2,17 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useHotkeysContext } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
+import {
+  useIsRunPanelOpen,
+  useRunPanelContext,
+  useUICommands,
+} from "../hooks/useUI";
 import {
   useNodeSelection,
   useWorkflowActions,
@@ -20,25 +26,30 @@ import { Inspector } from "./inspector";
 import { LeftPanel } from "./left-panel";
 import { ManualRunPanel } from "./ManualRunPanel";
 
-interface WorkflowEditorProps {
-  runPanelContext: {
-    jobId?: string;
-    triggerId?: string;
-  } | null;
-  onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
-  onCloseRunPanel: () => void;
-}
-
-export function WorkflowEditor({
-  runPanelContext,
-  onOpenRunPanel,
-  onCloseRunPanel,
-}: WorkflowEditorProps) {
+export function WorkflowEditor() {
   const { hash, searchParams, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
   const { saveWorkflow } = useWorkflowActions();
+
+  // UI state from store
+  const isRunPanelOpen = useIsRunPanelOpen();
+  const runPanelContext = useRunPanelContext();
+  const { closeRunPanel, openRunPanel } = useUICommands();
+
+  // Manage "panel" scope based on whether run panel is open
+  // When run panel opens, disable "panel" scope so Inspector Escape doesn't fire
+  // When run panel closes, re-enable "panel" scope so Inspector Escape works
+  const { enableScope, disableScope } = useHotkeysContext();
+
+  useEffect(() => {
+    if (isRunPanelOpen) {
+      disableScope("panel");
+    } else {
+      enableScope("panel");
+    }
+  }, [isRunPanelOpen, enableScope, disableScope]);
 
   // Get projectId from session context store
   const project = useProject();
@@ -145,24 +156,28 @@ export function WorkflowEditor({
                   workflow={workflow}
                   currentNode={currentNode}
                   onClose={handleCloseInspector}
-                  onOpenRunPanel={onOpenRunPanel}
+                  onOpenRunPanel={openRunPanel}
                 />
               </div>
             )}
 
             {/* Run panel overlays inspector when open */}
-            {workflow && runPanelContext && projectId && workflowId && (
-              <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
-                <ManualRunPanel
-                  workflow={workflow}
-                  projectId={projectId}
-                  workflowId={workflowId}
-                  jobId={runPanelContext.jobId ?? undefined}
-                  triggerId={runPanelContext.triggerId ?? undefined}
-                  onClose={onCloseRunPanel}
-                />
-              </div>
-            )}
+            {workflow &&
+              isRunPanelOpen &&
+              runPanelContext &&
+              projectId &&
+              workflowId && (
+                <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+                  <ManualRunPanel
+                    workflow={workflow}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                    jobId={runPanelContext.jobId ?? undefined}
+                    triggerId={runPanelContext.triggerId ?? undefined}
+                    onClose={closeRunPanel}
+                  />
+                </div>
+              )}
           </div>
 
           {/* Left Panel - Workflow creation methods (absolute positioned, slides over) */}
